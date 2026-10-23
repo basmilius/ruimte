@@ -19,12 +19,7 @@ export const USAGE_MAX_STARTUP_MS = 600_000;
 // The versions the release scripts never ship; a test batch carries one so every view of the data can leave it out.
 export const USAGE_TEST_VERSION_PREFIX = '0.0.0';
 
-/*
- * The one table both the writer and the dashboard read. A day becomes one Analytics Engine data point per
- * entry, and a key's place in its list is its double (`double1` is the first). `day` is always written;
- * `work` and `verbs` only when one of their counts is above zero. Appending a key keeps every stored column;
- * moving or removing one changes what older points mean, so never do either.
- */
+// The fields of the address book's batch, frozen: daemons before 0.22 send exactly these, and the batch is read strictly.
 export const USAGE_POINTS = {
     day: [
         'active',
@@ -99,30 +94,6 @@ const MEASURES: ReadonlySet<string> = new Set(USAGE_DAY_MEASURES);
 
 export const USAGE_COUNTERS = USAGE_POINT_KINDS.flatMap((kind) => USAGE_POINTS[kind].filter((key) => !MEASURES.has(key))) as UsageCounter[];
 
-// The same on every point, so each can be broken down by any of them. `blob1` is the first.
-export const USAGE_BLOBS = ['point', 'date', 'version', 'platform', 'arch', 'launcher', 'signedIn', 'cohortWeek'] as const;
-export type UsageBlob = (typeof USAGE_BLOBS)[number];
-
-export interface UsageColumn {
-    point: UsagePointKind;
-    column: `double${number}`;
-}
-
-/* Where a field is stored: the data point it rides on and its double there. */
-export function usageColumn(field: UsageField): UsageColumn {
-    for (const point of USAGE_POINT_KINDS) {
-        const index = (USAGE_POINTS[point] as readonly string[]).indexOf(field);
-        if (index >= 0) {
-            return { point, column: `double${index + 1}` };
-        }
-    }
-    throw new Error(`No usage field ${field}`);
-}
-
-export function usageBlob(name: UsageBlob): `blob${number}` {
-    return `blob${USAGE_BLOBS.indexOf(name) + 1}`;
-}
-
 /*
  * The project view kinds a machine counts openings of, and the counter of each. A kind added to the
  * contracts needs a counter here first; `packages/contracts` holds the two lists against each other.
@@ -139,7 +110,7 @@ export const USAGE_VIEW_COUNTERS = {
     database: 'viewsDatabase'
 } as const satisfies Record<string, UsageCounter>;
 
-// Only the kinds the layout has doubles for; a chat of any other kind is not counted.
+// Only the kinds the batch has counters for; a chat of any other kind is not counted.
 export const USAGE_CHAT_COUNTERS = {
     claude: { chats: 'chatsClaude', turns: 'turnsClaude' },
     codex: { chats: 'chatsCodex', turns: 'turnsCodex' },
@@ -148,7 +119,7 @@ export const USAGE_CHAT_COUNTERS = {
     apple: { chats: 'chatsApple', turns: 'turnsApple' }
 } as const satisfies Record<KnownAgentKind, { chats: UsageCounter; turns: UsageCounter }>;
 
-// Every `ruimte-context` verb in one group, since twenty doubles hold fewer than the verbs there are.
+// Every `ruimte-context` verb in one group, since the batch has fewer counters than there are verbs.
 export const USAGE_VERB_COUNTERS = {
     help: 'verbsRead',
     list: 'verbsRead',
@@ -212,28 +183,35 @@ export const UsageCountsSchema = z.strictObject(
 );
 export type UsageCounts = z.infer<typeof UsageCountsSchema>;
 
+/* What describes a day and the machine it is of, in the address book's batch and in the report alike (`usage-report.ts`). */
+export const USAGE_DAY_DESCRIPTION = {
+    // The UTC day the counts are of, finished before it is sent.
+    date: z.string().refine(isCalendarDate, 'Expected a UTC day as YYYY-MM-DD'),
+    version: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}(-[0-9A-Za-z.-]{1,32})?$/, 'Expected a release version'),
+    platform: z.enum(['darwin', 'linux', 'win32', 'other']),
+    arch: z.enum(['arm64', 'x64', 'other']),
+    launcher: z.enum(['service', 'desktop', 'standalone']),
+    signedIn: z.boolean(),
+    // The machine's first active day of this ISO week or this UTC calendar month, so a sum of either is the active machines in it.
+    firstThisWeek: z.boolean(),
+    firstThisMonth: z.boolean(),
+    // The ISO week of the machine's first day with Ruimte, for retention.
+    cohortWeek: z.string().regex(WEEK_PATTERN, 'Expected an ISO week as YYYY-Www')
+};
+
+/* A cohort week after the day itself is a clock or a counter that is off. */
+export function usageCohortProblem(day: { date: string; cohortWeek: string }): boolean {
+    return isCalendarDate(day.date) && WEEK_PATTERN.test(day.cohortWeek) && day.cohortWeek > isoWeekOf(day.date);
+}
+
 export const UsageDaySchema = z
     .strictObject({
-        // The UTC day the counts are of, finished before it is sent.
-        date: z.string().refine(isCalendarDate, 'Expected a UTC day as YYYY-MM-DD'),
-        version: z.string().regex(/^\d{1,4}\.\d{1,4}\.\d{1,4}(-[0-9A-Za-z.-]{1,32})?$/, 'Expected a release version'),
-        platform: z.enum(['darwin', 'linux', 'win32', 'other']),
-        arch: z.enum(['arm64', 'x64', 'other']),
-        launcher: z.enum(['service', 'desktop', 'standalone']),
-        signedIn: z.boolean(),
-        // The machine's first active day of this ISO week or this UTC calendar month, so a sum of either is the active machines in it.
-        firstThisWeek: z.boolean(),
-        firstThisMonth: z.boolean(),
-        // The ISO week of the machine's first day with Ruimte, for retention.
-        cohortWeek: z.string().regex(WEEK_PATTERN, 'Expected an ISO week as YYYY-Www'),
+        ...USAGE_DAY_DESCRIPTION,
         // The median of the day's desktop starts until the first connection, in milliseconds; absent when the desktop did not start.
         startupMs: z.number().int().min(1).max(USAGE_MAX_STARTUP_MS).optional(),
         counts: UsageCountsSchema
     })
-    .refine((day) => !isCalendarDate(day.date) || !WEEK_PATTERN.test(day.cohortWeek) || day.cohortWeek <= isoWeekOf(day.date), {
-        message: 'The cohort week is after the day',
-        path: ['cohortWeek']
-    });
+    .refine((day) => !usageCohortProblem(day), { message: 'The cohort week is after the day', path: ['cohortWeek'] });
 export type UsageDay = z.infer<typeof UsageDaySchema>;
 
 export const UsageBatchSchema = z
@@ -251,38 +229,4 @@ export function usageDateProblem(date: string, now: number): string | null {
         return `The day is more than ${USAGE_MAX_AGE_DAYS} days old`;
     }
     return null;
-}
-
-export interface UsageDataPoint {
-    indexes: [string];
-    blobs: string[];
-    doubles: number[];
-}
-
-/* The data points one day is written as: `day` always, the others only when they count anything. */
-export function usageDataPoints(day: UsageDay): UsageDataPoint[] {
-    const values: Record<UsageField, number> = {
-        ...(Object.fromEntries(USAGE_COUNTERS.map((counter) => [counter, day.counts[counter] ?? 0])) as Record<UsageCounter, number>),
-        active: 1,
-        firstThisWeek: day.firstThisWeek ? 1 : 0,
-        firstThisMonth: day.firstThisMonth ? 1 : 0,
-        startupMs: day.startupMs ?? 0
-    };
-    const dimensions: Record<Exclude<UsageBlob, 'point'>, string> = {
-        date: day.date,
-        version: day.version,
-        platform: day.platform,
-        arch: day.arch,
-        launcher: day.launcher,
-        signedIn: day.signedIn ? '1' : '0',
-        cohortWeek: day.cohortWeek
-    };
-    return USAGE_POINT_KINDS.flatMap((point) => {
-        const doubles = USAGE_POINTS[point].map((field) => values[field]);
-        if (point !== 'day' && doubles.every((value) => value === 0)) {
-            return [];
-        }
-        const blobs = USAGE_BLOBS.map((name) => (name === 'point' ? point : dimensions[name]));
-        return [{ indexes: [day.date], blobs, doubles }];
-    });
 }

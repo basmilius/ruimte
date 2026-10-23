@@ -1,5 +1,6 @@
-import { UsageBatchSchema, usageDataPoints, usageDateOf, usageDateProblem, type UsageDataPoint } from '@ruimte/pulsar';
+import { UsageBatchSchema, usageDateOf, usageReportOfV1, type UsageReportBatch } from '@ruimte/pulsar';
 import { clientIp, failure, noContent, readBody } from './http.ts';
+import { countUsageRelay } from './metrics.ts';
 
 // Seven days with every counter at its cap stay under 12 KB.
 const MAX_USAGE_BODY_BYTES = 32 * 1024;
@@ -15,10 +16,46 @@ export const USAGE_BUCKET_PREFIX = 'usage:';
 
 export interface UsageDeps {
     db: D1Database;
-    // Absent until the dataset is bound, and then the route answers `not-configured`.
-    dataset?: { writeDataPoint(point: UsageDataPoint): void };
     burst?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+    // Hands an accepted batch on to Observatory after the answer; absent until it is configured, and then the route answers `not-configured`.
+    relay?: (batch: UsageReportBatch) => void;
     now: () => number;
+}
+
+export interface UsageRelayConfig {
+    // Observatory's usage ingest of the daemon app, with its `sentry_key`.
+    url: string;
+    // An upload token of the product, which tells Observatory this address book limits per address itself.
+    token: string;
+}
+
+/*
+ * Fire and forget: the machine already has its answer, so a relay that fails only loses those days in
+ * Observatory. Only the status is logged, never the batch.
+ */
+export function usageRelay(
+    config: UsageRelayConfig,
+    waitUntil: (promise: Promise<unknown>) => void,
+    send: typeof fetch = fetch
+): (batch: UsageReportBatch) => void {
+    return (batch) => {
+        const delivery = send(config.url, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${config.token}`, 'content-type': 'application/json' },
+            body: JSON.stringify(batch)
+        })
+            .then((response) => {
+                countUsageRelay(response.ok ? 'accepted' : String(response.status));
+                if (!response.ok) {
+                    console.warn('usage relay refused', response.status);
+                }
+            })
+            .catch(() => {
+                countUsageRelay('failed');
+                console.warn('usage relay failed');
+            });
+        waitUntil(delivery);
+    };
 }
 
 /* The day's bucket of an address: a digest, so the table never holds the address itself, and gone after the day. */
@@ -42,12 +79,16 @@ function rateLimited(): Response {
 }
 
 /*
- * `POST /v1/usage`: finished days of anonymous counts. Neither the address nor the body is logged. A
- * body the schema refuses is refused whole; otherwise every day in the window is written and the
- * others skipped, so after either answer a machine forgets every day it sent.
+ * TODO(Bas): remove `/v1/usage`, `usageRelay`, the usage buckets and `USAGE_LIMIT` once 0.23.0 is out;
+ * from 0.22.0 on a daemon sends straight to Observatory, and only older ones still come here.
+ *
+ * `POST /v1/usage`: finished days of anonymous counts, kept nowhere here. Neither the address nor the body
+ * is logged. A body the schema refuses is refused whole, so after either answer a machine forgets every day
+ * it sent. The relay gets the batch whole, since Observatory skips a day outside its window itself, under the
+ * names of the report a newer daemon sends.
  */
 export async function acceptUsage(request: Request, deps: UsageDeps): Promise<Response> {
-    if (!deps.dataset) {
+    if (!deps.relay) {
         return failure('not-configured', 'Usage statistics are not collected here');
     }
     const ip = clientIp(request);
@@ -62,12 +103,7 @@ export async function acceptUsage(request: Request, deps: UsageDeps): Promise<Re
     if ('response' in body) {
         return body.response;
     }
-    // A day outside the window is a clock that is off, not a wrong batch: it is left out, and the rest still counts.
-    for (const day of body.value.days.filter((candidate) => usageDateProblem(candidate.date, now) === null)) {
-        for (const point of usageDataPoints(day)) {
-            deps.dataset.writeDataPoint(point);
-        }
-    }
+    deps.relay(usageReportOfV1(body.value));
     return noContent();
 }
 

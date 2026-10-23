@@ -1,6 +1,7 @@
 import { PUSH_MAX_AGE_MS, type PushEnvelope } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { signEs256Jwt } from './jwt.ts';
+import { countPush, pushOutcomeOf } from './metrics.ts';
 
 type ApnsEnvironment = 'sandbox' | 'production';
 
@@ -90,9 +91,11 @@ export function apnsPayload(push: PushEnvelope, startsActivity: boolean, deliver
 export async function deliverApns(env: Env, target: ApnsTarget, push: PushEnvelope, now: number, send: typeof fetch = fetch): Promise<ApnsResult> {
     const body = JSON.stringify(apnsPayload(push, target.startsActivity, now));
     if (new TextEncoder().encode(body).byteLength > 4096) {
+        countPush(push.pushType, 'too-large');
         return { ok: false, status: 413 };
     }
     if (!apnsConfigured(env, target.environment)) {
+        countPush(push.pushType, 'not-configured');
         return { ok: false, status: 503 };
     }
     const host = target.environment === 'sandbox' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com';
@@ -110,6 +113,7 @@ export async function deliverApns(env: Env, target: ApnsTarget, push: PushEnvelo
         },
         body
     });
+    countPush(push.pushType, pushOutcomeOf(response.status, response.ok));
     if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { reason?: unknown } | null;
         const reason = typeof body?.reason === 'string' ? body.reason : undefined;

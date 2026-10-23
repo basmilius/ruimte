@@ -2,6 +2,7 @@ import type { AgentKind } from '@ruimte/contracts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
 import { SessionError, type SessionManager } from '../sessions/manager.ts';
+import { recordTiming } from '../stats/usage-stats.ts';
 
 /* Owes ending the agents a session's node opened, before that session goes; a shell that already exited ends nothing, so a restart does not. */
 export type BeforeKill = (nodeId: string) => Promise<unknown>;
@@ -60,9 +61,18 @@ export function registerSessionHandlers(
         return created;
     });
 
-    dispatcher.register('session.attach', (payload, client) => {
+    dispatcher.register('session.attach', async (payload, client) => {
         refuseBoundNode(machineOf, payload.sessionId);
-        return manager.attach(payload.sessionId, client.id, payload.follow ? undefined : payload.cols, payload.follow ? undefined : payload.rows);
+        const started = performance.now();
+        const attached = await manager.attach(
+            payload.sessionId,
+            client.id,
+            payload.follow ? undefined : payload.cols,
+            payload.follow ? undefined : payload.rows
+        );
+        // The machine's side of an attach: the screen it serializes for this client.
+        recordTiming('terminalAttachMs', performance.now() - started);
+        return attached;
     });
 
     dispatcher.register('session.detach', (payload, client) => {

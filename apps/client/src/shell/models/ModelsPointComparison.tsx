@@ -2,9 +2,9 @@ import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Select } from '@adecore/ui';
 import { formatDecimal, formatRounded } from '@adecore/ui/format';
-import { ProviderLogo } from '@adecore/agents-react/providers';
 import type { ChartModel, ModelMark } from './chart';
 import { formatMetric, metricChange, metricValue, METRICS, shortModelName, type ModelPoint } from './comparison';
+import { LabLogo } from './LabLogo';
 
 interface ModelsPointComparisonProps {
     models: readonly ChartModel[];
@@ -34,7 +34,7 @@ export function ModelsPointComparison({ models, marks, points, reference, candid
         >
             <div className="flex items-center gap-2">
                 <span style={{ color: marks.get(model.id)?.color }}>
-                    <ProviderLogo provider={model.provider} size={14} />
+                    <LabLogo lab={model.lab} size={14} />
                 </span>
                 <p className="min-w-0 grow text-xs font-semibold text-text">{label(shown)}</p>
                 {reference !== null && <IconButton size="sm" icon={X} label={t('compare.clear')} onClick={onClear} className="pointer-events-auto" />}

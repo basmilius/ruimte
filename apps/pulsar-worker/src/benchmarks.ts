@@ -1,6 +1,6 @@
 import type { BenchmarkMeasurement, BenchmarkModel, ModelBenchmarksResult } from '@ruimte/pulsar';
 import { z } from 'zod';
-import { BENCHMARK_MODELS } from './benchmark-models.ts';
+import { BENCHMARK_LABS, BENCHMARK_MODELS } from './benchmark-models.ts';
 import type { Env } from './env.ts';
 import { failure, json } from './http.ts';
 
@@ -171,6 +171,8 @@ export async function readBenchmarks(env: Env): Promise<Response> {
     return json({
         fetchedAt: row.fetched_at,
         models: JSON.parse(row.models) as BenchmarkModel[],
-        ...(row.details === null ? {} : JSON.parse(row.details))
+        ...(row.details === null ? {} : JSON.parse(row.details)),
+        // From the code rather than the snapshot, so a new lab shows with the deploy instead of the next refresh.
+        labs: [...BENCHMARK_LABS]
     } satisfies ModelBenchmarksResult);
 }

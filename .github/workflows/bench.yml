@@ -1,0 +1,45 @@
+name: Bench
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/bench/**'
+      - 'apps/client/**'
+      - 'packages/**'
+      - 'bun.lock'
+      - '.github/workflows/bench.yml'
+  # For a deploy after a commit that touched none of the above, such as a fix to a red CI.
+  workflow_dispatch:
+
+# One deploy at a time, so an older build never lands after a newer one.
+concurrency:
+  group: bench
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
+    defaults:
+      run:
+        working-directory: apps/bench
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/install
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun test src/shell/models
+        working-directory: apps/client
+      - run: bun run build
+      - uses: ./.github/actions/wait-for-ci
+      - run: bunx wrangler deploy
+        env:
+          # The token the station deploys with, which covers the Custom Domain `bench.ruimte.app` on the zone too.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # The page has to answer with its policy, or the deploy is not what this repository says it is.
+      - run: curl --fail --silent --show-error --max-time 20 --head https://bench.ruimte.app/ | grep -i '^content-security-policy:.*frame-ancestors'

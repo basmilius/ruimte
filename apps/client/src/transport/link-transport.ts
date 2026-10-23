@@ -14,6 +14,7 @@ import {
     type RequestType
 } from '@ruimte/contracts';
 import type { LinkProblem } from '@/telemetry/events';
+import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from './piece';
 import { protocolGate } from './protocol';
 import { messageOf } from './signaling';
@@ -90,10 +91,22 @@ export interface LinkTransportOptions {
     log?: Pick<Console, 'info' | 'warn'>;
     /* A link that dropped while open, a request without an answer in time, a machine refused at the check: for a crash report. */
     report?: (problem: LinkProblem) => void;
+    meter?: LinkMeter;
 }
+
+/* How long links take to open or fail, why a new one opens, and how long a request waits for its answer: for the page's metrics. */
+export interface LinkMeter {
+    /* From the start of an attempt until the protocol check passed, or until the attempt failed. */
+    connected(link: { relayed: boolean; signaled: SignalRoute | null }, outcome: LinkOutcome, ms: number): void;
+    reconnecting(reason: ReconnectReason): void;
+    answered(type: RequestType, ms: number): void;
+}
+
+const NO_METER: LinkMeter = { connected: () => undefined, reconnecting: () => undefined, answered: () => undefined };
 
 interface Pending {
     type: RequestType;
+    sentAt: number;
     resolve(result: unknown): void;
     reject(error: TransportError): void;
     // Asked by `readBytes`, which resolves with the `BytesPiece` of a binary reply; a JSON answer is no reply to it.
@@ -122,6 +135,8 @@ export class LinkTransport implements PooledTransport {
     private readonly requestTimeoutMs: number;
     private readonly log: Pick<Console, 'info' | 'warn'>;
     private readonly report: (problem: LinkProblem) => void;
+    private readonly meter: LinkMeter;
+    private attemptStartedAt = 0;
     private nextId = 1;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private disposed = false;
@@ -139,6 +154,7 @@ export class LinkTransport implements PooledTransport {
         this.requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
         this.log = options.log ?? console;
         this.report = options.report ?? (() => undefined);
+        this.meter = options.meter ?? NO_METER;
         this.random = options.random ?? Math.random;
         this.now = options.now ?? Date.now;
         this.connect();
@@ -190,6 +206,7 @@ export class LinkTransport implements PooledTransport {
             this.log.info('Reconnecting to the machine');
             this.rejectPending('disconnected', i18next.t('machines:connection.closedBeforeAnswer'));
         }
+        this.meter.reconnecting('switch');
         this.connect();
     }
 
@@ -266,6 +283,7 @@ export class LinkTransport implements PooledTransport {
             return;
         }
         this.setConnection({ status: 'connecting', retryAt: null });
+        this.attemptStartedAt = this.now();
         const generation = this.generation;
         const resolved = typeof this.address === 'string' ? Promise.resolve(this.address) : withTimeout(this.address(), this.addressTimeoutMs);
         void resolved.then(
@@ -280,6 +298,8 @@ export class LinkTransport implements PooledTransport {
                 }
                 // A daemon that will not say how to reach it is a daemon that is not reachable; the backoff is the same one.
                 this.log.warn('Could not work out how to connect to the machine', e);
+                this.meter.connected({ relayed: false, signaled: null }, 'failed', this.now() - this.attemptStartedAt);
+                this.meter.reconnecting('address');
                 this.scheduleReconnect();
                 this.setConnection({ status: 'closed', failure: messageOf(e) });
             }
@@ -295,6 +315,8 @@ export class LinkTransport implements PooledTransport {
         let relayed = false;
         // A link that opens before the opener returned cannot be written to yet.
         let openedEarly = false;
+        // Why the attempt ended before it opened, when the transport knows better than "it failed".
+        let failedBecause: ReconnectReason | null = null;
         let gateTimer: ReturnType<typeof setTimeout> | null = null;
         const stopGateTimer = (): void => {
             if (gateTimer !== null) {
@@ -307,6 +329,7 @@ export class LinkTransport implements PooledTransport {
             open: (features) => {
                 stopGateTimer();
                 if (this.linkToken === token) {
+                    this.meter.connected({ relayed, signaled }, 'ok', this.now() - this.attemptStartedAt);
                     this.setConnection({ status: 'open', attempts: 0, retryAt: null, failure: null, relayed, signaled, features });
                 }
             },
@@ -317,6 +340,7 @@ export class LinkTransport implements PooledTransport {
             },
             refuse: (failure, mismatch) => {
                 this.report({ kind: 'refused', mismatch });
+                failedBecause = 'refused';
                 events.close(failure);
                 link?.close();
             }
@@ -348,8 +372,15 @@ export class LinkTransport implements PooledTransport {
                     return;
                 }
                 // A link this transport let go of reports no more, so whatever closes here closed on its own.
-                if (this.currentConnection.status === 'open' && !this.disposed) {
+                const wasOpen = this.currentConnection.status === 'open';
+                if (wasOpen && !this.disposed) {
                     this.report({ kind: 'dropped', code: code ?? null });
+                }
+                if (!this.disposed) {
+                    if (!wasOpen) {
+                        this.meter.connected({ relayed, signaled }, 'failed', this.now() - this.attemptStartedAt);
+                    }
+                    this.meter.reconnecting(wasOpen ? 'dropped' : (failedBecause ?? 'failed'));
                 }
                 this.linkToken = null;
                 this.link = null;
@@ -367,6 +398,7 @@ export class LinkTransport implements PooledTransport {
         const askGate = (): void => {
             gate.opened();
             gateTimer = setTimeout(() => {
+                failedBecause = 'timeout';
                 events.close(i18next.t('machines:connection.noAnswer', { seconds: Math.round(this.gateTimeoutMs / 1000) }));
                 link?.close();
             }, this.gateTimeoutMs);
@@ -409,7 +441,13 @@ export class LinkTransport implements PooledTransport {
         }
         const id = String(this.nextId++);
         const promise = new Promise<R>((resolve, reject) => {
-            const entry: Pending = { type, resolve: resolve as (result: unknown) => void, reject, ...(bytes ? { bytes: true as const } : {}) };
+            const entry: Pending = {
+                type,
+                sentAt: this.now(),
+                resolve: resolve as (result: unknown) => void,
+                reject,
+                ...(bytes ? { bytes: true as const } : {})
+            };
             if (!UNBOUNDED_REQUESTS.has(type)) {
                 entry.timer = setTimeout(() => {
                     this.pending.delete(id);
@@ -433,6 +471,8 @@ export class LinkTransport implements PooledTransport {
         }
         this.pending.delete(id);
         clearTimeout(entry.timer);
+        // Only an answer comes here; a request that timed out was taken off the list by its timer.
+        this.meter.answered(entry.type, this.now() - entry.sentAt);
         return entry;
     }
 

@@ -148,7 +148,7 @@ export class Dispatcher {
 
         try {
             const result = await handler(payloadParse.data, client);
-            countRequest(type);
+            countRequest(type, payloadParse.data);
             if (result instanceof BinaryReply && client.sendBinary) {
                 client.sendBinary(result.encode(id));
                 return;

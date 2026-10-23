@@ -1,5 +1,4 @@
-import type { UsageProvider } from '@ruimte/contracts';
-import type { BenchmarkMeasurement, BenchmarkModel } from '@ruimte/pulsar';
+import type { BenchmarkLab, BenchmarkMeasurement, BenchmarkModel } from '@ruimte/pulsar';
 import { niceScale } from '@adecore/agents-react/usage';
 
 export type CostScale = 'log' | 'linear';
@@ -7,13 +6,12 @@ export type CostScale = 'log' | 'linear';
 export type ChartPoint = Omit<BenchmarkMeasurement, 'modelId'>;
 
 export interface ChartModel extends Omit<BenchmarkModel, 'points'> {
-    provider: UsageProvider;
+    lab: BenchmarkLab;
     points: ChartPoint[];
 }
 
 type Measured = { costPerTask: number; intelligence: number };
 
-const PROVIDERS: readonly string[] = ['claude', 'codex'] satisfies UsageProvider[];
 const EFFORTS = ['off', 'low', 'medium', 'high', 'xhigh', 'max', 'thinking'];
 
 export function compareEfforts(one: string, other: string): number {
@@ -21,18 +19,20 @@ export function compareEfforts(one: string, other: string): number {
     return order(one) - order(other) || one.localeCompare(other);
 }
 
-/* The address book may know a provider this client does not; it has no color here, so it is left out. */
-export function chartModels(models: readonly BenchmarkModel[], measurements?: readonly BenchmarkMeasurement[]): ChartModel[] {
-    return models
-        .filter((model) => PROVIDERS.includes(model.provider))
-        .map((model) => ({
-            ...model,
-            provider: model.provider as UsageProvider,
-            points: (measurements === undefined
+/* A model whose lab the address book did not describe has no mark or color, so it is left out. */
+export function chartModels(models: readonly BenchmarkModel[], labs: readonly BenchmarkLab[], measurements?: readonly BenchmarkMeasurement[]): ChartModel[] {
+    return models.flatMap((model) => {
+        const lab = labs.find((entry) => entry.id === model.provider);
+        if (lab === undefined) {
+            return [];
+        }
+        const points = (
+            measurements === undefined
                 ? [...model.points]
                 : measurements.filter((point) => point.modelId === model.id).map(({ modelId: _modelId, ...point }) => point)
-            ).sort((one, other) => compareEfforts(one.effort, other.effort))
-        }));
+        ).sort((one, other) => compareEfforts(one.effort, other.effort));
+        return [{ ...model, lab, points }];
+    });
 }
 
 /*
@@ -56,16 +56,26 @@ export interface ModelMark {
     color: string;
 }
 
-/* Legacy entries must not shift the colors of current models. */
+/*
+ * Legacy entries must not shift the colors of current models. `light-dark()` follows the theme's
+ * `color-scheme`, so a color drawn as an SVG fill must go through `style`, not the attribute.
+ */
 export function modelMarks(models: readonly ChartModel[]): Map<string, ModelMark> {
     const marks = new Map<string, ModelMark>();
-    const used: Partial<Record<UsageProvider, number>> = {};
+    const used = new Map<string, number>();
     for (const model of [...models.filter((entry) => !entry.legacy), ...models.filter((entry) => entry.legacy)]) {
-        const index = used[model.provider] ?? 0;
-        used[model.provider] = index + 1;
-        marks.set(model.id, { color: `var(--model-chart-${model.provider}-${index % 6})` });
+        const index = used.get(model.lab.id) ?? 0;
+        used.set(model.lab.id, index + 1);
+        const { light, dark } = model.lab.colors;
+        marks.set(model.id, {
+            color: `light-dark(${light[index % light.length]}, ${dark[index % dark.length]})`
+        });
     }
     return marks;
+}
+
+export function chartLabs(labs: readonly BenchmarkLab[], models: readonly ChartModel[]): BenchmarkLab[] {
+    return labs.filter((lab) => models.some((model) => model.lab.id === lab.id));
 }
 
 export interface Axis {
@@ -78,7 +88,10 @@ export interface Axis {
 export function costAxis(costs: readonly number[], scale: CostScale): Axis {
     if (scale === 'linear') {
         const { max, step } = niceScale(Math.max(0, ...costs));
-        return { ticks: Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step), at: (value) => value / max };
+        return {
+            ticks: Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step),
+            at: (value) => value / max
+        };
     }
     const positive = costs.filter((cost) => cost > 0);
     const low = positive.length === 0 ? -1 : Math.floor(Math.log10(Math.min(...positive)));

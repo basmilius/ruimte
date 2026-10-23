@@ -2,9 +2,9 @@ import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useContentSize } from '@adecore/ui';
 import { formatDecimal } from '@adecore/ui/format';
-import { ProviderLogo } from '@adecore/agents-react/providers';
 import { costAxis, frontier, intelligenceAxis, nearestPoint, type ChartModel, type CostScale, type ModelMark } from './chart';
 import { effortSegments, formatMetric, metricValue, pointKey, shortModelName, type PointInteraction } from './comparison';
+import { LabLogo } from './LabLogo';
 import { usePointNavigation } from './use-point-navigation';
 
 interface ModelsChartProps extends PointInteraction {
@@ -153,7 +153,7 @@ export function ModelsChart({
                                             key={segment[0]!.key}
                                             points={segment.map((point) => `${point.x},${point.y}`).join(' ')}
                                             fill="none"
-                                            stroke={color}
+                                            style={{ stroke: color }}
                                             strokeWidth={2}
                                             strokeLinejoin="round"
                                         />
@@ -204,7 +204,7 @@ export function ModelsChart({
                                                 cx={point.x}
                                                 cy={point.y}
                                                 r={point.key === preview || pinned ? 5 : 4}
-                                                fill={color}
+                                                style={{ fill: color }}
                                                 stroke="var(--surface-raised)"
                                                 strokeWidth={1}
                                             />
@@ -214,10 +214,17 @@ export function ModelsChart({
                                         </g>
                                     );
                                 })}
-                                <line x1={label.point.x + 7} y1={label.point.y} x2={LEFT + plotWidth + 12} y2={label.y} stroke={color} opacity={0.3} />
+                                <line
+                                    x1={label.point.x + 7}
+                                    y1={label.point.y}
+                                    x2={LEFT + plotWidth + 12}
+                                    y2={label.y}
+                                    style={{ stroke: color }}
+                                    opacity={0.3}
+                                />
                                 <foreignObject x={LEFT + plotWidth + 18} y={label.y - 12} width={labelWidth - 22} height={24}>
                                     <div className="flex h-full items-center gap-2 text-xs font-medium" style={{ color }}>
-                                        <ProviderLogo provider={model.provider} size={15} />
+                                        <LabLogo lab={model.lab} size={15} />
                                         <span className="truncate">
                                             {compact ? shortModelName(model.name).replace(/^GPT-/, '') : shortModelName(model.name)}
                                         </span>

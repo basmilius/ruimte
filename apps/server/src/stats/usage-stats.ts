@@ -1,5 +1,13 @@
-import { USAGE_CLIENT_KINDS, type AgentKind, type UsageClientKind } from '@ruimte/contracts';
-import { USAGE_CHAT_COUNTERS, USAGE_VERB_COUNTERS, USAGE_VIEW_COUNTERS, type UsageCounter as UsageCounterName } from '@ruimte/pulsar';
+import { USAGE_CLIENT_KINDS, type UsageClientKind } from '@ruimte/contracts';
+import {
+    USAGE_VERB_COUNTERS,
+    USAGE_VIEW_COUNTERS,
+    usageModeOf,
+    usageModelFamilyOf,
+    usageProviderOf,
+    type UsageReportCounter,
+    type UsageReportTiming
+} from '@ruimte/pulsar';
 import { isOwner } from '../auth/access.ts';
 import type { ClientAccess } from '../dispatcher.ts';
 import type { UsageCounter } from './usage-counter.ts';
@@ -17,13 +25,13 @@ export function installUsageCounter(counter: UsageCounter | null, on: () => bool
     enabled = on;
 }
 
-export function countUsage(counter: UsageCounterName): void {
+export function countUsage(counter: UsageReportCounter): void {
     if (installed !== null && enabled()) {
         installed.count(counter);
     }
 }
 
-function countUsageOnce(counter: UsageCounterName, key: string): void {
+function countUsageOnce(counter: UsageReportCounter, key: string): void {
     if (installed !== null && enabled()) {
         installed.countOnce(counter, key);
     }
@@ -35,49 +43,87 @@ export function recordStartup(ms: number): void {
     }
 }
 
-// What a person asks over the wire that counts as an action, beside what agents do through their verbs.
-const REQUEST_COUNTERS: Readonly<Record<string, UsageCounterName>> = {
-    'browser.navigate': 'browserActions',
-    'browser.command': 'browserActions',
-    'device.boot': 'deviceActions',
-    'device.shutdown': 'deviceActions',
-    'device.action': 'deviceActions',
-    'device.capture': 'deviceActions',
-    'device.record': 'deviceActions',
-    'device.clipboard': 'deviceActions',
-    'database.request': 'databaseActions',
-    'computer.control': 'computerActions'
+/* One sample of a timing, in milliseconds; the day sends their median. */
+export function recordTiming(timing: UsageReportTiming, ms: number): void {
+    if (installed !== null && enabled() && Number.isFinite(ms) && ms >= 0) {
+        installed.sample(timing, Math.round(ms));
+    }
+}
+
+// What a person asks over the wire that counts, beside what agents do through their verbs; only once it was answered.
+const REQUEST_COUNTERS: Readonly<Record<string, readonly UsageReportCounter[]>> = {
+    'browser.navigate': ['actions.browser'],
+    'browser.command': ['actions.browser'],
+    'device.boot': ['actions.device', 'devices.started'],
+    'device.shutdown': ['actions.device'],
+    'device.action': ['actions.device'],
+    'device.capture': ['actions.device'],
+    'device.record': ['actions.device'],
+    'device.clipboard': ['actions.device'],
+    'database.request': ['actions.database'],
+    'computer.control': ['actions.computer'],
+    'fs.write': ['files.saved'],
+    'git.resolve': ['git.conflictsResolved'],
+    'git.pr-watch': ['prWatches.started'],
+    'voice.start': ['voice.sessions'],
+    'peer.taskStart': ['peers.tasks']
 };
+
+// A git action as what it did; one that only fetches, checks out or branches counts nothing here.
+const GIT_ACTION_COUNTERS: Readonly<Record<string, readonly UsageReportCounter[]>> = {
+    commit: ['git.commits'],
+    'commit-push': ['git.commits', 'git.pushes'],
+    push: ['git.pushes'],
+    'force-push': ['git.pushes'],
+    publish: ['git.pushes'],
+    pull: ['git.pulls'],
+    sync: ['git.pulls', 'git.pushes']
+};
+
+function fieldOf(payload: unknown, name: string): unknown {
+    return typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>)[name] : undefined;
+}
 
 // The verbs that also count on the day itself: what an agent delegates, and what it does in a feature a person can use too.
-const VERB_DAY_COUNTERS: Readonly<Record<string, UsageCounterName>> = {
-    agent: 'agentsDelegated',
-    team: 'teamsDelegated',
-    browser: 'browserActions',
-    device: 'deviceActions',
-    database: 'databaseActions',
-    computer: 'computerActions'
+const VERB_DAY_COUNTERS: Readonly<Record<string, UsageReportCounter>> = {
+    agent: 'agents.delegated',
+    team: 'teams.delegated',
+    browser: 'actions.browser',
+    device: 'actions.device',
+    database: 'actions.database',
+    computer: 'actions.computer'
 };
 
-const CLIENT_COUNTERS: Readonly<Record<UsageClientKind, UsageCounterName>> = {
-    desktop: 'clientsDesktop',
-    ios: 'clientsIos',
-    station: 'clientsStation'
-};
+const VERBS: ReadonlySet<string> = new Set(Object.keys(USAGE_VERB_COUNTERS));
+const VIEW_KINDS: ReadonlySet<string> = new Set(Object.keys(USAGE_VIEW_COUNTERS));
 
-/* A request that was answered. */
-export function countRequest(type: string): void {
-    const counter = REQUEST_COUNTERS[type];
-    if (counter !== undefined) {
+/*
+ * A request that was answered, with the payload it carried. A file read counts once per file a day, by a key that
+ * stays in memory like every other `countOnce` key; a statement a person ran in a database view counts as a query.
+ */
+export function countRequest(type: string, payload?: unknown): void {
+    for (const counter of REQUEST_COUNTERS[type] ?? []) {
         countUsage(counter);
+    }
+    if (type === 'git.action') {
+        const kind = fieldOf(payload, 'kind');
+        for (const counter of (typeof kind === 'string' ? GIT_ACTION_COUNTERS[kind] : undefined) ?? []) {
+            countUsage(counter);
+        }
+    } else if (type === 'database.request' && fieldOf(payload, 'method') === 'execute') {
+        countUsage('database.queries');
+    } else if (type === 'fs.read') {
+        const path = fieldOf(payload, 'path');
+        if (typeof path === 'string') {
+            countUsageOnce('files.opened', path);
+        }
     }
 }
 
 /* A `ruimte-context` verb that ran. */
 export function countVerb(name: string): void {
-    const group = (USAGE_VERB_COUNTERS as Readonly<Record<string, UsageCounterName>>)[name];
-    if (group !== undefined) {
-        countUsage(group);
+    if (VERBS.has(name)) {
+        countUsage(`verbs.${name}` as UsageReportCounter);
     }
     const day = VERB_DAY_COUNTERS[name];
     if (day !== undefined) {
@@ -85,22 +131,30 @@ export function countVerb(name: string): void {
     }
 }
 
-function chatCounters(provider: AgentKind): { chats: UsageCounterName; turns: UsageCounterName } | undefined {
-    return (USAGE_CHAT_COUNTERS as Readonly<Record<string, { chats: UsageCounterName; turns: UsageCounterName }>>)[provider];
+export function countChatStarted(provider: string): void {
+    countUsage(`chats.${usageProviderOf(provider)}`);
 }
 
-export function countChatStarted(provider: AgentKind): void {
-    const counters = chatCounters(provider);
-    if (counters !== undefined) {
-        countUsage(counters.chats);
+/* A turn a chat started: by provider, by the family of its model when it named one, and by the mode it ran in. */
+export function countTurn(provider: string, model?: string | null, mode?: string | null): void {
+    countUsage(`turns.${usageProviderOf(provider)}`);
+    if (model) {
+        countUsage(`turns.model.${usageModelFamilyOf(model)}`);
+    }
+    const counted = mode ? usageModeOf(mode) : null;
+    if (counted !== null) {
+        countUsage(`turns.mode.${counted}`);
     }
 }
 
-export function countTurn(provider: AgentKind): void {
-    const counters = chatCounters(provider);
-    if (counters !== undefined) {
-        countUsage(counters.turns);
-    }
+/* A turn that stopped on a usage limit of its provider. */
+export function countLimit(provider: string): void {
+    countUsage(`limits.${usageProviderOf(provider)}`);
+}
+
+/* The time from a turn's start to its first words, per provider. */
+export function recordFirstToken(provider: string, ms: number): void {
+    recordTiming(`firstTokenMs.${usageProviderOf(provider)}`, ms);
 }
 
 function isClientKind(kind: string): kind is UsageClientKind {
@@ -117,17 +171,17 @@ export function countClient(access: ClientAccess | undefined, kind: string | und
         return;
     }
     if (access.peer !== undefined) {
-        countUsageOnce('clientsPeer', access.peer.machineId);
+        countUsageOnce('clients.peer', access.peer.machineId);
         return;
     }
     if (kind !== undefined && isClientKind(kind) && access.sessionId !== null) {
-        countUsageOnce(CLIENT_COUNTERS[kind], access.sessionId);
+        countUsageOnce(`clients.${kind}`, access.sessionId);
     }
 }
 
 /* A project a client opened, once per UTC day, so the open a client repeats after a reconnect does not count again. */
 export function countProjectOpened(projectId: string): void {
-    countUsageOnce('projectsOpened', projectId);
+    countUsageOnce('projects.opened', projectId);
 }
 
 /*
@@ -139,8 +193,7 @@ export function countViewShown(projectId: string, viewId: string | null, kindOf:
         return;
     }
     const kind = kindOf(viewId);
-    const counter = kind === null ? undefined : (USAGE_VIEW_COUNTERS as Readonly<Record<string, UsageCounterName>>)[kind];
-    if (counter !== undefined) {
-        countUsageOnce(counter, `${projectId}\n${viewId}`);
+    if (kind !== null && VIEW_KINDS.has(kind)) {
+        countUsageOnce(`views.${kind}` as UsageReportCounter, `${projectId}\n${viewId}`);
     }
 }

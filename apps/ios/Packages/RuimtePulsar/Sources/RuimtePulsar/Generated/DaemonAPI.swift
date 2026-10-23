@@ -243,6 +243,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `usageLimits` = "usage.limits"
     case `usageRefreshLimits` = "usage.refreshLimits"
     case `usageStartup` = "usage.startup"
+    case `usageCount` = "usage.count"
+    case `usageTiming` = "usage.timing"
     case `processesSubscribe` = "processes.subscribe"
     case `processesUnsubscribe` = "processes.unsubscribe"
     case `processesSignal` = "processes.signal"

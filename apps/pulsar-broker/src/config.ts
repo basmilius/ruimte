@@ -35,6 +35,8 @@ export interface BrokerConfig {
     trustProxy: boolean;
     /* Read the client address from `CF-Connecting-IP`, but only on a connection that came from Cloudflare's edge. */
     trustCloudflare: boolean;
+    /* Send errors and log lines to Observatory (`telemetry.ts`); off on a laptop, on in the unit on the VPS. */
+    telemetry: boolean;
     limits: BrokerLimits;
     turn: TurnConfig;
 }
@@ -112,6 +114,7 @@ export function parseBrokerArgs(argv: string[], env: Record<string, string | und
             name: { type: 'string', multiple: true, default: [] },
             'trust-proxy': { type: 'boolean', default: false },
             'trust-cloudflare': { type: 'boolean', default: false },
+            telemetry: { type: 'boolean', default: false },
             turn: { type: 'string' },
             'turn-secret-file': { type: 'string' },
             'turn-url': { type: 'string', multiple: true, default: [] },
@@ -133,6 +136,7 @@ export function parseBrokerArgs(argv: string[], env: Record<string, string | und
         names: names.map((name) => name.trim().toLowerCase()).filter((name) => name !== ''),
         trustProxy: values['trust-proxy'] || env.PULSAR_BROKER_TRUST_PROXY === '1',
         trustCloudflare: values['trust-cloudflare'] || env.PULSAR_BROKER_TRUST_CLOUDFLARE === '1',
+        telemetry: values.telemetry || env.PULSAR_BROKER_TELEMETRY === '1',
         limits: {
             maxMessageBytes: number('max-message-bytes', 1024, 1024 * 1024, DEFAULT_LIMITS.maxMessageBytes),
             maxSocketsPerIp: number('max-sockets-per-ip', 1, 100_000, DEFAULT_LIMITS.maxSocketsPerIp),

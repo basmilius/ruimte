@@ -5,6 +5,8 @@ import {
     PublicKeySchema,
     RegisterMachinePayloadSchema,
     SignatureSchema,
+    USAGE_CLIENT_COUNTERS,
+    USAGE_CLIENT_TIMINGS,
     USAGE_MAX_STARTUP_MS
 } from '@ruimte/pulsar';
 import { z } from 'zod';
@@ -122,6 +124,12 @@ export type UsageClientKind = (typeof USAGE_CLIENT_KINDS)[number];
 // `usage.startup`: how long the desktop app took from its start to its first connection, once per start.
 export const UsageStartupPayloadSchema = z.object({ ms: z.number().int().min(1).max(USAGE_MAX_STARTUP_MS) });
 export type UsageStartupPayload = z.infer<typeof UsageStartupPayloadSchema>;
+
+// `usage.count` and `usage.timing`: what only the app on this machine sees, for its anonymous usage counts.
+export const UsageCountPayloadSchema = z.object({ counter: z.enum(USAGE_CLIENT_COUNTERS) });
+export type UsageCountPayload = z.infer<typeof UsageCountPayloadSchema>;
+export const UsageTimingPayloadSchema = z.object({ timing: z.enum(USAGE_CLIENT_TIMINGS), ms: z.number().int().min(0).max(USAGE_MAX_STARTUP_MS) });
+export type UsageTimingPayload = z.infer<typeof UsageTimingPayloadSchema>;
 
 // `POST /auth/pair`: a one-time pairing token from the daemon's printed URL, for a long-lived session token.
 export const PairPayloadSchema = z.object({

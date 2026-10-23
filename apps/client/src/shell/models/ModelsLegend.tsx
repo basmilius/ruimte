@@ -4,13 +4,14 @@ import { Search, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton, Input, Switch, Tooltip } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
-import { ProviderLogo } from '@adecore/agents-react/providers';
-import type { UsageProvider } from '@ruimte/contracts';
+import type { BenchmarkLab } from '@ruimte/pulsar';
 import type { ChartModel, ModelMark } from './chart';
 import { shortModelName } from './comparison';
+import { LabLogo } from './LabLogo';
 import { ModelsReasoningFilter } from './ModelsReasoningFilter';
 
 interface ModelsLegendProps {
+    labs: readonly BenchmarkLab[];
     models: readonly ChartModel[];
     marks: ReadonlyMap<string, ModelMark>;
     hidden: ReadonlySet<string>;
@@ -27,9 +28,8 @@ interface ModelsLegendProps {
     onClose(): void;
 }
 
-const PROVIDERS: readonly UsageProvider[] = ['claude', 'codex'];
-
 export function ModelsLegend({
+    labs,
     models,
     marks,
     hidden,
@@ -80,15 +80,15 @@ export function ModelsLegend({
                 <ModelsReasoningFilter efforts={efforts} hidden={hiddenEfforts} onToggle={onEffort} />
             </div>
             <div className="min-h-0 grow overflow-y-auto px-3 pb-3" role="group" aria-label={t('legend.label')}>
-                {PROVIDERS.map((provider) => {
-                    const own = shown.filter((model) => model.provider === provider);
-                    const all = models.filter((model) => model.provider === provider && model.points.length > 0);
+                {labs.map((lab) => {
+                    const own = shown.filter((model) => model.lab.id === lab.id);
+                    const all = models.filter((model) => model.lab.id === lab.id && model.points.length > 0);
                     const selectedAll = all.every((model) => !hidden.has(model.id));
                     return own.length === 0 ? null : (
-                        <div key={provider} className="mb-4">
+                        <div key={lab.id} className="mb-4">
                             <div className="mb-1 flex items-center justify-between px-1 text-xs">
-                                <span className="font-medium text-text">{provider === 'claude' ? 'Anthropic' : 'OpenAI'}</span>
-                                <Button size="sm" variant="ghost" onClick={() => onProvider(provider, !selectedAll)}>
+                                <span className="font-medium text-text">{lab.name}</span>
+                                <Button size="sm" variant="ghost" onClick={() => onProvider(lab.id, !selectedAll)}>
                                     {t(selectedAll ? 'filters.none' : 'filters.all')}
                                 </Button>
                             </div>
@@ -119,7 +119,7 @@ export function ModelsLegend({
                                             onBlur={() => onHighlight(null)}
                                         >
                                             <span style={{ color }} className={clsx(!selected && 'opacity-40')}>
-                                                <ProviderLogo provider={model.provider} size={14} />
+                                                <LabLogo lab={model.lab} size={14} />
                                             </span>
                                             <span className="min-w-0 grow truncate">{shortModelName(model.name)}</span>
                                             {!measured ? (

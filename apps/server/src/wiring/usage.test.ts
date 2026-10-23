@@ -3,8 +3,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ProviderAccountsService, ProviderRegistry } from '@adecore/agents/providers';
-import { UsageService, usageRootsOf } from '@adecore/agents/usage';
+import { UsageService, usageRootsOf, type LimitAccounts } from '@adecore/agents/usage';
 import { grokProvider } from '../providers/acp-providers.ts';
+import { withoutNanoGptUntilKeyed } from './usage.ts';
 
 let root: string;
 
@@ -64,5 +65,25 @@ describe('usage of Grok', () => {
             })
         ]);
         expect(summary.sessions).toBe(1);
+    });
+});
+
+describe('plan limits of NanoGPT', () => {
+    const accounts: LimitAccounts = {
+        list: () => [
+            { id: 'claude', kind: 'claude', label: 'Claude', isDefault: true },
+            { id: 'nanogpt', kind: 'nanogpt', label: 'NanoGPT', isDefault: true }
+        ],
+        envFor: () => ({}),
+        lastUsedAt: () => null
+    };
+
+    test('are left out while no key is set, and come back once one is', () => {
+        let keyed = false;
+        const limited = withoutNanoGptUntilKeyed(accounts, () => keyed);
+
+        expect(limited.list().map((account) => account.kind)).toEqual(['claude']);
+        keyed = true;
+        expect(limited.list().map((account) => account.kind)).toEqual(['claude', 'nanogpt']);
     });
 });

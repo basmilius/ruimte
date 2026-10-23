@@ -34,7 +34,6 @@ import {
     type SessionResult
 } from './address-book.ts';
 import { MapsTicketSchema, type MapsTicket } from './maps.ts';
-import { USAGE_PATH, type UsageBatch } from './usage.ts';
 import {
     DeviceLinkCompleteResultSchema,
     DeviceLinkLookupResultSchema,
@@ -126,11 +125,6 @@ export class AddressBookClient {
 
     modelCatalogs(): Promise<ModelCatalogsResult> {
         return this.call({ method: 'GET', path: '/v1/models/catalog', schema: ModelCatalogsResultSchema });
-    }
-
-    /* Finished days of anonymous usage counts; never with a token, so nothing ties them to an account. */
-    async sendUsage(batch: UsageBatch): Promise<void> {
-        await this.call({ method: 'POST', path: USAGE_PATH, body: batch, schema: null });
     }
 
     account(accessToken: string): Promise<AccountResult> {

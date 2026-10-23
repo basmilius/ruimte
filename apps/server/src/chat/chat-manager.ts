@@ -35,7 +35,8 @@ import { AgentImages } from './agent-images.ts';
 import { ChatError } from './errors.ts';
 import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 import { InlineEditNotes } from './inline-edit.ts';
-import { countChatStarted, countTurn } from '../stats/usage-stats.ts';
+import { TurnUsage } from '../stats/turn-usage.ts';
+import { countChatStarted } from '../stats/usage-stats.ts';
 import { prependPath } from '../env-path.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
@@ -237,8 +238,7 @@ export class ChatManager extends ChatCore {
     private readonly clearedTasks = new Map<string, Set<string>>();
     /* The digest of the note each chat's thread last took in, kept in its record as `instructions`. */
     private readonly instructed = new Map<string, string>();
-    // The turn each chat last opened, so a turn counts once however often its item changes.
-    private readonly countedTurns = new Map<string, string>();
+    private readonly turnUsage = new TurnUsage();
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
     private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
@@ -667,7 +667,7 @@ export class ChatManager extends ChatCore {
         }
         this.clearedTasks.delete(chatId);
         this.instructed.delete(chatId);
-        this.countedTurns.delete(chatId);
+        this.turnUsage.forget(chatId);
     }
 
     private async removed(chatId: string, chat: { info: ChatInfo; items: ChatItem[] }): Promise<void> {
@@ -676,15 +676,15 @@ export class ChatManager extends ChatCore {
 
     /* A client following a task's node hears whenever an item of that node's thread lands; a delta alone does not. */
     private broadcasted(chatId: string, event: ChatEvent): void {
+        const info = this.get(chatId)?.info;
         if (event.type === 'delta') {
+            if (info !== undefined) {
+                this.turnUsage.words(chatId, info.provider);
+            }
             return;
         }
-        if (event.type === 'item' && event.item.kind === 'turn' && event.item.state === 'running' && this.countedTurns.get(chatId) !== event.item.id) {
-            this.countedTurns.set(chatId, event.item.id);
-            const provider = this.get(chatId)?.info.provider;
-            if (provider !== undefined) {
-                countTurn(provider);
-            }
+        if (event.type === 'item' && event.item.kind === 'turn' && info !== undefined) {
+            this.turnUsage.turn(chatId, event.item, info);
         }
         for (const hold of this.childHolds.values()) {
             if (hold.childId === chatId) {

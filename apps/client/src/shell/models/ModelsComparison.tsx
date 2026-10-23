@@ -1,11 +1,11 @@
-import { useId, useReducer, useState } from 'react';
+import { useId, useReducer, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ModelBenchmarksResult } from '@ruimte/pulsar';
 import { Button, Checkbox, EmptyState, IconButton, Segmented, Tabs, Tooltip } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
-import { chartModels, modelMarks, type CostScale } from './chart';
+import { chartLabs, chartModels, modelMarks, type CostScale } from './chart';
 import {
     barAxis,
     comparisonModels,
@@ -25,11 +25,13 @@ import { ModelsPointComparison } from './ModelsPointComparison';
 
 const SCALES: readonly CostScale[] = ['linear', 'log'];
 
-export function ModelsComparison({ result }: { result: ModelBenchmarksResult }) {
+/* `start` sits before the tabs in their own row, for a page that has no title bar above them. */
+export function ModelsComparison({ result, start }: { result: ModelBenchmarksResult; start?: ReactNode }) {
     const { t } = useTranslation('models');
     useFormatLocale();
     const sidebarId = useId();
-    const models = chartModels(result.models, result.measurements);
+    const models = chartModels(result.models, result.labs ?? [], result.measurements);
+    const labs = chartLabs(result.labs ?? [], models);
     const marks = modelMarks(models);
     const [selection, dispatch] = useReducer(reduceComparison.bind(null, models), undefined, initialSelection);
     const [view, setView] = useState<ModelView>('comparison');
@@ -97,6 +99,7 @@ export function ModelsComparison({ result }: { result: ModelBenchmarksResult }) 
             <Tabs.List
                 aria-label={t('views.label')}
                 className="shrink-0 px-5 max-[760px]:gap-2 max-[760px]:px-2"
+                start={start}
                 end={
                     <IconButton
                         size="sm"
@@ -226,6 +229,7 @@ export function ModelsComparison({ result }: { result: ModelBenchmarksResult }) 
                     )}
                 >
                     <ModelsLegend
+                        labs={labs}
                         models={listed}
                         marks={marks}
                         hidden={selection.hiddenModels}

@@ -1,7 +1,17 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isNotFound, writeAtomic } from '@adecore/agents';
-import { isoWeekOf, usageDateOf, USAGE_MAX_DAYS_PER_BATCH, type UsageCounter as UsageCounterName } from '@ruimte/pulsar';
+import {
+    isoWeekOf,
+    usageDateOf,
+    usageReportCounterOfV1,
+    USAGE_MAX_DAYS_PER_BATCH,
+    USAGE_REPORT_COUNTERS,
+    USAGE_REPORT_TIMINGS,
+    type UsageCounter as UsageCounterV1,
+    type UsageReportCounter,
+    type UsageReportTiming
+} from '@ruimte/pulsar';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 import type { Launcher } from '../telemetry/reporter.ts';
@@ -11,10 +21,14 @@ const DAY_MS = 86_400_000;
 const KEPT_DAYS = USAGE_MAX_DAYS_PER_BATCH + 1;
 const PERSIST_MS = 60_000;
 // A median needs only a handful; a desktop restarted in a loop must not grow the file.
-const MAX_STARTUPS = 32;
+const MAX_SAMPLES = 32;
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+const REPORT_COUNTERS: ReadonlySet<string> = new Set(USAGE_REPORT_COUNTERS);
+const REPORT_TIMINGS: ReadonlySet<string> = new Set(USAGE_REPORT_TIMINGS);
+
+// A day kept before 0.22 has no `timings` and its counters under their old names; `load` renames them.
 const DaySchema = z.object({
     date: z.string().regex(DATE),
     version: z.string(),
@@ -23,6 +37,7 @@ const DaySchema = z.object({
     firstThisWeek: z.boolean(),
     firstThisMonth: z.boolean(),
     startups: z.array(z.number()),
+    timings: z.record(z.string(), z.array(z.number())).optional(),
     counts: z.record(z.string(), z.number().int().min(0))
 });
 
@@ -34,10 +49,31 @@ const StateSchema = z.object({
     days: z.array(DaySchema)
 });
 
-type UsageState = z.infer<typeof StateSchema>;
+type UsageState = Omit<z.infer<typeof StateSchema>, 'days'> & { days: UsageDayRecord[] };
 
-/* One UTC day of counts, with what describes the machine that day. */
-export type UsageDayRecord = Omit<z.infer<typeof DaySchema>, 'counts'> & { counts: Partial<Record<UsageCounterName, number>> };
+/* One UTC day of counts and timing samples, with what describes the machine that day. */
+export type UsageDayRecord = Omit<z.infer<typeof DaySchema>, 'counts' | 'timings'> & {
+    counts: Partial<Record<UsageReportCounter, number>>;
+    timings: Partial<Record<UsageReportTiming, number[]>>;
+};
+
+/* A day as an older version kept it, under the report's names; a counter without one, such as a verb group, is dropped. */
+function currentDay(day: z.infer<typeof DaySchema>): UsageDayRecord {
+    const { timings, counts, ...description } = day;
+    const current: UsageDayRecord = { ...description, counts: {}, timings: {} };
+    for (const [name, value] of Object.entries(counts)) {
+        const counter = REPORT_COUNTERS.has(name) ? (name as UsageReportCounter) : usageReportCounterOfV1(name as UsageCounterV1);
+        if (counter !== null) {
+            current.counts[counter] = (current.counts[counter] ?? 0) + value;
+        }
+    }
+    for (const [name, samples] of Object.entries(timings ?? {})) {
+        if (REPORT_TIMINGS.has(name)) {
+            current.timings[name as UsageReportTiming] = samples.slice(0, MAX_SAMPLES);
+        }
+    }
+    return current;
+}
 
 export interface UsageStateStore {
     read(): Promise<string | null>;
@@ -120,7 +156,7 @@ export class UsageCounter {
         try {
             const parsed = StateSchema.safeParse(JSON.parse(text));
             if (parsed.success) {
-                this.state = parsed.data;
+                this.state = { ...parsed.data, days: parsed.data.days.map(currentDay) };
                 return;
             }
         } catch {
@@ -134,14 +170,14 @@ export class UsageCounter {
         return this.state.firstDate;
     }
 
-    count(counter: UsageCounterName, by = 1): void {
+    count(counter: UsageReportCounter, by = 1): void {
         const day = this.today();
         day.counts[counter] = (day.counts[counter] ?? 0) + by;
         this.dirty();
     }
 
     /* Counts `key` once per UTC day under `counter`; the key stays on this machine and goes with the day. */
-    countOnce(counter: UsageCounterName, key: string): void {
+    countOnce(counter: UsageReportCounter, key: string): void {
         const day = this.today();
         if (this.seenDate !== day.date) {
             this.seen.clear();
@@ -163,8 +199,18 @@ export class UsageCounter {
 
     startup(ms: number): void {
         const day = this.today();
-        if (day.startups.length < MAX_STARTUPS) {
+        if (day.startups.length < MAX_SAMPLES) {
             day.startups.push(ms);
+            this.dirty();
+        }
+    }
+
+    /* One sample of a timing, in milliseconds; the day sends their median. */
+    sample(timing: UsageReportTiming, ms: number): void {
+        const day = this.today();
+        const samples = (day.timings[timing] ??= []);
+        if (samples.length < MAX_SAMPLES) {
+            samples.push(ms);
             this.dirty();
         }
     }
@@ -252,6 +298,7 @@ export class UsageCounter {
             firstThisWeek: week !== this.state.lastWeek,
             firstThisMonth: month !== this.state.lastMonth,
             startups: [],
+            timings: {},
             counts: {}
         };
         this.state.firstDate ??= date;

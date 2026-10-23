@@ -35,6 +35,7 @@ import { machineAnswers } from '@/transport/features';
 import { reportPresence } from '@/transport/presence';
 import type { Transport } from '@/transport/transport';
 import { LinkHold } from '@/transport/workspace-hold';
+import { workspaceOpening } from '@/telemetry/workspace-load';
 
 /*
  * One daemon, as everything inside a workspace sees it. The address and the credential are
@@ -365,6 +366,7 @@ export async function enterWorkspace(endpointId: string, request: OpenRequest): 
     }
     opens += 1;
     const ticket = opens;
+    workspaceOpening();
     const connection = connect(endpoint, (opened, summary) => {
         if (ticket < shownOpen) {
             releaseUnless(opened, summary.projectId, projectInStores());

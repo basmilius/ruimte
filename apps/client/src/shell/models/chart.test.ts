@@ -1,11 +1,18 @@
 import { describe, expect, test } from 'bun:test';
-import { chartModels, costAxis, frontier, intelligenceAxis, modelMarks, movePoint, nearestPoint } from '@/shell/models/chart';
+import type { BenchmarkLab } from '@ruimte/pulsar';
+import { chartLabs, chartModels, costAxis, frontier, intelligenceAxis, modelMarks, movePoint, nearestPoint } from '@/shell/models/chart';
 
 function point(costPerTask: number, intelligence: number) {
     return { costPerTask, intelligence };
 }
 
-function model(id: string, provider: 'claude' | 'codex', legacy = false) {
+function lab(id: string, light: string[], dark: string[]): BenchmarkLab {
+    return { id, name: id, logo: { viewBox: '0 0 24 24', path: 'M0 0h24v24H0z' }, colors: { light, dark } };
+}
+
+const LABS = [lab('claude', ['#a00000', '#b00000', '#c00000'], ['#d00000', '#e00000', '#f00000']), lab('codex', ['#000a00'], ['#000b00'])];
+
+function model(id: string, provider: string, legacy = false) {
     return { id, name: id, provider, legacy, points: [] };
 }
 
@@ -60,29 +67,40 @@ describe('the axes', () => {
 describe('the marks', () => {
     test('uses partial measurements in canonical effort order and supports an older cached response', () => {
         const original = { ...model('haiku', 'claude'), points: [{ effort: 'max', intelligence: 42, costPerTask: 0.2 }] };
-        expect(chartModels([original])[0]?.points).toEqual(original.points);
+        expect(chartModels([original], LABS)[0]?.points).toEqual(original.points);
         const measurements = [
             { modelId: 'haiku', effort: 'max', intelligence: 42, costPerTask: 0.2 },
             { modelId: 'other', effort: 'low', intelligence: 12 },
             { modelId: 'haiku', effort: 'low', coding: 0, outputSpeed: 120 }
         ];
-        expect(chartModels([original], measurements)[0]?.points).toEqual([
+        expect(chartModels([original], LABS, measurements)[0]?.points).toEqual([
             { effort: 'low', coding: 0, outputSpeed: 120 },
             { effort: 'max', intelligence: 42, costPerTask: 0.2 }
         ]);
         expect(measurements[0]?.effort).toBe('max');
     });
 
-    test('keep current model colors stable when legacy models are listed', () => {
-        const marks = modelMarks([model('old', 'claude', true), model('opus', 'claude'), model('sonnet', 'claude'), model('sol', 'codex')]);
-        expect(marks.get('opus')).toEqual({ color: 'var(--model-chart-claude-0)' });
-        expect(marks.get('sonnet')).toEqual({ color: 'var(--model-chart-claude-1)' });
-        expect(marks.get('old')).toEqual({ color: 'var(--model-chart-claude-2)' });
-        expect(marks.get('sol')).toEqual({ color: 'var(--model-chart-codex-0)' });
+    test("take the lab's colors per theme and keep current model colors stable when legacy models are listed", () => {
+        const models = chartModels(
+            [model('old', 'claude', true), model('opus', 'claude'), model('sonnet', 'claude'), model('sol', 'codex'), model('luna', 'codex')],
+            LABS
+        );
+        const marks = modelMarks(models);
+        expect(marks.get('opus')).toEqual({ color: 'light-dark(#a00000, #d00000)' });
+        expect(marks.get('sonnet')).toEqual({ color: 'light-dark(#b00000, #e00000)' });
+        expect(marks.get('old')).toEqual({ color: 'light-dark(#c00000, #f00000)' });
+        expect(marks.get('sol')).toEqual({ color: 'light-dark(#000a00, #000b00)' });
+        expect(marks.get('luna')).toEqual({ color: 'light-dark(#000a00, #000b00)' });
     });
 
-    test('leave out a provider this client has no color for', () => {
-        expect(chartModels([model('opus', 'claude'), { ...model('other', 'claude'), provider: 'someone' }]).map((entry) => entry.id)).toEqual(['opus']);
+    test('leave out a model whose lab the address book did not describe', () => {
+        expect(chartModels([model('opus', 'claude'), model('other', 'someone')], LABS).map((entry) => entry.id)).toEqual(['opus']);
+        expect(chartModels([model('opus', 'claude')], [])).toEqual([]);
+    });
+
+    test('list the labs in the order of the address book, only those with a model', () => {
+        const labs = [lab('xai', ['#000000'], ['#ffffff']), ...LABS];
+        expect(chartLabs(labs, chartModels([model('sol', 'codex'), model('opus', 'claude')], labs)).map((entry) => entry.id)).toEqual(['claude', 'codex']);
     });
 });
 

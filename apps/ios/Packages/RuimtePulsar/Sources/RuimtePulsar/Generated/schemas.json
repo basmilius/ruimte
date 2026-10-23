@@ -282,6 +282,71 @@
       "error"
     ]
   },
+  "BenchmarkLabSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "maxLength": 32
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "logo": {
+        "type": "object",
+        "properties": {
+          "viewBox": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?( -?\\d+(\\.\\d+)?){3}$"
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 8192,
+            "pattern": "^[MmLlHhVvCcSsQqTtAaZz0-9eE.,\\s+-]+$"
+          }
+        },
+        "required": [
+          "viewBox",
+          "path"
+        ]
+      },
+      "colors": {
+        "type": "object",
+        "properties": {
+          "light": {
+            "minItems": 1,
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$"
+            }
+          },
+          "dark": {
+            "minItems": 1,
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^#[0-9a-f]{6}$"
+            }
+          }
+        },
+        "required": [
+          "light",
+          "dark"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "logo",
+      "colors"
+    ]
+  },
   "BenchmarkMeasurementSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -792,6 +857,74 @@
       },
       "intelligenceIndexVersion": {
         "type": "number"
+      },
+      "labs": {
+        "maxItems": 16,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "logo": {
+              "type": "object",
+              "properties": {
+                "viewBox": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(\\.\\d+)?( -?\\d+(\\.\\d+)?){3}$"
+                },
+                "path": {
+                  "type": "string",
+                  "maxLength": 8192,
+                  "pattern": "^[MmLlHhVvCcSsQqTtAaZz0-9eE.,\\s+-]+$"
+                }
+              },
+              "required": [
+                "viewBox",
+                "path"
+              ]
+            },
+            "colors": {
+              "type": "object",
+              "properties": {
+                "light": {
+                  "minItems": 1,
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-f]{6}$"
+                  }
+                },
+                "dark": {
+                  "minItems": 1,
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-f]{6}$"
+                  }
+                }
+              },
+              "required": [
+                "light",
+                "dark"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "logo",
+            "colors"
+          ]
+        }
       }
     },
     "required": [
@@ -54127,6 +54260,62 @@
     ]
   },
   "request.usage.startup.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.usage.count.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "counter": {
+        "type": "string",
+        "enum": [
+          "dictations",
+          "connections.local",
+          "connections.lan",
+          "connections.direct",
+          "connections.turn",
+          "connectFailures.timeout",
+          "connectFailures.refused",
+          "connectFailures.signaling",
+          "connectFailures.ice",
+          "connectFailures.closed",
+          "connectFailures.other"
+        ]
+      }
+    },
+    "required": [
+      "counter"
+    ]
+  },
+  "request.usage.count.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.usage.timing.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "timing": {
+        "type": "string",
+        "enum": [
+          "remoteConnectMs"
+        ]
+      },
+      "ms": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 600000
+      }
+    },
+    "required": [
+      "timing",
+      "ms"
+    ]
+  },
+  "request.usage.timing.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}

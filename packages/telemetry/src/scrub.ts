@@ -79,7 +79,14 @@ export interface Scrubber {
     /* An event rebuilt from the allow-list; null for anything that is not an error event. */
     scrubEvent<T extends object>(event: T): T | null;
     scrubBreadcrumb<T extends object>(breadcrumb: T): T | null;
+    /* A log line of a service: its first line scrubbed, and only scalar attributes, scrubbed, without the host or a person. */
+    scrubLog<T extends { message: unknown; attributes?: Record<string, unknown> }>(log: T): ScrubbedLog<T>;
 }
+
+export type ScrubbedLog<T> = Omit<T, 'message' | 'attributes'> & { message: string; attributes: Record<string, string | number | boolean> };
+
+// The SDK names the host and, when it knows one, the person; a log line of a service carries neither.
+const DROPPED_LOG_ATTRIBUTE = /^(?:server\.address|user\.|client\.address)/;
 
 export function createScrubber(context: ScrubContext = {}): Scrubber {
     const allowedTags = new Set(context.tags ?? DEFAULT_TAGS);
@@ -312,7 +319,22 @@ export function createScrubber(context: ScrubContext = {}): Scrubber {
         return result as T;
     };
 
-    return { scrubText, scrubPath, scrubEvent, scrubBreadcrumb };
+    const scrubLog = <T extends { message: unknown; attributes?: Record<string, unknown> }>(log: T): ScrubbedLog<T> => {
+        const attributes: Record<string, string | number | boolean> = {};
+        for (const [key, value] of Object.entries(log.attributes ?? {})) {
+            if (DROPPED_LOG_ATTRIBUTE.test(key)) {
+                continue;
+            }
+            if (typeof value === 'string') {
+                attributes[key] = truncate(scrubText(value), MAX_MESSAGE);
+            } else if (typeof value === 'number' || typeof value === 'boolean') {
+                attributes[key] = value;
+            }
+        }
+        return { ...log, message: scrubMessage(String(log.message)), attributes };
+    };
+
+    return { scrubText, scrubPath, scrubEvent, scrubBreadcrumb, scrubLog };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

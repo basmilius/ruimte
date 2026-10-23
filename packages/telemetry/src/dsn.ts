@@ -1,11 +1,17 @@
 /* Where each part of Ruimte sends its crash reports. A DSN only lets a client send, so it is no secret. */
 export const TELEMETRY_DSN = {
-    daemon: 'https://4a64a9ae7ddcb39c9f23e472b9b0fc54@o4512264930983936.ingest.de.sentry.io/4512264949334096',
-    desktop: 'https://803b8dade75e2b308e2e97a5f639ee22@o4512264930983936.ingest.de.sentry.io/4512264955691088',
-    station: 'https://7da04963248be92d21e14f25b1d0eaca@o4512264930983936.ingest.de.sentry.io/4512264959688784'
+    daemon: 'https://ace29cdab42746249e5753874d74c401@ingest.bmnw.nl/3',
+    desktop: 'https://1b7ea4823fd6466f9de7f4c6bee0fc8d@ingest.bmnw.nl/4',
+    station: 'https://313c4ee0419c4e3eac2e8c92be270bb2@ingest.bmnw.nl/5'
 };
 
 export type TelemetrySurface = keyof typeof TELEMETRY_DSN;
+
+/* Observatory's usage ingest of the daemon's app, which takes the anonymous `UsageBatch` as it is. */
+export function usageIngestUrl(dsn: string = TELEMETRY_DSN.daemon): string {
+    const url = new URL(dsn);
+    return `${url.origin}/api${url.pathname}/usage/?sentry_key=${url.username}`;
+}
 
 /* The release every part reports under, and the one CI creates for a tag `v<version>`. */
 export function telemetryRelease(version: string): string {

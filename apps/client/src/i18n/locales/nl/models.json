@@ -138,5 +138,8 @@
         "days_one": "{{value}} dag geleden bijgewerkt",
         "days_other": "{{value}} dagen geleden bijgewerkt",
         "version": "Intelligence Index v{{version}}"
+    },
+    "bench": {
+        "home": "Ruimte, Space for AI Engineering"
     }
 }

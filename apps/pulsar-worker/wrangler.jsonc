@@ -5,6 +5,8 @@
   "account_id": "5e565cf9fa55b0eae1f8131903da2ca9",
   // The newest date the pinned miniflare's workerd knows, so the tests run the same runtime rules.
   "compatibility_date": "2026-08-01",
+  // `@sentry/cloudflare` needs Node's AsyncLocalStorage and diagnostics channels (`src/telemetry.ts`).
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
   "routes": [{ "pattern": "pulsar.ruimte.app", "custom_domain": true }],
@@ -16,14 +18,19 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Anonymous usage, one batch of finished days per machine a day (`src/usage.ts`, layout in `packages/pulsar/src/usage.ts`).
-  "analytics_engine_datasets": [{ "binding": "USAGE", "dataset": "ruimte_usage" }],
+  // In front of the usage relay of daemons before 0.22 (`src/usage.ts`).
   "ratelimits": [{ "name": "USAGE_LIMIT", "namespace_id": "2001", "simple": { "limit": 3, "period": 60 } }],
   "vars": {
     "PUBLIC_ORIGIN": "https://pulsar.ruimte.app",
     "APNS_TOPIC": "app.ruimte.mobile",
     "APNS_TEAM_ID": "7RGV9KKX87",
-    "ALLOWED_ORIGINS": "https://station.ruimte.app"
+    "ALLOWED_ORIGINS": "https://station.ruimte.app,https://bench.ruimte.app",
+    // Every accepted usage batch goes on here; the upload token beside it is the secret OBSERVATORY_UPLOAD_TOKEN.
+    "OBSERVATORY_USAGE_URL": "https://ingest.bmnw.nl/api/3/usage/?sentry_key=ace29cdab42746249e5753874d74c401",
+    // The nightly cleanup checks in here (`src/check-in.ts`), so a run that is missed or fails opens an issue.
+    "OBSERVATORY_CHECK_IN_URL": "https://ingest.bmnw.nl/api/7/envelope/?sentry_key=9ff9af7a3b804d228a025d52b6040176",
+    // Errors and log lines (`src/telemetry.ts`); the deploy adds OBSERVATORY_RELEASE, `pulsar@<commit>`.
+    "OBSERVATORY_DSN": "https://9ff9af7a3b804d228a025d52b6040176@ingest.bmnw.nl/7"
   },
   // Expired logins, codes, rate limit windows and dead sessions; and the model benchmarks, every three hours.
   // `scheduled()` tells them apart by the expression, so a change here is a change in `src/index.ts` too.

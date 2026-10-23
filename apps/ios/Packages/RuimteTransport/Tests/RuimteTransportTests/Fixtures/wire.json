@@ -335,6 +335,8 @@
     "usage.limits",
     "usage.refreshLimits",
     "usage.startup",
+    "usage.count",
+    "usage.timing",
     "processes.subscribe",
     "processes.unsubscribe",
     "processes.signal",

@@ -26,8 +26,8 @@ export function telemetryBuild(): boolean {
 }
 
 /*
- * Crashes and errors of the shell, and native crashes of its processes as minidumps. No tracing,
- * no sessions, no breadcrumbs, no logs, and nothing from a page: the client reports its own.
+ * Crashes and errors of the shell, native crashes of its processes as minidumps, and the app's session
+ * per run without a user. No tracing, no breadcrumbs, no logs, and nothing from a page: the client reports its own.
  */
 export function startTelemetry(): void {
     if (!telemetryBuild() || starting) {
@@ -54,7 +54,9 @@ export function startTelemetry(): void {
                     loaded.functionToStringIntegration(),
                     loaded.linkedErrorsIntegration(),
                     loaded.dedupeIntegration(),
-                    loaded.nodeContextIntegration({ app: false, cloudResource: false, culture: false, device: { cpu: false, memory: false } })
+                    loaded.nodeContextIntegration({ app: false, cloudResource: false, culture: false, device: { cpu: false, memory: false } }),
+                    // The one session of the app per run, which a native crash of any of its processes marks; the windows hold none of their own.
+                    loaded.mainProcessSessionIntegration()
                 ],
                 attachStacktrace: false,
                 maxBreadcrumbs: 0,

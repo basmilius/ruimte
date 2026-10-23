@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { BenchmarkLab } from '@ruimte/pulsar';
 import type { ChartModel } from './chart';
 import {
     barAxis,
@@ -15,11 +16,16 @@ import {
     sortedPoints
 } from './comparison';
 
+function lab(id: string): BenchmarkLab {
+    return { id, name: id, logo: { viewBox: '0 0 24 24', path: 'M0 0h24v24H0z' }, colors: { light: ['#000000'], dark: ['#ffffff'] } };
+}
+
 const MODELS: ChartModel[] = [
     {
         id: 'haiku',
         name: 'Haiku 5.5',
         provider: 'claude',
+        lab: lab('claude'),
         legacy: false,
         points: [
             { effort: 'low', intelligence: 40.04, costPerTask: 0.04 },
@@ -33,6 +39,7 @@ const MODELS: ChartModel[] = [
         id: 'gpt',
         name: 'GPT',
         provider: 'codex',
+        lab: lab('codex'),
         legacy: false,
         points: [
             { effort: 'low', intelligence: 40.01, costPerTask: 0.09 },
@@ -43,13 +50,14 @@ const MODELS: ChartModel[] = [
         id: 'haiku-old',
         name: 'Haiku 4.5',
         provider: 'claude',
+        lab: lab('claude'),
         legacy: true,
         points: [
             { effort: 'off', intelligence: 30, costPerTask: 0.02 },
             { effort: 'thinking', intelligence: 35, costPerTask: 0.3 }
         ]
     },
-    { id: 'empty', name: 'No data', provider: 'codex', legacy: false, points: [] }
+    { id: 'empty', name: 'No data', provider: 'codex', lab: lab('codex'), legacy: false, points: [] }
 ];
 
 describe('model comparison selection', () => {

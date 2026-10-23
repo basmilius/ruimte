@@ -171,17 +171,19 @@ function reactCompiler(): PluginOption[] {
 
 const shiki = shikiModules();
 
+/*
+ * The model comparison alone at `bench.ruimte.app` (`vite build --mode bench`), from `bench.html`. It has
+ * no workspace, video or visual to serve, so the plugins that write those stay out of its build.
+ */
 export default defineConfig(({ mode }) => ({
     plugins: [
         adecoreSources(),
         react(),
         ...reactCompiler(),
         tailwindcss(),
-        bytesWorker(),
-        pdfjsAssets(),
-        visualHostPage(),
+        ...(mode === 'bench' ? [] : [bytesWorker(), pdfjsAssets(), visualHostPage()]),
         shikiOnce(shiki, true),
-        startChunkGuard(),
+        ...(mode === 'bench' ? [] : [startChunkGuard()]),
         scriptFilesGuard(),
         ...(mode === 'station' ? [stationHead()] : [])
     ],
@@ -189,7 +191,8 @@ export default defineConfig(({ mode }) => ({
         'import.meta.env.RUIMTE_TELEMETRY_VERSION': JSON.stringify(telemetryVersion)
     },
     build: {
-        sourcemap: telemetryVersion === '' ? false : 'hidden'
+        sourcemap: telemetryVersion === '' ? false : 'hidden',
+        ...(mode === 'bench' ? { rolldownOptions: { input: fileURLToPath(new URL('./bench.html', import.meta.url)) } } : {})
     },
     resolve: {
         alias: {

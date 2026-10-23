@@ -346,7 +346,7 @@ describe('WorktreeMerge', () => {
 
         function mergesCounted(): number {
             clock += 86_400_000;
-            return counter.finished()[0]?.counts.worktreeMerges ?? 0;
+            return counter.finished()[0]?.counts['worktree.merges'] ?? 0;
         }
 
         beforeEach(() => {

@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ruimte/pulsar": "workspace:*"
+    "@ruimte/pulsar": "workspace:*",
+    "@ruimte/telemetry": "workspace:*",
+    "@sentry/bun": "11.8.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

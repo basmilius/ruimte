@@ -9,7 +9,7 @@ import {
     type BrokerServerFrame,
     type SignalEnvelope
 } from '@ruimte/pulsar';
-import { Broker, CLOSE, type Peer, type PeerSocket } from './broker.ts';
+import { Broker, CLOSE, type BrokerMeter, type Peer, type PeerSocket } from './broker.ts';
 import { DEFAULT_LIMITS, type BrokerLimits } from './config.ts';
 import type { TurnPeer, TurnProvider } from './turn.ts';
 
@@ -523,5 +523,55 @@ describe('the broker without sockets', () => {
         expect(socket.sent.at(-1)).toMatchObject({ type: 'error', code: 'bad-frame' });
         // Already announced, so the socket stays; only the frame was wrong.
         expect(socket.closed).toBeNull();
+    });
+});
+
+describe('what the broker counts', () => {
+    function recordingMeter() {
+        const counted: string[] = [];
+        const meter: BrokerMeter = {
+            rateLimited: (limit) => counted.push(`limited:${limit}`),
+            relayed: (outcome) => counted.push(`relay:${outcome}`),
+            ice: (outcome) => counted.push(`ice:${outcome}`),
+            online: () => undefined
+        };
+        return { meter, counted };
+    }
+
+    test('a relay that arrives, one to nobody and one over the limit', async () => {
+        const { meter, counted } = recordingMeter();
+        const broker = new Broker({ ...DEFAULT_LIMITS, relaysPerMinutePerKey: 2 }, () => 0, undefined, { warn: () => undefined }, meter);
+        const machine = connect(broker, 'machine', newKey());
+        const client = connect(broker, 'client', newKey());
+        await settle();
+        await client.peer.relay(machine.key.publicKey, offer);
+        await client.peer.relay(newKey().publicKey, offer);
+        await client.peer.relay(machine.key.publicKey, offer);
+        await settle();
+        expect(counted).toEqual(['relay:delivered', 'relay:not-connected', 'limited:relays']);
+    });
+
+    test('a refused upgrade, and ICE servers handed out or not, without a key or an address', async () => {
+        const { meter, counted } = recordingMeter();
+        let failing = false;
+        const turn: TurnProvider = {
+            iceServersFor: async () => {
+                if (failing) {
+                    throw new Error('secret file missing');
+                }
+                return { servers: [], expiresAt: 5_000 };
+            }
+        };
+        const broker = new Broker({ ...DEFAULT_LIMITS, connectionsPerMinutePerIp: 1 }, () => 0, turn, { warn: () => undefined }, meter);
+        broker.admit('192.0.2.1');
+        broker.admit('192.0.2.1');
+        const machine = connect(broker, 'machine', newKey());
+        await settle();
+        machine.peer.ice();
+        await settle();
+        failing = true;
+        machine.peer.ice();
+        await settle();
+        expect(counted).toEqual(['limited:connections', 'ice:issued', 'ice:failed']);
     });
 });

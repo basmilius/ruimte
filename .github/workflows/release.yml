@@ -87,9 +87,8 @@ jobs:
       - uses: ./.github/actions/client-source-maps
         with:
           dist: apps/client/dist
-          project: desktop
           release: ruimte@${{ env.RUIMTE_VERSION }}
-          auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -124,6 +123,12 @@ jobs:
           bun run build:main
           bun x electron-builder --mac --arm64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION" -c.mac.notarize=true
+      - uses: ./.github/actions/electron-symbols
+        with:
+          platform: darwin
+          arch: arm64
+          release: ruimte@${{ env.RUIMTE_VERSION }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
       - name: Shred the key
         if: always()
         run: rm -f "$RUNNER_TEMP/AuthKey.p8"
@@ -158,9 +163,8 @@ jobs:
       - uses: ./.github/actions/client-source-maps
         with:
           dist: apps/client/dist
-          project: desktop
           release: ruimte@${{ env.RUIMTE_VERSION }}
-          auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -182,6 +186,12 @@ jobs:
           bun run build:main
           bun x electron-builder --linux --${{ matrix.arch }} --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
+      - uses: ./.github/actions/electron-symbols
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+          release: ruimte@${{ env.RUIMTE_VERSION }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
 
   # Unsigned until Bas picks a code signing route (docs/RELEASE.md, "Windows"); the certificate goes in
   # here as WIN_CSC_LINK and WIN_CSC_KEY_PASSWORD, or as a signing service's step before the build.
@@ -206,9 +216,8 @@ jobs:
       - uses: ./.github/actions/client-source-maps
         with:
           dist: apps/client/dist
-          project: desktop
           release: ruimte@${{ env.RUIMTE_VERSION }}
-          auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
       - name: Compile the daemon
         env:
           RUIMTE_TELEMETRY: '1'
@@ -230,29 +239,38 @@ jobs:
           bun run build:main
           bun x electron-builder --win --x64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION"
+      - uses: ./.github/actions/electron-symbols
+        with:
+          platform: win32
+          arch: x64
+          release: ruimte@${{ env.RUIMTE_VERSION }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
 
-  # The release the daemon, the shell and the page report under, `ruimte@<version>`. Bun maps a
-  # stack trace of the daemon back to the source inside the binary; the page's source maps go up from
-  # the build jobs. Reports arrive without it as well, so an error tracker that is down never holds
-  # up a release.
+  # The deploy of the release the daemon, the shell and the page report under, `ruimte@<version>`, once
+  # it is published, so its commits run from the release before. Bun maps a stack trace of the daemon
+  # back to the source inside the binary; the page's source maps and Electron's symbols go up from the
+  # build jobs. Reports arrive without it as well, so an error tracker that is down never holds up a
+  # release.
   error-tracking:
-    needs: draft
+    needs: publish
     runs-on: ubuntu-latest
     continue-on-error: true
     timeout-minutes: 5
+    env:
+      OBSERVATORY_UPLOAD_TOKEN: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
     steps:
-      - name: Create the release
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ruimte
-        run: |
-          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
-            echo "::warning::SENTRY_AUTH_TOKEN is empty; no release created"
-            exit 0
-          fi
-          release="ruimte@${GITHUB_REF_NAME#v}"
-          npx --yes @sentry/cli@3.8.0 releases new "$release" --project daemon --project desktop
-          npx --yes @sentry/cli@3.8.0 releases finalize "$release"
+      - name: Version from the tag
+        run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: No token, no deploy
+        if: env.OBSERVATORY_UPLOAD_TOKEN == ''
+        run: echo "::warning::OBSERVATORY_UPLOAD_TOKEN is empty; no deploy reported"
+      - name: Report the deploy
+        if: env.OBSERVATORY_UPLOAD_TOKEN != ''
+        uses: basmilius/observatory-action@dae861d69a193baacbe35c29b9b99754f2938f10 # v1
+        with:
+          url: https://ingest.bmnw.nl
+          token: ${{ env.OBSERVATORY_UPLOAD_TOKEN }}
+          version: ruimte@${{ env.RUIMTE_VERSION }}
 
   publish:
     needs: [verify, build, linux, windows]

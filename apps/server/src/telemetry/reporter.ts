@@ -123,12 +123,16 @@ export function markInApp<T extends object>(event: T): T {
     return event;
 }
 
-/* Starts reporting for the serving daemon. Errors only: no tracing, no sessions, no breadcrumbs, no logs. */
-export async function startTelemetry(current: TelemetrySettings): Promise<void> {
-    const loaded = await import('@sentry/bun');
-    settings = current;
-    const beforeSend = daemonBeforeSend(current, () => [...secrets, ...projectRedactions]);
-    loaded.initWithoutDefaultIntegrations({
+/*
+ * What the serving daemon reports with: errors, and a session per run without a user, so a release's crash-free
+ * runs are counted and nothing else. No tracing, no breadcrumbs, no logs.
+ */
+export function daemonClientOptions(
+    loaded: Sentry,
+    current: TelemetrySettings,
+    beforeSend: <T extends object>(event: T) => T | null
+): Parameters<Sentry['init']>[0] {
+    return {
         dsn: current.dsn,
         release: current.release,
         environment: 'production',
@@ -140,12 +144,26 @@ export async function startTelemetry(current: TelemetrySettings): Promise<void> 
             loaded.functionToStringIntegration(),
             loaded.linkedErrorsIntegration(),
             loaded.dedupeIntegration(),
-            loaded.nodeContextIntegration({ app: false, cloudResource: false, culture: false, device: { cpu: false, memory: false } })
+            loaded.nodeContextIntegration({ app: false, cloudResource: false, culture: false, device: { cpu: false, memory: false } }),
+            loaded.processSessionIntegration()
         ],
         initialScope: { tags: { ...current.tags } },
         beforeSend: (event) => beforeSend(event),
         beforeBreadcrumb: () => null
-    });
+    };
+}
+
+/* Starts reporting for the serving daemon (`daemonClientOptions`). */
+export async function startTelemetry(current: TelemetrySettings): Promise<void> {
+    const loaded = await import('@sentry/bun');
+    settings = current;
+    loaded.initWithoutDefaultIntegrations(
+        daemonClientOptions(
+            loaded,
+            current,
+            daemonBeforeSend(current, () => [...secrets, ...projectRedactions])
+        )
+    );
     sentry = loaded;
 }
 
@@ -274,8 +292,12 @@ export function helperStderrOf(lines: readonly string[]): string[] {
     return lines.slice(-STDERR_LINES).map(blankQuoted);
 }
 
-/* Sends what is still queued before a clean exit. */
+/*
+ * Sends what is still queued before a clean exit, and this run's session as exited: the SDK ends it only on
+ * `beforeExit`, which a daemon that stops on a signal never reaches.
+ */
 export async function stopTelemetry(): Promise<void> {
+    sentry?.endSession();
     await sentry?.close(FLUSH_MS);
 }
 

@@ -69,23 +69,34 @@ A release build also counts how this machine is used and sends the totals once a
 
 `UsageCounter` adds one to a counter in memory per UTC day and writes `usage/stats.json` at most once a minute and on shutdown. It keeps today and the seven days before it, the first day it counted (for the cohort week) and the last week and month it was active in (for `firstThisWeek` and `firstThisMonth`). Every count is one call at its site (`countUsage` and the helpers in `src/stats/usage-stats.ts`). What counts once a day remembers its keys (a project, a view, a session or a machine id) in memory for that day only; they are never written or sent, and go with the day, a restart or the switch:
 
+Every name comes from the allow-list `USAGE_REPORT_COUNTERS` in `packages/pulsar/src/usage-report.ts`. A name with a dot is one value of a dimension, with `other` where the set can grow, so nothing a person typed or chose becomes a name.
+
 | Counter | Where it counts |
 | --- | --- |
-| `projectsOpened` | distinct projects opened per day: an answered `project.open`, each project once a day, so a client's open after a reconnect does not count again |
-| `views*` | distinct views shown per day, by kind: a view that is the active view of a client's local state (`project.save-local`), each view of a project once a day |
-| `terminalsStarted` | a session the session manager starts without `exec`, so not a launch |
-| `chats*` | a chat that opens with no stored record, by provider |
-| `turns*` | the first `running` item of each new turn in a chat, by provider |
-| `verbs*` | a `ruimte-context` verb that ran, by its group in `USAGE_VERB_COUNTERS`, `list` and `read` included |
-| `agentsDelegated`, `teamsDelegated` | an `agent` or `team` verb that ran |
-| `browserActions`, `deviceActions`, `databaseActions`, `computerActions` | the `browser`, `device`, `database` and `computer` verbs, and a person's `browser.navigate`, `browser.command`, `device.boot`, `device.shutdown`, `device.action`, `device.capture`, `device.record`, `device.clipboard`, `database.request` and `computer.control` |
-| `launchesRun` | a launch the runner started, by a person, an agent, its project or a worktree task |
-| `worktreeMerges` | a worktree merge that landed on the target branch; not one that stopped on a conflict or a hook, or had nothing to merge |
-| `clientsDesktop`, `clientsIos`, `clientsStation` | a client that is not the local secret, once a day per session its key proved, by the `client` it names in `endpoint.info` |
-| `clientsPeer` | another machine working here as a peer, once a day per machine |
+| `projects.opened` | distinct projects opened per day: an answered `project.open`, each project once a day, so a client's open after a reconnect does not count again |
+| `views.<kind>` | distinct views shown per day, by kind: a view that is the active view of a client's local state (`project.save-local`), each view of a project once a day |
+| `terminals.started` | a session the session manager starts without `exec`, so not a launch |
+| `chats.<provider>` | a chat that opens with no stored record, by provider (`USAGE_PROVIDERS`) |
+| `turns.<provider>`, `turns.model.<family>`, `turns.mode.<mode>` | the first `running` item of each new turn in a chat, by provider, by the family of its model (`usageModelFamilyOf`, never the id) and by its runtime mode, or `plan` while the chat plans (`src/stats/turn-usage.ts`) |
+| `limits.<provider>`, `limitResumes` | a turn that stopped on a usage limit, once per turn, and the first turn of that chat after it |
+| `verbs.<verb>` | a `ruimte-context` verb that ran, `list` and `read` included |
+| `agents.delegated`, `teams.delegated` | an `agent` or `team` verb that ran |
+| `actions.browser`, `actions.device`, `actions.database`, `actions.computer` | the `browser`, `device`, `database` and `computer` verbs, and a person's `browser.navigate`, `browser.command`, `device.boot`, `device.shutdown`, `device.action`, `device.capture`, `device.record`, `device.clipboard`, `database.request` and `computer.control` |
+| `launches.run` | a launch the runner started, by a person, an agent, its project or a worktree task |
+| `worktree.merges` | a worktree merge that landed on the target branch; not one that stopped on a conflict or a hook, or had nothing to merge |
+| `clients.desktop`, `clients.ios`, `clients.station` | a client that is not the local secret, once a day per session its key proved, by the `client` it names in `endpoint.info` |
+| `clients.peer` | another machine working here as a peer, once a day per machine |
+| `files.opened`, `files.saved` | an `fs.read`, each path once a day, and every `fs.write` |
+| `git.commits`, `git.pushes`, `git.pulls`, `git.conflictsResolved` | a `git.action` by its kind (a sync counts a pull and a push, a commit-push a commit and a push), and a `git.resolve` |
+| `prWatches.started`, `database.queries`, `devices.started`, `voice.sessions`, `peers.tasks` | a `git.pr-watch`, a `database.request` that executes, a `device.boot`, a `voice.start` and a `peer.taskStart` |
+| `plans.created`, `visuals.shown` | a plan written to disk (not a dry run), and a visual a chat showed |
+| `dictations`, `connections.<path>`, `connectFailures.<reason>` | what only the app on the machine sees, handed over with `usage.count` (local secret only): a dictation that landed, and each link it opened by path or failed to open by reason |
 | `startupMs` | the median of the day's `usage.startup` (local secret only): the desktop app's time from its start to its page's first connection, handed out once per start by the shell |
+| `timings.<name>` | the median of a day's samples per name in `USAGE_REPORT_TIMINGS`: the first words of a turn per provider, a terminal's attach, a connection to a machine elsewhere (the last handed over with `usage.timing`, local secret only) |
 
-The finished days go to the address book (`POST /v1/usage`, `apps/pulsar-worker/README.md`) when the daemon starts and whenever a client lists the providers, the moments the model catalogs are fetched too, so nothing runs on a clock of its own. A day goes once: after a 204 (the address book skips a day outside its window and still takes the others) or a 400 (a body it refuses) it is dropped, after any other failure it waits for the next try, at most every ten minutes, until it is more than seven days old. A day carries the version, platform, arch, launcher (as the crash reports tag it), whether the machine was on an account at any moment of it, and the counts; no id, key, name, path or content. `--no-model-fetch` stops only the catalogs: usage has its own switch, so a person who wants neither turns off both.
+`packages/pulsar/fixtures/usage.json` is a batch the daemon's own counter and serializer made (`src/stats/usage-fixture.test.ts`), the contract Observatory builds against. A change to what goes out changes it, and Observatory has to take the new one before the release that sends it.
+
+The finished days go straight to Observatory, the usage ingest of the daemon's app (`usageIngestUrl` in `packages/telemetry`), as many as fit in 32 KB per batch, when the daemon starts and whenever a client lists the providers, the moments the model catalogs are fetched too, so nothing runs on a clock of its own. A day goes once: after a 204 (the ingest skips a day outside its window and still takes the others) or a 400 (a body it refuses) it is dropped, after any other failure it waits for the next try, at most every ten minutes or after the answer's `Retry-After` (up to a day), until it is more than seven days old. A day carries the version, platform, arch, launcher (as the crash reports tag it), whether the machine was on an account at any moment of it, and the counts; no id, key, name, path or content. `--no-model-fetch` stops only the catalogs: usage has its own switch, so a person who wants neither turns off both.
 
 ## The `ruimte` CLI
 
