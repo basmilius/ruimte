@@ -41,7 +41,10 @@ Do not reverse one without asking Bas.
 - `ruimte-context` finds `ruimte.exe`, and `ruimte-context.cmd` ships beside it for cmd and PowerShell.
 - Terminals start in Git Bash with `-l`; `shellName` drops `.exe`, so `plainShell` applies.
 - Ending a session, as in the stopping decision.
-- Deleting to the Recycle Bin (`apps/server/src/fs/trash.ts`).
+- Deleting to the Recycle Bin (`apps/server/src/fs/trash.ts`, the script in `fs/recycle-bin.ts`). The
+  shell is called with no error dialogs and the item is refused, not deleted for good, when the Recycle Bin
+  would not take it: a drive that is not fixed, a bin that is off, an item larger than the bin, or a linked
+  folder. PowerShell is ended after 30 seconds. Unit tested through an injected spawner; unverified on a PC.
 - `bun run dev` through `apps/server/scripts/dev.ts`, since Bun's shell on Windows has no `${VAR:-default}`
   and no `HOME`.
 - `win:` and `nsis:` in `apps/desktop/electron-builder.yml`: an installer and a zip, unsigned.
@@ -165,7 +168,23 @@ Open questions for the next test at the PC:
 
 - Does `bash -l` start in the folder the session asked for, or does Git Bash's profile move it to `$HOME`?
 - Does a console window appear beside the desktop app when it starts the daemon?
-- Does deleting a file that another program holds open show a Windows error dialog?
+- Deleting from the file tree (`fs/recycle-bin.ts`), each with the file still there afterwards unless it
+  is in the Recycle Bin:
+  - A file and a folder land in the Recycle Bin and Restore puts them back. How long does a delete take,
+    with PowerShell compiling its helper each time? A `node_modules` folder finishes within 30 seconds.
+  - A file another program holds open (an open Excel workbook) is refused within seconds with "Another
+    program has the file open", and no dialog appears.
+  - A file on a mapped network drive, on a USB stick and on a SUBST drive is refused.
+  - With "Don't move files to the Recycle Bin" on for the drive, a file is refused. With a custom size of
+    1 MB, a 5 MB file is refused and a 100 KB file lands in the bin.
+  - A junction (`mklink /J linked C:\Elsewhere`) and a directory symbolic link (`mklink /D`) are refused,
+    and both the link and `C:\Elsewhere` stay as they were. A symbolic link to a file lands in the bin as
+    the link, its target untouched.
+  - A folder that holds a junction to a folder outside it lands in the bin, and the folder the junction
+    points to keeps everything in it.
+  - A file in a OneDrive folder whose content is only online lands in the bin.
+  - The same from the daemon the scheduled task started.
+  - Does the shell ever still ask to delete for good (`FOF_WANTNUKEWARNING`)? If so, for what.
 - Does an agent started from a terminal report its status through the hooks?
 - Does the packaged app register the scheduled task without admin, does it start at logon and after a
   crash, and do "Stop the machine" and a restart onto a new build end the whole tree?
