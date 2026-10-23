@@ -350,7 +350,7 @@ export class SessionManager {
         this.sessions.set(session.id, session);
         // A launch runs its command through `exec` and counts as a launch, not as a terminal.
         if (options.exec === undefined) {
-            countUsage('terminalsStarted');
+            countUsage('terminals.started');
         }
         this.announce(session, 'created');
         this.tokens.set(session.hookToken, session.id);

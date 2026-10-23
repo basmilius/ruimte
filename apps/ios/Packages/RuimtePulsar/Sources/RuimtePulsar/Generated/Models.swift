@@ -339,6 +339,98 @@ public struct AddressBookErrorError: Codable, Sendable, Equatable {
     }
 }
 
+public struct BenchmarkLab: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `logo`: BenchmarkLabLogo
+    public let `colors`: BenchmarkLabColors
+
+    public init(`id`: String, `name`: String, `logo`: BenchmarkLabLogo, `colors`: BenchmarkLabColors) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`logo` = `logo`
+        self.`colors` = `colors`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("BenchmarkLabSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `logo` = try container.decode(BenchmarkLabLogo.self, forKey: .`logo`)
+        `colors` = try container.decode(BenchmarkLabColors.self, forKey: .`colors`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`logo`, forKey: .`logo`)
+        try container.encode(`colors`, forKey: .`colors`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `logo` = "logo"
+        case `colors` = "colors"
+    }
+}
+
+public struct BenchmarkLabLogo: Codable, Sendable, Equatable {
+    public let `viewBox`: String
+    public let `path`: String
+
+    public init(`viewBox`: String, `path`: String) {
+        self.`viewBox` = `viewBox`
+        self.`path` = `path`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `viewBox` = try container.decode(String.self, forKey: .`viewBox`)
+        `path` = try container.decode(String.self, forKey: .`path`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`viewBox`, forKey: .`viewBox`)
+        try container.encode(`path`, forKey: .`path`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `viewBox` = "viewBox"
+        case `path` = "path"
+    }
+}
+
+public struct BenchmarkLabColors: Codable, Sendable, Equatable {
+    public let `light`: [String]
+    public let `dark`: [String]
+
+    public init(`light`: [String], `dark`: [String]) {
+        self.`light` = `light`
+        self.`dark` = `dark`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `light` = try container.decode([String].self, forKey: .`light`)
+        `dark` = try container.decode([String].self, forKey: .`dark`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`light`, forKey: .`light`)
+        try container.encode(`dark`, forKey: .`dark`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `light` = "light"
+        case `dark` = "dark"
+    }
+}
+
 public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
     public let `modelId`: String
     public let `effort`: String
@@ -668,12 +760,14 @@ public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
     public let `models`: [BenchmarkModel]
     public let `measurements`: [BenchmarkMeasurement]?
     public let `intelligenceIndexVersion`: Double?
+    public let `labs`: [BenchmarkLab]?
 
-    public init(`fetchedAt`: Int64, `models`: [BenchmarkModel], `measurements`: [BenchmarkMeasurement]? = nil, `intelligenceIndexVersion`: Double? = nil) {
+    public init(`fetchedAt`: Int64, `models`: [BenchmarkModel], `measurements`: [BenchmarkMeasurement]? = nil, `intelligenceIndexVersion`: Double? = nil, `labs`: [BenchmarkLab]? = nil) {
         self.`fetchedAt` = `fetchedAt`
         self.`models` = `models`
         self.`measurements` = `measurements`
         self.`intelligenceIndexVersion` = `intelligenceIndexVersion`
+        self.`labs` = `labs`
     }
 
     public init(from decoder: Decoder) throws {
@@ -683,6 +777,7 @@ public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
         `models` = try container.decode([BenchmarkModel].self, forKey: .`models`)
         `measurements` = try container.decodeIfPresent([BenchmarkMeasurement].self, forKey: .`measurements`)
         `intelligenceIndexVersion` = try container.decodeIfPresent(Double.self, forKey: .`intelligenceIndexVersion`)
+        `labs` = try container.decodeIfPresent([BenchmarkLab].self, forKey: .`labs`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -691,6 +786,7 @@ public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
         try container.encode(`models`, forKey: .`models`)
         try container.encodeIfPresent(`measurements`, forKey: .`measurements`)
         try container.encodeIfPresent(`intelligenceIndexVersion`, forKey: .`intelligenceIndexVersion`)
+        try container.encodeIfPresent(`labs`, forKey: .`labs`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -698,6 +794,7 @@ public struct ModelBenchmarksResult: Codable, Sendable, Equatable {
         case `models` = "models"
         case `measurements` = "measurements"
         case `intelligenceIndexVersion` = "intelligenceIndexVersion"
+        case `labs` = "labs"
     }
 }
 

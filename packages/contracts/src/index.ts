@@ -241,7 +241,9 @@ import {
     EndpointSignPeerAccessResultSchema,
     EndpointSignRegistrationPayloadSchema,
     EndpointSignRegistrationResultSchema,
-    UsageStartupPayloadSchema
+    UsageCountPayloadSchema,
+    UsageStartupPayloadSchema,
+    UsageTimingPayloadSchema
 } from './auth.ts';
 import { DirectSignalPayloadSchema } from './direct.ts';
 import { EndpointReachPayloadSchema, EndpointReachResultSchema } from './reach.ts';
@@ -761,6 +763,8 @@ export const REQUEST_SCHEMAS = {
     'usage.limits': AGENT_REQUEST_SCHEMAS['usage.limits'],
     'usage.refreshLimits': AGENT_REQUEST_SCHEMAS['usage.refreshLimits'],
     'usage.startup': { payload: UsageStartupPayloadSchema, result: EmptySchema },
+    'usage.count': { payload: UsageCountPayloadSchema, result: EmptySchema },
+    'usage.timing': { payload: UsageTimingPayloadSchema, result: EmptySchema },
     'processes.subscribe': { payload: ProcessesSubscribePayloadSchema, result: ProcessesSubscribeResultSchema },
     'processes.unsubscribe': { payload: EmptySchema, result: EmptySchema },
     'processes.signal': { payload: ProcessesSignalPayloadSchema, result: EmptySchema },

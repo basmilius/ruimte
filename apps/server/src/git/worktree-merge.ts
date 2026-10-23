@@ -222,7 +222,7 @@ export class WorktreeMerge {
                 );
             }
             await must('merge', ['merge', '--ff-only', `refs/heads/${branch}`], target.path);
-            countUsage('worktreeMerges');
+            countUsage('worktree.merges');
             summary = `Rebased ${branch} onto ${into} and fast-forwarded.`;
         } else {
             const squash = payload.strategy === 'squash';
@@ -272,7 +272,7 @@ export class WorktreeMerge {
                 if (staged) {
                     const subject = payload.subject?.trim() || `Merge ${branch}`;
                     await must('commit', ['commit', '--message', subject, ...messageBody(payload.body)], target.path);
-                    countUsage('worktreeMerges');
+                    countUsage('worktree.merges');
                 } else {
                     // Git prepares the message even for a squash of nothing.
                     await dropSquashMessage(target.path);
@@ -280,7 +280,7 @@ export class WorktreeMerge {
                 squashed = true;
                 summary = staged ? `Squashed ${branch} into ${into}.` : `${into} already has everything in ${branch}.`;
             } else {
-                countUsage('worktreeMerges');
+                countUsage('worktree.merges');
                 summary = `Merged ${branch} into ${into}.`;
             }
         }

@@ -424,6 +424,16 @@ describe('auth handlers', () => {
         expect(await ask({ reachability: 'loopback', sessionId: null }, 'usage.startup', { ms: 1200 })).toEqual(expect.objectContaining({ ok: true }));
     });
 
+    test('only the app on this machine hands over what it alone counts, and only names from the list', async () => {
+        const lan: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        const local: ClientAccess = { reachability: 'loopback', sessionId: null };
+        expect(await ask(lan, 'usage.count', { counter: 'dictations' })).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await ask(lan, 'usage.timing', { timing: 'remoteConnectMs', ms: 640 })).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await ask(local, 'usage.count', { counter: 'dictations' })).toEqual(expect.objectContaining({ ok: true }));
+        expect(await ask(local, 'usage.timing', { timing: 'remoteConnectMs', ms: 640 })).toEqual(expect.objectContaining({ ok: true }));
+        expect(await ask(local, 'usage.count', { counter: 'git.commits' })).toMatchObject({ ok: false, error: { code: 'bad-request' } });
+    });
+
     test('any client the machine let in sets the size of new nodes of a kind, and every client hears it', async () => {
         const paired: ClientAccess = { reachability: 'lan', sessionId: 's1' };
         expect(await ask(paired, 'endpoint.info')).toMatchObject({ ok: true, result: { nodeSizes: {} } });

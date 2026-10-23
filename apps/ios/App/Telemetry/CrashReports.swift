@@ -3,13 +3,13 @@ import RuimteTransport
 import Sentry
 import Synchronization
 
-/// Crashes, hangs and connection problems of a build that ships, and nothing else: no tracing, no sessions, no
-/// breadcrumbs, no screenshots, no logs. Only the DSN and the start name the service, so the DSN can point at any
+/// Crashes, hangs and connection problems of a build that ships, with a session per run, and nothing else: no tracing,
+/// no breadcrumbs, no screenshots, no logs. Only the DSN and the start name the service, so the DSN can point at any
 /// ingest that takes the same envelopes. `apps/ios/README.md` ("Crash reports") has what goes out.
 enum CrashReports {
     // A DSN only lets a client send, so it is no secret.
     private static let dsn =
-        "https://9bc580fefcb648fbaacfc83ff0a41a79@o4512264930983936.ingest.de.sentry.io/4512264962637904"
+        "https://48ef3786734e40099009e3cf2bf9ffae@ingest.bmnw.nl/6"
     /// The tags a report may carry; every other one is dropped.
     static let tags: Set<String> = ["surface", "problem", "machine", "link", "request", "mismatch"]
     /// What a report keeps of each context, as `scrub.ts` does.
@@ -47,7 +47,8 @@ enum CrashReports {
             options.enableAppHangTracking = true
             options.appHangTimeoutInterval = 2
             options.enableWatchdogTerminationTracking = true
-            options.enableAutoSessionTracking = false
+            // The SDK always names the install in a session (`did`); the app's "Count users" switch in Observatory is off, so the ingest drops it.
+            options.enableAutoSessionTracking = true
             options.enableAutoPerformanceTracing = false
             options.tracesSampleRate = nil
             options.enableUIViewControllerTracing = false

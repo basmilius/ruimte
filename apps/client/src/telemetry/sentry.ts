@@ -1,7 +1,17 @@
-import { captureEvent, captureException, dedupeIntegration, functionToStringIntegration, init, linkedErrorsIntegration } from '@sentry/browser';
+import {
+    browserSessionIntegration,
+    captureEvent,
+    captureException,
+    dedupeIntegration,
+    functionToStringIntegration,
+    init,
+    linkedErrorsIntegration,
+    metrics
+} from '@sentry/browser';
 import { createDailyDedupe, createScrubber, TELEMETRY_DATA_COLLECTION, TELEMETRY_DSN, telemetryRelease } from '@ruimte/telemetry';
 import { useProjectList } from '@/state/project-list';
 import { CLIENT_TAGS, connectionEvent, storageDedupeStore, type ConnectionProblem } from './events';
+import type { PageMetric } from './metrics';
 
 export interface ReporterOptions {
     readonly surface: 'desktop' | 'station';
@@ -12,8 +22,9 @@ export interface ReporterOptions {
 }
 
 /*
- * The SDK behind the page's reports, loaded only once there is something to report. Errors only:
- * no tracing, no sessions, no breadcrumbs, no replays, no logs, and the page's address never goes along.
+ * The SDK behind the page's reports and measurements. Errors, the station's sessions and the metrics in
+ * `report.ts`: no tracing, no breadcrumbs, no replays, no logs, and the page's address never goes along.
+ * A desktop window has no session of its own, since the shell's main process holds the session of the whole app.
  */
 export function startReporter(options: ReporterOptions): void {
     const scrubber = createScrubber({
@@ -28,7 +39,12 @@ export function startReporter(options: ReporterOptions): void {
         environment: 'production',
         dataCollection: TELEMETRY_DATA_COLLECTION,
         defaultIntegrations: false,
-        integrations: [functionToStringIntegration(), linkedErrorsIntegration(), dedupeIntegration()],
+        integrations: [
+            functionToStringIntegration(),
+            linkedErrorsIntegration(),
+            dedupeIntegration(),
+            ...(options.surface === 'station' ? [browserSessionIntegration()] : [])
+        ],
         attachStacktrace: false,
         maxBreadcrumbs: 0,
         sendClientReports: false,
@@ -54,4 +70,13 @@ export function reportError(error: unknown, mechanism: string, handled: boolean)
 
 export function reportConnection(problem: ConnectionProblem): void {
     captureEvent(connectionEvent(problem));
+}
+
+/* A metric with exactly the name, unit and attributes Observatory's Connections dashboard reads (`metrics.ts`). */
+export function recordMetric(metric: PageMetric): void {
+    if (metric.kind === 'count') {
+        metrics.count(metric.name, 1, { attributes: metric.attributes });
+    } else {
+        metrics.distribution(metric.name, metric.value, { unit: 'millisecond', attributes: metric.attributes });
+    }
 }

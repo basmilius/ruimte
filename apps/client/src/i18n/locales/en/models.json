@@ -138,5 +138,8 @@
         "days_one": "Updated {{value}} day ago",
         "days_other": "Updated {{value}} days ago",
         "version": "Intelligence Index v{{version}}"
+    },
+    "bench": {
+        "home": "Ruimte, Space for AI Engineering"
     }
 }

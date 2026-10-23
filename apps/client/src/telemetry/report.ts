@@ -3,13 +3,14 @@ import { ErrorBoundary } from '@adecore/ui';
 import { desktop } from '@/desktop/bridge';
 import { IS_STATION } from '@/station';
 import type { ConnectionProblem } from './events';
+import type { PageMetric } from './metrics';
 
 type Reporter = typeof import('./sentry');
 
 /*
  * The version a release build was stamped with (`vite.config.ts`), empty in development, in tests and
- * in every other build, which therefore report nothing. The SDK is a chunk of its own that only the
- * first report loads, so the start screen carries none of it.
+ * in every other build, which therefore report nothing. The SDK is a chunk of its own, so the start
+ * screen's code carries none of it; a release loads it as it starts, for the session and the metrics.
  */
 const VERSION: string = import.meta.env.RUIMTE_TELEMETRY_VERSION ?? '';
 
@@ -52,6 +53,15 @@ export function startTelemetry(target: Window = window): void {
     target.addEventListener('unhandledrejection', (event) => {
         void reporter().then((module) => module?.reportError(event.reason, 'onunhandledrejection', false));
     });
+    void reporter();
+}
+
+/* A metric of `metrics.ts`; nothing outside a release of the desktop app or the station. */
+export function recordPageMetric(metric: PageMetric): void {
+    if (VERSION === '' || surface() === null) {
+        return;
+    }
+    void reporter().then((module) => module?.recordMetric(metric));
 }
 
 /*

@@ -53,6 +53,7 @@ function start(limits: Partial<BrokerLimits> = {}): RunningBroker {
         names: [],
         trustProxy: false,
         trustCloudflare: false,
+        telemetry: false,
         limits: { ...DEFAULT_LIMITS, ...limits },
         turn: { kind: 'none' }
     });

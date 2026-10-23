@@ -73,6 +73,20 @@ test('input while a live inspection is pending discards its answer', async () =>
     expect(prompt.snapshot()).toBeNull();
 });
 
+test('waiting for the editor channel resolves when it connects, and at once while it is up', async () => {
+    const prompt = new ShellPrompt();
+    let connected = false;
+    const waiting = prompt.whenConnected().then(() => {
+        connected = true;
+    });
+    await Promise.resolve();
+    expect(connected).toBe(false);
+    prompt.connect({ inspect: async () => ({ cwd: '/work', empty: true }), prepare: async () => 'inserted', close() {} });
+    await waiting;
+    expect(connected).toBe(true);
+    await prompt.whenConnected();
+});
+
 test('a late connection cannot revive an exited session', async () => {
     const { prompt, commands } = fixture();
     await prompt.inspect();

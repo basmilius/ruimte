@@ -63,8 +63,10 @@ export async function realShell(rc: (home: string) => string = () => "PS1='edito
         queuedInput(data: string) {
             pty.write(data);
         },
+        // Waits on the channel itself, since a cold zsh on a busy runner starts in its own time.
         async ready() {
-            await waitForAsync(async () => (await session.shellPrompt.inspect()) !== null, 'ZLE editor channel', 1000).catch(() => {
+            await session.shellPrompt.whenConnected();
+            await waitForAsync(async () => (await session.shellPrompt.inspect()) !== null, 'ZLE editor channel').catch(() => {
                 throw new Error(JSON.stringify(output));
             });
         },

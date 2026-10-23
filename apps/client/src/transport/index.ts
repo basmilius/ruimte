@@ -8,13 +8,15 @@ import { LOCAL_ENDPOINT_ID, brokerRouteOf, endpointById, useEndpoints, type Endp
 import { iceServersFrom, useSettings } from '@/state/settings';
 import { IS_STATION } from '@/station';
 import type { LinkKind, MachineKind } from '@/telemetry/events';
-import { reportConnectionProblem } from '@/telemetry/report';
+import { linkMetrics, linkPathOf } from '@/telemetry/metrics';
+import { recordPageMetric, reportConnectionProblem } from '@/telemetry/report';
 import { ActiveTransport } from './active-transport';
 import { brokerSignaling } from './broker-signaling';
 import { directProof } from './direct-auth';
 import { DormantTransport } from './dormant-transport';
 import { lanSignaling } from './lan-signaling';
 import { LinkTransport, type LinkOpener } from './link-transport';
+import { bothMeters, linkUsage, localUsage } from './local-usage';
 import { MachineTransports } from './machine-transport';
 import { TransportPool } from './pool';
 import { lanDoorUrls, lanSkips, routedLink } from './route-race';
@@ -106,6 +108,9 @@ export function connectionAddressFor(endpointId: string): Promise<string> {
     return endpointId === LOCAL_ENDPOINT_ID ? socketAddressFor(endpointId) : Promise.resolve(endpointById(endpointId)?.brokerUrl ?? '');
 }
 
+/* This machine's own anonymous usage counts, over its own link; `pool` is read only when something counts. */
+export const machineUsage = localUsage(() => pool.peek(LOCAL_ENDPOINT_ID));
+
 /*
  * One connection per daemon, each with its own reconnect loop; nothing here opens one until it is
  * held. The address is worked out per attempt, because every connection signs for its own ticket.
@@ -116,7 +121,11 @@ export const pool = new TransportPool({
         !hasLocalMachine() && endpoint.id === LOCAL_ENDPOINT_ID
             ? new DormantTransport()
             : new LinkTransport(() => connectionAddressFor(currentId()), linkFor(currentId), {
-                  report: (problem) => reportConnectionProblem({ ...problem, ...linkKindOf(currentId()) })
+                  report: (problem) => reportConnectionProblem({ ...problem, ...linkKindOf(currentId()) }),
+                  meter: bothMeters(
+                      linkMetrics(recordPageMetric, () => linkKindOf(currentId()).link === 'socket'),
+                      linkUsage(machineUsage, currentId, (link) => `connections.${linkPathOf({ ...link, socket: linkKindOf(currentId()).link === 'socket' })}`)
+                  )
               })
 });
 

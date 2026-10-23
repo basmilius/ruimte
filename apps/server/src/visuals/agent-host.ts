@@ -1,6 +1,7 @@
 import type { VisualStore } from '@adecore/agents/chat';
 import type { VisualHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import { countUsage } from '../stats/usage-stats.ts';
 import { previewVisual, type VisualRenderer } from './renderer.ts';
 
 export interface AgentVisualDeps {
@@ -18,7 +19,11 @@ export function agentVisuals(deps: AgentVisualDeps): VisualHost {
     return {
         enabled: () => deps.enabled(),
         writeSource: (chatId, name, html) => visuals.writeSource(chatId, name, html),
-        publish: (chatId, visual) => chats.publishVisual(chatId, visual),
+        publish: async (chatId, visual) => {
+            const shown = await chats.publishVisual(chatId, visual);
+            countUsage('visuals.shown');
+            return shown;
+        },
         list: (chatId) => chats.listVisuals(chatId),
         remove: (chatId, visualId) => chats.removeVisual(chatId, visualId),
         ...(renderer === undefined

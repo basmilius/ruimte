@@ -28,7 +28,7 @@ import {
     type SessionResult
 } from '@ruimte/pulsar';
 import { Miniflare, type WorkerOptions } from 'miniflare';
-import { BENCHMARK_MODELS } from './benchmark-models.ts';
+import { BENCHMARK_LABS, BENCHMARK_MODELS } from './benchmark-models.ts';
 import { MAX_PAGES } from './benchmarks.ts';
 import { LIMITS, WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-window.ts';
 import { ROTATION_GRACE_MS } from './sessions.ts';
@@ -80,7 +80,8 @@ const statementSecret = realStatementSecret ?? base64url(testStatementPair.priva
 const statementPublicKey = realStatementSecret ? (PULSAR_STATEMENT_PUBLIC_KEYS[0] ?? '') : (testStatementPair.publicKey.export({ format: 'jwk' }).x ?? '');
 
 async function bundle(): Promise<string> {
-    const result = await Bun.build({ entrypoints: [join(APP_ROOT, 'src/index.ts')], target: 'browser', format: 'esm' });
+    // workerd supplies `node:*` under `nodejs_compat`, as wrangler leaves them out of its bundle too.
+    const result = await Bun.build({ entrypoints: [join(APP_ROOT, 'src/index.ts')], target: 'browser', format: 'esm', external: ['node:*'] });
     const output = result.outputs[0];
     if (!result.success || !output) {
         throw new Error(`The worker did not bundle: ${result.logs.join('\n')}`);
@@ -146,11 +147,8 @@ function database(on: Miniflare): Database {
 }
 
 // The Worker under test comes first, so every request outside the SQL path reaches it.
-function miniflare(
-    databaseId: string,
-    options: Partial<Pick<WorkerOptions, 'bindings' | 'outboundService' | 'analyticsEngineDatasets' | 'ratelimits'>>
-): Miniflare {
-    const shared = { modules: true, compatibilityDate: '2026-08-01', d1Databases: { DB: databaseId } };
+function miniflare(databaseId: string, options: Partial<Pick<WorkerOptions, 'bindings' | 'outboundService' | 'ratelimits'>>): Miniflare {
+    const shared = { modules: true, compatibilityDate: '2026-08-01', compatibilityFlags: ['nodejs_compat'], d1Databases: { DB: databaseId } };
     return new Miniflare({
         workers: [
             { name: 'pulsar', script, ...shared, ...options },
@@ -187,6 +185,7 @@ const APPLE_TEAM_ID = 'TEAMID0001';
 const APPLE_KEY_ID = 'APPLEKEY01';
 const APPLE_CLIENT_ID = 'app.ruimte.test';
 const APPLE_ISSUER = 'https://appleid.apple.com';
+const OBSERVATORY_INGEST = 'https://ingest.test';
 // The .p8 the Worker signs its client secret with, and the key Apple signs every id_token with.
 const appleClientKey = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 const appleSigningKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -297,6 +296,9 @@ async function outbound(request: Request): Promise<Response> {
         return userId
             ? Response.json({ id: userId, login: `user-${userId}`, name: githubNames.get(userId) ?? null })
             : Response.json({ message: 'Bad credentials' }, { status: 401 });
+    }
+    if (url.origin === OBSERVATORY_INGEST) {
+        return new Response(null, { status: 204 });
     }
     return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
 }
@@ -539,9 +541,10 @@ beforeAll(async () => {
             GITHUB_CLIENT_ID: 'github-client',
             GITHUB_CLIENT_SECRET: GITHUB_SECRET,
             ...APPLE_BINDINGS,
-            STATEMENT_PRIVATE_KEY: statementSecret
+            STATEMENT_PRIVATE_KEY: statementSecret,
+            OBSERVATORY_USAGE_URL: `${OBSERVATORY_INGEST}/api/3/usage/?sentry_key=key`,
+            OBSERVATORY_UPLOAD_TOKEN: 'obs_token'
         },
-        analyticsEngineDatasets: { USAGE: { dataset: 'ruimte_usage' } },
         ratelimits: { USAGE_LIMIT: { namespace_id: '2001', simple: { limit: 100, period: 60 } } },
         outboundService: outbound
     });
@@ -2148,7 +2151,7 @@ describe('model benchmarks', () => {
             await migrate(upgrade, (file) => file === '0015_benchmark_measurements.sql');
             const response = await dispatch('/v1/models/benchmarks', { on: upgrade });
             expect(response.status).toBe(200);
-            expect(await response.json()).toEqual({ fetchedAt: 123, models });
+            expect(await response.json()).toEqual({ fetchedAt: 123, models, labs: BENCHMARK_LABS });
         } finally {
             await upgrade.dispose();
         }
@@ -2173,7 +2176,8 @@ describe('model benchmarks', () => {
         const response = await read();
         expect(response.status).toBe(200);
         const result = (await response.json()) as ModelBenchmarksResult;
-        expect(Object.keys(result).sort()).toEqual(['fetchedAt', 'intelligenceIndexVersion', 'measurements', 'models']);
+        expect(Object.keys(result).sort()).toEqual(['fetchedAt', 'intelligenceIndexVersion', 'labs', 'measurements', 'models']);
+        expect(result.labs).toEqual([...BENCHMARK_LABS]);
         expect(result.intelligenceIndexVersion).toBe(9);
         expect(result.measurements?.find((point) => point.modelId === 'gpt-6-luna' && point.effort === 'max')).toEqual({
             modelId: 'gpt-6-luna',
@@ -2309,7 +2313,7 @@ describe('model benchmarks', () => {
             const response = await dispatch('/internal/benchmarks/refresh', options);
             expect(response.status).toBe(502);
             expect(await response.json()).toMatchObject({ refreshed: false });
-            expect(await (await dispatch('/v1/models/benchmarks', { on: failed })).json()).toEqual({ fetchedAt: 123, models: [] });
+            expect(await (await dispatch('/v1/models/benchmarks', { on: failed })).json()).toEqual({ fetchedAt: 123, models: [], labs: BENCHMARK_LABS });
             expect((await dispatch('/internal/benchmarks/refresh', options)).status).toBe(429);
             expect(asked).toHaveLength(1);
         } finally {

@@ -59,6 +59,23 @@ export interface Admission {
     retryAfterMs: number;
 }
 
+export type BrokerLimit = 'sockets' | 'connections' | 'frames' | 'relays' | 'announces' | 'ice-ip' | 'ice-key' | 'ice-all';
+
+/* What the broker counts for Observatory: a fixed name and fixed values, never a key, an address or a name. */
+export interface BrokerMeter {
+    rateLimited(limit: BrokerLimit): void;
+    relayed(outcome: 'delivered' | 'not-connected'): void;
+    ice(outcome: 'issued' | 'failed'): void;
+    online(counts: { sockets: number; machines: number; clients: number }): void;
+}
+
+export const NO_METER: BrokerMeter = {
+    rateLimited: () => undefined,
+    relayed: () => undefined,
+    ice: () => undefined,
+    online: () => undefined
+};
+
 /*
  * The whole broker: which key sits on which socket, and a signal from one to another. It holds no
  * account, no name and nothing on disk, and it passes an envelope on as it was written; the receiver
@@ -80,12 +97,20 @@ export class Broker {
     private iceRefusedLoggedAt: number | null = null;
     private readonly turn: TurnProvider;
     private readonly log: Pick<Console, 'warn'>;
+    private readonly meter: BrokerMeter;
 
-    constructor(limits: BrokerLimits, now: () => number = Date.now, turn: TurnProvider = noTurn, log: Pick<Console, 'warn'> = console) {
+    constructor(
+        limits: BrokerLimits,
+        now: () => number = Date.now,
+        turn: TurnProvider = noTurn,
+        log: Pick<Console, 'warn'> = console,
+        meter: BrokerMeter = NO_METER
+    ) {
         this.limits = limits;
         this.now = now;
         this.turn = turn;
         this.log = log;
+        this.meter = meter;
         this.iceRequests = new RateLimiter(limits.iceRequestsPerMinutePerKey, 60_000, now);
         this.iceRequestsPerIp = new RateLimiter(limits.iceRequestsPerMinutePerIp, 60_000, now);
         this.iceRequestsAll = new RateLimiter(limits.iceRequestsPerMinute, 60_000, now);
@@ -108,10 +133,15 @@ export class Broker {
     admit(address: string): Admission | null {
         const ip = addressKeyOf(address);
         if ((this.socketsPerIp.get(ip) ?? 0) >= this.limits.maxSocketsPerIp) {
+            this.meter.rateLimited('sockets');
             return { message: 'Too many sockets from this address', retryAfterMs: 60_000 };
         }
         const wait = this.connections.take(ip);
-        return wait === 0 ? null : { message: 'Too many connections from this address', retryAfterMs: wait };
+        if (wait === 0) {
+            return null;
+        }
+        this.meter.rateLimited('connections');
+        return { message: 'Too many connections from this address', retryAfterMs: wait };
     }
 
     open(socket: PeerSocket, address: string, name: string): Peer {
@@ -134,6 +164,7 @@ export class Broker {
         // Counted before parsing, so a flood costs a map lookup and not a JSON parse per frame.
         const wait = this.frames.take(peer.ip);
         if (wait > 0) {
+            this.meter.rateLimited('frames');
             this.send(peer, { type: 'rate-limited', scope: 'ip', retryAfterMs: wait });
             return;
         }
@@ -239,17 +270,20 @@ export class Broker {
         }
         const wait = this.relays.take(peer.publicKey);
         if (wait > 0) {
+            this.meter.rateLimited('relays');
             this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: wait, id: frame.id });
             return;
         }
         const target = this.announced.get(frame.to);
         // A machine talks to clients and a client to machines; anything else is a key that is not there for this sender.
         if (!target || target.role === peer.role) {
+            this.meter.relayed('not-connected');
             this.send(peer, { type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: frame.id });
             return;
         }
         this.send(target, { type: 'relayed', from: peer.publicKey, envelope, signature: frame.signature });
         this.send(peer, { type: 'delivered', id: frame.id });
+        this.meter.relayed('delivered');
     }
 
     private prove(peer: Peer, signature: string): void {
@@ -268,6 +302,7 @@ export class Broker {
         // Counted only once the key is proven: anyone can say hello with a machine's key, and would drain its budget.
         const waitKey = this.announcements.take(peer.publicKey);
         if (waitKey > 0) {
+            this.meter.rateLimited('announces');
             this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: waitKey });
             this.close(peer, CLOSE.rateLimited, 'Announcing too often');
             return;
@@ -296,16 +331,19 @@ export class Broker {
         }
         const waitIp = this.iceRequestsPerIp.take(peer.ip);
         if (waitIp > 0) {
+            this.meter.rateLimited('ice-ip');
             this.send(peer, { type: 'rate-limited', scope: 'ip', retryAfterMs: waitIp, id });
             return;
         }
         const wait = this.iceRequests.take(peer.publicKey);
         if (wait > 0) {
+            this.meter.rateLimited('ice-key');
             this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: wait, id });
             return;
         }
         const waitAll = this.iceRequestsAll.take('all');
         if (waitAll > 0) {
+            this.meter.rateLimited('ice-all');
             this.warnIceRefused();
             // An older peer only knows `ip` and `key`, and leaves the broker over a scope it cannot read.
             this.send(peer, { type: 'rate-limited', scope: 'ip', retryAfterMs: waitAll, id });
@@ -313,10 +351,12 @@ export class Broker {
         }
         try {
             const grant = await this.turn.iceServersFor({ role: peer.role, publicKey: peer.publicKey });
+            this.meter.ice('issued');
             if (peer.state === 'ready') {
                 this.send(peer, { type: 'ice', id, servers: grant.servers, expiresAt: grant.expiresAt });
             }
         } catch (e) {
+            this.meter.ice('failed');
             this.log.warn(`Could not hand out ICE servers: ${e instanceof Error ? e.message : String(e)}`);
             if (peer.state === 'ready') {
                 this.send(peer, { type: 'error', code: 'internal', message: 'The broker could not hand out ICE servers', id });

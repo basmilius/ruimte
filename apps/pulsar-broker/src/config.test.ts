@@ -12,6 +12,7 @@ describe('parseBrokerArgs', () => {
             names: [],
             trustProxy: false,
             trustCloudflare: false,
+            telemetry: false,
             limits: DEFAULT_LIMITS,
             turn: { kind: 'none' }
         });

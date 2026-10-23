@@ -260,12 +260,38 @@ export const BenchmarkMeasurementSchema = z.object({
 });
 export type BenchmarkMeasurement = z.infer<typeof BenchmarkMeasurementSchema>;
 
+const ChartColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
+
+/*
+ * The lab a model's `provider` names, with what the chart draws for it, so a new lab needs a deploy of
+ * the address book and no release. The mark is one path in `currentColor`: path data cannot run script.
+ */
+export const BenchmarkLabSchema = z.object({
+    id: z.string().max(32),
+    name: z.string().max(64),
+    logo: z.object({
+        viewBox: z.string().regex(/^-?\d+(\.\d+)?( -?\d+(\.\d+)?){3}$/),
+        path: z
+            .string()
+            .max(8192)
+            .regex(/^[MmLlHhVvCcSsQqTtAaZz0-9eE.,\s+-]+$/)
+    }),
+    // Per theme, one color per model in turn, current models first.
+    colors: z.object({
+        light: z.array(ChartColorSchema).min(1).max(12),
+        dark: z.array(ChartColorSchema).min(1).max(12)
+    })
+});
+export type BenchmarkLab = z.infer<typeof BenchmarkLabSchema>;
+
 export const ModelBenchmarksResultSchema = z.object({
     fetchedAt: z.number().int(),
     models: z.array(BenchmarkModelSchema).max(64),
     // Separate from the original complete pairs so older clients can keep reading `models`.
     measurements: z.array(BenchmarkMeasurementSchema).max(1024).optional(),
-    intelligenceIndexVersion: z.number().optional()
+    intelligenceIndexVersion: z.number().optional(),
+    // In the order the legend lists them. A model whose lab is not here is not drawn.
+    labs: z.array(BenchmarkLabSchema).max(16).optional()
 });
 export type ModelBenchmarksResult = z.infer<typeof ModelBenchmarksResultSchema>;
 

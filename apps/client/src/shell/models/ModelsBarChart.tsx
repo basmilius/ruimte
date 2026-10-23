@@ -1,9 +1,9 @@
 import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useContentSize } from '@adecore/ui';
-import { ProviderLogo } from '@adecore/agents-react/providers';
 import type { Axis, ChartModel, ModelMark } from './chart';
 import { barGroups, formatMetric, metricValue, shortModelName, VIEW_METRICS, type BarMetric, type PointInteraction } from './comparison';
+import { LabLogo } from './LabLogo';
 import { usePointNavigation } from './use-point-navigation';
 
 interface ModelsBarChartProps extends PointInteraction {
@@ -175,7 +175,7 @@ export function ModelsBarChart({
                                             width={barWidth}
                                             height={Math.max(2, bottom - point.y)}
                                             rx={3}
-                                            fill={color}
+                                            style={{ fill: color }}
                                             opacity={active ? 1 : 0.6 + (index / Math.max(group.points.length - 1, 1)) * 0.4}
                                         />
                                         {focused === point.key && (
@@ -211,7 +211,7 @@ export function ModelsBarChart({
                                         className="flex flex-col items-center gap-1 text-center text-xs font-medium"
                                         style={{ color: marks.get(group.model.id)?.color }}
                                     >
-                                        <ProviderLogo provider={group.model.provider} size={18} />
+                                        <LabLogo lab={group.model.lab} size={18} />
                                         <span className="px-1 leading-tight">{shortModelName(group.model.name)}</span>
                                     </div>
                                 </foreignObject>

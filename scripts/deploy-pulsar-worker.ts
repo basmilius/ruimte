@@ -8,7 +8,8 @@ const TOKEN_LIFETIME_MS = 15 * 60_000;
 export async function deployPulsarWorker(
     run: (args: string[]) => Promise<void>,
     request: (url: string, init: RequestInit) => Promise<Response> = fetch,
-    wait: (milliseconds: number) => Promise<void> = Bun.sleep
+    wait: (milliseconds: number) => Promise<void> = Bun.sleep,
+    release: string | null = null
 ): Promise<void> {
     await run(['d1', 'migrations', 'apply', 'ruimte-pulsar', '--remote']);
 
@@ -16,7 +17,8 @@ export async function deployPulsarWorker(
     const digest = createHash('sha256').update(token).digest('base64url');
     const expiresAt = Date.now() + TOKEN_LIFETIME_MS;
     // Wrangler prints plain-text bindings, so only the digest and expiry may enter its arguments.
-    await run(['deploy', '--var', `BENCHMARK_REFRESH_TOKEN_HASH:${digest}`, '--var', `BENCHMARK_REFRESH_TOKEN_EXPIRES_AT:${expiresAt}`]);
+    const releaseVars = release === null ? [] : ['--var', `OBSERVATORY_RELEASE:${release}`];
+    await run(['deploy', '--var', `BENCHMARK_REFRESH_TOKEN_HASH:${digest}`, '--var', `BENCHMARK_REFRESH_TOKEN_EXPIRES_AT:${expiresAt}`, ...releaseVars]);
 
     const response = await refreshAfterPropagation(token, request, wait);
     if (!response.ok) {
@@ -60,9 +62,15 @@ async function wrangler(args: string[]): Promise<void> {
     }
 }
 
+/* The release the worker reports its errors under: the commit it deploys, `pulsar@<12 hex>`. */
+function releaseOfCheckout(): string | null {
+    const commit = process.env.GITHUB_SHA ?? Bun.spawnSync(['git', 'rev-parse', 'HEAD'], { cwd: WORKER_ROOT }).stdout.toString().trim();
+    return /^[0-9a-f]{40}$/.test(commit) ? `pulsar@${commit.slice(0, 12)}` : null;
+}
+
 if (import.meta.main) {
     try {
-        await deployPulsarWorker(wrangler);
+        await deployPulsarWorker(wrangler, fetch, Bun.sleep, releaseOfCheckout());
     } catch (error) {
         console.error(error instanceof Error ? error.message : 'Worker deployment failed.');
         process.exitCode = 1;

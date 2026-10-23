@@ -4,6 +4,7 @@ import type { SpeechState } from '@ruimte/desktop-bridge';
 import { claimMicrophone } from '@/audio/ownership';
 import { desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
+import { machineUsage } from '@/transport';
 import { dictationFailureText } from './failure';
 import { helperEngine } from './helper';
 import type { DictationEngine, DictationSession } from './engine';
@@ -256,6 +257,7 @@ export function toggleDictation(target: DictationTarget): void {
                     try {
                         if (commit && finalText !== null && finalText.trim() !== '') {
                             captured.insert(finalText);
+                            machineUsage.count('dictations');
                         }
                     } catch (error) {
                         failed = true;

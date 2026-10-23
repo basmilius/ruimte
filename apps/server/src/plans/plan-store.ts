@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { isNotFound, writeAtomic, KeyedSerializer } from '@adecore/agents';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { countUsage } from '../stats/usage-stats.ts';
 
 const SUFFIX = '.plans.json';
 
@@ -93,6 +94,7 @@ export class PlanStore {
                 return created;
             }
             await this.writeFile(chatId, [...plans, created.plan]);
+            countUsage('plans.created');
             // The plan first, so a client that moves its panel to the new plan already holds it.
             this.broadcast({ event: 'plan.changed', payload: { chatId, plan: created.plan } });
             this.broadcast({ event: 'plan.created', payload: { chatId, planId: created.plan.id } });

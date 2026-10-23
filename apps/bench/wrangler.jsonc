@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ruimte-bench",
+  "main": "src/index.ts",
+  "account_id": "5e565cf9fa55b0eae1f8131903da2ca9",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "bench.ruimte.app", "custom_domain": true }],
+  "assets": {
+    // `bun run build` writes the client's bench build here, with `public/` on top.
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // So the security headers are on every answer, the page included.
+    "run_worker_first": true
+  },
+  "observability": { "enabled": true }
+}

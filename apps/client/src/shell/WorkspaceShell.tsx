@@ -36,6 +36,7 @@ import { useFileChoice } from '@/shell/panels/file-links';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { useSettings } from '@/state/settings';
+import { workspaceShown } from '@/telemetry/workspace-load';
 import { useVoice } from '@/voice/state';
 import { useShownPanel, useUi } from '@/state/ui';
 import { useDevices } from '@/devices/state';
@@ -157,6 +158,10 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     useEffect(() => {
         void prefetcher.prefetchEverything();
     }, []);
+    // Per workspace, since a switch to another project keeps this shell mounted.
+    useEffect(() => {
+        workspaceShown();
+    }, [workspace]);
     useEffect(() => () => stopVoice(), []);
     const folder = useProject((state) => shownFolderOf(state.current));
     useEffect(() => {

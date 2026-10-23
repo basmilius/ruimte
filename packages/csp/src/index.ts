@@ -7,7 +7,7 @@
 export type CspDirectives = Readonly<Record<string, readonly string[]>>;
 
 /* Where the client sends its crash reports (`TELEMETRY_DSN` in `@ruimte/telemetry`), named apart from `https:` so it stays allowed if that ever narrows. */
-export const TELEMETRY_INGEST = 'https://o4512264930983936.ingest.de.sentry.io';
+export const TELEMETRY_INGEST = 'https://ingest.bmnw.nl';
 
 /*
  * `connect-src`, `img-src` and `media-src` are wide because a machine's LAN door and broker are whatever

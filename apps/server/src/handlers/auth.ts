@@ -20,7 +20,7 @@ import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
-import { countClient, recordStartup } from '../stats/usage-stats.ts';
+import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
 
 interface EndpointHost {
     identity: EndpointIdentity;
@@ -285,6 +285,25 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         'usage.startup',
         (payload) => {
             recordStartup(payload.ms);
+            return {};
+        },
+        { owner: true }
+    );
+
+    /* What only the app on this machine sees: a dictation, how its links went. Names come from a fixed list in the schema. */
+    dispatcher.register(
+        'usage.count',
+        (payload) => {
+            countUsage(payload.counter);
+            return {};
+        },
+        { owner: true }
+    );
+
+    dispatcher.register(
+        'usage.timing',
+        (payload) => {
+            recordTiming(payload.timing, payload.ms);
             return {};
         },
         { owner: true }

@@ -1,0 +1,82 @@
+{
+  "days": [
+    {
+      "date": "2026-10-21",
+      "version": "0.22.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "launcher": "service",
+      "signedIn": false,
+      "firstThisWeek": false,
+      "firstThisMonth": false,
+      "cohortWeek": "2026-W43",
+      "counts": {
+        "terminals.started": 1,
+        "launches.run": 1,
+        "connections.direct": 1
+      }
+    },
+    {
+      "date": "2026-10-20",
+      "version": "0.22.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "launcher": "desktop",
+      "signedIn": true,
+      "firstThisWeek": true,
+      "firstThisMonth": true,
+      "cohortWeek": "2026-W43",
+      "startupMs": 1100,
+      "counts": {
+        "projects.opened": 1,
+        "terminals.started": 1,
+        "agents.delegated": 1,
+        "clients.ios": 1,
+        "actions.browser": 1,
+        "limitResumes": 1,
+        "voice.sessions": 1,
+        "dictations": 1,
+        "files.opened": 1,
+        "files.saved": 1,
+        "git.commits": 1,
+        "git.pushes": 1,
+        "git.pulls": 1,
+        "git.conflictsResolved": 1,
+        "plans.created": 1,
+        "visuals.shown": 1,
+        "prWatches.started": 1,
+        "database.queries": 1,
+        "devices.started": 1,
+        "peers.tasks": 1,
+        "views.chat": 1,
+        "verbs.read": 1,
+        "verbs.agent": 1,
+        "chats.claude": 1,
+        "chats.grok": 1,
+        "turns.claude": 2,
+        "turns.codex": 1,
+        "turns.nanogpt": 1,
+        "turns.other": 1,
+        "limits.claude": 1,
+        "turns.model.opus": 2,
+        "turns.model.codex": 1,
+        "turns.model.other": 1,
+        "turns.mode.supervised": 1,
+        "turns.mode.autoAcceptEdits": 1,
+        "turns.mode.fullAccess": 1,
+        "turns.mode.plan": 1,
+        "connections.local": 1,
+        "connections.lan": 1,
+        "connections.turn": 1,
+        "connectFailures.timeout": 1,
+        "connectFailures.ice": 1
+      },
+      "timings": {
+        "firstTokenMs.claude": 1300,
+        "firstTokenMs.codex": 2100,
+        "terminalAttachMs": 85,
+        "remoteConnectMs": 640
+      }
+    }
+  ]
+}

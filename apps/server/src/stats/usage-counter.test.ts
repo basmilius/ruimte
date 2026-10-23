@@ -49,17 +49,17 @@ beforeEach(() => {
 describe('the usage counter', () => {
     test('counts per UTC day and hands out only the finished days, newest first', () => {
         const counter = counterOf();
-        counter.count('projectsOpened');
-        counter.count('projectsOpened');
+        counter.count('projects.opened');
+        counter.count('projects.opened');
         clock += DAY;
-        counter.count('terminalsStarted');
+        counter.count('terminals.started');
         clock += DAY;
         counter.touch();
 
         const finished = counter.finished();
         expect(finished.map((day) => day.date)).toEqual(['2026-10-15', '2026-10-14']);
-        expect(finished[1]!.counts).toEqual({ projectsOpened: 2 });
-        expect(finished[0]!.counts).toEqual({ terminalsStarted: 1 });
+        expect(finished[1]!.counts).toEqual({ 'projects.opened': 2 });
+        expect(finished[0]!.counts).toEqual({ 'terminals.started': 1 });
         expect(finished[1]).toMatchObject({ version: '1.2.3', launcher: 'desktop', signedIn: false });
     });
 
@@ -88,7 +88,7 @@ describe('the usage counter', () => {
     test('keeps at most today and the seven days before it', () => {
         const counter = counterOf();
         for (let i = 0; i < 12; i++) {
-            counter.count('launchesRun');
+            counter.count('launches.run');
             clock += DAY;
         }
         counter.touch();
@@ -100,31 +100,31 @@ describe('the usage counter', () => {
 
     test('writes at most once a minute, and at once when asked', async () => {
         const counter = counterOf();
-        counter.count('projectsOpened');
-        counter.count('projectsOpened');
+        counter.count('projects.opened');
+        counter.count('projects.opened');
         expect(timers).toHaveLength(1);
         expect(timers[0]!.ms).toBe(60_000);
         expect(written).toBeNull();
         runTimers();
         await Promise.resolve();
-        expect(JSON.parse(written!).days[0].counts).toEqual({ projectsOpened: 2 });
+        expect(JSON.parse(written!).days[0].counts).toEqual({ 'projects.opened': 2 });
 
-        counter.count('projectsOpened');
+        counter.count('projects.opened');
         await counter.persist();
         expect(timers.every((timer) => timer.cancelled)).toBe(true);
-        expect(JSON.parse(written!).days[0].counts).toEqual({ projectsOpened: 3 });
+        expect(JSON.parse(written!).days[0].counts).toEqual({ 'projects.opened': 3 });
     });
 
     test('reads back what it wrote, and starts over on a file it cannot read', async () => {
         const first = counterOf();
-        first.count('worktreeMerges');
+        first.count('worktree.merges');
         await first.persist();
 
         const second = counterOf(memoryStore(written));
         await second.load();
-        second.count('worktreeMerges');
+        second.count('worktree.merges');
         clock += DAY;
-        expect(second.finished()[0]!.counts).toEqual({ worktreeMerges: 2 });
+        expect(second.finished()[0]!.counts).toEqual({ 'worktree.merges': 2 });
 
         const broken = counterOf(memoryStore('{ not json'));
         await broken.load();
@@ -150,9 +150,9 @@ describe('the usage counter', () => {
 
     test('forgets what was sent, and everything when turned off, keeping the cohort', async () => {
         const counter = counterOf();
-        counter.count('projectsOpened');
+        counter.count('projects.opened');
         clock += DAY;
-        counter.count('projectsOpened');
+        counter.count('projects.opened');
         clock += DAY;
         counter.forget(['2026-10-14']);
         expect(counter.finished().map((day) => day.date)).toEqual(['2026-10-15']);
@@ -175,16 +175,16 @@ describe('the usage counter', () => {
 
     test('counts a key once a day, and again on the next day or after the counts were turned off', async () => {
         const counter = counterOf();
-        counter.countOnce('projectsOpened', 'p1');
-        counter.countOnce('projectsOpened', 'p1');
-        counter.countOnce('viewsCanvas', 'p1');
+        counter.countOnce('projects.opened', 'p1');
+        counter.countOnce('projects.opened', 'p1');
+        counter.countOnce('views.canvas', 'p1');
         clock += DAY;
-        expect(counter.finished()[0]!.counts).toEqual({ projectsOpened: 1, viewsCanvas: 1 });
-        counter.countOnce('projectsOpened', 'p1');
+        expect(counter.finished()[0]!.counts).toEqual({ 'projects.opened': 1, 'views.canvas': 1 });
+        counter.countOnce('projects.opened', 'p1');
         await counter.discard();
-        counter.countOnce('projectsOpened', 'p1');
+        counter.countOnce('projects.opened', 'p1');
         clock += DAY;
-        expect(counter.finished()[0]!.counts).toEqual({ projectsOpened: 1 });
+        expect(counter.finished()[0]!.counts).toEqual({ 'projects.opened': 1 });
         await counter.persist();
         expect(written).not.toContain('p1');
     });

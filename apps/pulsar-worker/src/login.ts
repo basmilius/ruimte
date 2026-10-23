@@ -10,6 +10,7 @@ import {
 } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import type { Env } from './env.ts';
+import { countLogin } from './metrics.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { resolveAccount, spendLinkToken, storeLinkCode } from './identities.ts';
 import type { OAuthProvider } from './providers.ts';
@@ -174,6 +175,7 @@ export async function finishLogin(request: Request, env: Env, provider: OAuthPro
     const params = await callbackParams(request);
     const state = params.get('state');
     if (!state) {
+        countLogin(provider.id, 'expired');
         return loginPage(400, 'This sign-in link is not complete. Start signing in again from Ruimte.');
     }
     // Deleted on the first read, so a state is spent whether this callback succeeds or not.
@@ -182,10 +184,12 @@ export async function finishLogin(request: Request, env: Env, provider: OAuthPro
         .first<LoginAttemptRow>();
     const browser = cookieOf(request, BROWSER_COOKIE);
     if (!attempt || attempt.expires_at <= Date.now() || attempt.provider !== provider.id || !browser || (await sha256(browser)) !== attempt.browser_hash) {
+        countLogin(provider.id, 'expired');
         return loginPage(400, 'This sign-in expired, was already used or was started in another browser. Start signing in again from Ruimte.');
     }
     const code = params.get('code');
     if (params.get('error') || !code) {
+        countLogin(provider.id, 'denied');
         return redirectToApp(attempt.app_redirect_uri, { error: 'access_denied', state: attempt.app_state });
     }
     let identity;
@@ -193,6 +197,7 @@ export async function finishLogin(request: Request, env: Env, provider: OAuthPro
         identity = await provider.identify(env, { code, codeVerifier: attempt.provider_verifier, redirectUri: callbackUrl(env, provider), callback: params });
     } catch (error) {
         console.error('provider refused the login', error);
+        countLogin(provider.id, 'refused');
         return redirectToApp(attempt.app_redirect_uri, { error: 'server_error', state: attempt.app_state });
     }
     if (attempt.link_account_id !== null && attempt.link_session_id !== null) {
@@ -203,16 +208,19 @@ export async function finishLogin(request: Request, env: Env, provider: OAuthPro
             appRedirectUri: attempt.app_redirect_uri,
             appCodeChallenge: attempt.app_code_challenge
         });
+        countLogin(provider.id, 'linked');
         return redirectToApp(attempt.app_redirect_uri, { code: linkCode, state: attempt.app_state });
     }
     const accountId = await resolveAccount(env.DB, provider.id, identity);
     if (!accountId) {
+        countLogin(provider.id, 'failed');
         return redirectToApp(attempt.app_redirect_uri, { error: 'server_error', state: attempt.app_state });
     }
     const loginCode = randomToken();
     await env.DB.prepare('INSERT INTO login_code (code_hash, account_id, app_redirect_uri, app_code_challenge, expires_at) VALUES (?1, ?2, ?3, ?4, ?5)')
         .bind(await sha256(loginCode), accountId, attempt.app_redirect_uri, attempt.app_code_challenge, Date.now() + LOGIN_CODE_LIFETIME_MS)
         .run();
+    countLogin(provider.id, 'signed-in');
     return redirectToApp(attempt.app_redirect_uri, { code: loginCode, state: attempt.app_state });
 }
 

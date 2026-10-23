@@ -44,9 +44,8 @@ jobs:
       - uses: ./.github/actions/client-source-maps
         with:
           dist: apps/station/dist
-          project: station
           release: ruimte@${{ env.RUIMTE_VERSION }}
-          auth-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
       - uses: ./.github/actions/wait-for-ci
       - run: bunx wrangler deploy
         env:
@@ -55,3 +54,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       # The page has to answer with its policy, or the deploy is not what this repository says it is.
       - run: curl --fail --silent --show-error --max-time 20 --head https://station.ruimte.app/ | grep -i '^content-security-policy:.*frame-ancestors'
+      # The deploy only gives a release its commits, so a tracker that is down never fails it.
+      - name: Report the deploy
+        continue-on-error: true
+        uses: basmilius/observatory-action@dae861d69a193baacbe35c29b9b99754f2938f10 # v1
+        with:
+          url: https://ingest.bmnw.nl
+          token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
+          version: ruimte@${{ env.RUIMTE_VERSION }}

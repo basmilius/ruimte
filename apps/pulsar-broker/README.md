@@ -158,6 +158,12 @@ Replace `broker.ruimte.app` in both with the name you use.
    Settings, Machines. A daemon on the same host that dials the broker on loopback needs the second
    `--name` from "Why a name".
 
+With `--telemetry` (or `PULSAR_BROKER_TELEMETRY=1`), as in the unit, the broker sends its errors and log lines to
+Observatory, the broker's app of product Ruimte, through `@sentry/bun` (`src/telemetry.ts`). The release is the
+commit of the checkout, `broker@<12 hex>`. An event keeps only the scrubber's allow-list of `@ruimte/telemetry` and a
+log line its first line and scalar attributes, scrubbed, so no address of a peer and no host name leaves. Without the
+flag, as on a laptop, nothing is sent.
+
 The unit raises the descriptor limit to 65536, since every machine that is online holds one socket. To
 update: `git pull`, `bun install`, `sudo systemctl restart pulsar-broker`. A restart drops every socket;
 the daemons come back within their backoff (at most 30 seconds, with jitter), and open channels are not

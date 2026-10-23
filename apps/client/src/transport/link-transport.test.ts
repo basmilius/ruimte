@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { PROTOCOL_VERSION, REQUEST_SCHEMAS, encodeBytesReply, encodeLiveFrame } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
+import { linkMetrics, type PageMetric } from '@/telemetry/metrics';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
 import type { SignalRoute, TransportStatus } from './transport';
 
@@ -594,5 +595,86 @@ describe('LinkTransport', () => {
             expect(problems).toEqual([{ kind: 'refused', mismatch: 'daemon-older' }]);
             transport.dispose();
         });
+    });
+});
+
+describe('what the transport measures', () => {
+    function measured(options: { gateTimeoutMs?: number; socket?: boolean } = {}) {
+        let clock = 1_000;
+        const metrics: PageMetric[] = [];
+        const links: FakeLink[] = [];
+        const transport = new LinkTransport(
+            'ws://machine/ws',
+            (_url, events) => {
+                const link = new FakeLink(events);
+                links.push(link);
+                return link;
+            },
+            {
+                now: () => clock,
+                random: () => 0,
+                ...(options.gateTimeoutMs === undefined ? {} : { gateTimeoutMs: options.gateTimeoutMs }),
+                meter: linkMetrics(
+                    (metric) => metrics.push(metric),
+                    () => options.socket ?? false
+                )
+            }
+        );
+        return {
+            transport,
+            links,
+            metrics,
+            advance(ms: number) {
+                clock += ms;
+            }
+        };
+    }
+
+    test('link.connect: the time an attempt took to open, by the path it went', async () => {
+        const run = measured();
+        await tick();
+        run.advance(240);
+        run.links[0]!.events.route?.(true);
+        open(run.links[0]!, 'broker');
+        expect(run.metrics).toEqual([{ kind: 'distribution', name: 'link.connect', value: 240, attributes: { path: 'turn', outcome: 'ok' } }]);
+        run.transport.dispose();
+    });
+
+    test('link.connect and link.reconnect: a failed attempt, with the time until it failed and why', async () => {
+        const run = measured({ gateTimeoutMs: 20 });
+        await tick();
+        run.links[0]!.events.open('lan');
+        run.advance(20);
+        await tick(21);
+        expect(run.metrics).toEqual([
+            { kind: 'distribution', name: 'link.connect', value: 20, attributes: { path: 'lan', outcome: 'failed' } },
+            { kind: 'count', name: 'link.reconnect', attributes: { reason: 'timeout' } }
+        ]);
+        run.transport.dispose();
+    });
+
+    test('link.reconnect: an open link that drops, and this machine socket as the local path', async () => {
+        const run = measured({ socket: true });
+        await tick();
+        open(run.links[0]!);
+        run.links[0]!.events.close('gone', 1006);
+        expect(run.metrics.map((metric) => (metric.name === 'link.reconnect' ? metric.attributes.reason : metric.attributes))).toEqual([
+            { path: 'local', outcome: 'ok' },
+            'dropped'
+        ]);
+        run.transport.dispose();
+    });
+
+    test('request.duration: the wait for an answer, by the area of the request and nothing else', async () => {
+        const run = measured();
+        await tick();
+        open(run.links[0]!);
+        const reply = run.transport.request('session.detach', { sessionId: 'node-1' });
+        const frame = JSON.parse(run.links[0]!.sent[0]!) as { id: string };
+        run.advance(35);
+        run.links[0]!.events.message(JSON.stringify({ id: frame.id, ok: true, result: {} }));
+        await reply;
+        expect(run.metrics.at(-1)).toEqual({ kind: 'distribution', name: 'request.duration', value: 35, attributes: { area: 'session' } });
+        run.transport.dispose();
     });
 });

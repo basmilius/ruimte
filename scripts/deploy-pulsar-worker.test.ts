@@ -32,6 +32,20 @@ describe('Worker deployment', () => {
             }
         );
         expect(requests).toBe(1);
+        expect(commands[1]!.some((arg) => arg.startsWith('OBSERVATORY_RELEASE:'))).toBe(false);
+    });
+
+    test('names the release of the commit it deploys', async () => {
+        const commands: string[][] = [];
+        await deployPulsarWorker(
+            async (args) => {
+                commands.push(args);
+            },
+            async () => Response.json({ refreshed: true, fetchedAt: 123, measurements: 70 }),
+            Bun.sleep,
+            'pulsar@0123456789ab'
+        );
+        expect(commands[1]).toContain('OBSERVATORY_RELEASE:pulsar@0123456789ab');
     });
 
     test('a failed migration or deploy stops before consuming API quota', async () => {

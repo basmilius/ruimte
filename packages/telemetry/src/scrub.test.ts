@@ -252,3 +252,25 @@ describe('scrubBreadcrumb', () => {
         expect(scrubber.scrubBreadcrumb({ message: 'no category' })).toBeNull();
     });
 });
+
+describe('scrubLog', () => {
+    test('keeps the first line and scalar attributes, scrubbed, without the host or a person', () => {
+        const log = scrubber.scrubLog({
+            level: 'warn',
+            message: 'APNs delivery rejected for jane@example.com\nsecond line',
+            attributes: {
+                status: 410,
+                startsActivity: false,
+                reason: 'Bearer abc.def.ghi',
+                'server.address': 'vps-1',
+                'user.id': 'u1',
+                details: { nested: true }
+            }
+        });
+        expect(log).toEqual({
+            level: 'warn',
+            message: 'APNs delivery rejected for <email>',
+            attributes: { status: 410, startsActivity: false, reason: 'Bearer <redacted>' }
+        });
+    });
+});

@@ -26,6 +26,7 @@ export class ShellPrompt {
     private editor: ShellEditorConnection | null = null;
     private empty: EmptyShellPrompt | null = null;
     private disposeChannel: (() => void) | null = null;
+    private connectWaiters: (() => void)[] = [];
 
     connect(editor: ShellEditorConnection): () => void {
         if (this.disposed) {
@@ -35,12 +36,23 @@ export class ShellPrompt {
         this.editor?.close();
         this.input();
         this.editor = editor;
+        for (const resolve of this.connectWaiters.splice(0)) {
+            resolve();
+        }
         return () => {
             if (this.editor === editor) {
                 this.editor = null;
                 this.input();
             }
         };
+    }
+
+    /* Resolves once the shell's private editor channel is up, at once while it is; however long its startup takes. */
+    whenConnected(): Promise<void> {
+        if (this.editor !== null) {
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => this.connectWaiters.push(resolve));
     }
 
     onDispose(dispose: () => void): void {

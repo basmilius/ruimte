@@ -380,7 +380,7 @@ export class LaunchRunner {
             markExited();
             throw e;
         }
-        countUsage('launchesRun');
+        countUsage('launches.run');
         this.emit(run);
         if (run.state === 'starting') {
             void this.probeRun(run);

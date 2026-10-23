@@ -1,6 +1,9 @@
-import { Broker, type Peer } from './broker.ts';
+import { Broker, NO_METER, type BrokerMeter, type Peer } from './broker.ts';
 import { clientIpOf, nameFor, type BrokerConfig, type TurnConfig } from './config.ts';
 import { cloudflareTurn, noTurn, sharedSecretTurn, type TurnProvider } from './turn.ts';
+
+// How often the sockets, machines and clients online go to the meter.
+const ONLINE_EVERY_MS = 60_000;
 
 interface SocketData {
     ip: string;
@@ -26,8 +29,8 @@ export function turnProviderFor(turn: TurnConfig): TurnProvider {
 }
 
 /* The broker on a Bun server: `/health` for a monitor, and a WebSocket upgrade on any other path. */
-export function startBroker(config: BrokerConfig): RunningBroker {
-    const broker = new Broker(config.limits, Date.now, turnProviderFor(config.turn));
+export function startBroker(config: BrokerConfig, meter: BrokerMeter = NO_METER): RunningBroker {
+    const broker = new Broker(config.limits, Date.now, turnProviderFor(config.turn), console, meter);
 
     const server = Bun.serve<SocketData>({
         hostname: config.host,
@@ -99,12 +102,14 @@ export function startBroker(config: BrokerConfig): RunningBroker {
     // Often enough that a hello timeout is kept to within a few seconds, whatever the heartbeat is.
     const sweepMs = Math.max(50, Math.min(5_000, Math.floor(Math.min(config.limits.heartbeatMs, config.limits.helloTimeoutMs) / 4)));
     const sweep = setInterval(() => broker.sweep(), sweepMs);
+    const online = setInterval(() => meter.online(broker.counts), ONLINE_EVERY_MS);
 
     return {
         port: server.port ?? config.port,
         broker,
         stop: async () => {
             clearInterval(sweep);
+            clearInterval(online);
             broker.closeAll();
             await server.stop(true);
         }

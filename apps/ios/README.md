@@ -390,9 +390,10 @@ A build that ships (Release on a device, so TestFlight and the App Store) report
 and nothing else (`App/Telemetry`). Debug, the simulator, tests and previews send nothing. A report goes out for a
 native crash, a hang of the main thread of two seconds or more, a watchdog termination, and a connection problem with
 a machine: a link that drops while open, a read without an answer in time and a machine refused at the protocol
-check. The transport hands those to `LinkProblems`, and the app passes them on. There is no tracing, no session
-tracking, no profiling, no logs, no replay, no screenshot or view hierarchy and no breadcrumbs. Only the DSN and the
-start in `CrashReports` name the service.
+check. The transport hands those to `LinkProblems`, and the app passes them on. Each run is a session, for the share
+of runs that crashed. The SDK names the install in it (`did`), and the app in Observatory has "Count users" off, so the
+ingest drops that before it stores anything. There is no tracing, no profiling, no logs, no replay, no screenshot or
+view hierarchy and no breadcrumbs. Only the DSN and the start in `CrashReports` name the service.
 
 Every report is rebuilt as the desktop's are (`packages/telemetry`): the stack frames without source lines or
 variables, the error's type and the first line of its message, a fixed set of tags and the `os`, `device` (model and
@@ -401,8 +402,9 @@ machines and the projects this phone knows with their folders, anything that loo
 e-mail and IP addresses, URL paths, SQL, other paths and quoted text. The same error goes out once a day at most
 (`ruimte.telemetry.sent` in the app's defaults). The release is `ruimte-ios@<version>+<build>`.
 
-`ci_scripts/ci_post_xcodebuild.sh` uploads the archive's dSYMs with `sentry-cli` when the workflow has a
-`SENTRY_AUTH_TOKEN` secret, and never fails the build. Without the secret a crash arrives with addresses only.
+Reports go to Observatory (`ingest.bmnw.nl`). `ci_scripts/ci_post_xcodebuild.sh` uploads the archive's dSYMs there
+when the workflow has an `OBSERVATORY_UPLOAD_TOKEN` secret, and never fails the build. Without the secret a crash
+arrives with addresses only.
 
 ## Device acceptance
 

@@ -222,18 +222,19 @@ Electron-builder before 26.16.1 unlocked its own keychain with the wrong passwor
 `SecKeychainUnlock: The user name or passphrase you entered is not correct` has an older
 electron-builder again.
 
-`SENTRY_AUTH_TOKEN` (scope `org:ci`) lets the `error-tracking` job create the release `ruimte@<version>`
-the daemon, the shell and the page report their crashes under. That job may fail without holding up
-the release. `RUIMTE_TELEMETRY=1` is what turns crash reports on: the compile steps stamp it into
+Crash reports go to Observatory (`ingest.bmnw.nl`, product Ruimte). `OBSERVATORY_UPLOAD_TOKEN`, an
+upload token of that product, lets the `error-tracking` job report the deploy of `ruimte@<version>`,
+the release the daemon, the shell and the page report their crashes under, once the release is
+published. That job may fail without holding up the release. `RUIMTE_TELEMETRY=1` is what turns crash reports on: the compile steps stamp it into
 the daemon (see "Crash reports" in `apps/server/README.md`), `build:main` into the shell, and the
 client build into the page (`apps/client/README.md`).
 
 The client build of a release writes hidden source maps. `.github/actions/client-source-maps` gives
-the build debug ids, uploads the maps to the `desktop` project with the same token and deletes them,
+the build debug ids, uploads the maps with the same token and deletes them,
 and electron-builder leaves out any `.map` that is still there. Without the token the maps are only
-deleted and the page's stack traces stay minified. The station deploy does the same for the
-`station` project under `ruimte@station-<commit>`, and `.assetsignore` keeps a map out of its assets.
+deleted and the page's stack traces stay minified. The station deploy does the same under
+`ruimte@station-<commit>` and reports that deploy, and `.assetsignore` keeps a map out of its assets.
 
-A native crash of the shell arrives as a minidump. Its frames resolve against Electron's own symbol
-server once that source is on in the `desktop` project's settings (Debug Files, Symbol Sources);
-nothing is uploaded for it.
+A native crash of the shell arrives as a minidump in an envelope. `.github/actions/electron-symbols`
+uploads the breakpad symbols of the Electron each build ships (the shell has no native module of its
+own), so its frames resolve. A failed upload leaves the release alone.
