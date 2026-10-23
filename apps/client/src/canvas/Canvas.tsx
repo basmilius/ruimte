@@ -802,7 +802,12 @@ export function Canvas() {
                     ))}
                     {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
                     {maximizedId === null && <PortHints rootRef={rootRef} />}
-                    {maximizedId === null && <ResizeHandles rootRef={rootRef} />}
+                    {/* Over every node, or a press on the handle of a node in a group lands on the group's frame and moves the group. */}
+                    {maximizedId === null && (
+                        <div className="absolute left-0 top-0" style={{ zIndex: order.length + 1 }}>
+                            <ResizeHandles rootRef={rootRef} />
+                        </div>
+                    )}
                 </div>
                 {order.length === 0 && textIds.length === 0 && Object.keys(lines).length === 0 && <EmptyCanvas />}
                 {lineTool !== null && maximizedId === null && <CanvasLineTool key={lineTool} onDraftChange={setLineDraft} />}
