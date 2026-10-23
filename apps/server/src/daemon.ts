@@ -310,7 +310,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         await step('Writing terminal snapshots', () => agents.snapshotSchedule.flush());
         await step('Writing chats', () => chats.shutdown());
         await computer.stop();
-        sessions.killAll();
+        await step('Ending terminals', () => sessions.killAllSettled());
         devices.browsers.closeAll();
         await step('Stopping visual previews', () => devices.visualRenderer.stop());
         devices.deviceDriver.releaseAll();

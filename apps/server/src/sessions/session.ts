@@ -416,6 +416,10 @@ export class Session {
         }
     }
 
+    killSettled(): Promise<void> {
+        return this.pty.killSettled?.() ?? Promise.resolve();
+    }
+
     dispose(): void {
         this.shellPrompt.dispose();
         this.clearTimers();

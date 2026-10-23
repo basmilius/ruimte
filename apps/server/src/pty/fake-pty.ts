@@ -16,6 +16,8 @@ export class FakePty implements PtyProcess {
     // Resolves with the exit code, so a test waits on the event itself instead of polling for it.
     readonly exited: Promise<number>;
     exitCode: number | null = null;
+    // A kill still running, as a taskkill on Windows is; a test sets it to hold the daemon's shutdown.
+    pendingKill: Promise<void> | null = null;
     private dataCallback: ((data: Uint8Array) => void) | null = null;
     private exitCallback: ((exitCode: number) => void) | null = null;
     private resolveExit: (exitCode: number) => void = () => undefined;
@@ -48,6 +50,10 @@ export class FakePty implements PtyProcess {
     kill(signal: NodeJS.Signals = 'SIGHUP'): void {
         this.signals.push(signal);
         queueMicrotask(() => this.exit(signalExitCode(signal)));
+    }
+
+    killSettled(): Promise<void> {
+        return this.pendingKill ?? Promise.resolve();
     }
 
     onData(callback: (data: Uint8Array) => void): void {

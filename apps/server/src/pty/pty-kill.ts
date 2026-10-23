@@ -9,13 +9,22 @@ export interface PtyKillTarget {
 /** Starts a command and leaves it running; `exited` settles when it ends. */
 export type KillSpawner = (argv: string[]) => { readonly exited: Promise<unknown> };
 
+export interface PtyKill {
+    kill(signal: NodeJS.Signals): void;
+    /* Settles once the taskkill still running, and the SIGKILL after it, are done; at once when none runs. */
+    settled(): Promise<void>;
+}
+
 export interface PtyKillOptions {
     platform?: string;
     spawn?: KillSpawner;
 }
 
-function spawnDetached(argv: string[]): { readonly exited: Promise<unknown> } {
-    return Bun.spawn(argv, { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
+// A taskkill that hangs would hold every later kill back, the SIGKILL after it included.
+const TASKKILL_LIMIT_MS = 5_000;
+
+function spawnUnawaited(argv: string[]): { readonly exited: Promise<unknown> } {
+    return Bun.spawn(argv, { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', timeout: TASKKILL_LIMIT_MS });
 }
 
 /*
@@ -26,10 +35,10 @@ function spawnDetached(argv: string[]): { readonly exited: Promise<unknown> } {
  * the sum of those runs, and the escalation to SIGKILL that follows a SIGHUP starts no second one
  * while the first still runs.
  */
-export function createPtyKill(target: PtyKillTarget, options: PtyKillOptions = {}): (signal: NodeJS.Signals) => void {
+export function createPtyKill(target: PtyKillTarget, options: PtyKillOptions = {}): PtyKill {
     const platform = options.platform ?? process.platform;
-    const spawn = options.spawn ?? spawnDetached;
-    let taskkillRunning = false;
+    const spawn = options.spawn ?? spawnUnawaited;
+    let taskkill: Promise<void> | null = null;
 
     const forceKill = (): void => {
         if (target.hasExited()) {
@@ -42,7 +51,7 @@ export function createPtyKill(target: PtyKillTarget, options: PtyKillOptions = {
         }
     };
 
-    return (signal) => {
+    const kill = (signal: NodeJS.Signals): void => {
         if (target.hasExited()) {
             return;
         }
@@ -54,7 +63,7 @@ export function createPtyKill(target: PtyKillTarget, options: PtyKillOptions = {
             target.write('\x03');
             return;
         }
-        if (taskkillRunning) {
+        if (taskkill !== null) {
             return;
         }
         let exited: Promise<unknown>;
@@ -64,11 +73,15 @@ export function createPtyKill(target: PtyKillTarget, options: PtyKillOptions = {
             forceKill();
             return;
         }
-        taskkillRunning = true;
         const settle = (): void => {
-            taskkillRunning = false;
+            taskkill = null;
             forceKill();
         };
-        void exited.then(settle, settle);
+        taskkill = exited.then(settle, settle);
+    };
+
+    return {
+        kill,
+        settled: () => taskkill ?? Promise.resolve()
     };
 }

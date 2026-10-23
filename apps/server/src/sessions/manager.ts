@@ -38,6 +38,9 @@ type SessionErrorCode =
  */
 const RESUME_GRACE_MS = 15_000;
 
+// How long the daemon going down waits for its terminals' kills; a taskkill takes well under a second.
+const KILL_SETTLE_LIMIT_MS = 3_000;
+
 /* What a fresh screen says before the shell prints anything: the linked context, then what was left for this node while it did not exist. */
 function motdOf(hint: string | null, notices: readonly string[]): string | undefined {
     const lines = [...(hint === null ? [] : [hint]), ...notices];
@@ -731,6 +734,24 @@ export class SessionManager {
             if (!session.exited) {
                 session.kill();
             }
+        }
+    }
+
+    /*
+     * The daemon's own shutdown: a kill on Windows is a taskkill that runs on its own, and one still
+     * running when the daemon exits dies with it, leaving the tree it was to end behind.
+     */
+    async killAllSettled(limitMs: number = KILL_SETTLE_LIMIT_MS): Promise<void> {
+        this.killAll();
+        const kills = [...this.sessions.values()].map((session) => session.killSettled());
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const limit = new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, limitMs);
+        });
+        try {
+            await Promise.race([Promise.allSettled(kills), limit]);
+        } finally {
+            clearTimeout(timer);
         }
     }
 

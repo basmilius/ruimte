@@ -16,6 +16,8 @@ export interface PtyProcess {
     write(data: string): void;
     resize(cols: number, rows: number): void;
     kill(signal?: NodeJS.Signals): void;
+    // Settles once a kill still running is done, so a daemon going down outlives a taskkill on Windows.
+    killSettled?(): Promise<void>;
     onData(callback: (data: Uint8Array) => void): void;
     onExit(callback: (exitCode: number) => void): void;
 }

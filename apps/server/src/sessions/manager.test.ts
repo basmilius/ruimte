@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { delimiter } from 'node:path';
 import { RESTORED_TEXT } from './session.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
@@ -22,6 +22,45 @@ function print(sessionId: string, text: string): void {
     harness.adapter.forSession(sessionId).emit(text);
     harness.manager.get(sessionId)!.flush();
 }
+
+describe('SessionManager.killAllSettled', () => {
+    test('waits for a kill that still runs, as a taskkill on Windows does', async () => {
+        await create('s1');
+        const pty = harness.adapter.forSession('s1');
+        const taskkill = Promise.withResolvers<void>();
+        pty.pendingKill = taskkill.promise;
+        let done = false;
+        const ending = harness.manager.killAllSettled().then(() => {
+            done = true;
+        });
+        await pty.exited;
+        expect(pty.signals).toEqual(['SIGHUP']);
+        expect(done).toBe(false);
+        taskkill.resolve();
+        await ending;
+        expect(done).toBe(true);
+    });
+
+    test('stops waiting after its limit', async () => {
+        jest.useFakeTimers();
+        try {
+            await create('s1');
+            harness.adapter.forSession('s1').pendingKill = new Promise<void>(() => undefined);
+            let done = false;
+            const ending = harness.manager.killAllSettled(3_000).then(() => {
+                done = true;
+            });
+            jest.advanceTimersByTime(2_999);
+            await Promise.resolve();
+            expect(done).toBe(false);
+            jest.advanceTimersByTime(1);
+            await ending;
+            expect(done).toBe(true);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+});
 
 describe('SessionManager', () => {
     test('a permission request only says the node needs a person; its CLI asks on its own screen', async () => {

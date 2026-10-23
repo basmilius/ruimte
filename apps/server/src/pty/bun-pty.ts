@@ -1,4 +1,4 @@
-import { createPtyKill } from './pty-kill.ts';
+import { createPtyKill, type PtyKill } from './pty-kill.ts';
 import { signalExitCode, type PtyAdapter, type PtyProcess, type PtySpawnOptions } from './pty.ts';
 
 // A backgrounded grandchild may keep the PTY open forever, so only wait briefly for trailing output.
@@ -13,7 +13,7 @@ class BunPtyProcess implements PtyProcess {
     private processExitCode: number | null = null;
     private exitReported = false;
     private drainTimer: ReturnType<typeof setTimeout> | null = null;
-    private readonly killProcess: (signal: NodeJS.Signals) => void;
+    private readonly killer: PtyKill;
 
     constructor(options: PtySpawnOptions) {
         this.process = Bun.spawn([options.shell, ...options.args], {
@@ -37,7 +37,7 @@ class BunPtyProcess implements PtyProcess {
             }
         });
         this.pid = this.process.pid;
-        this.killProcess = createPtyKill({
+        this.killer = createPtyKill({
             pid: this.pid,
             hasExited: () => this.processExitCode !== null,
             write: (data) => this.process.terminal?.write(data),
@@ -54,7 +54,11 @@ class BunPtyProcess implements PtyProcess {
     }
 
     kill(signal: NodeJS.Signals = 'SIGHUP'): void {
-        this.killProcess(signal);
+        this.killer.kill(signal);
+    }
+
+    killSettled(): Promise<void> {
+        return this.killer.settled();
     }
 
     onData(callback: (data: Uint8Array) => void): void {
