@@ -2080,8 +2080,13 @@ describe('model benchmarks', () => {
         model_creator: { id: 'creator', name: 'Creator' },
         evaluations: { artificial_analysis_intelligence_index: intelligence, artificial_analysis_coding_index: 1, artificial_analysis_agentic_index: null },
         artificial_analysis_intelligence_index_cost: cost === null ? null : { total_cost: cost * 100, cost_per_task: { total_cost: cost } },
-        pricing: { price_1m_input_tokens: 1, price_1m_output_tokens: 2 },
-        performance: { median_output_tokens_per_second: 3 }
+        pricing: { price_1m_input_tokens: 1, price_1m_output_tokens: 2, price_1m_cache_hit_tokens: 0, price_1m_cache_write_tokens: 1.25 },
+        performance: {
+            median_output_tokens_per_second: 3,
+            median_time_to_first_token_seconds: 0.1,
+            median_time_to_first_answer_token_seconds: 0.5,
+            median_end_to_end_response_time_seconds: 167.17
+        }
     });
     const page = (number: number, hasMore: boolean, data: unknown[]) => ({
         tier: 'free',
@@ -2157,7 +2162,7 @@ describe('model benchmarks', () => {
         }
     });
 
-    test('follows every page and hands out only what the chart draws', async () => {
+    test('follows every page and hands out only what the comparison displays', async () => {
         pages = [
             page(1, true, [
                 measured(measuredId('claude-opus-5-5', 'low'), 42.3, 0.55),
@@ -2184,7 +2189,13 @@ describe('model benchmarks', () => {
             effort: 'max',
             intelligence: 37.3,
             coding: 1,
-            outputSpeed: 3
+            outputSpeed: 3,
+            timeToFirstAnswer: 0.5,
+            responseTime: 167.17,
+            inputPrice: 1,
+            outputPrice: 2,
+            cacheReadPrice: 0,
+            cacheWritePrice: 1.25
         });
         expect(result.models.map((model) => model.id)).toEqual(BENCHMARK_MODELS.map((model) => model.slug));
         for (const model of result.models) {
