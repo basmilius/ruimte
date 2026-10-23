@@ -440,8 +440,14 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
     public let `costPerTask`: Double?
     public let `totalCost`: Double?
     public let `outputSpeed`: Double?
+    public let `timeToFirstAnswer`: Double?
+    public let `responseTime`: Double?
+    public let `inputPrice`: Double?
+    public let `outputPrice`: Double?
+    public let `cacheReadPrice`: Double?
+    public let `cacheWritePrice`: Double?
 
-    public init(`modelId`: String, `effort`: String, `intelligence`: Double? = nil, `coding`: Double? = nil, `agentic`: Double? = nil, `costPerTask`: Double? = nil, `totalCost`: Double? = nil, `outputSpeed`: Double? = nil) {
+    public init(`modelId`: String, `effort`: String, `intelligence`: Double? = nil, `coding`: Double? = nil, `agentic`: Double? = nil, `costPerTask`: Double? = nil, `totalCost`: Double? = nil, `outputSpeed`: Double? = nil, `timeToFirstAnswer`: Double? = nil, `responseTime`: Double? = nil, `inputPrice`: Double? = nil, `outputPrice`: Double? = nil, `cacheReadPrice`: Double? = nil, `cacheWritePrice`: Double? = nil) {
         self.`modelId` = `modelId`
         self.`effort` = `effort`
         self.`intelligence` = `intelligence`
@@ -450,6 +456,12 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         self.`costPerTask` = `costPerTask`
         self.`totalCost` = `totalCost`
         self.`outputSpeed` = `outputSpeed`
+        self.`timeToFirstAnswer` = `timeToFirstAnswer`
+        self.`responseTime` = `responseTime`
+        self.`inputPrice` = `inputPrice`
+        self.`outputPrice` = `outputPrice`
+        self.`cacheReadPrice` = `cacheReadPrice`
+        self.`cacheWritePrice` = `cacheWritePrice`
     }
 
     public init(from decoder: Decoder) throws {
@@ -463,6 +475,12 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         `costPerTask` = try container.decodeIfPresent(Double.self, forKey: .`costPerTask`)
         `totalCost` = try container.decodeIfPresent(Double.self, forKey: .`totalCost`)
         `outputSpeed` = try container.decodeIfPresent(Double.self, forKey: .`outputSpeed`)
+        `timeToFirstAnswer` = try container.decodeIfPresent(Double.self, forKey: .`timeToFirstAnswer`)
+        `responseTime` = try container.decodeIfPresent(Double.self, forKey: .`responseTime`)
+        `inputPrice` = try container.decodeIfPresent(Double.self, forKey: .`inputPrice`)
+        `outputPrice` = try container.decodeIfPresent(Double.self, forKey: .`outputPrice`)
+        `cacheReadPrice` = try container.decodeIfPresent(Double.self, forKey: .`cacheReadPrice`)
+        `cacheWritePrice` = try container.decodeIfPresent(Double.self, forKey: .`cacheWritePrice`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -475,6 +493,12 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`costPerTask`, forKey: .`costPerTask`)
         try container.encodeIfPresent(`totalCost`, forKey: .`totalCost`)
         try container.encodeIfPresent(`outputSpeed`, forKey: .`outputSpeed`)
+        try container.encodeIfPresent(`timeToFirstAnswer`, forKey: .`timeToFirstAnswer`)
+        try container.encodeIfPresent(`responseTime`, forKey: .`responseTime`)
+        try container.encodeIfPresent(`inputPrice`, forKey: .`inputPrice`)
+        try container.encodeIfPresent(`outputPrice`, forKey: .`outputPrice`)
+        try container.encodeIfPresent(`cacheReadPrice`, forKey: .`cacheReadPrice`)
+        try container.encodeIfPresent(`cacheWritePrice`, forKey: .`cacheWritePrice`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -486,6 +510,12 @@ public struct BenchmarkMeasurement: Codable, Sendable, Equatable {
         case `costPerTask` = "costPerTask"
         case `totalCost` = "totalCost"
         case `outputSpeed` = "outputSpeed"
+        case `timeToFirstAnswer` = "timeToFirstAnswer"
+        case `responseTime` = "responseTime"
+        case `inputPrice` = "inputPrice"
+        case `outputPrice` = "outputPrice"
+        case `cacheReadPrice` = "cacheReadPrice"
+        case `cacheWritePrice` = "cacheWritePrice"
     }
 }
 

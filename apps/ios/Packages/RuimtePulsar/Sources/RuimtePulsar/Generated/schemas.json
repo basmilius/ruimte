@@ -379,6 +379,30 @@
       "outputSpeed": {
         "type": "number",
         "exclusiveMinimum": 0
+      },
+      "timeToFirstAnswer": {
+        "type": "number",
+        "minimum": 0
+      },
+      "responseTime": {
+        "type": "number",
+        "minimum": 0
+      },
+      "inputPrice": {
+        "type": "number",
+        "minimum": 0
+      },
+      "outputPrice": {
+        "type": "number",
+        "minimum": 0
+      },
+      "cacheReadPrice": {
+        "type": "number",
+        "minimum": 0
+      },
+      "cacheWritePrice": {
+        "type": "number",
+        "minimum": 0
       }
     },
     "required": [
@@ -847,6 +871,30 @@
             "outputSpeed": {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            "timeToFirstAnswer": {
+              "type": "number",
+              "minimum": 0
+            },
+            "responseTime": {
+              "type": "number",
+              "minimum": 0
+            },
+            "inputPrice": {
+              "type": "number",
+              "minimum": 0
+            },
+            "outputPrice": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cacheReadPrice": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cacheWritePrice": {
+              "type": "number",
+              "minimum": 0
             }
           },
           "required": [
