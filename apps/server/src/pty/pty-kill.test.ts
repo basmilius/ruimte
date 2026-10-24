@@ -101,17 +101,6 @@ describe('createPtyKill on Windows', () => {
         expect(pty.spawned).toHaveLength(2);
     });
 
-    test('does nothing once the process exited', () => {
-        const pty = harness();
-        const kill = createPtyKill(pty.target, { platform: 'win32', spawn: pty.spawn }).kill;
-        pty.exit();
-        kill('SIGINT');
-        kill('SIGHUP');
-        expect(pty.written).toEqual([]);
-        expect(pty.spawned).toEqual([]);
-        expect(pty.signals).toEqual([]);
-    });
-
     test('sends SIGKILL at once when taskkill cannot be started', () => {
         const pty = harness();
         const kill = createPtyKill(pty.target, {
@@ -163,12 +152,15 @@ describe('createPtyKill elsewhere', () => {
         expect(pty.written).toEqual([]);
         expect(pty.spawned).toEqual([]);
     });
+});
 
-    test('does nothing once the process exited', () => {
-        const pty = harness();
-        const kill = createPtyKill(pty.target, { platform: 'linux', spawn: pty.spawn }).kill;
-        pty.exit();
-        kill('SIGHUP');
-        expect(pty.signals).toEqual([]);
-    });
+test.each(['win32', 'linux'])('createPtyKill on %s does nothing once the process exited', (platform) => {
+    const pty = harness();
+    const kill = createPtyKill(pty.target, { platform, spawn: pty.spawn }).kill;
+    pty.exit();
+    kill('SIGINT');
+    kill('SIGHUP');
+    expect(pty.written).toEqual([]);
+    expect(pty.spawned).toEqual([]);
+    expect(pty.signals).toEqual([]);
 });
