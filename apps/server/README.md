@@ -47,7 +47,7 @@ Other environment variables:
 
 ## Compile
 
-`bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte-context` and `ruimte.build` next to it. For Windows it also puts a copy named `ruimte-context.exe` there, which runs `ruimte context` under that name, so cmd and PowerShell never pass an agent's words through a batch file. It builds for this machine, or for another with `--os mac|linux --arch arm64|x64`. `--target darwin-arm64` names the target the way the npm packages do, and `--outdir` picks the folder. A macOS binary only compiles on macOS, since `codesign` has to repair the signature Bun leaves. `RUIMTE_VERSION` stamps a version in. The desktop app packages that folder as its `bin` resource.
+`bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte-context` and `ruimte.build` next to it. For Windows it also builds `ruimte-context.exe` there, a small launcher (`apps/context-launcher`) that starts `ruimte.exe context` with the words as they came, so cmd and PowerShell never pass an agent's words through a batch file. That takes cargo, with the MinGW target and linker when it does not run on Windows. It builds for this machine, or for another with `--os mac|linux --arch arm64|x64`. `--target darwin-arm64` names the target the way the npm packages do, and `--outdir` picks the folder. A macOS binary only compiles on macOS, since `codesign` has to repair the signature Bun leaves. `RUIMTE_VERSION` stamps a version in. The desktop app packages that folder as its `bin` resource.
 
 ## Crash reports
 

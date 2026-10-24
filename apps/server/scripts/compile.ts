@@ -8,8 +8,9 @@ import { placeDatabaseHelper } from './database-helper.ts';
 
 /*
  * Compiles the daemon into one executable per platform, with the `ruimte-context` script next
- * to it (and on Windows a `ruimte-context.exe`), under `dist/<os>-<arch>/`. The folder names follow electron-builder's macros, so the
- * desktop build picks the right one with `${os}-${arch}`.
+ * to it, under `dist/<os>-<arch>/`. Git Bash on Windows runs that script too; cmd and PowerShell find
+ * `ruimte-context.exe` beside it, the launcher in `apps/context-launcher`. The folder names follow
+ * electron-builder's macros, so the desktop build picks the right one with `${os}-${arch}`.
  *
  *   bun scripts/compile.ts                                     the machine it runs on
  *   bun scripts/compile.ts --os mac --arch x64                 cross-compile
@@ -79,6 +80,8 @@ if (values.os === 'mac' && process.platform !== 'darwin') {
 const nativeDir = join(outDir, 'native');
 await mkdir(nativeDir, { recursive: true });
 const rustTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-apple-darwin`;
+const installedCargo = join(homedir(), '.cargo', 'bin', 'cargo');
+const cargo = process.env.CARGO ?? (existsSync(installedCargo) ? installedCargo : 'cargo');
 
 // The daemon and every native helper write to places of their own, so they build side by side.
 const builds: Array<Promise<number>> = [
@@ -140,8 +143,6 @@ if (values.os === 'mac') {
        the Linux build targets, so Speech to Text stays macOS only until that floor moves. A build
        without the helper reports the feature as unavailable. */
     const speechRoot = join(root, '../speech-bridge');
-    const installedCargo = join(homedir(), '.cargo', 'bin', 'cargo');
-    const cargo = process.env.CARGO ?? (existsSync(installedCargo) ? installedCargo : 'cargo');
     builds.push(
         run([cargo, 'build', '--release', '--locked', '--target', rustTarget], speechRoot).then(async (exitCode) => {
             if (exitCode !== 0) {
@@ -160,6 +161,21 @@ if (values.os === 'mac') {
             ['bun', resolve(root, '../computer-use/scripts/build.ts'), '--variant', 'release', '--arch', values.arch, '--outdir', join(outDir, 'Helpers')],
             root
         )
+    );
+}
+
+if (values.os === 'win') {
+    // MSVC is the toolchain of a Windows runner; anywhere else the MinGW one cross-compiles, with `x86_64-w64-mingw32-gcc` installed.
+    const launcherRoot = resolve(root, '../context-launcher');
+    const launcherTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-pc-windows-${process.platform === 'win32' ? 'msvc' : 'gnu'}`;
+    builds.push(
+        run([cargo, 'build', '--release', '--locked', '--target', launcherTarget], launcherRoot).then(async (exitCode) => {
+            if (exitCode !== 0) {
+                return exitCode;
+            }
+            await copyFile(join(launcherRoot, 'target', launcherTarget, 'release', 'ruimte-context.exe'), join(outDir, 'ruimte-context.exe'));
+            return 0;
+        })
     );
 }
 
@@ -189,11 +205,6 @@ if (values.os === 'mac' || values.os === 'linux') {
 
 await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));
 await chmod(join(outDir, 'ruimte-context'), 0o755);
-if (values.os === 'win') {
-    // Git Bash runs the script above; cmd and PowerShell find this copy, which is `ruimte context` under its
-    // name (`argvForExecutable`). A `.cmd` in its place would pass the words through `%*`, which cmd reads again.
-    await copyFile(binary, join(outDir, 'ruimte-context.exe'));
-}
 await writeFile(join(outDir, 'ruimte.build'), `${buildId}\n`);
 console.log(`Compiled ${binary}`);
 

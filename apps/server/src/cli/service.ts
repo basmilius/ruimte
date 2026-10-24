@@ -264,7 +264,6 @@ export function copyServiceBinaries(from: string, to: string, platform: NodeJS.P
     }
 }
 
-/* Best effort: a retired executable that still runs stays until a later copy or removal. */
 /* Only a cleanup: a former file another process holds open never stops an install or an uninstall. */
 function removeFormer(dir: string): void {
     for (const name of FORMER_FILES) {
@@ -276,6 +275,7 @@ function removeFormer(dir: string): void {
     }
 }
 
+/* Best effort: a retired executable that still runs stays until a later copy or removal. */
 function removeRetired(dir: string): void {
     const names = existsSync(dir) ? readdirSync(dir) : [];
     for (const name of names.filter((entry) => entry.endsWith(RETIRED_SUFFIX))) {
