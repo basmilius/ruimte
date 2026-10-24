@@ -114,9 +114,12 @@ async function trashWindows(path: string, env: NodeJS.ProcessEnv, spawn: SpawnTr
     const code = await Promise.race([child.exited, late]);
     clearTimeout(timer);
     if (code === null) {
-        // The shell works inside this process, so ending it ends a dialog too, and the file stays where it was.
+        // The shell works inside this process, so ending it ends a dialog too; a move that finished just then is not undone.
         child.kill();
-        throw new TrashError('trash-failed', 'Moving the file to the Recycle Bin did not finish within 30 seconds and was stopped');
+        throw new TrashError(
+            'trash-failed',
+            'Moving the file to the Recycle Bin took longer than 30 seconds and was stopped. Look in the Recycle Bin before you try again'
+        );
     }
     if (code === RecycleBinExit.moved) {
         return;

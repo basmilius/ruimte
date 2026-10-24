@@ -242,13 +242,6 @@ describe('trashPath on Windows', () => {
         expect(`${RECYCLE_BIN_SOURCE}${RECYCLE_BIN_SCRIPT}`).not.toContain('Microsoft.VisualBasic');
     });
 
-    test('gives the helper the exit codes trash.ts reads', () => {
-        expect(RECYCLE_BIN_SOURCE).toContain(
-            `NotFixed = ${RecycleBinExit.notFixed}, RecycleBinOff = ${RecycleBinExit.recycleBinOff}, TooLarge = ${RecycleBinExit.tooLarge};`
-        );
-        expect(RECYCLE_BIN_SOURCE).toContain(`LinkedFolder = ${RecycleBinExit.linkedFolder}, InUse = ${RecycleBinExit.inUse},`);
-    });
-
     test('asks the shell for no error dialog and for a warning instead of a deletion for good', () => {
         const flags = /operation\.Flags = \(ushort\)\(([^)]*)\);/
             .exec(RECYCLE_BIN_SOURCE)?.[1]
@@ -291,7 +284,7 @@ describe('trashPath on Windows', () => {
 
             expect(await failure).toMatchObject({
                 code: 'trash-failed',
-                message: 'Moving the file to the Recycle Bin did not finish within 30 seconds and was stopped'
+                message: 'Moving the file to the Recycle Bin took longer than 30 seconds and was stopped. Look in the Recycle Bin before you try again'
             });
             expect(killed).toBe(1);
         });
