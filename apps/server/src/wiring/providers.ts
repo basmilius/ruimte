@@ -78,8 +78,6 @@ export async function wireProviders(
     void modelCatalogs.refresh();
     fetched();
     identity.attachAgentIntegrations({ describe: () => ({ agentIntegrations: integrations.summary() }) });
-    integrations.onChanged(() => identity.announce());
-    void integrations.refreshInstalled();
     // Before the managers, which start every CLI under the account its node or chat names.
     const accounts = new ProviderAccountsService({
         home: config.home,

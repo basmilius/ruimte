@@ -183,6 +183,9 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     registerEditorHandlers(dispatcher, { machine, providers, projects, work, launches, git, devices, databases, usage, processes, language, agents });
     const network = wireNetwork(config, compiled, machine, dispatcher, { clients: () => clients });
 
+    // Only from here on has the identity everything its announce describes; a CLI found sooner took the daemon down.
+    providers.integrations.onChanged(() => identity.announce());
+    void providers.integrations.refreshInstalled();
     void providers.integrations.installDefaults();
 
     const clients = wireClients(machine.handshake, {
