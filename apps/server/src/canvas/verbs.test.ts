@@ -99,6 +99,7 @@ let ended: string[];
 let watching: Array<{ projectId: string; viewId: string; by: string }>;
 let notified: Array<Omit<Notice, 'createdAt'>>;
 let delivery: NoticeDelivery;
+let bridgeHost: CanvasHost['bridges'];
 let breakWrites: boolean;
 let tasks: TaskStore;
 let modes: Record<string, RuntimeMode>;
@@ -191,6 +192,7 @@ beforeEach(async () => {
     watching = [];
     notified = [];
     delivery = { at: 'waiting', wake: false, detail: 'nothing runs in that node yet; it reads the message when it starts (1 waiting)' };
+    bridgeHost = undefined;
     lineage = new AgentLineageStore(join(root, 'home'));
     tasks = new TaskStore(join(root, 'home'));
     await lineage.load();
@@ -301,6 +303,7 @@ function host(): CanvasHost {
                 return delivery;
             }
         },
+        bridges: bridgeHost,
         diagrams,
         devices,
         tasks: {
@@ -3380,6 +3383,22 @@ describe('node color', () => {
 });
 
 describe('notify', () => {
+    test('discovers person-made machine connections and sends with the authenticated caller id', async () => {
+        const sent: string[][] = [];
+        const id = 'b7880251-89c4-4f9e-8a03-9f98448639e6';
+        bridgeHost = {
+            list: (caller) => (caller === 'term-1' ? [{ id, nodeId: caller, projectId, machineId: 'mac', remoteNodeId: 'builder', label: 'Mac builder' }] : []),
+            send: async (caller, bridgeId, text) => {
+                sent.push([caller, bridgeId, text]);
+                return { at: 'now', detail: 'delivered on Mac' };
+            }
+        };
+        expect((await post('bridge', ['list'])).lines).toEqual([`bridge\t${id}\tmac\tMac builder`]);
+        expect((await post('notify', [`bridge:${id}`, '--text', 'Check the Mac build'])).lines).toEqual([`notified\tbridge:${id}\tnow\tdelivered on Mac`]);
+        expect(sent).toEqual([['term-1', id, 'Check the Mac build']]);
+        expect(notified).toEqual([]);
+    });
+
     test('refuses a node that runs on another machine, where nothing would ever deliver it', async () => {
         const target = (await post('node', ['new', 'terminal'])).lines[0]!.split('\t')[0]!;
         elsewhere.add(target);

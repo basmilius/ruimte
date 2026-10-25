@@ -271,6 +271,7 @@ interface UiStore {
     pullRequestDialog: { cwd: string } | null;
     /* A node on another machine being made, or made over for a machine that no longer links the project. */
     remoteNodeDialog: RemoteNodeRequest | null;
+    agentBridgeDialog: { nodeId: string; endpointId: string; title: string } | null;
     addToMachineDialog: AddToMachineRequest | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
@@ -299,6 +300,7 @@ interface UiStore {
     setIssueStartOpen(open: boolean): void;
     setPullRequestDialog(request: { cwd: string } | null): void;
     setRemoteNodeDialog(request: RemoteNodeRequest | null): void;
+    setAgentBridgeDialog(request: { nodeId: string; endpointId: string; title: string } | null): void;
     setAddToMachineDialog(request: AddToMachineRequest | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setRenamingViewId(viewId: string | null): void;
@@ -366,6 +368,7 @@ export const useUi = create<UiStore>((set, get) => ({
     issueStartOpen: false,
     pullRequestDialog: null,
     remoteNodeDialog: null,
+    agentBridgeDialog: null,
     addToMachineDialog: null,
     viewDialog: null,
     renamingViewId: null,
@@ -429,6 +432,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setRemoteNodeDialog(request) {
         set({ remoteNodeDialog: request });
+    },
+    setAgentBridgeDialog(request) {
+        set({ agentBridgeDialog: request });
     },
     setAddToMachineDialog(request) {
         set({ addToMachineDialog: request });

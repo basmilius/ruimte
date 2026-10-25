@@ -94,6 +94,10 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
     'agent.notify': async ({ nodeId, text }, { actor, context }) => {
         const { host, place } = context;
         const caller = actor.id;
+        if (nodeId.startsWith('bridge:') && host.bridges !== undefined) {
+            const delivery = await host.bridges.send(caller, nodeId.slice('bridge:'.length), text);
+            return { output: { nodeId, at: delivery.at, detail: delivery.detail } };
+        }
         if (nodeId === caller) {
             throw new VerbRefusal('self-notify', `${nodeId} is you; a node needs no message to itself`);
         }

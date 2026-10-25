@@ -7316,6 +7316,242 @@
     "type": "object",
     "properties": {}
   },
+  "request.bridge.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "nodeId"
+    ]
+  },
+  "request.bridge.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "bridges": {
+        "maxItems": 32,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "nodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "machineId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "remoteNodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "id",
+            "projectId",
+            "nodeId",
+            "machineId",
+            "remoteNodeId",
+            "label"
+          ]
+        }
+      }
+    },
+    "required": [
+      "bridges"
+    ]
+  },
+  "request.bridge.bind.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "machineId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "remoteNodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "label": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      }
+    },
+    "required": [
+      "id",
+      "projectId",
+      "nodeId",
+      "machineId",
+      "remoteNodeId",
+      "label"
+    ]
+  },
+  "request.bridge.bind.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.bridge.remove.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.bridge.remove.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.bridge.candidates.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.bridge.candidates.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "agents": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "nodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "title": {
+              "type": "string"
+            },
+            "canvas": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "nodeId",
+            "title",
+            "canvas"
+          ]
+        }
+      }
+    },
+    "required": [
+      "agents"
+    ]
+  },
+  "request.peer.message.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "bridgeId": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "fromNodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "text": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      },
+      "fromMessage": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "bridgeId",
+      "fromNodeId",
+      "text",
+      "fromMessage"
+    ]
+  },
+  "request.peer.message.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "at": {
+        "type": "string",
+        "enum": [
+          "now",
+          "waiting"
+        ]
+      },
+      "detail": {
+        "type": "string",
+        "maxLength": 2000
+      }
+    },
+    "required": [
+      "at",
+      "detail"
+    ]
+  },
   "request.peer.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

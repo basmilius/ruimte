@@ -33,6 +33,9 @@ import { registerLaunchHandlers } from '../handlers/launches.ts';
 import { registerOnDeviceHandlers } from '../handlers/ondevice.ts';
 import { registerPeerHandlers } from '../handlers/peer.ts';
 import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
+import { registerAgentBridgeHandlers } from '../handlers/agent-bridges.ts';
+import { AgentBridges } from '../peering/agent-bridges.ts';
+import { chatNoticeTargets } from '@adecore/agents/coordination';
 import { registerPlanHandlers } from '../handlers/plan.ts';
 import { registerRemoteHandlers } from '../handlers/remote.ts';
 import { trustedStatementKeys } from '../pulsar/statement.ts';
@@ -122,6 +125,17 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
     const { identity } = machine;
     const { sessions, chats } = agents;
     const store = projects.store;
+    const bridges = new AgentBridges({
+        home: config.home,
+        projects: store,
+        connections: remote.connections,
+        messages: canvasHost.messages,
+        fromMessage: chatNoticeTargets(chats).fromMessage
+    });
+    await bridges.load();
+    remote.onLeave(() => bridges.wipe());
+    canvasHost.bridges = bridges;
+    registerAgentBridgeHandlers(dispatcher, bridges);
     registerPushHandlers(dispatcher, machine.auth, () => push.synchronizeActivities(), push);
     registerSnoozeHandlers(dispatcher, work.snoozes, (nodeId) => store.index.locate(nodeId));
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await input.machineModel });

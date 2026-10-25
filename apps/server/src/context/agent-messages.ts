@@ -36,7 +36,8 @@ export function agentMessages(deps: AgentMessageDeps): MessageHost {
                 viewId: place.canvasId ?? nodeId
             });
         },
-        notify: async (notice) => {
+        notify: async (notice, fromMessage = false) => {
+            const chatTargets = chatNoticeTargets(chats);
             const delivery = await deliverNotice(
                 notices,
                 {
@@ -46,7 +47,8 @@ export function agentMessages(deps: AgentMessageDeps): MessageHost {
                         const session = sessions.get(id);
                         return session && !session.exited ? { agent: session.agent, notice: (text: string) => session.notice(text) } : null;
                     },
-                    ...chatNoticeTargets(chats)
+                    ...chatTargets,
+                    fromMessage: (id) => fromMessage || chatTargets.fromMessage(id)
                 },
                 notice
             );

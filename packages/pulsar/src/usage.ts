@@ -125,6 +125,7 @@ export const USAGE_VERB_COUNTERS = {
     list: 'verbsRead',
     read: 'verbsRead',
     provider: 'verbsRead',
+    bridge: 'verbsRead',
     done: 'verbsTask',
     task: 'verbsTask',
     plan: 'verbsTask',

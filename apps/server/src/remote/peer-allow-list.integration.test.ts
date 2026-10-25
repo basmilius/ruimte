@@ -138,6 +138,7 @@ describe('a peer in the whole daemon', () => {
             'peer.bundlePut',
             'peer.bundleRead',
             'peer.close',
+            'peer.message',
             'peer.result',
             'peer.taskStart',
             'peer.taskStop',

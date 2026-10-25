@@ -23,6 +23,7 @@ const VERB_LOOKS: Record<ContextVerb, VerbLook> = {
     read: { name: 'Context', from: 0 },
     done: { name: 'Task', from: 0 },
     notify: { name: 'Message', from: 0 },
+    bridge: { name: 'Agents', from: 1 },
     alert: { name: 'Notification', from: 1 },
     answer: { name: 'Message', from: 0 },
     agent: { name: 'Agent', from: 1 },

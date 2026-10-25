@@ -248,6 +248,12 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                 <Icon icon={Link2} size={14} /> {t('menu.connect')}
                 <ContextMenu.Hint>{t('menu.connectHint')}</ContextMenu.Hint>
             </ContextMenu.Item>
+            {node.kind === 'chat' && !node.machine && (
+                <ContextMenu.Item onClick={() => useUi.getState().setAgentBridgeDialog({ nodeId: id, endpointId, title: node.title })}>
+                    <Icon icon={Link2} size={14} />
+                    {t('agentBridge.menu')}
+                </ContextMenu.Item>
+            )}
             <ContextMenu.Separator />
             {conversation && (
                 <ContextMenu.SubmenuRoot>

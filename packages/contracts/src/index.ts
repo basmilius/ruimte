@@ -1,4 +1,15 @@
 import {
+    AgentBridgeSchema,
+    BridgeListPayloadSchema,
+    BridgeListResultSchema,
+    BridgeRemovePayloadSchema,
+    BridgeCandidatesPayloadSchema,
+    BridgeCandidatesResultSchema,
+    PeerMessagePayloadSchema,
+    PeerMessageResultSchema
+} from './agent-bridge.ts';
+export * from './agent-bridge.ts';
+import {
     TerminalPreparePreviewPayloadSchema,
     TerminalPreparePreviewResultSchema,
     TerminalPreparePayloadSchema,
@@ -504,6 +515,11 @@ export const REQUEST_SCHEMAS = {
     'push.preferences': { payload: EmptySchema, result: PushPreferencesResultSchema },
     'presence.report': { payload: PresenceReportPayloadSchema, result: EmptySchema },
     // Any client may link, change and unlink: only a person reaches these, an agent has no socket.
+    'bridge.list': { payload: BridgeListPayloadSchema, result: BridgeListResultSchema },
+    'bridge.bind': { payload: AgentBridgeSchema, result: EmptySchema },
+    'bridge.remove': { payload: BridgeRemovePayloadSchema, result: EmptySchema },
+    'bridge.candidates': { payload: BridgeCandidatesPayloadSchema, result: BridgeCandidatesResultSchema },
+    'peer.message': { payload: PeerMessagePayloadSchema, result: PeerMessageResultSchema },
     'peer.list': { payload: EmptySchema, result: PeerListResultSchema },
     'peer.bind': { payload: PeerBindPayloadSchema, result: PeerLinkSchema },
     'peer.setCeiling': { payload: PeerSetCeilingPayloadSchema, result: EmptySchema },

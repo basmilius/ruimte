@@ -10,6 +10,7 @@ const NEEDS_TEXT = '--text needs the message to leave, in quotes';
 const NOTICE_HOURS = Math.round(NOTICE_MAX_AGE_MS / 3_600_000);
 
 const NOTIFY_DETAIL: readonly string[] = [
+    'machine\tFor an agent on another machine, use bridge:<id> from ruimte-context bridge list; only a person can make that connection',
     'prints\tnotified\tid\twhen\twhat happened\twhen is now for a message that is acted on as you call, on a screen or in a turn the chat takes on it, and waiting for one that is held until that node takes a turn of its own',
     'who\tOnly a node a line runs from you into, which is the same direction that makes you readable to it; ruimte-context link new draws that line',
     'who\tA link --to that names a terminal or a chat draws both ways at once, two edges and two rows, so one call is enough to be able to notify it and be notified back',

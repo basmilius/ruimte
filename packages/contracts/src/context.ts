@@ -31,6 +31,7 @@ export const CONTEXT_VERBS = [
     'read',
     'done',
     'notify',
+    'bridge',
     'alert',
     'answer',
     'agent',

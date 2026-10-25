@@ -22,6 +22,7 @@ import { PROVIDER_ACTIONS, PROVIDER_DETAIL, PROVIDER_SUMMARY } from './provider-
 import { LAUNCHES_ACTIONS, LAUNCHES_DETAIL, LAUNCHES_SUMMARY } from './launch-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
+import { bridgeVerb } from './bridge-verb.ts';
 import { openAction } from './open-verb.ts';
 import { operationVerb } from './operation-verb.ts';
 import { planVerb } from './plan-verb.ts';
@@ -231,6 +232,7 @@ export const VERBS: readonly VerbEntry[] = [
     readVerb,
     doneVerb,
     notifyVerb,
+    bridgeVerb,
     alertVerb,
     answerVerb,
     agentVerb,

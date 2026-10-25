@@ -1,4 +1,18 @@
 {
+    "agentBridge": {
+        "menu": "Koppelen aan een agent op een andere machine…",
+        "title": "Agents koppelen",
+        "description": "Kies een bestaande agent waarmee {{agent}} berichten kan uitwisselen.",
+        "machine": "Machine",
+        "agent": "Agent en canvas",
+        "connect": "Koppelen",
+        "disconnect": "Ontkoppelen",
+        "update": "Werk Ruimte op beide machines bij om agents te koppelen.",
+        "unreachable": "De andere machine kon niet worden bereikt.",
+        "noAgents": "De gekoppelde checkout van dit project heeft geen chat-agents op een zichtbaar canvas. Open er eerst een op de andere machine.",
+        "noMachines": "Koppel de andere machine eerst aan dit project via het canvasmenu.",
+        "rule": "Alleen deze agents kunnen berichten uitwisselen. Een bericht kan één beurt starten; een antwoord vanuit die beurt wacht op de volgende. Beide machines moeten bereikbaar zijn."
+    },
     "accents": {
         "red": "Rood",
         "orange": "Oranje",

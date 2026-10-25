@@ -1,4 +1,18 @@
 {
+    "agentBridge": {
+        "menu": "Connect to an agent on another machine…",
+        "title": "Connect agents",
+        "description": "Choose an existing agent that {{agent}} can exchange messages with.",
+        "machine": "Machine",
+        "agent": "Agent and canvas",
+        "connect": "Connect",
+        "disconnect": "Disconnect",
+        "update": "Update Ruimte on both machines to connect agents.",
+        "unreachable": "The other machine could not be reached.",
+        "noAgents": "This project's linked checkout has no chat agents on a visible canvas. Open one on the other machine first.",
+        "noMachines": "Link the other machine to this project first, using the canvas menu.",
+        "rule": "Only these agents can exchange messages. A message can start one turn; a reply from that turn waits for the next one. Both machines must be reachable."
+    },
     "accents": {
         "red": "Red",
         "orange": "Orange",

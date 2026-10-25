@@ -523,6 +523,7 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply ondevice.generate #/properties/state = ["aborted", "done"]",
   "reply peer.bind #/properties/ceiling = ["auto", "auto-accept-edits", "full-access", "supervised"]",
   "reply peer.list #/properties/links/items/properties/ceiling = ["auto", "auto-accept-edits", "full-access", "supervised"]",
+  "reply peer.message #/properties/at = ["now", "waiting"]",
   "reply peer.result #/properties/result/anyOf/0/properties/source = ["done", "exit", "turn"]",
   "reply peer.result #/properties/status/anyOf/0 = ["cancelled", "done", "failed", "open"]",
   "reply plan.apply #/properties/plan/properties/items/items/oneOf/0/properties/items/items/oneOf/1/properties/by = ["agent", "person"]",

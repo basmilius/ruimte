@@ -113,6 +113,10 @@ export interface CanvasHost {
     /* Ends the shell or the CLI behind a node; a canvas that is removed takes its sessions with it. */
     endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
     messages: MessageHost;
+    bridges?: {
+        list(nodeId: string): import('@ruimte/contracts').AgentBridge[];
+        send(nodeId: string, id: string, text: string): Promise<{ at: 'now' | 'waiting'; detail: string }>;
+    };
     /* Replaces the diagram of a view, whether or not anyone has its project open, and answers the new rev. */
     diagrams: Pick<DiagramStore, 'write'>;
     /* The tasks a chat gives the nodes it opens with `--task`, kept by the daemon outside the project. */
@@ -249,7 +253,7 @@ export interface CheckoutHost {
 export interface MessageHost {
     alert(nodeId: string, text: string): void;
     /* Puts a message in front of another node's agent, and says whether it landed or is waiting. */
-    notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
+    notify(notice: Omit<Notice, 'createdAt'>, fromMessage?: boolean): Promise<NoticeDelivery>;
 }
 
 /* Only what became of a card ever comes back; the value goes from the person's card to the store. */
