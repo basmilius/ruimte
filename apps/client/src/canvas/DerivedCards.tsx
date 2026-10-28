@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useChatRow } from '@adecore/agents-react/state';
 import { ErrorBoundary, LazyBoundary, lazyNamed } from '@adecore/ui';
 import { useRemoteNodeState } from '@/canvas/remote-node-state';
 import { useUntakenTask } from '@/canvas/remote-wait';
+import { workflowCandidates } from '@/chat/workflow/beside-workflows';
 import { forgetWorkflowBeside } from '@/chat/workflow/workflow-beside-state';
 import { useCanvas, type CanvasNode } from '@/state/canvas';
 import { useEndpoints } from '@/state/endpoints';
@@ -58,6 +60,11 @@ function ChatBeside({ node, z }: { node: CanvasNode; z: number }) {
     const remote = useRemoteNodeState(machine, workspaceId);
     const known = useEndpoints((s) => machine === undefined || s.endpoints.some((row) => row.id === machine || row.daemonId === machine));
     const unstarted = useUntakenTask(node.id, machine);
+    // Asked here, before the cards' chunk, so a canvas whose chats run no workflow never loads it.
+    const runsWorkflow = useChatRow(node.id, (row) => row !== undefined && workflowCandidates(row).length > 0);
+    if (!runsWorkflow) {
+        return null;
+    }
     if (machine !== undefined && (!known || remote === 'unlinked' || remote === 'too-old' || unstarted !== null)) {
         return null;
     }

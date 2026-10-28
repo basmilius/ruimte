@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { ArrowLeft, ChevronLeft, ChevronRight, CloudOff, MessageSquareText, Square, TriangleAlert, Workflow, X } from 'lucide-react';
-import { nodeColorOf, type AgentKind, type ChatWorkflow } from '@ruimte/contracts';
+import { nodeColorOf, workflowEndedAt, type AgentKind, type ChatWorkflow } from '@ruimte/contracts';
 import {
     jumpToTimelineItem,
     liveWorkflowPhase,
@@ -85,15 +85,6 @@ function PhaseTime({ phase }: { phase: WorkflowPhaseView }) {
     return time.endedAt === null ? <Elapsed startedAt={time.startedAt} /> : <span className={TIME}>{formatElapsedShort(time.endedAt - time.startedAt)}</span>;
 }
 
-/* When the workflow stopped: the end the host noted, or else the last end of an agent, or its last report. */
-function endedAt(workflow: ChatWorkflow): number | null {
-    if (workflow.finishedAt !== undefined) {
-        return workflow.finishedAt;
-    }
-    const ends = workflow.agents.flatMap((agent) => (agent.startedAt !== null && agent.durationMs !== null ? [agent.startedAt + agent.durationMs] : []));
-    return ends.length > 0 ? Math.max(...ends) : (workflow.lastProgressAt ?? null);
-}
-
 function phaseTitle(phase: WorkflowPhaseView, loose: string): string {
     return phase.title ?? loose;
 }
@@ -122,8 +113,12 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
     const actions = useChatActions();
     const [openHeights, setOpenHeights] = useState<Readonly<Record<string, number>>>({});
     const [agentSize, setAgentSize] = useState<CardSize | null>(() => (viewId === null ? null : storedAgentSize(viewId, id).read()));
-    // The workflow a stop was asked for; it stays pending until the workflow ends or the stop failed.
-    const [stopping, setStopping] = useState<string | null>(null);
+    /*
+     * The workflow a stop was asked for and the report it was pressed on. The machine answers once it
+     * passed the stop on, not once the workflow ended, so the stop stays pending until the workflow
+     * reports again: an ended one goes, and one that still runs offers Stop again.
+     */
+    const [stopping, setStopping] = useState<{ id: string; workflow: ChatWorkflow; sent: boolean } | null>(null);
     // Where the keyboard goes back to once the agent's card closed, which is only drawn after the change.
     const focusAfterClose = useRef<{ phase: string; index: number } | null>(null);
 
@@ -172,16 +167,22 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
     const loose = t('workflowBeside.phase.loose');
     const title = workflow.name ?? workflowDescription(tool.input) ?? t('workflowBeside.summary');
 
+    const stopPending = running && stopping?.id === candidate.id && (!stopping.sent || stopping.workflow === workflow);
+
     const stop = (): void => {
         const taskId = workflow.taskId;
-        if (taskId === undefined || stopping === candidate.id) {
+        if (taskId === undefined || stopPending) {
             return;
         }
-        setStopping(candidate.id);
-        actions.stopTask(id, taskId).catch((e: unknown) => {
-            setStopping(null);
-            useToasts.getState().show({ kind: 'error', title: t('workflowBeside.stopFailed'), description: messageOf(e) });
-        });
+        const asked = { id: candidate.id, workflow, sent: false };
+        setStopping(asked);
+        actions.stopTask(id, taskId).then(
+            () => setStopping((last) => (last === asked ? { ...asked, sent: true } : last)),
+            (e: unknown) => {
+                setStopping((last) => (last === asked ? null : last));
+                useToasts.getState().show({ kind: 'error', title: t('workflowBeside.stopFailed'), description: messageOf(e) });
+            }
+        );
     };
     const closeAgent = (): void => {
         if (picked !== undefined && agentPhase !== undefined) {
@@ -204,7 +205,7 @@ export function WorkflowBeside({ id, z }: { id: string; z: number }) {
                         title={title}
                         accent={accent}
                         stale={stale}
-                        stopping={stopping === candidate.id && running}
+                        stopping={stopPending}
                         position={shown.count > 1 ? { index: shown.index, count: shown.count } : null}
                         onSwitch={(step) => pickWorkflow(key, shown.shown[(shown.index + step + shown.count) % shown.count]!.id)}
                         onStop={stop}
@@ -312,7 +313,7 @@ function Summary({
     const { t } = useTranslation('canvas');
     const { workflow, tool, running } = candidate;
     const counts = workflowCounts(workflowPhases(workflow, running));
-    const ended = running ? null : endedAt(workflow);
+    const ended = running ? null : workflowEndedAt(workflow);
     const time = ended === null ? null : formatElapsedShort(Math.max(0, ended - tool.createdAt));
     return (
         <div

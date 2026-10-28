@@ -109,7 +109,7 @@
         "sizeAndPosition": "Size and position",
         "clearAsking": "Clear…",
         "openIn": "Open in {{app}}",
-        "showWorkflow": "Show workflow beside"
+        "showWorkflow": "Show workflow"
     },
     "kinds": {
         "terminal": "Terminal",

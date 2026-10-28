@@ -109,7 +109,7 @@
         "sizeAndPosition": "Grootte en positie",
         "clearAsking": "Wissen…",
         "openIn": "Openen in {{app}}",
-        "showWorkflow": "Workflow ernaast tonen"
+        "showWorkflow": "Workflow tonen"
     },
     "kinds": {
         "terminal": "Terminal",
