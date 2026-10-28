@@ -295,6 +295,10 @@
         "inspect": "Inspecteren",
         "error": {
             "openExternal": "In systeembrowser openen"
+        },
+        "plate": {
+            "picture": "Laatste beeld van de pagina, niet live",
+            "identity": "De pagina, niet live"
         }
     },
     "gaps": {

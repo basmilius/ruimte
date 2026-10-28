@@ -2,7 +2,8 @@ import { Globe, MapIcon, PenTool } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsRow } from '@adecore/ui/settings';
-import { Switch, Keys, shortcut } from '@adecore/ui';
+import { Segmented, Switch, Keys, shortcut } from '@adecore/ui';
+import { RENDER_DISTANCES, type RenderDistance } from '@/canvas/render-distance';
 import { NodeSizeSections } from '@/shell/settings/NodeSizeSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
@@ -14,6 +15,7 @@ const MOD_HELD = shortcut('Mod');
 export function ViewsPane() {
     const { t } = useTranslation('settings');
     const drawingSnap = useSettings((s) => s.drawingSnap);
+    const renderDistance = useSettings((s) => s.canvasRenderDistance);
     const update = useSettings((s) => s.update);
 
     return (
@@ -21,6 +23,19 @@ export function ViewsPane() {
             <NodeSizeSections />
             <SettingsSection title={t('views.canvas.title')} icon={MapIcon}>
                 <SettingSwitchRow id="views.canvas.minimap" setting="canvasMinimap" />
+                <SettingsRow
+                    searchId="views.canvas.renderDistance"
+                    label={t('views.canvas.renderDistance.label')}
+                    description={t('views.canvas.renderDistance.description')}
+                    control={
+                        <Segmented<RenderDistance>
+                            value={renderDistance}
+                            options={RENDER_DISTANCES.map((id) => ({ id, label: t(`views.canvas.renderDistance.options.${id}`) }))}
+                            label={t('views.canvas.renderDistance.label')}
+                            onValueChange={(value) => update({ canvasRenderDistance: value })}
+                        />
+                    }
+                />
             </SettingsSection>
             <SettingsSection title={t('views.drawing.title')} icon={PenTool}>
                 <SettingsRow

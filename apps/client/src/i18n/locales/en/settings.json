@@ -668,6 +668,15 @@
             "minimap": {
                 "label": "Canvas map",
                 "description": "A small map in the bottom right shows every node and the part you see. Click to jump there, drag the frame to pan. Hidden on a narrow canvas."
+            },
+            "renderDistance": {
+                "label": "Render distance",
+                "description": "How far out the canvas still draws pages, files, diagrams and devices live. Further out they show a still picture or their name. In the desktop app a page carries on out of sight. Applies at once to every window on this computer, not to your other devices. Far and Unlimited ask more of this computer.",
+                "options": {
+                    "standard": "Standard",
+                    "far": "Far",
+                    "unlimited": "Unlimited"
+                }
             }
         },
         "drawing": {

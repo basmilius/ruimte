@@ -61,7 +61,7 @@ import {
     lazyNamed,
     tintStyle
 } from '@adecore/ui';
-import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
+import { useHeldWhileVisible, useNodeInViewport, useRenderZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { SessionPorts } from '@/terminal/SessionPorts';
 import { ChatBody } from '@/nodes/ChatBody';
@@ -358,7 +358,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const maximized = maximizedPlace !== null;
     const inViewport = useNodeInViewport(id);
     const live = useHeldWhileVisible(inViewport || maximized);
-    const readable = useReadableZoom() || maximized;
+    const renderBody = useRenderZoom() || maximized;
     const [renaming, setRenaming] = useState(false);
     // Where a right-click landed on a group, in the canvas's own coordinates, for what its menu adds there.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
@@ -623,10 +623,10 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                     {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
                                     {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas />}
                                     {node.kind === 'browser' && <BrowserBody id={id} focused={active} />}
-                                    {node.kind === 'device' && (live && readable ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
+                                    {node.kind === 'device' && (live && renderBody ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
                                     {node.kind === 'note' && <NoteNode id={id} focused={active} />}
                                     {node.kind === 'drawing' && <DrawingNode id={id} />}
-                                    {node.kind === 'diagram' && (live && readable ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
+                                    {node.kind === 'diagram' && (live && renderBody ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
                                     {isUnknown && <UnknownNodePlate id={id} />}
                                     {node.kind === 'artifact' && (
                                         <FileToolbarSlotProvider value={toolbarSlot}>
@@ -650,7 +650,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                         </FileToolbarSlotProvider>
                                     )}
                                     {node.kind === 'file' &&
-                                        (live && readable ? (
+                                        (live && renderBody ? (
                                             <FileToolbarSlotProvider value={toolbarSlot}>
                                                 <FileNode id={id} focused={takesKeyboard} />
                                             </FileToolbarSlotProvider>

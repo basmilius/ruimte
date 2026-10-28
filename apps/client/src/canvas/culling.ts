@@ -3,6 +3,8 @@ import type { Viewport } from '@/canvas/camera-slice';
 import { intersects, isMeasured, visibleRect, type Camera } from '@/canvas/math';
 import { maximizedNodeOf, useCanvas, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
+import { useSettings } from '@/state/settings';
+import { rendersAtZoom } from '@/canvas/render-distance';
 
 /* Screen pixels around the viewport that still count as visible, so an edge does not flicker. */
 export const VIEW_MARGIN = 96;
@@ -24,14 +26,15 @@ export function useNodeInViewport(id: string): boolean {
 }
 
 /*
- * Under this a node is a few dozen pixels tall, a shape on the canvas rather than something anyone
- * is reading. What costs nothing to draw ignores it; a body that costs a read and a syntax
- * highlighter shows its plate instead, which is what keeps a canvas full of files moving.
+ * Whether the camera is close enough for the costly bodies (a file, a diagram, a device) to draw live,
+ * by the render distance this client chose. Below it such a body shows its plate, which is what keeps a
+ * canvas full of files moving; what costs nothing to draw ignores it. One boolean per canvas, so a node
+ * renders when the camera crosses the line and not on every frame of a zoom. Attention keeps a line of
+ * its own (`SEEN_ZOOM`), since this one is about what the machine can carry, not what a person can read.
  */
-export const READABLE_ZOOM = 0.4;
-
-export function useReadableZoom(): boolean {
-    return useCanvas((s) => s.camera.zoom >= READABLE_ZOOM);
+export function useRenderZoom(): boolean {
+    const distance = useSettings((s) => s.canvasRenderDistance);
+    return useCanvas((s) => rendersAtZoom(distance, s.camera.zoom));
 }
 
 /* True while visible and for a grace period after; the caller unmounts the live view when it turns false. */
