@@ -41,6 +41,12 @@ and npm packaging paths include it for macOS arm64. A development provider prefe
 that release build when present, otherwise its debug build. Override the binary
 with `RUIMTE_APPLE_FOUNDATION_HELPER` on the daemon when testing another build.
 
+CI builds and tests the helper (`.github/workflows/ci.yml`). `apps/server/scripts/compile.ts`
+builds it into the arm64 daemon's `native/`, and `apps/desktop/build/sign.cjs` and
+`after-pack.cjs` sign it and refuse a Mac build without it. The daemon starts it from
+`apps/server/src/providers/apple-helper.ts` (the provider) and `apps/server/src/ondevice/model.ts`
+(the editor's help, `--oneshot`).
+
 The client and daemon must understand the `apple` provider kind. Older iOS builds
 without that contract update cannot use these chats. Native conversation forking
 is not implemented.

@@ -1,0 +1,14 @@
+# The desktop shell
+
+- Whether the shell runs a daemon is the machine mode in `machine.json` under `userData` (`src/machine-mode.ts`). `local` runs one, `none` only connects to other machines, and `ask` is a new install that shows the first-run screen until a person chose.
+- Everything about the daemon below holds for `local` only. In any other mode the shell starts no daemon and passes no `daemonUrl`, the preload leaves out `localSecret`, `takeStartupMs`, `backgroundService` and `countUsage`, and no `service:*` channel is installed.
+- The app's daily usage totals (`src/usage.ts`, allow-list in `packages/pulsar/src/usage-desktop.ts`) follow the machine's `usageStats` switch. A new command needs its row in that allow-list.
+- The shell serves the built client on its own scheme (`app://ruimte`, `src/app-scheme.ts`), so a window never waits on a daemon, and hands the page the daemon's address over the bridge (`daemonUrl`). Under `bun dev` the page is Vite's and reaches the daemon through its proxy.
+- Windows open while the machine still comes up. The local secret waits until the daemon on the port proved it holds it (`src/startup.ts`, `src/daemon-proof.ts`), so a page connects only then.
+- Only a small, fixed set crosses IPC. `src/preload.ts` builds the bridge and checks it with `satisfies DesktopBridge` from `packages/desktop-bridge`, which the client re-exports in `apps/client/src/desktop/bridge.ts`. Every bridge method added after the first release is optional.
+- The main process installs its channels per domain from `src/main`. It keeps a window per project, and the last session's windows open again at the next start (`createWindows`). Every handler answers the window that asked; what the app shares (updates, the service, the theme) goes to every window.
+- What a shell of any app does (windows, the menu tree, the updater, shared guards) is `@adecore/shell` in `basmilius/adecore`; its IPC shapes reach the client through `packages/desktop-bridge`.
+- The refresh token stays in the shell (`src/pulsar-store.ts`); the page only gets access tokens. Browser pages have their own preload (`src/guest.ts`).
+- The application menu is the client's. The client sends a tree (`menu:set`) built from what has the focus, and a click comes back as a command id (`menu:run`). The shell keeps a fixed menu only until the first tree and after a reload.
+- The menu only shows a key. The shell drops a command its accelerator fires when the page had that key first, since the page's own listeners answered it (`createMenuCommands` in `@adecore/shell`). A page in a browser node never sees the key, and an item picked through accessibility or a key sent to a window that is not key never reached the page, so there the menu answers.
+- A packaged app on macOS and Linux runs the daemon as a background service (`src/service`). The dev app never touches launchd or systemd.

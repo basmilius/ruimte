@@ -133,9 +133,37 @@ typing; Tab accepts it, Option+] accepts a word and Escape dismisses it. Setting
 model is unavailable when it is. The [daemon's on-device documentation](../server/README.md#on-device-help-for-the-editor)
 describes the helper and transport.
 
+Ruimte's editor adapters are `src/language/ruimte-project-language.ts`,
+`ruimte-editor-language.ts` and `RuimteLanguagePopups.tsx`. They inject the Shiki highlighter and
+`RUIMTE_EDITOR_KEYMAP`, and keep the daemon transport, machine diagnostics, app navigation and AI
+features. Ghost suggestions keep priority over shared completion on Tab. What a server asks of a
+person (messages with answers, documents it shows) goes through `src/language/server-prompts.ts`,
+never through `onShowDocument` or `onServerMessage` of the service, which would open a server's
+address without a press.
+
 Remaining acceptance, formatter choices and feature limits are in
 [NEXT.md](../../docs/NEXT.md#15-language-servers). Shared editor behavior belongs
 in ADE CORE's package documentation.
+
+## ADE CORE hosts
+
+`UIProvider` in `App.tsx` adds the `ui` words of `@adecore/ui`, hands its formatters their source
+and mounts the tooltip provider. `@adecore/ui/theme.css` (tokens, type scale, shared control rules)
+loads before the client's own tokens in `styles.css`, which scans it with `@source`.
+
+Every terminal draws in `TerminalView` of `@adecore/terminal` (`nodes/TerminalBody.tsx`, the
+launches panel, the login dialog), which owns the fit, the terminal tokens (`--term-bg`,
+`--term-fg`, the ANSI palette) and the page's budget of WebGL contexts. The client feeds it through
+its handle and keeps its own keys (`terminal/xterm.ts`), the screens of its terminals
+(`terminal/registry.ts`) and the session behind each.
+
+`@adecore/agents-react` draws the chat UI, composers, provider settings and usage views.
+`chat/host.ts` configures its storage with the `ruimte` namespace before any store is used and
+supplies application actions; `chat/workspace-host.ts` supplies workspace components.
+
+`@adecore/database` draws the database panel, the table and console views, the designer and row
+editing (`src/database`). Active FileTree rendering uses `@adecore/ui`; listing caches, persisted
+expansion keys, Git commands and staging stay in the client.
 
 ## Icons
 

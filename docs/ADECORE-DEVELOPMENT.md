@@ -71,10 +71,24 @@ The script replaces the installed package symlinks itself. Bun 1.4.2's `bun link
 
 ## Language servers
 
-The PHP and SQL language servers live in repositories of their own and are no part of the ADE CORE link. The root `CLAUDE.md` says how a development daemon finds their sources, and [the daemon README](../apps/server/README.md#language-servers) covers the pinned release and how Install works.
+The PHP and SQL language servers live in repositories of their own and are no part of the ADE CORE link. `apps/server/src/language/CLAUDE.md` says how a development daemon finds their sources, and [the daemon README](../apps/server/README.md#language-servers) covers the pinned release and how Install works.
 
 ## Work across the repositories
 
 Fix shared behavior in the ADE CORE folder and application behavior in Ruimte. Edit a shared repository only through its real filesystem path, never through `node_modules`, and only when the task authorizes changes there. A link changes package resolution; it grants neither task authorization nor filesystem permissions.
 
 Validate a shared change in ADE CORE first and then in linked Ruimte. Linked checks do not prove that Ruimte CI can use the registry versions. Publish ADE CORE first. Push Ruimte code that uses a new ADE CORE API only together with the dependency bump to that published version in its manifests and `bun.lock`, after `adecore:npm`, `adecore:status --npm` and the relevant npm consumer checks are green. No pre-push hook is required. Each repository keeps its own commits and release history.
+
+## Asking ADE CORE for a change
+
+UI that knows nothing of Ruimte belongs in `basmilius/adecore`, and so does a fix to it. Never copy a shared implementation into Ruimte. When Ruimte needs something the library lacks or draws wrong, open an issue there:
+
+```sh
+gh issue create --repo basmilius/adecore --title "<Component>: <the need>" --label Ruimte --label Bug   # or Enhancement
+```
+
+The body has three sections:
+
+- `## Problem`: what is missing or wrong, the call sites in Ruimte as `path:line`, and how Ruimte works around it today.
+- `## Wish`: the need as what a person does or sees, not a fix. A proposed API is optional.
+- `## Impact on AfterMotion`: search `../aftermotion` for the same component or pattern. Name the call sites a change would touch and whether it would change what they draw or break them, or say there are none.
