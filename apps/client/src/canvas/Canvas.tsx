@@ -824,23 +824,21 @@ export function Canvas() {
                 }}
             >
                 <div ref={worldRef} className="absolute left-0 top-0 origin-top-left">
-                    {maximizedId === null && <EdgeLayer />}
-                    {maximizedId === null && <CanvasLineLayer />}
-                    {textIds.map((id) => (
-                        <TextElementView key={id} id={id} />
-                    ))}
                     {drawIds.map((id) => (
                         <NodeFrame key={id} id={id} z={id === maximizedId ? order.length + 1 : (stacking[id] ?? 1)} />
                     ))}
                     {maximizedId === null && <DerivedCards stacking={stacking} />}
                     {/* Over every group and under every other node: groups take the lowest z-indexes and this comes
-                        later in the DOM. A press on the port of a node in a group would otherwise land on the group's
-                        frame and move the group, and a port beside a node stays covered by the node standing there. */}
-                    {maximizedId === null && (
-                        <div className="absolute left-0 top-0" style={{ zIndex: groupCount }}>
-                            <PortHints rootRef={rootRef} />
-                        </div>
-                    )}
+                        later in the DOM. A press on a line, a text or a port in a group would otherwise land on the
+                        group's frame and move the group, and a port beside a node stays covered by the node standing there. */}
+                    <div className="absolute left-0 top-0" style={{ zIndex: groupCount }}>
+                        {maximizedId === null && <EdgeLayer />}
+                        {maximizedId === null && <CanvasLineLayer />}
+                        {textIds.map((id) => (
+                            <TextElementView key={id} id={id} />
+                        ))}
+                        {maximizedId === null && <PortHints rootRef={rootRef} />}
+                    </div>
                     {maximizedId === null && <GroupHover rootRef={rootRef} />}
                     {/* Over every node, or a press on the handle of a node in a group lands on the group's frame and moves the group. */}
                     {maximizedId === null && (
