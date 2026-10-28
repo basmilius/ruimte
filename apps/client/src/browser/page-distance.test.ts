@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { belowSinceOf, FAR_AFTER_MS, pageFar, type PageDistance } from '@/browser/page-distance';
+import { belowSinceOf, FAR_AFTER_MS, pageFar, wakeAt, type PageDistance } from '@/browser/page-distance';
 
 function page(input: Partial<PageDistance>): PageDistance {
     return {
@@ -54,5 +54,15 @@ describe('the moment the camera went past the line', () => {
         expect(belowSinceOf(null, true, 5)).toBe(5);
         expect(belowSinceOf(5, true, 9)).toBe(5);
         expect(belowSinceOf(5, false, 9)).toBeNull();
+    });
+});
+
+describe('the moment the layer looks again', () => {
+    test('is the end of the pause while it runs, and never once it is over', () => {
+        expect(wakeAt(null, 0)).toBeNull();
+        expect(wakeAt(100, 200)).toBe(100 + FAR_AFTER_MS);
+        // A page that stays past the line after the pause (it has the keyboard) waits for the canvas, not a timer.
+        expect(wakeAt(100, 100 + FAR_AFTER_MS)).toBeNull();
+        expect(wakeAt(100, 5000)).toBeNull();
     });
 });

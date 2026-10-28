@@ -112,7 +112,13 @@ export class PageSnapshots {
         if (!this.leaving.has(key)) {
             const generation = current.generation + 1;
             this.patch(key, { generation });
-            const timer = this.deps.setTimer(() => this.go(key, generation), HIDE_DEADLINE_MS);
+            const timer = this.deps.setTimer(() => {
+                // A picture already under way is of a drawn page and in within tens of milliseconds; hiding the
+                // page under it would leave the shell waiting for good, so that picture ends the wait instead.
+                if (!this.busy.has(key)) {
+                    this.go(key, generation);
+                }
+            }, HIDE_DEADLINE_MS);
             this.leaving.set(key, { generation, timer });
             this.enqueue({ key, generation, width });
         }

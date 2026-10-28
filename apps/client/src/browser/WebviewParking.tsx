@@ -7,7 +7,7 @@ import { browserRegistry, useBrowser } from '@/browser/registry';
 import { nodesOverBrowsers } from '@/canvas/stacking';
 import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
 import { oncePerFrame } from '@/browser/once-per-frame';
-import { belowSinceOf, FAR_AFTER_MS, pageFar } from '@/browser/page-distance';
+import { belowSinceOf, pageFar, wakeAt } from '@/browser/page-distance';
 import { pageSnapshots, usePageSnapshots } from '@/browser/page-snapshots';
 import { RENDER_DISTANCE_ZOOM, rendersAtZoom } from '@/canvas/render-distance';
 import { pageClipPath, type PageHole } from '@/browser/page-clip';
@@ -104,12 +104,19 @@ function DesktopWebviewParking() {
     const hosts = useRef(new Map<string, HTMLDivElement>());
     const clips = useRef(new Map<string, HTMLDivElement>());
     const root = useRef<HTMLDivElement>(null);
+    /* Since when each page's camera has been past the render distance, for the pause before it goes. Kept
+       across the layer's passes over a new set of pages, so a page added elsewhere restarts no pause. */
+    const pausing = useRef(new Map<string, number>());
 
     useEffect(() => {
         const inputs = new Map<string, ReturnType<typeof createGuestCanvasInput>>();
         const configurations = new Map<string, string>();
-        /* Since when each page's camera has been past the render distance, for the pause before it goes. */
-        const belowSince = new Map<string, number>();
+        const belowSince = pausing.current;
+        for (const key of [...belowSince.keys()]) {
+            if (!keys.includes(key)) {
+                belowSince.delete(key);
+            }
+        }
         /* What the distance asked of each page in the last pass, so a picture asks again before the page goes. */
         const wantsFar = new Map<string, boolean>();
         let wake: ReturnType<typeof setTimeout> | null = null;
@@ -233,8 +240,9 @@ function DesktopWebviewParking() {
                     wantsFar.set(key, wants);
                     // The picture is as wide as the node is drawn at the line, never more.
                     far = pageSnapshots.settle(key, wants, Math.max(1, Math.round(node!.w * RENDER_DISTANCE_ZOOM[distance] * window.devicePixelRatio)));
-                    if (since !== null && !wants) {
-                        nextWake = Math.min(nextWake ?? Infinity, since + FAR_AFTER_MS);
+                    const at = wants ? null : wakeAt(since, now);
+                    if (at !== null) {
+                        nextWake = Math.min(nextWake ?? Infinity, at);
                     }
                     if (far) {
                         releaseFocus(key, view.viewId);

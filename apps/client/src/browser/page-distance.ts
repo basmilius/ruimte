@@ -48,3 +48,16 @@ export function belowSinceOf(previous: number | null, below: boolean, now: numbe
     }
     return previous ?? now;
 }
+
+/*
+ * When the layer has to look again at a page that is waiting out the pause, since nothing else moves
+ * then. Null once the pause is over: a page past the line that still stays (it has the keyboard, a
+ * gesture runs) changes only with the canvas, which the layer already follows.
+ */
+export function wakeAt(belowSince: number | null, now: number): number | null {
+    if (belowSince === null) {
+        return null;
+    }
+    const at = belowSince + FAR_AFTER_MS;
+    return at > now ? at : null;
+}

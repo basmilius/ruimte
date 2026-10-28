@@ -71,14 +71,14 @@ describe('a page on its way past the render distance', () => {
         expect(snapshots.settle('a', true, 200)).toBe(true);
     });
 
-    test('goes at the deadline when its picture is slow, and the late picture still lands', async () => {
+    test('whose picture is under way at the deadline stays drawn until it is in, so the shell is never left waiting', async () => {
         snapshots.settle('a', true, 200);
         tick(HIDE_DEADLINE_MS);
-        expect(snapshots.of('a').far).toBe(true);
+        expect(snapshots.of('a').far).toBe(false);
 
         captures[0]!.resolve(PNG);
         await settleAll();
-        expect(snapshots.of('a').imageUrl).toBe('blob:1');
+        expect(snapshots.of('a')).toMatchObject({ far: true, imageUrl: 'blob:1' });
     });
 
     test('stays when the reason to go passed while its picture was taken', async () => {
@@ -122,12 +122,13 @@ describe('pictures over many pages', () => {
         expect(captures.map((capture) => capture.key)).toEqual(['a', 'b']);
         expect(MAX_CAPTURES).toBe(2);
 
-        // Every page goes at its deadline, the one still in line included.
+        // At the deadline the page still in line goes; the two being photographed go once their pictures are in.
         tick(HIDE_DEADLINE_MS);
-        expect(['a', 'b', 'c'].map((key) => snapshots.of(key).far)).toEqual([true, true, true]);
+        expect(['a', 'b', 'c'].map((key) => snapshots.of(key).far)).toEqual([false, false, true]);
 
         captures[0]!.resolve(PNG);
         await settleAll();
+        expect(snapshots.of('a').far).toBe(true);
         expect(captures.map((capture) => [capture.key, capture.revealing])).toEqual([
             ['a', 0],
             ['b', 0],
@@ -140,13 +141,16 @@ describe('pictures over many pages', () => {
 
     test('one at a time per page: a refresh waits for the picture in flight', async () => {
         snapshots.settle('a', true, 200);
-        tick(HIDE_DEADLINE_MS);
-        snapshots.refresh('a');
-        expect(captures).toHaveLength(1);
         captures[0]!.resolve(PNG);
         await settleAll();
+        snapshots.refresh('a');
+        snapshots.refresh('a');
+        await settleAll();
         expect(captures).toHaveLength(2);
-        expect(captures[1]!.revealing).toBe(1);
+        captures[1]!.resolve(PNG);
+        await settleAll();
+        expect(captures).toHaveLength(3);
+        expect(captures[2]!.revealing).toBe(1);
     });
 });
 
@@ -175,7 +179,9 @@ describe('a picture an agent asks for', () => {
         captures[0]!.resolve(PNG);
 
         snapshots.settle('b', true, 200);
-        tick(HIDE_DEADLINE_MS);
+        captures[1]!.resolve(PNG);
+        await settleAll();
+        expect(snapshots.of('b').far).toBe(true);
         const shot = snapshots.photograph('b');
         await settleAll();
         const reveal = captures.find((capture) => capture.key === 'b' && capture.revealing === 1);
