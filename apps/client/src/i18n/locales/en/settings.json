@@ -1151,6 +1151,10 @@
             "report": {
                 "label": "Report a problem",
                 "description": "Describe what you saw and what you expected."
+            },
+            "sponsor": {
+                "label": "Sponsor Ruimte",
+                "description": "Ruimte is made by one person. Sponsoring on GitHub keeps it going."
             }
         }
     },

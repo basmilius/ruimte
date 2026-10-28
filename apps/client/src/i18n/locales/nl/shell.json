@@ -501,6 +501,7 @@
         "openOnGitHub": "Openen op GitHub",
         "loading": "Release notes laden…",
         "allReleases": "Alle releases op GitHub",
+        "sponsor": "Sponsoren",
         "dialogDescription": "Wat er in elke versie van Ruimte is veranderd."
     },
     "removeWorktree": {

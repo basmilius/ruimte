@@ -1151,6 +1151,10 @@
             "report": {
                 "label": "Een probleem melden",
                 "description": "Beschrijf wat je zag en wat je verwachtte."
+            },
+            "sponsor": {
+                "label": "Ruimte sponsoren",
+                "description": "Ruimte wordt door één persoon gemaakt. Met sponsoring op GitHub blijft het doorgaan."
             }
         }
     },

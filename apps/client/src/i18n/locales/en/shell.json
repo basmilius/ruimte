@@ -501,6 +501,7 @@
         "openOnGitHub": "Open on GitHub",
         "loading": "Loading release notes…",
         "allReleases": "All releases on GitHub",
+        "sponsor": "Sponsor",
         "dialogDescription": "What changed in each version of Ruimte."
     },
     "removeWorktree": {

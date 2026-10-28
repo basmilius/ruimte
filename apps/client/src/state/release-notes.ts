@@ -6,6 +6,7 @@ import { desktop, type Release, type ReleaseNotesState, type UpdateState } from 
 import { hasUpdate } from '@/state/updates';
 
 export const RELEASES_PAGE = 'https://github.com/basmilius/ruimte/releases';
+export const SPONSOR_PAGE = 'https://github.com/sponsors/basmilius';
 
 interface ReleaseNotesStore {
     /* Null until the shell answered once. */
