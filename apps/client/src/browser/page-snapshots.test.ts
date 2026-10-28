@@ -170,12 +170,25 @@ describe('a page that goes away', () => {
         expect(usePageSnapshots.getState().byKey.a).toBeUndefined();
         expect(made).toBe(1);
     });
+
+    test('and opens again under the same key never takes a picture meant for the one before', async () => {
+        snapshots.settle('a', true, 200);
+        snapshots.keep([]);
+        snapshots.settle('a', true, 200);
+        captures[0]!.resolve(PNG);
+        await settleAll();
+        expect(snapshots.of('a')).toMatchObject({ far: false, imageUrl: null });
+
+        captures[1]!.resolve(PNG);
+        await settleAll();
+        expect(snapshots.of('a')).toMatchObject({ far: true, imageUrl: 'blob:1' });
+    });
 });
 
 describe('a picture an agent asks for', () => {
     test('of a near page is taken as it is, and of a far page while it is drawn again', async () => {
         void snapshots.photograph('a');
-        expect(captures[0]!.revealing).toBe(0);
+        expect(captures[0]!.revealing).toBe(1);
         captures[0]!.resolve(PNG);
 
         snapshots.settle('b', true, 200);
@@ -189,5 +202,17 @@ describe('a picture an agent asks for', () => {
         reveal!.resolve(PNG);
         expect(await shot).toBe(PNG);
         expect(snapshots.of('b').revealing).toBe(0);
+    });
+
+    test('keeps a page drawn that its own picture sends far meanwhile', async () => {
+        snapshots.settle('a', true, 200);
+        const shot = snapshots.photograph('a');
+        captures[0]!.resolve(PNG);
+        await settleAll();
+        expect(snapshots.of('a')).toMatchObject({ far: true, revealing: 1 });
+
+        captures[1]!.resolve(PNG);
+        expect(await shot).toBe(PNG);
+        expect(snapshots.of('a').revealing).toBe(0);
     });
 });

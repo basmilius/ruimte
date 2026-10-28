@@ -15,10 +15,13 @@ export interface PageSnapshot {
     far: boolean;
     imageUrl: string | null;
     takenAt: number | null;
-    /* Bumped on every turn between near and far, so a picture that comes back too late is thrown away. */
+    /* New on every turn between near and far and never used twice, so a picture that comes back too late,
+       even for an earlier page under the same key, is thrown away. */
     generation: number;
-    /* While above zero the far page is drawn, transparent, so the shell can photograph it. */
+    /* While above zero the page stays drawn, transparent once far, so the shell can photograph it. */
     revealing: number;
+    /* Which entry under this key this is, so a picture of a page that closed never touches the next one. */
+    life: number;
 }
 
 interface PageSnapshotStore {
@@ -33,7 +36,7 @@ export function usePageFar(id: string): boolean {
     return usePageSnapshots((s) => s.byKey[key]?.far === true);
 }
 
-const EMPTY: PageSnapshot = { far: false, imageUrl: null, takenAt: null, generation: 0, revealing: 0 };
+const EMPTY: PageSnapshot = { far: false, imageUrl: null, takenAt: null, generation: 0, revealing: 0, life: 0 };
 
 /* How long a page waits for its picture before it lets go of the screen anyway, counted from the moment it was asked to go. */
 export const HIDE_DEADLINE_MS = 300;
@@ -71,6 +74,8 @@ export class PageSnapshots {
     private readonly busy = new Set<string>();
     private queue: Job[] = [];
     private running = 0;
+    private generations = 0;
+    private lives = 0;
     /* Asked again before a page goes: what made it go may have passed while its picture was taken. */
     private stillFar: (key: string) => boolean = () => true;
 
@@ -102,7 +107,7 @@ export class PageSnapshots {
         if (!wantsFar) {
             if (current.far || this.leaving.has(key)) {
                 this.endLeaving(key);
-                this.patch(key, { far: false, generation: current.generation + 1 });
+                this.patch(key, { far: false, generation: ++this.generations });
             }
             return false;
         }
@@ -110,7 +115,7 @@ export class PageSnapshots {
             return true;
         }
         if (!this.leaving.has(key)) {
-            const generation = current.generation + 1;
+            const generation = ++this.generations;
             this.patch(key, { generation });
             const timer = this.deps.setTimer(() => {
                 // A picture already under way is of a drawn page and in within tens of milliseconds; hiding the
@@ -134,11 +139,11 @@ export class PageSnapshots {
         }
     }
 
-    /* A picture of the page for whoever asks, such as an agent; a far page is drawn for the moment it takes. */
-    async photograph(key: string): Promise<Uint8Array | null> {
-        if (!this.of(key).far) {
-            return this.deps.capture(key);
-        }
+    /*
+     * A picture of the page for whoever asks, such as an agent; a far page is drawn for the moment it
+     * takes. A near page is held drawn as well, since its own picture may send it far meanwhile.
+     */
+    photograph(key: string): Promise<Uint8Array | null> {
         return this.revealed(key);
     }
 
@@ -163,7 +168,8 @@ export class PageSnapshots {
     /* Forgets every page that is no longer among `keys`. */
     keep(keys: readonly string[]): void {
         const kept = new Set(keys);
-        for (const key of Object.keys(usePageSnapshots.getState().byKey)) {
+        // A page that closed before it ever went far has a width and no entry.
+        for (const key of new Set([...Object.keys(usePageSnapshots.getState().byKey), ...this.widths.keys()])) {
             if (!kept.has(key)) {
                 this.forget(key);
             }
@@ -231,19 +237,25 @@ export class PageSnapshots {
 
     private async revealed(key: string): Promise<Uint8Array | null> {
         this.patch(key, { revealing: this.of(key).revealing + 1 });
+        const { life, far } = this.of(key);
+        const alive = (): boolean => usePageSnapshots.getState().byKey[key]?.life === life;
         try {
-            await this.deps.drawn();
+            if (far) {
+                await this.deps.drawn();
+            }
             // A page that went away while it was being drawn again has nothing left to photograph.
-            return usePageSnapshots.getState().byKey[key] === undefined ? null : await this.deps.capture(key);
+            return alive() ? await this.deps.capture(key) : null;
         } finally {
-            if (usePageSnapshots.getState().byKey[key] !== undefined) {
+            if (alive()) {
                 this.patch(key, { revealing: Math.max(0, this.of(key).revealing - 1) });
             }
         }
     }
 
     private patch(key: string, patch: Partial<PageSnapshot>): void {
-        usePageSnapshots.setState((state) => ({ byKey: { ...state.byKey, [key]: { ...(state.byKey[key] ?? EMPTY), ...patch } } }));
+        usePageSnapshots.setState((state) => ({
+            byKey: { ...state.byKey, [key]: { ...(state.byKey[key] ?? { ...EMPTY, life: ++this.lives }), ...patch } }
+        }));
     }
 }
 

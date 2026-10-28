@@ -18,7 +18,7 @@ function plate(): HTMLElement | null {
 beforeEach(() => {
     key = endpointKey(useEndpoints.getState().activeId, ID);
     useBrowser.getState().patch(key, { url: 'https://example.com/dashboard', title: 'Dashboard' });
-    usePageSnapshots.setState({ byKey: { [key]: { far: true, imageUrl: null, takenAt: null, generation: 1, revealing: 0 } } });
+    usePageSnapshots.setState({ byKey: { [key]: { far: true, imageUrl: null, takenAt: null, generation: 1, revealing: 0, life: 1 } } });
 });
 
 afterEach(async () => {
@@ -29,7 +29,7 @@ afterEach(async () => {
 
 describe('the plate of a page past the render distance', () => {
     test('shows the last picture, marked as not live', async () => {
-        usePageSnapshots.setState({ byKey: { [key]: { far: true, imageUrl: 'blob:picture', takenAt: 1, generation: 1, revealing: 0 } } });
+        usePageSnapshots.setState({ byKey: { [key]: { far: true, imageUrl: 'blob:picture', takenAt: 1, generation: 1, revealing: 0, life: 1 } } });
         page = mount();
         await page.render(<BrowserPlate id={ID} />);
         await until(() => plate() !== null);
@@ -47,7 +47,7 @@ describe('the plate of a page past the render distance', () => {
     });
 
     test('of a page that did not load shows no picture of what it was before', async () => {
-        usePageSnapshots.setState({ byKey: { [key]: { far: true, imageUrl: 'blob:picture', takenAt: 1, generation: 1, revealing: 0 } } });
+        usePageSnapshots.setState({ byKey: { [key]: { far: true, imageUrl: 'blob:picture', takenAt: 1, generation: 1, revealing: 0, life: 1 } } });
         await act(async () =>
             useBrowser.getState().patch(key, { error: { url: 'https://example.com/dashboard', code: -105, description: 'ERR_NAME_NOT_RESOLVED' } })
         );
