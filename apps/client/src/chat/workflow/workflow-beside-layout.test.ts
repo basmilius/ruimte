@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
+import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
+import { GRID } from '@/canvas/math';
 import { PHASES_W, workflowBesideLayout, type WorkflowBesideCard } from '@/chat/workflow/workflow-beside-layout';
 
 const NODE = { x: 100, y: 200, w: 480, h: 640 };
@@ -30,7 +31,7 @@ describe('workflowBesideLayout', () => {
 
         // Measured in pixels, laid out on the grid.
         const between = workflowBesideLayout(NODE, { phases: PHASES, openPhase: 'phase-1', agentPhase: null }, { openHeights: { 'phase-1': 201 } });
-        expect(cardOf(between, 'phase:phase-1').rect.h % 8).toBe(0);
+        expect(cardOf(between, 'phase:phase-1').rect.h % GRID).toBe(0);
         expect(cardOf(between, 'phase:phase-1').rect.h).toBeGreaterThanOrEqual(201);
     });
 
@@ -41,7 +42,7 @@ describe('workflowBesideLayout', () => {
             kind: 'agent',
             key: 'agent',
             from: 'phase:phase-2',
-            rect: { x: NODE.x + NODE.w + GUTTER + PHASES_W + GUTTER, y: NODE.y, w: 440, h: OPEN_H }
+            rect: { x: NODE.x + NODE.w + GUTTER + PHASES_W + GUTTER, y: NODE.y, w: COLUMN_W, h: OPEN_H }
         });
         // An agent of a phase the workflow no longer shows has no card.
         expect(workflowBesideLayout(NODE, { phases: PHASES, openPhase: null, agentPhase: 'phase-9' }).some((card) => card.kind === 'agent')).toBe(false);

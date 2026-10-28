@@ -18,28 +18,19 @@ function call(id: string, state: 'running' | 'done', finishedAt?: number): ChatI
     };
 }
 
-function user(id: string, createdAt: number): ChatItem {
-    return { id, kind: 'user', createdAt, turnId: null, text: 'Go on' };
-}
-
 function rowOf(items: ChatItem[], before: ChatItem[] = []) {
     const structure = Object.fromEntries([...before, ...items].map((item) => [item.id, item]));
     return { structure, order: items.map((item) => item.id), workflowsBefore: before.map((item) => item.id) };
 }
 
 describe('workflowCandidates', () => {
-    test('the workflows from before the page come first, then those of the page, as the chat still speaks of them', () => {
-        const row = rowOf([call('ended', 'done', 5), user('u', 10), call('new', 'running')], [call('older', 'running')]);
+    test('the workflows from before the page come first, then those of the page', () => {
+        const row = rowOf([call('new', 'running'), call('newer', 'done', 5)], [call('older', 'running')]);
         expect(workflowCandidates(row).map((candidate) => [candidate.id, candidate.running])).toEqual([
             ['older', true],
-            ['new', true]
+            ['new', true],
+            ['newer', false]
         ]);
-    });
-
-    test('a finished one stays until the next message, and goes with it', () => {
-        const before = rowOf([user('u1', 1), call('w', 'done', 5)]);
-        expect(workflowCandidates(before).map((candidate) => candidate.id)).toEqual(['w']);
-        expect(workflowCandidates(rowOf([user('u1', 1), call('w', 'done', 5), user('u2', 10)]))).toEqual([]);
     });
 
     test('answers the same array while the row is the same', () => {

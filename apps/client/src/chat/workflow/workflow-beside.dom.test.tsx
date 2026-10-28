@@ -53,21 +53,27 @@ function chatNode(patch: Partial<ProjectNode> = {}): ProjectNode {
 // Every test its own chat, so no row or choice of one test is in the next.
 let tests = 0;
 let chatId: string;
+let otherId: string;
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
 let restoreLayout: () => void;
 let items: ChatItem[];
 
-async function open(node: ProjectNode = chatNode()): Promise<void> {
-    const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [{ ...node, id: chatId }], texts: [], edges: [], layouts: [] };
+/* A second chat node on the workspace machine that runs the workflow, so its cards prove the cards beside the canvas's chats were drawn. */
+function otherNode(): ProjectNode {
+    return chatNode({ id: otherId, title: 'Other', x: 2000 });
+}
+
+async function open(node: ProjectNode = chatNode(), more: ProjectNode[] = []): Promise<void> {
+    const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [{ ...node, id: chatId }, ...more], texts: [], edges: [], layouts: [] };
     workspace = await openFakeWorkspace(machine, { views: [main] }, { activeViewId: main.id, views: {} });
     page = mount();
     await page.renderApp();
 }
 
-function cards(): HTMLElement[] {
-    return [...page.host.querySelectorAll<HTMLElement>(`[data-derived-of="${chatId}"]`)];
+function cards(owner: string = chatId): HTMLElement[] {
+    return [...page.host.querySelectorAll<HTMLElement>(`[data-derived-of="${owner}"]`)];
 }
 
 function card(label: string): HTMLElement | undefined {
@@ -90,10 +96,14 @@ beforeEach(() => {
     restoreLayout = layOutChat();
     tests += 1;
     chatId = `chat-workflow-${tests}`;
+    otherId = `chat-other-${tests}`;
     items = [USER, workflowCall('running')];
     machine = new FakeMachine();
     machine.answer('provider.list', () => ({ providers: [CLAUDE] }));
-    machine.answer('chat.attach', ({ chatId: attached }) => ({ info: chatInfoOf(attached), items, seq: 1 }) as never);
+    machine.answer(
+        'chat.attach',
+        ({ chatId: attached }) => ({ info: chatInfoOf(attached), items: attached === chatId ? items : [USER, workflowCall('running')], seq: 1 }) as never
+    );
     machine.answer(
         'chat.subagent',
         () =>
@@ -118,8 +128,9 @@ afterEach(async () => {
 describe('a chat node that runs a workflow', () => {
     test('draws nothing beside it while the chat runs none', async () => {
         items = [USER];
-        await open();
+        await open(chatNode(), [otherNode()]);
         await until(() => Object.keys(useChats.getState().byKey).some((key) => key.endsWith(chatId)));
+        await until(() => cards(otherId).length > 0);
         expect(cards()).toEqual([]);
     });
 
@@ -166,24 +177,37 @@ describe('a chat node that runs a workflow', () => {
         expect(card('Read')!.querySelector<HTMLElement>('button')!.getAttribute('style')).toContain('#7f22fe');
     });
 
-    test('stops the workflow by its task once, and offers no stop while the machine is away', async () => {
+    test('stops the workflow by its task once, and offers Stop again when it reports on after the machine passed the stop on', async () => {
         let stop: (() => void) | undefined;
         machine.answer('chat.stopTask', () => new Promise<never>((resolve) => (stop = () => resolve({} as never))));
         await open();
         await until(() => button('Stop workflow') !== null);
         await clickOn(button('Stop workflow'));
         await until(() => button('Stopping…') !== null);
+        await clickOn(button('Stopping…'));
         expect(button('Stopping…')!.disabled).toBe(true);
         expect(machine.requests('chat.stopTask')).toEqual([{ chatId, taskId: 'task-wf' }]);
-        stop?.();
 
+        // The machine passed the stop on; the workflow has not reported since.
+        await act(async () => stop?.());
+        expect(button('Stopping…')!.disabled).toBe(true);
+
+        await emit(workflowCall('running', { ...WORKFLOW, lastProgressAt: 9000 }), 2);
+        await until(() => button('Stop workflow') !== null);
+        expect(button('Stop workflow')!.disabled).toBe(false);
+    });
+
+    test('offers no stop while the machine is away, and again once it is back', async () => {
+        await open();
+        await until(() => button('Stop workflow') !== null);
         await act(async () => machine.drop());
         await until(() => page.host.querySelector('[data-workflow-stale]') !== null);
-        expect(button('Stopping…')!.disabled).toBe(true);
+        expect(button('Stop workflow')!.disabled).toBe(true);
         expect(cards().length).toBe(3);
 
         await act(async () => machine.reopen());
         await until(() => page.host.querySelector('[data-workflow-stale]') === null);
+        expect(button('Stop workflow')!.disabled).toBe(false);
     });
 
     test('once it ended it says how it went, and goes with Close or with the next message', async () => {
@@ -214,8 +238,9 @@ describe('a chat node that runs a workflow', () => {
     });
 
     test("on a machine this client does not know draws nothing, and never the workspace machine's chat", async () => {
-        await open(chatNode({ machine: 'machine-unknown' } as Partial<ProjectNode>));
+        await open(chatNode({ machine: 'machine-unknown' } as Partial<ProjectNode>), [otherNode()]);
         await until(() => page.host.querySelector(`[data-node-id="${chatId}"]`) !== null);
+        await until(() => cards(otherId).length > 0);
         expect(cards()).toEqual([]);
         expect(machine.requests('chat.attach').filter((request) => request.chatId === chatId)).toEqual([]);
     });
