@@ -107,9 +107,10 @@ const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: st
     exited: { icon: CirclePower, className: 'text-text-faint' }
 };
 
-/* A group is a frame under its nodes: a faint tint of its accent, never a surface of its own. */
-const GROUP_FRAME =
-    'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_7%,transparent)] hover:bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_10%,transparent)]';
+/* A group is a frame under its nodes: a faint tint of its accent, never a surface of its own. It darkens
+   from `hoverGroupId` and not from `:hover`, since a node in the group is its sibling in the DOM. */
+const GROUP_FRAME = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_7%,transparent)]';
+const GROUP_FRAME_HOVER = 'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_10%,transparent)]';
 
 /* `plain` drops the tooltip, for a control that already has one of its own; a screen reader still hears the status. */
 export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
@@ -385,6 +386,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const nodeWorktree = useWorktreeOf(node === undefined ? undefined : workFolderOf(node, chatId));
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
+    const hovered = useCanvas((s) => s.hoverGroupId === id);
     const hiddenNeedsYou = useHiddenNeedsYou(node?.kind === 'group' && node.collapsed === true ? id : null);
     const browserTitle = useBrowserDisplayTitle(id, node?.title ?? '', node?.titleSource);
     const unsavedFile = useUnsavedStoredPath(node?.kind === 'file' ? (node.path ?? null) : null);
@@ -423,7 +425,9 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     'absolute isolate flex flex-col overflow-hidden focus-visible:outline-none',
                     maximized ? 'origin-top-left' : 'rounded-xl border',
                     isGroup
-                        ? GROUP_FRAME
+                        ? hovered
+                            ? GROUP_FRAME_HOVER
+                            : GROUP_FRAME
                         : isNote
                           ? clsx(!maximized && 'shadow-node', noteAccent ? 'bg-clip-padding' : notePaperClass(notePaperOf(node)))
                           : clsx('bg-surface', !maximized && 'shadow-node'),

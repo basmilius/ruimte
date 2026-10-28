@@ -100,6 +100,8 @@ export interface CanvasState extends CameraSlice {
     gesturing: boolean;
     panning: boolean;
     gapMove: GapMove | null;
+    /* The group the pointer is in (`canvas/group-hover.ts`), which wears the darker tint. Transient. */
+    hoverGroupId: string | null;
     /* True for the one update that swaps in another project's content, so nobody reads it as edits. */
     loading: boolean;
     /*
@@ -141,6 +143,7 @@ export interface CanvasState extends CameraSlice {
     focusCard(id: string): void;
     setGesturing(gesturing: boolean): void;
     setPanning(panning: boolean): void;
+    setHoverGroup(id: string | null): void;
     bringToFront(id: string): void;
     /* One of the accents or none; a note takes its paper from it. One undo step. */
     setNodeColor(id: string, accent: NodeAccent | null): void;
@@ -255,6 +258,7 @@ export function createCanvasStore(): StoreApi<CanvasState> {
             gesturing: false,
             panning: false,
             gapMove: null,
+            hoverGroupId: null,
             loading: false,
             merging: false,
             past: [],

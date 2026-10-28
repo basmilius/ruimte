@@ -41,6 +41,7 @@ import { showFileOnCanvas } from '@/project/views';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EmptyCanvas } from '@/canvas/EmptyCanvas';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
+import { GroupHover } from '@/canvas/GroupHover';
 import { PortHints } from '@/canvas/PortHints';
 import { ResizeHandles } from '@/canvas/ResizeHandles';
 import { NodeFrame } from '@/canvas/NodeFrame';
@@ -840,6 +841,7 @@ export function Canvas() {
                             <PortHints rootRef={rootRef} />
                         </div>
                     )}
+                    {maximizedId === null && <GroupHover rootRef={rootRef} />}
                     {/* Over every node, or a press on the handle of a node in a group lands on the group's frame and moves the group. */}
                     {maximizedId === null && (
                         <div className="absolute left-0 top-0" style={{ zIndex: order.length + 1 }}>
