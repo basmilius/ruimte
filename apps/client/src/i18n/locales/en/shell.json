@@ -282,6 +282,12 @@
         "noFolder": "A design needs the project's folder on this machine.",
         "failed": "The design could not be shown.",
         "failedAction": "The design could not do that",
+        "deletePage": {
+            "action": "Delete {{name}}",
+            "title": "Move {{name}} to trash?",
+            "description": "The page goes to the trash on this project's machine, where you can restore it.",
+            "confirm": "Move to trash"
+        },
         "comment": {
             "placeholder": "What should change here?",
             "cancel": "Cancel",

@@ -282,6 +282,12 @@
         "noFolder": "Een design heeft de map van het project op deze machine nodig.",
         "failed": "Het design kon niet worden getoond.",
         "failedAction": "Het design kon dat niet doen",
+        "deletePage": {
+            "action": "{{name}} verwijderen",
+            "title": "{{name}} naar prullenbak verplaatsen?",
+            "description": "De pagina gaat naar de prullenbak op de machine van dit project, waar je hem kunt terughalen.",
+            "confirm": "Naar de prullenbak"
+        },
         "comment": {
             "placeholder": "Wat moet hier anders?",
             "cancel": "Annuleren",

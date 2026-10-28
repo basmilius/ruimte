@@ -1,9 +1,9 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook } from 'lucide-react';
+import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
 import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
-import { Button, EmptyState, Icon, ProjectSwitcher, Segmented, Separator, ZoomControls, type ProjectSwitcherItem } from '@adecore/ui';
+import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls } from '@adecore/ui';
 import { perform } from '@/actions/client-actions';
 import { DesignCommentPopover } from '@/design/DesignCommentPopover';
 import { DesignDrawLayer } from '@/design/DesignDrawLayer';
@@ -12,7 +12,7 @@ import { DesignTweaks } from '@/design/DesignTweaks';
 import { useDesignChat } from '@/design/design-chat';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
-import { changeReaches, designFiles, pageMtime, pageName } from '@/design/design-page';
+import { changeReaches, designFiles, pageMtime, pageName, pagesByChange } from '@/design/design-page';
 import {
     DESIGN_METHODS,
     designMessage,
@@ -108,6 +108,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const [comments, setComments] = useState<DesignComment[]>([]);
     const [edits, setEdits] = useState<DesignEdits>({});
     const [heldFor, setHeldFor] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState<string | null>(null);
+    const [deleteBusy, setDeleteBusy] = useState(false);
     const frameBox = useRef<HTMLDivElement>(null);
     // Per page and for as long as the view is open: a person's place on the canvas is no one else's business.
     const cameras = useRef(new Map<string, DesignCamera>());
@@ -145,8 +147,9 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         [transport, folder, found]
     );
 
-    // A pinned page that went shows nothing rather than another page under its card.
-    const active = chosen !== null && files?.includes(chosen) ? chosen : pinned === undefined ? (files?.[0] ?? null) : null;
+    // A pinned page that went shows nothing rather than another page under its card; without a choice the page last worked on opens.
+    const latest = entries === null ? null : (pagesByChange(entries)[0] ?? null);
+    const active = chosen !== null && files?.includes(chosen) ? chosen : pinned === undefined ? latest : null;
     const mtime = active === null || entries === null ? null : pageMtime(entries, active);
     const page = usePageReader(endpointId, folder, active);
     const opened = `${active}:${mtime}:${reloads}`;
@@ -346,6 +349,23 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const sendDrawing = async (image: ChatAttachmentUpload, rect: { x: number; y: number; width: number; height: number }, note: string): Promise<boolean> =>
         active !== null && tell(drawPrompt(active, await locate(rect), note), [image]);
 
+    // The listing reads again once the page went, and the stage moves on to the page last worked on.
+    const deletePage = async (): Promise<void> => {
+        if (deleting === null) {
+            return;
+        }
+
+        setDeleteBusy(true);
+        try {
+            await perform('file.delete', { paths: [`${folder}/${deleting}`] });
+            setDeleting(null);
+        } catch (error) {
+            failed(error);
+        } finally {
+            setDeleteBusy(false);
+        }
+    };
+
     if (!listed) {
         return (
             <EmptyState busy className="grow">
@@ -362,23 +382,34 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         );
     }
 
-    const pageOf = (file: string): ProjectSwitcherItem => ({
-        id: file,
-        name: pageName(file),
-        icon: <Icon icon={FileCode2} size={14} className="shrink-0 text-text-muted" />
-    });
-
     return (
         <div className="flex min-h-0 grow flex-col">
             {/* Built like the bar of a cell, so its last control stands under the cell's own. */}
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-surface bg-clip-padding pr-1.5 pl-2 text-xs">
                 {pinned === undefined && (
-                    <ProjectSwitcher
-                        label={t('design.pages')}
-                        current={pageOf(active)}
-                        projects={files.map(pageOf)}
-                        onSelect={(next) => showPage(designId, next.id)}
-                    />
+                    // Drawn like a switcher, with a row of its own per page so each carries its delete beside it.
+                    <Menu.Root>
+                        <Menu.Trigger aria-label={`${t('design.pages')}: ${pageName(active)}`} className="project-switcher-trigger">
+                            <Icon icon={FileCode2} size={14} className="shrink-0 text-text-muted" />
+                            <span className="truncate text-sm font-medium text-text">{pageName(active)}</span>
+                            <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
+                        </Menu.Trigger>
+                        <Menu.Popup className="min-w-60">
+                            {files.map((file) => (
+                                <Menu.Row key={file} aria-label={pageName(file)}>
+                                    <Menu.Item className="min-w-0" label={pageName(file)} onClick={() => showPage(designId, file)}>
+                                        <Icon icon={FileCode2} size={14} className="shrink-0 text-text-muted" />
+                                        <span className="min-w-0 truncate">{pageName(file)}</span>
+                                    </Menu.Item>
+                                    <Menu.RowAction
+                                        icon={Trash2}
+                                        label={t('design.deletePage.action', { name: pageName(file) })}
+                                        onClick={() => setDeleting(file)}
+                                    />
+                                </Menu.Row>
+                            ))}
+                        </Menu.Popup>
+                    </Menu.Root>
                 )}
                 {comments.length > 0 && (
                     <Button size="sm" variant="secondary" onClick={() => void sendComments()}>
@@ -449,6 +480,16 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                 )}
                 {tool === 'draw' && <DesignDrawLayer onSend={sendDrawing} />}
             </div>
+            <PromptDialog
+                open={deleting !== null}
+                title={t('design.deletePage.title', { name: deleting === null ? '' : pageName(deleting) })}
+                description={t('design.deletePage.description')}
+                confirmLabel={t('design.deletePage.confirm')}
+                danger
+                busy={deleteBusy}
+                onConfirm={() => void deletePage()}
+                onOpenChange={() => setDeleting(null)}
+            />
         </div>
     );
 }
