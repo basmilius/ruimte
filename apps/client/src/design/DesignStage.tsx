@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
 import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
-import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls } from '@adecore/ui';
+import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls, useNow } from '@adecore/ui';
+import { formatAgo } from '@adecore/ui/format';
 import { perform } from '@/actions/client-actions';
 import { DesignCommentPopover } from '@/design/DesignCommentPopover';
 import { DesignDrawLayer } from '@/design/DesignDrawLayer';
@@ -31,6 +32,8 @@ import { useFolderWatch } from '@/state/fs-watch';
 import { useToasts } from '@/state/toasts';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
+
+const MINUTE_MS = 60_000;
 
 const TOOL_ICONS = { view: MousePointer2, comment: MessageSquarePlus, edit: SquareMousePointer, draw: PenLine } as const;
 
@@ -110,6 +113,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const [heldFor, setHeldFor] = useState<string | null>(null);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [deleteBusy, setDeleteBusy] = useState(false);
+    const now = useNow(MINUTE_MS);
     const frameBox = useRef<HTMLDivElement>(null);
     // Per page and for as long as the view is open: a person's place on the canvas is no one else's business.
     const cameras = useRef(new Map<string, DesignCamera>());
@@ -148,7 +152,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     );
 
     // A pinned page that went shows nothing rather than another page under its card; without a choice the page last worked on opens.
-    const latest = entries === null ? null : (pagesByChange(entries)[0] ?? null);
+    const recent = entries === null ? [] : pagesByChange(entries).map((file) => ({ file, changed: pageMtime(entries, file) ?? 0 }));
+    const latest = recent[0]?.file ?? null;
     const active = chosen !== null && files?.includes(chosen) ? chosen : pinned === undefined ? latest : null;
     const mtime = active === null || entries === null ? null : pageMtime(entries, active);
     const page = usePageReader(endpointId, folder, active);
@@ -387,7 +392,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             {/* Built like the bar of a cell, so its last control stands under the cell's own. */}
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-surface bg-clip-padding pr-1.5 pl-2 text-xs">
                 {pinned === undefined && (
-                    // Drawn like a switcher, with a row of its own per page so each carries its delete beside it.
+                    // Drawn like a switcher, the page last worked on first, with a row of its own per page so each carries its delete beside it.
                     <Menu.Root>
                         <Menu.Trigger aria-label={`${t('design.pages')}: ${pageName(active)}`} className="project-switcher-trigger">
                             <Icon icon={FileCode2} size={14} className="shrink-0 text-text-muted" />
@@ -395,11 +400,16 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                             <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                         </Menu.Trigger>
                         <Menu.Popup className="min-w-60">
-                            {files.map((file) => (
+                            {recent.map(({ file, changed }) => (
                                 <Menu.Row key={file} aria-label={pageName(file)}>
-                                    <Menu.Item className="min-w-0" label={pageName(file)} onClick={() => showPage(designId, file)}>
+                                    <Menu.Item className="min-w-0 grow" label={pageName(file)} onClick={() => showPage(designId, file)}>
                                         <Icon icon={FileCode2} size={14} className="shrink-0 text-text-muted" />
-                                        <span className="min-w-0 truncate">{pageName(file)}</span>
+                                        <span className="flex min-w-0 grow flex-col">
+                                            <span className="truncate">{pageName(file)}</span>
+                                            <span className="truncate text-xs text-text-faint">
+                                                {t('design.pageChanged', { ago: formatAgo(now - changed) })}
+                                            </span>
+                                        </span>
                                     </Menu.Item>
                                     <Menu.RowAction
                                         icon={Trash2}

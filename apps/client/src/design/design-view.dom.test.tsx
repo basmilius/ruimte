@@ -67,6 +67,18 @@ describe('a design view', () => {
         expect(shownPage()).toBe('2a Dense');
     });
 
+    test('lists the pages in its menu the most recently changed first', async () => {
+        await until(() => shownPage() === '2a Dense');
+
+        await clickOn(mounted.host.querySelector('button[aria-label="Page: 2a Dense"]'));
+        await until(() => button('Delete 2a Dense') !== null);
+
+        const rows = [...document.querySelectorAll<HTMLElement>('[role="menu"] [aria-label]:has([role="menuitem"])')];
+
+        expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual(['2a Dense', '1b Bold', '1a Calm']);
+        expect(rows[0]?.textContent).toContain('Changed');
+    });
+
     test('moves a page to the trash from its row in the menu, and then shows the page worked on before it', async () => {
         await until(() => shownPage() === '2a Dense');
 

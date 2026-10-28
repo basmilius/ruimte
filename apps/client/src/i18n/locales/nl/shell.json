@@ -277,6 +277,7 @@
     },
     "design": {
         "pages": "Pagina",
+        "pageChanged": "Aangepast {{ago}}",
         "loading": "Het design wordt gelezen…",
         "empty": "Nog geen pagina's. Vraag de chat om een eerste ontwerp.",
         "noFolder": "Een design heeft de map van het project op deze machine nodig.",
