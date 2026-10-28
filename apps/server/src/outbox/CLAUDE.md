@@ -1,21 +1,19 @@
 # The outbox, tasks and lineage
 
-- The daemon, not a client, starts the agents a verb creates, through a durable entry in `$RUIMTE_HOME/outbox` that survives a restart. Store and worker: `@adecore/agents/outbox`. Ruimte's entry kinds: `outbox/outbox.ts`, handlers beside it. Task handlers: `@adecore/agents/tasks`, bound in `tasks/wiring.ts`. Message handlers: `@adecore/agents/messages`. Lineage and the mode ceiling: `@adecore/agents/lineage.ts` and `modes.ts`. A running turn resumes from the outbox too (`resume-run.ts`). Session and chat managers create one id at a time.
+- The daemon, not a client, starts the agents a verb creates, through a durable entry in `$RUIMTE_HOME/outbox` (`@adecore/agents/outbox`; Ruimte's kinds in `outbox/outbox.ts`, task handlers bound in `tasks/wiring.ts`). A running turn resumes from it too (`resume-run.ts`). Session and chat managers create one id at a time.
 - Chat observers settle tasks (`@adecore/agents/tasks/task-coordinator.ts`), never a clock.
-- Entries due later: `resume-limit` (`@adecore/agents/chat/limit-resume.ts`), `background-limit` (`@adecore/agents/tasks/background-limit.ts`), `deliver-waiting` (`@adecore/agents/tasks/waiting-child.ts`), `connect-peer` and `routine-run`.
-- `connect-peer` (`remote/connect-peer.ts`) is at most one per machine, target `peer:<machineId>`. Each failure writes a fresh entry with the wait doubled from one minute up to ten, and a restart makes it due at once. It gives up at once when that machine refuses this one's key or statement; another Ruimte version is waited out. Giving up fails the tasks still owed there (`RemoteTasks.giveUp`). An agent that ran there, or whose start may have reached it, is owed a stop, asked once over a link that happens to be open, never opening one (`once`). New work starts a fresh window.
-- `routine-run` is written only by `routines/routines.ts`, at most one per routine (target `routine:<projectId>:<routineId>`). It outlives its target, its handler rereads the routine from disk, and one due in the past after a restart runs once as a caught-up run.
-- Entries due at once: `deliver-pr-watch`, written only by `github/pr-watch.ts`, opens one turn in the watching chat, which wakes nobody. `run-after-settle`, written only when a worktree chat settles (`launches/after-settle.ts`), starts the project's chosen task there, never twice per turn, and only notes in the chat.
-- The outbox timer never waits more than a minute (`wakeful-clock.ts`), so a time that passed during sleep is seen within a minute of waking. Work due later holds no lane.
-- While a `resume-limit` is owed, nothing else the outbox owes that chat opens a turn (`@adecore/agents/chat/wake-chat.ts`), since a turn before the reset would hit the same limit.
-- The tasks of one `team --task` call (`batchId`) wake the parent once, when all settled. A wake that finds its chat in a turn answers `wait` and runs again when `OutboxWorker.wake` names that chat.
-- After a restart a `background-limit` entry is due at once (`restarted`), since its commands went down with the CLI.
-- Stopping or deleting a node ends its descendants through an `end-children` entry (`@adecore/agents/tasks/end-children.ts`, bound in `end-children.ts`), written before the node goes; their threads and screens stay. Two openers no project places are no orphans when the project is indexed again: another machine's agent (`peer` on the record) and a Voice session (`openedBy` = `voice:<sessionId>`), whose chat outlives it.
-- No observer here settles a task whose child runs on another machine (`machine` on the task). That machine reports it, and `settleFromElsewhere` settles it, waking the parent once. `connect-peer` counts four kinds as owed to the machine:
-    - `start-remote-agent` (target the node) waits for the link and a place on the machine; neither ever fails the task. An ended node drops it.
-    - `take-remote-result` (target the node) waits for the machine's word, takes in the result and branch, and acknowledges.
-    - `stop-remote-agent` (target `peer:<machineId>`) outlives the node, and is owed only for an agent that started (`remote/remote-tasks.ts`).
-    - `deliver-remote-result` (target `peer:<machineId>`), on the machine doing the work, stays until the other machine acknowledges.
+- Due later: `resume-limit`, `background-limit` (due at once after a restart), `deliver-waiting`, `connect-peer` and `routine-run`. Due at once: `deliver-pr-watch` (written only by `github/pr-watch.ts`, one turn that wakes nobody) and `run-after-settle` (written only by `launches/after-settle.ts`, never twice per turn, notes only).
+- `connect-peer` (`remote/connect-peer.ts`): one per machine (`peer:<machineId>`), its wait doubling from one minute to ten per failure, due at once after a restart. It gives up at once when that machine refuses this one's key or statement (another Ruimte version is waited out), failing the tasks still owed (`RemoteTasks.giveUp`). An agent that ran there, or may have, is owed a stop asked once over a link already open, never opening one. New work starts a fresh window.
+- `routine-run` is written only by `routines/routines.ts`, one per routine (`routine:<projectId>:<routineId>`). It outlives its target, rereads the routine, and one overdue after a restart runs once as caught up.
+- The outbox timer waits at most a minute (`wakeful-clock.ts`), so a time passed in sleep is seen within a minute of waking. Work due later holds no lane.
+- While a `resume-limit` is owed, nothing else opens a turn in that chat (`@adecore/agents/chat/wake-chat.ts`).
+- The tasks of one `team --task` call (`batchId`) wake the parent once, when all settled. A wake that finds its chat in a turn answers `wait` and reruns when `OutboxWorker.wake` names that chat.
+- Stopping or deleting a node ends its descendants through `end-children` (`@adecore/agents/tasks/end-children.ts`), written before the node goes; their threads and screens stay. Openers no project places are no orphans on reindex: another machine's agent (`peer`) and a Voice session (`voice:<sessionId>`).
+- A task whose child runs on another machine (`machine`) is settled by that machine's report (`settleFromElsewhere`), waking the parent once. `connect-peer` counts four kinds as owed there (`remote/remote-tasks.ts`):
+    - `start-remote-agent` (target the node) waits for the link and a place there and never fails the task; an ended node drops it.
+    - `take-remote-result` (target the node) takes in the result and branch and acknowledges.
+    - `stop-remote-agent` (`peer:<machineId>`) outlives the node, owed only for an agent that started.
+    - `deliver-remote-result` (`peer:<machineId>`), on the working machine, stays until acknowledged.
 
 ## Product rules
 

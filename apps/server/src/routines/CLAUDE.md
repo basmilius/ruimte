@@ -2,14 +2,14 @@
 
 The `routine-run` entry is in `apps/server/src/outbox/CLAUDE.md`.
 
-- A routine starts work once at a set time or on repeat, in one project: an agent with a prompt, a shell command, or a project launch. It lives in `.ruimte/routines.json` (shared) or `.ruimte/private/routines.json`. The private file also keeps what is one person's per routine (`local`): the account, a pause, a refusal. An entry this release cannot read is written back as it stands.
-- A routine runs for every project in the machine's register, whether or not a client has it open. A removed project runs nothing.
-- Each routine owes at most one `routine-run` entry, due at its next time, and the handler rereads the files from disk. A run whose previous one still runs or waits on a person is recorded as `skipped`, never queued. Times missed while the machine slept or was off run once on wake, as `caught-up`. Resuming owes the next time from now. Daylight saving follows the machine's wall clock: a skipped time runs after the skip, a doubled one runs once.
-- An agent run is a hidden agent chat of the project, opened by `routine:<id>` and started through the outbox like `start-agent`, with the person's mode as ceiling. It is on no canvas and outlives its routine. Its brief tells it to publish a result to Output under the routine's output key, and nothing when it has none. The daemon marks a version published from that chat `maker: 'routine'` from its own record (`provenanceOf`). A command or launch run delivers its output itself (`Artifacts.deliver`).
+- A routine starts an agent with a prompt, a shell command or a project launch, once or on repeat, in one project. It lives in `.ruimte/routines.json` or `.ruimte/private/routines.json`; the private file also keeps a person's account, pause and refusal per routine (`local`). An unreadable entry is written back as it stands.
+- Every project in the machine's register runs its routines, open or not; a removed project runs nothing.
+- Each routine owes at most one `routine-run`, and the handler rereads the files. A run whose previous one still runs or waits on a person is `skipped`, never queued. Missed times run once on wake as `caught-up`. Resuming owes the next time from now. Daylight saving follows the machine's wall clock: a skipped time runs after the skip, a doubled one once.
+- An agent run is a hidden agent chat opened by `routine:<id>`, started through the outbox with the person's mode as ceiling, on no canvas, outliving its routine. Its brief has it publish a result to Output under the routine's output key, or nothing. The daemon marks that version `maker: 'routine'` (`provenanceOf`). A command or launch run delivers its output itself (`Artifacts.deliver`).
 - Removing a routine never removes its runs, their chats or its artifact.
-- A routine node (kind `routine`) holds only the id of a routine of its own project (`routine`, the last field of `ProjectNodeSchema`), and that id travels in the shared file. A private routine's id names nothing on a teammate's machine, and the node says so. A Ruimte older than the kind writes it back as `unknown` (`project-split.test.ts`).
-- The node draws from the client's routine list and asks the machine nothing. Beside it the canvas draws its newest runs and its Output (`apps/client/src/routines/RoutineBeside.tsx`). That view is never written to a project and is never a node, so a run's chat stays off every canvas.
-- `read` of the node prints the routine and its newest runs (`routine-report.ts`). `node new routine --routine` adds one and approves nothing.
+- A routine node (kind `routine`) holds only a routine id of its own project (`routine`, the last field of `ProjectNodeSchema`), which travels in the shared file; a private routine's id names nothing for a teammate, and the node says so. An older Ruimte writes it back as `unknown` (`project-split.test.ts`).
+- The node draws from the client's routine list. Beside it the canvas draws its newest runs and Output (`apps/client/src/routines/RoutineBeside.tsx`), never written to a project, so a run's chat stays off every canvas.
+- `read` of the node prints the routine and its newest runs (`routine-report.ts`). `node new routine --routine` approves nothing.
 
 ## Product rules
 

@@ -2,14 +2,14 @@
 
 `ruimte-context help visual` says how an agent shows, previews and measures a page.
 
-- A render child (`render-child.ts`, the daemon started again as `ruimte visual-render`) runs its own Chrome with a throwaway profile in a temporary folder, never the daemon's browser profile under `$RUIMTE_HOME/browser`, so an agent's page never sees a person's cookies, logins or history.
-- Everything a child's Chrome sends goes through the child's public-only SOCKS5 proxy (`socks-proxy.ts`). It refuses loopback, local networks and every address a machine interface holds (`local-address.ts`), checked on the addresses a name resolves to, and connects only to an address it checked. WebRTC is held to proxied UDP and QUIC is off, since either would bypass it.
-- A page never loads from `file:`. It is answered from memory as `https://visual.invalid/page.html` (`page-source.ts`), and the main frame stays there.
-- Render children are bounded in number and time (`renderer.ts`): at most two at once, the rest queued, each with a hard limit, in its own process group, killed with its Chrome at the limit and when the daemon stops. A child ends with its browser once its stdin closes, so a dying daemon takes it along.
-- The daemon never reads a path an agent names. The CLI embeds the local images a page names (`apps/server/src/cli/visual-images.ts`), in the agent's own process and inside its CLI's sandbox, and only files whose bytes are an image. Read through the daemon, a path would hand the agent what its sandbox withholds.
-- A visual's page is never served inline on the daemon's origin. The attachment route and `bytes.read` hand it out as a download with `nosniff`, and a client shows it only in a sandboxed frame on an origin of its own.
-- An agent in every permission mode may show a visual, since it touches only its own thread.
-- Source files and preview PNGs live in `$RUIMTE_HOME/chats/<chatId>.visuals/`, outside the project. `visual write --name chart.html` takes HTML on stdin and writes only a validated filename in the caller's own chat folder. It works in every permission mode without granting writes to the rest of the machine's home. Clearing or deleting the chat removes this folder (`VisualStore.removeChat`); a fork copies published pages, not working sources or previews.
+- A render child (`render-child.ts`) runs its own Chrome on a throwaway profile, never the daemon's under `$RUIMTE_HOME/browser`.
+- Its Chrome sends everything through a public-only SOCKS5 proxy (`socks-proxy.ts`) that refuses loopback, local networks and the machine's own addresses (`local-address.ts`) on the resolved address, and connects only to an address it checked. WebRTC is held to proxied UDP and QUIC is off.
+- A page never loads from `file:`; it is served from memory as `https://visual.invalid/page.html` (`page-source.ts`), and the main frame stays there.
+- At most two children run at once (`renderer.ts`), each with a hard limit, in its own process group, killed with its Chrome at the limit, when the daemon stops or when its stdin closes.
+- The daemon never reads a path an agent names. The CLI embeds a page's local images in the agent's own process, only files whose bytes are an image (`apps/server/src/cli/visual-images.ts`).
+- The daemon never serves a page inline; it goes out as a download with `nosniff`, shown only in a sandboxed frame.
+- Every permission mode may show a visual.
+- Sources and previews live in `$RUIMTE_HOME/chats/<chatId>.visuals/`. `visual write` writes only a validated filename in the caller's own chat folder. A clear or delete removes it (`VisualStore.removeChat`); a fork copies only published pages.
 
 ## Product rules
 

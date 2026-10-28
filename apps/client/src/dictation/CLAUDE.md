@@ -1,16 +1,14 @@
 # Speech to Text
 
-Local dictation under Voice settings, beside Voice Control, on Nemotron streaming only.
+Local dictation on Nemotron streaming (`controller.ts`, `helper.ts`, `editor.ts`). The shell owns downloads, enablement and the helper's sixty-second idle timeout (`packages/desktop-bridge/src/speech.ts`).
 
-- `audio/ownership.ts` allows one microphone listener at a time, shared with Voice Control.
-- A run owns one target and one session ID. Cancelling, unmounting its target, replacing its draft or stale IPC must never insert elsewhere.
-- Live transcripts are whole replacement previews. Only the final transcript is inserted, once, after stopping. Escape discards.
-- A terminal paste sends sanitized text through xterm; never Enter, control characters or partial transcripts.
-- The microphone closes on stop, cancellation and every failure. Stop drains the final worklet block before asking the helper for its last result.
-- No word substitutions or spoken commands. Recognition errors stay visible for the person to edit.
-- A failure reaches a person only through `failure.ts`. Each `DictationError` code is a key under `voice:dictation.errors`; a person never sees a raw code or Chromium message.
-
-`controller.ts` coordinates target and audio ownership. `helper.ts` manages capture and the optional desktop bridge. `editor.ts` tracks CodeMirror insertion ranges and isolates undo history. The desktop shell owns downloads, persisted enablement and the helper's sixty-second idle timeout. IPC shapes: `packages/desktop-bridge/src/speech.ts`.
+- One microphone listener at a time, shared with Voice Control (`audio/ownership.ts`).
+- A run owns one target and session ID; cancelling, unmounting, a replaced draft or stale IPC never inserts elsewhere.
+- Live transcripts are previews. Only the final one is inserted, once, after stopping; Escape discards. Stop drains the last worklet block first.
+- A terminal paste is sanitized text through xterm, never Enter, control characters or partial transcripts.
+- The microphone closes on stop, cancellation and every failure.
+- No word substitutions or spoken commands; recognition errors stay for the person to edit.
+- A failure reaches a person only through `failure.ts`, as a `voice:dictation.errors` key, never a raw code or Chromium message.
 
 ## Product rules
 
