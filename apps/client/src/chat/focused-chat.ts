@@ -1,5 +1,5 @@
 import { isCanvasView, isChatHostView, isDesignView, type ProjectView } from '@ruimte/contracts';
-import { activeDesignChat, useDesignChat } from '@/design/design-chat';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
@@ -8,7 +8,7 @@ import { endpointOfNodeId } from '@/state/node-endpoint';
 /* The chat a view of its own shows: a chat view's, the one a design has in front, or none. */
 function shownChatOf(view: ProjectView): string | null {
     if (isDesignView(view)) {
-        return activeDesignChat(view, useDesignChat.getState().picked);
+        return activeDesignChat(placeOfView(view), useDesignChat.getState().picked);
     }
     return isChatHostView(view) ? view.id : null;
 }
@@ -24,7 +24,13 @@ export function focusedChatId(): string | null {
     }
     const { bodyFocusId, selection, nodes } = focusedCanvas().getState();
     const id = bodyFocusId ?? (selection.length === 1 ? selection[0]! : null);
-    return id !== null && nodes[id]?.kind === 'chat' ? id : null;
+    const node = id === null ? undefined : nodes[id];
+    return node === undefined ? null : shownChatOfNode(node);
+}
+
+/* The chat a node shows, as `shownChatOfNode` answers, drawn again when a person picks another chat of a design. */
+export function useShownChatOfNode(node: Parameters<typeof shownChatOfNode>[0] | undefined): string | null {
+    return useDesignChat(() => (node === undefined ? null : shownChatOfNode(node)));
 }
 
 /* The key that chat's composer registers under, on the machine the chat runs on, so a menu row and its shortcut reach the same composer. */
@@ -49,5 +55,8 @@ export function keyboardChatKey(): string | null {
         return chat === null ? null : endpointKey(endpointOfNodeId(chat), chat);
     }
     const { bodyFocusId, nodes } = focusedCanvas().getState();
-    return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'chat' ? endpointKey(endpointOfNodeId(bodyFocusId), bodyFocusId) : null;
+    const node = bodyFocusId === null ? undefined : nodes[bodyFocusId];
+    const chat = node === undefined ? null : shownChatOfNode(node);
+    // A later chat of a design node runs where its node does.
+    return chat === null ? null : endpointKey(endpointOfNodeId(bodyFocusId!), chat);
 }

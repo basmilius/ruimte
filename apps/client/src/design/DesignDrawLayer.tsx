@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Eraser, Send } from 'lucide-react';
 import type { ChatAttachmentUpload } from '@ruimte/contracts';
 import { Button, Icon, IconButton, Input } from '@adecore/ui';
-import { strokesBox, type Point, type Rect } from '@/design/design-page';
+import { layoutPoint, strokesBox, type Point, type Rect } from '@/design/design-page';
 
-/* Every stroke on the canvas, in the color of the pen, at the pixels of the screen. */
+/* Every stroke on the canvas, in the color of the pen, at the pixels of its layout. */
 function paintStrokes(element: HTMLCanvasElement, strokes: readonly (readonly Point[])[]): void {
     const context = element.getContext('2d');
 
@@ -68,8 +68,12 @@ export function DesignDrawLayer({ onSend }: { onSend(image: ChatAttachmentUpload
     };
 
     const pointOf = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+        const element = event.currentTarget;
+
+        return layoutPoint({ x: event.clientX, y: event.clientY }, element.getBoundingClientRect(), {
+            width: element.clientWidth,
+            height: element.clientHeight
+        });
     };
 
     const clear = (): void => {

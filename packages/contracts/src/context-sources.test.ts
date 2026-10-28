@@ -229,6 +229,32 @@ describe('deriveProjectContextSources', () => {
         expect(sources.has('solo')).toBe(false);
     });
 
+    test('a line to a design node brings every chat it holds, and its later chats read what the node reads', () => {
+        const design = node('design', 'design', { title: 'Site', path: 'site', chats: [{ id: 'later', name: 'Header', node: {} }] });
+        const board: ProjectView[] = [
+            {
+                kind: 'canvas',
+                id: 'board',
+                name: 'Board',
+                nodes: [design, node('agent', 'chat'), node('plan', 'note', { title: 'Plan', body: 'ship' })],
+                texts: [],
+                edges: [
+                    { id: 'e1', from: 'design', to: 'agent' },
+                    { id: 'e2', from: 'plan', to: 'design' }
+                ],
+                layouts: []
+            }
+        ];
+
+        const sources = deriveProjectContextSources(board, null);
+
+        expect(sources.get('agent')).toEqual([
+            { id: 'design', kind: 'chat', title: 'Site' },
+            { id: 'later', kind: 'chat', title: 'Header' }
+        ]);
+        expect(sources.get('later')).toEqual([{ id: 'plan', kind: 'text', title: 'Plan', text: 'ship' }]);
+    });
+
     test('an edge from one canvas never reaches a node on another', () => {
         const crossed: ProjectView[] = [
             { ...(views[0] as Extract<ProjectView, { kind: 'canvas' }>), edges: [] },

@@ -16,7 +16,8 @@ import {
     type PlanPersonOp,
     type ProviderInfo,
     type RequestMap,
-    type RequestType
+    type RequestType,
+    nodeChats
 } from '@ruimte/contracts';
 import { effectiveChecks, findItem } from '@adecore/plan';
 import type { StoreApi } from 'zustand';
@@ -27,8 +28,7 @@ import { forkRefusal, lastSettledTurn, summaryRefusal, recentSubagentMessages, s
 import { readNodeHost, updateHost, type NodeHost } from '@/nodes/node-host';
 import { PlanClient } from '@/plan/plan-client';
 import { nodesOfView } from '@/project/view-nodes';
-import { showViewWhenItLands } from '@/project/views';
-import { revealWhenItLands } from '@/state/canvas';
+import { revealForkWhenItLands, showViewWhenItLands } from '@/project/views';
 import { useChats, type ChatState, providersOf } from '@adecore/agents-react/state';
 import { chatSinkFor } from '@/state/chats';
 import type { DocumentState } from '@/state/document';
@@ -102,7 +102,7 @@ const LIVE_MACHINE: SessionMachine = {
         if (result.viewId === result.nodeId) {
             showViewWhenItLands(result.viewId);
         } else {
-            revealWhenItLands(result.viewId, result.nodeId);
+            revealForkWhenItLands(result.viewId, result.nodeId);
         }
     },
     terminalHost: (terminalId) => readNodeHost(terminalId),
@@ -134,6 +134,16 @@ export function sessionTitle(document: StoreApi<DocumentState>, id: string, kind
         const node = nodesOfView(view).find((candidate) => candidate.id === id && candidate.kind === kind);
         if (node) {
             return node.title;
+        }
+        // Every chat of a design node, its own under the node's id included.
+        const chat =
+            kind === 'chat'
+                ? nodesOfView(view)
+                      .flatMap(nodeChats)
+                      .find((candidate) => candidate.id === id)
+                : undefined;
+        if (chat) {
+            return chat.name;
         }
     }
     return null;

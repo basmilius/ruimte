@@ -1,5 +1,6 @@
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { DesignActions } from '@/design/DesignActions';
+import { placeOfView } from '@/design/design-chat';
 import { useNodeComputerSession } from '@/computer/indicator';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
@@ -60,7 +61,7 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
                 {forked && <ForkPill chatId={view.id} />}
                 {planned && <PlanPill chatId={view.id} />}
                 {operating && <ComputerIndicator nodeId={view.id} />}
-                <DesignActions view={view} />
+                <DesignActions design={placeOfView(view)} />
             </div>
         );
     }

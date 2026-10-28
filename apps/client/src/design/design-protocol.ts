@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { assetPathOf, isPagePath } from '@/design/design-page';
 
 /* The methods between the stage and the runtime in a design page, beside the bridge of every visual. */
 export const DESIGN_METHODS = {
@@ -25,7 +26,9 @@ export const DESIGN_METHODS = {
     // From the stage: what lies under a drawing, in the frame's coordinates.
     locate: 'ruimte/design/locate',
     // From the page: the options and the element under that drawing.
-    located: 'ruimte/design/located'
+    located: 'ruimte/design/located',
+    // Both ways: a file of the folder a page's script named while it ran, and its bytes, or null when it gets none.
+    asset: 'ruimte/design/asset'
 } as const;
 
 export type DesignTool = 'view' | 'comment' | 'edit' | 'draw';
@@ -81,7 +84,17 @@ const PageMessageSchema = z.discriminatedUnion('method', [
     message(DESIGN_METHODS.camera, DesignCameraSchema),
     message(DESIGN_METHODS.pick, z.object({ tool: z.enum(['comment', 'edit']), element: DesignElementSchema })),
     message(DESIGN_METHODS.text, z.object({ element: DesignElementSchema, before: z.string().max(2000), after: z.string().max(2000) })),
-    message(DESIGN_METHODS.located, z.object({ elements: z.array(DesignElementSchema).max(4) }))
+    message(DESIGN_METHODS.located, z.object({ elements: z.array(DesignElementSchema).max(4) })),
+    // Only a file the folder holds, by the path `assetPathOf` makes of it, and never a page, which frames as a page of its own.
+    message(
+        DESIGN_METHODS.asset,
+        z.object({
+            path: z
+                .string()
+                .max(1024)
+                .refine((path) => assetPathOf(path) === path && !isPagePath(path))
+        })
+    )
 ]);
 export type DesignPageMessage = z.infer<typeof PageMessageSchema>;
 

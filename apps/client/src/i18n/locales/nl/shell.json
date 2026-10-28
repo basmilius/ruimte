@@ -278,8 +278,8 @@
     "design": {
         "pages": "Pagina",
         "loading": "Het design wordt gelezen…",
-        "empty": "De chat schrijft de eerste pagina van dit design in {{folder}}.",
-        "noFolder": "Dit project heeft geen map op deze machine, dus er is niets te tonen.",
+        "empty": "Nog geen pagina's. Vraag de chat om een eerste ontwerp.",
+        "noFolder": "Een design heeft de map van het project op deze machine nodig.",
         "failed": "Het design kon niet worden getoond.",
         "failedAction": "Het design kon dat niet doen",
         "comment": {
@@ -290,13 +290,13 @@
             "sendAll_other": "{{count}} commentaren versturen"
         },
         "edit": {
-            "hint": "Klik op een element om de stijl in te stellen. Dubbelklik op tekst om die ter plekke te wijzigen; de chat zet het in de bron.",
+            "hint": "Klik op een element om het op te maken. Dubbelklik op tekst om die te wijzigen.",
             "save": "Bewaren",
             "discard": "Weggooien",
-            "bake": "Inbakken"
+            "bake": "Naar de chat"
         },
         "tweaks": {
-            "none": "Deze pagina heeft geen tweaks. Vraag de chat om haar aanpasbaar te maken.",
+            "none": "Deze pagina heeft nog geen tweaks. Vraag de chat erom.",
             "save": "Waarden bewaren"
         },
         "draw": {
@@ -308,6 +308,9 @@
             "label": "Chat",
             "new": "Nieuwe chat"
         },
+        "node": {
+            "closePage": "Pagina sluiten"
+        },
         "tools": {
             "label": "Gereedschap",
             "view": "Bekijken en gebruiken",
@@ -318,13 +321,13 @@
         },
         "actions": {
             "saveVersion": "Versie bewaren",
-            "saveVersionHint": "Bewaar het design zoals het nu is als versie in Output",
+            "saveVersionHint": "Bewaar deze versie in Output",
             "saved": "Bewaard als versie in Output",
-            "olderMachine": "Deze machine kan nog geen design bewaren; werk Ruimte daar bij",
+            "olderMachine": "Werk Ruimte op deze machine bij om versies te bewaren",
             "export": "Exporteren",
-            "exportHint": "De pagina die voor staat als één HTML-bestand, met de afbeeldingen erin",
+            "exportHint": "Bewaar deze pagina als één HTML-bestand",
             "implement": "Implementeren",
-            "implementHint": "Een nieuwe chat die deze pagina in het project bouwt, met de opdracht klaar om te versturen"
+            "implementHint": "Start een chat die deze pagina in het project bouwt"
         }
     },
     "viewKinds": {
@@ -405,6 +408,7 @@
         "drawing": "Tekening",
         "diagram": "Diagram",
         "file": "Bestand",
+        "design": "Design",
         "unknown": "Onbekend"
     },
     "dock": {

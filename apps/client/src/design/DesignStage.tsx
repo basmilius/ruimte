@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook } from 'lucide-react';
-import { isPathBelow, type ChatAttachmentUpload, type ProjectDesignView } from '@ruimte/contracts';
+import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
 import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
 import { Button, EmptyState, Icon, ProjectSwitcher, Segmented, Separator, ZoomControls, type ProjectSwitcherItem } from '@adecore/ui';
 import { perform } from '@/actions/client-actions';
@@ -12,7 +12,7 @@ import { DesignTweaks } from '@/design/DesignTweaks';
 import { useDesignChat } from '@/design/design-chat';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
-import { pageName } from '@/design/design-page';
+import { changeReaches, designFiles, pageMtime, pageName } from '@/design/design-page';
 import {
     DESIGN_METHODS,
     designMessage,
@@ -25,7 +25,8 @@ import {
     type Tweaks,
     type TweakValue
 } from '@/design/design-protocol';
-import { listDesignFiles, readDesignPage, rewriteDesignFile } from '@/design/design-read';
+import { runtimeAssets } from '@/design/design-inline';
+import { listDesignFolder, readDesignAsset, readDesignPage, rewriteDesignFile } from '@/design/design-read';
 import { useFolderWatch } from '@/state/fs-watch';
 import { useToasts } from '@/state/toasts';
 import { useEndpointId } from '@/state/keys';
@@ -38,30 +39,66 @@ function pinsOf(comments: readonly DesignComment[]): { selector: string; number:
     return comments.map((comment, index) => ({ selector: comment.element.selector, number: index + 1 }));
 }
 
+/*
+ * The tweaks of a page that opened again: a value a person set and did not save stays over what the
+ * page declares, as long as the page still declares that tweak with a value of its kind.
+ */
+function heldTweakValues(declared: Tweaks | null, held: Readonly<Record<string, TweakValue>>): { values: Record<string, TweakValue>; changed: boolean } {
+    if (declared === null) {
+        return { values: {}, changed: false };
+    }
+
+    let changed = false;
+
+    const values = Object.fromEntries(
+        Object.entries(declared).map(([name, tweak]) => {
+            const value = held[name];
+
+            if (value === undefined || typeof value !== typeof tweak.value) {
+                return [name, tweak.value];
+            }
+
+            changed ||= value !== tweak.value;
+
+            return [name, value];
+        })
+    );
+
+    return { values, changed };
+}
+
+/* One reader per page: the frame opens its bridge again for every new one, so a fresh one each render never finishes loading. */
+function usePageReader(endpointId: string, folder: string, file: string | null): (() => Promise<string>) | null {
+    return useMemo(() => (file === null ? null : () => readDesignPage(endpointId, folder, file)), [endpointId, folder, file]);
+}
+
 interface StageProps {
-    view: ProjectDesignView;
+    designId: string;
     chatId: string;
     folder: string;
-    // The folder relative to the project, as a person reads it.
-    location: string;
     watched: string;
+    /* The one page a card on a canvas shows, which offers no other; absent, the bar picks among them all. */
+    pinned?: string;
 }
 
 /*
  * The pages of the folder over one sandboxed frame, the frame the visuals of a chat run in, with the
  * runtime of the page drawing the canvas, the outlines and the pins. A write in the folder reads the
- * list and the page again, and the camera a person left the page at goes back to it. What the tools
+ * list again and a write of the page in front opens it again, with the camera a person left it at and
+ * the tweaks and edits not saved yet. What the tools
  * gather goes to the chat in front as an ordinary message; only Edit and Tweaks write the file.
  */
-export function DesignStage({ view, chatId, folder, location, watched }: StageProps) {
+export function DesignStage({ designId, chatId, folder, watched, pinned }: StageProps) {
     const { t } = useTranslation('shell');
     const endpointId = useEndpointId();
     const transport = useTransport();
-    const [files, setFiles] = useState<string[] | null>(null);
+    const [entries, setEntries] = useState<FsEntry[] | null>(null);
     const [listed, setListed] = useState(false);
-    const chosen = useDesignChat((state) => state.pages[view.id] ?? null);
+    const shownPage = useDesignChat((state) => state.pages[designId] ?? null);
+    const chosen = pinned ?? shownPage;
     const showPage = useDesignChat((state) => state.showPage);
     const [version, setVersion] = useState(0);
+    const [reloads, setReloads] = useState(0);
     const [tool, setTool] = useState<DesignTool>('view');
     const [zoom, setZoom] = useState(1);
     const [canvas, setCanvas] = useState(false);
@@ -70,10 +107,15 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
     const [picked, setPicked] = useState<DesignElement | null>(null);
     const [comments, setComments] = useState<DesignComment[]>([]);
     const [edits, setEdits] = useState<DesignEdits>({});
+    const [heldFor, setHeldFor] = useState<string | null>(null);
     const frameBox = useRef<HTMLDivElement>(null);
     // Per page and for as long as the view is open: a person's place on the canvas is no one else's business.
     const cameras = useRef(new Map<string, DesignCamera>());
     const located = useRef<((elements: DesignElement[]) => void) | null>(null);
+    const assets = useRef<{ opened: string; read: (path: string) => Promise<Blob | null> } | null>(null);
+
+    const files = entries === null ? null : designFiles(entries);
+    const found = entries !== null;
 
     // The folder may not be there yet, so the project's watch is the one that sees the chat make it.
     useFolderWatch(endpointId, watched);
@@ -81,9 +123,9 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
     useEffect(() => {
         let current = true;
 
-        void listDesignFiles(endpointId, folder).then((found) => {
+        void listDesignFolder(endpointId, folder).then((found) => {
             if (current) {
-                setFiles(found);
+                setEntries(found);
                 setListed(true);
             }
         });
@@ -96,16 +138,32 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
     useEffect(
         () =>
             transport.on('fs.changed', (payload) => {
-                if (payload.paths.some((changed) => changed === folder || isPathBelow(folder, changed) || isPathBelow(changed, folder))) {
+                if (payload.paths.some((changed) => changeReaches(changed, folder, found))) {
                     setVersion((previous) => previous + 1);
                 }
             }),
-        [transport, folder]
+        [transport, folder, found]
     );
 
-    const active = chosen !== null && files?.includes(chosen) ? chosen : (files?.[0] ?? null);
-    // One reader per page: the frame opens its bridge again for every new one, so a fresh one each render never finishes loading.
-    const page = useMemo(() => (active === null ? null : () => readDesignPage(endpointId, folder, active)), [endpointId, folder, active]);
+    // A pinned page that went shows nothing rather than another page under its card.
+    const active = chosen !== null && files?.includes(chosen) ? chosen : pinned === undefined ? (files?.[0] ?? null) : null;
+    const mtime = active === null || entries === null ? null : pageMtime(entries, active);
+    const page = usePageReader(endpointId, folder, active);
+    const opened = `${active}:${mtime}:${reloads}`;
+
+    // What a person tweaked or edited and did not save belongs to the page it was done on.
+    if (heldFor !== active) {
+        setHeldFor(active);
+        setValues({});
+        setEdits({});
+    }
+
+    // The bar of the view acts on the page the stage shows, also when no person picked one.
+    useEffect(() => {
+        if (pinned === undefined && listed) {
+            showPage(designId, active);
+        }
+    }, [pinned, listed, designId, active, showPage]);
 
     const frameWindow = (): Window | null => frameBox.current?.querySelector('iframe')?.contentWindow ?? null;
 
@@ -145,13 +203,20 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
             case DESIGN_METHODS.ready: {
                 const declared = tweaksOf(message.params.tweaks);
                 const kept = cameras.current.get(active);
+                const held = heldTweakValues(declared, values);
                 setCanvas(message.params.canvas);
                 setTweaks(declared);
-                setValues(declared === null ? {} : Object.fromEntries(Object.entries(declared).map(([name, tweak]) => [name, tweak.value])));
+                setValues(held.values);
                 setPicked(null);
-                // A page drawn again knows nothing yet: the tool, the pins and the camera go to it once more.
+                // A page drawn again knows nothing yet: the tool, the pins, what a person changed and did not save, and the camera go to it once more.
                 frame.postMessage(designMessage(DESIGN_METHODS.tool, { tool }), '*');
                 frame.postMessage(designMessage(DESIGN_METHODS.pins, { pins: pinsOf(comments) }), '*');
+                if (held.changed) {
+                    frame.postMessage(designMessage(DESIGN_METHODS.tweaks, { values: held.values }), '*');
+                }
+                for (const [selector, styles] of Object.entries(edits)) {
+                    frame.postMessage(designMessage(DESIGN_METHODS.style, { selector, styles }), '*');
+                }
                 if (kept !== undefined && message.params.canvas) {
                     frame.postMessage(designMessage(DESIGN_METHODS.camera, kept), '*');
                     setZoom(kept.zoom);
@@ -172,6 +237,17 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
                 located.current?.(message.params.elements);
                 located.current = null;
                 return;
+            case DESIGN_METHODS.asset: {
+                const { path } = message.params;
+
+                // Bounded per page the frame opened, which may ask as often as it likes.
+                if (assets.current?.opened !== opened) {
+                    assets.current = { opened, read: runtimeAssets((file) => readDesignAsset(endpointId, folder, file)) };
+                }
+
+                void assets.current.read(path).then((bytes) => frame.postMessage(designMessage(DESIGN_METHODS.asset, { path, bytes }), '*'));
+                return;
+            }
         }
     });
 
@@ -222,7 +298,7 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
     const discardEdits = (): void => {
         setEdits({});
         dismiss();
-        setVersion((previous) => previous + 1);
+        setReloads((previous) => previous + 1);
     };
 
     const bake = async (): Promise<void> => {
@@ -281,7 +357,7 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
     if (files === null || files.length === 0 || active === null || page === null) {
         return (
             <EmptyState icon={SwatchBook} className="grow">
-                {t('design.empty', { folder: location })}
+                {t('design.empty')}
             </EmptyState>
         );
     }
@@ -296,12 +372,14 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
         <div className="flex min-h-0 grow flex-col">
             {/* Built like the bar of a cell, so its last control stands under the cell's own. */}
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-surface bg-clip-padding pr-1.5 pl-2 text-xs">
-                <ProjectSwitcher
-                    label={t('design.pages')}
-                    current={pageOf(active)}
-                    projects={files.map(pageOf)}
-                    onSelect={(next) => showPage(view.id, next.id)}
-                />
+                {pinned === undefined && (
+                    <ProjectSwitcher
+                        label={t('design.pages')}
+                        current={pageOf(active)}
+                        projects={files.map(pageOf)}
+                        onSelect={(next) => showPage(designId, next.id)}
+                    />
+                )}
                 {comments.length > 0 && (
                     <Button size="sm" variant="secondary" onClick={() => void sendComments()}>
                         <Icon icon={Send} size={14} />
@@ -341,8 +419,8 @@ export function DesignStage({ view, chatId, folder, location, watched }: StagePr
                 )}
             </div>
             <div ref={frameBox} className="relative min-h-0 grow overflow-hidden">
-                {/* Keyed on the page and the folder's version: the frame takes a page only as it opens, so another page or a write the chat makes opens it again. */}
-                <VisualPageFrame key={`${active}:${version}`} page={page} title={active} fill />
+                {/* Keyed on the page and when it was written: the frame takes a page only as it opens, so another page or a write of this one opens it again, and nothing else in the folder does. */}
+                <VisualPageFrame key={opened} page={page} title={active} fill />
                 {tool === 'comment' && picked !== null && (
                     <DesignCommentPopover
                         element={picked}

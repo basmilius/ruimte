@@ -1,4 +1,4 @@
-import { isCanvasView, isDividerView, isUnlistedView, UNKNOWN_KIND, type ProjectNode, type ProjectText, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isDividerView, isUnlistedView, nodeChats, UNKNOWN_KIND, type ProjectNode, type ProjectText, type ProjectView } from '@ruimte/contracts';
 import type { Referable, ReferableKind, Referables } from '@adecore/agents-react/chat';
 import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
@@ -28,6 +28,9 @@ function nodeReferable(node: Pick<ProjectNode, 'id' | 'kind' | 'title' | 'viewId
         case 'note':
         case 'browser':
             return { id: node.id, name: node.title, kind: node.kind };
+        case 'design':
+            // A design is reached as its own chat, under the node's id.
+            return { id: node.id, name: node.title, kind: 'chat' };
         case 'drawing':
         case 'diagram':
             return node.viewId ? { id: node.viewId, name: node.title, kind: node.kind } : null;
@@ -55,7 +58,10 @@ function viewReferable(view: ProjectView): Referable | null {
  * the canvas the node stands on.
  */
 export function projectReferables(views: readonly ProjectView[], nodesOf: NodesOfView<ProjectNode>, textsOf: TextsOfView, chatId: string): Referable[] {
-    const canvas = views.find((view) => isCanvasView(view) && !isUnlistedView(view) && nodesOf(view).some((node) => node.id === chatId));
+    // A later chat of a design node is no node of its own, so the canvas is the one its design stands on.
+    const canvas = views.find(
+        (view) => isCanvasView(view) && !isUnlistedView(view) && nodesOf(view).some((node) => nodeChats(node).some((chat) => chat.id === chatId))
+    );
     const onCanvas: Referable[] =
         canvas === undefined
             ? []

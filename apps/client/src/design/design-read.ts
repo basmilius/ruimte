@@ -1,18 +1,19 @@
-import { injectVisualBootstrap } from '@ruimte/contracts';
+import { injectVisualBootstrap, type FsEntry } from '@ruimte/contracts';
 import { machineTransport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { withDesignRuntime } from '@/design/design-runtime';
 import { DESIGN_FOLDERS } from '@/design/design-folder';
-import { assetPathOf, assetReferences, designFiles, DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES, withAssets } from '@/design/design-page';
+import { DESIGN_ASSET_MAX_BYTES } from '@/design/design-page';
+import { inlineDesignPage } from '@/design/design-inline';
 
-/* The pages of the design folder, or null while the folder is not there yet: the chat makes it with its first file. */
-export async function listDesignFiles(endpointId: string, folder: string): Promise<string[] | null> {
+/* What the design folder holds, or null while the folder is not there yet: the chat makes it with its first file. */
+export async function listDesignFolder(endpointId: string, folder: string): Promise<FsEntry[] | null> {
     try {
         // Hidden too: git ignores a private design's folder, and a listing leaves out what git ignores.
         const listed = await machineTransport(endpointId).request('fs.list', { path: folder, hidden: true });
 
-        return designFiles(listed.entries);
+        return listed.entries;
     } catch {
         return null;
     }
@@ -76,46 +77,34 @@ export async function readDesignPage(endpointId: string, folder: string, file: s
     return injectVisualBootstrap(withDesignRuntime(await standaloneDesignPage(endpointId, folder, file)));
 }
 
-/*
- * One page as a file that stands on its own: the frame writes a page from a string, so every file of the
- * folder it pulls in rides along as its bytes, up to the bounds of a visual. A file that cannot be read
- * stays a reference that loads nothing, the way a broken path does in a browser. Export hands this out.
- */
+/* The bytes of one file of the design folder, by its path inside it, within the bounds of one file of a visual. */
+export function readDesignAsset(endpointId: string, folder: string, path: string): Promise<Blob> {
+    const transport = machineTransport(endpointId);
+
+    return readResource((piece) => readPiece(transport, piece), { kind: 'file', path: `${folder}/${path}` }, { maxBytes: DESIGN_ASSET_MAX_BYTES });
+}
+
+/* One page as a file that stands on its own (`inlineDesignPage`). Export hands this out. */
 export async function standaloneDesignPage(endpointId: string, folder: string, file: string): Promise<string> {
     const transport = machineTransport(endpointId);
-    const read = await transport.request('fs.read', { path: `${folder}/${file}` });
 
-    if (read.kind !== 'text') {
-        throw new Error(`${file} is not a text file`);
-    }
+    return inlineDesignPage(
+        {
+            readPage: async (path) => {
+                const read = await transport.request('fs.read', { path: `${folder}/${path}` });
 
-    const inline = new Map<string, string>();
-    let total = read.size;
+                if (read.kind !== 'text') {
+                    throw new Error(`${path} is not a text file`);
+                }
 
-    for (const reference of assetReferences(read.text)) {
-        const path = assetPathOf(reference);
+                return { text: read.text, size: read.size };
+            },
+            readAsset: async (path) => {
+                const blob = await readDesignAsset(endpointId, folder, path);
 
-        if (path === null) {
-            continue;
-        }
-
-        try {
-            const blob = await readResource(
-                (piece) => readPiece(transport, piece),
-                { kind: 'file', path: `${folder}/${path}` },
-                { maxBytes: DESIGN_ASSET_MAX_BYTES }
-            );
-
-            if (total + blob.size > DESIGN_PAGE_MAX_BYTES) {
-                break;
+                return { url: await dataUrlOf(blob), size: blob.size };
             }
-
-            total += blob.size;
-            inline.set(reference, await dataUrlOf(blob));
-        } catch {
-            // Left as it is: the frame shows the page without it.
-        }
-    }
-
-    return withAssets(read.text, inline);
+        },
+        file
+    );
 }

@@ -41,6 +41,7 @@ import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { hasPrWatch } from '@/shell/pr-watch-actions';
 import { focusedChatId } from '@/chat/focused-chat';
+import { shownChatOfNode } from '@/design/design-chat';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
@@ -161,6 +162,8 @@ export function menuContext(host: MenuHost): MenuContext {
     const free = freeViewFor(documentState);
     const room = (direction: 'right' | 'down'): boolean => layout !== null && free !== null && canSplit(layout, layout.focus, direction, free);
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
+    // A design acts as the chat it shows.
+    const selectedChat = selected === undefined ? null : shownChatOfNode(selected);
     const onCanvas = facts?.view.kind === 'canvas';
     return {
         host,
@@ -169,7 +172,7 @@ export function menuContext(host: MenuHost): MenuContext {
         folder: shownFolderOf(useProject.getState().current) !== null,
         scratch: isScratchProject(useProject.getState().current),
         prRepos: prReposOfCurrent().map((repo) => ({ path: repo.path, label: repo.label })),
-        prWatch: onCanvas && selected?.kind === 'chat' && hasPrWatch(endpointId, selected.id),
+        prWatch: onCanvas && selectedChat !== null && hasPrWatch(endpointId, selectedChat),
         routines: windowWorkspace() !== null && machineAnswers(pool.statusOf(endpointId), 'routine.list'),
         chat: windowWorkspace() !== null && focusedChatId() !== null,
         terminalKeys: terminalHasKeyboard(),

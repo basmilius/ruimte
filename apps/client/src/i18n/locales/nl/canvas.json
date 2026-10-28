@@ -126,6 +126,7 @@
         "routine": "Routine…",
         "routines": "Routine",
         "newRoutine": "Nieuwe routine…",
+        "design": "Design",
         "groupSelection": "Selectie groeperen",
         "zoomToFit": "Passend zoomen"
     },
@@ -154,6 +155,7 @@
             "note": "Markdown",
             "group": "Kader om nodes"
         },
+        "design": "Pagina's die een agent ontwerpt",
         "file": "Uit de projectmap",
         "text": "Of dubbelklik",
         "layout": "Indeling toepassen",

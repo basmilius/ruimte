@@ -9,6 +9,7 @@ import { leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFront } from '@/canv
 import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
 import { agentName } from '@/processes/format';
+import { designChatInFront } from '@/project/views';
 import { isApplePlatform } from '@/desktop/bridge';
 import { pageKey, answerPrompt, promptCreatedAt, useFocusAfterAnswer, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
 import { useChatHost } from '@adecore/agents-react';
@@ -108,11 +109,13 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
         return null;
     }
 
-    const nodeId = active.sourceNodeId ?? active.subject.nodeId;
+    const chatOrNodeId = active.sourceNodeId ?? active.subject.nodeId;
+    // A later chat of a design asks from the design's node, which goes in front on that chat.
     const goTo = (): void => {
-        focusNodeAction(viewId, nodeId);
+        focusNodeAction(viewId, designChatInFront(chatOrNodeId));
     };
     const reveal = (): void => {
+        const nodeId = designChatInFront(chatOrNodeId);
         focusNodeAction(viewId, nodeId);
         canvasStore.getState().activateNode(nodeId);
     };

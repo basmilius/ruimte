@@ -25,7 +25,8 @@ import {
     type ProjectSharedFile,
     type ProjectNode,
     type ProjectView,
-    type SharedFileRead
+    type SharedFileRead,
+    mapDesignChats
 } from '@ruimte/contracts';
 import { fileExists, isNotFound, settled, writeAtomic, type DirectoryWatcher, type Serializer, type Settled, type WatchSeams } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
@@ -451,12 +452,20 @@ function mapCwd<T extends { cwd?: string; machine?: string }>(carrier: T, map: (
 }
 
 function mapViews(views: ProjectView[], map: (cwd: string) => string | undefined): ProjectView[] {
+    // A design's later chats carry a folder each; an entry this version cannot read goes as it is.
+    const mapChats = (chats: readonly Record<string, unknown>[]) => mapDesignChats(chats, (chat) => ({ ...chat, node: mapCwd(chat.node, map) }));
     return views.map((view) => {
         if (isCanvasView(view)) {
-            return { ...view, nodes: view.nodes.map((node: ProjectNode) => mapCwd(node, map)) };
+            return {
+                ...view,
+                nodes: view.nodes.map((node: ProjectNode) => {
+                    const mapped = mapCwd(node, map);
+                    return node.kind === 'design' && node.chats !== undefined ? { ...mapped, chats: mapChats(node.chats) } : mapped;
+                })
+            };
         }
         if (isDesignView(view) && view.chats !== undefined) {
-            return { ...view, node: mapCwd(view.node, map), chats: view.chats.map((chat) => ({ ...chat, node: mapCwd(chat.node, map) })) };
+            return { ...view, node: mapCwd(view.node, map), chats: mapChats(view.chats) };
         }
         // Only a chat, a design and a terminal carry a node; every other view has no folder to map.
         return isChatHostView(view) || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;

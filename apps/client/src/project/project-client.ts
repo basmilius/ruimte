@@ -15,8 +15,10 @@ import type { LooseStrip } from '@/shell/legacy-files-cell';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
+import { useToasts } from '@/state/toasts';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { forgetClosedProject, rememberClosedProject } from './closed-projects';
+import { restoreDesignFolders } from './design-folder-refusal';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
 import { readDeletedViews, writeDeletedViews } from './deleted-views';
 import { rememberProject, type LastProjectStorage } from './last-project';
@@ -68,6 +70,10 @@ interface DocumentAccess {
         fileViews(): ProjectView[];
         deleteView(id: string): void;
         purgeTrash(): void;
+        moveNodeToView(nodeId: string, viewId: string): void;
+        openAsView(nodeId: string): string | null;
+        putOnCanvas(viewId: string, canvasViewId: string): boolean;
+        setShared(id: string, shared: boolean): void;
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout' | 'emptyLayout'>;
     };
     subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
@@ -703,6 +709,17 @@ export class ProjectClient {
                 }
                 if (isConnectionError(e)) {
                     return 'offline' as const;
+                }
+                /* The machine refuses the whole document, so the next save would be refused the same way.
+                   Taking the design back where the last save had it lets that one through instead. */
+                if (
+                    e instanceof TransportError &&
+                    e.code === 'design-folder-taken' &&
+                    this.base !== null &&
+                    restoreDesignFolders({ views: this.base.views, shared: this.baseShared }, this.documents)
+                ) {
+                    useToasts.getState().show({ kind: 'error', title: i18next.t('project:error.projectNotSaved'), description: e.message });
+                    return 'failed' as const;
                 }
                 this.sink.setError(messageOf(e, i18next.t('project:error.projectNotSaved')));
                 return 'failed' as const;

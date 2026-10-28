@@ -1,7 +1,8 @@
 import type { GitRepo, Worktree } from '@ruimte/contracts';
+import { shownChatOfNode } from '@/design/design-chat';
 import { membersOf, type CanvasNode } from '@/state/canvas';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { worktreeOfPath } from '@/shell/panels/worktree-rows';
+import { workFolderOf, worktreeOfPath } from '@/shell/panels/worktree-rows';
 
 export interface GitTarget {
     /* The checkout every request of the panel acts on; null when no project is open. */
@@ -45,7 +46,8 @@ export function gitTarget(nodes: Record<string, CanvasNode>, selection: string[]
             return { cwd: worktree.path, label: worktree.branch, branch: worktree.branch, kind: 'worktree', via: id };
         }
         const node = nodes[id];
-        const own = node?.kind === 'terminal' || node?.kind === 'chat' ? worktreeOfPath(worktrees, node.cwd) : null;
+        // A design points the panel where the chat it shows works.
+        const own = node === undefined ? null : worktreeOfPath(worktrees, workFolderOf(node, shownChatOfNode(node) ?? node.id));
         if (own) {
             return { cwd: own.path, label: own.branch, branch: own.branch, kind: 'worktree', via: id };
         }

@@ -8,7 +8,7 @@ import { useChats } from '@adecore/agents-react/state';
 import { nodeWorking } from '@/state/agent-work';
 import { useSessions } from '@/state/sessions';
 import { useProjectNodes } from '@/state/worktrees';
-import { nodesInWorktree, removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
+import { nodesInWorktree, removeAllQuestion, removedToast, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
@@ -28,7 +28,8 @@ export function RemoveWorktreeDialog() {
     const removal = useUi((s) => s.worktreeRemoval);
     const endpointId = useEndpointId();
     const transport = useTransport();
-    const nodes = useProjectNodes();
+    // Per chat of a design, so the one working in a worktree is the one stopped.
+    const nodes = worktreeSessionsOf(useProjectNodes());
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
     const [reading, setReading] = useState<Reading | null>(null);

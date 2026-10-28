@@ -49,6 +49,7 @@ import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { EMPTY_DRAFT, writeDraft } from '@adecore/agents-react/chat';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
+import { useShownChatOfNode } from '@/chat/focused-chat';
 import { useOffersFork } from '@/chat/use-offers-fork';
 import { stopPrWatch } from '@/shell/pr-watch-actions';
 import { useUnstartedTask } from '@/canvas/remote-wait';
@@ -56,7 +57,7 @@ import { useEndpointId } from '@/state/keys';
 import { useChatPrWatch } from '@/state/pr-watches';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { worktreeDiffTab } from '@/shell/panels/worktree-rows';
+import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
@@ -109,19 +110,21 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
-    const prWatch = useChatPrWatch(id);
+    // A design's conversation is the one of the chat it shows.
+    const chatId = useShownChatOfNode(node) ?? id;
+    const prWatch = useChatPrWatch(chatId);
     const waitingTask = useUnstartedTask(id, node?.machine);
     const maximized = useCanvas((s) => maximizedNodeOf(s) === id);
     const moveLocked = useCanvas((s) => s.locks.move);
     const canvasViewId = useCanvas((s) => s.viewId);
     const agent = useSessionRow(id, (row) => row?.agent);
     const sessionAccount = useSessionRow(id, (row) => row?.account);
-    const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
-    const offersFork = useOffersFork(id);
-    const bookmarked = useChatRow(id, (row) => (row?.bookmarks?.length ?? 0) > 0);
-    const chatCwd = useChatRow(id, (row) => row?.info.cwd);
-    const chatProvider = useChatRow(id, (row) => row?.info.provider);
-    const chatAccount = useChatRow(id, (row) => row?.info.account);
+    const chatSession = useChatRow(chatId, (row) => row?.info.agentSessionId);
+    const offersFork = useOffersFork(chatId);
+    const bookmarked = useChatRow(chatId, (row) => (row?.bookmarks?.length ?? 0) > 0);
+    const chatCwd = useChatRow(chatId, (row) => row?.info.cwd);
+    const chatProvider = useChatRow(chatId, (row) => row?.info.provider);
+    const chatAccount = useChatRow(chatId, (row) => row?.info.account);
     const platform = useServer((s) => s.platform);
     const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
@@ -130,7 +133,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const transport = useTransport();
     // The project's worktrees, which a delete asks about, are the workspace's.
     const workspaceTransport = useWorkspace()?.connection.transport ?? transport;
-    const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
+    const nodeWorktree = useWorktreeOf(node === undefined ? undefined : workFolderOf(node, chatId));
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' ? id : null);
     const viewId = targetViewId ?? canvasViewId;
     const runsHidden = useRunsHidden(viewId, id);
@@ -182,9 +185,9 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
         });
     };
     const clearChat = (): void => {
-        void askBeforeClearingChat(transport, id, node.title, () => {
+        void askBeforeClearingChat(transport, chatId, node.title, () => {
             // The dialog already said that a running turn stops, so the composer's busy-turn question is skipped.
-            perform('chat.clear', { chatId: id, force: true }).catch((error: unknown) =>
+            perform('chat.clear', { chatId, force: true }).catch((error: unknown) =>
                 useToasts.getState().show({
                     kind: 'error',
                     title: t('menu.clearFailed', { what: node.title }),
@@ -228,8 +231,8 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     // The folder the node works in: its own, or the project's when it has none. The Chats project shows none of its folders.
     const workingFolder = scratch
         ? null
-        : node.kind === 'terminal' || node.kind === 'chat'
-          ? (node.cwd ?? chatCwd ?? projectFolder)
+        : node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'design'
+          ? (workFolderOf(node, chatId) ?? chatCwd ?? projectFolder)
           : (node.worktree?.path ?? null);
     // What the node holds is stored against the project folder; the menu acts on the daemon's path.
     const filePath = node.kind === 'file' && node.path ? resolveStoredPath(projectFolder, node.path) : null;
@@ -240,7 +243,8 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const groupWorktreePaths = groupWorktrees.length > 0 && projectFolder !== null ? groupWorktrees.map((worktree) => worktree.path) : [];
     const place = canOpenAsView(node.kind) || workingFolder !== null || filePath !== null;
     // A chat that has not run a turn yet has nothing to put under Conversation.
-    const conversation = node.kind === 'chat' && (offersFork || bookmarked || Boolean(chatSession) || prWatch !== null);
+    const isChat = node.kind === 'chat' || node.kind === 'design';
+    const conversation = isChat && (offersFork || bookmarked || Boolean(chatSession) || prWatch !== null);
 
     return (
         <ContextMenu.Popup {...(finalFocus === undefined ? {} : { finalFocus })}>
@@ -262,9 +266,11 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
             <ContextMenu.Item onClick={onRename}>
                 <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
             </ContextMenu.Item>
-            <ContextMenu.Item onClick={() => duplicateNodeAction(canvas().getState().viewId, id)}>
-                <Icon icon={Copy} size={14} /> {t('menu.duplicate')}
-            </ContextMenu.Item>
+            {node.kind !== 'design' && (
+                <ContextMenu.Item onClick={() => duplicateNodeAction(canvas().getState().viewId, id)}>
+                    <Icon icon={Copy} size={14} /> {t('menu.duplicate')}
+                </ContextMenu.Item>
+            )}
             <ContextMenu.Item onClick={() => canvas().getState().startLink(id)}>
                 <Icon icon={Link2} size={14} /> {t('menu.connect')}
                 <ContextMenu.Hint>{t('menu.connectHint')}</ContextMenu.Hint>
@@ -276,15 +282,15 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                         <Icon icon={MessagesSquare} size={14} /> {t('menu.conversation')}
                     </ContextMenu.SubmenuTrigger>
                     <ContextMenu.Popup>
-                        <ForkMenuItem chatId={id} />
-                        <BookmarkSubmenu chatId={id} />
+                        <ForkMenuItem chatId={chatId} />
+                        <BookmarkSubmenu chatId={chatId} />
                         {chatSession && (
                             <ContextMenu.Item onClick={openInTerminal}>
                                 <Icon icon={Terminal} size={14} /> {t('menu.openInTerminal')}
                             </ContextMenu.Item>
                         )}
                         {prWatch !== null && (
-                            <ContextMenu.Item onClick={() => void stopPrWatch(endpointId, id)}>
+                            <ContextMenu.Item onClick={() => void stopPrWatch(endpointId, chatId)}>
                                 <Icon icon={EyeOff} size={14} /> {t('menu.stopPrWatch')}
                             </ContextMenu.Item>
                         )}
@@ -427,7 +433,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
             )}
             {node.kind === 'file' && filePath !== null && <FileActionItems path={filePath} on="node" />}
             <ContextMenu.Separator />
-            {node.kind === 'chat' && (
+            {isChat && (
                 <ContextMenu.Item onClick={clearChat}>
                     <Icon icon={Eraser} size={14} /> {t('menu.clearAsking')}
                 </ContextMenu.Item>

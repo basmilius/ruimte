@@ -1054,7 +1054,7 @@
             },
             "hideToolCalls": {
                 "label": "Hide tool calls",
-                "description": "A chat shows the agent's messages without the files it read and the commands it ran. A finished turn still says how long it worked. Design chats always hide them."
+                "description": "Show only the agent's messages, not the files it read or the commands it ran. Design chats always hide them."
             }
         },
         "integrations": {

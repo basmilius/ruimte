@@ -102,6 +102,45 @@ test('a link made between turns is put in front of the next prompt, once, as a n
     expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['first', 'second', 'third']);
 });
 
+test('a chat of a design hears once, at its next prompt, that the folder of its design moved', async () => {
+    let folder = '/repo/.ruimte/private/designs/onboarding';
+    manager = await remake(manager, { design: () => ({ folder, onCanvas: false }) });
+    await open(manager, 'chat-design');
+
+    await manager.send('chat-design', 'first');
+    await recorder.untilIdle();
+    folder = '/repo/.ruimte/designs/onboarding';
+    await manager.send('chat-design', 'second');
+    await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
+    await manager.send('chat-design', 'third');
+    await recorder.until(() => recorder.info?.usage.turns === 3 && recorder.idle);
+
+    const notes = recorder.ofKind('note').map((item) => item.text);
+    expect(notes).toEqual([
+        'Ruimte: the pages of your design now live in `/repo/.ruimte/designs/onboarding`. Read and write them there from now on, never in `/repo/.ruimte/private/designs/onboarding`.'
+    ]);
+    // The fake echoes its prompt, so the reply shows what the CLI was given.
+    const replies = recorder.ofKind('assistant').map((item) => item.text);
+    expect(replies[1]).toBe(`echo: ${notes[0]}\n\nsecond`);
+    expect(replies[2]).toBe('echo: third');
+});
+
+test('every turn that ends is told, so a design folder that moved during it takes in what the turn wrote', async () => {
+    const ended: string[] = [];
+    manager = await remake(manager, { turnEnded: (chatId) => ended.push(chatId) });
+    await open(manager, 'chat-turns');
+
+    await manager.send('chat-turns', 'first');
+    await recorder.untilIdle();
+    expect(ended.length).toBeGreaterThan(0);
+    expect(new Set(ended)).toEqual(new Set(['chat-turns']));
+
+    const afterFirst = ended.length;
+    await manager.send('chat-turns', 'second');
+    await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
+    expect(ended.length).toBeGreaterThan(afterFirst);
+});
+
 test('a chat attached with @ and a view with # go to the CLI as the commands that read them, and to the thread as their ids', async () => {
     const known: Record<string, Reference> = {
         'chat-earlier': { id: 'chat-earlier', kind: 'chat', name: 'Auth rewrite', canvas: null, sources: [] },

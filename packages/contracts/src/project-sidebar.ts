@@ -87,8 +87,17 @@ export function projectSidebarViews(views: readonly ProjectView[], shared: reado
                 ...(flag === null ? {} : { flag }),
                 nodes: isCanvasView(view)
                     ? view.nodes.flatMap((node) =>
-                          node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'browser' || node.kind === 'device'
-                              ? [{ id: node.id, title: node.title, titleSource: node.titleSource, kind: node.kind, provider: node.provider ?? null }]
+                          // A design node goes as the chat it is, since the kinds are a closed list on the wire.
+                          node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'design' || node.kind === 'browser' || node.kind === 'device'
+                              ? [
+                                    {
+                                        id: node.id,
+                                        title: node.title,
+                                        titleSource: node.titleSource,
+                                        kind: node.kind === 'design' ? ('chat' as const) : node.kind,
+                                        provider: node.provider ?? null
+                                    }
+                                ]
                               : []
                       )
                     : [],

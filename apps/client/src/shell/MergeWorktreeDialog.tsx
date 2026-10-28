@@ -21,7 +21,7 @@ import {
     type MergeOutcome,
     type MergeRun
 } from '@/shell/panels/worktree-merge';
-import { nodesInWorktree } from '@/shell/panels/worktree-rows';
+import { nodesInWorktree, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
 import { inspectWorktrees, nodeNames } from '@/shell/worktree-inspection';
 import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@adecore/ui';
 import { nodeWorking } from '@/state/agent-work';
@@ -47,7 +47,8 @@ export function MergeWorktreeDialog() {
     const endpointId = useEndpointId();
     const transport = useTransport();
     const strategy = useSettings((s) => s.worktreeMergeStrategy);
-    const nodes = useProjectNodes();
+    // Per chat of a design, so the one working in a worktree is the one stopped.
+    const nodes = worktreeSessionsOf(useProjectNodes());
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
     const [reading, setReading] = useState<Reading | null>(null);

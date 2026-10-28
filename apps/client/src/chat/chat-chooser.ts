@@ -7,7 +7,8 @@ import {
     type AgentKind,
     type ProjectNode,
     type ProjectView,
-    type SplitLayout
+    type SplitLayout,
+    designNodeChats
 } from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
@@ -30,7 +31,7 @@ interface ChooserSections {
 }
 
 /* What the chooser reads of a node. */
-type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider'>;
+type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider' | 'chats'>;
 
 /* Every chat of the project with the CLI it runs, node or view, in sidebar order. */
 export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView<ChooserNode>): ChooserChat[] {
@@ -38,9 +39,14 @@ export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView
         if (isChatHostView(view)) {
             return isUnlistedView(view) ? [] : viewChats(view).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }));
         }
-        return nodesOf(view)
-            .filter((node) => node.kind === 'chat')
-            .map((node) => ({ id: node.id, title: node.title, provider: node.provider ?? null }));
+        return nodesOf(view).flatMap((node) =>
+            node.kind === 'chat' || node.kind === 'design'
+                ? [
+                      { id: node.id, title: node.title, provider: node.provider ?? null },
+                      ...designNodeChats(node).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }))
+                  ]
+                : []
+        );
     });
 }
 
@@ -48,7 +54,11 @@ export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView
  * The chats a person can see right now: a chat view in a cell, or a chat node on a canvas in a cell.
  * A canvas that is in a cell but panned away still counts, since it is one tap from the screen.
  */
-export function chatsOpenHere(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind'>>, layout: SplitLayout | null): Set<string> {
+export function chatsOpenHere(
+    views: readonly ProjectView[],
+    nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'chats'>>,
+    layout: SplitLayout | null
+): Set<string> {
     const inCells = new Set(layout === null ? [] : viewIdsIn(layout));
     const open = new Set<string>();
     for (const view of views) {
@@ -61,8 +71,11 @@ export function chatsOpenHere(views: readonly ProjectView[], nodesOf: NodesOfVie
             }
         } else if (isCanvasView(view)) {
             for (const node of nodesOf(view)) {
-                if (node.kind === 'chat') {
+                if (node.kind === 'chat' || node.kind === 'design') {
                     open.add(node.id);
+                }
+                for (const chat of designNodeChats(node)) {
+                    open.add(chat.id);
                 }
             }
         }

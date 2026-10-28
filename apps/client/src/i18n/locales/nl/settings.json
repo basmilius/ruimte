@@ -1054,7 +1054,7 @@
             },
             "hideToolCalls": {
                 "label": "Tool calls verbergen",
-                "description": "Een chat toont de berichten van de agent zonder de bestanden die hij las en de commando's die hij draaide. Een afgeronde beurt zegt nog hoe lang hij werkte. Design chats verbergen ze altijd."
+                "description": "Toon alleen de berichten van de agent, niet de bestanden die hij las of de commando's die hij draaide. Design chats verbergen ze altijd."
             }
         },
         "integrations": {

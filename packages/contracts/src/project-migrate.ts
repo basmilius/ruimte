@@ -11,7 +11,8 @@ import {
     type ProjectLocal,
     type ProjectSharedFile,
     type ProjectView,
-    viewChats
+    viewChats,
+    designNodeChats
 } from './project.ts';
 
 /* What reading `.ruimte/project.json` gives: the file, and what an older one carried beside it. */
@@ -108,10 +109,12 @@ export function duplicateIdIn(views: ProjectView[]): string | null {
             continue;
         }
         for (const node of view.nodes) {
-            if (seen.has(node.id)) {
-                return node.id;
+            for (const id of [node.id, ...designNodeChats(node).map((chat) => chat.id)]) {
+                if (seen.has(id)) {
+                    return id;
+                }
+                seen.add(id);
             }
-            seen.add(node.id);
         }
     }
     return null;

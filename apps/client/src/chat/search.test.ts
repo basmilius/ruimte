@@ -52,6 +52,10 @@ describe('searchChat', () => {
         expect(searchChat([call], query('3f2a9k1d')).hits).toHaveLength(1);
     });
 
+    test('a thread that hides its tool lines finds only what it draws', () => {
+        expect(searchChat(thread, query('sidebar'), undefined, true).hits.map((hit) => hit.itemId)).toEqual(['u1', 'a1', 'a1']);
+    });
+
     test('ignores case unless asked to match it', () => {
         expect(keys(thread, query('Sidebar', { caseSensitive: true }))).toEqual(['u1:text:0', 'b1:output:0']);
     });

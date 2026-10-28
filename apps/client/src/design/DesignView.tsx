@@ -1,13 +1,12 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SwatchBook } from 'lucide-react';
-import { designFolderOf, resolveStoredPath, type ProjectDesignView } from '@ruimte/contracts';
+import type { ProjectDesignView } from '@ruimte/contracts';
 import { ColumnResizeHandle, EmptyState, ErrorBoundary, useColumnResize, useMeasuredWidth } from '@adecore/ui';
-import { activeDesignChat, useDesignChat } from '@/design/design-chat';
+import { activeDesignChat, placeOfView, useDesignChat } from '@/design/design-chat';
+import { useDesignFolder } from '@/design/design-places';
 import { DesignStage } from '@/design/DesignStage';
 import { ChatBody } from '@/nodes/ChatBody';
-import { useDocument } from '@/state/document';
-import { shownFolderOf, useProject } from '@/state/project';
 
 const CHAT_WIDTH = 400;
 const CHAT_MIN_WIDTH = 320;
@@ -15,12 +14,10 @@ const CHAT_MIN_WIDTH = 320;
 /* A design: the chat that works on it, and beside it the pages of its folder on a stage. */
 export function DesignView({ view, focused }: { view: ProjectDesignView; focused: boolean }) {
     const { t } = useTranslation('shell');
-    const projectFolder = useProject((s) => shownFolderOf(s.current));
-    const shared = useDocument((s) => s.shared.includes(view.id));
-    const location = designFolderOf(view, shared);
-    const folder = resolveStoredPath(projectFolder, location);
+    const design = placeOfView(view);
+    const { folder, projectFolder } = useDesignFolder(design);
     const picked = useDesignChat((state) => state.picked);
-    const chatId = activeDesignChat(view, picked);
+    const chatId = activeDesignChat(design, picked);
     const row = useRef<HTMLDivElement | null>(null);
     const chat = useRef<HTMLDivElement>(null);
     const [measure, rowWidth] = useMeasuredWidth();
@@ -59,7 +56,7 @@ export function DesignView({ view, focused }: { view: ProjectDesignView; focused
                             {t('design.noFolder')}
                         </EmptyState>
                     ) : (
-                        <DesignStage view={view} chatId={chatId} folder={folder} location={location} watched={projectFolder ?? folder} />
+                        <DesignStage designId={view.id} chatId={chatId} folder={folder} watched={projectFolder ?? folder} />
                     )}
                 </ErrorBoundary>
             </div>

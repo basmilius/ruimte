@@ -4,6 +4,7 @@ import {
     isDesignView,
     isHiddenCanvasView,
     isSessionView,
+    nodeChats,
     sessionKindOfView,
     viewChats,
     type ProjectNode,
@@ -56,7 +57,19 @@ export function nodeRefsOfView(view: ProjectView): readonly ProjectNodeRef[] {
     if (isDesignView(view)) {
         return viewChats(view).map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name }));
     }
-    return isSessionView(view) ? [{ id: view.id, kind: sessionKindOfView(view), title: view.name }] : nodesOfView(view);
+    if (isSessionView(view)) {
+        return [{ id: view.id, kind: sessionKindOfView(view), title: view.name }];
+    }
+    return nodeRefsOf(nodesOfView(view));
+}
+
+/* Nodes in the words the status needs: a design node counts as each chat it holds, on the machine the node runs on; a list without one stays as it is. */
+export function nodeRefsOf(nodes: readonly ProjectNode[]): readonly ProjectNodeRef[] {
+    return nodes.some((node) => node.kind === 'design')
+        ? nodes.flatMap((node): ProjectNodeRef[] =>
+              node.kind === 'design' ? nodeChats(node).map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name, machine: node.machine })) : [node]
+          )
+        : nodes;
 }
 
 /*

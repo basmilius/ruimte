@@ -160,7 +160,7 @@ export function Sidebar() {
                     provider: nodeProvider(node, chats, endpointId) ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
                     work: nodeWork(node, sessions, chats, endpointId),
-                    draft: node.kind === 'chat' && drafts.includes(node.id),
+                    draft: (node.kind === 'chat' || node.kind === 'design') && drafts.includes(node.id),
                     alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, machine, node.id),
                     task: childTask(tasks[machine], node.id),

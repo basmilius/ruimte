@@ -25,7 +25,7 @@ import type { StoreApi } from 'zustand';
 import { messageOf } from '@adecore/ui';
 import { basenameOf, isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { commitTargets, nextActionId } from '@/shell/panels/git-actions';
-import { nodesInWorktree } from '@/shell/panels/worktree-rows';
+import { nodesInWorktree, worktreeSessionsOf } from '@/shell/panels/worktree-rows';
 import { nodesOfView } from '@/project/view-nodes';
 import type { DocumentState } from '@/state/document';
 import { useGit } from '@/state/git';
@@ -597,12 +597,15 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
                         branch: worktree.branch,
                         path: worktree.missing ? null : worktree.path,
                         nodes: nodesInWorktree(
-                            nodes.map((node) => ({
-                                id: node.id,
-                                kind: node.kind,
-                                title: node.title,
-                                ...('cwd' in node && typeof node.cwd === 'string' ? { cwd: node.cwd } : {})
-                            })),
+                            worktreeSessionsOf(
+                                nodes.map((node) => ({
+                                    id: node.id,
+                                    kind: node.kind,
+                                    title: node.title,
+                                    ...('cwd' in node && typeof node.cwd === 'string' ? { cwd: node.cwd } : {}),
+                                    ...(node.chats === undefined ? {} : { chats: node.chats })
+                                }))
+                            ),
                             worktree
                         ).map((node) => node.id),
                         from: worktree.from?.branch ?? null,

@@ -23,7 +23,8 @@ export const NODE_SIZE: Record<NodeKind, NodeSize> = {
     diagram: { w: 480, h: 360 },
     file: { w: 520, h: 420 },
     artifact: { w: 440, h: 520 },
-    routine: { w: 400, h: 560 }
+    routine: { w: 400, h: 560 },
+    design: { w: 480, h: 640 }
 };
 
 /* The smallest node a person can drag a frame down to, so a default size never makes one smaller. */
@@ -216,5 +217,6 @@ export const DEFAULT_TITLES: Record<NodeKind, string> = {
     note: 'Note',
     file: 'File',
     artifact: 'Output',
-    routine: 'Routine'
+    routine: 'Routine',
+    design: 'Design'
 };

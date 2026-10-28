@@ -19,6 +19,7 @@ function input(patch: Partial<EmptyCanvasInput> = {}): EmptyCanvasInput {
     return {
         providers: [],
         hasFolder: false,
+        design: false,
         layouts: [],
         views: [],
         ...patch
@@ -39,6 +40,11 @@ describe('the tiles of an empty canvas', () => {
 
     test('the generic chat remains available without installed terminal agents', () => {
         expect(ids(emptyCanvasSections(input({ providers: [provider('claude', { installed: false })] })).agents)).toEqual(['node-chat']);
+    });
+
+    test('a design follows the chat, only where the menus that add to a canvas offer one', () => {
+        expect(ids(emptyCanvasSections(input({ design: true })).agents)).toEqual(['node-chat', 'design']);
+        expect(ids(emptyCanvasSections(input()).agents)).toEqual(['node-chat']);
     });
 
     test('a file is offered only with a folder to pick it from', () => {

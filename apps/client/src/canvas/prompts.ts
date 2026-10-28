@@ -1,5 +1,6 @@
 import {
     CHAT_REQUEST_LIMITS,
+    designNodeChats,
     type AgentKind,
     type ChatApprovalItem,
     type ChatQuestionItem,
@@ -24,7 +25,7 @@ export interface CanvasPrompt {
 }
 
 export interface CanvasPromptsInput {
-    nodes: readonly Pick<CanvasNode, 'id' | 'kind' | 'title' | 'provider' | 'machine'>[];
+    nodes: readonly Pick<CanvasNode, 'id' | 'kind' | 'title' | 'provider' | 'machine' | 'chats'>[];
     endpointId: string;
     sessions: SessionsByKey;
     chats: ChatsById;
@@ -65,7 +66,16 @@ export function canvasPrompts({
     const since = new Map(waitingSince);
     const add = (node: CanvasPromptsInput['nodes'][number], subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
         prompts.push({ id: promptIdOf(subject), subject, title: node.title, provider, surface });
-    for (const node of nodes) {
+    // A design node asks as each of its chats, the one under its own id and every later one.
+    const asked = nodes.flatMap((node): CanvasPromptsInput['nodes'][number][] =>
+        node.kind === 'design'
+            ? [
+                  { ...node, kind: 'chat' },
+                  ...designNodeChats(node).map((chat) => ({ ...node, id: chat.id, kind: 'chat' as const, title: chat.name, provider: chat.node.provider }))
+              ]
+            : [node]
+    );
+    for (const node of asked) {
         if (node.kind !== 'chat' && node.kind !== 'terminal') {
             continue;
         }

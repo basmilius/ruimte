@@ -11,7 +11,8 @@ import {
     type ProjectContent,
     type ProjectNode,
     type ProjectSummary,
-    type ProjectView
+    type ProjectView,
+    nodeChats
 } from '@ruimte/contracts';
 import type { VoiceOpenProject } from '../actions/context.ts';
 import type { IndexedPlace, ProjectIndex } from '../projects/project-index.ts';
@@ -75,8 +76,10 @@ export function projectAgents(content: ProjectContent): VoiceAgentPlace[] {
         if (!isCanvasView(view)) {
             return [];
         }
-        return view.nodes.flatMap((node) =>
-            node.kind === 'chat' || node.kind === 'terminal' ? [{ id: node.id, name: node.title, kind: node.kind, viewId: view.id, view: view.name }] : []
+        return view.nodes.flatMap((node): VoiceAgentPlace[] =>
+            node.kind === 'terminal'
+                ? [{ id: node.id, name: node.title, kind: 'terminal', viewId: view.id, view: view.name }]
+                : nodeChats(node).map((chat) => ({ id: chat.id, name: chat.name, kind: 'chat', viewId: view.id, view: view.name }))
         );
     });
 }

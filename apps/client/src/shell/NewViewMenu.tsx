@@ -11,6 +11,8 @@ import { shownFolderOf, useProject } from '@/state/project';
 import { Tile, Icon, Menu, Kbd, SectionLabel, type Shortcut } from '@adecore/ui';
 import { labelCollator } from '@adecore/ui/format';
 import { useUi } from '@/state/ui';
+import { useEndpointId } from '@/state/keys';
+import { useMachineAnswers } from '@/transport/features';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* A row of one of the two lists below, with the label it is put in order by. */
@@ -91,6 +93,8 @@ export function NewViewItems() {
     const { t } = useTranslation('shell');
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
+    // A machine older than designs would keep the view and know nothing of its folder.
+    const knowsDesigns = useMachineAnswers(useEndpointId(), 'artifact.saveFolder');
     const pickAgent = (target: AgentTarget, provider: ProviderInfo, account?: string): void =>
         void createViewAction(target, { provider: provider.kind, account });
     return (
@@ -102,18 +106,19 @@ export function NewViewItems() {
                 itemEntry('terminal', Terminal, t('viewKinds.terminal'), () => void createViewAction('terminal')),
                 { id: 'agent-chat', label: agentTargetLabel('chat'), node: <AgentSubmenu target="chat" onPick={pickAgent} /> },
                 { id: 'agent-terminal', label: agentTargetLabel('terminal'), node: <AgentSubmenu target="terminal" onPick={pickAgent} /> },
-                hasFolder && {
-                    id: 'design',
-                    label: t('viewKinds.design'),
-                    node: (
-                        <AgentSubmenu
-                            target="chat"
-                            label={t('viewKinds.design')}
-                            icon={SwatchBook}
-                            onPick={(_target, provider, account) => void createViewAction('design', { provider: provider.kind, account })}
-                        />
-                    )
-                },
+                hasFolder &&
+                    knowsDesigns && {
+                        id: 'design',
+                        label: t('viewKinds.design'),
+                        node: (
+                            <AgentSubmenu
+                                target="chat"
+                                label={t('viewKinds.design')}
+                                icon={SwatchBook}
+                                onPick={(_target, provider, account) => void createViewAction('design', { provider: provider.kind, account })}
+                            />
+                        )
+                    },
                 itemEntry('browser', Globe, t('viewKinds.browser'), () => useUi.getState().setViewDialog({ kind: 'new-browser' })),
                 hasFolder && itemEntry('file', FileText, t('viewMenu.filePick'), () => useUi.getState().openFilePicker({ kind: 'view' }))
             ])}

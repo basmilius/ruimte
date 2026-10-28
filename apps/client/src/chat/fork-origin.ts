@@ -1,4 +1,4 @@
-import { chatHostOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { chatHostOf, type ProjectNode, type ProjectView, designNodeChats } from '@ruimte/contracts';
 import type { ForkShape } from '@adecore/agents-react/chat';
 import type { NodesOfView } from '@/project/view-nodes';
 
@@ -12,7 +12,7 @@ interface ForkOrigin {
 
 export function forkOriginIn(
     views: readonly ProjectView[],
-    nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title'>>,
+    nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title' | 'chats'>>,
     chatId: string
 ): ForkOrigin | null {
     const host = chatHostOf(views, chatId);
@@ -23,6 +23,14 @@ export function forkOriginIn(
         const node = nodesOf(view).find((candidate) => candidate.id === chatId && candidate.kind === 'chat');
         if (node) {
             return { shape: 'node', title: node.title, viewId: view.id };
+        }
+        // A chat of a design node goes by its own name, on its node's canvas.
+        const later = nodesOf(view)
+            .flatMap(designNodeChats)
+            .find((chat) => chat.id === chatId);
+        const own = nodesOf(view).find((candidate) => candidate.id === chatId && candidate.kind === 'design');
+        if (later !== undefined || own !== undefined) {
+            return { shape: 'node', title: later?.name ?? own!.title, viewId: view.id };
         }
     }
     return null;

@@ -31,7 +31,7 @@ interface EditPanelProps {
 
 /*
  * The panel of Edit: the computed style of the picked element, each property set by hand and shown at
- * once. Save writes what was set into the page's overrides block without a turn of the chat; Fold in
+ * once. Save writes what was set into the page's overrides block without a turn of the chat; Send to chat
  * asks the chat to move that block into the source. Text changes in place, with a double click.
  */
 export function DesignEditPanel({ element, pending, onStyle, onSave, onDiscard, onBake }: EditPanelProps) {

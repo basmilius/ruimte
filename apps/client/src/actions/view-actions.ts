@@ -18,7 +18,8 @@ import {
     type ProjectCanvasView,
     type ProjectView,
     type ProviderInfo,
-    viewIconOf
+    viewIconOf,
+    nodeChats
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { databaseViewName } from '@/database/view-name';
@@ -317,7 +318,7 @@ export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach)
             if (!confirmed) {
                 const nodes = nodesOfView(view).length;
                 const sessions = isCanvasView(view)
-                    ? nodesOfView(view).filter((node) => node.kind === 'chat' || node.kind === 'terminal').length
+                    ? nodesOfView(view).reduce((count, node) => count + (node.kind === 'terminal' ? 1 : nodeChats(node).length), 0)
                     : isChatHostView(view) || view.kind === 'terminal'
                       ? 1
                       : 0;

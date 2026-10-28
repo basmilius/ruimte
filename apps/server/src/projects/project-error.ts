@@ -19,6 +19,8 @@ type ProjectErrorCode =
     // A machine named for a node that cannot run there: wrong kind, this very machine, or work already started here.
     | 'remote-node-invalid'
     // The canvas a machine keeps for another one is not a view to commit.
-    | 'hidden-view-shared';
+    | 'hidden-view-shared'
+    // A design would move onto the folder of another, such as one a teammate shared under the same name.
+    | 'design-folder-taken';
 
 export class ProjectError extends CodedError<ProjectErrorCode> {}

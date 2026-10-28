@@ -1,4 +1,4 @@
-import { isDesignView, type ProjectView } from '@ruimte/contracts';
+import { designPlaces, type ProjectView } from '@ruimte/contracts';
 
 /* The two places design folders live, relative to the project folder: one person's, and the team's. */
 export const DESIGN_FOLDERS = ['.ruimte/private/designs', '.ruimte/designs'] as const;
@@ -21,7 +21,7 @@ export function designSlug(name: string): string {
  * opens on another's files.
  */
 export function freeDesignFolder(views: readonly ProjectView[], name: string, onDisk: readonly string[] = []): string {
-    const taken = new Set([...views.filter(isDesignView).map((view) => view.path), ...onDisk]);
+    const taken = new Set([...designPlaces(views).map((design) => design.path), ...onDisk]);
     const base = designSlug(name);
 
     if (!taken.has(base)) {

@@ -24,6 +24,18 @@ describe('callerName', () => {
         expect(callerName(views, nodesOfView, 'chat-1')).toBe('Planner');
     });
 
+    test('a later chat of a design is called by its own name', () => {
+        const design = {
+            kind: 'design',
+            id: 'design-1',
+            name: 'Landing',
+            path: 'landing',
+            node: {},
+            chats: [{ id: 'later-1', name: 'Second pass', node: {} }]
+        };
+        expect(callerName([...views, design as ProjectView], nodesOfView, 'later-1')).toBe('Second pass');
+    });
+
     test('an id this client has not got yet has no name, and the banner says so in its own words', () => {
         expect(callerName(views, nodesOfView, 'term-9')).toBeNull();
         expect(showViewNotice({ agent: null, view: 'Board', follow: true, alreadyThere: false }).message).toStartWith('An agent showed Board');

@@ -136,8 +136,8 @@ describe('verbsNote', () => {
     });
 
     test('tells a chat that works on a design where its files go, and every other chat nothing about designs', () => {
-        const prompt = chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true, design: 'designs/onboarding' });
-        expect(prompt).toContain('`designs/onboarding`');
+        const prompt = chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true, design: { folder: '/repo/designs/onboarding', onCanvas: false } });
+        expect(prompt).toContain('in the folder `/repo/designs/onboarding`, also when you run in another checkout');
         // Every convention a tool of the view reads, by the exact name it reads.
         expect(prompt).toContain('`<meta name="ruimte-design" content="canvas">`');
         expect(prompt).toContain('`<section id="t2">`');
@@ -156,6 +156,16 @@ describe('verbsNote', () => {
         expect(prompt).toContain('Never show a design with `visual show`');
         expect(prompt).toContain('`ruimte-context visual preview --width <width> < <file>`');
         expect(chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true })).not.toContain('design');
+    });
+
+    test('tells a chat of a design on a canvas to make every option a page of its own, and never a board', () => {
+        const prompt = chatPrompt({ sources: [], depth: 0, visuals: true, design: { folder: '/repo/.ruimte/designs/onboarding', onCanvas: true } });
+        expect(prompt).toContain('`/repo/.ruimte/designs/onboarding`');
+        expect(prompt).toContain('never use the `ruimte-design` canvas meta');
+        expect(prompt).toContain('(`2a Onboarding.html`)');
+        expect(prompt).not.toContain('`<meta name="ruimte-design" content="canvas">`');
+        expect(prompt).not.toContain('`<section id="t2">`');
+        expect(prompt).toContain('`<script type="application/json" id="ruimte-tweaks">`');
     });
 
     test('tells an AI chat about visuals only while they are on, on a canvas and in a view alike, and never a terminal', () => {

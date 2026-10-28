@@ -1,13 +1,18 @@
 import {
     canvasContextSources,
+    designOfChat,
     isCanvasView,
     isDatabaseView,
+    isDesignView,
+    nodeChats,
     resolveStoredPath,
+    viewChats,
     type ChatItem,
     type ContextSource,
     type ProjectCanvasView,
     type ProjectDatabaseTarget,
-    type ProjectView
+    type ProjectView,
+    type ViewChat
 } from '@ruimte/contracts';
 
 type ReferenceKind =
@@ -71,7 +76,13 @@ function nodeReference(canvas: ProjectCanvasView, id: string, folder: string | n
         return null;
     }
     const kind: ReferenceKind = node === undefined ? 'text' : node.kind === 'note' ? 'note' : source.kind === 'text' ? 'text' : source.kind;
-    return { id, kind, name: source.title, canvas: { id: canvas.id, name: canvas.name }, sources: [source] };
+    const sources = node?.kind === 'design' ? designSources(nodeChats(node)) : [source];
+    return { id, kind, name: source.title, canvas: { id: canvas.id, name: canvas.name }, sources };
+}
+
+/* Every chat of a design works on the same pages, so a `#` to it reads them all, as a line to it does. */
+function designSources(chats: readonly ViewChat[]): ContextSource[] {
+    return chats.map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name }));
 }
 
 /*
@@ -96,6 +107,9 @@ export function resolveReference(views: readonly ProjectView[], id: string, fold
                 };
                 return { id, kind: 'database', name: view.name, canvas: null, sources: [], database };
             }
+            if (isDesignView(view)) {
+                return { id, kind: 'chat', name: view.name, canvas: null, sources: designSources(viewChats(view)) };
+            }
             const source = viewSource(view, folder);
             return source === null ? null : { id, kind: source.kind === 'text' ? 'text' : source.kind, name: source.title, canvas: null, sources: [source] };
         }
@@ -108,7 +122,19 @@ export function resolveReference(views: readonly ProjectView[], id: string, fold
             }
         }
     }
-    return null;
+    // A later chat of a design is neither a view nor a node of its own.
+    const found = designOfChat(views, id);
+    if (found === null) {
+        return null;
+    }
+    const canvas = views.find((view) => view.id === found.design.canvasId);
+    return {
+        id,
+        kind: 'chat',
+        name: found.chat.name,
+        canvas: canvas !== undefined && isCanvasView(canvas) ? { id: canvas.id, name: canvas.name } : null,
+        sources: [{ id, kind: 'chat', title: found.chat.name }]
+    };
 }
 
 /* The ids that still stand in the project, once each and in the order given; `lookup` answers null for any other. */

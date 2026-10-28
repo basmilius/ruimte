@@ -37824,7 +37824,8 @@
                                   "diagram",
                                   "file",
                                   "artifact",
-                                  "routine"
+                                  "routine",
+                                  "design"
                                 ]
                               },
                               {
@@ -38034,6 +38035,16 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
                           }
                         },
                         "required": [
@@ -38058,7 +38069,8 @@
                             "diagram",
                             "file",
                             "artifact",
-                            "routine"
+                            "routine",
+                            "design"
                           ],
                           "template": {
                             "id": "future-id",
@@ -41107,107 +41119,9 @@
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "node": {
-                            "type": "object",
-                            "properties": {
-                              "cwd": {
-                                "type": "string"
-                              },
-                              "command": {
-                                "type": "string"
-                              },
-                              "resume": {
-                                "type": "string"
-                              },
-                              "provider": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 32,
-                                "pattern": "^[a-z][a-z0-9-]*$",
-                                "x-open-enum": [
-                                  "claude",
-                                  "codex",
-                                  "gemini",
-                                  "copilot",
-                                  "apple"
-                                ]
-                              },
-                              "account": {
-                                "type": "string",
-                                "pattern": "^[a-z][a-z0-9_-]{0,63}$"
-                              },
-                              "providerFixed": {
-                                "type": "boolean"
-                              },
-                              "runtimeMode": {
-                                "type": "string",
-                                "x-open-enum": [
-                                  "supervised",
-                                  "auto-accept-edits",
-                                  "auto",
-                                  "full-access"
-                                ]
-                              },
-                              "accent": {
-                                "type": "string"
-                              },
-                              "issue": {
-                                "type": "object",
-                                "properties": {
-                                  "repo": {
-                                    "type": "string"
-                                  },
-                                  "number": {
-                                    "type": "integer",
-                                    "exclusiveMinimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "repo",
-                                  "number",
-                                  "url"
-                                ]
-                              },
-                              "artifact": {
-                                "type": "object",
-                                "properties": {
-                                  "id": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 64
-                                  },
-                                  "version": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 64
-                                  }
-                                },
-                                "required": [
-                                  "id"
-                                ]
-                              }
-                            },
-                            "additionalProperties": {}
-                          }
+                        "propertyNames": {
+                          "type": "string"
                         },
-                        "required": [
-                          "id",
-                          "name",
-                          "node"
-                        ],
                         "additionalProperties": {}
                       }
                     }
@@ -42259,7 +42173,8 @@
                                   "diagram",
                                   "file",
                                   "artifact",
-                                  "routine"
+                                  "routine",
+                                  "design"
                                 ]
                               },
                               {
@@ -42469,6 +42384,16 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
                           }
                         },
                         "required": [
@@ -42493,7 +42418,8 @@
                             "diagram",
                             "file",
                             "artifact",
-                            "routine"
+                            "routine",
+                            "design"
                           ],
                           "template": {
                             "id": "future-id",
@@ -45542,107 +45468,9 @@
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "node": {
-                            "type": "object",
-                            "properties": {
-                              "cwd": {
-                                "type": "string"
-                              },
-                              "command": {
-                                "type": "string"
-                              },
-                              "resume": {
-                                "type": "string"
-                              },
-                              "provider": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 32,
-                                "pattern": "^[a-z][a-z0-9-]*$",
-                                "x-open-enum": [
-                                  "claude",
-                                  "codex",
-                                  "gemini",
-                                  "copilot",
-                                  "apple"
-                                ]
-                              },
-                              "account": {
-                                "type": "string",
-                                "pattern": "^[a-z][a-z0-9_-]{0,63}$"
-                              },
-                              "providerFixed": {
-                                "type": "boolean"
-                              },
-                              "runtimeMode": {
-                                "type": "string",
-                                "x-open-enum": [
-                                  "supervised",
-                                  "auto-accept-edits",
-                                  "auto",
-                                  "full-access"
-                                ]
-                              },
-                              "accent": {
-                                "type": "string"
-                              },
-                              "issue": {
-                                "type": "object",
-                                "properties": {
-                                  "repo": {
-                                    "type": "string"
-                                  },
-                                  "number": {
-                                    "type": "integer",
-                                    "exclusiveMinimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "repo",
-                                  "number",
-                                  "url"
-                                ]
-                              },
-                              "artifact": {
-                                "type": "object",
-                                "properties": {
-                                  "id": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 64
-                                  },
-                                  "version": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 64
-                                  }
-                                },
-                                "required": [
-                                  "id"
-                                ]
-                              }
-                            },
-                            "additionalProperties": {}
-                          }
+                        "propertyNames": {
+                          "type": "string"
                         },
-                        "required": [
-                          "id",
-                          "name",
-                          "node"
-                        ],
                         "additionalProperties": {}
                       }
                     }
@@ -63043,7 +62871,8 @@
           "diagram",
           "file",
           "artifact",
-          "routine"
+          "routine",
+          "design"
         ]
       },
       "size": {
@@ -79503,7 +79332,8 @@
                                   "diagram",
                                   "file",
                                   "artifact",
-                                  "routine"
+                                  "routine",
+                                  "design"
                                 ]
                               },
                               {
@@ -79713,6 +79543,16 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
                           }
                         },
                         "required": [
@@ -79737,7 +79577,8 @@
                             "diagram",
                             "file",
                             "artifact",
-                            "routine"
+                            "routine",
+                            "design"
                           ],
                           "template": {
                             "id": "future-id",
@@ -82786,107 +82627,9 @@
                       "type": "array",
                       "items": {
                         "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "node": {
-                            "type": "object",
-                            "properties": {
-                              "cwd": {
-                                "type": "string"
-                              },
-                              "command": {
-                                "type": "string"
-                              },
-                              "resume": {
-                                "type": "string"
-                              },
-                              "provider": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 32,
-                                "pattern": "^[a-z][a-z0-9-]*$",
-                                "x-open-enum": [
-                                  "claude",
-                                  "codex",
-                                  "gemini",
-                                  "copilot",
-                                  "apple"
-                                ]
-                              },
-                              "account": {
-                                "type": "string",
-                                "pattern": "^[a-z][a-z0-9_-]{0,63}$"
-                              },
-                              "providerFixed": {
-                                "type": "boolean"
-                              },
-                              "runtimeMode": {
-                                "type": "string",
-                                "x-open-enum": [
-                                  "supervised",
-                                  "auto-accept-edits",
-                                  "auto",
-                                  "full-access"
-                                ]
-                              },
-                              "accent": {
-                                "type": "string"
-                              },
-                              "issue": {
-                                "type": "object",
-                                "properties": {
-                                  "repo": {
-                                    "type": "string"
-                                  },
-                                  "number": {
-                                    "type": "integer",
-                                    "exclusiveMinimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "url": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "repo",
-                                  "number",
-                                  "url"
-                                ]
-                              },
-                              "artifact": {
-                                "type": "object",
-                                "properties": {
-                                  "id": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 64
-                                  },
-                                  "version": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 64
-                                  }
-                                },
-                                "required": [
-                                  "id"
-                                ]
-                              }
-                            },
-                            "additionalProperties": {}
-                          }
+                        "propertyNames": {
+                          "type": "string"
                         },
-                        "required": [
-                          "id",
-                          "name",
-                          "node"
-                        ],
                         "additionalProperties": {}
                       }
                     }

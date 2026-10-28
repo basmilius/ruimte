@@ -142,7 +142,37 @@ function withRepeatedId(current: ProjectContent): ProjectContent {
     };
 }
 
-const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
+const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody', later: 'later-1' };
+
+/* A design node on main that holds a later chat, `later-1`, with these lines drawn beside the ones there. */
+async function withDesignNode(edges: ProjectEdge[]): Promise<void> {
+    const current = await store.read(projectId);
+    await replaceContent({
+        ...current,
+        views: current.views.map((view) =>
+            view.id === 'main' && view.kind === 'canvas'
+                ? {
+                      ...view,
+                      nodes: [
+                          ...view.nodes,
+                          {
+                              id: 'design-1',
+                              kind: 'design',
+                              title: 'Site',
+                              path: 'site',
+                              x: 0,
+                              y: 900,
+                              w: 480,
+                              h: 640,
+                              chats: [{ id: 'later-1', name: 'Header', node: {} }]
+                          }
+                      ],
+                      edges: [...view.edges, ...edges]
+                  }
+                : view
+        )
+    });
+}
 
 function content(): ProjectContent {
     return {
@@ -406,12 +436,12 @@ function unusedPlans(): Promise<never> {
     return Promise.reject(new Error('no plans in these tests'));
 }
 
-async function post(verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> {
+async function post(verb: string, argv: string[], token = 'term', through: CanvasHost = host()): Promise<{ status: number; lines: string[] }> {
     const path = `${CANVAS_PATH}/${verb}`;
     const response = await handleCanvasRequest(
         new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ argv }) }),
         path,
-        { targetForToken: (value) => TOKENS[value] ?? null, host: host() }
+        { targetForToken: (value) => TOKENS[value] ?? null, host: through }
     );
     const body = await response.text();
     return { status: response.status, lines: body === '' ? [] : body.replace(/\n$/, '').split('\n') };
@@ -2003,6 +2033,45 @@ describe('--worktree', () => {
         expect(madeWorktrees.map((made) => made.branch)).toEqual(['fix-the-lexer', 'feature/own']);
     });
 
+    test('worktree list names a design node whose later chat works in the worktree', async () => {
+        const lexer = join(worktree, 'lexer');
+        const current = await store.read(projectId);
+        await replaceContent({
+            ...current,
+            views: current.views.map((view) =>
+                view.id === 'main' && view.kind === 'canvas'
+                    ? {
+                          ...view,
+                          nodes: [
+                              ...view.nodes,
+                              {
+                                  id: 'design-1',
+                                  kind: 'design',
+                                  title: 'Site',
+                                  path: 'site',
+                                  x: 0,
+                                  y: 900,
+                                  w: 480,
+                                  h: 640,
+                                  chats: [{ id: 'later-1', name: 'Header', node: { cwd: lexer } }]
+                              }
+                          ]
+                      }
+                    : view
+            )
+        });
+        const listing: CanvasHost = {
+            ...host(),
+            worktrees: {
+                list: async () => [{ path: lexer, branch: 'lexer' }],
+                diff: () => Promise.reject(new Error('no diffs here')),
+                merge: () => Promise.reject(new Error('no merges here'))
+            }
+        };
+        const { lines } = await post('worktree', ['list'], 'term', listing);
+        expect(lines).toEqual([`lexer\t${lexer}\tdesign-1\t-\t0\t0\t0`]);
+    });
+
     test('a dry run makes no worktree, and a write the store refuses takes back the ones it made', async () => {
         branches = ['main'];
         expect((await post('agent', ['claude', '--worktree', '--dry-run'])).status).toBe(200);
@@ -3520,6 +3589,25 @@ describe('notify', () => {
         expect(notified).toEqual([{ projectId, targetId: target, from: 'term-1', fromTitle: 'shell', text: 'the build is green' }]);
     });
 
+    test('a later chat of a design node sends along the lines of that node', async () => {
+        await withDesignNode([{ id: 'edge-d', from: 'design-1', to: 'term-1' }]);
+        const sent = await post('notify', ['term-1', '--text', 'the header is done'], 'later');
+        expect(sent.status).toBe(200);
+        // The message signs with the later chat's own name, not the node's.
+        expect(notified).toEqual([{ projectId, targetId: 'term-1', from: 'later-1', fromTitle: 'Header', text: 'the header is done' }]);
+    });
+
+    test('a later chat of a design node takes a message along a line into that node, delivered to the chat itself', async () => {
+        await withDesignNode([]);
+        const refused = await post('notify', ['later-1', '--text', 'hi']);
+        expect(refused.lines[0]).toStartWith('refused\tnot-linked\tlater-1 is a design node on main');
+        expect(refused.lines).toContain('see\truimte-context link new --to design-1\tdraws the line this needs');
+
+        await post('link', ['new', '--to', 'design-1']);
+        expect((await post('notify', ['later-1', '--text', 'hi'])).status).toBe(200);
+        expect(notified).toEqual([{ projectId, targetId: 'later-1', from: 'term-1', fromTitle: 'shell', text: 'hi' }]);
+    });
+
     test('says where the message landed, in the words the daemon gave it', async () => {
         const target = await madeId(post('node', ['new', 'terminal']));
         await post('link', ['new', '--to', target]);
@@ -3614,6 +3702,15 @@ describe('node delete', () => {
         // The line node new drew from the caller goes with it.
         expect(lines).toEqual([`deleted\t${made}\tterminal\trunner`, `ended\t${made}\tterminal`, 'edges\t1']);
         expect(ended).toEqual([`terminal\t${made}`]);
+    });
+
+    test('a design node ends every chat it holds, its later ones too, before the canvas lets go of it', async () => {
+        await withDesignNode([]);
+        deleteAnyView = true;
+        const { lines } = await post('node', ['delete', 'design-1']);
+        expect(lines[0]).toBe('deleted\tdesign-1\tdesign\tSite');
+        expect(ended).toEqual(['chat\tdesign-1', 'chat\tlater-1']);
+        expect(await nodeOnDisk('design-1')).toBeUndefined();
     });
 
     test('a node the caller did not make stays, unless the machine frees every one', async () => {

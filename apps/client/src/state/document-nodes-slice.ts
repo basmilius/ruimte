@@ -1,6 +1,9 @@
 import {
+    designNodeChats,
     isCanvasView,
+    isDesignView,
     isSessionView,
+    mapDesignChats,
     sessionKindOfView,
     withNodeAsView,
     withNodeOnView,
@@ -54,9 +57,6 @@ export function createDocumentNodesSlice({
     return {
         moveNodeToView(nodeId, viewId) {
             const state = get();
-            if (viewId === state.activeViewId) {
-                return;
-            }
             const views = state.exportViews();
             const source = canvasHolding(views, nodeId);
             const size = source?.nodes.find((candidate) => candidate.id === nodeId);
@@ -66,6 +66,8 @@ export function createDocumentNodesSlice({
             }
             write(moved.views);
             reloadShownCanvas(peers, moved.views, source.id);
+            // A target on screen holds its nodes in its editor, which would write the canvas back without this one.
+            reloadShownCanvas(peers, moved.views, viewId);
         },
 
         renameNodeOnView(viewId, nodeId, title, source = 'user') {
@@ -78,8 +80,16 @@ export function createDocumentNodesSlice({
         },
 
         updateStandalone(id, patch) {
+            const { url: _url, artifact: _artifact, ...chatPatch } = patch;
             set((state) => ({
                 views: state.views.map((view) => {
+                    // A later chat of a design view keeps what it carries in the view's list of chats.
+                    if (view.id !== id && isDesignView(view) && designNodeChats(view).some((chat) => chat.id === id)) {
+                        return {
+                            ...view,
+                            chats: mapDesignChats(view.chats ?? [], (chat) => (chat.id === id ? { ...chat, node: { ...chat.node, ...chatPatch } } : chat))
+                        };
+                    }
                     if (view.id !== id) {
                         return view;
                     }
@@ -119,7 +129,8 @@ export function createDocumentNodesSlice({
             const state = get();
             const views = state.exportViews();
             const source = views.find((view) => view.id === viewId);
-            const size = source && isSessionView(source) ? defaultNodeSize(sessionKindOfView(source)) : { w: 0, h: 0 };
+            // A design lands as a design node, the size of its own kind and not of the chat it holds.
+            const size = source && isSessionView(source) ? defaultNodeSize(source.kind === 'design' ? 'design' : sessionKindOfView(source)) : { w: 0, h: 0 };
             const at = centerOfView(canvasViewId, state.viewLocal[canvasViewId], size, peers) ?? { x: 0, y: 0 };
             const landed = withViewAsNode(views, viewId, canvasViewId, at, machineNodeSizes());
             if (landed === null) {

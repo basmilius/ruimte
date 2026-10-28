@@ -3,8 +3,10 @@ import { join } from 'node:path';
 import {
     chatHostOf,
     clipText,
+    idsInViews,
     isCanvasView,
     isDesignView,
+    nodeChats,
     withView,
     type AgentKind,
     type ChatForkInfoPayload,
@@ -23,6 +25,7 @@ import {
     type ProjectChatView,
     type ProjectContent,
     type ProjectEdge,
+    type ProjectNode,
     type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
@@ -582,7 +585,7 @@ async function landFork(
     }
 ): Promise<ProjectMutation<ChatForkResult>> {
     const { deps, payload, place, forkId, forkInfo, title, provider, account, opener } = fork;
-    if (content.views.some((view) => view.id === forkId || (isCanvasView(view) && view.nodes.some((node) => node.id === forkId)))) {
+    if (idsInViews(content.views).has(forkId)) {
         throw new ChatError('fork-failed', 'Could not make the fork. Try again.');
     }
     opener?.recount();
@@ -623,6 +626,28 @@ async function landFork(
         return {
             content: { ...content, views: withView(content.views, chat, originViewOf(content, place, payload.chatId)) },
             result: { info: forkInfo, nodeId: forkId, viewId: forkId, edgeId: null, ...answer },
+            landed
+        };
+    }
+    // A chat of a design node forks into a further chat of that node, the way one of a design view does.
+    const designNode = place.canvasId !== null && payload.viewId === undefined ? designNodeOf(content, place.canvasId, payload.chatId) : null;
+    if (designNode !== null) {
+        const later = {
+            id: forkId,
+            name: title,
+            node: { provider, providerFixed: true, ...(account === undefined ? {} : { account }), ...(nodeCwd === undefined ? {} : { cwd: nodeCwd }) }
+        };
+        const forked: ProjectNode = { ...designNode, chats: [...(designNode.chats ?? []), later] };
+        return {
+            content: {
+                ...content,
+                views: content.views.map((view) =>
+                    view.id === place.canvasId && isCanvasView(view)
+                        ? { ...view, nodes: view.nodes.map((node) => (node.id === designNode.id ? forked : node)) }
+                        : view
+                )
+            },
+            result: { info: forkInfo, nodeId: forkId, viewId: place.canvasId!, edgeId: null, ...answer },
             landed
         };
     }
@@ -689,10 +714,19 @@ function originViewOf(content: ProjectContent, place: IndexedPlace, chatId: stri
         return host.view.id;
     }
     const view = content.views.find((candidate) => candidate.id === place.canvasId);
-    if (view === undefined || !isCanvasView(view) || !view.nodes.some((node) => node.id === chatId)) {
+    if (view === undefined || !isCanvasView(view) || !view.nodes.some((node) => nodeChats(node).some((chat) => chat.id === chatId))) {
         throw new ChatError('chat-not-found', `${chatId} left the project while the fork was made`);
     }
     return place.canvasId;
+}
+
+/* The design node on this canvas that holds the chat, as its own or a later one; null for a chat that is a node of its own. */
+function designNodeOf(content: ProjectContent, canvasId: string, chatId: string): ProjectNode | null {
+    const view = content.views.find((candidate) => candidate.id === canvasId);
+    if (view === undefined || !isCanvasView(view)) {
+        return null;
+    }
+    return view.nodes.find((node) => node.kind === 'design' && nodeChats(node).some((chat) => chat.id === chatId)) ?? null;
 }
 
 /* The canvas the fork lands on (the one the original stands on, else the one the payload names for a chat that is a view). */

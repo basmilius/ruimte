@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ProjectDocumentSchema, type ProjectCanvasView, type ProjectView } from './project.ts';
+import { duplicateIdIn } from './project-migrate.ts';
 import {
     emptyCanvasView,
     idsInViews,
@@ -130,6 +131,29 @@ describe('duplicating', () => {
         expect(copy.edges[0]).toMatchObject({ from: copy.nodes[0]!.id, to: copy.texts[0]!.id });
     });
 
+    test('a copy of a canvas leaves its designs out, with their lines, group places and layout places', () => {
+        const board = { ...node('board', 'design'), path: 'pricing', resume: 'session-1', chats: [{ id: 'board-2', name: 'Dense', node: {} }] };
+        const group = { ...node('g1', 'group'), memberIds: ['n1', 'board'] };
+        const frame = { x: 0, y: 0, w: 100, h: 100 };
+        const source: ProjectCanvasView = {
+            ...canvas('a', [node('n1'), board, group]),
+            edges: [
+                { id: 'e1', from: 'n1', to: 'board' },
+                { id: 'e2', from: 'n1', to: 'g1' }
+            ],
+            layouts: [{ name: 'Wide', nodes: { n1: frame, board: frame }, texts: {} }]
+        };
+        const result = withDuplicatedView([source], 'a', ids())!;
+        const copy = result.views[1] as ProjectCanvasView;
+
+        expect(copy.nodes.map((item) => item.kind)).toEqual(['terminal', 'group']);
+        const [terminal, copiedGroup] = copy.nodes;
+        expect(copiedGroup!.memberIds).toEqual([terminal!.id]);
+        expect(copy.edges).toEqual([{ id: expect.any(String), from: terminal!.id, to: copiedGroup!.id }]);
+        expect(Object.keys(copy.layouts[0]!.nodes)).toEqual([terminal!.id]);
+        expect(duplicateIdIn(result.views)).toBeNull();
+    });
+
     test('a copy of a canvas keeps its lines under ids of their own', () => {
         const line = { id: 'l1', x: 0, y: 0, endX: 100, endY: 40, stroke: 'ink', strokeWidth: 2, strokeStyle: 'dashed', arrowEnd: true } as const;
         const copy = withDuplicatedView([{ ...canvas('a'), lines: [line] }], 'a', ids())!.views[1] as ProjectCanvasView;
@@ -196,6 +220,49 @@ describe('a node and a view of its own', () => {
         expect(left.nodes.map((each) => each.id)).toEqual(['n2']);
         expect(left.edges).toEqual([]);
         expect(left.texts).toHaveLength(1);
+    });
+
+    test('a design node becomes a design view and back with its folder and every chat, under the same ids', () => {
+        const chats = [{ id: 'board-2', name: 'Dense', node: { provider: 'codex' as const, resume: 'thread-2' } }];
+        const board = { ...node('board', 'design'), title: 'Pricing', provider: 'claude' as const, resume: 'session-1', path: 'pricing', chats };
+        const promoted = withNodeAsView([canvas('a', [board])], 'board')!;
+        expect(promoted.view).toEqual({
+            kind: 'design',
+            id: 'board',
+            name: 'Pricing',
+            node: { provider: 'claude', resume: 'session-1' },
+            path: 'pricing',
+            chats
+        });
+        expect(idsInViews(promoted.views)).toContain('board-2');
+
+        const stored = ProjectDocumentSchema.shape.views.parse(promoted.views);
+        const back = withViewAsNode(stored, 'board', 'a', { x: 0, y: 0 })!;
+        expect(back.node).toMatchObject({ id: 'board', kind: 'design', title: 'Pricing', path: 'pricing', provider: 'claude', resume: 'session-1', chats });
+        expect(sessionNodesOfView(back.views[0]!)).toEqual([
+            { id: 'board', kind: 'chat' },
+            { id: 'board-2', kind: 'chat' }
+        ]);
+        expect(idsInViews(back.views)).toContain('board-2');
+    });
+
+    test('a design node without a folder of its own stays on its canvas', () => {
+        expect(withNodeAsView([canvas('a', [node('board', 'design')])], 'board')).toBeNull();
+        expect(withNodeAsView([canvas('a', [{ ...node('board', 'design'), path: '..' }])], 'board')).toBeNull();
+    });
+
+    test('a later chat of a design this version cannot read goes along as it is, both ways', () => {
+        const chats = [{ id: 'board-2', name: 'Dense', node: {} }, { id: 'board-3' }];
+        const board = { ...node('board', 'design'), path: 'pricing', chats };
+        const promoted = withNodeAsView([canvas('a', [board])], 'board')!;
+        expect(promoted.view).toMatchObject({ kind: 'design', chats });
+        expect(sessionNodesOfView(promoted.view)).toEqual([
+            { id: 'board', kind: 'chat' },
+            { id: 'board-2', kind: 'chat' }
+        ]);
+
+        const back = withViewAsNode(ProjectDocumentSchema.shape.views.parse(promoted.views), 'board', 'a', { x: 0, y: 0 })!;
+        expect(back.node.chats).toEqual(chats);
     });
 
     test('only a session leaves the canvas', () => {

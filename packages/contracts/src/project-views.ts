@@ -22,7 +22,13 @@ import {
     ProjectNodeSchema,
     ProjectTerminalViewSchema,
     type ProjectView,
-    viewChats
+    viewChats,
+    designNodeChats,
+    isDesignNode,
+    isDesignPath,
+    nodeChats,
+    ProjectDesignViewSchema,
+    standaloneOf
 } from './project.ts';
 
 /*
@@ -58,6 +64,9 @@ export function idsInViews(views: readonly ProjectView[]): Set<string> {
         if (isCanvasView(view)) {
             for (const item of [...view.nodes, ...view.texts, ...view.edges]) {
                 ids.add(item.id);
+            }
+            for (const chat of view.nodes.flatMap(designNodeChats)) {
+                ids.add(chat.id);
             }
         }
     }
@@ -140,24 +149,38 @@ export function withDuplicatedView(views: readonly ProjectView[], id: string, ne
     return { views: withView(views, copy, id), id: copy.id };
 }
 
+/*
+ * A design stays out of the copy: its later chats carry ids and sessions of their own and its folder is
+ * its own, so a copy would share both with the original.
+ */
 function copyOfCanvas(view: ProjectCanvasView, name: string, nextId: (prefix: string) => string): ProjectCanvasView {
+    const left = new Set(view.nodes.filter(isDesignNode).map((node) => node.id));
+    const nodes = view.nodes.filter((node) => !left.has(node.id));
     const renamed = new Map<string, string>();
-    for (const node of view.nodes) {
+    for (const node of nodes) {
         renamed.set(node.id, nextId(node.kind));
     }
     for (const text of view.texts) {
         renamed.set(text.id, nextId('text'));
     }
     const idOf = (id: string): string => renamed.get(id) ?? id;
-    const remap = <T>(record: Record<string, T>): Record<string, T> => Object.fromEntries(Object.entries(record).map(([id, value]) => [idOf(id), value]));
+    const remap = <T>(record: Record<string, T>): Record<string, T> =>
+        Object.fromEntries(Object.entries(record).flatMap(([id, value]) => (left.has(id) ? [] : [[idOf(id), value]])));
     return {
         ...extraFieldsOf(view, ProjectCanvasViewSchema),
         kind: 'canvas',
         id: nextId('view'),
         name,
-        nodes: view.nodes.map((node) => ({ ...node, id: idOf(node.id), resume: undefined, memberIds: node.memberIds?.map(idOf) })),
+        nodes: nodes.map((node) => ({
+            ...node,
+            id: idOf(node.id),
+            resume: undefined,
+            memberIds: node.memberIds?.filter((id) => !left.has(id)).map(idOf)
+        })),
         texts: view.texts.map((text) => ({ ...text, id: idOf(text.id) })),
-        edges: view.edges.map((edge) => ({ ...edge, id: nextId('edge'), from: idOf(edge.from), to: idOf(edge.to) })),
+        edges: view.edges
+            .filter((edge) => !left.has(edge.from) && !left.has(edge.to))
+            .map((edge) => ({ ...edge, id: nextId('edge'), from: idOf(edge.from), to: idOf(edge.to) })),
         layouts: view.layouts.map((layout) => ({ ...layout, nodes: remap(layout.nodes), texts: remap(layout.texts) })),
         ...(view.lines ? { lines: view.lines.map((line) => ({ ...line, id: nextId('line') })) } : {})
     };
@@ -182,12 +205,31 @@ export function withNodeAsView(views: readonly ProjectView[], nodeId: string): {
         return null;
     }
     const node = source.nodes.find((candidate) => candidate.id === nodeId)!;
-    if (node.kind !== 'chat' && node.kind !== 'terminal' && node.kind !== 'browser' && node.kind !== 'device' && node.kind !== 'artifact') {
+    if (
+        node.kind !== 'chat' &&
+        node.kind !== 'terminal' &&
+        node.kind !== 'browser' &&
+        node.kind !== 'device' &&
+        node.kind !== 'artifact' &&
+        !(node.kind === 'design' && node.path !== undefined && isDesignPath(node.path))
+    ) {
         return null;
     }
     const extras = extraFieldsOf(node, ProjectNodeSchema);
     let view: ProjectView;
-    if (node.kind === 'artifact') {
+    if (node.kind === 'design') {
+        // Raw, so a later chat this version cannot read stays with its design.
+        const chats = node.chats ?? [];
+        view = {
+            ...extras,
+            kind: 'design',
+            id: node.id,
+            name: node.title,
+            node: standaloneOf(node),
+            path: node.path!,
+            ...(chats.length > 0 ? { chats } : {})
+        };
+    } else if (node.kind === 'artifact') {
         view = { kind: 'artifact', id: node.id, name: node.title, node: { ...extras, ...(node.artifact ? { artifact: node.artifact } : {}) } };
     } else if (node.kind === 'browser') {
         view = {
@@ -238,7 +280,8 @@ const VIEW_SCHEMAS_OF_SESSIONS = {
     terminal: ProjectTerminalViewSchema,
     browser: ProjectBrowserViewSchema,
     device: ProjectDeviceViewSchema,
-    artifact: ProjectArtifactViewSchema
+    artifact: ProjectArtifactViewSchema,
+    design: ProjectDesignViewSchema
 } as const;
 
 /*
@@ -255,8 +298,8 @@ export function withViewAsNode(
 ): { views: ProjectView[]; node: ProjectNode } | null {
     const source = views.find((view) => view.id === viewId);
     const target = views.find((view) => view.id === canvasViewId);
-    // A drawing is a file, not a session, so it is mirrored onto a canvas instead of moved there. A design is a view only: no node shows its folder.
-    if (!source || !(isSessionView(source) || source.kind === 'artifact') || source.kind === 'design' || !target || !isCanvasView(target)) {
+    // A drawing is a file, not a session, so it is mirrored onto a canvas instead of moved there.
+    if (!source || !(isSessionView(source) || source.kind === 'artifact') || !target || !isCanvasView(target)) {
         return null;
     }
     const own =
@@ -264,7 +307,9 @@ export function withViewAsNode(
             ? { url: source.url, ...(source.browserOwner ? { browserOwner: source.browserOwner } : {}) }
             : source.kind === 'device'
               ? { device: source.device }
-              : source.node;
+              : source.kind === 'design'
+                ? { ...source.node, path: source.path, ...(source.chats ? { chats: source.chats } : {}) }
+                : source.node;
     // The identity and frame come last: a stored `node` is loose and must not decide them.
     const node: ProjectNode = {
         ...extraFieldsOf(source, VIEW_SCHEMAS_OF_SESSIONS[source.kind]),
@@ -333,5 +378,10 @@ export function sessionNodesOfView(view: ProjectView): ViewSessionNode[] {
     if (!isCanvasView(view)) {
         return [];
     }
-    return view.nodes.flatMap<ViewSessionNode>((node) => (isSessionKind(node.kind) ? [{ id: node.id, kind: node.kind }] : []));
+    return view.nodes.flatMap<ViewSessionNode>((node) => {
+        if (isDesignNode(node)) {
+            return nodeChats(node).map((chat) => ({ id: chat.id, kind: 'chat' }));
+        }
+        return isSessionKind(node.kind) ? [{ id: node.id, kind: node.kind }] : [];
+    });
 }

@@ -1,5 +1,5 @@
 import { MAX_PROMPT_LENGTH, pendingRequestsOf, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
-import type { ChatItem, ProjectContent } from '@ruimte/contracts';
+import { isChatNode, type ChatItem, type ProjectContent } from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import { VerbRefusal, type CanvasHost } from '../canvas/verb.ts';
 import { agentReading } from '../voice/agent-reading.ts';
@@ -226,8 +226,12 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         const nodes = canvas
             ? await Promise.all(
                   canvas.nodes.map(async (node) => {
-                      const agent =
-                          node.kind === 'chat' || node.kind === 'terminal' ? await agentReading(context.host, { id: node.id, kind: node.kind }) : null;
+                      // A design node's own chat runs under the node id, so it reads as any chat.
+                      const agent = isChatNode(node)
+                          ? await agentReading(context.host, { id: node.id, kind: 'chat' })
+                          : node.kind === 'terminal'
+                            ? await agentReading(context.host, { id: node.id, kind: 'terminal' })
+                            : null;
                       return { id: node.id, title: node.title, kind: nodeKindOf(node), visible: false, ...(agent === null ? {} : { status: agent.status }) };
                   })
               )

@@ -2,6 +2,9 @@ import { useContext } from 'react';
 import { createStore, type StoreApi } from 'zustand';
 import {
     isCanvasView,
+    isDesignView,
+    nodeChats,
+    viewChats,
     type NodeAccent,
     type NodeTitleSource,
     type ProjectDatabaseTarget,
@@ -255,9 +258,17 @@ export function useCellHasFocus(): boolean {
     return useDocument((s) => cell === null || s.activeViewId === cell);
 }
 
-/* The view a node sits on, so a jump from anywhere can switch to it first. */
+/* The view a node sits on, so a jump from anywhere can switch to it first. A later chat of a design sits where its design does. */
 export function viewOfNode(views: readonly ProjectView[], nodesOf: (view: ProjectView) => readonly ProjectNode[], nodeId: string): ProjectView | null {
-    return views.find((view) => (isCanvasView(view) ? nodesOf(view).some((node) => node.id === nodeId) : view.id === nodeId)) ?? null;
+    const holds = (view: ProjectView): boolean => {
+        if (isCanvasView(view)) {
+            return nodesOf(view).some((node) => node.id === nodeId || (node.kind === 'design' && nodeChats(node).some((chat) => chat.id === nodeId)));
+        }
+
+        return view.id === nodeId || (isDesignView(view) && viewChats(view).some((chat) => chat.id === nodeId));
+    };
+
+    return views.find(holds) ?? null;
 }
 
 export function activeViewOf(state: Pick<DocumentState, 'views' | 'activeViewId'>): ProjectView | null {

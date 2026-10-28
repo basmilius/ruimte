@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ProjectFileTabView, Worktree, WorktreeRemoveResult, WorktreeWork } from '@ruimte/contracts';
+import { designNodeChats, type ProjectFileTabView, type Worktree, type WorktreeRemoveResult, type WorktreeWork } from '@ruimte/contracts';
 import { formatNumber } from '@adecore/ui/format';
 import { isUnderFolder } from '@/state/fs-watch';
 
@@ -187,6 +187,34 @@ interface NodeLike {
     kind: string;
     title: string;
     cwd?: string;
+}
+
+/* The folder a terminal or a chat works in; for a design the folder of its chat `chatId`, its own by default. */
+export function workFolderOf(node: Omit<NodeLike, 'title'> & { chats?: readonly Record<string, unknown>[] }, chatId: string = node.id): string | undefined {
+    if (node.kind === 'terminal' || node.kind === 'chat' || (node.kind === 'design' && chatId === node.id)) {
+        return node.cwd;
+    }
+
+    return node.kind === 'design' ? designNodeChats(node).find((chat) => chat.id === chatId)?.node.cwd : undefined;
+}
+
+/*
+ * Nodes as the sessions that work in a folder: a design node as each chat it holds, its own under the
+ * node's id and every later one with a folder of its own, so a later chat counts where it works.
+ */
+export function worktreeSessionsOf<T extends NodeLike & { chats?: readonly Record<string, unknown>[] }>(nodes: readonly T[]): T[] {
+    if (!nodes.some((node) => node.kind === 'design')) {
+        return [...nodes];
+    }
+
+    return nodes.flatMap((node) => {
+        if (node.kind !== 'design') {
+            return [node];
+        }
+
+        const later = designNodeChats(node).map((chat) => ({ ...node, id: chat.id, title: chat.name, cwd: chat.node.cwd }) as T);
+        return [node, ...later].map((chat) => ({ ...chat, kind: 'chat' }) as T);
+    });
 }
 
 /*

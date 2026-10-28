@@ -58,6 +58,14 @@ describe('projectReferables', () => {
         expect(items.find((item) => item.id === 'chat-view')?.detail).toBeUndefined();
         expect(items.find((item) => item.id === 'note-1')?.detail).toBeUndefined();
     });
+
+    test('a design node is offered as its chat, and a later chat of it gets the canvas its design stands on', () => {
+        const design = node('design-1', 'design', 'Landing', { chats: [{ id: 'design-later', name: 'Second pass', node: {} }] });
+        const board = { ...BOARD, nodes: [...(BOARD as { nodes: ProjectNode[] }).nodes, design] } as ProjectView;
+        const items = projectReferables([board, ...VIEWS.slice(1)], nodesOf, textsOf, 'design-later');
+        expect(items.find((item) => item.id === 'design-1')).toEqual({ id: 'design-1', name: 'Landing', kind: 'chat', group: 'canvas' });
+        expect(items.find((item) => item.id === 'note-1')?.group).toBe('canvas');
+    });
 });
 
 describe('the offer the iPhone shares', () => {

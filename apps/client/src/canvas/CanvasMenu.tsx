@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Maximize, Minus, Scan, SquareDashedMousePointer, Type } from 'lucide-react';
 import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
+import { DesignAddItem } from '@/design/DesignAddItem';
 import type { Point } from '@/canvas/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
@@ -61,6 +62,7 @@ export function CanvasCreateItems({ at }: { at: () => Point }) {
                     <AddItem key={kind} kind={kind} at={at} />
                 ))}
                 <RoutineAddItems at={at} />
+                <DesignAddItem at={at} />
                 <AddItem kind="group" at={at} />
                 {hasFolder && (
                     <ContextMenu.Item onClick={() => useUi.getState().openFilePicker({ kind: 'node', at: at() })}>

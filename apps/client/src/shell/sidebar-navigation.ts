@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { nodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
-import { useDocument } from '@/state/document';
+import { useDocument, viewOfNode } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
@@ -33,7 +33,8 @@ export const openSidebarTarget = sidebarNavigator({
     current: currentProject,
     reveal(target) {
         const view = useDocument.getState().views.find((view) => view.id === target.viewId);
-        const found = view && (!target.nodeId || target.nodeId === view.id || nodesOfView(view).some((node) => node.id === target.nodeId));
+        // A later chat of a design is found where its design is.
+        const found = view && (!target.nodeId || viewOfNode([view], nodesOfView, target.nodeId) !== null);
         if (!found) {
             useToasts.getState().show({ kind: 'error', title: i18next.t('shell:sidebar.targetGone') });
             return;
@@ -43,7 +44,7 @@ export const openSidebarTarget = sidebarNavigator({
             useSidebarProjects.getState().collapse(sidebarProjectKey(target.endpointId, target.projectId), false);
             const expanded = useUi.getState().sidebarExpanded ?? [];
             useUi.getState().setSidebarExpanded([...new Set([...expanded, target.viewId])]);
-            if (view.kind === 'canvas') {
+            if (view.kind === 'canvas' || view.kind === 'design') {
                 revealNode(target.nodeId);
             }
         }

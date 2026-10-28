@@ -3,6 +3,7 @@ import { liveFlags } from './project-flags.ts';
 import { isAbsolutePath } from './stored-path.ts';
 import {
     EMPTY_PRIVATE_FILE,
+    mapDesignChats,
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
     ProjectNodeSchema,
@@ -263,16 +264,27 @@ function sharedIdsOf(views: readonly ProjectView[], shared: readonly string[]): 
     return ids;
 }
 
+// A design's later chats, node or view, carry under their own ids; an entry this version cannot read goes as it is.
+function carriedChats(chats: readonly Record<string, unknown>[], map: (id: string, carrier: Carrier) => Carrier): Record<string, unknown>[] {
+    return mapDesignChats(chats, (chat) => ({ ...chat, node: map(chat.id, chat.node) as typeof chat.node }));
+}
+
 // A chat, a design, a terminal and an artifact view are one node under the view's own id, a design's later chats one each under theirs; other kinds carry nothing.
 function withCarriers(view: ProjectView, map: (id: string, carrier: Carrier) => Carrier): ProjectView {
     if (isCanvasView(view)) {
-        return { ...view, nodes: view.nodes.map((node: ProjectNode) => map(node.id, node) as ProjectNode) };
+        return {
+            ...view,
+            nodes: view.nodes.map((node: ProjectNode) => {
+                const mapped = map(node.id, node) as ProjectNode;
+                return node.kind === 'design' && node.chats !== undefined ? { ...mapped, chats: carriedChats(node.chats, map) } : mapped;
+            })
+        };
     }
     if (isDesignView(view) && view.chats !== undefined) {
         return {
             ...view,
             node: map(view.id, view.node) as typeof view.node,
-            chats: view.chats.map((chat) => ({ ...chat, node: map(chat.id, chat.node) as typeof chat.node }))
+            chats: carriedChats(view.chats, map)
         };
     }
     return isChatHostView(view) || view.kind === 'terminal' || view.kind === 'artifact' ? { ...view, node: map(view.id, view.node) as typeof view.node } : view;

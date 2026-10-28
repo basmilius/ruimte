@@ -1,7 +1,7 @@
 import i18next from 'i18next';
-import type { ProviderInfo } from '@ruimte/contracts';
+import type { DesignPlace, ProviderInfo } from '@ruimte/contracts';
 import { readChatPreferences } from '@adecore/agents-react/chat';
-import { nextId, type AddNodeOptions } from '@/state/canvas';
+import { canvasOfNode, nextId, type AddNodeOptions } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
 // The two kinds of node an agent CLI can live in; every menu offers a provider under one of them.
@@ -42,11 +42,24 @@ export function addAgentView(target: AgentTarget, provider: ProviderInfo, name =
 }
 
 /* A further chat of a design, on the same folder, named after its CLI and its place among the design's chats. */
-export function addDesignChat(viewId: string, provider: ProviderInfo, chatCount: number, session: AgentSession = {}): string | null {
+export function addDesignChat(design: DesignPlace, provider: ProviderInfo, chatCount: number, session: AgentSession = {}): string | null {
     const { title: _title, ...node } = agentNodeOptions('chat', provider, session);
     const id = nextId('chat');
+    const chat = { id, name: `${provider.name} ${chatCount + 1}`, node };
 
-    return useDocument.getState().addDesignChat(viewId, { id, name: `${provider.name} ${chatCount + 1}`, node }) ? id : null;
+    if (design.canvasId === null) {
+        return useDocument.getState().addDesignChat(design.id, chat) ? id : null;
+    }
+
+    // On a canvas the node holds its chats, so its editor writes the new one, the way it writes any change of a node.
+    // Not on the undo stack: an undo would take a running chat off its node.
+    const canvas = canvasOfNode(design.id);
+    const owner = canvas?.getState().nodes[design.id];
+    if (canvas === null || owner === undefined) {
+        return null;
+    }
+    canvas.getState().updateNode(design.id, { chats: [...(owner.chats ?? []), chat] }, false);
+    return id;
 }
 
 /* A design: its chat is an agent chat like any other, working on the folder at `path`, relative to the project folder. */

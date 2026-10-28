@@ -1,4 +1,4 @@
-import { deriveContextSources, type ContextSource } from '@ruimte/contracts';
+import { deriveContextSources, type ContextSource, isChatNode } from '@ruimte/contracts';
 import { useCanvas, type CanvasNode, type Edge, type TextElement } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
 
@@ -30,7 +30,7 @@ export function chatsLinkedTo(nodes: Record<string, CanvasNode>, texts: Record<s
     const sources = contextSourcesOf(nodes, texts, edges);
     const readByNode = new Set((sources.get(nodeId) ?? NONE).map((source) => source.id));
     return Object.values(nodes)
-        .filter((node) => node.kind === 'chat' && node.id !== nodeId)
+        .filter((node) => isChatNode(node) && node.id !== nodeId)
         .filter((chat) => readByNode.has(chat.id) || (sources.get(chat.id) ?? NONE).some((source) => source.id === nodeId))
         .map((chat) => chat.id);
 }

@@ -11,7 +11,7 @@ import { NODE_ACCENT_NAMES } from './node-accents.ts';
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
-export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file', 'artifact', 'routine']);
+export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file', 'artifact', 'routine', 'design']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 // Wraps an entry of a newer version so it is written back verbatim; a reserved kind keeps narrowing useful.
@@ -149,7 +149,7 @@ export const ProjectNodeSchema = keepingUnknown(
         color: z.string().optional(),
         // Drawing and diagram only: the view of that kind this node mirrors, which lives in the same project.
         viewId: z.string().optional(),
-        // File only: relative to the project folder and POSIX, so it holds in another checkout; absolute outside it.
+        // File only: relative to the project folder and POSIX, so it holds in another checkout; absolute outside it. Design: its folder, as `designFolderOf` reads it.
         path: z.string().optional(),
         // Unknown kind only: the entry exactly as it was read.
         raw: RawEntrySchema.optional(),
@@ -159,7 +159,10 @@ export const ProjectNodeSchema = keepingUnknown(
         artifact: z.object({ id: z.string().min(1).max(64), version: z.string().min(1).max(64).optional() }).optional(),
         /* Routine only: the id of a routine of the node's own project. It travels in the shared file, since a shared routine's id
            names the same routine for a teammate; a private one's names nothing on their machine, and the node says so. */
-        routine: z.string().min(1).max(64).optional()
+        routine: z.string().min(1).max(64).optional(),
+        /* Design only: the chats started after the node's own, oldest first, read through `nodeChats`. Raw here, since the
+           schema of a chat picks its node from this one. */
+        chats: z.array(RawEntrySchema).optional()
     })
 );
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
@@ -647,16 +650,45 @@ export type DesignChat = z.infer<typeof DesignChatSchema>;
  * while the design is one person's, and under `.ruimte/designs/` once it is shared, so it goes into git
  * with its view. A path with a slash is a folder of the project a design named itself and stays put.
  */
-export function designFolderOf(view: Pick<ProjectDesignView, 'path'>, shared: boolean): string {
+export function designFolderOf(view: { path: string }, shared: boolean): string {
     return view.path.includes('/') ? view.path : `.ruimte/${shared ? '' : 'private/'}designs/${view.path}`;
 }
 
-// The first chat is `node` under the view's own id; `chats` are the ones started after it, oldest first. `path` is the folder's name.
+// A control character or a backtick would break out of the code span the path stands in, in the chat's prompt.
+function hasUnsafeCharacter(path: string): boolean {
+    return [...path].some((character) => {
+        const code = character.charCodeAt(0);
+
+        return code < 0x20 || code === 0x7f || character === '`' || character === '\\';
+    });
+}
+
+/*
+ * Whether a design's `path` names a folder of its own. A bare name is one folder under `designs/`, so
+ * `.` or `..` would make it the folder of every design or the one above, and sharing it would move them
+ * all into git. A path with a slash is a legacy folder of the project, which never moves, so it stays
+ * relative and portable: no root, no drive and no empty, `.` or `..` segment, or it could name any folder
+ * of the machine.
+ */
+export function isDesignPath(path: string): boolean {
+    if (path === '' || hasUnsafeCharacter(path) || /^[a-z]:/i.test(path)) {
+        return false;
+    }
+
+    if (!path.includes('/')) {
+        return !path.startsWith('.');
+    }
+
+    return path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}
+
+// The first chat is `node` under the view's own id; `chats` are the ones started after it, oldest first, read through `viewChats`. `path` is the folder's name.
 export const ProjectDesignViewSchema = ViewBaseSchema.extend({
     kind: z.literal('design'),
     node: StandaloneNodeSchema,
-    path: z.string().min(1),
-    chats: z.array(DesignChatSchema).optional()
+    path: z.string().min(1).refine(isDesignPath, 'must name a folder of its own'),
+    // Raw like a design node's, so one entry this version cannot read never makes the whole file unreadable.
+    chats: z.array(RawEntrySchema).optional()
 });
 export type ProjectDesignView = z.infer<typeof ProjectDesignViewSchema>;
 
@@ -734,22 +766,27 @@ export const ProjectUnknownViewSchema = z.object({
 });
 export type ProjectUnknownView = z.infer<typeof ProjectUnknownViewSchema>;
 
-export const ProjectViewSchema = z.preprocess(
-    (value) =>
-        readEntry(
-            value,
-            KNOWN_VIEW_KINDS,
-            (entry) => entry.raw,
-            (raw) => ({
-                kind: UNKNOWN_KIND,
-                id: raw.id,
-                name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : raw.kind,
-                ...(typeof raw.createdBy === 'string' && raw.createdBy !== '' ? { createdBy: raw.createdBy } : {}),
-                raw
-            })
-        ),
-    z.discriminatedUnion('kind', [...KNOWN_VIEW_SCHEMAS, ProjectUnknownViewSchema])
-);
+function unknownViewOf(raw: Record<string, unknown>): unknown {
+    return {
+        kind: UNKNOWN_KIND,
+        id: raw.id,
+        name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : raw.kind,
+        ...(typeof raw.createdBy === 'string' && raw.createdBy !== '' ? { createdBy: raw.createdBy } : {}),
+        raw
+    };
+}
+
+/* A design whose name is no folder of its own is kept as it was read and never opened, so a file with one still opens and nothing moves. */
+function viewEntryOf(value: unknown): unknown {
+    const entry = readEntry(value, KNOWN_VIEW_KINDS, (stored) => stored.raw, unknownViewOf);
+    if (!isRecord(entry) || entry.kind !== 'design' || typeof entry.path !== 'string' || isDesignPath(entry.path)) {
+        return entry;
+    }
+
+    return typeof entry.id === 'string' && entry.id !== '' ? unknownViewOf(entry) : entry;
+}
+
+export const ProjectViewSchema = z.preprocess(viewEntryOf, z.discriminatedUnion('kind', [...KNOWN_VIEW_SCHEMAS, ProjectUnknownViewSchema]));
 export type ProjectView = z.infer<typeof ProjectViewSchema>;
 export type ProjectViewKind = ProjectView['kind'];
 
@@ -840,7 +877,7 @@ export function viewChats(view: ProjectView): ViewChat[] {
         return [];
     }
 
-    return [{ id: view.id, name: view.name, node: view.node }, ...(view.chats ?? []).map((chat) => ({ id: chat.id, name: chat.name, node: chat.node }))];
+    return [{ id: view.id, name: view.name, node: view.node }, ...designNodeChats(view).map((chat) => ({ id: chat.id, name: chat.name, node: chat.node }))];
 }
 
 /* The view that holds the chat of this id outside a canvas, with that chat; null for any other id. */
@@ -858,6 +895,121 @@ export function chatHostOf(views: readonly ProjectView[], id: string): { view: P
     }
 
     return null;
+}
+
+export function isDesignNode(node: Pick<ProjectNode, 'kind'>): boolean {
+    return node.kind === 'design';
+}
+
+/* A node that holds a chat under its own id: a chat, and a design, whose chat works on its folder. */
+export function isChatNode<N extends Pick<ProjectNode, 'kind'>>(node: N): node is N & { kind: 'chat' | 'design' } {
+    return node.kind === 'chat' || node.kind === 'design';
+}
+
+const STANDALONE_KEYS = ['cwd', 'command', 'resume', 'provider', 'account', 'providerFixed', 'runtimeMode', 'accent', 'issue', 'artifact'] as const;
+
+/* What a node holds once its frame is taken off, as a view of its own keeps it. */
+export function standaloneOf(node: ProjectNode): StandaloneNode {
+    return Object.fromEntries(STANDALONE_KEYS.flatMap((key) => (node[key] === undefined ? [] : [[key, node[key]]]))) as StandaloneNode;
+}
+
+/* The later chats a design holds, node or view, each as `DesignChatSchema` reads it; an entry it cannot read is left out here and still written back. */
+export function designNodeChats(design: { chats?: readonly Record<string, unknown>[] }): DesignChat[] {
+    return (design.chats ?? []).flatMap((raw) => {
+        const parsed = DesignChatSchema.safeParse(raw);
+        return parsed.success ? [parsed.data] : [];
+    });
+}
+
+/* The later chats of a design with `map` applied to each one this version reads; an entry it cannot read goes as it is. */
+export function mapDesignChats(chats: readonly Record<string, unknown>[], map: (chat: DesignChat) => DesignChat): Record<string, unknown>[] {
+    return chats.map((raw) => {
+        const parsed = DesignChatSchema.safeParse(raw);
+        return parsed.success ? { ...raw, ...map(parsed.data) } : raw;
+    });
+}
+
+/* Every chat a node holds: a chat node its own, a design its first under the node's id and every later one under its own. */
+export function nodeChats(node: ProjectNode): ViewChat[] {
+    if (!isChatNode(node)) {
+        return [];
+    }
+
+    const own = { id: node.id, name: node.title, node: standaloneOf(node) };
+
+    return node.kind === 'design' ? [own, ...designNodeChats(node)] : [own];
+}
+
+/* A design wherever it stands: a view of its own, or a node on the canvas `canvasId`. */
+export interface DesignPlace {
+    id: string;
+    name: string;
+    path: string;
+    chats: ViewChat[];
+    canvasId: string | null;
+}
+
+/*
+ * Every design of these views, the ones on a canvas included. A node without a folder has nothing to
+ * show, and one whose name is no folder of its own (`isDesignPath`) must never move one, so both are left out.
+ */
+export function designPlaces(views: readonly ProjectView[]): DesignPlace[] {
+    return views.flatMap((view): DesignPlace[] => {
+        if (isDesignView(view)) {
+            return isDesignPath(view.path) ? [{ id: view.id, name: view.name, path: view.path, chats: viewChats(view), canvasId: null }] : [];
+        }
+
+        if (!isCanvasView(view)) {
+            return [];
+        }
+
+        return view.nodes.flatMap((node) =>
+            node.kind === 'design' && node.path !== undefined && isDesignPath(node.path)
+                ? [{ id: node.id, name: node.title, path: node.path, chats: nodeChats(node), canvasId: view.id }]
+                : []
+        );
+    });
+}
+
+/* The design a chat of this id works on, with that chat; null for any other id. */
+export function designOfChat(views: readonly ProjectView[], chatId: string): { design: DesignPlace; chat: ViewChat } | null {
+    for (const design of designPlaces(views)) {
+        const chat = design.chats.find((candidate) => candidate.id === chatId);
+
+        if (chat !== undefined) {
+            return { design, chat };
+        }
+    }
+
+    return null;
+}
+
+/* The name a chat goes by wherever it stands: a chat view or node, or any chat of a design, its later ones included; null for any other id. */
+export function chatNameOf(views: readonly ProjectView[], chatId: string): string | null {
+    const host = chatHostOf(views, chatId);
+    if (host !== null) {
+        return host.chat.name;
+    }
+    for (const view of views) {
+        const chat = isCanvasView(view) ? view.nodes.flatMap(nodeChats).find((candidate) => candidate.id === chatId) : undefined;
+        if (chat !== undefined) {
+            return chat.name;
+        }
+    }
+    return null;
+}
+
+/*
+ * The node whose lines a chat on a canvas goes by: a later chat of a design node has no node of its own,
+ * so it reads, writes and is reached along the lines of the design node that holds it. Any other id is its own.
+ */
+export function lineEndOf(nodes: readonly Pick<ProjectNode, 'id' | 'kind' | 'chats'>[], id: string): string {
+    return nodes.find((node) => node.kind === 'design' && designNodeChats(node).some((chat) => chat.id === id))?.id ?? id;
+}
+
+/* Whether a design goes into git: a view of its own when it is shared, a node when its canvas is. */
+export function isSharedDesign(design: Pick<DesignPlace, 'id' | 'canvasId'>, shared: readonly string[]): boolean {
+    return shared.includes(design.canvasId ?? design.id);
 }
 
 export function isHiddenChatView(view: ProjectView): view is ProjectChatView {
