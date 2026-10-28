@@ -1,7 +1,11 @@
 import {
     deriveProjectContextSources,
     flagOf,
+    chatHostOf,
+    designFolderOf,
     isCanvasView,
+    isChatHostView,
+    isDesignView,
     isHiddenChatView,
     isSessionView,
     sessionNodesOfView,
@@ -11,7 +15,8 @@ import {
     type ProjectFlags,
     type ProjectSql,
     type ProjectView,
-    type ViewSessionNode
+    type ViewSessionNode,
+    viewChats
 } from '@ruimte/contracts';
 import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { resolveReference, type Reference } from '../context/references.ts';
@@ -26,7 +31,7 @@ export interface IndexedPlace {
 
 interface IndexedProject {
     folder: string;
-    content: Pick<ProjectContent, 'views' | 'flags' | 'sql'>;
+    content: Pick<ProjectContent, 'views' | 'flags' | 'sql'> & { shared?: readonly string[] };
     sources: Map<string, ContextSource[]>;
     places: Map<string, string | null>;
 }
@@ -59,6 +64,10 @@ export function placesOf(views: readonly ProjectView[]): Map<string, string | nu
             }
         } else if (isSessionView(view)) {
             places.set(view.id, null);
+            // A design's later chats are views of their own too, for whatever asks where a chat stands.
+            for (const chat of viewChats(view)) {
+                places.set(chat.id, null);
+            }
         }
     }
     return places;
@@ -92,7 +101,7 @@ export class ProjectIndex {
     }
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
-    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags' | 'sql'>): void {
+    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags' | 'sql'> & { shared?: readonly string[] }): void {
         const sources = flaggedSources(deriveProjectContextSources(content.views, folder), content.flags);
         this.projects.set(projectId, { folder, content, sources, places: placesOf(content.views) });
         this.changedPlaces(projectId);
@@ -203,8 +212,12 @@ export class ProjectIndex {
         }
         for (const project of this.projects.values()) {
             for (const view of project.content.views) {
-                if ((view.kind === 'chat' || view.kind === 'terminal') && view.id === id) {
-                    return { id, kind: view.kind, title: view.name };
+                if (view.kind === 'terminal' && view.id === id) {
+                    return { id, kind: 'terminal', title: view.name };
+                }
+                const chat = isChatHostView(view) ? viewChats(view).find((candidate) => candidate.id === id) : undefined;
+                if (chat) {
+                    return { id, kind: 'chat', title: chat.name };
                 }
                 const node = isCanvasView(view) ? view.nodes.find((candidate) => candidate.id === id) : undefined;
                 if (node) {
@@ -245,6 +258,18 @@ export class ProjectIndex {
     /* Whether a view of this id is a chat an inline edit runs in. */
     isHiddenChat(id: string): boolean {
         return [...this.projects.values()].some((project) => project.content.views.some((view) => view.id === id && isHiddenChatView(view)));
+    }
+
+    /* The folder a chat works on as a design, relative to the project folder, where its view being shared or not puts it. Null for any other id. */
+    designOf(id: string): string | null {
+        for (const project of this.projects.values()) {
+            const host = chatHostOf(project.content.views, id);
+            if (host !== null) {
+                return isDesignView(host.view) ? designFolderOf(host.view, project.content.shared?.includes(host.view.id) === true) : null;
+            }
+        }
+
+        return null;
     }
 
     locate(id: string): IndexedPlace | null {

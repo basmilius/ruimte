@@ -10,6 +10,8 @@ import {
     duplicateElementIdIn,
     duplicateIdIn,
     isCanvasView,
+    isChatHostView,
+    isDesignView,
     migrateDiagram,
     migrateDrawing,
     migrateSharedFile,
@@ -45,17 +47,23 @@ const DRAWINGS_DIR = 'drawings';
 const DIAGRAMS_DIR = 'diagrams';
 // A person's database consoles, plain `.sql` files under `private`, so git never sees them.
 export const CONSOLES_DIR = 'consoles';
+// A folder per design, under `private` until its view is shared (`designFolderOf`).
+const DESIGNS_DIR = 'designs';
 
 /*
  * Whether a path inside a project folder, as the names below that folder, is Ruimte's own state, which a
  * file request never writes, creates, moves or deletes: the files there change only through their own
- * requests and revs. A person's consoles are the exception, since they are files like any other.
+ * requests and revs. A person's consoles and the folders of designs are the exception, since they are
+ * files like any other: a design's chat and the person's edits write its pages.
  */
 export function isRuimteState(segments: readonly string[]): boolean {
     if (segments[0] !== PROJECT_DIR) {
         return false;
     }
-    return !(segments[1] === PRIVATE_DIR && segments[2] === CONSOLES_DIR && segments.length > 3);
+    if (segments[1] === DESIGNS_DIR && segments.length > 2) {
+        return false;
+    }
+    return !(segments[1] === PRIVATE_DIR && (segments[2] === CONSOLES_DIR || segments[2] === DESIGNS_DIR) && segments.length > 3);
 }
 
 /*
@@ -447,8 +455,11 @@ function mapViews(views: ProjectView[], map: (cwd: string) => string | undefined
         if (isCanvasView(view)) {
             return { ...view, nodes: view.nodes.map((node: ProjectNode) => mapCwd(node, map)) };
         }
-        // Only a chat and a terminal carry a node; every other view has no folder to map.
-        return view.kind === 'chat' || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;
+        if (isDesignView(view) && view.chats !== undefined) {
+            return { ...view, node: mapCwd(view.node, map), chats: view.chats.map((chat) => ({ ...chat, node: mapCwd(chat.node, map) })) };
+        }
+        // Only a chat, a design and a terminal carry a node; every other view has no folder to map.
+        return isChatHostView(view) || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;
     });
 }
 

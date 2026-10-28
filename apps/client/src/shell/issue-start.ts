@@ -1,4 +1,4 @@
-import { isCanvasView, type GitIssue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, type GitIssue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { fenceOf } from '@/chat/selection-to-chat';
 import type { NodesOfView } from '@/project/view-nodes';
 
@@ -40,7 +40,7 @@ export function findIssueNode(views: readonly ProjectView[], nodesOf: NodesOfVie
             if (found) {
                 return found.id;
             }
-        } else if ((view.kind === 'chat' || view.kind === 'terminal') && view.node.issue?.url === url && (cwd === undefined || view.node.cwd === cwd)) {
+        } else if ((isChatHostView(view) || view.kind === 'terminal') && view.node.issue?.url === url && (cwd === undefined || view.node.cwd === cwd)) {
             return view.id;
         }
     }

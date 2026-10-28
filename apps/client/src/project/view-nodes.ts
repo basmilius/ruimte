@@ -1,5 +1,14 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { isCanvasView, isHiddenCanvasView, isSessionView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isDesignView,
+    isHiddenCanvasView,
+    isSessionView,
+    sessionKindOfView,
+    viewChats,
+    type ProjectNode,
+    type ProjectView
+} from '@ruimte/contracts';
 import { defaultCanvases, liveCanvas, subscribeCanvases, type CanvasNode } from '@/state/canvas';
 import { shallow } from 'zustand/shallow';
 import { useDocument } from '@/state/document';
@@ -44,7 +53,10 @@ export interface ProjectNodeRef extends StatusOf {
 
 /* What a view holds in the words the status needs: a standalone view is one node under its own id. */
 export function nodeRefsOfView(view: ProjectView): readonly ProjectNodeRef[] {
-    return isSessionView(view) ? [{ id: view.id, kind: view.kind, title: view.name }] : nodesOfView(view);
+    if (isDesignView(view)) {
+        return viewChats(view).map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name }));
+    }
+    return isSessionView(view) ? [{ id: view.id, kind: sessionKindOfView(view), title: view.name }] : nodesOfView(view);
 }
 
 /*

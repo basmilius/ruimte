@@ -13,7 +13,8 @@ import {
     type ProjectView,
     type ProjectViewLocal,
     type SplitLayout,
-    type StandaloneNode
+    type StandaloneNode,
+    type DesignChat
 } from '@ruimte/contracts';
 import type { LooseStrip } from '@/shell/legacy-files-cell';
 import type { CanvasPatch } from '@/project/merge';
@@ -172,6 +173,8 @@ export interface DocumentState {
     addStandaloneView(view: StandaloneRequest): string;
     /* An artifact of this machine's Output as a view; `opens` means the same as for a file. */
     addArtifactView(name: string, artifact: NonNullable<StandaloneNode['artifact']>, opens?: boolean): string;
+    /* A further chat on the folder of a design; false when the view is no design (any more). */
+    addDesignChat(viewId: string, chat: DesignChat): boolean;
     renameView(id: string, name: string, source?: NodeTitleSource | null): void;
     /* Overrules the mark a view wears in the lists; null hands it back to its kind. */
     setViewIcon(id: string, icon: ProjectIconChoice | null): void;

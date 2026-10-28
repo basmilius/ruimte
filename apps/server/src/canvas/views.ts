@@ -23,8 +23,10 @@ export const MAX_PROJECT_VIEWS = 100;
  * A device view needs a local discovery result, so agents may inspect it but cannot invent one. An
  * artifact view is a person's pick from this machine's Output.
  */
+// A design is made by a person for now: its folder and its chat's CLI are theirs to pick.
 export const VIEW_KINDS = PROJECT_VIEW_KINDS.filter(
-    (kind): kind is Exclude<(typeof PROJECT_VIEW_KINDS)[number], 'device' | 'artifact'> => kind !== 'device' && kind !== 'artifact'
+    (kind): kind is Exclude<(typeof PROJECT_VIEW_KINDS)[number], 'device' | 'artifact' | 'design'> =>
+        kind !== 'device' && kind !== 'artifact' && kind !== 'design'
 );
 
 type ViewFlag = 'path' | 'url';

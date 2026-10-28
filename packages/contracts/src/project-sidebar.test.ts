@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { projectSidebarViews, ProjectSidebarResultSchema } from './project-sidebar';
+import { projectSidebarViews, ProjectSidebarResultSchema, ProjectSidebarViewSchema } from './project-sidebar';
 import { isOpenableView, type ProjectView } from './project';
 
 test('the sidebar projection keeps navigation and session identity but excludes canvas content', () => {
@@ -45,6 +45,18 @@ test('a row carries the flag of its view, and none for a color this version cann
     const projected = projectSidebarViews(views, [], { a: 'red', b: 'ultraviolet' });
     expect(projected[0]?.flag).toBe('red');
     expect('flag' in projected[1]!).toBe(false);
+});
+
+test('a design goes as a row an older client draws as unknown, with its chat as the session of the row', () => {
+    const views: ProjectView[] = [
+        { id: 'design', kind: 'design', name: 'Onboarding', node: { provider: 'claude' }, path: 'designs/onboarding' },
+        { id: 'chat', kind: 'chat', name: 'Discussion', node: { provider: 'claude' } }
+    ];
+    const projected = projectSidebarViews(views, []);
+    expect(projected[0]).toMatchObject({ kind: 'unknown', design: true, provider: 'claude' });
+    expect(projected[0]?.self).toMatchObject({ id: 'design', kind: 'chat', provider: 'claude' });
+    expect('design' in projected[1]!).toBe(false);
+    expect(ProjectSidebarViewSchema.array().parse(projected)).toEqual(projected);
 });
 
 test('an empty sidebar result is valid for a machine with no open projects', () => {

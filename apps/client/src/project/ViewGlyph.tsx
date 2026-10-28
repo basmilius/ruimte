@@ -10,6 +10,7 @@ import {
     Package,
     PenTool,
     Smartphone,
+    SwatchBook,
     Table,
     Terminal,
     Workflow,
@@ -38,6 +39,7 @@ const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     separator: Minus,
     subheader: Heading,
     artifact: Package,
+    design: SwatchBook,
     unknown: CircleQuestionMark
 };
 

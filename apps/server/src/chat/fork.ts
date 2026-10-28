@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import {
+    chatHostOf,
     clipText,
     isCanvasView,
+    isDesignView,
     withView,
     type AgentKind,
     type ChatForkInfoPayload,
@@ -21,6 +23,7 @@ import {
     type ProjectChatView,
     type ProjectContent,
     type ProjectEdge,
+    type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
 import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
@@ -600,15 +603,25 @@ async function landFork(
     }
     // A view forks into a view unless a canvas is named; a node forks into a node unless a view is asked for.
     if (payload.asView === true || (place.canvasId === null && payload.viewId === undefined)) {
-        const view: ProjectChatView = {
+        const chat: ProjectChatView = {
             kind: 'chat',
             id: forkId,
             name: title,
             titleSource: 'user',
             node: { provider, providerFixed: true, ...(account === undefined ? {} : { account }), ...(nodeCwd === undefined ? {} : { cwd: nodeCwd }) }
         };
+        // A chat of a design forks into a further chat of that design, which goes on with the files it knows.
+        const design = place.canvasId === null ? chatHostOf(content.views, payload.chatId)?.view : undefined;
+        if (design !== undefined && isDesignView(design)) {
+            const forked: ProjectView = { ...design, chats: [...(design.chats ?? []), { id: forkId, name: title, node: chat.node }] };
+            return {
+                content: { ...content, views: content.views.map((view) => (view.id === design.id ? forked : view)) },
+                result: { info: forkInfo, nodeId: forkId, viewId: design.id, edgeId: null, ...answer },
+                landed
+            };
+        }
         return {
-            content: { ...content, views: withView(content.views, view, originViewOf(content, place, payload.chatId)) },
+            content: { ...content, views: withView(content.views, chat, originViewOf(content, place, payload.chatId)) },
             result: { info: forkInfo, nodeId: forkId, viewId: forkId, edgeId: null, ...answer },
             landed
         };
@@ -668,13 +681,18 @@ async function filesTree(deps: ChatForkDeps, cwd: string, turns: readonly ChatTu
 
 /* The view a fork that is a view is listed after (the original itself, or the canvas the original stands on). */
 function originViewOf(content: ProjectContent, place: IndexedPlace, chatId: string): string {
-    const id = place.canvasId ?? chatId;
-    const view = content.views.find((candidate) => candidate.id === id);
-    const stands = place.canvasId === null ? view?.kind === 'chat' : view !== undefined && isCanvasView(view) && view.nodes.some((node) => node.id === chatId);
-    if (!stands) {
+    if (place.canvasId === null) {
+        const host = chatHostOf(content.views, chatId);
+        if (host === null) {
+            throw new ChatError('chat-not-found', `${chatId} left the project while the fork was made`);
+        }
+        return host.view.id;
+    }
+    const view = content.views.find((candidate) => candidate.id === place.canvasId);
+    if (view === undefined || !isCanvasView(view) || !view.nodes.some((node) => node.id === chatId)) {
         throw new ChatError('chat-not-found', `${chatId} left the project while the fork was made`);
     }
-    return id;
+    return place.canvasId;
 }
 
 /* The canvas the fork lands on (the one the original stands on, else the one the payload names for a chat that is a view). */

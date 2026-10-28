@@ -224,6 +224,8 @@ export interface Settings {
        sends the deltas either way. */
     chatStreaming: ChatStreamingMode;
     chatSteerByDefault: boolean;
+    /* A design chat hides them whatever this says. */
+    chatHideToolCalls: boolean;
     /* Speech to Text's own; Voice speaks these two only on a machine that keeps no preferences of its own (`voice.preferences`). */
     voiceLanguage: VoiceLanguage;
     liveVoice: LiveVoice;
@@ -335,6 +337,7 @@ const DEFAULT_SETTINGS: Settings = {
     dockAutoHide: false,
     chatStreaming: 'words',
     chatSteerByDefault: false,
+    chatHideToolCalls: false,
     voiceLanguage: 'nl',
     liveVoice: 'marin',
     voiceInputDeviceId: 'default',
@@ -437,6 +440,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         keepAwakeDisplay: stored.keepAwakeDisplay === true,
         chatStreaming: chatStreamingFrom(stored.chatStreaming),
         chatSteerByDefault: stored.chatSteerByDefault === true,
+        chatHideToolCalls: stored.chatHideToolCalls === true,
         voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
         liveVoice: isLiveVoice(stored.liveVoice)
             ? stored.liveVoice

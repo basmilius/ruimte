@@ -1,7 +1,16 @@
 import { inPickerOrder } from '@/agents/creation';
 import { groupArrangeable } from '@/canvas/arrange-group';
 import i18next from 'i18next';
-import { canShareView, chatIsWorking, isCanvasView, isEmptyChatView, isOpenableView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import {
+    canShareView,
+    chatIsWorking,
+    isCanvasView,
+    isChatHostView,
+    isEmptyChatView,
+    isOpenableView,
+    type ProjectView,
+    type SplitLayout
+} from '@ruimte/contracts';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { forkRefusal, lastSettledTurn } from '@adecore/agents-react/chat';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
@@ -69,7 +78,7 @@ export function activeViewFacts(): ActiveViewFacts | null {
     const shared = documentState.shared.includes(view.id);
     const { asChat, asTerminal } = sessionHandoffs(view.kind, view, chatRow?.info, session, providersOf(endpointId).providers);
     const scratch = isScratchProject(current);
-    const workingFolder = !scratch && (view.kind === 'chat' || view.kind === 'terminal') ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
+    const workingFolder = !scratch && (isChatHostView(view) || view.kind === 'terminal') ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
     const settled = chatRow ? lastSettledTurn(chatRow.structure, chatRow.order) : null;
     const forkTurn = settled !== null && forkRefusal(chatRow?.info ?? null, chatRow?.structure[settled]) === null ? settled : null;
     const offers = viewOffers({
@@ -85,7 +94,7 @@ export function activeViewFacts(): ActiveViewFacts | null {
         // A file view's own actions stay in its view menu; the application menu has none of them.
         filePath: null,
         scratch,
-        written: !(view.kind === 'chat' && isEmptyChatView(view)),
+        written: !(isChatHostView(view) && isEmptyChatView(view)),
         moves: machineAnswers(pool.statusOf(endpointId), 'chat.move')
     });
     const working = chatIsWorking(

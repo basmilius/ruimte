@@ -57,6 +57,7 @@ import {
 } from './project-files.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
+import { moveDesignFolders } from './design-folders.ts';
 import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
 import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { readIdeaName } from './project-identity.ts';
@@ -679,6 +680,10 @@ export class ProjectStore {
             }
         );
         remember(state, written, document.rev, ids, document.views);
+        // A design's folder follows its view between the two sides once the files say where it is.
+        await moveDesignFolders(state.entry.folder, document.views, moved, ids)
+            .then((stuck) => stuck.forEach((viewId) => console.warn(`The folder of design ${viewId} is on both sides of the project and stayed where it was`)))
+            .catch((e: unknown) => console.warn(`Moving the folders of the designs of project ${projectId} failed:`, errorText(e)));
         await this.remote.prune(projectId, idsOf(content));
         /* Not the sender: its screen is already ahead of this document, and taking it in would undo a
            drag that went on while the save was out. */

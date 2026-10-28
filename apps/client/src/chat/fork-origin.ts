@@ -1,4 +1,4 @@
-import type { ProjectNode, ProjectView } from '@ruimte/contracts';
+import { chatHostOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { ForkShape } from '@adecore/agents-react/chat';
 import type { NodesOfView } from '@/project/view-nodes';
 
@@ -15,10 +15,11 @@ export function forkOriginIn(
     nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title'>>,
     chatId: string
 ): ForkOrigin | null {
+    const host = chatHostOf(views, chatId);
+    if (host !== null) {
+        return { shape: 'view', title: host.chat.name, viewId: null };
+    }
     for (const view of views) {
-        if (view.kind === 'chat' && view.id === chatId) {
-            return { shape: 'view', title: view.name, viewId: null };
-        }
         const node = nodesOf(view).find((candidate) => candidate.id === chatId && candidate.kind === 'chat');
         if (node) {
             return { shape: 'node', title: node.title, viewId: view.id };

@@ -2,7 +2,10 @@ import i18next from 'i18next';
 import { ActionRefusal, pendingRequestsOf, type ActionCall, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
     CHAT_FORK_TITLE_MAX,
+    chatHostOf,
     clipText,
+    isSessionView,
+    sessionKindOfView,
     type AgentKind,
     type ChatForkResult,
     type ChatInfo,
@@ -118,8 +121,14 @@ const LIVE_MACHINE: SessionMachine = {
 };
 
 export function sessionTitle(document: StoreApi<DocumentState>, id: string, kind: 'chat' | 'terminal'): string | null {
-    for (const view of document.getState().views) {
-        if (view.kind === kind && view.id === id) {
+    const views = document.getState().views;
+    // A chat view's chat and every chat of a design, under the id each goes by.
+    const host = kind === 'chat' ? chatHostOf(views, id) : null;
+    if (host !== null) {
+        return host.chat.name;
+    }
+    for (const view of views) {
+        if (view.id === id && isSessionView(view) && sessionKindOfView(view) === kind) {
             return view.name;
         }
         const node = nodesOfView(view).find((candidate) => candidate.id === id && candidate.kind === kind);

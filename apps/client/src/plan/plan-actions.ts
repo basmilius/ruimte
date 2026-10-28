@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { isCanvasView, type Plan, type PlanStepState } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { planToMarkdown } from '@adecore/plan';
 import { focusNodeAction, perform } from '@/actions/client-actions';
 import { offerDraft } from '@adecore/agents-react/chat';
@@ -98,7 +98,7 @@ export function collapsedOf(collapsed: PlanViewPrefs['collapsed'], planKey: stri
 /* The keyboard and the eye to a chat: its cell when it stands in one, else the camera to its node. */
 export function focusChat(chatId: string): void {
     const { views, layout, setActiveView } = useDocument.getState();
-    if (views.some((view) => view.kind === 'chat' && view.id === chatId)) {
+    if (views.some((view) => isChatHostView(view) && view.id === chatId)) {
         showView(chatId);
         return;
     }

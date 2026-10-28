@@ -1051,6 +1051,10 @@
             "steerByDefault": {
                 "label": "Werkende agents standaard bijsturen",
                 "description": "Een bericht dat je stuurt terwijl Codex of Claude werkt, komt bij de volgende stap aan. Uit wacht het tot de agent klaar is. Houd Option of Alt ingedrukt bij het sturen voor het omgekeerde."
+            },
+            "hideToolCalls": {
+                "label": "Tool calls verbergen",
+                "description": "Een chat toont de berichten van de agent zonder de bestanden die hij las en de commando's die hij draaide. Een afgeronde beurt zegt nog hoe lang hij werkte. Design chats verbergen ze altijd."
             }
         },
         "integrations": {

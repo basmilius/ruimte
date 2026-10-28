@@ -275,6 +275,58 @@
     "filesView": {
         "failed": "These files could not be shown"
     },
+    "design": {
+        "pages": "Page",
+        "loading": "Reading the design…",
+        "empty": "The chat writes the first page of this design in {{folder}}.",
+        "noFolder": "This project has no folder on this machine, so there is nothing to draw.",
+        "failed": "The design could not be shown.",
+        "failedAction": "The design could not do that",
+        "comment": {
+            "placeholder": "What should change here?",
+            "cancel": "Cancel",
+            "queue": "Add comment",
+            "sendAll_one": "Send {{count}} comment",
+            "sendAll_other": "Send {{count}} comments"
+        },
+        "edit": {
+            "hint": "Click an element to set its style. Double-click text to change it in place; the chat writes it into the source.",
+            "save": "Save",
+            "discard": "Discard",
+            "bake": "Fold in"
+        },
+        "tweaks": {
+            "none": "This page declares no tweaks. Ask the chat to make it tweakable.",
+            "save": "Save values"
+        },
+        "draw": {
+            "placeholder": "What does the drawing mean?",
+            "clear": "Clear",
+            "send": "Send"
+        },
+        "chats": {
+            "label": "Chat",
+            "new": "New chat"
+        },
+        "tools": {
+            "label": "Tool",
+            "view": "View and interact",
+            "comment": "Comment",
+            "edit": "Edit",
+            "draw": "Draw",
+            "tweaks": "Tweaks"
+        },
+        "actions": {
+            "saveVersion": "Save version",
+            "saveVersionHint": "Keep the design as it stands as a version in Output",
+            "saved": "Saved as a version in Output",
+            "olderMachine": "This machine cannot keep a design yet; update Ruimte on it",
+            "export": "Export",
+            "exportHint": "The page in front as one HTML file, its images inside it",
+            "implement": "Implement",
+            "implementHint": "A new chat that builds this page into the project, its brief ready to send"
+        }
+    },
     "viewKinds": {
         "canvas": "Canvas",
         "drawing": "Drawing",
@@ -283,7 +335,8 @@
         "browser": "Browser",
         "file": "File",
         "separator": "Separator",
-        "subheader": "Subheader"
+        "subheader": "Subheader",
+        "design": "Design"
     },
     "viewMenu": {
         "filePick": "File…",

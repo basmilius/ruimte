@@ -10,7 +10,8 @@ import {
     isCanvasView,
     type ProjectLocal,
     type ProjectSharedFile,
-    type ProjectView
+    type ProjectView,
+    viewChats
 } from './project.ts';
 
 /* What reading `.ruimte/project.json` gives: the file, and what an older one carried beside it. */
@@ -96,6 +97,13 @@ export function duplicateIdIn(views: ProjectView[]): string | null {
             return view.id;
         }
         seen.add(view.id);
+        // A design's later chats share the namespace; its first is the view itself.
+        for (const chat of viewChats(view).slice(1)) {
+            if (seen.has(chat.id)) {
+                return chat.id;
+            }
+            seen.add(chat.id);
+        }
         if (!isCanvasView(view)) {
             continue;
         }

@@ -1,7 +1,8 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { isCanvasView, type AgentStatus } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, isDesignView, viewChats, type AgentStatus } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
+import { activeDesignChat, useDesignChat } from '@/design/design-chat';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { nodesOfView } from '@/project/view-nodes';
 import { focusedCanvas } from '@/state/canvas';
@@ -16,8 +17,28 @@ export function projectAgents(document: StoreApi<DocumentState>) {
     const active = activeViewOf(state);
     const canvas = active && isCanvasView(active) ? focusedCanvas().getState() : null;
     return state.views.flatMap((view) => {
-        if (view.kind === 'chat' || view.kind === 'terminal') {
-            return [{ id: view.id, name: view.name, kind: view.kind, viewId: view.id, view: view.name, selected: active?.id === view.id }];
+        if (isDesignView(view)) {
+            const shown = activeDesignChat(view, useDesignChat.getState().picked);
+            return viewChats(view).map((chat) => ({
+                id: chat.id,
+                name: chat.name,
+                kind: 'chat' as const,
+                viewId: view.id,
+                view: view.name,
+                selected: active?.id === view.id && chat.id === shown
+            }));
+        }
+        if (isChatHostView(view) || view.kind === 'terminal') {
+            return [
+                {
+                    id: view.id,
+                    name: view.name,
+                    kind: view.kind === 'terminal' ? ('terminal' as const) : ('chat' as const),
+                    viewId: view.id,
+                    view: view.name,
+                    selected: active?.id === view.id
+                }
+            ];
         }
         if (!isCanvasView(view)) {
             return [];

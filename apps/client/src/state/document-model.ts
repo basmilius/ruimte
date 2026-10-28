@@ -57,6 +57,7 @@ export function splitTrash(views: ProjectView[], trashed: TrashedView[]): { view
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
 export type StandaloneRequest =
     | { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode }
+    | { kind: 'design'; name: string; id?: string; node: StandaloneNode; path: string }
     | { kind: 'browser'; name: string; id?: string; url: string; browserOwner?: string }
     | { kind: 'device'; name: string; id?: string; device: DeviceReference };
 

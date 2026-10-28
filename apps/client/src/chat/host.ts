@@ -222,6 +222,7 @@ export const CHAT_HOST: Partial<ChatHost> = {
     },
     useStreaming: () => useSettings((s) => s.chatStreaming),
     useSendDelivery: () => useSettings((s) => (s.chatSteerByDefault ? 'steer' : 'queue')),
+    useHidesToolCalls: () => useSettings((s) => s.chatHideToolCalls),
     tasks: {
         useTasks: (endpointId) => useTasks((s) => s.byEndpoint[endpointId]),
         useTask: (endpointId, taskId) => useTasks((s) => (taskId === null ? null : (s.byEndpoint[endpointId]?.[taskId] ?? null)))

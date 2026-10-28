@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal, type LucideIcon } from 'lucide-react';
+import { FileText, Frame, Globe, Heading, Minus, PenTool, SwatchBook, Workflow, Terminal, type LucideIcon } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { ProviderRows } from '@/agents/ProviderRows';
 import { AgentSubmenu } from '@/agents/AgentMenus';
@@ -102,6 +102,18 @@ export function NewViewItems() {
                 itemEntry('terminal', Terminal, t('viewKinds.terminal'), () => void createViewAction('terminal')),
                 { id: 'agent-chat', label: agentTargetLabel('chat'), node: <AgentSubmenu target="chat" onPick={pickAgent} /> },
                 { id: 'agent-terminal', label: agentTargetLabel('terminal'), node: <AgentSubmenu target="terminal" onPick={pickAgent} /> },
+                hasFolder && {
+                    id: 'design',
+                    label: t('viewKinds.design'),
+                    node: (
+                        <AgentSubmenu
+                            target="chat"
+                            label={t('viewKinds.design')}
+                            icon={SwatchBook}
+                            onPick={(_target, provider, account) => void createViewAction('design', { provider: provider.kind, account })}
+                        />
+                    )
+                },
                 itemEntry('browser', Globe, t('viewKinds.browser'), () => useUi.getState().setViewDialog({ kind: 'new-browser' })),
                 hasFolder && itemEntry('file', FileText, t('viewMenu.filePick'), () => useUi.getState().openFilePicker({ kind: 'view' }))
             ])}

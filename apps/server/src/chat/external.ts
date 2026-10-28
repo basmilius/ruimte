@@ -1,4 +1,4 @@
-import { isCanvasView, isSessionView, type ChatExternalResult, type ChatExternalSession, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, isSessionView, viewChats, type ChatExternalResult, type ChatExternalSession, type ProjectView } from '@ruimte/contracts';
 import { listClaudeSessions, listCodexSessions, type ExternalSession, type SessionFs } from '@adecore/agents/chat';
 import type { UsageRootPath } from '@adecore/agents/usage';
 
@@ -18,8 +18,11 @@ export interface ExternalChatSessionsDeps {
 /* The agent sessions the nodes and views of a project resume, which are Ruimte's own however they began. */
 export function resumesOfViews(views: readonly ProjectView[]): string[] {
     return views.flatMap((view): string[] => {
+        if (isChatHostView(view)) {
+            return viewChats(view).flatMap((chat) => (chat.node.resume === undefined ? [] : [chat.node.resume]));
+        }
         if (isSessionView(view)) {
-            return (view.kind === 'chat' || view.kind === 'terminal') && view.node.resume !== undefined ? [view.node.resume] : [];
+            return view.kind === 'terminal' && view.node.resume !== undefined ? [view.node.resume] : [];
         }
         return isCanvasView(view) ? view.nodes.flatMap((node) => (node.resume === undefined ? [] : [node.resume])) : [];
     });

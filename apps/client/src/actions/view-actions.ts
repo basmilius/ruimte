@@ -3,6 +3,7 @@ import {
     canShareView,
     flagOf,
     isCanvasView,
+    isChatHostView,
     isDiagramView,
     isDrawingView,
     isOpenableView,
@@ -22,7 +23,8 @@ import {
 import type { StoreApi } from 'zustand';
 import { databaseViewName } from '@/database/view-name';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
-import { addAgentView } from '@/agents/nodes';
+import { addAgentView, addDesignView } from '@/agents/nodes';
+import { freeDesignFolder } from '@/design/design-folder';
 import { saveViewFiles, viewDeletionFacts, type ViewDeletionMachine } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
 import { offerViewUndo } from '@/project/view-trash';
@@ -58,6 +60,8 @@ export interface ViewReach {
     viewDeletion: ViewDeletionMachine;
     /* A drawing or diagram keeps what it holds in a file of its own, which the daemon copies. */
     copyViewContent(kind: 'drawing' | 'diagram', from: string, to: string): void;
+    /* The folders under `designs/` of the project on disk, as stored paths. */
+    designFolders(): Promise<readonly string[]>;
 }
 
 const VIEW_BASE_NAMES: Record<CreatableViewKind, string> = {
@@ -71,7 +75,8 @@ const VIEW_BASE_NAMES: Record<CreatableViewKind, string> = {
     database: 'Table',
     separator: 'Separator',
     subheader: 'Section',
-    device: 'Device'
+    device: 'Device',
+    design: 'Design'
 };
 
 /* A new view is named after what it is, "Canvas", then "Canvas 2", until someone renames it. */
@@ -175,12 +180,14 @@ function addViewOf(
                 throw new ActionRefusal('missing-device', 'Name the device a device view shows.');
             }
             return state.addStandaloneView({ kind, name: title, device });
+        case 'design':
+            throw new ActionRefusal('missing-provider', 'A design is worked on by an AI chat. Name its provider.');
     }
 }
 
 /* The views of the project: shown, named, made, deleted, copied, moved, marked, shared and flagged. */
 export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach): ActionHandlers<void> {
-    const { providers, viewDeletion, copyViewContent } = reach;
+    const { providers, viewDeletion, copyViewContent, designFolders } = reach;
     return {
         'view.focus': ({ viewId }) => {
             const state = document.getState();
@@ -232,9 +239,43 @@ export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach)
                     : {})
             };
         },
-        'view.create': ({ kind, name, url, browserOwner, command, path, provider, account, device, resume, cwd, connection, schema, table, mode, where }) => {
+        'view.create': async ({
+            kind,
+            name,
+            url,
+            browserOwner,
+            command,
+            path,
+            provider,
+            account,
+            device,
+            resume,
+            cwd,
+            connection,
+            schema,
+            table,
+            mode,
+            where
+        }) => {
             refuseUnreachableBrowser(kind, url, browserOwner);
             refuseResumeWithout(resume, provider);
+            if (kind === 'design') {
+                const agent = agentFor(providers(), 'chat', provider, null, account ?? null);
+                if (agent === null) {
+                    throw new ActionRefusal('missing-provider', 'A design is worked on by an AI chat. Name its provider.');
+                }
+                // Read before the document, since the list may change while the disk answers.
+                const onDisk = path === null ? await designFolders() : [];
+                const state = document.getState();
+                const title = name ?? freeName(state.views, VIEW_BASE_NAMES.design);
+                const folder = path === null ? freeDesignFolder(state.views, title, onDisk) : storedFilePath(path);
+                const viewId = addDesignView(agent.info, title, folder, { ...(cwd == null ? {} : { cwd }), ...(account == null ? {} : { account }) });
+                if (!viewId) {
+                    throw new ActionRefusal('view-create-failed', 'Ruimte could not create the design.');
+                }
+
+                return { output: { viewId, view: title, kind } };
+            }
             const agent = agentFor(providers(), kind, provider, command);
             if (account != null && agent === null) {
                 throw new ActionRefusal('missing-provider', 'An account belongs to an agent CLI. Name the provider as well.');
@@ -277,7 +318,7 @@ export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach)
                 const nodes = nodesOfView(view).length;
                 const sessions = isCanvasView(view)
                     ? nodesOfView(view).filter((node) => node.kind === 'chat' || node.kind === 'terminal').length
-                    : view.kind === 'chat' || view.kind === 'terminal'
+                    : isChatHostView(view) || view.kind === 'terminal'
                       ? 1
                       : 0;
                 const facts = await viewDeletionFacts(view, document.getState().exportViews(), viewDeletion);

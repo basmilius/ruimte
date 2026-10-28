@@ -9,7 +9,12 @@ import { useHasPlans } from '@/state/plans';
 import { useSessionPortControl } from '@/terminal/session-port-controls';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */
-export const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'terminal', 'file', 'diagram', 'chat', 'artifact']);
+export const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'terminal', 'file', 'diagram', 'chat', 'artifact', 'design']);
+
+/* A view whose session is an AI chat, which shows its fork and its plans in the bar. */
+export function chatIdOf(view: CellView | null): string {
+    return view?.kind === 'chat' || view?.kind === 'design' ? view.id : '';
+}
 
 export function modeOf(host: NodeHost | null): RuntimeMode | undefined {
     return RUNTIME_MODES.find((mode) => mode === host?.runtimeMode);
@@ -25,7 +30,7 @@ export function useHasViewToolbar(view: CellView | null): boolean {
     const host = useNodeHost(hostIdOf(view));
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     const forked = useIsFork(view);
-    const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
+    const planned = useHasPlans(chatIdOf(view));
     const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');
     // A file's controls are portaled into the bar; a database or an artifact tab draws its own toolbar in the body.
     if (isLooseView(view)) {
@@ -52,5 +57,5 @@ export function useViewToolbarLeads(view: CellView | null): boolean {
 }
 
 export function useIsFork(view: CellView | null): boolean {
-    return useChatRow(view?.kind === 'chat' ? view.id : '', (row) => row?.info.forkOf !== undefined);
+    return useChatRow(chatIdOf(view), (row) => row?.info.forkOf !== undefined);
 }

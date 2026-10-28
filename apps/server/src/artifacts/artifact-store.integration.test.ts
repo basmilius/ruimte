@@ -199,4 +199,32 @@ describe('artifact store on a real disk', () => {
         await expect(save(join(outside, 'picture.png'), 'r6')).rejects.toMatchObject({ code: 'outside-project' });
         expect(await artifacts.list({})).toHaveLength(2);
     });
+
+    test('a design folder is kept whole as one version, its assets by their path in it, and never a link or a folder outside the project', async () => {
+        const artifacts = artifactsOver(await storeOn(NODE_ARTIFACT_FS));
+        const design = join(project, 'designs', 'onboarding');
+        await mkdir(join(design, 'assets'), { recursive: true });
+        await writeFile(join(design, 'Onboarding.html'), '<p>1</p>');
+        await writeFile(join(design, 'assets', 'logo.png'), PNG);
+        await writeFile(join(design, '.DS_Store'), 'x');
+        await writeFile(join(outside, 'secret.txt'), 'secret');
+        await symlink(join(outside, 'secret.txt'), join(design, 'secret.txt'));
+        await symlink(outside, join(project, 'designs', 'escape'));
+        const keep = (path: string, requestId: string) =>
+            artifacts.saveFolder({ projectId: 'project-1', path, title: 'Onboarding', key: 'design-1', requestId });
+
+        const first = await keep('designs/onboarding', 'k1');
+        const listed = await artifacts.get(first.artifactId);
+        expect(listed.versions[0]?.files.map((file) => file.name)).toEqual(['assets/logo.png', 'Onboarding.html']);
+        expect(listed.versions[0]?.provenance).toEqual({ maker: 'person', machineId: 'machine-1' });
+
+        await writeFile(join(design, 'Onboarding.html'), '<p>2</p>');
+        const second = await keep('designs/onboarding', 'k2');
+        expect(second.artifactId).toBe(first.artifactId);
+        expect(await keep('designs/onboarding', 'k2')).toEqual(second);
+
+        await expect(keep('designs/escape', 'k3')).rejects.toMatchObject({ code: 'outside-project' });
+        await expect(keep('..', 'k4')).rejects.toMatchObject({ code: 'outside-project' });
+        await expect(keep('.', 'k5')).rejects.toMatchObject({ code: 'outside-project' });
+    });
 });

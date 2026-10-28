@@ -1,6 +1,8 @@
 import type { ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
+    isChatHostView,
+    viewChats,
     isHiddenCanvasView,
     isOpenableView,
     isUnknownNode,
@@ -64,8 +66,11 @@ export function visibleCanvas(content: ProjectContent, viewId: string | null): P
 /* Every chat and terminal of the project a person sees, in the order of the sidebar and then of each canvas. */
 export function projectAgents(content: ProjectContent): VoiceAgentPlace[] {
     return openableViews(content).flatMap((view): VoiceAgentPlace[] => {
-        if (view.kind === 'chat' || view.kind === 'terminal') {
-            return [{ id: view.id, name: view.name ?? view.id, kind: view.kind, viewId: view.id, view: view.name ?? view.id }];
+        if (view.kind === 'terminal') {
+            return [{ id: view.id, name: view.name ?? view.id, kind: 'terminal', viewId: view.id, view: view.name ?? view.id }];
+        }
+        if (isChatHostView(view)) {
+            return viewChats(view).map((chat) => ({ id: chat.id, name: chat.name, kind: 'chat', viewId: view.id, view: view.name }));
         }
         if (!isCanvasView(view)) {
             return [];

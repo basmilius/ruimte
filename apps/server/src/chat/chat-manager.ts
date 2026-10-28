@@ -88,6 +88,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     endedAt?: (chatId: string) => number | null;
     // Whether the chat is the hidden one an inline edit runs in, which hears how to answer and is no list's business.
     inlineChat?: (chatId: string) => boolean;
+    // The folder a chat view works on as a design, which it hears about when its CLI starts; null for any other chat.
+    design?: (chatId: string) => string | null;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
     // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
@@ -238,6 +240,7 @@ export class ChatManager extends ChatCore {
     // Ruimte's instructions for a chat's next prompt, handed out once (`ContextNotes`).
     private readonly briefs = new Map<string, string>();
     private readonly inlineChat: (chatId: string) => boolean;
+    private readonly design: (chatId: string) => string | null;
     private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
     private readonly peerChat: (chatId: string) => boolean;
     private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
@@ -306,6 +309,7 @@ export class ChatManager extends ChatCore {
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.inlineChat = options.inlineChat ?? (() => false);
+        this.design = options.design ?? (() => null);
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.peerChat = options.peerChat ?? (() => false);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
@@ -590,7 +594,8 @@ export class ChatManager extends ChatCore {
             computer: this.computer(),
             // An inline edit answers with one replacement block, which a page above it would only contradict.
             visuals: this.visualReplies() && !this.inlineChat(chatId),
-            databases: !this.inlineChat(chatId) && this.databases(chatId)
+            databases: !this.inlineChat(chatId) && this.databases(chatId),
+            design: this.design(chatId)
         };
     }
 

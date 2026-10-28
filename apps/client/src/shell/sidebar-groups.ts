@@ -86,8 +86,10 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                         : {
                               activeViewId: null,
                               openViewIds: [],
-                              views: (views ?? []).map((view) => ({
+                              views: (views ?? []).map(({ design, ...view }) => ({
                                   ...view,
+                                  // The wire's kinds are a closed list, so a design arrives as an unknown row that says what it is.
+                                  kind: design === true ? 'design' : view.kind,
                                   nodes: view.nodes.map(node),
                                   self: view.self ? node(view.self) : null
                               }))

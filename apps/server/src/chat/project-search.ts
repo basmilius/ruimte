@@ -1,4 +1,4 @@
-import { isCanvasView, type ChatItem, type ChatSearchHit, type ChatSearchPayload, type ChatSearchResult, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, viewChats, type ChatItem, type ChatSearchHit, type ChatSearchPayload, type ChatSearchResult, type ProjectView } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import { searchThreadItems } from '@adecore/agents/chat';
 
@@ -30,6 +30,9 @@ export function chatsOfViews(views: readonly ProjectView[], unlisted = false): S
     return views.flatMap((view): SearchableChat[] => {
         if (view.kind === 'chat') {
             return !unlisted && (view.empty === true || view.hidden === true) ? [] : [{ chatId: view.id, title: view.name ?? '' }];
+        }
+        if (view.kind === 'design') {
+            return viewChats(view).map((chat) => ({ chatId: chat.id, title: chat.name }));
         }
         if (isCanvasView(view)) {
             return view.nodes.filter((node) => node.kind === 'chat').map((node) => ({ chatId: node.id, title: node.title }));

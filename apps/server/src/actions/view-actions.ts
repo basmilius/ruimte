@@ -78,6 +78,9 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         if (kind === 'device') {
             throw new VerbRefusal('bad-arguments', 'view new makes no device view; a person opens one from the devices panel');
         }
+        if (kind === 'design') {
+            throw new VerbRefusal('bad-arguments', 'view new makes no design; a person makes one from New view');
+        }
         const given = { path, url };
         for (const flag of ['path', 'url'] as const) {
             if (given[flag] !== null && VIEW_KIND_FLAGS[kind] !== flag) {

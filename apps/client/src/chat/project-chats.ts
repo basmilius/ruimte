@@ -1,4 +1,4 @@
-import type { ProjectNode, ProjectView } from '@ruimte/contracts';
+import { isChatHostView, isHiddenChatView, viewChats, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { ProjectChat } from '@adecore/agents-react/chat';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
@@ -6,9 +6,9 @@ import { useSidebarSource } from '@/shell/sidebar-source';
 /* Every chat of the project under the name it has right now, node or view, in sidebar order. */
 export function projectChats(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'title'>>): ProjectChat[] {
     return views.flatMap((view): ProjectChat[] => {
-        if (view.kind === 'chat') {
+        if (isChatHostView(view)) {
             // The chat an inline edit runs in is no chat a person attaches to a message.
-            return view.hidden === true ? [] : [{ id: view.id, title: view.name }];
+            return isHiddenChatView(view) ? [] : viewChats(view).map((chat) => ({ id: chat.id, title: chat.name }));
         }
         return nodesOf(view)
             .filter((node) => node.kind === 'chat')

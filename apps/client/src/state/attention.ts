@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { isCanvasView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, isDesignView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import { activeDesignChat, useDesignChat } from '@/design/design-chat';
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
 import { desktop } from '@/desktop/bridge';
 import { projectNodes } from '@/project/view-nodes';
@@ -45,7 +46,12 @@ export function chatsInSight(workspace: ChatSightWorkspace, { planWidth }: { pla
         if (!onScreen.has(view.id)) {
             continue;
         }
-        if (view.kind === 'chat') {
+        if (isDesignView(view)) {
+            // Only the chat in front is in sight; the others of the design wait behind its picker.
+            chats.add(activeDesignChat(view, useDesignChat.getState().picked));
+            continue;
+        }
+        if (isChatHostView(view)) {
             chats.add(view.id);
             continue;
         }

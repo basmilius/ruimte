@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import { nodeSizeOf, type NodeSizes } from './node-defaults.ts';
 import {
     isCanvasView,
+    isDesignView,
     isDiagramView,
     isDividerView,
     isDrawingView,
@@ -20,7 +21,8 @@ import {
     type ProjectNode,
     ProjectNodeSchema,
     ProjectTerminalViewSchema,
-    type ProjectView
+    type ProjectView,
+    viewChats
 } from './project.ts';
 
 /*
@@ -50,6 +52,9 @@ export function idsInViews(views: readonly ProjectView[]): Set<string> {
     const ids = new Set<string>();
     for (const view of views) {
         ids.add(view.id);
+        for (const chat of viewChats(view)) {
+            ids.add(chat.id);
+        }
         if (isCanvasView(view)) {
             for (const item of [...view.nodes, ...view.texts, ...view.edges]) {
                 ids.add(item.id);
@@ -250,8 +255,8 @@ export function withViewAsNode(
 ): { views: ProjectView[]; node: ProjectNode } | null {
     const source = views.find((view) => view.id === viewId);
     const target = views.find((view) => view.id === canvasViewId);
-    // A drawing is a file, not a session, so it is mirrored onto a canvas instead of moved there.
-    if (!source || !(isSessionView(source) || source.kind === 'artifact') || !target || !isCanvasView(target)) {
+    // A drawing is a file, not a session, so it is mirrored onto a canvas instead of moved there. A design is a view only: no node shows its folder.
+    if (!source || !(isSessionView(source) || source.kind === 'artifact') || source.kind === 'design' || !target || !isCanvasView(target)) {
         return null;
     }
     const own =
@@ -319,6 +324,9 @@ function isSessionKind(kind: string): kind is ViewSessionNode['kind'] {
 
 // What keeps running on the machine for a view: a shell or a CLI. A browser page lives in a client, so it is none.
 export function sessionNodesOfView(view: ProjectView): ViewSessionNode[] {
+    if (isDesignView(view)) {
+        return viewChats(view).map((chat) => ({ id: chat.id, kind: 'chat' }));
+    }
     if (isSessionView(view)) {
         return isSessionKind(view.kind) ? [{ id: view.id, kind: view.kind }] : [];
     }

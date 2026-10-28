@@ -288,6 +288,9 @@ describe('what a view keeps running', () => {
 
     test('a view of its own is the one daemon session it is; browsers, devices and files are none', () => {
         expect(sessionNodesOfView({ kind: 'chat', id: 'c1', name: 'Planner', node: {} })).toEqual([{ id: 'c1', kind: 'chat' }]);
+        expect(sessionNodesOfView({ kind: 'design', id: 'd1', name: 'Onboarding', node: {}, path: 'designs/onboarding' })).toEqual([
+            { id: 'd1', kind: 'chat' }
+        ]);
         expect(sessionNodesOfView({ kind: 'browser', id: 'p1', name: 'Page', url: 'https://bas.dev' })).toEqual([]);
         expect(
             sessionNodesOfView({

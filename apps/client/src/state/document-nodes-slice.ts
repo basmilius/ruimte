@@ -1,6 +1,7 @@
 import {
     isCanvasView,
     isSessionView,
+    sessionKindOfView,
     withNodeAsView,
     withNodeOnView,
     withViewAsNode,
@@ -118,7 +119,7 @@ export function createDocumentNodesSlice({
             const state = get();
             const views = state.exportViews();
             const source = views.find((view) => view.id === viewId);
-            const size = source && isSessionView(source) ? defaultNodeSize(source.kind) : { w: 0, h: 0 };
+            const size = source && isSessionView(source) ? defaultNodeSize(sessionKindOfView(source)) : { w: 0, h: 0 };
             const at = centerOfView(canvasViewId, state.viewLocal[canvasViewId], size, peers) ?? { x: 0, y: 0 };
             const landed = withViewAsNode(views, viewId, canvasViewId, at, machineNodeSizes());
             if (landed === null) {

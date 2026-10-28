@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import {
+    chatHostOf,
     isSessionView,
+    sessionKindOfView,
     type AgentKind,
     type CanvasNodeKind,
     type DeviceReference,
@@ -80,7 +82,17 @@ function hostOfView(view: ProjectView): NodeHost | null {
     if (view.kind === 'device') {
         return { id: view.id, kind: 'device', title: view.name, titleSource: view.titleSource, device: view.device, onCanvas: false };
     }
-    return { id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, ...view.node, onCanvas: false };
+    return { id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, ...view.node, onCanvas: false };
+}
+
+/* A view of its own by its id, or a later chat of a design by its id. */
+function hostOfViewId(views: readonly ProjectView[], id: string): NodeHost | null {
+    const view = views.find((each) => each.id === id);
+    if (view) {
+        return hostOfView(view);
+    }
+    const host = chatHostOf(views, id);
+    return host === null ? null : { id, kind: 'chat', title: host.chat.name, ...host.chat.node, onCanvas: false };
 }
 
 export function readNodeHost(id: string): NodeHost | null {
@@ -88,14 +100,13 @@ export function readNodeHost(id: string): NodeHost | null {
     if (node) {
         return hostOfNode(node);
     }
-    const view = useDocument.getState().views.find((each) => each.id === id);
-    return view ? hostOfView(view) : null;
+    return hostOfViewId(useDocument.getState().views, id);
 }
 
 export function useNodeHost(id: string): NodeHost | null {
     const node = useCanvas((s) => s.nodes[id]);
-    const view = useDocument((s) => s.views.find((each) => each.id === id) ?? null);
-    return node ? hostOfNode(node) : view ? hostOfView(view) : null;
+    const views = useDocument((s) => s.views);
+    return node ? hostOfNode(node) : hostOfViewId(views, id);
 }
 
 /* The title of a node is the name of its view when it has no frame to carry one. */

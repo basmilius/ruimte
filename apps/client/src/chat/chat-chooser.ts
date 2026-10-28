@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import { isCanvasView, type AgentKind, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isChatHostView,
+    isUnlistedView,
+    viewChats,
+    type AgentKind,
+    type ProjectNode,
+    type ProjectView,
+    type SplitLayout
+} from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
 import { viewIdsIn } from '@/shell/split';
@@ -26,8 +35,8 @@ type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider'>;
 /* Every chat of the project with the CLI it runs, node or view, in sidebar order. */
 export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView<ChooserNode>): ChooserChat[] {
     return views.flatMap((view): ChooserChat[] => {
-        if (view.kind === 'chat') {
-            return view.empty === true || view.hidden === true ? [] : [{ id: view.id, title: view.name, provider: view.node.provider ?? null }];
+        if (isChatHostView(view)) {
+            return isUnlistedView(view) ? [] : viewChats(view).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }));
         }
         return nodesOf(view)
             .filter((node) => node.kind === 'chat')
@@ -46,8 +55,10 @@ export function chatsOpenHere(views: readonly ProjectView[], nodesOf: NodesOfVie
         if (!inCells.has(view.id)) {
             continue;
         }
-        if (view.kind === 'chat') {
-            open.add(view.id);
+        if (isChatHostView(view)) {
+            for (const chat of viewChats(view)) {
+                open.add(chat.id);
+            }
         } else if (isCanvasView(view)) {
             for (const node of nodesOf(view)) {
                 if (node.kind === 'chat') {

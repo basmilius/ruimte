@@ -1,9 +1,22 @@
 import { ActionRefusal, type ActionInput, type ActionOutput } from '@ruimte/actions';
-import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isChatHostView,
+    isDesignView,
+    isOpenableView,
+    isUnknownNode,
+    isUnknownView,
+    viewChats,
+    type ProjectDesignView,
+    type ProjectNode,
+    type ProjectView,
+    type ViewChat
+} from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import type { StoreApi } from 'zustand';
 import { projectAgents } from '@/actions/inspection-actions';
 import { listedProjects } from '@/actions/project-actions';
+import { activeDesignChat, useDesignChat } from '@/design/design-chat';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { nodesOfView } from '@/project/view-nodes';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
@@ -23,6 +36,11 @@ function current(target: Resolved['target'], found: Target[]): Resolved {
 }
 
 const placed = { endpointId: null, machine: null };
+
+/* A chat of a design, which goes by its own name in the design it stands in. */
+function designChatTarget(view: ProjectDesignView, chat: ViewChat): Target {
+    return { ...viewTarget(view), id: chat.id, name: chat.name, kind: 'chat', viewId: view.id, view: view.name };
+}
 
 function viewTarget(view: ProjectView): Target {
     return {
@@ -81,14 +99,26 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
     }
     if (target === 'chat') {
         if (names === null) {
-            if (active?.kind === 'chat') {
+            if (active && isDesignView(active)) {
+                const chatId = activeDesignChat(active, useDesignChat.getState().picked);
+                return current(target, [
+                    designChatTarget(
+                        active,
+                        viewChats(active).find((chat) => chat.id === chatId)!
+                    )
+                ]);
+            }
+            if (active && isChatHostView(active)) {
                 return current(target, [viewTarget(active)]);
             }
             const selected = canvas && active ? nodesInScope(canvas, 'selected').filter((node) => node.kind === 'chat') : [];
             return current(target, active ? selected.map((node) => nodeTarget(node, active)) : []);
         }
         const chats = state.views.flatMap((view) => {
-            if (view.kind === 'chat') {
+            if (isDesignView(view)) {
+                return viewChats(view).map((chat) => designChatTarget(view, chat));
+            }
+            if (isChatHostView(view)) {
                 return [{ ...viewTarget(view), viewId: view.id, view: view.name }];
             }
             if (!isCanvasView(view)) {

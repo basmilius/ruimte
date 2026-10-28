@@ -14,6 +14,8 @@ import { MarkdownImage, ReadImage } from '@/chat/ReadImage';
 import { useTimelineFind } from '@/chat/use-chat-find';
 import { useChatPlace } from '@/chat/use-chat-place';
 import { useContextSources } from '@/context/sources';
+import { DesignComposerHeader } from '@/design/DesignChats';
+import { useDesignHidesToolCalls } from '@/design/design-tool-calls';
 import { isApplePlatform } from '@/desktop/bridge';
 import { saveToOutputActions } from '@/output/save';
 import { useOutputThreadCards } from '@/output/thread-cards';
@@ -47,6 +49,8 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
     ReadImage,
     MarkdownImage,
     ModelView: ChatModelView,
+    ComposerHeaderSlot: DesignComposerHeader,
+    useHidesToolCalls: useDesignHidesToolCalls,
     renderShellCodeBlock: prepareCodeBlockAction,
     fileLinks: {
         target: (text, cwd, scopeId) => {

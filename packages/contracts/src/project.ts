@@ -637,6 +637,29 @@ export const ProjectChatViewSchema = ViewBaseSchema.extend({
 });
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 
+// A chat that works on a design: the view shows the HTML files of the folder at `path`, relative to the project folder, beside the thread.
+// A further chat of a design, on the same folder, under an id of its own in the one namespace of views and nodes.
+export const DesignChatSchema = keepingUnknown(z.object({ id: z.string().min(1), name: z.string().min(1), node: StandaloneNodeSchema }));
+export type DesignChat = z.infer<typeof DesignChatSchema>;
+
+/*
+ * The folder of a design, relative to the project folder: its name under `.ruimte/private/designs/`
+ * while the design is one person's, and under `.ruimte/designs/` once it is shared, so it goes into git
+ * with its view. A path with a slash is a folder of the project a design named itself and stays put.
+ */
+export function designFolderOf(view: Pick<ProjectDesignView, 'path'>, shared: boolean): string {
+    return view.path.includes('/') ? view.path : `.ruimte/${shared ? '' : 'private/'}designs/${view.path}`;
+}
+
+// The first chat is `node` under the view's own id; `chats` are the ones started after it, oldest first. `path` is the folder's name.
+export const ProjectDesignViewSchema = ViewBaseSchema.extend({
+    kind: z.literal('design'),
+    node: StandaloneNodeSchema,
+    path: z.string().min(1),
+    chats: z.array(DesignChatSchema).optional()
+});
+export type ProjectDesignView = z.infer<typeof ProjectDesignViewSchema>;
+
 export const ProjectTerminalViewSchema = ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema });
 export type ProjectTerminalView = z.infer<typeof ProjectTerminalViewSchema>;
 
@@ -692,7 +715,8 @@ const KNOWN_VIEW_SCHEMAS = [
     ProjectDatabaseViewSchema,
     ProjectSeparatorViewSchema,
     ProjectSubheaderViewSchema,
-    ProjectArtifactViewSchema
+    ProjectArtifactViewSchema,
+    ProjectDesignViewSchema
 ] as const;
 
 export const PROJECT_VIEW_KINDS = KNOWN_VIEW_SCHEMAS.map((schema) => schema.shape.kind.value);
@@ -775,12 +799,65 @@ export function viewIconOf(view: ProjectView): ProjectIconChoice | null {
 }
 
 // The views that are one session under their own id; drawings, diagrams and files are read off disk.
-export function isSessionView(view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView {
-    return view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
+export function isSessionView(view: ProjectView): view is ProjectChatView | ProjectDesignView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView {
+    return isChatHostView(view) || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
+}
+
+/* The kind of the session a view of its own holds, which for a design is its chat. */
+export function sessionKindOfView(
+    view: ProjectChatView | ProjectDesignView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView
+): 'chat' | 'terminal' | 'browser' | 'device' {
+    return view.kind === 'design' ? 'chat' : view.kind;
 }
 
 export function isEmptyChatView(view: ProjectView): view is ProjectChatView {
     return view.kind === 'chat' && view.empty === true;
+}
+
+export function isDesignView(view: ProjectView): view is ProjectDesignView {
+    return view.kind === 'design';
+}
+
+/* A view that holds a chat under its own id: a chat view, and a design, whose chat works on its folder. */
+export function isChatHostView(view: ProjectView): view is ProjectChatView | ProjectDesignView {
+    return view.kind === 'chat' || view.kind === 'design';
+}
+
+/* One chat a view holds outside any canvas: its id, the name it goes by and its node. */
+export interface ViewChat {
+    id: string;
+    name: string;
+    node: StandaloneNode;
+}
+
+/* Every chat a view holds: a chat view its own, a design its first under the view's id and every later one under its own. */
+export function viewChats(view: ProjectView): ViewChat[] {
+    if (view.kind === 'chat') {
+        return [{ id: view.id, name: view.name, node: view.node }];
+    }
+
+    if (view.kind !== 'design') {
+        return [];
+    }
+
+    return [{ id: view.id, name: view.name, node: view.node }, ...(view.chats ?? []).map((chat) => ({ id: chat.id, name: chat.name, node: chat.node }))];
+}
+
+/* The view that holds the chat of this id outside a canvas, with that chat; null for any other id. */
+export function chatHostOf(views: readonly ProjectView[], id: string): { view: ProjectChatView | ProjectDesignView; chat: ViewChat } | null {
+    for (const view of views) {
+        if (!isChatHostView(view)) {
+            continue;
+        }
+
+        const chat = viewChats(view).find((candidate) => candidate.id === id);
+
+        if (chat !== undefined) {
+            return { view, chat };
+        }
+    }
+
+    return null;
 }
 
 export function isHiddenChatView(view: ProjectView): view is ProjectChatView {

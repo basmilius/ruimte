@@ -293,6 +293,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         reference: (chatId, id) => index().referenceBeside(chatId, id),
         standalone: (chatId) => index().locate(chatId)?.canvasId === null,
         inlineChat: (chatId) => index().isHiddenChat(chatId),
+        design: (chatId) => index().designOf(chatId),
         openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
         messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
         // The other reader: what a chat has to show a person in its thread, which is never taken from the model.

@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { readChatPreferences } from '@adecore/agents-react/chat';
-import type { AddNodeOptions } from '@/state/canvas';
+import { nextId, type AddNodeOptions } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
 // The two kinds of node an agent CLI can live in; every menu offers a provider under one of them.
@@ -39,4 +39,19 @@ export function agentNodeOptions(target: AgentTarget, provider: ProviderInfo, se
 export function addAgentView(target: AgentTarget, provider: ProviderInfo, name = provider.name, session: AgentSession = {}): string | null {
     const { title: _title, ...node } = agentNodeOptions(target, provider, session);
     return useDocument.getState().addStandaloneView({ kind: target, name, node });
+}
+
+/* A further chat of a design, on the same folder, named after its CLI and its place among the design's chats. */
+export function addDesignChat(viewId: string, provider: ProviderInfo, chatCount: number, session: AgentSession = {}): string | null {
+    const { title: _title, ...node } = agentNodeOptions('chat', provider, session);
+    const id = nextId('chat');
+
+    return useDocument.getState().addDesignChat(viewId, { id, name: `${provider.name} ${chatCount + 1}`, node }) ? id : null;
+}
+
+/* A design: its chat is an agent chat like any other, working on the folder at `path`, relative to the project folder. */
+export function addDesignView(provider: ProviderInfo, name: string, path: string, session: AgentSession = {}): string | null {
+    const { title: _title, ...node } = agentNodeOptions('chat', provider, session);
+
+    return useDocument.getState().addStandaloneView({ kind: 'design', name, node, path });
 }

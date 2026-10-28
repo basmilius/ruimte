@@ -56,6 +56,8 @@ import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/sta
 import { closeCellsRightOfGuarded, closeOtherCellsGuarded } from '@/state/cell-close';
 import { closeTabGuarded, closeTabsAround, type TabsClosing } from '@/state/tab-close';
 import { currentEndpointId, endpointKey } from '@/state/keys';
+import { shownFolderOf, useProject } from '@/state/project';
+import { designFoldersOnDisk } from '@/design/design-read';
 import { chatClient, chatClientFor, diagramClient, drawingClient, sessionClient, sessionClientFor } from '@/transport/connections';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { canvasActions } from '@/actions/canvas-actions';
@@ -73,6 +75,8 @@ export interface ClientActionMachine {
     providers(): readonly ProviderInfo[];
     /* A drawing or diagram keeps what it holds in a file of its own, which the daemon copies. */
     copyViewContent(kind: 'drawing' | 'diagram', from: string, to: string): void;
+    /* The folders under `designs/` of the project on disk, as stored paths, so a new design takes a folder of its own. */
+    designFolders(): Promise<readonly string[]>;
     viewDeletion: ViewDeletionMachine;
     developer: Partial<DeveloperMachine>;
     sessions: Partial<SessionMachine>;
@@ -93,6 +97,7 @@ const LIVE_MACHINE: ClientActionMachine = {
     clearTerminal: (terminalId) => (sessionClientFor(endpointOfNodeId(terminalId)) ?? sessionClient).clear(terminalId),
     providers: () => providersOf(currentEndpointId()).providers,
     copyViewContent: (kind, from, to) => void (kind === 'drawing' ? drawingClient.copy(from, to) : diagramClient.copy(from, to)),
+    designFolders: () => designFoldersOnDisk(currentEndpointId(), shownFolderOf(useProject.getState().current)),
     viewDeletion: liveViewDeletion,
     developer: {},
     sessions: {},
@@ -114,6 +119,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         clearTerminal,
         providers,
         copyViewContent,
+        designFolders,
         viewDeletion,
         developer,
         sessions,
@@ -143,7 +149,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
         ...machineActions(machineReach),
         ...launchActions(launches),
         ...canvasActions(document, { providers, viewDeletion }),
-        ...viewActions(document, { providers, viewDeletion, copyViewContent }),
+        ...viewActions(document, { providers, viewDeletion, copyViewContent, designFolders }),
         ...layoutActions(document),
         'target.resolve': (input) => ({ output: resolveTarget(document, input) }),
         'terminal.clear': ({ terminalId }, { confirmed }) => {
