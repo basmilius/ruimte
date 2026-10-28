@@ -137,6 +137,8 @@ export interface CanvasState extends CameraSlice {
     resizeNode(id: string, rect: Rect): void;
     setResizing(id: string | null): void;
     setDerivedCard(id: string, card: DerivedFrame | null): void;
+    /* A card that went for good hands the keys on to `next`, another card or a node, or to nothing when that is gone too. */
+    leaveDerivedCard(id: string, next: string): void;
     /* What a press in a card does: its owner's content has the keyboard, and the card is where the keys go on from. */
     focusCard(id: string): void;
     setGesturing(gesturing: boolean): void;

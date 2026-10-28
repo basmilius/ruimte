@@ -58,6 +58,8 @@ import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
+import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
+import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
 import { canvasOfNode, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasNode } from '@/state/canvas';
 import { useViewNodes } from '@/project/view-nodes';
 import { useChatRow, useProviders } from '@adecore/agents-react/state';
@@ -100,6 +102,8 @@ export function NodeMenuPopup(props: NodeMenuProps) {
     );
 }
 
+const NO_WORKFLOWS: readonly WorkflowCandidate[] = [];
+
 function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, finalFocus }: NodeMenuProps & { node: CanvasNode | undefined }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
@@ -129,6 +133,13 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' ? id : null);
     const viewId = targetViewId ?? canvasViewId;
     const runsHidden = useRunsHidden(viewId, id);
+    const workflows = useChatRow(id, (row) => (row === undefined ? NO_WORKFLOWS : workflowCandidates(row)));
+    const workflowSwitch = useWorkflowBesideSwitch(
+        endpointId,
+        viewId,
+        id,
+        workflows.map((workflow) => workflow.id)
+    );
 
     if (!node) {
         return snooze ? <ContextMenu.Popup>{snooze}</ContextMenu.Popup> : null;
@@ -384,6 +395,11 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
             {node.kind === 'routine' && viewId !== null && (
                 <ContextMenu.Item onClick={() => setRunsHidden(viewId, id, !runsHidden)}>
                     <ContextMenu.Check kind="checkbox" checked={!runsHidden} /> {t('menu.showRuns')}
+                </ContextMenu.Item>
+            )}
+            {node.kind === 'chat' && workflowSwitch !== null && (
+                <ContextMenu.Item onClick={workflowSwitch.toggle}>
+                    <ContextMenu.Check kind="checkbox" checked={workflowSwitch.shown} /> {t('menu.showWorkflow')}
                 </ContextMenu.Item>
             )}
             <ContextMenu.Separator />

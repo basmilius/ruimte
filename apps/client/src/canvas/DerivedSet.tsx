@@ -43,6 +43,28 @@ export function DerivedSet({
     const node = useCanvas((s) => s.nodes[owner]);
     const nodes = useCanvas((s) => s.nodes);
     const hidden = useCanvas((s) => s.hidden);
+    const leaveDerivedCard = useCanvas((s) => s.leaveDerivedCard);
+    // By key, not by the cards: a card's own effect also lets go of it on every move or resize, which is not leaving.
+    const keys = cards.map((card) => card.key).join('\n');
+    const shownKeys = useRef<readonly string[]>([]);
+    useEffect(() => {
+        const now = keys === '' ? [] : keys.split('\n');
+        const gone = shownKeys.current.filter((key) => !now.includes(key));
+        shownKeys.current = now;
+        // The keys go on from the first card that stays, or else the node the cards are drawn beside.
+        const next = now[0] === undefined ? owner : derivedCardId(owner, now[0]);
+        for (const key of gone) {
+            leaveDerivedCard(derivedCardId(owner, key), next);
+        }
+    }, [keys, owner, leaveDerivedCard]);
+    useEffect(
+        () => () => {
+            for (const key of shownKeys.current) {
+                leaveDerivedCard(derivedCardId(owner, key), owner);
+            }
+        },
+        [owner, leaveDerivedCard]
+    );
     if (node === undefined) {
         return null;
     }

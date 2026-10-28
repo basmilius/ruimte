@@ -37,6 +37,7 @@ export function createCanvasGestureSlice(
     | 'resizeNode'
     | 'setResizing'
     | 'setDerivedCard'
+    | 'leaveDerivedCard'
     | 'setGesturing'
     | 'setPanning'
     | 'beginGapMove'
@@ -81,6 +82,14 @@ export function createCanvasGestureSlice(
                     next[id] = card;
                 }
                 return { derivedCards: next };
+            });
+        },
+        leaveDerivedCard(id, next) {
+            set((s) => {
+                if (s.navigationId !== id) {
+                    return {};
+                }
+                return { navigationId: s.derivedCards[next] !== undefined || s.nodes[next] !== undefined ? next : null };
             });
         },
         setGesturing(gesturing) {

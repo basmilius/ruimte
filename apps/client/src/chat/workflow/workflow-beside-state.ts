@@ -102,3 +102,19 @@ export function forgetWorkflowBeside(matches: (key: string) => boolean): void {
         return kept.length === Object.keys(s.byKey).length ? s : { byKey: Object.fromEntries(kept) };
     });
 }
+
+/* Whether a chat node shows its workflows beside it, for the node's menu, which puts every one away or brings them back. */
+export function useWorkflowBesideSwitch(
+    endpointId: string,
+    viewId: string | null,
+    nodeId: string,
+    workflowIds: readonly string[]
+): { shown: boolean; toggle(): void } | null {
+    const key = besideKey(endpointId, viewId ?? '', nodeId);
+    const dismissed = useBesideStore((s) => s.byKey[key]?.dismissed ?? EMPTY.dismissed);
+    if (viewId === null || workflowIds.length === 0) {
+        return null;
+    }
+    const shown = workflowIds.some((id) => !dismissed.includes(id));
+    return { shown, toggle: () => (shown ? dismissWorkflows(key, workflowIds) : showWorkflows(key)) };
+}

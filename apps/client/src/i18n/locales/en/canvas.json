@@ -108,7 +108,8 @@
         "worktree": "Worktree",
         "sizeAndPosition": "Size and position",
         "clearAsking": "Clear…",
-        "openIn": "Open in {{app}}"
+        "openIn": "Open in {{app}}",
+        "showWorkflow": "Show workflow beside"
     },
     "kinds": {
         "terminal": "Terminal",
@@ -348,5 +349,34 @@
         "notInstalled": "{{name}} is not installed on this machine.",
         "notOffered": "{{name}} is not available on this machine.",
         "install": "Install"
+    },
+    "workflowBeside": {
+        "summary": "Workflow",
+        "done": "Done · {{time}}",
+        "failed": "Ended · {{time}}",
+        "failedAgents_one": "{{count}} failed",
+        "failedAgents_other": "{{count}} failed",
+        "settled": "{{settled}}/{{total}}",
+        "stop": "Stop workflow",
+        "stopping": "Stopping…",
+        "stopFailed": "The workflow could not be stopped",
+        "dismiss": "Close",
+        "showInChat": "Show in chat",
+        "notInChat": "The chat no longer holds this workflow",
+        "switch": "{{index}} of {{count}}",
+        "previous": "Previous workflow",
+        "next": "Next workflow",
+        "stalled": "No progress for a while",
+        "stale": "Not up to date while the machine is not connected",
+        "unsupported": "This machine cannot show the conversation of an agent",
+        "phase": {
+            "loose": "Agents",
+            "open": "Open {{title}}",
+            "collapse": "Close phase"
+        },
+        "agentCard": {
+            "close": "Close conversation",
+            "back": "Back"
+        }
     }
 }

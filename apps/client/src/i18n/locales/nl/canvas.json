@@ -108,7 +108,8 @@
         "worktree": "Worktree",
         "sizeAndPosition": "Grootte en positie",
         "clearAsking": "Wissen…",
-        "openIn": "Openen in {{app}}"
+        "openIn": "Openen in {{app}}",
+        "showWorkflow": "Workflow ernaast tonen"
     },
     "kinds": {
         "terminal": "Terminal",
@@ -348,5 +349,34 @@
         "notInstalled": "{{name}} is niet geïnstalleerd op deze machine.",
         "notOffered": "{{name}} is niet beschikbaar op deze machine.",
         "install": "Installeren"
+    },
+    "workflowBeside": {
+        "summary": "Workflow",
+        "done": "Klaar · {{time}}",
+        "failed": "Gestopt · {{time}}",
+        "failedAgents_one": "{{count}} mislukt",
+        "failedAgents_other": "{{count}} mislukt",
+        "settled": "{{settled}}/{{total}}",
+        "stop": "Workflow stoppen",
+        "stopping": "Bezig met stoppen…",
+        "stopFailed": "De workflow kon niet worden gestopt",
+        "dismiss": "Sluiten",
+        "showInChat": "In chat tonen",
+        "notInChat": "De chat bevat deze workflow niet meer",
+        "switch": "{{index}} van {{count}}",
+        "previous": "Vorige workflow",
+        "next": "Volgende workflow",
+        "stalled": "Al een tijd geen voortgang",
+        "stale": "Niet actueel zolang de machine niet verbonden is",
+        "unsupported": "Deze machine kan het gesprek van een agent niet tonen",
+        "phase": {
+            "loose": "Agents",
+            "open": "{{title}} openen",
+            "collapse": "Fase sluiten"
+        },
+        "agentCard": {
+            "close": "Gesprek sluiten",
+            "back": "Terug"
+        }
     }
 }
