@@ -79,8 +79,10 @@ import { canSplit, cellAt, cellCount, cellsRightOf, isTabHost, maximizedCell } f
 import type { Shortcut } from '@adecore/ui';
 import { sendFromComposer, stepEffortFromComposer, stepTimelineMessage } from '@adecore/agents-react/chat';
 import { focusedChatId } from '@/chat/focused-chat';
+import { shownChatOfNode } from '@/design/design-chat';
 import { restartChatSession } from '@/chat/restart-session';
 import { COMMANDS, type PaletteCommandId } from '@/shell/command-table';
+import { isNotePreviewLocked, setNotePreviewLocked } from '@/state/note-previews';
 import type { MeasureVariant } from '@/measure/scene';
 
 export interface Command {
@@ -303,6 +305,8 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
     const filling = maximizedCell(layout, maximized) !== null;
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
+    // A design acts as the chat it shows.
+    const selectedChat = selected === undefined ? null : shownChatOfNode(selected);
     const drawing = activeView !== null && isDrawingView(activeView);
     const diagram = activeView !== null && isDiagramView(activeView);
     /* A row that writes into a canvas is offered only while one is on screen. In a chat or a
@@ -348,8 +352,8 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
                   row('chat-move-to-project', () => useUi.getState().setMoveChatDialog({ chatId: leavingChatId, mode: 'pick', projectId: null }))
               ]
             : []),
-        ...(selected?.kind === 'chat' && hasPrWatch(endpointOfNodeId(selected.id), selected.id)
-            ? [row('pr-watch-stop', () => void stopPrWatch(endpointOfNodeId(selected.id), selected.id))]
+        ...(selectedChat !== null && selected !== undefined && hasPrWatch(endpointOfNodeId(selected.id), selectedChat)
+            ? [row('pr-watch-stop', () => void stopPrWatch(endpointOfNodeId(selected.id), selectedChat))]
             : []),
         ...(folder
             ? [
@@ -527,6 +531,15 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
                                 'node-maximize',
                                 () => focusedCanvas().getState().toggleMaximizedNode(maximizeTarget),
                                 maximizedNodeOf(canvas) === null ? {} : { label: i18next.t('canvas:node.restore') }
+                            )
+                        ]
+                      : []),
+                  ...(maximizeTarget !== null && canvas.nodes[maximizeTarget]?.kind === 'note' && (canvas.nodes[maximizeTarget]?.body ?? '').trim() !== ''
+                      ? [
+                            row(
+                                'note-lock-preview',
+                                () => setNotePreviewLocked(maximizeTarget, !isNotePreviewLocked(maximizeTarget)),
+                                isNotePreviewLocked(maximizeTarget) ? { label: i18next.t('canvas:note.unlockPreview') } : {}
                             )
                         ]
                       : []),

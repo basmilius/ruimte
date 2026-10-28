@@ -1,9 +1,24 @@
 import { ActionRefusal, type ActionInput, type ActionOutput } from '@ruimte/actions';
-import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isChatHostView,
+    isChatNode,
+    isDesignView,
+    isOpenableView,
+    isUnknownNode,
+    isUnknownView,
+    nodeChats,
+    viewChats,
+    type ProjectDesignView,
+    type ProjectNode,
+    type ProjectView,
+    type ViewChat
+} from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
 import type { StoreApi } from 'zustand';
 import { projectAgents } from '@/actions/inspection-actions';
 import { listedProjects } from '@/actions/project-actions';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { sightOf, visibleNodes } from '@/state/attention';
 import { nodesOfView } from '@/project/view-nodes';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
@@ -23,6 +38,11 @@ function current(target: Resolved['target'], found: Target[]): Resolved {
 }
 
 const placed = { endpointId: null, machine: null };
+
+/* A chat of a design, which goes by its own name in the design it stands in. */
+function designChatTarget(view: ProjectDesignView, chat: ViewChat): Target {
+    return { ...viewTarget(view), id: chat.id, name: chat.name, kind: 'chat', viewId: view.id, view: view.name };
+}
 
 function viewTarget(view: ProjectView): Target {
     return {
@@ -44,6 +64,12 @@ function nodeTarget(node: ProjectNode, view: ProjectView): Target {
         view: view.name ?? view.id,
         ...placed
     };
+}
+
+/* A chat a node holds as a target: a chat node itself, or one chat of a design node by its own id and name. */
+function nodeChatTarget(node: ProjectNode, chatId: string, view: ProjectView): Target {
+    const chat = nodeChats(node).find((candidate) => candidate.id === chatId);
+    return { ...nodeTarget(node, view), id: chatId, name: chat?.name ?? node.title, kind: 'chat' };
 }
 
 function nodesInScope(canvas: CanvasState, scope: Scope): ProjectNode[] {
@@ -81,22 +107,32 @@ export function resolveTarget(document: StoreApi<DocumentState>, input: ActionIn
     }
     if (target === 'chat') {
         if (names === null) {
-            if (active?.kind === 'chat') {
+            if (active && isDesignView(active)) {
+                const chatId = activeDesignChat(placeOfView(active), useDesignChat.getState().picked);
+                return current(target, [
+                    designChatTarget(
+                        active,
+                        viewChats(active).find((chat) => chat.id === chatId)!
+                    )
+                ]);
+            }
+            if (active && isChatHostView(active)) {
                 return current(target, [viewTarget(active)]);
             }
-            const selected = canvas && active ? nodesInScope(canvas, 'selected').filter((node) => node.kind === 'chat') : [];
-            return current(target, active ? selected.map((node) => nodeTarget(node, active)) : []);
+            const selected = canvas && active ? nodesInScope(canvas, 'selected').filter(isChatNode) : [];
+            return current(target, active ? selected.map((node) => nodeChatTarget(node, shownChatOfNode(node)!, active)) : []);
         }
         const chats = state.views.flatMap((view) => {
-            if (view.kind === 'chat') {
+            if (isDesignView(view)) {
+                return viewChats(view).map((chat) => designChatTarget(view, chat));
+            }
+            if (isChatHostView(view)) {
                 return [{ ...viewTarget(view), viewId: view.id, view: view.name }];
             }
             if (!isCanvasView(view)) {
                 return [];
             }
-            return nodesOfView(view)
-                .filter((node) => node.kind === 'chat')
-                .map((node) => nodeTarget(node, view));
+            return nodesOfView(view).flatMap((node) => nodeChats(node).map((chat) => nodeChatTarget(node, chat.id, view)));
         });
         return byName(target, names, (name) => matchName(name, chats));
     }

@@ -65,7 +65,8 @@ export function createCanvasNodesSlice(
         duplicateNode(id) {
             const source = get().nodes[id];
             // What a newer Ruimte's node holds may be tied to its id (a session, a file), so a copy of it is not this version's to make.
-            if (!source || isUnknownNode(source)) {
+            // A design's later chats and its folder are its own, so a copy would share both.
+            if (!source || isUnknownNode(source) || source.kind === 'design') {
                 return;
             }
             const copyId = nextId(source.kind);

@@ -3,11 +3,11 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 /*
- * Compiles `assets/AppIcon.icon` (Icon Composer) into the two things a macOS 26 bundle wants:
+ * Compiles `assets/AppIcon.icon` (Icon Composer) into what a macOS 26 bundle wants:
  * `Assets.car`, which carries the icon in every appearance the system tints it with, and
- * `AppIcon.icns` for whoever still asks for a file. Both land in `build/icon`, committed, so
- * packaging never needs Xcode: actool only reads `.icon` from Xcode 26 on, and the runner that
- * builds a release may carry an older one.
+ * `AppIcon.icns` for whoever still asks for a file. A PNG of the icns serves the Windows icon.
+ * All three land in `build/icon`, committed, so packaging never needs Xcode: actool only reads
+ * `.icon` from Xcode 26 on, and the runner that builds a release may carry an older one.
  *
  *   bun scripts/icon.ts
  */
@@ -59,6 +59,13 @@ for (const name of ['Assets.car', 'AppIcon.icns']) {
         console.error(`actool wrote no ${name}; is ${source} an Icon Composer document?`);
         process.exit(1);
     }
+}
+
+// Windows builds its .ico from a PNG, and the icns holds the macOS shape at 256 px at most, which
+// is the size an .ico needs.
+const png = spawnSync('sips', ['-s', 'format', 'png', join(out, 'AppIcon.icns'), '--out', join(out, 'AppIcon.png')], { stdio: 'inherit' });
+if (png.status !== 0) {
+    process.exit(png.status ?? 1);
 }
 
 console.log(`Compiled the icon into ${out}`);

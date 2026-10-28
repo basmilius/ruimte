@@ -1,5 +1,15 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { isCanvasView, isHiddenCanvasView, isSessionView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isDesignView,
+    isHiddenCanvasView,
+    isSessionView,
+    nodeChats,
+    sessionKindOfView,
+    viewChats,
+    type ProjectNode,
+    type ProjectView
+} from '@ruimte/contracts';
 import { defaultCanvases, liveCanvas, subscribeCanvases, type CanvasNode } from '@/state/canvas';
 import { shallow } from 'zustand/shallow';
 import { useDocument } from '@/state/document';
@@ -44,7 +54,22 @@ export interface ProjectNodeRef extends StatusOf {
 
 /* What a view holds in the words the status needs: a standalone view is one node under its own id. */
 export function nodeRefsOfView(view: ProjectView): readonly ProjectNodeRef[] {
-    return isSessionView(view) ? [{ id: view.id, kind: view.kind, title: view.name }] : nodesOfView(view);
+    if (isDesignView(view)) {
+        return viewChats(view).map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name }));
+    }
+    if (isSessionView(view)) {
+        return [{ id: view.id, kind: sessionKindOfView(view), title: view.name }];
+    }
+    return nodeRefsOf(nodesOfView(view));
+}
+
+/* Nodes in the words the status needs: a design node counts as each chat it holds, on the machine the node runs on; a list without one stays as it is. */
+export function nodeRefsOf(nodes: readonly ProjectNode[]): readonly ProjectNodeRef[] {
+    return nodes.some((node) => node.kind === 'design')
+        ? nodes.flatMap((node): ProjectNodeRef[] =>
+              node.kind === 'design' ? nodeChats(node).map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name, machine: node.machine })) : [node]
+          )
+        : nodes;
 }
 
 /*

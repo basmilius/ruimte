@@ -275,6 +275,61 @@
     "filesView": {
         "failed": "Deze bestanden konden niet worden getoond"
     },
+    "design": {
+        "pages": "Pagina",
+        "loading": "Het design wordt gelezen…",
+        "empty": "Nog geen pagina's. Vraag de chat om een eerste ontwerp.",
+        "noFolder": "Een design heeft de map van het project op deze machine nodig.",
+        "failed": "Het design kon niet worden getoond.",
+        "failedAction": "Het design kon dat niet doen",
+        "comment": {
+            "placeholder": "Wat moet hier anders?",
+            "cancel": "Annuleren",
+            "queue": "Commentaar toevoegen",
+            "sendAll_one": "{{count}} commentaar versturen",
+            "sendAll_other": "{{count}} commentaren versturen"
+        },
+        "edit": {
+            "hint": "Klik op een element om het op te maken. Dubbelklik op tekst om die te wijzigen.",
+            "save": "Bewaren",
+            "discard": "Weggooien",
+            "bake": "Naar de chat"
+        },
+        "tweaks": {
+            "none": "Deze pagina heeft nog geen tweaks. Vraag de chat erom.",
+            "save": "Waarden bewaren"
+        },
+        "draw": {
+            "placeholder": "Wat betekent de tekening?",
+            "clear": "Wissen",
+            "send": "Versturen"
+        },
+        "chats": {
+            "label": "Chat",
+            "new": "Nieuwe chat"
+        },
+        "node": {
+            "closePage": "Pagina sluiten"
+        },
+        "tools": {
+            "label": "Gereedschap",
+            "view": "Bekijken en gebruiken",
+            "comment": "Commentaar",
+            "edit": "Bewerken",
+            "draw": "Tekenen",
+            "tweaks": "Tweaks"
+        },
+        "actions": {
+            "saveVersion": "Versie bewaren",
+            "saveVersionHint": "Bewaar deze versie in Output",
+            "saved": "Bewaard als versie in Output",
+            "olderMachine": "Werk Ruimte op deze machine bij om versies te bewaren",
+            "export": "Exporteren",
+            "exportHint": "Bewaar deze pagina als één HTML-bestand",
+            "implement": "Implementeren",
+            "implementHint": "Start een chat die deze pagina in het project bouwt"
+        }
+    },
     "viewKinds": {
         "canvas": "Canvas",
         "drawing": "Tekening",
@@ -283,7 +338,8 @@
         "browser": "Browser",
         "file": "Bestand",
         "separator": "Scheiding",
-        "subheader": "Kopje"
+        "subheader": "Kopje",
+        "design": "Design"
     },
     "viewMenu": {
         "filePick": "Bestand…",
@@ -352,6 +408,7 @@
         "drawing": "Tekening",
         "diagram": "Diagram",
         "file": "Bestand",
+        "design": "Design",
         "unknown": "Onbekend"
     },
     "dock": {
@@ -783,6 +840,7 @@
             "nodeDown": "Selecteer node onder",
             "zoomToNode": "Zoom naar node",
             "maximizeNode": "Node maximaliseren",
+            "lockNotePreview": "Notitie vastzetten op preview",
             "usage": "Verbruik",
             "compareModels": "Modellen vergelijken",
             "measureScene": "Meten: scène met 30 nodes bouwen",

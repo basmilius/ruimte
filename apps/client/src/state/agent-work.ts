@@ -38,7 +38,8 @@ export function nodeWork(node: StatusOf, sessions: SessionsByKey, chats: ChatSta
     if (node.kind === 'terminal') {
         return sessionWorking(sessions[endpointKey(machine, node.id)]) ? 'turn' : null;
     }
-    if (node.kind !== 'chat') {
+    // A design node works as the chat under its own id; its later chats count as chats of their own.
+    if (node.kind !== 'chat' && node.kind !== 'design') {
         return null;
     }
     const chat = chats[endpointKey(machine, node.id)];

@@ -1,4 +1,4 @@
-import { isCanvasView, type ProjectContent, type Task } from '@ruimte/contracts';
+import { designNodeChats, isCanvasView, isChatNode, isDesignView, viewChats, type ProjectContent, type Task } from '@ruimte/contracts';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import { VerbRefusal, field } from './verb.ts';
@@ -42,12 +42,16 @@ export function taskFirstPrompt(prompt: string, chat: boolean): FirstPrompt {
 export function callerKind(content: ProjectContent, caller: string): string | null {
     for (const view of content.views) {
         if (view.id === caller) {
-            return view.kind;
+            // The caller in a design is its chat.
+            return isDesignView(view) ? 'chat' : view.kind;
+        }
+        if (isDesignView(view) && viewChats(view).some((chat) => chat.id === caller)) {
+            return 'chat';
         }
         if (isCanvasView(view)) {
-            const node = view.nodes.find((candidate) => candidate.id === caller);
+            const node = view.nodes.find((candidate) => candidate.id === caller || designNodeChats(candidate).some((chat) => chat.id === caller));
             if (node) {
-                return node.kind;
+                return isChatNode(node) ? 'chat' : node.kind;
             }
         }
     }

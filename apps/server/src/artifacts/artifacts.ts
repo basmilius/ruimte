@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { lstat, realpath } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { lstat, readdir, realpath } from 'node:fs/promises';
+import { basename, join, relative, resolve } from 'node:path';
 import {
     ARTIFACT_LIMITS,
     PEER_ARTIFACT_PIECE_BYTES,
@@ -15,6 +15,7 @@ import {
     type ArtifactProvenance,
     type ArtifactRemovePayload,
     type ArtifactRemoveResult,
+    type ArtifactSaveFolderPayload,
     type ArtifactSavePayload,
     type ArtifactSaveResult,
     type ArtifactStorageResult,
@@ -173,6 +174,51 @@ export class Artifacts {
     file(artifactId: string, versionId: string, index: number): { path: string; mime: string; sha256: string } | null {
         const found = this.store.file(artifactId, versionId, index);
         return found ? { path: found.path, mime: found.file.mime, sha256: found.file.sha256 } : null;
+    }
+
+    /*
+     * A person keeps a folder of the project as it stands, such as a design: every regular file under it,
+     * named by its path inside it. A link is never followed, so nothing outside the folder comes along.
+     */
+    async saveFolder(payload: ArtifactSaveFolderPayload): Promise<ArtifactSaveResult> {
+        const project = await this.requireProject(payload.projectId);
+        const earlier = this.store.findRequest(payload.projectId, payload.requestId);
+        if (earlier) {
+            return { artifactId: earlier.artifactId, versionId: earlier.versionId };
+        }
+        const root = resolve(project.folder, payload.path);
+        const real = await realOrNull(root);
+        const realProject = await realOrNull(project.folder);
+        if (real === null || realProject === null || real === realProject || !isInside(realProject, real)) {
+            throw new ArtifactError('outside-project', 'Only a folder inside the project can be kept');
+        }
+        const files = await filesUnder(root, ARTIFACT_LIMITS.filesPerVersion);
+        if (files.length === 0) {
+            throw new ArtifactError('not-found', 'The folder holds no files to keep');
+        }
+        const bytes = files.reduce((sum, file) => sum + file.size, 0);
+        if (bytes > ARTIFACT_LIMITS.versionBytes) {
+            throw versionTooLarge();
+        }
+        const committed = await this.store.saveNew(
+            bytes,
+            async (stagingId) => {
+                for (const [index, file] of files.entries()) {
+                    await this.store.stageCopy(stagingId, index, file.path);
+                }
+            },
+            {
+                projectId: payload.projectId,
+                projectName: project.name,
+                title: payload.title,
+                ...(payload.kind === undefined ? {} : { kind: payload.kind }),
+                ...(payload.key === undefined ? {} : { key: payload.key }),
+                requestId: payload.requestId,
+                provenance: { maker: 'person', machineId: this.deps.machineId },
+                names: files.map((file) => file.name)
+            }
+        );
+        return { artifactId: committed.artifactId, versionId: committed.versionId };
     }
 
     /* A person saves what a chat of the project shows; the same request id lands once. */
@@ -515,4 +561,32 @@ export class Artifacts {
     private changed(event: ArtifactChangedEvent): void {
         this.sinks.emit({ event: 'artifact.changed', payload: event });
     }
+}
+
+/*
+ * The regular files under a folder in name order, each named by its path inside it with `/`. A link and
+ * a dot file are left out; a folder holding more files than a version takes is refused rather than cut short.
+ */
+async function filesUnder(root: string, limit: number): Promise<{ path: string; name: string; size: number }[]> {
+    const found: { path: string; name: string; size: number }[] = [];
+    const walk = async (folder: string): Promise<void> => {
+        const entries = await readdir(folder, { withFileTypes: true });
+        entries.sort((one, other) => one.name.localeCompare(other.name));
+        for (const entry of entries) {
+            if (entry.name.startsWith('.') || entry.isSymbolicLink()) {
+                continue;
+            }
+            const path = join(folder, entry.name);
+            if (entry.isDirectory()) {
+                await walk(path);
+            } else if (entry.isFile()) {
+                if (found.length >= limit) {
+                    throw new ArtifactError('too-large', `A version holds at most ${limit} files`);
+                }
+                found.push({ path, name: relative(root, path).split(/[\\/]/).join('/'), size: (await lstat(path)).size });
+            }
+        }
+    };
+    await walk(root);
+    return found;
 }

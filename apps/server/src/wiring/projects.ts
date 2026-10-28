@@ -1,3 +1,4 @@
+import { chatIsWorking } from '@ruimte/contracts';
 import { StartClaims } from '../actions/start-claims.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
 import { errorText } from '../error-text.ts';
@@ -93,7 +94,12 @@ export async function wireProjects({ home, machineId, stores, agents, computer, 
             machineId,
             started: async (nodeId) => sessions.get(nodeId) !== undefined || stores.lineage.madeBy(nodeId) !== null || (await chats.readChat(nodeId)) !== null
         },
-        viewFiles: () => [drawings, diagrams]
+        viewFiles: () => [drawings, diagrams],
+        chatWorking: (chatId) => {
+            const session = chats.get(chatId);
+
+            return session !== undefined && (session.busy || chatIsWorking(session.info));
+        }
     });
     await store.hiddenAgents.load();
     await store.remote.load();

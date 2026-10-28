@@ -6,8 +6,8 @@ import { PROJECT_VIEW_KINDS } from './project.ts';
 // A separator and a subheader only shape the sidebar; a person never opens one.
 const UNOPENED_VIEW_KINDS = ['separator', 'subheader'];
 
-// Nothing of Output goes into a usage count (`apps/server/src/artifacts/CLAUDE.md`).
-const UNCOUNTED_VIEW_KINDS = ['artifact'];
+// Nothing of Output goes into a usage count (`apps/server/src/artifacts/CLAUDE.md`). A design waits on a counter the address book reads: its batch is frozen and read strictly.
+const UNCOUNTED_VIEW_KINDS = ['artifact', 'design'];
 
 test('every view kind a person opens has a usage counter', () => {
     const opened = PROJECT_VIEW_KINDS.filter((kind) => !UNOPENED_VIEW_KINDS.includes(kind) && !UNCOUNTED_VIEW_KINDS.includes(kind));

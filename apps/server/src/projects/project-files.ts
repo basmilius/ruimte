@@ -10,6 +10,8 @@ import {
     duplicateElementIdIn,
     duplicateIdIn,
     isCanvasView,
+    isChatHostView,
+    isDesignView,
     migrateDiagram,
     migrateDrawing,
     migrateSharedFile,
@@ -23,7 +25,8 @@ import {
     type ProjectSharedFile,
     type ProjectNode,
     type ProjectView,
-    type SharedFileRead
+    type SharedFileRead,
+    mapDesignChats
 } from '@ruimte/contracts';
 import { fileExists, isNotFound, settled, writeAtomic, type DirectoryWatcher, type Serializer, type Settled, type WatchSeams } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
@@ -45,17 +48,23 @@ const DRAWINGS_DIR = 'drawings';
 const DIAGRAMS_DIR = 'diagrams';
 // A person's database consoles, plain `.sql` files under `private`, so git never sees them.
 export const CONSOLES_DIR = 'consoles';
+// A folder per design, under `private` until its view is shared (`designFolderOf`).
+const DESIGNS_DIR = 'designs';
 
 /*
  * Whether a path inside a project folder, as the names below that folder, is Ruimte's own state, which a
  * file request never writes, creates, moves or deletes: the files there change only through their own
- * requests and revs. A person's consoles are the exception, since they are files like any other.
+ * requests and revs. A person's consoles and the folders of designs are the exception, since they are
+ * files like any other: a design's chat and the person's edits write its pages.
  */
 export function isRuimteState(segments: readonly string[]): boolean {
     if (segments[0] !== PROJECT_DIR) {
         return false;
     }
-    return !(segments[1] === PRIVATE_DIR && segments[2] === CONSOLES_DIR && segments.length > 3);
+    if (segments[1] === DESIGNS_DIR && segments.length > 2) {
+        return false;
+    }
+    return !(segments[1] === PRIVATE_DIR && (segments[2] === CONSOLES_DIR || segments[2] === DESIGNS_DIR) && segments.length > 3);
 }
 
 /*
@@ -443,12 +452,23 @@ function mapCwd<T extends { cwd?: string; machine?: string }>(carrier: T, map: (
 }
 
 function mapViews(views: ProjectView[], map: (cwd: string) => string | undefined): ProjectView[] {
+    // A design's later chats carry a folder each; an entry this version cannot read goes as it is.
+    const mapChats = (chats: readonly Record<string, unknown>[]) => mapDesignChats(chats, (chat) => ({ ...chat, node: mapCwd(chat.node, map) }));
     return views.map((view) => {
         if (isCanvasView(view)) {
-            return { ...view, nodes: view.nodes.map((node: ProjectNode) => mapCwd(node, map)) };
+            return {
+                ...view,
+                nodes: view.nodes.map((node: ProjectNode) => {
+                    const mapped = mapCwd(node, map);
+                    return node.kind === 'design' && node.chats !== undefined ? { ...mapped, chats: mapChats(node.chats) } : mapped;
+                })
+            };
         }
-        // Only a chat and a terminal carry a node; every other view has no folder to map.
-        return view.kind === 'chat' || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;
+        if (isDesignView(view) && view.chats !== undefined) {
+            return { ...view, node: mapCwd(view.node, map), chats: mapChats(view.chats) };
+        }
+        // Only a chat, a design and a terminal carry a node; every other view has no folder to map.
+        return isChatHostView(view) || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;
     });
 }
 

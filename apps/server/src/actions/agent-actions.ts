@@ -1,5 +1,15 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { isAgentKind, isCanvasView, type ChatApprovalItem, type ChatQuestionItem, type ProjectContent, type ProjectView } from '@ruimte/contracts';
+import {
+    chatNameOf,
+    isAgentKind,
+    isCanvasView,
+    lineEndOf,
+    nodeChats,
+    type ChatApprovalItem,
+    type ChatQuestionItem,
+    type ProjectContent,
+    type ProjectView
+} from '@ruimte/contracts';
 import { refuseMissingNodes } from '../canvas/own-view.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import { VerbRefusal, canvasFor, field, orNote, type ChatRequestHost } from '../canvas/verb.ts';
@@ -12,8 +22,12 @@ function requestLine(nodeId: string, item: ChatQuestionItem | ChatApprovalItem):
         : `approval\t${nodeId}\t${item.requestId}\t${field(item.toolName)}\ta person's alone`;
 }
 
-/* The caller's name as a message signs it: its node on a canvas, or the view it is. */
+/* The caller's name as a message signs it: any chat by its own name, a later one of a design too, else its node on a canvas or the view it is. */
 function callerTitle(views: readonly ProjectView[], caller: string): string {
+    const chatName = chatNameOf(views, caller);
+    if (chatName !== null) {
+        return chatName;
+    }
     for (const view of views) {
         if (view.id === caller) {
             return view.name ?? '';
@@ -137,9 +151,11 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
         const content = await host.projects.read(place.projectId);
         const canvas = canvasFor(content, place, undefined);
         /* A message travels where `deriveContextSources` already lets a read go: along a line from the
-           caller into an agent node, which the person who drew it can see. */
-        const reachable = canvas.nodes.filter((node) => isAgentKind(node.kind) && canvas.edges.some((edge) => edge.from === caller && edge.to === node.id));
-        const target = canvas.nodes.find((node) => node.id === nodeId);
+           caller into an agent node, which the person who drew it can see. A later chat of a design
+           node sends and takes along the lines of that node. */
+        const callerEnd = lineEndOf(canvas.nodes, caller);
+        const reachable = canvas.nodes.filter((node) => isAgentKind(node.kind) && canvas.edges.some((edge) => edge.from === callerEnd && edge.to === node.id));
+        const target = canvas.nodes.find((node) => node.id === nodeId || nodeChats(node).some((chat) => chat.id === nodeId));
         /* Only the nodes this same call would accept, and where there are none, what to do about
            the node that was asked for rather than a sentence about the canvas in general. */
         const lines = (): string[] =>
@@ -158,11 +174,11 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
                 lines()
             );
         }
-        if (!reachable.some((node) => node.id === nodeId)) {
+        if (!reachable.some((node) => node.id === target.id)) {
             throw new VerbRefusal(
                 'not-linked',
                 `${nodeId} is a ${target.kind} node on ${canvas.id}, but no line runs from you into it: draw that line and it can be notified`,
-                [...lines(), `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`]
+                [...lines(), `see\truimte-context link new --to ${target.id}\tdraws the line this needs`]
             );
         }
 

@@ -121,10 +121,12 @@
     },
     "canvasMenu": {
         "addHere": "Hier toevoegen",
+        "newNode": "Nieuwe node",
         "file": "Bestand…",
         "routine": "Routine…",
         "routines": "Routine",
         "newRoutine": "Nieuwe routine…",
+        "design": "Design",
         "groupSelection": "Selectie groeperen",
         "zoomToFit": "Passend zoomen"
     },
@@ -153,6 +155,7 @@
             "note": "Markdown",
             "group": "Kader om nodes"
         },
+        "design": "Pagina's die een agent ontwerpt",
         "file": "Uit de projectmap",
         "text": "Of dubbelklik",
         "layout": "Indeling toepassen",
@@ -219,7 +222,9 @@
     },
     "note": {
         "placeholder": "Schrijf een notitie. Markdown werkt.",
-        "empty": "Klik om te schrijven"
+        "empty": "Klik om te schrijven",
+        "lockPreview": "Vastzetten op preview",
+        "unlockPreview": "Losmaken om te bewerken"
     },
     "drawing": {
         "gone": "Deze tekening is verwijderd.",

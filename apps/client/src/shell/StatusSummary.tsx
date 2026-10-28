@@ -4,7 +4,8 @@ import { CircleCheck } from 'lucide-react';
 import { useProjectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
-import { useCanvas } from '@/state/canvas';
+import { shownChatOfNode } from '@/design/design-chat';
+import { useCanvasStore } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
@@ -14,10 +15,13 @@ import { Button, Icon, Separator, Tooltip } from '@adecore/ui';
 
 /* A count that walks through the nodes behind it, across views, one per click. */
 function Walker({ label, count, ids, children }: { label: string; count: number; ids: string[]; children: ReactNode }) {
-    const selection = useCanvas((s) => s.selection);
+    const canvasStore = useCanvasStore();
     const next = (): void => {
-        // Starts after the selected node, so repeated clicks visit every node in the list.
-        const at = ids.findIndex((id) => selection.includes(id));
+        // Starts after the selected node, so repeated clicks visit every node in the list. A design is
+        // selected as its node and counted as the chat it shows.
+        const { selection, nodes } = canvasStore.getState();
+        const selected = selection.map((id) => (nodes[id] === undefined ? id : (shownChatOfNode(nodes[id]) ?? id)));
+        const at = ids.findIndex((id) => selected.includes(id));
         const target = ids[(at + 1) % ids.length];
         if (target) {
             revealNode(target);

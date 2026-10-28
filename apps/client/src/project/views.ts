@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { isCanvasView, isOpenableView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
+import { designOfChat, isCanvasView, isOpenableView, sessionNodesOfView, type AgentKind, type ProjectView } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
 import {
     createNodeAction,
@@ -17,12 +17,13 @@ import {
 import { offerDraft } from '@adecore/agents-react/chat';
 import { GRID, type Point } from '@/canvas/math';
 import { databaseTargetOf, databaseViewName } from '@/database/view-name';
+import { useDesignChat } from '@/design/design-chat';
 import { filesOfView } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
 import { leaveRoutines } from '@/routines/stage';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { focusedCanvas, liveCanvas } from '@/state/canvas';
+import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
 import { defaultNodeSize } from '@/state/node-size';
 import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
@@ -61,9 +62,23 @@ export function showViewWhenItLands(id: string): void {
     });
 }
 
+/*
+ * The node or view that draws an id. A chat of a design has neither of its own (a later one) or shares
+ * the design's, so the design is put on that chat and its id comes back; any other id draws itself.
+ */
+export function designChatInFront(id: string): string {
+    const found = designOfChat(useDocument.getState().views, id);
+    if (found === null) {
+        return id;
+    }
+    useDesignChat.getState().pick(found.design.id, id);
+    return found.design.id;
+}
+
 /* A node that lives on another canvas is reached by switching there first. */
-export function revealNode(nodeId: string): void {
+export function revealNode(id: string): void {
     leaveRoutines();
+    const nodeId = designChatInFront(id);
     const { views, activeViewId } = useDocument.getState();
     const view = viewOfNode(views, nodesOfView, nodeId);
     if (view && view.id !== activeViewId) {
@@ -73,6 +88,36 @@ export function revealNode(nodeId: string): void {
     if (viewId !== null) {
         focusNodeAction(viewId, nodeId);
     }
+}
+
+/*
+ * Reveals a fork the machine writes once it is in the document: a node on its canvas (see
+ * `revealWhenItLands`), or a later chat of a design, which never lands as a node, so whichever comes
+ * first ends the wait for the other.
+ */
+export function revealForkWhenItLands(viewId: string, chatId: string): void {
+    const isLaterChat = (views: readonly ProjectView[]): boolean => {
+        const found = designOfChat(views, chatId);
+        return found !== null && found.design.id !== chatId;
+    };
+
+    if (isLaterChat(useDocument.getState().views)) {
+        revealNode(chatId);
+        return;
+    }
+    let offCanvas = (): void => {};
+    const offDocument = useDocument.subscribe((state) => {
+        if (isLaterChat(state.views)) {
+            // Before the reveal, which is a change this listener would otherwise hear again.
+            offDocument();
+            offCanvas();
+            revealNode(chatId);
+        } else if (viewOfNode(state.views, nodesOfView, chatId) !== null) {
+            // A node: its canvas reveals it, when it is on screen.
+            offDocument();
+        }
+    });
+    offCanvas = revealWhenItLands(viewId, chatId, offDocument);
 }
 
 /* A heading over the rows under it. It lands with a name it can be read by, and the sidebar puts the
@@ -252,7 +297,7 @@ export function stepView(delta: -1 | 1): void {
 
 /* Which nodes can leave a canvas for a view of their own: the ones that are a session, not a frame, and an artifact. */
 export function canOpenAsView(kind: string): boolean {
-    return kind === 'chat' || kind === 'terminal' || kind === 'browser' || kind === 'device' || kind === 'artifact';
+    return kind === 'chat' || kind === 'terminal' || kind === 'browser' || kind === 'device' || kind === 'artifact' || kind === 'design';
 }
 
 /*

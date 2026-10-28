@@ -646,6 +646,11 @@ const TABLE = {
             showsShortcut: (context) => context.nodeMaximizable
         }
     },
+    'note-lock-preview': {
+        key: 'lockNotePreview',
+        icon: Lock,
+        palette: true
+    },
     fit: {
         key: 'zoomToFit',
         icon: Maximize2,

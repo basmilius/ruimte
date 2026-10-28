@@ -3,7 +3,16 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NODE_SIZE, type ChatInfo, type ChatItem, type ChatTurnItem, type ChatVisual, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import {
+    NODE_SIZE,
+    designNodeChats,
+    type ChatInfo,
+    type ChatItem,
+    type ChatTurnItem,
+    type ChatVisual,
+    type ProjectCanvasView,
+    type ProjectContent
+} from '@ruimte/contracts';
 import { AgentLineageStore } from '@adecore/agents/coordination';
 import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -476,6 +485,93 @@ describe('forkChat', () => {
         );
         expect(onCanvas).toMatchObject({ viewId: 'main', edgeId: null });
         expect((canvas.document.views[0] as ProjectCanvasView).nodes.map((node) => node.id)).toContain(onCanvas.nodeId);
+    });
+
+    describe('a chat of a design', () => {
+        const inWorktree: Partial<ChatForkDeps> = {
+            branchesOf: async () => ['main'],
+            addWorktree: async ({ want }) => {
+                const branch = 'branch' in want ? want.branch : want.fresh;
+                return { worktree: { path: `/worktrees/${branch}`, branch }, cwd: `/worktrees/${branch}`, undo: async () => undefined };
+            }
+        };
+
+        test('of a design view forks into a later chat of that view, working in its worktree', async () => {
+            const { deps } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
+            const canvas = inMemoryCanvas({
+                ...leadProject(),
+                views: [
+                    ...leadProject().views,
+                    {
+                        kind: 'design',
+                        id: 'site',
+                        name: 'Site',
+                        path: 'site',
+                        node: { provider: 'claude' },
+                        chats: [{ id: 'chat-header', name: 'Header', node: {} }]
+                    }
+                ]
+            });
+            const fork = await forkChat(
+                { ...deps, ...inWorktree, read: canvas.read, mutate: canvas.mutate, locate: () => ({ projectId: 'p1', folder: '/work', canvasId: null }) },
+                { chatId: 'chat-header', turnId: 'turn-1', worktree: {} }
+            );
+            expect(fork).toMatchObject({ viewId: 'site', edgeId: null });
+            const design = canvas.document.views.find((view) => view.id === 'site');
+            expect(designNodeChats(design as { chats?: Record<string, unknown>[] }).map((chat) => [chat.id, chat.node.cwd])).toEqual([
+                ['chat-header', undefined],
+                [fork.nodeId, fork.worktree?.path]
+            ]);
+            // No view of its own and no node: the fork stands only in the design.
+            expect(canvas.document.views.map((view) => view.id)).toEqual(['main', 'site']);
+        });
+
+        test('of a design node forks into a later chat of that node, working in its worktree, unless it asks for a view', async () => {
+            const { deps } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
+            const lead = leadProject();
+            const main = lead.views[0] as ProjectCanvasView;
+            const canvas = inMemoryCanvas({
+                ...lead,
+                views: [
+                    {
+                        ...main,
+                        nodes: [
+                            ...main.nodes,
+                            {
+                                id: 'board',
+                                kind: 'design',
+                                title: 'Board',
+                                path: 'board',
+                                x: 0,
+                                y: 700,
+                                w: 480,
+                                h: 640,
+                                provider: 'claude',
+                                chats: [{ id: 'chat-nav', name: 'Nav', node: {} }]
+                            }
+                        ]
+                    }
+                ]
+            });
+            const onDocument: ChatForkDeps = { ...deps, ...inWorktree, read: canvas.read, mutate: canvas.mutate };
+            const fork = await forkChat(onDocument, { chatId: 'chat-nav', turnId: 'turn-1', worktree: {} });
+            expect(fork).toMatchObject({ viewId: 'main', edgeId: null });
+            const nodesOf = () => (canvas.document.views[0] as ProjectCanvasView).nodes;
+            const board = nodesOf().find((node) => node.id === 'board')!;
+            expect(designNodeChats(board).map((chat) => [chat.id, chat.node.cwd])).toEqual([
+                ['chat-nav', undefined],
+                [fork.nodeId, fork.worktree?.path]
+            ]);
+            expect(nodesOf().map((node) => node.id)).toEqual(['chat-lead', 'board']);
+
+            // Asked as a view, the fork of the node's own chat is a chat view after the canvas.
+            const asView = await forkChat(onDocument, { chatId: 'board', turnId: 'turn-1', asView: true });
+            expect(canvas.document.views.map((view) => [view.id, view.kind])).toEqual([
+                ['main', 'canvas'],
+                [asView.nodeId, 'chat']
+            ]);
+            expect(designNodeChats(nodesOf().find((node) => node.id === 'board')!)).toHaveLength(2);
+        });
     });
 
     test('a record that cannot be written takes back the worktree and the transcript copy made for the fork', async () => {

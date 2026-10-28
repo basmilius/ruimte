@@ -121,10 +121,12 @@
     },
     "canvasMenu": {
         "addHere": "Add here",
+        "newNode": "New node",
         "file": "File…",
         "routine": "Routine…",
         "routines": "Routine",
         "newRoutine": "New routine…",
+        "design": "Design",
         "groupSelection": "Group selection",
         "zoomToFit": "Zoom to fit"
     },
@@ -153,6 +155,7 @@
             "note": "Markdown",
             "group": "Frame around nodes"
         },
+        "design": "Pages an agent designs",
         "file": "From the project folder",
         "text": "Or double-click",
         "layout": "Apply layout",
@@ -219,7 +222,9 @@
     },
     "note": {
         "placeholder": "Write a note. Markdown works.",
-        "empty": "Click to write"
+        "empty": "Click to write",
+        "lockPreview": "Lock to preview",
+        "unlockPreview": "Unlock to edit"
     },
     "drawing": {
         "gone": "This drawing was removed.",

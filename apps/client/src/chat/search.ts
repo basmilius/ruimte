@@ -58,7 +58,7 @@ function contextCallLine(item: Extract<ChatItem, { kind: 'tool' }>, nameOf: Call
 }
 
 /* What a reader can find in an item, part by part, in the order its row draws them. */
-function findableFields(item: ChatItem, nameOf?: CallNames): { field: ChatFindField; text: string }[] {
+function findableFields(item: ChatItem, nameOf?: CallNames, hideTools = false): { field: ChatFindField; text: string }[] {
     if (isChild(item)) {
         return [];
     }
@@ -71,6 +71,10 @@ function findableFields(item: ChatItem, nameOf?: CallNames): { field: ChatFindFi
             const report = handbackReportOf(item);
             if (report !== null) {
                 return [{ field: 'text', text: report }];
+            }
+            // A thread that hides its tool lines draws none of this, so a hit here would lead nowhere.
+            if (hideTools) {
+                return [];
             }
             return [
                 { field: 'summary', text: contextCallLine(item, nameOf) ?? toolSummary(item.name, item.input) },
@@ -97,7 +101,7 @@ function findableFields(item: ChatItem, nameOf?: CallNames): { field: ChatFindFi
     }
 }
 
-export function searchChat(items: readonly ChatItem[], query: FindQuery, nameOf?: CallNames): ChatSearch {
+export function searchChat(items: readonly ChatItem[], query: FindQuery, nameOf?: CallNames, hideTools = false): ChatSearch {
     const compiled = compileFind(query);
     if (compiled.kind === 'empty') {
         return NOTHING;
@@ -107,7 +111,7 @@ export function searchChat(items: readonly ChatItem[], query: FindQuery, nameOf?
     }
     const hits: ChatHit[] = [];
     for (const item of items) {
-        for (const { field, text } of findableFields(item, nameOf)) {
+        for (const { field, text } of findableFields(item, nameOf, hideTools)) {
             if (text === '') {
                 continue;
             }

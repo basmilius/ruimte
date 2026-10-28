@@ -61,11 +61,20 @@ mac:
   # Set to true by the release workflow once Apple credentials are in the secrets.
   notarize: false
 dmg:
+  title: Ruimte
+  # The galaxy of the onboarding at 5 seconds. electron-builder merges the `@2x` file beside it into a
+  # HiDPI TIFF with `tiffutil`. The icons sit on the two label pills drawn in the image, so moving one
+  # means drawing the image again.
+  background: build/dmg-background.png
+  window:
+    width: 660
+    height: 420
+  iconSize: 112
   contents:
-    - x: 140
-      y: 200
-    - x: 420
-      y: 200
+    - x: 170
+      y: 190
+    - x: 490
+      y: 190
       type: link
       path: /Applications
 linux:
@@ -98,8 +107,8 @@ rpm:
 win:
   # There is no background service on Windows: the shell runs the daemon as its child (`serviceSupport`).
   target: [nsis, zip]
-  # electron-builder turns the 1024 px PNG into the .ico Windows asks for.
-  icon: build/icon.png
+  # electron-builder turns the 256 px PNG `scripts/icon.ts` writes next to the icns into the .ico Windows asks for.
+  icon: build/icon/AppIcon.png
   artifactName: ${productName}-${version}-${arch}.${ext}
   executableName: Ruimte
 nsis:

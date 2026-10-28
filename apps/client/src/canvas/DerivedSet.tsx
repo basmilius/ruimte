@@ -18,6 +18,8 @@ export interface DerivedCard {
     lineDown?: number;
     /* Offered to the canvas's resize handles; a card without one keeps the size its layout gives it. */
     resize?: CardResize;
+    /* Holds a page that lives in the frame, which stays drawn far from sight as a browser node's does. */
+    live?: boolean;
 }
 
 /*
@@ -87,7 +89,7 @@ export function DerivedSet({
     );
 }
 
-/* A card further than a viewport past every edge is left out, the way the canvas leaves out a far node (`farNodeKey`). */
+/* A card further than a viewport past every edge is left out, the way the canvas leaves out a far node (`farNodeKey`), unless it is `live`. */
 function nearView(s: CanvasState, rect: Rect): boolean {
     return !isMeasured(s.viewport) || intersects(rect, visibleRect(s.camera, s.viewport, Math.max(s.viewport.w, s.viewport.h)));
 }
@@ -115,7 +117,7 @@ function Card({ owner, z, card }: { owner: string; z: number; card: DerivedCard 
             section.focus({ preventScroll: true });
         }
     }, [holds]);
-    if (!near) {
+    if (!near && card.live !== true) {
         return null;
     }
     return (

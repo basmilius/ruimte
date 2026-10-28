@@ -643,6 +643,21 @@ describe('a maximized node', () => {
     });
 });
 
+describe('fitting everything', () => {
+    test('takes in the cards beside a node, such as the open page of a design', () => {
+        const store = createCanvasStore();
+        store.getState().setViewport({ w: 1200, h: 800 });
+        store.getState().loadView({ kind: 'canvas', id: 'fit-view', name: 'Canvas', nodes: [node('a', 0, 0)], texts: [], edges: [], layouts: [] }, null);
+        store.getState().setDerivedCard('a:page', { owner: 'a', rect: { x: 300, y: 0, w: 720, h: 560 }, resize: null });
+
+        store.getState().fitAll();
+
+        const { camera } = store.getState();
+        expect(toWorld(camera, { x: 1200, y: 800 }).x).toBeGreaterThanOrEqual(1020);
+        expect(toWorld(camera, { x: 1200, y: 800 }).y).toBeGreaterThanOrEqual(560);
+    });
+});
+
 describe('the camera history of a view', () => {
     let clock = 0;
     const open = (...nodes: CanvasNode[]) => {

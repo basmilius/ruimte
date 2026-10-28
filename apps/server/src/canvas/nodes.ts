@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { isAgentKind, isCanvasView, type ProjectCanvasView, type ProjectContent, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { idsInViews, isAgentKind, type ProjectCanvasView, type ProjectContent, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { refuseMissingNodes } from './own-view.ts';
 import { VerbRefusal, field, orNote } from './verb.ts';
 
@@ -65,24 +65,11 @@ export function nodesNamed(
     return ids.map((id) => canvas.nodes.find((node) => node.id === id)!);
 }
 
-/* Every id the project already uses, since a node id is also a session id and a view id is too. */
-function idsIn(content: ProjectContent): Set<string> {
-    const ids = new Set<string>();
-    for (const view of content.views) {
-        ids.add(view.id);
-        if (isCanvasView(view)) {
-            for (const item of [...view.nodes, ...view.texts, ...view.edges]) {
-                ids.add(item.id);
-            }
-        }
-    }
-    return ids;
-}
-
 /* A fresh id in the shape the client's `nextId` gives: a prefix, a dash, eight base-36 characters.
-   `also` is what the same mutation already handed out and has not written down yet. */
+   `also` is what the same mutation already handed out and has not written down yet. Every id the
+   project uses is taken, a later chat of a design too, since a node id is also a session id. */
 export function newId(prefix: string, content: ProjectContent, also: readonly string[] = []): string {
-    const taken = idsIn(content);
+    const taken = idsInViews(content.views);
     for (const id of also) {
         taken.add(id);
     }

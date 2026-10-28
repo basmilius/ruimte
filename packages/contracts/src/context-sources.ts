@@ -1,7 +1,9 @@
 import type { ContextSource } from './context.ts';
 import { groupMemberIds } from './node-defaults.ts';
 import {
+    designNodeChats,
     isCanvasView,
+    nodeChats,
     type CanvasNodeKind,
     type ProjectCanvasView,
     type ProjectEdge,
@@ -13,7 +15,7 @@ import { resolveStoredPath } from './stored-path.ts';
 
 /* The kinds an agent lives in; a line that touches one of these is readable context for it. */
 export function isAgentKind(kind: CanvasNodeKind): boolean {
-    return kind === 'terminal' || kind === 'chat';
+    return kind === 'terminal' || kind === 'chat' || kind === 'design';
 }
 
 // A text's first line is its name in the list an agent sees.
@@ -21,15 +23,22 @@ function titleOf(text: string): string {
     return text.split('\n')[0]?.trim().slice(0, 60) || 'Text';
 }
 
-/* The thing at one end of a line, or null when it is a node with nothing to read in it. */
-function sourceOf(
+/* The things at one end of a line: one for most, every chat of a design node, none for a node with nothing to read in it. */
+function sourcesOf(
     nodes: Readonly<Record<string, ProjectNode>>,
     texts: Readonly<Record<string, ProjectText>>,
     sourceId: string,
     folder: string | null
-): ContextSource | null {
+): ContextSource[] {
     const node = nodes[sourceId];
-    const text = texts[sourceId];
+    if (node?.kind === 'design') {
+        return nodeChats(node).map((chat) => ({ id: chat.id, kind: 'chat', title: chat.name }));
+    }
+    const source = sourceOf(node, texts[sourceId], folder);
+    return source ? [source] : [];
+}
+
+function sourceOf(node: ProjectNode | undefined, text: ProjectText | undefined, folder: string | null): ContextSource | null {
     if (text) {
         return { id: text.id, kind: 'text', title: titleOf(text.text), text: text.text };
     }
@@ -90,8 +99,7 @@ function sourcesFrom(
         // The agent standing in the frame is not context for itself.
         return members.filter((memberId) => memberId !== targetId).flatMap((memberId) => sourcesFrom(nodes, texts, memberId, targetId, folder, framed));
     }
-    const source = sourceOf(nodes, texts, sourceId, folder);
-    return source ? [source] : [];
+    return sourcesOf(nodes, texts, sourceId, folder);
 }
 
 /*
@@ -154,7 +162,7 @@ function byId<T extends { id: string }>(items: readonly T[]): Record<string, T> 
 export function canvasContextSources(view: ProjectCanvasView, folder: string | null = null): ContextSource[] {
     const nodes = byId(view.nodes);
     const texts = byId(view.texts);
-    return [...view.nodes, ...view.texts].flatMap((item) => sourceOf(nodes, texts, item.id, folder) ?? []);
+    return [...view.nodes, ...view.texts].flatMap((item) => sourcesOf(nodes, texts, item.id, folder));
 }
 
 // A node id never repeats across a project's views (the daemon refuses such a file), so the canvases merge safely.
@@ -166,6 +174,16 @@ export function deriveProjectContextSources(views: readonly ProjectView[], folde
         }
         for (const [targetId, sources] of deriveContextSources(byId(view.nodes), byId(view.texts), view.edges, folder)) {
             merged.set(targetId, sources);
+        }
+        // A design node's later chats work on the same design, so they read what a line brings the node.
+        for (const node of view.nodes) {
+            const sources = merged.get(node.id);
+            if (sources === undefined) {
+                continue;
+            }
+            for (const chat of designNodeChats(node)) {
+                merged.set(chat.id, sources);
+            }
         }
     }
     return merged;

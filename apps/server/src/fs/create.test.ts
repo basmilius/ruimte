@@ -104,6 +104,15 @@ describe('fs.create', () => {
         expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'project.json'), kind: 'file' }, boundary()))).toBe('ruimte-state');
         expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'sub', 'x'), kind: 'directory' }, boundary()))).toBe('ruimte-state');
         expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'private', 'consoles'), kind: 'directory' }, boundary()))).toBe('ruimte-state');
+        expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'designs'), kind: 'directory' }, boundary()))).toBe('ruimte-state');
+        expect(await codeOf(createEntry({ path: join(project, '.ruimte', 'private', 'designs'), kind: 'directory' }, boundary()))).toBe('ruimte-state');
+    });
+
+    test('creates the pages of a design in its folder, private or shared', async () => {
+        for (const folder of [join(project, '.ruimte', 'private', 'designs', 'onboarding'), join(project, '.ruimte', 'designs', 'pricing')]) {
+            await createEntry({ path: join(folder, 'assets', 'logo.svg'), kind: 'file', text: '<svg/>' }, boundary());
+            expect(await stat(join(folder, 'assets', 'logo.svg')).then((entry) => entry.isFile())).toBe(true);
+        }
     });
 
     test('creates a console in the private state, with the folders it needs', async () => {

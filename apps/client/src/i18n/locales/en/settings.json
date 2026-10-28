@@ -1060,6 +1060,10 @@
             "steerByDefault": {
                 "label": "Steer running agents by default",
                 "description": "A message you send while Codex or Claude works reaches it at its next step. Off, it waits until the agent is done. Hold Option or Alt while sending to do the opposite."
+            },
+            "hideToolCalls": {
+                "label": "Hide tool calls",
+                "description": "Show only the agent's messages, not the files it read or the commands it ran. Design chats always hide them."
             }
         },
         "integrations": {

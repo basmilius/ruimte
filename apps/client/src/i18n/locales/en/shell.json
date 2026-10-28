@@ -275,6 +275,61 @@
     "filesView": {
         "failed": "These files could not be shown"
     },
+    "design": {
+        "pages": "Page",
+        "loading": "Reading the design…",
+        "empty": "No pages yet. Ask the chat for a first design.",
+        "noFolder": "A design needs the project's folder on this machine.",
+        "failed": "The design could not be shown.",
+        "failedAction": "The design could not do that",
+        "comment": {
+            "placeholder": "What should change here?",
+            "cancel": "Cancel",
+            "queue": "Add comment",
+            "sendAll_one": "Send {{count}} comment",
+            "sendAll_other": "Send {{count}} comments"
+        },
+        "edit": {
+            "hint": "Click an element to style it. Double-click text to change it.",
+            "save": "Save",
+            "discard": "Discard",
+            "bake": "Send to chat"
+        },
+        "tweaks": {
+            "none": "This page has no tweaks yet. Ask the chat for some.",
+            "save": "Save values"
+        },
+        "draw": {
+            "placeholder": "What does the drawing mean?",
+            "clear": "Clear",
+            "send": "Send"
+        },
+        "chats": {
+            "label": "Chat",
+            "new": "New chat"
+        },
+        "node": {
+            "closePage": "Close page"
+        },
+        "tools": {
+            "label": "Tool",
+            "view": "View and interact",
+            "comment": "Comment",
+            "edit": "Edit",
+            "draw": "Draw",
+            "tweaks": "Tweaks"
+        },
+        "actions": {
+            "saveVersion": "Save version",
+            "saveVersionHint": "Keep this version in Output",
+            "saved": "Saved as a version in Output",
+            "olderMachine": "Update Ruimte on this machine to save versions",
+            "export": "Export",
+            "exportHint": "Save this page as one HTML file",
+            "implement": "Implement",
+            "implementHint": "Start a chat that builds this page into the project"
+        }
+    },
     "viewKinds": {
         "canvas": "Canvas",
         "drawing": "Drawing",
@@ -283,7 +338,8 @@
         "browser": "Browser",
         "file": "File",
         "separator": "Separator",
-        "subheader": "Subheader"
+        "subheader": "Subheader",
+        "design": "Design"
     },
     "viewMenu": {
         "filePick": "File…",
@@ -352,6 +408,7 @@
         "drawing": "Drawing",
         "diagram": "Diagram",
         "file": "File",
+        "design": "Design",
         "unknown": "Unknown"
     },
     "dock": {
@@ -783,6 +840,7 @@
             "nodeDown": "Select node below",
             "zoomToNode": "Zoom to node",
             "maximizeNode": "Maximize node",
+            "lockNotePreview": "Lock note to preview",
             "usage": "Usage",
             "compareModels": "Compare models",
             "measureScene": "Measure: build the 30-node scene",

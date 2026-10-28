@@ -1,5 +1,5 @@
 import { worktreeDiffOutput, type ActionHandlers } from '@ruimte/actions';
-import { isCanvasView, type ProjectContent, type Worktree } from '@ruimte/contracts';
+import { designNodeChats, isCanvasView, isChatNode, type ProjectContent, type Worktree } from '@ruimte/contracts';
 import { isInside } from '../canvas/project-paths.ts';
 import { VerbRefusal, field, orNote, type CanvasHost, type WorktreeHost } from '../canvas/verb.ts';
 import { GitError } from '../git/run.ts';
@@ -29,15 +29,25 @@ async function worktreesOf(context: ServerActionContext): Promise<{ content: Pro
     return { content, worktrees };
 }
 
-/* The nodes of the project working in a worktree: the one it was made for, and every terminal or chat whose folder is inside it. */
+/*
+ * The nodes of the project working in a worktree: the one it was made for, and every terminal or chat
+ * whose folder is inside it. A design node counts when any of its chats works there, a later one too.
+ */
 function nodesIn(content: ProjectContent, worktree: Worktree): string[] {
     const ids = new Set<string>(worktree.nodeId === undefined ? [] : [worktree.nodeId]);
+    if (worktree.missing) {
+        return [...ids];
+    }
     for (const view of content.views) {
         if (!isCanvasView(view)) {
             continue;
         }
         for (const node of view.nodes) {
-            if ((node.kind === 'terminal' || node.kind === 'chat') && node.cwd !== undefined && !worktree.missing && isInside(worktree.path, node.cwd)) {
+            if (node.kind !== 'terminal' && !isChatNode(node)) {
+                continue;
+            }
+            const folders = [node.cwd, ...designNodeChats(node).map((chat) => chat.node.cwd)];
+            if (folders.some((cwd) => cwd !== undefined && isInside(worktree.path, cwd))) {
                 ids.add(node.id);
             }
         }

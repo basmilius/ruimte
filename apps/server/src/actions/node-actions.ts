@@ -9,9 +9,12 @@ import {
     nodeColorOf,
     nodeColorPatch,
     isCanvasView,
+    isChatNode,
     isDiagramView,
     isDrawingView,
     isUnknownNode,
+    lineEndOf,
+    nodeChats,
     storedPathOf,
     type ProjectCanvasView,
     type ProjectContent,
@@ -57,7 +60,7 @@ function deletableLines(content: ProjectContent, place: IndexedPlace, call: Verb
         return ['detail\truimte-context node list --view <id>\tthe nodes of a canvas, which is where an id comes from'];
     }
     return nodeLines(canvas, {
-        takes: (node) => node.id !== call.caller && (anyNode || call.host.lineage.madeBy(node.id) === call.caller),
+        takes: (node) => node.id !== lineEndOf(canvas.nodes, call.caller) && (anyNode || call.host.lineage.madeBy(node.id) === call.caller),
         empty: `You have no node on ${canvas.id} to remove; node delete takes a node you made yourself`
     });
 }
@@ -66,13 +69,15 @@ function deletableLines(content: ProjectContent, place: IndexedPlace, call: Verb
  * Who may write in a note or color a node: not the maker alone, so two agents can keep one between
  * them. A line a person drew grants it, in either direction, since a note holds no agent and a color
  * is no way into what a session runs. A chat view has no lines and touches any node of the canvas
- * it names, as a person arranging that canvas would.
+ * it names, as a person arranging that canvas would. A later chat of a design node goes by the node's lines.
  */
 function mayTouch(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
+    const end = lineEndOf(canvas.nodes, call.caller);
+
     return (
         chatView ||
         call.host.lineage.madeBy(node.id) === call.caller ||
-        canvas.edges.some((edge) => (edge.from === call.caller && edge.to === node.id) || (edge.to === call.caller && edge.from === node.id))
+        canvas.edges.some((edge) => (edge.from === end && edge.to === node.id) || (edge.to === end && edge.from === node.id))
     );
 }
 
@@ -83,7 +88,7 @@ function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, 
 
 /* Its own node too: how a session's node looks is that session's to say. A node pointed at with `#` counts as along a line. */
 function mayColor(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, chatView: boolean): boolean {
-    return node.id === call.caller || mayWrite(canvas, node, call, chatView);
+    return node.id === lineEndOf(canvas.nodes, call.caller) || mayWrite(canvas, node, call, chatView);
 }
 
 /* What a refusal may offer instead: only the nodes this same call would really color. */
@@ -319,7 +324,8 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
         if (canvas.nodes.length + specs.length > MAX_CANVAS_NODES) {
             throw canvasFull(canvas, specs.length);
         }
-        const caller = canvas.nodes.find((node) => node.id === actor.id) ?? null;
+        const callerEnd = lineEndOf(canvas.nodes, actor.id);
+        const caller = canvas.nodes.find((node) => node.id === callerEnd) ?? null;
         let current = content;
         const made: Made[] = [];
         const owned: string[] = [];
@@ -484,18 +490,22 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                     const lines = deletableLines(content, place, caller, anyNode);
                     const own = ownViewOf(content, id);
                     if (own) {
-                        throw refuseOwnView(own, 'there is no node to remove', [
-                            ...lines,
-                            `see\truimte-context view delete ${id}\tremoves a view you made, with the session it holds`
-                        ]);
+                        throw refuseOwnView(
+                            own,
+                            'there is no node to remove',
+                            [...lines, `see\truimte-context view delete ${own.id}\tremoves a view you made, with the session it holds`],
+                            id
+                        );
                     }
                     throw new VerbRefusal('unknown-node', `${id} is not a node on any canvas of this project`, lines);
                 }
             }
             const canvas = canvasNamed(content, viewId);
             const going = nodesNamed(content, canvas, ids, { cannot: 'there is no node to remove' });
+            // A later chat of a design node lives in that node, so removing it would end the asker as well.
+            const callerEnd = lineEndOf(canvas.nodes, caller.caller);
             for (const node of going) {
-                if (node.id === caller.caller) {
+                if (node.id === callerEnd) {
                     throw new VerbRefusal('deletes-caller', `You are ${node.id}, so removing it would end the session asking`);
                 }
                 const madeBy = host.lineage.madeBy(node.id);
@@ -528,14 +538,18 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                 nodeId: node.id,
                 kind: node.kind,
                 title: node.title,
-                ended: node.kind === 'terminal' || node.kind === 'chat',
+                ended: node.kind === 'terminal' || isChatNode(node),
                 edges: canvas.edges.filter((edge) => edge.from === node.id || edge.to === node.id).length,
                 members: node.kind === 'group' ? groupMembers(node, canvas.nodes).length : null
             }));
             for (const node of going) {
-                if (node.kind === 'terminal' || node.kind === 'chat') {
-                    // Before the write, the rule view delete follows: a shell that outlived its node would answer to nothing.
-                    await host.endSession(node.kind, node.id);
+                // Before the write, the rule view delete follows: a shell that outlived its node would answer to nothing.
+                if (node.kind === 'terminal') {
+                    await host.endSession('terminal', node.id);
+                }
+                // A design node takes every chat it holds along.
+                for (const chat of nodeChats(node)) {
+                    await host.endSession('chat', chat.id);
                 }
             }
             return {

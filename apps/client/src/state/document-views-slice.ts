@@ -1,5 +1,6 @@
 import {
     emptyCanvasView,
+    isDesignView,
     isOpenableView,
     withDuplicatedView,
     withMovedView,
@@ -31,6 +32,7 @@ export function createDocumentViewsSlice({
     | 'addDatabaseView'
     | 'addStandaloneView'
     | 'addArtifactView'
+    | 'addDesignChat'
     | 'renameView'
     | 'setViewIcon'
     | 'deleteView'
@@ -124,9 +126,21 @@ export function createDocumentViewsSlice({
                               ...(request.browserOwner ? { browserOwner: request.browserOwner } : {})
                           }
                         : { kind: 'device', id, name: request.name, device: request.device }
-                    : { kind: request.kind, id, name: request.name, node: request.node },
+                    : request.kind === 'design'
+                      ? { kind: 'design', id, name: request.name, node: request.node, path: request.path }
+                      : { kind: request.kind, id, name: request.name, node: request.node },
                 true
             );
+        },
+
+        addDesignChat(viewId, chat) {
+            const views = get().views;
+            const design = views.find((view) => view.id === viewId);
+            if (design === undefined || !isDesignView(design)) {
+                return false;
+            }
+            write(views.map((view) => (view === design ? { ...design, chats: [...(design.chats ?? []), chat] } : view)));
+            return true;
         },
 
         addArtifactView(name, artifact, opens = true) {

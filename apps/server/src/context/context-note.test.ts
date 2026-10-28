@@ -135,6 +135,39 @@ describe('verbsNote', () => {
         expect(chatPrompt({ sources: [], depth: 0, computer: true })).toContain('`ruimte-context computer`');
     });
 
+    test('tells a chat that works on a design where its files go, and every other chat nothing about designs', () => {
+        const prompt = chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true, design: { folder: '/repo/designs/onboarding', onCanvas: false } });
+        expect(prompt).toContain('in the folder `/repo/designs/onboarding`, also when you run in another checkout');
+        // Every convention a tool of the view reads, by the exact name it reads.
+        expect(prompt).toContain('`<meta name="ruimte-design" content="canvas">`');
+        expect(prompt).toContain('`<section id="t2">`');
+        expect(prompt).toContain('(`id="2a"`)');
+        expect(prompt).toContain('`<script type="application/json" id="ruimte-tweaks">`');
+        expect(prompt).toContain('`<style id="ruimte-edits">`');
+        expect(prompt).toContain('`var(--tweak-accent)`');
+        // How a design is made, and what the page never does.
+        expect(prompt).toContain("put every question you need into one call of your CLI's own question tool");
+        expect(prompt).toContain('Start a new page with a short note of your assumptions');
+        expect(prompt).toContain('Give three or more options');
+        expect(prompt).toContain('is drawn with the theme variables the page receives');
+        expect(prompt).toContain('when the person asks for a light or a dark board, give it that instead');
+        expect(prompt).toContain('never those theme variables');
+        expect(prompt).toContain('Use text the person gives you word for word');
+        expect(prompt).toContain('Never show a design with `visual show`');
+        expect(prompt).toContain('`ruimte-context visual preview --width <width> < <file>`');
+        expect(chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true })).not.toContain('design');
+    });
+
+    test('tells a chat of a design on a canvas to make every option a page of its own, and never a board', () => {
+        const prompt = chatPrompt({ sources: [], depth: 0, visuals: true, design: { folder: '/repo/.ruimte/designs/onboarding', onCanvas: true } });
+        expect(prompt).toContain('`/repo/.ruimte/designs/onboarding`');
+        expect(prompt).toContain('never use the `ruimte-design` canvas meta');
+        expect(prompt).toContain('(`2a Onboarding.html`)');
+        expect(prompt).not.toContain('`<meta name="ruimte-design" content="canvas">`');
+        expect(prompt).not.toContain('`<section id="t2">`');
+        expect(prompt).toContain('`<script type="application/json" id="ruimte-tweaks">`');
+    });
+
     test('tells an AI chat about visuals only while they are on, on a canvas and in a view alike, and never a terminal', () => {
         for (const standalone of [false, true]) {
             expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain('`ruimte-context visual show --title T < page.html`');

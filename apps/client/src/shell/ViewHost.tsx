@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isArtifactView, isCanvasView, isDatabaseView, isFileView, type ProjectView } from '@ruimte/contracts';
+import { isArtifactView, isCanvasView, isDatabaseView, isDesignView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { isLooseView, type CellView } from '@/shell/cell-view';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
@@ -24,6 +24,7 @@ const DrawingView = lazyNamed(() => import('@/drawing/DrawingView'), 'DrawingVie
 const DiagramView = lazyNamed(() => import('@/diagram/DiagramView'), 'DiagramView');
 const DatabaseViewBody = lazyNamed(() => import('@/database/DatabaseViewBody'), 'DatabaseViewBody');
 const ArtifactViewBody = lazyNamed(() => import('@/output/ArtifactViewBody'), 'ArtifactViewBody');
+const DesignView = lazyNamed(() => import('@/design/DesignView'), 'DesignView');
 
 function StandaloneView({ view }: { view: ProjectView }) {
     // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
@@ -63,6 +64,11 @@ function StandaloneView({ view }: { view: ProjectView }) {
             {isArtifactView(view) && (
                 <LazyBoundary>
                     <ArtifactViewBody view={view} />
+                </LazyBoundary>
+            )}
+            {isDesignView(view) && (
+                <LazyBoundary>
+                    <DesignView view={view} focused={focused} />
                 </LazyBoundary>
             )}
         </div>

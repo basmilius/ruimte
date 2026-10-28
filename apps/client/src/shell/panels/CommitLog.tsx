@@ -9,7 +9,7 @@ import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
 import { Button, copyText, Icon, ListRow, Menu, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu, useNow } from '@adecore/ui';
-import { formatAge, formatClock, isSameDay } from '@adecore/ui/format';
+import { formatClock, formatElapsedShort, isSameDay } from '@adecore/ui/format';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
@@ -241,12 +241,12 @@ const CommitRow = memo(function CommitRow({ commit, picture, selected, now, onOp
                 <AuthorAvatar name={commit.author} email={commit.authorEmail} picture={picture} />
                 {/* One width for every repository, so the subjects start in one column. */}
                 {commit.repo !== '' && <span className="w-16 shrink-0 truncate text-text-faint">{commit.repo}</span>}
-                <span className="truncate text-text">{commit.subject}</span>
+                <span className="min-w-0 flex-1 truncate text-text">{commit.subject}</span>
                 {refs.slice(0, REFS_SHOWN).map((ref) => (
                     <Tooltip key={ref.name} label={ref.tracked === null ? ref.name : t('git.log.tracked', { name: ref.name, remote: ref.tracked })}>
                         {/* A Pill takes the tooltip's click handler and turns into a button, which a row that is a button cannot hold. */}
-                        <span className="flex max-w-32 min-w-0 shrink">
-                            <Pill mono size="sm" className="min-w-0 py-0">
+                        <span className="flex max-w-32 min-w-0 shrink-0">
+                            <Pill mono size="sm" className="max-w-full min-w-0 py-0">
                                 <span className="min-w-0 truncate">{ref.name}</span>
                                 {ref.tracked !== null && <Icon icon={Cloud} size={12} className="shrink-0 text-text-faint" />}
                             </Pill>
@@ -269,7 +269,7 @@ const CommitRow = memo(function CommitRow({ commit, picture, selected, now, onOp
                 )}
                 {/* Under a date the age says that date again; the time of day says what it does not. */}
                 <span className="ml-auto shrink-0 text-text-faint tabular-nums">
-                    {isSameDay(commit.at * 1000, now * 1000) ? formatAge(commit.at * 1000, now * 1000) : formatClock(commit.at * 1000)}
+                    {isSameDay(commit.at * 1000, now * 1000) ? formatElapsedShort((now - commit.at) * 1000) : formatClock(commit.at * 1000)}
                 </span>
             </ContextMenu.Trigger>
             <ContextMenu.Popup>

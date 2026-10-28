@@ -883,6 +883,14 @@
     margin-bottom: round(0.5em, 1px);
 }
 
+/* A note is its color all over, and the theme's border is a gray for a plain surface; its lines are a shade of the text instead, like the note's header divider. */
+.note-markdown .prose.chat-markdown {
+    --tw-prose-hr: color-mix(in srgb, var(--text) 16%, transparent);
+    --tw-prose-quote-borders: color-mix(in srgb, var(--text) 16%, transparent);
+    --tw-prose-th-borders: color-mix(in srgb, var(--text) 16%, transparent);
+    --tw-prose-td-borders: color-mix(in srgb, var(--text) 16%, transparent);
+}
+
 .file-markdown .chat-markdown img {
     display: inline-block;
     max-width: 100%;

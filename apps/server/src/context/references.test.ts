@@ -5,7 +5,7 @@ import { runContext } from '../cli/context.ts';
 import { CONTEXT_ENV, routeContextCli } from '../cli/context-test-helpers.ts';
 import { ProjectIndex } from '../projects/project-index.ts';
 import fixture from '../../../ios/Tests/Fixtures/view-references.json';
-import { attachedReferences, referenceNote, referenced, referencedIds, resolveReferences } from './references.ts';
+import { attachedReferences, referenceNote, referenced, referencedIds, resolveReference, resolveReferences } from './references.ts';
 import { handleContextRequest } from './context-route.ts';
 import { ContextStore } from './context-store.ts';
 
@@ -69,6 +69,41 @@ describe('resolving references', () => {
         expect(resolveReferences(['asker', 'elsewhere', 'inline', 'line', 'frame', 'gone'], lookupFor('asker'))).toEqual([]);
         expect(resolveReferences(undefined, lookupFor('asker'))).toEqual([]);
         expect(index.referenceBeside('nobody', 'sketch')).toBeNull();
+    });
+
+    test('a design view, and a later chat of a design view or of a design node, resolve as chats', () => {
+        const designs = [
+            {
+                id: 'board',
+                kind: 'canvas',
+                name: 'Board',
+                texts: [],
+                edges: [],
+                layouts: [],
+                nodes: [
+                    { id: 'site', kind: 'design', title: 'Site', path: 'site', x: 0, y: 0, w: 400, h: 300, chats: [{ id: 'header', name: 'Header', node: {} }] }
+                ]
+            },
+            { id: 'shop', kind: 'design', name: 'Shop', path: 'shop', node: {}, chats: [{ id: 'cart', name: 'Cart', node: {} }] }
+        ] as ProjectView[];
+        const resolved = ['shop', 'cart', 'site', 'header'].map((id) => resolveReference(designs, id, '/work'));
+        expect(
+            resolved.map((reference) => reference && { id: reference.id, kind: reference.kind, name: reference.name, on: reference.canvas?.id ?? null })
+        ).toEqual([
+            { id: 'shop', kind: 'chat', name: 'Shop', on: null },
+            { id: 'cart', kind: 'chat', name: 'Cart', on: null },
+            { id: 'site', kind: 'chat', name: 'Site', on: 'board' },
+            { id: 'header', kind: 'chat', name: 'Header', on: 'board' }
+        ]);
+        expect(resolved[3]?.sources).toEqual([{ id: 'header', kind: 'chat', title: 'Header' }]);
+        expect(resolved[0]?.sources).toEqual([
+            { id: 'shop', kind: 'chat', title: 'Shop' },
+            { id: 'cart', kind: 'chat', title: 'Cart' }
+        ]);
+        expect(resolved[2]?.sources).toEqual([
+            { id: 'site', kind: 'chat', title: 'Site' },
+            { id: 'header', kind: 'chat', title: 'Header' }
+        ]);
     });
 
     test('a canvas hands over every node and text on it, and a file its path on this machine', () => {

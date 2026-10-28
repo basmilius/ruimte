@@ -214,7 +214,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
                 forkedFrom: (id) => lineage.forkedFrom(id),
                 forksOf: (id) => lineage.forksOf(id),
                 locate: (id) => index().locate(id),
-                titleFor: (id) => index().titleFor(id)
+                titleFor: (id) => index().titleFor(id),
+                viewsOf: (projectId) => index().viewsOf(projectId)
             }),
         referenced: (targetId) => referenced(chats.get(targetId)?.thread.list() ?? [], (id) => index().referenceBeside(targetId, id)),
         opened: (targetId, sourceId) =>
@@ -293,6 +294,12 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         reference: (chatId, id) => index().referenceBeside(chatId, id),
         standalone: (chatId) => index().locate(chatId)?.canvasId === null,
         inlineChat: (chatId) => index().isHiddenChat(chatId),
+        design: (chatId) => index().designOf(chatId),
+        turnEnded: (chatId) => {
+            if (index().designOf(chatId) !== null) {
+                void later.projects().store.settleDesignsAfterTurn(chatId);
+            }
+        },
         openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
         messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
         // The other reader: what a chat has to show a person in its thread, which is never taken from the model.

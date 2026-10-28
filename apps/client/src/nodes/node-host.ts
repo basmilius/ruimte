@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import {
+    chatHostOf,
+    designNodeChats,
     isSessionView,
+    mapDesignChats,
+    sessionKindOfView,
     type AgentKind,
     type CanvasNodeKind,
     type DeviceReference,
@@ -11,7 +15,7 @@ import {
 } from '@ruimte/contracts';
 import { deleteNodesAction, deleteViewAction } from '@/actions/client-actions';
 import { suggestedTitleFor } from '@/chat/title';
-import { nodesOfView } from '@/project/view-nodes';
+import { nodesOfView, useViewNodes } from '@/project/view-nodes';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
@@ -45,7 +49,8 @@ export interface NodeHost {
 function hostOfNode(node: ProjectNode): NodeHost {
     return {
         id: node.id,
-        kind: node.kind,
+        // A design node runs the chat under its own id like any chat node.
+        kind: node.kind === 'design' ? 'chat' : node.kind,
         title: node.title,
         titleSource: node.titleSource,
         cwd: node.cwd,
@@ -80,7 +85,27 @@ function hostOfView(view: ProjectView): NodeHost | null {
     if (view.kind === 'device') {
         return { id: view.id, kind: 'device', title: view.name, titleSource: view.titleSource, device: view.device, onCanvas: false };
     }
-    return { id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, ...view.node, onCanvas: false };
+    return { id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, ...view.node, onCanvas: false };
+}
+
+/* A view of its own by its id, or a later chat of a design by its id. */
+function hostOfViewId(views: readonly ProjectView[], id: string): NodeHost | null {
+    const view = views.find((each) => each.id === id);
+    if (view) {
+        return hostOfView(view);
+    }
+    const host = chatHostOf(views, id);
+    return host === null ? null : { id, kind: 'chat', title: host.chat.name, ...host.chat.node, onCanvas: false };
+}
+
+/* A later chat of a design node: no node of its own, but its node's canvas and frame. */
+function hostOfDesignChat(owner: ProjectNode, id: string): NodeHost | null {
+    const chat = designNodeChats(owner).find((candidate) => candidate.id === id);
+    return chat === undefined ? null : { id, kind: 'chat', title: chat.name, ...chat.node, onCanvas: true };
+}
+
+function ownsChat(node: ProjectNode, id: string): boolean {
+    return designNodeChats(node).some((chat) => chat.id === id);
 }
 
 export function readNodeHost(id: string): NodeHost | null {
@@ -88,14 +113,34 @@ export function readNodeHost(id: string): NodeHost | null {
     if (node) {
         return hostOfNode(node);
     }
-    const view = useDocument.getState().views.find((each) => each.id === id);
-    return view ? hostOfView(view) : null;
+    const views = useDocument.getState().views;
+    const owner = views.flatMap((view) => nodesOfView(view)).find((candidate) => ownsChat(candidate, id));
+    return owner === undefined ? hostOfViewId(views, id) : hostOfDesignChat(owner, id);
+}
+
+/* Whether a view stands for this id: itself, or a design view holding it as a later chat. Reads the raw list, since every change of the document asks again. */
+function viewHolds(view: ProjectView, id: string): boolean {
+    return view.id === id || (view.kind === 'design' && (view.chats ?? []).some((chat) => chat.id === id));
 }
 
 export function useNodeHost(id: string): NodeHost | null {
     const node = useCanvas((s) => s.nodes[id]);
-    const view = useDocument((s) => s.views.find((each) => each.id === id) ?? null);
-    return node ? hostOfNode(node) : view ? hostOfView(view) : null;
+    // The design node on this canvas a later chat belongs to; the node itself is a stable object of the store.
+    const localOwner = useCanvas((s) => (s.nodes[id] ? undefined : Object.values(s.nodes).find((candidate) => ownsChat(candidate, id))));
+    // A body drawn outside its design's canvas (a chat opened from the sidebar, a panel) finds the node on any canvas.
+    const owner = useViewNodes((views, nodesOf) =>
+        node !== undefined || localOwner !== undefined ? localOwner : views.flatMap(nodesOf).find((candidate) => ownsChat(candidate, id))
+    );
+    // Only the view this id stands for, so a change elsewhere in the document draws nothing again.
+    const view = useDocument((s) => (node !== undefined || owner !== undefined ? undefined : s.views.find((candidate) => viewHolds(candidate, id))));
+    if (node) {
+        return hostOfNode(node);
+    }
+    if (owner !== undefined) {
+        return hostOfDesignChat(owner, id);
+    }
+
+    return view === undefined ? null : hostOfViewId([view], id);
 }
 
 /* The title of a node is the name of its view when it has no frame to carry one. */
@@ -133,6 +178,19 @@ export function updateHost(id: string, patch: Partial<Pick<NodeHost, 'url' | 'cw
         canvas.getState().updateNode(id, patch);
         return;
     }
+    // A later chat of a design node keeps what it carries in its node's list of chats.
+    const owner = useDocument
+        .getState()
+        .views.flatMap((view) => nodesOfView(view))
+        .find((candidate) => ownsChat(candidate, id));
+    const ownerCanvas = owner === undefined ? null : canvasOfNode(owner.id);
+    if (owner !== undefined && ownerCanvas !== null) {
+        const { url: _url, ...chatPatch } = patch;
+        ownerCanvas.getState().updateNode(owner.id, {
+            chats: mapDesignChats(owner.chats ?? [], (chat) => (chat.id === id ? { ...chat, node: { ...chat.node, ...chatPatch } } : chat))
+        });
+        return;
+    }
     useDocument.getState().updateStandalone(id, patch);
 }
 
@@ -149,6 +207,13 @@ function automaticTitleOf(host: NodeHost): string {
  * again: the page's title for a browser, the next prompt for a chat.
  */
 export function resetTitle(id: string, viewId?: string): void {
+    // A design runs its chat under its own id, and a prompt to that chat must not name the design after itself.
+    const design =
+        canvasOfNode(id)?.getState().nodes[id]?.kind === 'design' || useDocument.getState().views.some((each) => each.id === id && each.kind === 'design');
+    if (design) {
+        renameHost(id, DEFAULT_TITLES.design, 'user');
+        return;
+    }
     const host = readNodeHost(id);
     if (host) {
         renameHost(id, automaticTitleOf(host), null);
@@ -158,6 +223,10 @@ export function resetTitle(id: string, viewId?: string): void {
     const view = viewId === undefined ? undefined : useDocument.getState().views.find((each) => each.id === viewId);
     const stored = view ? nodesOfView(view).find((node) => node.id === id) : undefined;
     if (view && stored) {
+        if (stored.kind === 'design') {
+            useDocument.getState().renameNodeOnView(view.id, id, DEFAULT_TITLES.design, 'user');
+            return;
+        }
         useDocument.getState().renameNodeOnView(view.id, id, automaticTitleOf(hostOfNode(stored)), null);
     }
 }

@@ -34,9 +34,9 @@ binary, the icons and the `.desktop` file. `desktopName` with `syncDesktopName` 
 Electron's app id, so a desktop environment can match the running window to the icon it launched.
 AppImage uses `${productName}` and was never affected.
 
-Do not set `linux.icon`. Left alone, electron-builder generates the whole set from
-`build/icon.png` and installs 16 through 512 in `hicolor`. Pointed at that same file it installs
-one 1024x1024 icon and nothing else.
+Do not set `linux.icon`. Left alone, electron-builder generates the whole set from `mac.icon`
+(`build/icon/AppIcon.icns`) and installs its sizes in `hicolor`. Pointed at a single PNG it installs
+that one icon and nothing else.
 
 ## The release workflow
 

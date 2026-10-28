@@ -1,6 +1,6 @@
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { notePaperOf, type CanvasNodeKind } from '@ruimte/contracts';
-import { memo, useState, type CSSProperties, type ReactNode } from 'react';
+import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, Eye, GitBranch, Hand, Link2, Shrink, X, type LucideIcon } from 'lucide-react';
@@ -66,12 +66,14 @@ import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { SessionPorts } from '@/terminal/SessionPorts';
 import { ChatBody } from '@/nodes/ChatBody';
 import { ForkPill } from '@/chat/ForkPill';
+import { useShownChatOfNode } from '@/chat/focused-chat';
 import { AccountPill, GoalPill, LimitPill, SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
 import { PlanPill } from '@/plan/PlanPill';
 import { useChatPrWatch } from '@/state/pr-watches';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
-import { NoteNode } from '@/canvas/nodes/NoteNode';
+import { NoteNode, NotePreviewLock } from '@/canvas/nodes/NoteNode';
+import type { Point } from '@/canvas/math';
 import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
@@ -80,12 +82,14 @@ import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { useUnsavedStoredPath } from '@/shell/panels/use-unsaved';
+import { workFolderOf } from '@/shell/panels/worktree-rows';
 import { resetTitle } from '@/nodes/node-host';
 import { AgentIcon } from '@adecore/agents-react/providers';
 
 // Draws what the artifact view draws, which a canvas without one never loads.
 const ArtifactNodeBody = lazyNamed(() => import('@/output/ArtifactNode'), 'ArtifactNodeBody');
 const RoutineNodeBody = lazyNamed(() => import('@/routines/RoutineNode'), 'RoutineNodeBody');
+const DesignNodeBody = lazyNamed(() => import('@/design/DesignNode'), 'DesignNodeBody');
 
 const STATUS_CLASS: Record<AgentStatus, string> = {
     running: 'bg-status-running',
@@ -356,7 +360,11 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const live = useHeldWhileVisible(inViewport || maximized);
     const renderBody = useRenderZoom() || maximized;
     const [renaming, setRenaming] = useState(false);
-    const subagentTrail = useSubagentTrail(id).trail;
+    // Where a right-click landed on a group, in the canvas's own coordinates, for what its menu adds there.
+    const menuPoint = useRef<Point>({ x: 0, y: 0 });
+    // A design wears the pills of the chat it shows, which is a chat of its own once a person picks a later one.
+    const chatId = useShownChatOfNode(node) ?? id;
+    const subagentTrail = useSubagentTrail(chatId).trail;
     /* Where a file node's controls go: its own header, so the body draws no second bar under it.
        Every other node hands its body an empty slot, which keeps the canvas out of the window's. */
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
@@ -374,7 +382,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const waitingFor = useWaitingMachines(id);
     const unstarted = useUntakenTask(id, node?.machine);
     const hasContext = useHasContextLinks(id);
-    const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
+    const nodeWorktree = useWorktreeOf(node === undefined ? undefined : workFolderOf(node, chatId));
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const hiddenNeedsYou = useHiddenNeedsYou(node?.kind === 'group' && node.collapsed === true ? id : null);
@@ -386,7 +394,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     }
 
     const accent = accentColor(node.accent);
-    const inSubagents = node.kind === 'chat' && subagentTrail.length > 0;
+    const isChat = node.kind === 'chat' || node.kind === 'design';
+    const inSubagents = isChat && subagentTrail.length > 0;
     const isGroup = node.kind === 'group';
     const isNote = node.kind === 'note';
     const frameAccent = !isGroup && !isNote ? accent : undefined;
@@ -436,7 +445,15 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                 }}
                 tabIndex={0}
                 // The node's own menu answers the right-click; the canvas must not open its menu as well.
-                onContextMenu={(e) => e.stopPropagation()}
+                onContextMenu={(e) => {
+                    e.stopPropagation();
+
+                    if (isGroup) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const zoom = canvasStore.getState().camera.zoom;
+                        menuPoint.current = { x: node.x + (e.clientX - rect.left) / zoom, y: node.y + (e.clientY - rect.top) / zoom };
+                    }
+                }}
                 onKeyDown={(e) => {
                     // Tab reaches the frame; Enter makes it the selection, so a node is usable without a pointer.
                     if (e.key === 'Enter' && e.target === e.currentTarget && !isGroup) {
@@ -496,8 +513,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         )}
                     </KindIcon>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(!isUnknown)}>
-                        {node.kind === 'chat' && !renaming ? (
-                            <SubagentTitleCrumb chatId={id}>
+                        {isChat && !renaming ? (
+                            <SubagentTitleCrumb chatId={chatId}>
                                 <Title id={id} title={visibleTitle} editing={false} muted={inSubagents} onDone={() => setRenaming(false)} />
                             </SubagentTitleCrumb>
                         ) : (
@@ -507,18 +524,18 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
                     {hiddenNeedsYou && <StatusDot status="needs-you" />}
-                    {node.kind === 'chat' && !renaming && (
+                    {isChat && !renaming && (
                         <>
-                            <AccountPill chatId={id} />
-                            <ForkPill chatId={id} />
-                            <PlanPill chatId={id} />
-                            <LimitPill chatId={id} />
-                            <GoalPill chatId={id} />
-                            <PrWatchPill chatId={id} />
+                            <AccountPill chatId={chatId} />
+                            <ForkPill chatId={chatId} />
+                            <PlanPill chatId={chatId} />
+                            <LimitPill chatId={chatId} />
+                            <GoalPill chatId={chatId} />
+                            <PrWatchPill chatId={chatId} />
                         </>
                     )}
                     {node.kind === 'terminal' && !renaming && <SessionPorts id={id} />}
-                    {(node.kind === 'chat' || node.kind === 'terminal') && !renaming && <ComputerIndicator nodeId={id} />}
+                    {(node.kind === 'chat' || node.kind === 'terminal' || node.kind === 'design') && !renaming && <ComputerIndicator nodeId={id} />}
                     {node.machine !== undefined && nodeEndpointId !== workspaceId && !renaming && (
                         <MachinePill machineId={node.machine} endpointId={nodeEndpointId} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />
                     )}
@@ -549,9 +566,10 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         </Tooltip>
                     )}
                     {(node.kind === 'file' || node.kind === 'artifact') && <ButtonGroup ref={setFileControls} render={<span />} className="shrink-0" />}
-                    {node.kind === 'routine' && <span ref={setFileControls} className="flex shrink-0 items-center gap-1.5" />}
+                    {(node.kind === 'routine' || node.kind === 'design') && <span ref={setFileControls} className="flex shrink-0 items-center gap-1.5" />}
                     {node.kind === 'device' && <DeviceToolbar id={id} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />}
                     <ButtonGroup className="shrink-0">
+                        {isNote && <NotePreviewLock id={id} />}
                         {maximized ? (
                             <IconButton icon={Shrink} size="sm" label={t('node.restore')} onClick={() => canvasStore.getState().toggleMaximizedNode(id)} />
                         ) : (
@@ -576,7 +594,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             'relative min-h-0',
                             folded ? 'shrink-0' : 'grow',
                             // A thread reads at the node's own 14px, over the 22px a chat gives its prose.
-                            node.kind === 'chat' && '[--text-sm--line-height:22px]'
+                            (node.kind === 'chat' || node.kind === 'design') && '[--text-sm--line-height:22px]'
                         )}
                         /* Folded, the body keeps the height it had under the header, where the frame cuts it off:
                            a terminal keeps its rows and its session, a chat its thread and its place in it. */
@@ -624,6 +642,13 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                             </LazyBoundary>
                                         </FileToolbarSlotProvider>
                                     )}
+                                    {node.kind === 'design' && (
+                                        <FileToolbarSlotProvider value={toolbarSlot}>
+                                            <LazyBoundary>
+                                                <DesignNodeBody id={id} focused={takesKeyboard} />
+                                            </LazyBoundary>
+                                        </FileToolbarSlotProvider>
+                                    )}
                                     {node.kind === 'file' &&
                                         (live && renderBody ? (
                                             <FileToolbarSlotProvider value={toolbarSlot}>
@@ -648,6 +673,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                 id={id}
                 onRename={() => setRenaming(true)}
                 snooze={<SnoozeMenuItems endpointId={endpointId} nodeId={id} needsYou={status === 'needs-you'} />}
+                {...(isGroup ? { createAt: () => menuPoint.current } : {})}
             />
         </ContextMenu.Root>
     );

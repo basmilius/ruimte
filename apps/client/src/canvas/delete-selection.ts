@@ -1,10 +1,10 @@
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { resolveStoredPath } from '@ruimte/contracts';
+import { nodeChats, resolveStoredPath } from '@ruimte/contracts';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
-import { worktreesLeftBy } from '@/shell/panels/worktree-rows';
+import { worktreeSessionsOf, worktreesLeftBy } from '@/shell/panels/worktree-rows';
 import { nodesOfView } from '@/project/view-nodes';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
@@ -31,13 +31,24 @@ export function deleteSelectionAsking(
         // A collapsed group takes what it hid along, which `deleteSelected` does as well.
         return node?.kind === 'group' && node.collapsed ? [id, ...(node.memberIds ?? [])] : [id];
     });
-    const sessions = going.filter((id) => nodes[id]?.kind === 'chat' || nodes[id]?.kind === 'terminal');
+    // A design node ends every chat it holds, each of them asked about under its own id.
+    const holderOf = new Map(
+        going.flatMap((id): [string, string][] => {
+            const node = nodes[id];
+            if (node === undefined) {
+                return [];
+            }
+
+            return node.kind === 'terminal' ? [[id, id]] : nodeChats(node).map((chat) => [chat.id, id]);
+        })
+    );
+    const sessions = [...holderOf.keys()];
     const named = picked.filter((id) => nodes[id] !== undefined);
     const what = named.length === 1 ? nodes[named[0]!]!.title : i18next.t('canvas:delete.nodes', { count: named.length });
     const goingIds = new Set(going);
     // A node that runs on another machine asks that machine which agents it opened.
     const askerOf = (id: string): Pick<Transport, 'request'> | null => {
-        const node = nodes[id];
+        const node = nodes[holderOf.get(id) ?? id];
         return node?.machine === undefined ? transport : transportFor(endpointOfNode(node, ''));
     };
     const leftBehind = async (): Promise<PendingEnd['worktrees']> => {
@@ -56,8 +67,8 @@ export function deleteSelectionAsking(
             folder,
             worktrees: worktreesLeftBy(
                 worktrees,
-                going.map((id) => nodes[id]).filter((node) => node !== undefined),
-                staying
+                worktreeSessionsOf(going.map((id) => nodes[id]).filter((node) => node !== undefined)),
+                worktreeSessionsOf(staying)
             )
         };
     };

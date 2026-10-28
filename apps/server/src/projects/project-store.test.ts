@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { PROJECT_VERSION, ProjectOpenResultSchema, emptyCanvasView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import {
+    PROJECT_VERSION,
+    ProjectOpenResultSchema,
+    emptyCanvasView,
+    withNodeAsView,
+    type ProjectCanvasView,
+    type ProjectContent,
+    type ProjectView
+} from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
@@ -1960,4 +1968,115 @@ test('opening without a folder or project id is refused', async () => {
         await expect(store.openProject(payload)).rejects.toMatchObject({ code: 'project-invalid' });
     }
     expect(await store.list()).toEqual([]);
+});
+
+describe('the folder of a design', () => {
+    const designView = (path = 'onboarding'): ProjectView => ({ kind: 'design', id: 'd1', name: 'Onboarding', node: {}, path });
+
+    const withDesign = (views: ProjectView[]): ProjectContent => ({ name: 'repo', color: '#123456', views });
+
+    async function page(at: string, text: string): Promise<void> {
+        await mkdir(join(folder, at), { recursive: true });
+        await writeFile(join(folder, at, 'Onboarding.html'), text);
+    }
+
+    function pageIn(at: string): Promise<string> {
+        return readFile(join(folder, at, 'Onboarding.html'), 'utf8');
+    }
+
+    test("follows a person's save that shares its design, and one that makes it private again", async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, withDesign([designView()]));
+        await page('.ruimte/private/designs/onboarding', 'one');
+
+        await store.save(projectId, 1, withDesign([designView()]), ['d1']);
+        expect(await pageIn('.ruimte/designs/onboarding')).toBe('one');
+
+        await store.save(projectId, 2, withDesign([designView()]), []);
+        expect(await pageIn('.ruimte/private/designs/onboarding')).toBe('one');
+    });
+
+    test('follows a change that takes a design node off a shared canvas into a view of its own', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const board = { id: 'board', kind: 'design' as const, title: 'Board', x: 0, y: 0, w: 480, h: 640, path: 'onboarding' };
+        await store.save(projectId, 0, withDesign([{ ...emptyCanvasView('main', 'Canvas'), nodes: [board] }]), ['main']);
+        await page('.ruimte/designs/onboarding', 'board');
+
+        await store.mutate(projectId, (current) => ({ content: { ...current, views: withNodeAsView(current.views, 'board')!.views }, result: null }));
+
+        expect(await pageIn('.ruimte/private/designs/onboarding')).toBe('board');
+        expect(store.index.designOf('board')).toEqual({ folder: join(folder, '.ruimte/private/designs/onboarding'), onCanvas: false });
+    });
+
+    test('refuses a save or a change that would put a design on the folder of another, and writes nothing', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, withDesign([designView()]));
+        await page('.ruimte/private/designs/onboarding', 'mine');
+        await page('.ruimte/designs/onboarding', 'theirs');
+
+        await expect(store.save(projectId, 1, withDesign([designView()]), ['d1'])).rejects.toMatchObject({ code: 'design-folder-taken' });
+        const board = { id: 'd1', kind: 'design' as const, title: 'Onboarding', x: 0, y: 0, w: 480, h: 640, path: 'onboarding' };
+        await store.save(projectId, 1, withDesign([{ ...emptyCanvasView('main', 'Canvas'), nodes: [] }, designView()]), ['main']);
+        await expect(
+            store.mutate(projectId, (current) => ({
+                content: { ...current, views: [{ ...emptyCanvasView('main', 'Canvas'), nodes: [board] }] },
+                result: null
+            }))
+        ).rejects.toMatchObject({ code: 'design-folder-taken' });
+
+        expect((await documentOnDisk(folder)).rev).toBe(2);
+        expect(await pageIn('.ruimte/private/designs/onboarding')).toBe('mine');
+        expect(await pageIn('.ruimte/designs/onboarding')).toBe('theirs');
+    });
+
+    test('a folder a move left on the other side goes back when the project is opened again', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, withDesign([designView()]), ['d1']);
+        // As a stop between the journal and the rename leaves it.
+        await page('.ruimte/private/designs/onboarding', 'one');
+        const moves = [{ id: 'd1', from: '.ruimte/private/designs/onboarding', to: '.ruimte/designs/onboarding' }];
+        await writeFile(join(folder, '.ruimte/private/design-moves.json'), JSON.stringify({ moves }));
+        store.closeAll();
+
+        await store.openProject({ projectId });
+
+        expect(await pageIn('.ruimte/designs/onboarding')).toBe('one');
+    });
+
+    test('what a chat in a turn still wrote to the folder its design left goes into the new one once the turn ends', async () => {
+        let working = true;
+        store.closeAll();
+        store = new ProjectStore(home, projectLinks({ chatWorking: (chatId) => working && chatId === 'd1' }), fake);
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, withDesign([designView()]));
+        await page('.ruimte/private/designs/onboarding', 'one');
+
+        await store.save(projectId, 1, withDesign([designView()]), ['d1']);
+        await mkdir(join(folder, '.ruimte/private/designs/onboarding'), { recursive: true });
+        await writeFile(join(folder, '.ruimte/private/designs/onboarding', 'Late.html'), 'late');
+        working = false;
+        await store.settleDesignsAfterTurn('d1');
+
+        expect(await pageIn('.ruimte/designs/onboarding')).toBe('one');
+        expect(await readFile(join(folder, '.ruimte/designs/onboarding/Late.html'), 'utf8')).toBe('late');
+        expect(await stat(join(folder, '.ruimte/private/designs/onboarding')).catch(() => null)).toBeNull();
+    });
+
+    test('a node whose name is no folder of its own moves nothing when its canvas is shared', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const board = { id: 'board', kind: 'design' as const, title: 'Board', x: 0, y: 0, w: 480, h: 640, path: '.' };
+        await store.save(projectId, 0, withDesign([{ ...emptyCanvasView('main', 'Canvas'), nodes: [board] }]));
+        await page('.ruimte/private/designs/mine', 'mine');
+
+        await store.save(projectId, 1, withDesign([{ ...emptyCanvasView('main', 'Canvas'), nodes: [board] }]), ['main']);
+
+        expect(await pageIn('.ruimte/private/designs/mine')).toBe('mine');
+        expect(store.index.designOf('board')).toBeNull();
+    });
 });

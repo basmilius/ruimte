@@ -1,11 +1,12 @@
 import { DictationControl } from '@/dictation/DictationControl';
 import { DictationError } from '@/dictation/engine';
 import { useEffect, useRef, useState } from 'react';
-import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
+import { ClipboardPaste, Copy, Lock, Pencil, Scan, Scissors } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '@adecore/agents-react/chat/ui';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { copyText, readClipboardText, Icon, EDIT_SHORTCUTS, Kbd, ContextMenu } from '@adecore/ui';
+import { setNotePreviewLocked, useNotePreviewLocked } from '@/state/note-previews';
+import { copyText, readClipboardText, Icon, IconButton, EDIT_SHORTCUTS, Kbd, ContextMenu } from '@adecore/ui';
 
 /* The note while it has the focus: a textarea with its own menu, since a textarea keeps its selection to itself. */
 function NoteEditor({ id, body }: { id: string; body: string }) {
@@ -106,16 +107,47 @@ function NoteEditor({ id, body }: { id: string; body: string }) {
     );
 }
 
+/* The switch in a note's header between reading and writing. An empty note has nothing to read, so it has none. */
+export function NotePreviewLock({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
+    const canvasStore = useCanvasStore();
+    const hasText = useCanvas((s) => (s.nodes[id]?.body ?? '').trim() !== '');
+    const locked = useNotePreviewLocked(id);
+
+    if (!hasText) {
+        return null;
+    }
+
+    return (
+        <IconButton
+            icon={locked ? Pencil : Lock}
+            size="sm"
+            label={locked ? t('note.unlockPreview') : t('note.lockPreview')}
+            onClick={() => {
+                setNotePreviewLocked(id, !locked);
+
+                // Unlocking is for writing, so the editor takes the keyboard at once.
+                if (locked) {
+                    canvasStore.getState().activateNode(id);
+                }
+            }}
+        />
+    );
+}
+
 /*
  * A sticky note: rendered markdown on the canvas, a textarea while the node has focus. The text
- * is saved with the project and, linked into an agent, read by it as a text source.
+ * is saved with the project and, linked into an agent, read by it as a text source. A note a person
+ * locked to its preview stays rendered with the focus too, so it scrolls and maximizes to be read.
  */
 export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const body = useCanvas((s) => s.nodes[id]?.body ?? '');
+    const locked = useNotePreviewLocked(id);
 
-    if (focused) {
+    // An empty note has nothing to preview, so a lock left on one never keeps a person from writing in it.
+    if (focused && (!locked || body.trim() === '')) {
         return <NoteEditor id={id} body={body} />;
     }
 
@@ -133,7 +165,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
     }
 
     return (
-        <div className="h-full overflow-auto px-3 py-2.5 select-text">
+        <div className="note-markdown h-full overflow-auto px-3 py-2.5 select-text">
             <Markdown text={body} breaks />
         </div>
     );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { nodeChats } from '@ruimte/contracts';
 import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasStore } from '@/state/canvas';
 import { ChatPromptFeed } from '@adecore/agents-react/chat';
@@ -47,19 +48,19 @@ export function useCanvasPrompts(): CanvasPrompt[] {
         const reconcile = (): void => {
             const active = new Set<string>();
             for (const node of Object.values(canvasStore.getState().nodes)) {
-                if (node.kind !== 'chat') {
-                    continue;
-                }
                 const machine = endpointOfNode(node, endpointId);
-                const key = endpointKey(machine, node.id);
-                active.add(key);
-                if (!feeds.has(key)) {
-                    const feed = new ChatPromptFeed(chatScopeOf(machine), node.id, (subjects) => {
-                        descendants.set(key, subjects);
-                        update();
-                    });
-                    feeds.set(key, feed);
-                    feed.start();
+                // Every chat a node holds, a design node's later ones included.
+                for (const chat of nodeChats(node)) {
+                    const key = endpointKey(machine, chat.id);
+                    active.add(key);
+                    if (!feeds.has(key)) {
+                        const feed = new ChatPromptFeed(chatScopeOf(machine), chat.id, (subjects) => {
+                            descendants.set(key, subjects);
+                            update();
+                        });
+                        feeds.set(key, feed);
+                        feed.start();
+                    }
                 }
             }
             for (const [key, feed] of feeds) {
