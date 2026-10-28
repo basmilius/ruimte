@@ -348,7 +348,9 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     /* Every cell's canvas keeps an active node of its own; only the one in the focused cell may take
        the keyboard, or a node remounting beside it pulls the grid's focus over. */
     const cellHasFocus = useCellHasFocus();
-    const takesKeyboard = active && cellHasFocus;
+    // A card beside the node holds the keys while its owner counts as active, so the node's own content does not take them back.
+    const onOwnCard = useCanvas((s) => s.navigationId !== null && s.derivedCards[s.navigationId]?.owner === id);
+    const takesKeyboard = active && cellHasFocus && !onOwnCard;
     const resizing = useCanvas((s) => s.resizing === id);
     const maximizedPlace = useMaximizedPlace(id);
     const maximized = maximizedPlace !== null;
