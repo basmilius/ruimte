@@ -29,4 +29,4 @@ Each environment has one provider token, kept in `apns_provider_tokens` for 50 m
 
 ## Open
 
-Delivery to a production-signed app has never been tested. The check is in [`docs/ACCEPTANCE.md`](../../docs/ACCEPTANCE.md#push-notifications).
+Delivery to a production-signed app has never been tested.

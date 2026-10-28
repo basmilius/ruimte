@@ -29,4 +29,4 @@ The shell kills a helper that idles for sixty seconds, and kills it at once on c
 
 ## Verification
 
-`cargo test --locked` covers sample and protocol validation. Device checks are in [`docs/ACCEPTANCE.md`](../../docs/ACCEPTANCE.md#speech-to-text). The weights carry their own NVIDIA license and do not ship with the app.
+`cargo test --locked` covers sample and protocol validation. The weights carry their own NVIDIA license and do not ship with the app.

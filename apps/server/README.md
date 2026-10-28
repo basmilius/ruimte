@@ -369,7 +369,7 @@ An Android phone on USB or Wi-Fi debugging is listed by serial with the same too
 
 An Android emulator also cannot clear a location, receive a local push, rotate to a chosen side, read elements of a screen that never stands still (`tree none`), record past 3 minutes, switch its camera while running or enroll a fingerprint. Typing on Android needs version 7 or later.
 
-A path to install or add is a file on the machine, never an upload; one that is not absolute or lies under `$RUIMTE_HOME` answers `device-path-refused`. `docs/ACCEPTANCE.md` ("Devices") lists what still waits for a real device. A checkout downloads the scrcpy server on first use into `.native`, checked against its pinned checksum; a build carries it in `native/`, and without it a device has no screen, touch or typing.
+A path to install or add is a file on the machine, never an upload; one that is not absolute or lies under `$RUIMTE_HOME` answers `device-path-refused`. A checkout downloads the scrcpy server on first use into `.native`, checked against its pinned checksum; a build carries it in `native/`, and without it a device has no screen, touch or typing.
 
 ## Providers and models
 

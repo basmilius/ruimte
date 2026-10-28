@@ -111,7 +111,7 @@ The helper saves a checkpoint marked interrupted before generation and clears th
 
 Before inference, Apple's tokenizer measures transcript, prompt and response schema against `SystemLanguageModel.contextSize`, with 1280 tokens reserved. At overflow or after 12 exchanges, a separate tool-less session summarizes older history and keeps the last two exchanges verbatim. Manual compaction takes the same path. A summary that is empty, incomplete or too large fails without touching saved history; nothing truncates silently. A single huge exchange may need a new chat. The context is small (8192 tokens on macOS 27), and the helper reports instruction and tool token counts at startup.
 
-The provider loads no linked nodes, attachments, skills or mentioned files. It has no delegation, background task queue, cross-chat memory, native fork, thinking stream or cloud fallback. Open model-quality checks are in `docs/ACCEPTANCE.md`.
+The provider loads no linked nodes, attachments, skills or mentioned files. It has no delegation, background task queue, cross-chat memory, native fork, thinking stream or cloud fallback.
 
 ## Streaming performance
 

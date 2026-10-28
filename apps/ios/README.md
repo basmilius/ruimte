@@ -196,7 +196,3 @@ The same builds send the desktop client's four metrics with its names, units and
 A shipping build counts a few things per UTC day and sends each finished day once to Observatory's iOS usage ingest, in the daemon's batch shape (`App/Telemetry`), with `launcher` `ios` and `platform` `ios` or `ipados`. It counts only what a machine cannot see: screens shown (`screens.now`, `projects`, `routines`, `machines`, `search`, `project`, `canvas`, `chat`, `terminal`, `machine`, `voice`, `settings`; a repeat counts once) and actions (`actions.messageSent`, `approvalAnswered`, `questionAnswered`, `chatStarted`, `attachmentAdded`). `UsageCounter` is the whole list. No day carries an id, name, path or text.
 
 It follows the machines' `usageStats` switch (`endpoint.info`, `endpoint.changed`). The phone counts only after hearing from a machine of the account, and only while every machine it heard from has the switch on. One that says off stops counting and deletes unsent days. A machine that leaves the account loses its say. Days and switches live in `usage/stats.json` under Application Support, written at most once a minute and on backgrounding. The app sends at launch and on foreground, at most once an hour, up to seven days a batch and none older than eight days. A 400 drops a batch; any other failure keeps it.
-
-## Device acceptance
-
-What only a device can show (connection timing, push on a production build, VoiceOver, iPad multitasking) is in [`docs/ACCEPTANCE.md`](../../docs/ACCEPTANCE.md#iphone-and-ipad).
