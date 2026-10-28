@@ -8,11 +8,18 @@ import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
 import { git, runGit, runGitBytes, toplevel, verifyRev, GitError } from './run.ts';
 
-// Beyond these a diff stops being something a person reads, and the chat file stops being small.
-const MAX_FILES = 100;
-const MAX_FILE_LINES = 2000;
-const MAX_FILE_BYTES = 128 * 1024;
-const MAX_TOTAL_BYTES = 512 * 1024;
+interface DiffCaps {
+    files: number;
+    fileLines: number;
+    fileBytes: number;
+    totalBytes: number;
+}
+
+// A turn's diff is stored in the chat file, which stays small.
+const CHAT_CAPS: DiffCaps = { files: 100, fileLines: 2000, fileBytes: 128 * 1024, totalBytes: 512 * 1024 };
+
+// The git panel reads a diff once and keeps nothing, so only the frame ceiling of a reply bounds it.
+const PANEL_CAPS: DiffCaps = { files: 1000, fileLines: 50_000, fileBytes: 2 * 1024 * 1024, totalBytes: 6 * 1024 * 1024 };
 // Beyond this a side of one file is not handed over whole, and its diff shows only its hunks.
 const MAX_SIDE_BYTES = 512 * 1024;
 
@@ -70,10 +77,10 @@ function kindsByPath(output: string): Map<string, ChatCheckpointFile['kind']> {
 
 /*
  * What changed between two git trees: one unified diff per file, with the counts a card shows and
- * the caps that keep a chat file small. Both the turn's checkpoint diff and the git panel read
- * their file lists through this, so a diff is capped and shaped the same way wherever it shows up.
+ * the caps of where it shows up. Both the turn's checkpoint diff and the git panel read their file
+ * lists through this, so a diff is shaped the same way wherever it shows up.
  */
-export async function diffTrees(top: string, from: string, to: string, prefix = ''): Promise<ChatCheckpointDiff | null> {
+export async function diffTrees(top: string, from: string, to: string, prefix = '', caps = CHAT_CAPS): Promise<ChatCheckpointDiff | null> {
     // A folder inside the repository narrows the lists to what lies under it; the patches follow the list.
     const under = prefix === '' ? [] : ['--', `:(literal)${prefix}`];
     const [numstat, status] = await Promise.all([
@@ -86,8 +93,8 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
     const kinds = kindsByPath(status);
     const counts = parseNumstat(numstat);
     const files: ChatCheckpointFile[] = [];
-    let budget = MAX_TOTAL_BYTES;
-    for (const count of counts.slice(0, MAX_FILES)) {
+    let budget = caps.totalBytes;
+    for (const count of counts.slice(0, caps.files)) {
         const file: ChatCheckpointFile = {
             path: count.path,
             kind: kinds.get(count.path) ?? 'update',
@@ -97,11 +104,11 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
         };
         if (count.binary) {
             file.omitted = 'binary';
-        } else if (count.added + count.deleted > MAX_FILE_LINES) {
+        } else if (count.added + count.deleted > caps.fileLines) {
             file.omitted = 'too-large';
         } else {
             const body = await git(['diff', ...PATCH_ARGS, from, to, '--', `:(literal)${count.path}`], top);
-            if (body === null || body.length > MAX_FILE_BYTES || body.length > budget) {
+            if (body === null || body.length > caps.fileBytes || body.length > budget) {
                 file.omitted = 'too-large';
             } else {
                 file.diff = body;
@@ -276,12 +283,12 @@ export async function diffFile(cwd: string, path: string, options: DiffOptions, 
         result.omitted = 'binary';
         return result;
     }
-    if (result.added + result.deleted > MAX_FILE_LINES) {
+    if (result.added + result.deleted > PANEL_CAPS.fileLines) {
         result.omitted = 'too-large';
         return result;
     }
     const patch = await runGit(args, top);
-    if (patch.code > 1 || patch.stdout.length > MAX_FILE_BYTES) {
+    if (patch.code > 1 || patch.stdout.length > PANEL_CAPS.fileBytes) {
         result.omitted = 'too-large';
         return result;
     }
@@ -304,7 +311,7 @@ async function parentOf(top: string, commit: string): Promise<string> {
 }
 
 /*
- * A whole commit as one answer: every file it touched, with the same caps a turn's diff has, plus
+ * A whole commit as one answer: every file it touched, under the panel's caps, plus
  * the row that names it. The panel's log opens this in a tab of its own, which is why it is one
  * request and not one per file.
  */
@@ -314,7 +321,7 @@ export async function diffCommit(cwd: string, commit: string): Promise<GitDiffRe
     if (hash === null) {
         throw new GitError('git-failed', `${commit} is not a commit in this repository.`);
     }
-    const [diff, meta] = await Promise.all([parentOf(top, hash).then((parent) => diffTrees(top, parent, hash)), readCommit(top, hash)]);
+    const [diff, meta] = await Promise.all([parentOf(top, hash).then((parent) => diffTrees(top, parent, hash, '', PANEL_CAPS)), readCommit(top, hash)]);
     return { ...filesResult(diff), ...(meta ? { commit: meta } : {}) };
 }
 
@@ -365,7 +372,7 @@ export async function diffCheckout(cwd: string, from: string | null): Promise<Gi
             throw new GitError('git-failed', `Could not read the working tree of ${top}.`);
         }
         const start = from ?? (await verifyRev('HEAD', top));
-        return filesResult(await diffTrees(top, start || EMPTY_TREE, tree));
+        return filesResult(await diffTrees(top, start || EMPTY_TREE, tree, '', PANEL_CAPS));
     } finally {
         await rm(scratch, { recursive: true, force: true });
     }
