@@ -290,6 +290,10 @@
         "inspect": "Inspect",
         "error": {
             "openExternal": "Open in system browser"
+        },
+        "plate": {
+            "picture": "Last picture of the page, not live",
+            "identity": "The page, not live"
         }
     },
     "gaps": {

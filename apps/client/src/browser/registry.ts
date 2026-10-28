@@ -169,6 +169,9 @@ function originOf(url: string): string {
 // A load the page itself cancelled (a redirect, a new navigation) is not an error worth a banner.
 const ABORTED = -3;
 
+/* Longer than any picture of a drawn page takes, which is tens of milliseconds. */
+const CAPTURE_TIMEOUT_MS = 3_000;
+
 /* Adds a scheme when the person typed a bare host; anything with one is used as is. */
 export function normalizeUrl(input: string): string {
     const trimmed = input.trim();
@@ -389,11 +392,18 @@ class BrowserRegistry {
         if (!element || !shell?.capturePage) {
             return null;
         }
+        let timer: ReturnType<typeof setTimeout> | undefined;
         try {
-            return await shell.capturePage(element.getWebContentsId());
+            // Chromium never answers for a guest that is not drawn (a folded node), so the wait has an end.
+            const late = new Promise<null>((resolve) => {
+                timer = setTimeout(() => resolve(null), CAPTURE_TIMEOUT_MS);
+            });
+            return await Promise.race([shell.capturePage(element.getWebContentsId()), late]);
         } catch {
             // The guest is not attached yet, so there is nothing to photograph.
             return null;
+        } finally {
+            clearTimeout(timer);
         }
     }
 

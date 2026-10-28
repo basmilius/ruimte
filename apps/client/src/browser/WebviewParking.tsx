@@ -7,12 +7,16 @@ import { browserRegistry, useBrowser } from '@/browser/registry';
 import { nodesOverBrowsers } from '@/canvas/stacking';
 import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
 import { oncePerFrame } from '@/browser/once-per-frame';
+import { belowSinceOf, FAR_AFTER_MS, pageFar } from '@/browser/page-distance';
+import { pageSnapshots, usePageSnapshots } from '@/browser/page-snapshots';
+import { RENDER_DISTANCE_ZOOM, rendersAtZoom } from '@/canvas/render-distance';
 import { pageClipPath, type PageHole } from '@/browser/page-clip';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
 import { shownViewIdsIn } from '@/shell/split';
 import { defaultCanvases, GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNodeOf, subscribeCanvases, type CanvasState } from '@/state/canvas';
 import { splitKey } from '@/state/keys';
 import { useDocument } from '@/state/document';
+import { useSettings } from '@/state/settings';
 
 // The browser toolbar sits under the frame's header, both above the page.
 const TOOLBAR_PX = 37;
@@ -104,6 +108,21 @@ function DesktopWebviewParking() {
     useEffect(() => {
         const inputs = new Map<string, ReturnType<typeof createGuestCanvasInput>>();
         const configurations = new Map<string, string>();
+        /* Since when each page's camera has been past the render distance, for the pause before it goes. */
+        const belowSince = new Map<string, number>();
+        /* What the distance asked of each page in the last pass, so a picture asks again before the page goes. */
+        const wantsFar = new Map<string, boolean>();
+        let wake: ReturnType<typeof setTimeout> | null = null;
+        pageSnapshots.judge((key) => wantsFar.get(key) === true);
+        /* A page that goes far while it still had the keyboard hands it back to the canvas of its own cell. */
+        const releaseFocus = (key: string, viewId: string): void => {
+            const element = browserRegistry.get(key);
+            if (element === undefined || document.activeElement !== element) {
+                return;
+            }
+            element.blur();
+            cellElement(viewId)?.querySelector<HTMLElement>('[data-canvas-surface]')?.focus({ preventScroll: true });
+        };
         const tellCanvas = (key: string, enabled: boolean, pan: boolean): void => {
             const configuration = { enabled, pan };
             const saved = JSON.stringify(configuration);
@@ -130,6 +149,9 @@ function DesktopWebviewParking() {
             }
             const open = shownViewIds();
             const cells = new Map<HTMLElement, CellBox>();
+            const distance = useSettings.getState().canvasRenderDistance;
+            const now = performance.now();
+            let nextWake: number | null = null;
             const pages = [...hosts.current].flatMap(([key, host]) => {
                 const nodeId = splitKey(key).id;
                 const clip = clips.current.get(key);
@@ -140,12 +162,14 @@ function DesktopWebviewParking() {
                 return [{ key, host, clip, nodeId, view, cell: view === null ? null : cellBoxOf(cells, cellElement(view.viewId)) }];
             });
             for (const { key, host, clip, nodeId, view, cell } of pages) {
+                wantsFar.set(key, false);
                 if (view === null || cell === null) {
                     inputs.get(key)?.end();
                     tellCanvas(key, false, false);
                     // Both boxes are hidden here; a child marked visible would still show through a parent marked hidden.
                     clip.style.visibility = 'hidden';
                     host.style.visibility = 'hidden';
+                    host.style.opacity = '';
                     host.style.pointerEvents = 'none';
                     continue;
                 }
@@ -163,6 +187,7 @@ function DesktopWebviewParking() {
                     host.dataset.square = '';
                     host.style.clipPath = '';
                     host.style.visibility = 'visible';
+                    host.style.opacity = '';
                     host.style.pointerEvents = 'auto';
                     host.style.width = '100%';
                     host.style.height = '100%';
@@ -182,15 +207,52 @@ function DesktopWebviewParking() {
                     // Folded to its header, the page stays parked out of sight and keeps running.
                     node.collapsed !== true &&
                     (maximized === null || maximized === nodeId);
-                host.style.visibility = shown ? 'visible' : 'hidden';
-                if (!shown) {
+                /* Past the render distance a page is hidden like a folded one and keeps running, while its
+                   node shows the last picture of it. Only a page that would be drawn is asked, so whatever
+                   already hides one goes first; the host, its parent and the guest stay as they are. */
+                let far = false;
+                if (shown) {
+                    const below = maximized === null && !rendersAtZoom(distance, canvas!.camera.zoom);
+                    const since = belowSinceOf(belowSince.get(key) ?? null, below, now);
+                    if (since === null) {
+                        belowSince.delete(key);
+                    } else {
+                        belowSince.set(key, since);
+                    }
+                    const wants = pageFar({
+                        zoom: canvas!.camera.zoom,
+                        distance,
+                        maximized: maximized === nodeId,
+                        onCanvas: true,
+                        active: isNodeActive(canvas!.bodyFocusId, nodeId),
+                        gesturing: canvas!.gesturing || canvas!.panning,
+                        wasFar: pageSnapshots.goingFar(key),
+                        belowSince: since,
+                        now
+                    });
+                    wantsFar.set(key, wants);
+                    // The picture is as wide as the node is drawn at the line, never more.
+                    far = pageSnapshots.settle(key, wants, Math.max(1, Math.round(node!.w * RENDER_DISTANCE_ZOOM[distance] * window.devicePixelRatio)));
+                    if (since !== null && !wants) {
+                        nextWake = Math.min(nextWake ?? Infinity, since + FAR_AFTER_MS);
+                    }
+                    if (far) {
+                        releaseFocus(key, view.viewId);
+                    }
+                }
+                const drawn = shown && !far;
+                // A far page is drawn again, transparent, only for the moment the shell photographs it.
+                const revealed = far && pageSnapshots.of(key).revealing > 0;
+                host.style.visibility = drawn || revealed ? 'visible' : 'hidden';
+                host.style.opacity = revealed ? '0' : '';
+                if (!drawn) {
                     inputs.get(key)?.end();
                 }
-                tellCanvas(key, shown, shown && !canvas!.locks.pan && maximized === null);
+                tellCanvas(key, drawn, drawn && !canvas!.locks.pan && maximized === null);
                 /* Only the active node hands the pointer to its page, and never while a gesture runs.
                    A page that always took it would swallow the wheel, and panning over it would stop. */
                 host.style.pointerEvents =
-                    shown &&
+                    drawn &&
                     (inputs.get(key)?.isPanning() || (isNodeActive(canvas!.bodyFocusId, nodeId) && !canvas!.gesturing && !canvas!.panning && !isSpaceDown()))
                         ? 'auto'
                         : 'none';
@@ -223,6 +285,14 @@ function DesktopWebviewParking() {
                 const covering = coveringIn(view.viewId, canvas!)[nodeId] ?? [];
                 const holes = covering.map((hole) => ({ ...hole, x: hole.x - pageLeft, y: hole.y - pageTop }));
                 host.style.clipPath = pageClipPath(width, height, holes) ?? '';
+            }
+            if (wake !== null) {
+                clearTimeout(wake);
+                wake = null;
+            }
+            // The pause before a page goes ends with no event of its own, so the layer looks again then.
+            if (nextWake !== null) {
+                wake = setTimeout(schedule, Math.max(0, nextWake - performance.now()));
             }
         };
         const frame = oncePerFrame(place);
@@ -272,6 +342,21 @@ function DesktopWebviewParking() {
         const offDocument = useDocument.subscribe(schedule);
         const offCells = subscribeCells(schedule);
         const offSpace = subscribeSpacePan(schedule);
+        const offDistance = useSettings.subscribe((state, previous) => {
+            if (state.canvasRenderDistance !== previous.canvasRenderDistance) {
+                schedule();
+            }
+        });
+        // A picture that came in, or a far page drawn again for one, moves the hosts as well.
+        const offSnapshots = usePageSnapshots.subscribe(schedule);
+        /* A far page that finished loading something new, such as a page an agent drives, gets a new picture. */
+        const offLoads = useBrowser.subscribe((state, previous) => {
+            for (const [key, row] of Object.entries(state.byKey)) {
+                if (!row.loading && previous.byKey[key]?.loading === true && pageSnapshots.of(key).far) {
+                    pageSnapshots.refresh(key);
+                }
+            }
+        });
         // The grid moves with the window as well, and a resize moves no state at all.
         window.addEventListener('resize', schedule);
         return () => {
@@ -280,12 +365,21 @@ function DesktopWebviewParking() {
             offDocument();
             offCells();
             offSpace();
+            offDistance();
+            offSnapshots();
+            offLoads();
+            if (wake !== null) {
+                clearTimeout(wake);
+            }
             for (const off of offGuests) {
                 off();
             }
             window.removeEventListener('resize', schedule);
         };
     }, [keys]);
+
+    // A page that closed lets go of its picture.
+    useEffect(() => pageSnapshots.keep(keys), [keys]);
 
     useEffect(() => {
         const offs: Array<() => void> = [];

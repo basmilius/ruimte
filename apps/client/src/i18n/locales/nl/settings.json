@@ -668,6 +668,15 @@
             "minimap": {
                 "label": "Canvaskaart",
                 "description": "Een kleine kaart rechtsonder toont elke node en het deel dat je ziet. Klik om erheen te gaan, sleep het kader om te schuiven. Verborgen op een smal canvas."
+            },
+            "renderDistance": {
+                "label": "Tekenafstand",
+                "description": "Hoe ver het canvas pagina's, bestanden, diagrammen en apparaten nog live tekent. Verder weg tonen ze een stilstaand beeld of hun naam. In de desktop-app loopt een pagina buiten beeld door. Geldt meteen voor elk venster op deze computer, niet voor je andere apparaten. Ver en Onbeperkt vragen meer van deze computer.",
+                "options": {
+                    "standard": "Standaard",
+                    "far": "Ver",
+                    "unlimited": "Onbeperkt"
+                }
             }
         },
         "drawing": {
