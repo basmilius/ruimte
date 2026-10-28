@@ -54,6 +54,7 @@ const NODE_LABELS = {
     file: 'file',
     artifact: 'output',
     routine: 'routine',
+    design: 'design',
     unknown: 'node'
 } as const;
 

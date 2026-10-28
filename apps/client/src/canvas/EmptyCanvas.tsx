@@ -7,6 +7,8 @@ import { ProviderRows } from '@/agents/ProviderRows';
 import { emptyCanvasSections, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
+import { DesignTile } from '@/design/DesignAddItem';
+import { useDesignOffered } from '@/design/design-create';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -36,11 +38,12 @@ export function EmptyCanvas() {
     const views = useDocument((s) => s.views);
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const providers = useProviders((s) => s.providers);
-    const sections = emptyCanvasSections({ providers, hasFolder, layouts, views });
+    const design = useDesignOffered();
+    const sections = emptyCanvasSections({ providers, hasFolder, design, layouts, views });
 
     const center = () => centerWorld(canvasStore.getState());
 
-    const lookOf = (tile: EmptyCanvasTile): TileLook => {
+    const lookOf = (tile: Exclude<EmptyCanvasTile, { kind: 'design' }>): TileLook => {
         switch (tile.kind) {
             case 'agent': {
                 return {
@@ -101,6 +104,11 @@ export function EmptyCanvas() {
                         </SectionLabel>
                         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))' }}>
                             {sections[key].map((tile) => {
+                                // A design asks for its CLI in a menu, which the tile opens.
+                                if (tile.kind === 'design') {
+                                    return <DesignTile key={tile.id} at={center} />;
+                                }
+
                                 const look = lookOf(tile);
                                 return (
                                     <Tile

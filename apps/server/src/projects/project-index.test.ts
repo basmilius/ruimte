@@ -75,6 +75,67 @@ describe('ProjectIndex', () => {
         expect(index.isHiddenChat('solo-chat')).toBe(false);
     });
 
+    test('places a design node and its later chats on its canvas, and its folder follows the canvas being shared', () => {
+        const index = new ProjectIndex();
+        const design = node('board', 'design', { title: 'Pricing', path: 'pricing', chats: [{ id: 'board-2', name: 'Dense', node: {} }] });
+        const canvas: ProjectView = {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Canvas',
+            nodes: [design, node('readme', 'file', { path: 'README.md' })],
+            texts: [],
+            edges: [{ id: 'e1', from: 'readme', to: 'board' }],
+            layouts: []
+        };
+        index.set('p1', '/repo', { views: [canvas] });
+
+        const onCanvas = (folder: string) => ({ folder, onCanvas: true });
+        expect(index.designOf('board')).toEqual(onCanvas('/repo/.ruimte/private/designs/pricing'));
+        expect(index.designOf('board-2')).toEqual(onCanvas('/repo/.ruimte/private/designs/pricing'));
+        expect(index.locate('board-2')).toEqual({ projectId: 'p1', folder: '/repo', canvasId: 'main' });
+        expect(index.agentSource('board')).toEqual({ id: 'board', kind: 'chat', title: 'Pricing' });
+        expect(index.agentSource('board-2')).toEqual({ id: 'board-2', kind: 'chat', title: 'Dense' });
+        expect(index.titleFor('board-2')).toBe('Dense');
+        expect(index.titleFor('board')).toBe('Pricing');
+        expect(index.sessionNodes('p1')).toEqual([
+            { id: 'board', kind: 'chat' },
+            { id: 'board-2', kind: 'chat' }
+        ]);
+        // A later chat reads what the line brings its node.
+        expect(index.sourcesFor('board-2').map((source) => source.id)).toEqual(['readme']);
+        index.set('p1', '/repo', { views: [canvas], shared: ['main'] });
+        expect(index.designOf('board')).toEqual(onCanvas('/repo/.ruimte/designs/pricing'));
+    });
+
+    test('names the folder of a chat that works on a design, and none for another chat or a node', () => {
+        const index = new ProjectIndex();
+        index.set('p1', '/repo', {
+            views: [
+                ...views('x'),
+                {
+                    kind: 'design',
+                    id: 'design',
+                    name: 'Onboarding',
+                    node: {},
+                    path: 'onboarding',
+                    chats: [{ id: 'design-2', name: 'Dark mode', node: {} }]
+                }
+            ]
+        });
+
+        const inView = (folder: string) => ({ folder, onCanvas: false });
+        expect(index.designOf('design')).toEqual(inView('/repo/.ruimte/private/designs/onboarding'));
+        expect(index.designOf('design-2')).toEqual(inView('/repo/.ruimte/private/designs/onboarding'));
+        index.set('p1', '/repo', { views: [...index.viewsOf('p1')!], shared: ['design'] });
+        expect(index.designOf('design')).toEqual(inView('/repo/.ruimte/designs/onboarding'));
+        expect(index.locate('design-2')).toEqual({ projectId: 'p1', folder: '/repo', canvasId: null });
+        expect(index.agentSource('design-2')).toEqual({ id: 'design-2', kind: 'chat', title: 'Dark mode' });
+        expect(index.titleFor('design-2')).toBe('Dark mode');
+        expect(index.designOf('solo-chat')).toBeNull();
+        expect(index.designOf('agent')).toBeNull();
+        expect(index.designOf('removed')).toBeNull();
+    });
+
     test('locates a node on its canvas and a session view as a place of its own', () => {
         const index = new ProjectIndex();
         index.set('p1', '/repo', { views: views('x') });

@@ -2,26 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
-import {
-    ArrowLeft,
-    ArrowRight,
-    Ban,
-    CircleAlert,
-    Clock,
-    Code,
-    ExternalLink,
-    Globe,
-    Link2Off,
-    Lock,
-    RotateCw,
-    ShieldAlert,
-    Unplug,
-    WifiOff,
-    X
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { BrowserSplash } from '@/browser/BrowserSplash';
-import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
+import { BrowserPlate } from '@/browser/BrowserPlate';
+import { ERROR_ICON } from '@/browser/error-icons';
+import { usePageFar } from '@/browser/page-snapshots';
+import { classifyLoadError } from '@/browser/load-error';
 import { drivePage, openPage } from '@/browser/open-page';
 import { browserRouteAvailable } from '@/browser/owner-route';
 import { prettyUrl } from '@/browser/pretty-url';
@@ -165,17 +151,6 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     );
 }
 
-const ERROR_ICON: Record<LoadErrorKind, LucideIcon> = {
-    offline: WifiOff,
-    dns: Globe,
-    refused: Unplug,
-    certificate: ShieldAlert,
-    timeout: Clock,
-    blocked: Ban,
-    address: Link2Off,
-    other: CircleAlert
-};
-
 /*
  * What a page that did not load says, over Chromium's own error page, which has no way back to this
  * app. It goes in the parked host, which the layer puts over a node and a browser view's column alike.
@@ -269,6 +244,7 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
     const host = useNodeHost(id);
     const saved = host?.url ?? '';
     const routeFailed = useBrowserRow(id, (row) => row?.error?.ownerRoute === true);
+    const far = usePageFar(id);
     const endpointId = useEndpointId();
     const localDaemonId = useLocalDaemonId();
     if (!browserRouteAvailable(endpointId, saved, host?.browserOwner, localDaemonId) || (routeFailed && !browserRegistry.has(endpointKey(endpointId, id)))) {
@@ -285,6 +261,14 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
     }
     if (!isDesktop()) {
         return <BrowserStream id={id} initialUrl={saved} className={className} />;
+    }
+    // Past the render distance the page is hidden in its layer and still running; its picture stands in.
+    if (far) {
+        return (
+            <div className={clsx('min-h-0', className)}>
+                <BrowserPlate id={id} />
+            </div>
+        );
     }
     return <div className={clsx('h-full bg-surface-sunken', className)} />;
 }

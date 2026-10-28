@@ -4,8 +4,11 @@ import { flagOf } from './project-flags.ts';
 import {
     ProjectSummaryResultSchema,
     isCanvasView,
+    isChatHostView,
+    isDesignView,
     isSessionView,
     isUnlistedView,
+    sessionKindOfView,
     NodeTitleSourceSchema,
     ProjectIconChoiceSchema,
     ProjectSummarySchema,
@@ -36,7 +39,9 @@ export const ProjectSidebarViewSchema = z.object({
     // The flag this person put on the row, as a node accent name; absent from a daemon from before flags.
     flag: z.string().optional(),
     nodes: z.array(SidebarNodeSchema),
-    self: SidebarNodeSchema.nullable()
+    self: SidebarNodeSchema.nullable(),
+    // A design, which goes as an unknown row since the kinds are a closed list; absent from a daemon from before designs.
+    design: z.boolean().optional()
 });
 
 export const ProjectSidebarResultSchema = z.object({
@@ -67,14 +72,14 @@ export function projectSidebarViews(views: readonly ProjectView[], shared: reado
     return views
         .filter((view): boolean => !isUnlistedView(view))
         .map((view) => {
-            const provider = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
+            const provider = isChatHostView(view) || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
             const flag = flagOf(flags, view.id);
             return {
                 id: view.id,
                 name: view.name ?? '',
                 titleSource: 'titleSource' in view ? view.titleSource : undefined,
-                // The row's kinds are a closed list on the wire, which an artifact view joins only as a row an older client can draw.
-                kind: view.kind === 'artifact' ? UNKNOWN_KIND : view.kind,
+                // The row's kinds are a closed list on the wire, which an artifact view and a design join only as a row an older client can draw.
+                kind: view.kind === 'artifact' || view.kind === 'design' ? UNKNOWN_KIND : view.kind,
                 icon: viewIconOf(view),
                 provider,
                 path: view.kind === 'file' ? view.path : null,
@@ -82,12 +87,22 @@ export function projectSidebarViews(views: readonly ProjectView[], shared: reado
                 ...(flag === null ? {} : { flag }),
                 nodes: isCanvasView(view)
                     ? view.nodes.flatMap((node) =>
-                          node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'browser' || node.kind === 'device'
-                              ? [{ id: node.id, title: node.title, titleSource: node.titleSource, kind: node.kind, provider: node.provider ?? null }]
+                          // A design node goes as the chat it is, since the kinds are a closed list on the wire.
+                          node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'design' || node.kind === 'browser' || node.kind === 'device'
+                              ? [
+                                    {
+                                        id: node.id,
+                                        title: node.title,
+                                        titleSource: node.titleSource,
+                                        kind: node.kind === 'design' ? ('chat' as const) : node.kind,
+                                        provider: node.provider ?? null
+                                    }
+                                ]
                               : []
                       )
                     : [],
-                self: isSessionView(view) ? { id: view.id, title: view.name, titleSource: view.titleSource, kind: view.kind, provider } : null
+                self: isSessionView(view) ? { id: view.id, title: view.name, titleSource: view.titleSource, kind: sessionKindOfView(view), provider } : null,
+                ...(isDesignView(view) ? { design: true } : {})
             };
         });
 }

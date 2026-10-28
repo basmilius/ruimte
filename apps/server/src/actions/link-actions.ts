@@ -1,5 +1,5 @@
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
-import { EDGE_ROLES, isAgentKind, type EdgeRole, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { EDGE_ROLES, isAgentKind, lineEndOf, type EdgeRole, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { MAX_LINKS, ROLE_LINES, edgeLines, ownEnd } from '../canvas/links.ts';
 import { newId, nodeLines } from '../canvas/nodes.ts';
 import { refuseMissingNodes } from '../canvas/own-view.ts';
@@ -83,7 +83,8 @@ export const linkActions: ActionHandlers<ServerActionContext> = {
 
         return host.projects.mutate(place.projectId, (content) => {
             const canvas = canvasNamed(content, viewId);
-            const from = start ?? call.actor.id;
+            // A later chat of a design node has no node of its own, so its line starts at the design node.
+            const from = start ?? lineEndOf(canvas.nodes, call.actor.id);
             const source = canvas.nodes.find((node) => node.id === from);
             if (!source) {
                 if (start === null) {

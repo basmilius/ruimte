@@ -1,5 +1,5 @@
 import { AppWindow, Box, FileText, Image, Sheet, Video, type LucideIcon } from 'lucide-react';
-import type { KnownArtifactKind, ProjectView } from '@ruimte/contracts';
+import { chatNameOf, type KnownArtifactKind, type ProjectView } from '@ruimte/contracts';
 import { drawnKind } from '@/output/artifact-list';
 import { nodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
@@ -18,7 +18,7 @@ export function kindIcon(kind: string): LucideIcon {
     return KIND_ICONS[drawnKind(kind)];
 }
 
-/* What the window's project calls a chat: a view of its own or a node on one of its canvases. */
+/* What the window's project calls a chat: a view of its own, a node on one of its canvases, or any chat of a design. */
 function chatNameIn(views: readonly ProjectView[], chatId: string): string | null {
     for (const view of views) {
         if (view.id === chatId) {
@@ -29,7 +29,8 @@ function chatNameIn(views: readonly ProjectView[], chatId: string): string | nul
             return node.title;
         }
     }
-    return null;
+    // A later chat of a design is no node and no view of its own.
+    return chatNameOf(views, chatId);
 }
 
 export function useChatName(chatId: string | undefined): string | null {

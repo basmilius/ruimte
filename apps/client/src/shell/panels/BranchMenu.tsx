@@ -140,7 +140,7 @@ export function BranchMenu({
                         }
                         name={nested}
                     >
-                        <Menu.Trigger render={<Button size="xs" variant="ghost" className="min-w-0 shrink" />}>
+                        <Menu.Trigger render={<Button size="xs" variant="ghost" className="min-w-0 shrink!" />}>
                             {nested ? (
                                 <>
                                     <Icon icon={Folders} size={12} className="shrink-0" />

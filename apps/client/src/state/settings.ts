@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
+import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
@@ -224,6 +225,8 @@ export interface Settings {
        sends the deltas either way. */
     chatStreaming: ChatStreamingMode;
     chatSteerByDefault: boolean;
+    /* A design chat hides them whatever this says. */
+    chatHideToolCalls: boolean;
     /* Speech to Text's own; Voice speaks these two only on a machine that keeps no preferences of its own (`voice.preferences`). */
     voiceLanguage: VoiceLanguage;
     liveVoice: LiveVoice;
@@ -273,6 +276,9 @@ export interface Settings {
     codeEnsureFinalNewline: boolean;
     /* The face of the terminals; `editor` follows `font`, so a client that stored nothing sees one face everywhere. */
     terminalFont: TerminalFontId;
+    /* How far out a canvas still draws its costly bodies live (a page, a file, a diagram, a device).
+       About what this computer can carry, so it sits with the client and not with a project. */
+    canvasRenderDistance: RenderDistance;
 }
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
@@ -335,6 +341,7 @@ const DEFAULT_SETTINGS: Settings = {
     dockAutoHide: false,
     chatStreaming: 'words',
     chatSteerByDefault: false,
+    chatHideToolCalls: false,
     voiceLanguage: 'nl',
     liveVoice: 'marin',
     voiceInputDeviceId: 'default',
@@ -355,7 +362,8 @@ const DEFAULT_SETTINGS: Settings = {
     onboardingIntroSeen: false,
     onboardingSkipWelcome: false,
     codeEnsureFinalNewline: true,
-    terminalFont: 'editor'
+    terminalFont: 'editor',
+    canvasRenderDistance: 'standard'
 };
 
 // Rounded as well as clamped: storage can still hold a half pixel, and text renders sharpest on a whole one.
@@ -437,6 +445,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         keepAwakeDisplay: stored.keepAwakeDisplay === true,
         chatStreaming: chatStreamingFrom(stored.chatStreaming),
         chatSteerByDefault: stored.chatSteerByDefault === true,
+        chatHideToolCalls: stored.chatHideToolCalls === true,
         voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
         liveVoice: isLiveVoice(stored.liveVoice)
             ? stored.liveVoice
@@ -461,7 +470,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         onboardingSkipWelcome: stored.onboardingSkipWelcome === true,
         codeEnsureFinalNewline: stored.codeEnsureFinalNewline !== false,
         terminalFont:
-            stored.terminalFont === 'editor' ? 'editor' : (MONO_FONTS.find((entry) => entry.id === stored.terminalFont)?.id ?? DEFAULT_SETTINGS.terminalFont)
+            stored.terminalFont === 'editor' ? 'editor' : (MONO_FONTS.find((entry) => entry.id === stored.terminalFont)?.id ?? DEFAULT_SETTINGS.terminalFont),
+        canvasRenderDistance: renderDistanceFrom(stored.canvasRenderDistance)
     };
 }
 

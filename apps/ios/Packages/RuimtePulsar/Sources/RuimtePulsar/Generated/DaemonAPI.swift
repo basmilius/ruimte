@@ -308,6 +308,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `artifactWatch` = "artifact.watch"
     case `artifactUnwatch` = "artifact.unwatch"
     case `artifactSave` = "artifact.save"
+    case `artifactSaveFolder` = "artifact.saveFolder"
     case `artifactCopyToProject` = "artifact.copyToProject"
     case `artifactStorage` = "artifact.storage"
     case `artifactCleanup` = "artifact.cleanup"

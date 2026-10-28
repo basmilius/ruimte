@@ -400,6 +400,7 @@
     "artifact.watch",
     "artifact.unwatch",
     "artifact.save",
+    "artifact.saveFolder",
     "artifact.copyToProject",
     "artifact.storage",
     "artifact.cleanup",

@@ -1,7 +1,16 @@
 import { inPickerOrder } from '@/agents/creation';
 import { groupArrangeable } from '@/canvas/arrange-group';
 import i18next from 'i18next';
-import { canShareView, chatIsWorking, isCanvasView, isEmptyChatView, isOpenableView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import {
+    canShareView,
+    chatIsWorking,
+    isCanvasView,
+    isChatHostView,
+    isEmptyChatView,
+    isOpenableView,
+    type ProjectView,
+    type SplitLayout
+} from '@ruimte/contracts';
 import { databaseViewShareRefusal } from '@/database/view-sharing';
 import { forkRefusal, lastSettledTurn } from '@adecore/agents-react/chat';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
@@ -32,6 +41,7 @@ import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { hasPrWatch } from '@/shell/pr-watch-actions';
 import { focusedChatId } from '@/chat/focused-chat';
+import { shownChatOfNode } from '@/design/design-chat';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
@@ -69,7 +79,7 @@ export function activeViewFacts(): ActiveViewFacts | null {
     const shared = documentState.shared.includes(view.id);
     const { asChat, asTerminal } = sessionHandoffs(view.kind, view, chatRow?.info, session, providersOf(endpointId).providers);
     const scratch = isScratchProject(current);
-    const workingFolder = !scratch && (view.kind === 'chat' || view.kind === 'terminal') ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
+    const workingFolder = !scratch && (isChatHostView(view) || view.kind === 'terminal') ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
     const settled = chatRow ? lastSettledTurn(chatRow.structure, chatRow.order) : null;
     const forkTurn = settled !== null && forkRefusal(chatRow?.info ?? null, chatRow?.structure[settled]) === null ? settled : null;
     const offers = viewOffers({
@@ -85,7 +95,7 @@ export function activeViewFacts(): ActiveViewFacts | null {
         // A file view's own actions stay in its view menu; the application menu has none of them.
         filePath: null,
         scratch,
-        written: !(view.kind === 'chat' && isEmptyChatView(view)),
+        written: !(isChatHostView(view) && isEmptyChatView(view)),
         moves: machineAnswers(pool.statusOf(endpointId), 'chat.move')
     });
     const working = chatIsWorking(
@@ -152,6 +162,8 @@ export function menuContext(host: MenuHost): MenuContext {
     const free = freeViewFor(documentState);
     const room = (direction: 'right' | 'down'): boolean => layout !== null && free !== null && canSplit(layout, layout.focus, direction, free);
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
+    // A design acts as the chat it shows.
+    const selectedChat = selected === undefined ? null : shownChatOfNode(selected);
     const onCanvas = facts?.view.kind === 'canvas';
     return {
         host,
@@ -160,7 +172,7 @@ export function menuContext(host: MenuHost): MenuContext {
         folder: shownFolderOf(useProject.getState().current) !== null,
         scratch: isScratchProject(useProject.getState().current),
         prRepos: prReposOfCurrent().map((repo) => ({ path: repo.path, label: repo.label })),
-        prWatch: onCanvas && selected?.kind === 'chat' && hasPrWatch(endpointId, selected.id),
+        prWatch: onCanvas && selectedChat !== null && hasPrWatch(endpointId, selectedChat),
         routines: windowWorkspace() !== null && machineAnswers(pool.statusOf(endpointId), 'routine.list'),
         chat: windowWorkspace() !== null && focusedChatId() !== null,
         terminalKeys: terminalHasKeyboard(),

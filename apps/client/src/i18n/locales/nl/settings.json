@@ -668,6 +668,15 @@
             "minimap": {
                 "label": "Canvaskaart",
                 "description": "Een kleine kaart rechtsonder toont elke node en het deel dat je ziet. Klik om erheen te gaan, sleep het kader om te schuiven. Verborgen op een smal canvas."
+            },
+            "renderDistance": {
+                "label": "Tekenafstand",
+                "description": "Hoe ver het canvas pagina's, bestanden, diagrammen en apparaten nog live tekent. Verder weg tonen ze een stilstaand beeld of hun naam. In de desktop-app loopt een pagina buiten beeld door. Geldt meteen voor elk venster op deze computer, niet voor je andere apparaten. Ver en Onbeperkt vragen meer van deze computer.",
+                "options": {
+                    "standard": "Standaard",
+                    "far": "Ver",
+                    "unlimited": "Onbeperkt"
+                }
             }
         },
         "drawing": {
@@ -1051,6 +1060,10 @@
             "steerByDefault": {
                 "label": "Werkende agents standaard bijsturen",
                 "description": "Een bericht dat je stuurt terwijl Codex of Claude werkt, komt bij de volgende stap aan. Uit wacht het tot de agent klaar is. Houd Option of Alt ingedrukt bij het sturen voor het omgekeerde."
+            },
+            "hideToolCalls": {
+                "label": "Tool calls verbergen",
+                "description": "Toon alleen de berichten van de agent, niet de bestanden die hij las of de commando's die hij draaide. Design chats verbergen ze altijd."
             }
         },
         "integrations": {
@@ -1138,6 +1151,10 @@
             "report": {
                 "label": "Een probleem melden",
                 "description": "Beschrijf wat je zag en wat je verwachtte."
+            },
+            "sponsor": {
+                "label": "Ruimte sponsoren",
+                "description": "Steun de ontwikkeling van Ruimte via GitHub."
             }
         }
     },

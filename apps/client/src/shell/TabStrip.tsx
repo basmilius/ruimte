@@ -202,7 +202,13 @@ function ProjectTabItem({ view }: { view: ProjectView }) {
             hint={label}
             unsavedLabel={unsubmitted ? td('tab.unsubmitted') : undefined}
             glyph={<ViewGlyph {...viewGlyphOf(view)} />}
-            attention={view.kind === 'chat' ? <ChatAttention id={view.id} /> : view.kind === 'terminal' ? <TerminalAttention id={view.id} /> : undefined}
+            attention={
+                view.kind === 'chat' || view.kind === 'design' ? (
+                    <ChatAttention id={view.id} />
+                ) : view.kind === 'terminal' ? (
+                    <TerminalAttention id={view.id} />
+                ) : undefined
+            }
             pinned={pinned}
             onDoubleClick={() => setTabPinned(view.id, !pinned)}
             onClose={() => closeTabAction(view.id)}

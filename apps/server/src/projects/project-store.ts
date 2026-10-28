@@ -57,6 +57,7 @@ import {
 } from './project-files.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
+import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
 import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
 import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { readIdeaName } from './project-identity.ts';
@@ -227,6 +228,8 @@ export interface ProjectLinks {
     bindings: ProjectBindings;
     /* The stores of drawing and diagram files, which are made from this one and so are asked for when a write or a release reaches them. */
     viewFiles(): readonly ProjectViewFiles[];
+    /* Whether a chat is in a turn or runs work beside it, and so may still write to a design folder that moved; nothing is without it. */
+    chatWorking?(chatId: string): boolean;
 }
 
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
@@ -558,6 +561,7 @@ export class ProjectStore {
         this.publish(entry);
 
         this.release(entry.projectId);
+        await this.settleDesigns(entry.projectId, entry.folder, { views: document.views, shared: document.shared ?? [] });
         const daemonSide = this.fromDisk(entry.projectId, document, entry.folder);
         this.index.set(entry.projectId, entry.folder, daemonSide);
         const state: OpenProject = {
@@ -670,6 +674,8 @@ export class ProjectStore {
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
         /* Bound first: a document that names a node before its binding exists would let a client start it here.
            A save that names no machine for a node leaves its binding as it was, so a client that never heard of the field cannot drop it. */
+        const sharedBefore = [...state.shared];
+        await this.refuseTakenDesignFolders(state.entry.folder, { views: before ?? [], shared: sharedBefore }, { views: document.views, shared: ids });
         const boundBefore = { ...this.remote.nodesOf(projectId) };
         await this.remote.bind(projectId, machinesOf(content), idsOf(content));
         const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, moved, state.overlayFields).catch(
@@ -679,6 +685,7 @@ export class ProjectStore {
             }
         );
         remember(state, written, document.rev, ids, document.views);
+        await this.followDesigns(projectId, state.entry.folder, { views: before ?? [], shared: sharedBefore }, { views: document.views, shared: ids });
         await this.remote.prune(projectId, idsOf(content));
         /* Not the sender: its screen is already ahead of this document, and taking it in would undo a
            drag that went on while the save was out. */
@@ -697,6 +704,54 @@ export class ProjectStore {
             origin
         );
         return document.rev;
+    }
+
+    /* Before a write: a design that changes sides must not land on a folder that is there already, or two designs would share it. */
+    private async refuseTakenDesignFolders(folder: string, before: DesignSides, after: DesignSides): Promise<void> {
+        const [taken] = await takenDesignFolders(folder, before, after);
+        if (taken !== undefined) {
+            throw new ProjectError(
+                'design-folder-taken',
+                `"${taken.name}" cannot move its pages to ${taken.to}, because another design already has a folder there. Nothing was saved.`
+            );
+        }
+    }
+
+    /* Whether a chat of the design other than `except` may still write to the folder it was told. */
+    private designAtWork(except: string | null = null): DesignAtWork {
+        return (design) => design.chats.some((chat) => chat.id !== except && this.links.chatWorking?.(chat.id) === true);
+    }
+
+    /* A folder a move left on the wrong side goes back to where the document says its design is; one that cannot only says so. */
+    private async settleDesigns(projectId: string, folder: string, sides: DesignSides, atWork = this.designAtWork()): Promise<void> {
+        await settleDesignFolders(folder, sides, atWork).catch((e: unknown) => {
+            console.warn(`Putting back the folders of the designs of project ${projectId} failed:`, errorText(e));
+        });
+    }
+
+    /*
+     * After a turn of a chat ended: what a chat of a design wrote to the folder its design left while
+     * that turn ran goes into the folder the design has now, since its CLI hears of the move only at its
+     * next turn.
+     */
+    async settleDesignsAfterTurn(chatId: string): Promise<void> {
+        for (const projectId of this.index.projectsPlacing(chatId)) {
+            await this.locked(projectId, async () => {
+                const folder = this.index.folderOf(projectId);
+                const sides = this.index.designSidesOf(projectId);
+
+                if (folder !== null && sides !== null) {
+                    await this.settleDesigns(projectId, folder, sides, this.designAtWork(chatId));
+                }
+            });
+        }
+    }
+
+    /* A design's folder follows its design between the two sides once the files say where it is; a folder that cannot follow only says so. */
+    private async followDesigns(projectId: string, folder: string, before: DesignSides, after: DesignSides): Promise<void> {
+        await moveDesignFolders(folder, before, after, this.designAtWork())
+            .then((stuck) => stuck.forEach((id) => console.warn(`The folder of design ${id} is on both sides of the project and stayed where it was`)))
+            .catch((e: unknown) => console.warn(`Moving the folders of the designs of project ${projectId} failed:`, errorText(e)));
     }
 
     /* Where a node or a view sits, from the index of every known project: an open one would miss an agent whose person switched away. */
@@ -774,8 +829,10 @@ export class ProjectStore {
         if (duplicate) {
             throw new ProjectError('project-invalid', `The change would give two things the id "${duplicate}"`);
         }
+        await this.refuseTakenDesignFolders(entry.folder, { views: before, shared }, { views: document.views, shared });
         const state = this.open.get(projectId);
         const written = await this.writeFiles(path, toPortable(mutation.content, entry.folder), shared, document.rev, [], overlayFields);
+        await this.followDesigns(projectId, entry.folder, { views: before, shared }, { views: document.views, shared });
         await this.remote.prune(projectId, idsOf(mutation.content));
         const renamed = identityChanged(entry, mutation.content);
         const nextEntry = renamed ? { ...entry, name: mutation.content.name, color: mutation.content.color, icon: mutation.content.icon ?? null } : entry;
@@ -1265,8 +1322,12 @@ export class ProjectStore {
         return true;
     }
 
-    /* Indexes a document read from disk and drops the bindings of nodes it no longer places; answers it in its daemon-side form. */
+    /*
+     * Indexes a document read from disk, puts its design folders where it says they are, and drops the
+     * bindings of nodes it no longer places; answers it in its daemon-side form.
+     */
     private async indexRead(entry: RegistryEntry, document: ProjectDocument): Promise<ProjectDocument> {
+        await this.settleDesigns(entry.projectId, entry.folder, { views: document.views, shared: document.shared ?? [] });
         const daemonSide = this.fromDisk(entry.projectId, document, entry.folder);
         this.index.set(entry.projectId, entry.folder, daemonSide);
         await this.remote.prune(entry.projectId, idsOf(document));

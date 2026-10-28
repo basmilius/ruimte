@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { act } from 'react';
 import type { GitStatus, ProjectCanvasView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
@@ -25,6 +25,16 @@ const TEAM = {
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [TEAM], texts: [], edges: [], layouts: [] };
 // A fixed moment, so the log groups its rows the same way on every run.
 const COMMITTED_AT = 1_760_000_000;
+const previousTimeZone = process.env.TZ;
+process.env.TZ = 'Europe/Amsterdam';
+
+afterAll(() => {
+    if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+    } else {
+        process.env.TZ = previousTimeZone;
+    }
+});
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
@@ -67,6 +77,7 @@ function worktreeRow(): HTMLElement | null {
 }
 
 beforeEach(async () => {
+    setSystemTime(new Date((COMMITTED_AT + 7200) * 1000));
     localStorage.clear();
     machine = new FakeMachine();
     machine.answer('git.repos', () => ({
@@ -102,6 +113,7 @@ afterEach(async () => {
     await act(async () => useUi.getState().setPanel({ open: false, kind: 'git' }));
     await page.unmount();
     workspace.close();
+    setSystemTime();
 });
 
 describe('the git panel over a folder of two repositories', () => {
@@ -213,6 +225,7 @@ describe('the git panel over a folder of two repositories', () => {
         expect(row?.textContent).toContain('v1.0');
         expect(row?.textContent).toContain('+1');
         expect(row?.querySelector('button')).toBeNull();
+        expect(row?.lastElementChild?.textContent).toBe('2h');
     });
 
     test('the log narrows to one repository and widens again', async () => {

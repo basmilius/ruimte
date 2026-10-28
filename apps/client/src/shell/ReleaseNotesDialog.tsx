@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Heart } from 'lucide-react';
 import { Markdown } from '@adecore/agents-react/chat/ui';
 import { formatDay, formatDayWithYear } from '@adecore/ui/format';
 import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog } from '@adecore/ui';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
-import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
+import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, SPONSOR_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
 import { useUpdates } from '@/state/updates';
 
 function dateOf(iso: string): string {
@@ -125,6 +125,9 @@ export function ReleaseNotesDialog() {
                 <div className="flex items-center gap-2 border-t border-border px-5 py-3">
                     <Button variant="ghost" href={RELEASES_PAGE}>
                         {t('releaseNotes.allReleases')} <Icon icon={ExternalLink} size={12} />
+                    </Button>
+                    <Button variant="ghost" href={SPONSOR_PAGE}>
+                        <Icon icon={Heart} size={12} /> {t('releaseNotes.sponsor')}
                     </Button>
                     <span className="grow" />
                     {updates.supported && <UpdateAction />}

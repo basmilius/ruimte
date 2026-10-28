@@ -40,6 +40,7 @@ export function createCanvasGestureSlice(
     | 'leaveDerivedCard'
     | 'setGesturing'
     | 'setPanning'
+    | 'setHoverGroup'
     | 'beginGapMove'
     | 'moveGapNodes'
     | 'endGapMove'
@@ -98,6 +99,11 @@ export function createCanvasGestureSlice(
         setPanning(panning) {
             if (get().panning !== panning) {
                 set({ panning });
+            }
+        },
+        setHoverGroup(id) {
+            if (get().hoverGroupId !== id) {
+                set({ hoverGroupId: id });
             }
         },
         beginGapMove(ids, fixed = []) {

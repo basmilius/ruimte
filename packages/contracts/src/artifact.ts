@@ -162,6 +162,21 @@ export type ArtifactSavePayload = z.infer<typeof ArtifactSavePayloadSchema>;
 export const ArtifactSaveResultSchema = z.object({ artifactId: ArtifactIdSchema, versionId: ArtifactVersionIdSchema });
 export type ArtifactSaveResult = z.infer<typeof ArtifactSaveResultSchema>;
 
+/*
+ * A folder of the project as one version, every file under it named by its path inside it: a design a
+ * person keeps as it stands. The same key makes a new version of the same artifact.
+ */
+export const ArtifactSaveFolderPayloadSchema = z.object({
+    projectId: z.string().min(1),
+    // Relative to the project folder.
+    path: z.string().min(1).max(4096),
+    title: z.string().trim().min(1).max(ARTIFACT_LIMITS.titleLength),
+    kind: KnownArtifactKindSchema.optional(),
+    key: ArtifactKeySchema.optional(),
+    requestId: ArtifactRequestIdSchema
+});
+export type ArtifactSaveFolderPayload = z.infer<typeof ArtifactSaveFolderPayloadSchema>;
+
 export const ArtifactCopyToProjectPayloadSchema = z.object({
     artifactId: ArtifactIdSchema,
     versionId: ArtifactVersionIdSchema,

@@ -1,5 +1,5 @@
-import { isCanvasView, isSessionView } from '@ruimte/contracts';
-import { READABLE_ZOOM } from '@/canvas/culling';
+import { isCanvasView, isDesignView, isSessionView, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
 import { shownViewIdsIn } from '@/shell/split';
 import { liveCanvas, maximizedNodeOf, type CanvasNode, type CanvasState } from '@/state/canvas';
@@ -10,6 +10,14 @@ import { useDocument } from '@/state/document';
  * all read. Kept apart from `state/attention.ts` so anything that announces something can ask about
  * the node it is about without importing the watcher that announces it.
  */
+
+/*
+ * Under this a node is a few dozen pixels tall, a shape on the canvas rather than something anyone is
+ * reading, so it does not count as seen. Fixed on purpose: the render distance a person sets is about
+ * what their machine can draw and moves only further out than this (`canvas/render-distance.ts`), so
+ * a node that counts as seen is always drawn live, and a faster machine never marks more as read.
+ */
+export const SEEN_ZOOM = 0.4;
 
 /* One canvas as a question about sight: where the camera is and what stands in front of it. */
 export interface CanvasSight {
@@ -35,7 +43,7 @@ export function visibleNodes(canvas: CanvasSight, { readable }: { readable: bool
     if (canvas.maximized) {
         return [canvas.maximized];
     }
-    if (readable && canvas.camera.zoom < READABLE_ZOOM) {
+    if (readable && canvas.camera.zoom < SEEN_ZOOM) {
         return [];
     }
     const rect = visibleRect(canvas.camera, canvas.viewport);
@@ -67,25 +75,53 @@ function windowFocused(): boolean {
     return typeof document !== 'undefined' && document.hasFocus();
 }
 
-// All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
-export function nodesInSight(): string[][] {
-    const { views, layout } = useDocument.getState();
-    const onScreen = new Set(layout === null ? [] : shownViewIdsIn(layout));
-    return views.flatMap((view) => {
+/* One canvas as a question about sight, with what a node needs to say which chat it shows. */
+export interface NodeSightCanvas extends CanvasSight {
+    nodes: readonly (Rect & { id: string; kind: string; chats?: ProjectNode['chats'] })[];
+}
+
+/* What `nodesInSightOf` reads of a workspace, handed in so a test builds one without a store. */
+export interface NodeSightWorkspace {
+    views: readonly ProjectView[];
+    layout: SplitLayout | null;
+    canvasOf(viewId: string): NodeSightCanvas | null;
+}
+
+/*
+ * All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
+ * A design is in sight as the chat it shows, so a later chat is seen while it is in front and its
+ * siblings behind the picker are not.
+ */
+export function nodesInSightOf(workspace: NodeSightWorkspace): string[][] {
+    const onScreen = new Set(workspace.layout === null ? [] : shownViewIdsIn(workspace.layout));
+    return workspace.views.flatMap((view) => {
         if (!onScreen.has(view.id)) {
             return [];
+        }
+        if (isDesignView(view)) {
+            return [[activeDesignChat(placeOfView(view), useDesignChat.getState().picked)]];
         }
         if (isSessionView(view)) {
             return [[view.id]];
         }
-        if (!isCanvasView(view)) {
-            return [];
-        }
-        const canvas = liveCanvas(view.id);
+        const canvas = isCanvasView(view) ? workspace.canvasOf(view.id) : null;
         if (canvas === null) {
             return [];
         }
-        return [readableNodes(sightOf(canvas))];
+        const nodes = new Map(canvas.nodes.map((node) => [node.id, node]));
+        return [readableNodes(canvas).map((id) => shownChatOfNode(nodes.get(id) ?? { id, kind: 'unknown' }) ?? id)];
+    });
+}
+
+export function nodesInSight(): string[][] {
+    const { views, layout } = useDocument.getState();
+    return nodesInSightOf({
+        views,
+        layout,
+        canvasOf: (viewId) => {
+            const canvas = liveCanvas(viewId);
+            return canvas === null ? null : sightOf(canvas);
+        }
     });
 }
 

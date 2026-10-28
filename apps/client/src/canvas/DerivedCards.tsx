@@ -12,20 +12,21 @@ import { useWorkspace } from '@/transport/connections';
 import { NodeMachineScope } from '@/transport/node-machine';
 
 const RoutineBeside = lazyNamed(() => import('@/routines/RoutineBeside'), 'RoutineBeside');
+const DesignBeside = lazyNamed(() => import('@/design/DesignNode'), 'DesignBeside');
 const WorkflowBeside = lazyNamed(() => import('@/chat/workflow/WorkflowBeside'), 'WorkflowBeside');
 
 /*
  * What the canvas draws beside a node from that node's data, never stored and never a node in the
- * store: a routine's runs and its Output, and the workflow a chat runs. They follow the node, so
- * selection, lines a person draws and layouts never see them (`DerivedSet`, `derivedOwnerOf`); the
- * minimap, the resize handles and the keys know them only through `derivedCards`.
+ * store: a routine's runs and its Output, the pages of a design and the workflow a chat runs. They
+ * follow the node, so selection, lines a person draws and layouts never see them (`DerivedSet`,
+ * `derivedOwnerOf`); the minimap, the resize handles and the keys know them only through `derivedCards`.
  */
 export function DerivedCards({ stacking }: { stacking: Readonly<Record<string, number>> }) {
     const { t } = useTranslation('canvas');
     const nodes = useCanvas((s) => s.nodes);
     const hidden = useCanvas((s) => s.hidden);
     const viewId = useCanvas((s) => s.viewId);
-    const owners = Object.values(nodes).filter((node) => (node.kind === 'routine' || node.kind === 'chat') && !hidden.has(node.id));
+    const owners = Object.values(nodes).filter((node) => (node.kind === 'routine' || node.kind === 'design' || node.kind === 'chat') && !hidden.has(node.id));
     // What a window chose beside a chat node goes with the node; a hidden one keeps it for when its group opens.
     useEffect(() => {
         forgetWorkflowBeside((key) => {
@@ -38,6 +39,8 @@ export function DerivedCards({ stacking }: { stacking: Readonly<Record<string, n
             <LazyBoundary>
                 {node.kind === 'routine' ? (
                     <RoutineBeside id={node.id} z={stacking[node.id] ?? 1} />
+                ) : node.kind === 'design' ? (
+                    <DesignBeside id={node.id} z={stacking[node.id] ?? 1} />
                 ) : (
                     <NodeMachineScope machine={node.machine}>
                         <ChatBeside node={node} z={stacking[node.id] ?? 1} />

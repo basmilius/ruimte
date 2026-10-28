@@ -1,9 +1,9 @@
-import { isFileView, resolveStoredPath, sessionNodesOfView, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { isFileView, resolveStoredPath, sessionNodesOfView, type ProjectNode, type ProjectView, nodeChats } from '@ruimte/contracts';
 import { agentsEndedBy } from '@/agents/end-children';
 import { callerName } from '@/project/show-view';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@adecore/agents-react/state';
-import { nodeRefsOfView, nodesOfView } from '@/project/view-nodes';
+import { nodeRefsOf, nodeRefsOfView, nodesOfView } from '@/project/view-nodes';
 import { currentEndpointId } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
@@ -89,8 +89,8 @@ export function viewDeletionFacts(view: ProjectView, views: readonly ProjectView
 /* `nodes` are the ones that go, a collapsed group's hidden members included. */
 export function nodeDeletionFacts(nodes: readonly ProjectNode[], views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> {
     return deletionFacts(
-        nodes,
-        nodes.flatMap((node) => (node.kind === 'chat' || node.kind === 'terminal' ? [node.id] : [])),
+        nodeRefsOf(nodes),
+        nodes.flatMap((node) => (node.kind === 'terminal' ? [node.id] : nodeChats(node).map((chat) => chat.id))),
         filesOfNodes(nodes, machine.folder()),
         views,
         machine

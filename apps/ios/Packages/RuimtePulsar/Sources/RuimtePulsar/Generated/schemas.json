@@ -37032,6 +37032,9 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "design": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -38114,7 +38117,8 @@
                                   "diagram",
                                   "file",
                                   "artifact",
-                                  "routine"
+                                  "routine",
+                                  "design"
                                 ]
                               },
                               {
@@ -38324,6 +38328,16 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
                           }
                         },
                         "required": [
@@ -38348,7 +38362,8 @@
                             "diagram",
                             "file",
                             "artifact",
-                            "routine"
+                            "routine",
+                            "design"
                           ],
                           "template": {
                             "id": "future-id",
@@ -41090,6 +41105,332 @@
                 {
                   "type": "object",
                   "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee",
+                            "pin",
+                            "target",
+                            "lightbulb",
+                            "archive",
+                            "inbox",
+                            "house",
+                            "briefcase",
+                            "code-xml",
+                            "braces",
+                            "square-terminal",
+                            "file-code",
+                            "binary",
+                            "regex",
+                            "variable",
+                            "blocks",
+                            "component",
+                            "git-branch",
+                            "git-merge",
+                            "git-pull-request",
+                            "git-fork",
+                            "bug",
+                            "test-tube-diagonal",
+                            "flask-conical",
+                            "workflow",
+                            "webhook",
+                            "bot-message-square",
+                            "brain-circuit",
+                            "wand-sparkles",
+                            "messages-square",
+                            "scan-eye",
+                            "audio-waveform",
+                            "app-window",
+                            "layout-dashboard",
+                            "layout-template",
+                            "panels-top-left",
+                            "mouse-pointer-click",
+                            "shopping-cart",
+                            "store",
+                            "mail",
+                            "server-cog",
+                            "cloud-cog",
+                            "gauge",
+                            "activity",
+                            "scroll-text",
+                            "bell",
+                            "lock",
+                            "fingerprint-pattern",
+                            "chart-line",
+                            "chart-column",
+                            "chart-pie",
+                            "table",
+                            "sheet",
+                            "calculator",
+                            "sigma",
+                            "atom",
+                            "dna",
+                            "telescope",
+                            "orbit",
+                            "microchip",
+                            "keyboard",
+                            "mouse",
+                            "headphones",
+                            "watch",
+                            "battery",
+                            "bluetooth",
+                            "thermometer",
+                            "pen-tool",
+                            "pencil-ruler",
+                            "shapes",
+                            "frame",
+                            "swatch-book",
+                            "type",
+                            "image",
+                            "film",
+                            "clapperboard",
+                            "mic",
+                            "notebook",
+                            "notebook-pen",
+                            "library-big",
+                            "newspaper",
+                            "graduation-cap",
+                            "languages",
+                            "quote",
+                            "presentation",
+                            "megaphone",
+                            "list-todo",
+                            "square-kanban",
+                            "clipboard-list",
+                            "calendar",
+                            "milestone",
+                            "trophy",
+                            "hourglass",
+                            "timer",
+                            "users",
+                            "handshake",
+                            "wallet",
+                            "sprout",
+                            "trees",
+                            "mountain",
+                            "sun",
+                            "moon",
+                            "plane",
+                            "ship",
+                            "anchor",
+                            "life-buoy",
+                            "pizza",
+                            "gift",
+                            "dumbbell",
+                            "bike",
+                            "paw-print"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "design"
+                    },
+                    "node": {
+                      "type": "object",
+                      "properties": {
+                        "cwd": {
+                          "type": "string"
+                        },
+                        "command": {
+                          "type": "string"
+                        },
+                        "resume": {
+                          "type": "string"
+                        },
+                        "provider": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32,
+                          "pattern": "^[a-z][a-z0-9-]*$",
+                          "x-open-enum": [
+                            "claude",
+                            "codex",
+                            "gemini",
+                            "copilot",
+                            "apple"
+                          ]
+                        },
+                        "account": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        },
+                        "providerFixed": {
+                          "type": "boolean"
+                        },
+                        "runtimeMode": {
+                          "type": "string",
+                          "x-open-enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                          ]
+                        },
+                        "accent": {
+                          "type": "string"
+                        },
+                        "issue": {
+                          "type": "object",
+                          "properties": {
+                            "repo": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "repo",
+                            "number",
+                            "url"
+                          ]
+                        },
+                        "artifact": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "version": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ]
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "chats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "node",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
                     "kind": {
                       "type": "string",
                       "const": "unknown"
@@ -41135,7 +41476,8 @@
                   "database",
                   "separator",
                   "subheader",
-                  "artifact"
+                  "artifact",
+                  "design"
                 ],
                 "template": {
                   "kind": "unknown",
@@ -42124,7 +42466,8 @@
                                   "diagram",
                                   "file",
                                   "artifact",
-                                  "routine"
+                                  "routine",
+                                  "design"
                                 ]
                               },
                               {
@@ -42334,6 +42677,16 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
                           }
                         },
                         "required": [
@@ -42358,7 +42711,8 @@
                             "diagram",
                             "file",
                             "artifact",
-                            "routine"
+                            "routine",
+                            "design"
                           ],
                           "template": {
                             "id": "future-id",
@@ -45100,6 +45454,332 @@
                 {
                   "type": "object",
                   "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee",
+                            "pin",
+                            "target",
+                            "lightbulb",
+                            "archive",
+                            "inbox",
+                            "house",
+                            "briefcase",
+                            "code-xml",
+                            "braces",
+                            "square-terminal",
+                            "file-code",
+                            "binary",
+                            "regex",
+                            "variable",
+                            "blocks",
+                            "component",
+                            "git-branch",
+                            "git-merge",
+                            "git-pull-request",
+                            "git-fork",
+                            "bug",
+                            "test-tube-diagonal",
+                            "flask-conical",
+                            "workflow",
+                            "webhook",
+                            "bot-message-square",
+                            "brain-circuit",
+                            "wand-sparkles",
+                            "messages-square",
+                            "scan-eye",
+                            "audio-waveform",
+                            "app-window",
+                            "layout-dashboard",
+                            "layout-template",
+                            "panels-top-left",
+                            "mouse-pointer-click",
+                            "shopping-cart",
+                            "store",
+                            "mail",
+                            "server-cog",
+                            "cloud-cog",
+                            "gauge",
+                            "activity",
+                            "scroll-text",
+                            "bell",
+                            "lock",
+                            "fingerprint-pattern",
+                            "chart-line",
+                            "chart-column",
+                            "chart-pie",
+                            "table",
+                            "sheet",
+                            "calculator",
+                            "sigma",
+                            "atom",
+                            "dna",
+                            "telescope",
+                            "orbit",
+                            "microchip",
+                            "keyboard",
+                            "mouse",
+                            "headphones",
+                            "watch",
+                            "battery",
+                            "bluetooth",
+                            "thermometer",
+                            "pen-tool",
+                            "pencil-ruler",
+                            "shapes",
+                            "frame",
+                            "swatch-book",
+                            "type",
+                            "image",
+                            "film",
+                            "clapperboard",
+                            "mic",
+                            "notebook",
+                            "notebook-pen",
+                            "library-big",
+                            "newspaper",
+                            "graduation-cap",
+                            "languages",
+                            "quote",
+                            "presentation",
+                            "megaphone",
+                            "list-todo",
+                            "square-kanban",
+                            "clipboard-list",
+                            "calendar",
+                            "milestone",
+                            "trophy",
+                            "hourglass",
+                            "timer",
+                            "users",
+                            "handshake",
+                            "wallet",
+                            "sprout",
+                            "trees",
+                            "mountain",
+                            "sun",
+                            "moon",
+                            "plane",
+                            "ship",
+                            "anchor",
+                            "life-buoy",
+                            "pizza",
+                            "gift",
+                            "dumbbell",
+                            "bike",
+                            "paw-print"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "design"
+                    },
+                    "node": {
+                      "type": "object",
+                      "properties": {
+                        "cwd": {
+                          "type": "string"
+                        },
+                        "command": {
+                          "type": "string"
+                        },
+                        "resume": {
+                          "type": "string"
+                        },
+                        "provider": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32,
+                          "pattern": "^[a-z][a-z0-9-]*$",
+                          "x-open-enum": [
+                            "claude",
+                            "codex",
+                            "gemini",
+                            "copilot",
+                            "apple"
+                          ]
+                        },
+                        "account": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        },
+                        "providerFixed": {
+                          "type": "boolean"
+                        },
+                        "runtimeMode": {
+                          "type": "string",
+                          "x-open-enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                          ]
+                        },
+                        "accent": {
+                          "type": "string"
+                        },
+                        "issue": {
+                          "type": "object",
+                          "properties": {
+                            "repo": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "repo",
+                            "number",
+                            "url"
+                          ]
+                        },
+                        "artifact": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "version": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ]
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "chats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "node",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
                     "kind": {
                       "type": "string",
                       "const": "unknown"
@@ -45145,7 +45825,8 @@
                   "database",
                   "separator",
                   "subheader",
-                  "artifact"
+                  "artifact",
+                  "design"
                 ],
                 "template": {
                   "kind": "unknown",
@@ -62483,7 +63164,8 @@
           "diagram",
           "file",
           "artifact",
-          "routine"
+          "routine",
+          "design"
         ]
       },
       "size": {
@@ -66953,6 +67635,71 @@
     ]
   },
   "request.artifact.save.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "artifactId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "versionId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "artifactId",
+      "versionId"
+    ]
+  },
+  "request.artifact.saveFolder.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "report",
+          "image",
+          "build",
+          "export",
+          "recording",
+          "page"
+        ]
+      },
+      "key": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+      },
+      "requestId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "title",
+      "requestId"
+    ]
+  },
+  "request.artifact.saveFolder.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -78884,7 +79631,8 @@
                                   "diagram",
                                   "file",
                                   "artifact",
-                                  "routine"
+                                  "routine",
+                                  "design"
                                 ]
                               },
                               {
@@ -79094,6 +79842,16 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "chats": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
                           }
                         },
                         "required": [
@@ -79118,7 +79876,8 @@
                             "diagram",
                             "file",
                             "artifact",
-                            "routine"
+                            "routine",
+                            "design"
                           ],
                           "template": {
                             "id": "future-id",
@@ -81860,6 +82619,332 @@
                 {
                   "type": "object",
                   "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee",
+                            "pin",
+                            "target",
+                            "lightbulb",
+                            "archive",
+                            "inbox",
+                            "house",
+                            "briefcase",
+                            "code-xml",
+                            "braces",
+                            "square-terminal",
+                            "file-code",
+                            "binary",
+                            "regex",
+                            "variable",
+                            "blocks",
+                            "component",
+                            "git-branch",
+                            "git-merge",
+                            "git-pull-request",
+                            "git-fork",
+                            "bug",
+                            "test-tube-diagonal",
+                            "flask-conical",
+                            "workflow",
+                            "webhook",
+                            "bot-message-square",
+                            "brain-circuit",
+                            "wand-sparkles",
+                            "messages-square",
+                            "scan-eye",
+                            "audio-waveform",
+                            "app-window",
+                            "layout-dashboard",
+                            "layout-template",
+                            "panels-top-left",
+                            "mouse-pointer-click",
+                            "shopping-cart",
+                            "store",
+                            "mail",
+                            "server-cog",
+                            "cloud-cog",
+                            "gauge",
+                            "activity",
+                            "scroll-text",
+                            "bell",
+                            "lock",
+                            "fingerprint-pattern",
+                            "chart-line",
+                            "chart-column",
+                            "chart-pie",
+                            "table",
+                            "sheet",
+                            "calculator",
+                            "sigma",
+                            "atom",
+                            "dna",
+                            "telescope",
+                            "orbit",
+                            "microchip",
+                            "keyboard",
+                            "mouse",
+                            "headphones",
+                            "watch",
+                            "battery",
+                            "bluetooth",
+                            "thermometer",
+                            "pen-tool",
+                            "pencil-ruler",
+                            "shapes",
+                            "frame",
+                            "swatch-book",
+                            "type",
+                            "image",
+                            "film",
+                            "clapperboard",
+                            "mic",
+                            "notebook",
+                            "notebook-pen",
+                            "library-big",
+                            "newspaper",
+                            "graduation-cap",
+                            "languages",
+                            "quote",
+                            "presentation",
+                            "megaphone",
+                            "list-todo",
+                            "square-kanban",
+                            "clipboard-list",
+                            "calendar",
+                            "milestone",
+                            "trophy",
+                            "hourglass",
+                            "timer",
+                            "users",
+                            "handshake",
+                            "wallet",
+                            "sprout",
+                            "trees",
+                            "mountain",
+                            "sun",
+                            "moon",
+                            "plane",
+                            "ship",
+                            "anchor",
+                            "life-buoy",
+                            "pizza",
+                            "gift",
+                            "dumbbell",
+                            "bike",
+                            "paw-print"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "design"
+                    },
+                    "node": {
+                      "type": "object",
+                      "properties": {
+                        "cwd": {
+                          "type": "string"
+                        },
+                        "command": {
+                          "type": "string"
+                        },
+                        "resume": {
+                          "type": "string"
+                        },
+                        "provider": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32,
+                          "pattern": "^[a-z][a-z0-9-]*$",
+                          "x-open-enum": [
+                            "claude",
+                            "codex",
+                            "gemini",
+                            "copilot",
+                            "apple"
+                          ]
+                        },
+                        "account": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+                        },
+                        "providerFixed": {
+                          "type": "boolean"
+                        },
+                        "runtimeMode": {
+                          "type": "string",
+                          "x-open-enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                          ]
+                        },
+                        "accent": {
+                          "type": "string"
+                        },
+                        "issue": {
+                          "type": "object",
+                          "properties": {
+                            "repo": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "repo",
+                            "number",
+                            "url"
+                          ]
+                        },
+                        "artifact": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "version": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ]
+                        }
+                      },
+                      "additionalProperties": {}
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "chats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "node",
+                    "path"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "object",
+                  "properties": {
                     "kind": {
                       "type": "string",
                       "const": "unknown"
@@ -81905,7 +82990,8 @@
                   "database",
                   "separator",
                   "subheader",
-                  "artifact"
+                  "artifact",
+                  "design"
                 ],
                 "template": {
                   "kind": "unknown",
@@ -82726,6 +83812,9 @@
                   "type": "null"
                 }
               ]
+            },
+            "design": {
+              "type": "boolean"
             }
           },
           "required": [

@@ -150,7 +150,7 @@ export function nodeStatus(node: StatusOf, sessions: SessionsByKey, chats: ChatS
     if (node.kind === 'terminal') {
         return sessionStatus(sessions[endpointKey(machine, node.id)]);
     }
-    if (node.kind === 'chat') {
+    if (node.kind === 'chat' || node.kind === 'design') {
         return chats[endpointKey(machine, node.id)]?.info.status;
     }
     return node.status;
@@ -162,7 +162,7 @@ export function nodeProvider(
     chats: ChatStatuses,
     endpointId: string
 ): AgentKind | undefined {
-    if (node.provider !== undefined || node.kind !== 'chat') {
+    if (node.provider !== undefined || (node.kind !== 'chat' && node.kind !== 'design')) {
         return node.provider;
     }
     return chats[endpointKey(endpointOfNode(node, endpointId), node.id)]?.info.provider;

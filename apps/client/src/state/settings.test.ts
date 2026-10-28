@@ -30,6 +30,21 @@ describe('the terminal font', () => {
     });
 });
 
+describe('the render distance of a canvas', () => {
+    test('starts on standard, keeps a stored distance and reads anything else as standard', () => {
+        expect(settingsFrom({}).canvasRenderDistance).toBe('standard');
+        expect(settingsFrom({ canvasRenderDistance: 'far' }).canvasRenderDistance).toBe('far');
+        expect(settingsFrom({ canvasRenderDistance: 'unlimited' }).canvasRenderDistance).toBe('unlimited');
+        expect(settingsFrom({ canvasRenderDistance: 'near' as Settings['canvasRenderDistance'] }).canvasRenderDistance).toBe('standard');
+    });
+
+    test('leaves every other choice where it was', () => {
+        const settings = settingsFrom({ canvasRenderDistance: 'far', canvasMinimap: true, terminalFont: 'fira' });
+        expect(settings.canvasMinimap).toBe(true);
+        expect(settings.terminalFont).toBe('fira');
+    });
+});
+
 describe('project navigation', () => {
     test('starts on the switcher and accepts only tabs besides it', () => {
         expect(settingsFrom({}).projectNavigation).toBe('switcher');
@@ -58,8 +73,8 @@ describe('an update', () => {
         try {
             useSettings.getState().update({ panelLayout: 'roomy', chatSteerByDefault: true });
             useSettings.getState().update({ terminalLinkDestination: 'ruimte' });
-            useSettings.getState().update({ dockAutoHide: true, chatStreaming: 'blocks', browserSwipe: false });
-            useSettings.setState({ panelLayout: 'standard', chatSteerByDefault: false, terminalLinkDestination: 'external' });
+            useSettings.getState().update({ dockAutoHide: true, chatStreaming: 'blocks', browserSwipe: false, canvasRenderDistance: 'far' });
+            useSettings.setState({ panelLayout: 'standard', chatSteerByDefault: false, terminalLinkDestination: 'external', canvasRenderDistance: 'standard' });
             useSettings.getState().reload();
             expect(useSettings.getState()).toMatchObject({
                 panelLayout: 'roomy',
@@ -67,7 +82,8 @@ describe('an update', () => {
                 terminalLinkDestination: 'ruimte',
                 dockAutoHide: true,
                 chatStreaming: 'blocks',
-                browserSwipe: false
+                browserSwipe: false,
+                canvasRenderDistance: 'far'
             });
         } finally {
             globalThis.localStorage = previousStorage;

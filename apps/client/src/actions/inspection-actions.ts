@@ -1,7 +1,8 @@
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
-import { isCanvasView, type AgentStatus } from '@ruimte/contracts';
+import { isCanvasView, isChatHostView, isDesignView, nodeChats, viewChats, type AgentStatus } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentActivity } from '@/actions/agent-activity';
+import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { nodesOfView } from '@/project/view-nodes';
 import { focusedCanvas } from '@/state/canvas';
@@ -16,22 +17,48 @@ export function projectAgents(document: StoreApi<DocumentState>) {
     const active = activeViewOf(state);
     const canvas = active && isCanvasView(active) ? focusedCanvas().getState() : null;
     return state.views.flatMap((view) => {
-        if (view.kind === 'chat' || view.kind === 'terminal') {
-            return [{ id: view.id, name: view.name, kind: view.kind, viewId: view.id, view: view.name, selected: active?.id === view.id }];
+        if (isDesignView(view)) {
+            const shown = activeDesignChat(placeOfView(view), useDesignChat.getState().picked);
+            return viewChats(view).map((chat) => ({
+                id: chat.id,
+                name: chat.name,
+                kind: 'chat' as const,
+                viewId: view.id,
+                view: view.name,
+                selected: active?.id === view.id && chat.id === shown
+            }));
+        }
+        if (isChatHostView(view) || view.kind === 'terminal') {
+            return [
+                {
+                    id: view.id,
+                    name: view.name,
+                    kind: view.kind === 'terminal' ? ('terminal' as const) : ('chat' as const),
+                    viewId: view.id,
+                    view: view.name,
+                    selected: active?.id === view.id
+                }
+            ];
         }
         if (!isCanvasView(view)) {
             return [];
         }
-        return nodesOfView(view)
-            .filter((node) => node.kind === 'chat' || node.kind === 'terminal')
-            .map((node) => ({
-                id: node.id,
-                name: node.title,
-                kind: node.kind as 'chat' | 'terminal',
+        return nodesOfView(view).flatMap((node): { id: string; name: string; kind: 'chat' | 'terminal'; viewId: string; view: string; selected: boolean }[] => {
+            const selected = view.id === active?.id && canvas?.selection.includes(node.id) === true;
+            if (node.kind === 'terminal') {
+                return [{ id: node.id, name: node.title, kind: 'terminal', viewId: view.id, view: view.name, selected }];
+            }
+            // A design node's chats are each an agent; the one it shows is the selected one.
+            const shown = shownChatOfNode(node);
+            return nodeChats(node).map((chat) => ({
+                id: chat.id,
+                name: chat.name,
+                kind: 'chat' as const,
                 viewId: view.id,
                 view: view.name,
-                selected: view.id === active?.id && canvas?.selection.includes(node.id) === true
+                selected: selected && chat.id === shown
             }));
+        });
     });
 }
 

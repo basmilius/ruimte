@@ -26,7 +26,15 @@ import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn } from '
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
 import { storedAccount, narrowerMode } from '@adecore/agents/providers';
 import { attachedReferences, type Reference } from '../context/references.ts';
-import { chatNote, chatPrompt, contextChangeNote, contextPrompt, type ChatPromptOptions, VISUAL_RESUME_NOTE } from '../context/context-note.ts';
+import {
+    chatNote,
+    chatPrompt,
+    contextChangeNote,
+    contextPrompt,
+    designMovedNote,
+    type ChatPromptOptions,
+    VISUAL_RESUME_NOTE
+} from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
@@ -88,6 +96,10 @@ interface ChatManagerOptions extends ChatCoreOptions {
     endedAt?: (chatId: string) => number | null;
     // Whether the chat is the hidden one an inline edit runs in, which hears how to answer and is no list's business.
     inlineChat?: (chatId: string) => boolean;
+    // The folder a chat works on as a design and whether that design stands on a canvas, which it hears about when its CLI starts; null for any other chat.
+    design?: (chatId: string) => { folder: string; onCanvas: boolean } | null;
+    // Told each time a turn of a chat ends, so a design folder that moved during it takes in what the turn still wrote to the old one.
+    turnEnded?: (chatId: string) => void;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
     // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
@@ -130,30 +142,43 @@ class ContextNotes implements PromptNotes {
     private readonly sources: () => ContextSource[];
     private readonly messages: PromptNotes | null;
     private readonly takeBrief: () => string | null;
+    private readonly designFolder: () => string | null;
     // The links at the previous prompt; null before the first, whose CLI hears about them at launch.
     private last: ContextSource[] | null = null;
+    // The design folder at the previous prompt, the same way: a design that moved in between is told where it went.
+    private lastFolder: string | null = null;
 
-    constructor(sources: () => ContextSource[], messages: PromptNotes | null, takeBrief: () => string | null) {
+    constructor(sources: () => ContextSource[], messages: PromptNotes | null, takeBrief: () => string | null, designFolder: () => string | null) {
         this.sources = sources;
         this.messages = messages;
         this.takeBrief = takeBrief;
+        this.designFolder = designFolder;
     }
 
     next(): { shown: string[]; heard: string[] } {
         const current = this.sources();
         const previous = this.last;
         this.last = current;
+        const folder = this.designFolder();
+        const moved = previous === null ? null : designMovedNote(this.lastFolder, folder);
+        this.lastFolder = folder;
         const brief = this.takeBrief();
         const change = previous === null ? null : contextChangeNote(previous, current);
         const messages = this.messages?.next() ?? { shown: [], heard: [] };
         return {
-            shown: [...(brief === null ? [] : [`${BRIEF_TITLE}\n${brief}`]), ...(change === null ? [] : [change]), ...messages.shown],
+            shown: [
+                ...(brief === null ? [] : [`${BRIEF_TITLE}\n${brief}`]),
+                ...(moved === null ? [] : [moved]),
+                ...(change === null ? [] : [change]),
+                ...messages.shown
+            ],
             heard: messages.heard
         };
     }
 
     reset(): void {
         this.last = null;
+        this.lastFolder = null;
         this.messages?.reset();
     }
 }
@@ -238,6 +263,8 @@ export class ChatManager extends ChatCore {
     // Ruimte's instructions for a chat's next prompt, handed out once (`ContextNotes`).
     private readonly briefs = new Map<string, string>();
     private readonly inlineChat: (chatId: string) => boolean;
+    private readonly design: (chatId: string) => { folder: string; onCanvas: boolean } | null;
+    private readonly turnEnded: (chatId: string) => void;
     private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
     private readonly peerChat: (chatId: string) => boolean;
     private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
@@ -306,6 +333,8 @@ export class ChatManager extends ChatCore {
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.inlineChat = options.inlineChat ?? (() => false);
+        this.design = options.design ?? (() => null);
+        this.turnEnded = options.turnEnded ?? (() => undefined);
         this.modeCeiling = options.modeCeiling ?? (() => null);
         this.peerChat = options.peerChat ?? (() => false);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
@@ -590,7 +619,8 @@ export class ChatManager extends ChatCore {
             computer: this.computer(),
             // An inline edit answers with one replacement block, which a page above it would only contradict.
             visuals: this.visualReplies() && !this.inlineChat(chatId),
-            databases: !this.inlineChat(chatId) && this.databases(chatId)
+            databases: !this.inlineChat(chatId) && this.databases(chatId),
+            design: this.design(chatId)
         };
     }
 
@@ -633,7 +663,12 @@ export class ChatManager extends ChatCore {
             this.briefs.delete(chatId);
             return brief;
         };
-        const notes = new ContextNotes(() => this.contextSources(chatId), this.messageNotes?.(chatId) ?? null, takeBrief);
+        const notes = new ContextNotes(
+            () => this.contextSources(chatId),
+            this.messageNotes?.(chatId) ?? null,
+            takeBrief,
+            () => this.design(chatId)?.folder ?? null
+        );
         return this.inlineChat(chatId) ? new InlineEditNotes(notes) : notes;
     }
 
@@ -737,6 +772,9 @@ export class ChatManager extends ChatCore {
         }
         if (event.type === 'item' && event.item.kind === 'turn' && info !== undefined) {
             this.turnUsage.turn(chatId, event.item, info);
+        }
+        if (event.type === 'item' && event.item.kind === 'turn' && event.item.state !== 'running') {
+            this.turnEnded(chatId);
         }
         for (const hold of this.childHolds.values()) {
             if (hold.childId === chatId) {

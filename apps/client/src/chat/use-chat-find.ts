@@ -1,6 +1,7 @@
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useContextNames } from '@/chat/ruimte-command-look';
 import { hitKey, hitRow, indexRows, NOTHING, placeOfHit, searchChat, type ChatHit } from '@/chat/search';
+import { useDesignHidesToolCalls } from '@/design/design-tool-calls';
 import type { FindReveal } from '@adecore/agents-react/chat/ui';
 import type { TimelineFind, TimelineFindOptions } from '@adecore/agents-react';
 import { findRanges } from '@/find/dom-text';
@@ -37,7 +38,9 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
     const { chatId, rows, structure, order } = options;
     const find = useFind(options.frame, options.enabled);
     // The thread of a workspace is a chat of the machine this window works on.
-    const nameOf = useContextNames(useEndpointId(), chatId);
+    const endpointId = useEndpointId();
+    const nameOf = useContextNames(endpointId, chatId);
+    const hideTools = useDesignHidesToolCalls(endpointId, chatId);
     // The structure and not the items, so a streamed word does not search the whole thread again; a reply is searched once it settles.
     const search = useMemo(() => {
         if (!find.open || structure === undefined || order === undefined) {
@@ -46,9 +49,10 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
         return searchChat(
             order.flatMap((id) => structure[id] ?? []),
             find.query,
-            nameOf
+            nameOf,
+            hideTools
         );
-    }, [find.open, find.query, structure, order, nameOf]);
+    }, [find.open, find.query, structure, order, nameOf, hideTools]);
     const rowIndex = useMemo(() => indexRows(rows), [rows]);
     // In the order the thread shows them, which is not always the order the items came in.
     const ordered = useMemo(

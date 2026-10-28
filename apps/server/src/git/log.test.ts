@@ -105,6 +105,19 @@ describe('a commit as a diff', () => {
         expect(diff.files?.map((file) => file.path)).toEqual(['file-1.txt']);
         expect(await readCommit(repo, first)).not.toBeNull();
     });
+
+    test('a file larger than a turn would store still shows its diff', async () => {
+        await run(['checkout', '--quiet', '-b', 'large']);
+        await writeFile(join(repo, 'large.md'), `${'a long line of prose in a readme '.repeat(40)}\n`.repeat(200));
+        await run(['add', '.']);
+        await run(['commit', '--quiet', '--message', 'large']);
+        const head = (await run(['rev-parse', 'HEAD'])).trim();
+        await run(['checkout', '--quiet', 'main']);
+
+        const [file] = (await diffCommit(repo, head)).files ?? [];
+        expect(file?.omitted).toBeUndefined();
+        expect(file?.diff.length).toBeGreaterThan(128 * 1024);
+    });
 });
 
 describe('refs', () => {

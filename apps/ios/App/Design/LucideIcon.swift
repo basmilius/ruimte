@@ -112,6 +112,7 @@ struct WorkspaceViewIcon: View {
         case "note": return "sticky-note"
         case "group": return "layout-grid"
         case "artifact": return "package"
+        case "design": return "swatch-book"
         default: return "circle-question-mark"
         }
     }

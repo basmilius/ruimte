@@ -53,7 +53,7 @@ function earliest(times: readonly number[]): number {
 /* When a node started waiting on a person: its oldest open request, else when a terminal was first seen waiting. */
 function waitedSince(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, since: ReadonlyMap<string, number>, endpointId: string): number {
     const key = endpointKey(endpointOfNode(node, endpointId), node.id);
-    if (node.kind === 'chat') {
+    if (node.kind === 'chat' || node.kind === 'design') {
         return earliest((chats[key]?.info.requests ?? []).map((request) => request.createdAt));
     }
     if (node.kind !== 'terminal') {

@@ -53,6 +53,7 @@ private func limits(_ entries: [String]) throws -> JSONValue {
     ])
     #expect(accounts.continueTarget("claude", current: nil, limits: snapshot)?.id == "spare")
     #expect(accounts.continueTarget("claude", current: "spare", limits: snapshot)?.id == "work")
+    #expect(accounts.continueTargets("claude", current: nil, limits: snapshot).map(\.id) == ["spare", "work"])
 }
 
 @Test func anAccountWithASpentWindowOrNoNumbersIsNoTarget() throws {
@@ -64,6 +65,7 @@ private func limits(_ entries: [String]) throws -> JSONValue {
         entry("out", windows: [window("session", 0)]),
     ])
     #expect(accounts.continueTarget("claude", current: nil, limits: snapshot) == nil)
+    #expect(accounts.continueTargets("claude", current: nil, limits: snapshot).isEmpty)
     let failed = try limits([entry("work", windows: [window("session", 0.1)], unavailable: true)])
     #expect(accounts.continueTarget("claude", current: nil, limits: failed) == nil)
     #expect(accounts.continueTarget("claude", current: nil, limits: nil) == nil)

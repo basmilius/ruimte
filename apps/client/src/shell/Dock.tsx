@@ -28,6 +28,7 @@ import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
 import type { Point } from '@/canvas/math';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
+import { DesignAddItem } from '@/design/DesignAddItem';
 import { shownFolderOf, useProject } from '@/state/project';
 import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -97,6 +98,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                     <AgentSubmenus onPick={(target, provider, account) => void createNodeAction(target, { provider: provider.kind, account })} />
                     <AddNodeItem kind="browser" icon={Globe} />
                     <RoutineAddItems />
+                    <DesignAddItem at={centerOfCanvas} />
                     <AddNodeItem kind="group" icon={LayoutGrid} />
                     {hasFolder && (
                         <Menu.Item onClick={() => useUi.getState().openFilePicker({ kind: 'node', at: centerOfCanvas() })}>

@@ -1,22 +1,12 @@
 # Apple Foundation Models
 
-Ruimte's local Apple provider uses a Swift helper and the on-device
-`SystemLanguageModel`. It identifies itself as Apple Foundation Models, with Ruimte as its host application.
-It supports streamed conversation, persisted native model
-memory, project file tools, approved shell commands, questions, web access and
-configured MCP servers. The helper selects tools; the daemon owns execution and
-approval cards.
+The Swift helper behind Ruimte's local Apple provider, on the on-device `SystemLanguageModel`. It identifies itself as Apple Foundation Models with Ruimte as host. It streams conversation, keeps native model memory, and offers project file tools, approved shell commands, questions, web access and configured MCP servers. The helper picks tools; the daemon runs them and owns the approval cards.
 
 ## Enable and build
 
-Requirements: Apple silicon, macOS 26.4 or later, Apple Intelligence enabled and its
-model available. Ruimte probes availability; it does not change Apple settings or
-force model downloads.
+Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence on with its model available. Ruimte only probes availability and never changes Apple settings or forces a download.
 
-Turn on Apple Foundation Models under **Settings > Agents** for the machine running
-the chat. The machine setting is off by default. Turning it off withdraws requests
-and ends running Apple helpers. Select Apple Foundation Models in a chat's
-provider picker.
+Turn on Apple Foundation Models under **Settings > Agents** for the machine running the chat (off by default), then pick it in a chat's provider picker. Turning it off withdraws requests and ends running helpers.
 
 For a development checkout:
 
@@ -26,60 +16,38 @@ apps/foundation-models/.build/debug/ruimte-foundation-models --probe
 RUIMTE_HOME="$(mktemp -d /tmp/ruimte-apple-dev.XXXXXX)" bun run dev:server
 ```
 
-Run `bun run dev:client` separately, connect to the development daemon on port
-4211, and enable Apple in that machine's settings. A fresh development home keeps
-these tests separate from live state.
+Run `bun run dev:client` separately, connect to the development daemon on port 4211 and enable Apple in that machine's settings. The fresh home keeps tests away from live state.
 
-Build the arm64 release helper with:
+Build the arm64 release helper with `bun apps/foundation-models/scripts/build.ts`, which writes `apps/foundation-models/dist/ruimte-foundation-models`. A development provider prefers that build, otherwise the debug build. `RUIMTE_APPLE_FOUNDATION_HELPER` on the daemon overrides the binary.
 
-```sh
-bun apps/foundation-models/scripts/build.ts
-```
+How CI, the compiled daemon and the desktop packaging carry the helper is in the root `CLAUDE.md`. The daemon starts it from `apps/server/src/providers/apple-helper.ts` (the provider) and `apps/server/src/ondevice/model.ts` (the editor's help, `--oneshot`).
 
-This produces `apps/foundation-models/dist/ruimte-foundation-models`. The desktop
-and npm packaging paths include it for macOS arm64. A development provider prefers
-that release build when present, otherwise its debug build. Override the binary
-with `RUIMTE_APPLE_FOUNDATION_HELPER` on the daemon when testing another build.
-
-The client and daemon must understand the `apple` provider kind. Older iOS builds
-without that contract update cannot use these chats. Native conversation forking
-is not implemented.
+Older iOS builds without the `apple` provider kind cannot use these chats. Native conversation forking is not implemented.
 
 ## One-shot mode
 
-`ruimte-foundation-models --oneshot` is the same binary without a conversation: no session store, no tools and no network. It answers `availability` once and then reads `generate { id, instructions, prompt, maxTokens?, temperature? }` lines, streaming `text.snapshot` frames and a `done` per request, and a `cancel { id }` ends one. The daemon runs it for the editor's explanations, name suggestions and ghost text (`apps/server/src/ondevice`), where the instructions of each purpose live.
+`ruimte-foundation-models --oneshot` runs without a conversation, session store, tools or network. It answers `availability` once, then reads `generate { id, instructions, prompt, maxTokens?, temperature? }` lines and streams `text.snapshot` frames and a `done` per request. `cancel { id }` ends one. The instructions per purpose live in `apps/server/src/ondevice`.
 
 ## Tools and approval
 
-Every file, command, web and MCP call asks for approval in all current
-runtime modes. There is no "allow always" policy. `AskUserQuestion` opens a question card
-and returns the person's answer directly to the model.
+Every file, command, web and MCP call asks for approval in every runtime mode. There is no "allow always". `AskUserQuestion` opens a question card and returns the answer to the model. A reply can also ask for input through its structured `needsUserInput` decision, which opens the same card.
 
-Replies carry a structured `needsUserInput` decision. If the model requests
-input through that response instead of calling the tool, the helper opens the
-same question card and resumes after the answer. Normal answers stream as text.
-A turn permits at most three questions across both paths and 12 tool calls total.
-Exceeding either budget throws before opening another card.
+| Limit | Value |
+| --- | --- |
+| Questions per turn (both paths) | 3 |
+| Tool calls per turn | 12 |
+| Generation between tool calls | 120 seconds, waiting on a person excluded |
+| Approved tool execution | 60 seconds, shorter per tool |
+| Stopped helper settling | 5 seconds |
+| File size | 256 KiB |
+| Tool result | 6000 UTF-8 bytes |
+| User message | 6000 UTF-8 bytes |
+| Output per generation | 1024 tokens |
+| Input frame | 64 KiB |
 
-A denial or execution failure is a typed terminal result, not conversational text.
-The daemon seals the turn immediately, withdraws other pending requests, aborts
-running tools, and ignores late model text or new calls. Denials end as aborted;
-operation failures end as errors. This does not undo earlier effects or guarantee
-that an external server honors cancellation.
+Exceeding a budget throws before another card opens. A denial or execution failure ends the turn at once. The daemon withdraws other pending requests, aborts running tools and ignores late text or calls. Denials end as aborted, failures as errors. Earlier effects are not undone, and an external server may ignore cancellation.
 
-An `Edit` with no unique exact match is a recoverable validation error: the file
-has not changed, the failed call stays visible, and the model may read again and
-submit a corrected call for approval. Three rejected matches stop the turn. A rejected edit stays unresolved until an
-Edit on the same file succeeds. Completion text is withheld while an edit remains
-unresolved; bounded follow-up generation asks for a correction.
-No operation is replayed automatically. Read results enter model context as text
-with original line breaks and pagination metadata, avoiding copied JSON escapes.
-
-Generation is limited to 120 seconds between tool calls. Waiting for a person is
-excluded. An approved tool has a 60-second execution deadline; individual tools
-may impose a shorter limit. A stopped helper gets five seconds to settle before
-it is closed. Failed or interrupted mutations require inspecting the current
-state before trying again.
+An `Edit` without a unique exact match leaves the file unchanged, and the model may read again and resubmit. Three rejected matches stop the turn. Completion text is withheld while an edit on a file stays unresolved. No operation is replayed automatically. Read results reach the model as text with original line breaks and pagination.
 
 | Tool | Behavior |
 | --- | --- |
@@ -95,37 +63,17 @@ state before trying again.
 | `MCPCall` | Call one configured server tool with a JSON-object argument string |
 | `AskUserQuestion` | Ask a question with optional choices and await the answer |
 
-The model and chat cards use these names. They follow Claude's naming where the
-operations overlap, but keep the behavior listed here: `Grep` is literal search,
-`Write` creates only, and `ListFiles` lists one directory. The helper protocol keeps
-its own tool identifiers.
+The names follow Claude's where operations overlap, but the behavior is as listed. The helper protocol keeps its own identifiers.
 
-File tools accept project-relative paths and reject parent traversal, symlinks,
-hidden state and common credential filenames. `.gitignore`, `.gitattributes` and
-`.editorconfig` remain readable. Files are limited to 256 KiB; tool results fit
-6000 UTF-8 bytes. Search respects conservative `.gitignore` exclusions and skips
-build directories. New-file parent directories must already exist.
+File tools take project-relative paths and reject parent traversal, symlinks, hidden state and common credential filenames. `.gitignore`, `.gitattributes` and `.editorconfig` stay readable. Search respects `.gitignore` and skips build directories. A new file's parent directory must exist.
 
-Shell commands run with the machine account's permissions. Their working
-directory is not a sandbox. They can read or change files outside the project,
-use the network, or start other programs. The approval card shows the command.
-Stop and timeout kill its process group; output is bounded, with truncation and
-exit status reported. Commands needing interactive stdin are unsupported.
+Shell commands run with the machine account's permissions. The working directory is no sandbox: a command can touch files outside the project, use the network and start programs. Stop and timeout kill its process group. Output is bounded, with truncation and exit status reported. Interactive stdin is unsupported.
 
-Web and remote MCP requests send their approved inputs to external services.
-MCP tools may change external data or run local programs, according to the server.
-All retrieved content is marked in model instructions as untrusted data. The
-filename filters cannot identify every secret; review which files and requests
-you approve.
+Web and remote MCP requests send their approved inputs to external services, and MCP tools may change external data or run local programs. Retrieved content is marked as untrusted in the model instructions. The filename filters cannot catch every secret, so review what you approve.
 
 ## Web and MCP configuration
 
-Use the Apple provider account's environment-variable editor in Settings.
-Configure `BRAVE_SEARCH_API_KEY` as a sensitive variable, or `SEARXNG_URL` with a
-publicly reachable SearXNG JSON search endpoint. Without either, `WebSearch`
-returns a configuration error. `WebFetch` needs no search key. Page fetching
-rejects private/local network destinations and bounds redirects, response size
-and request time.
+Set variables in the Apple provider account's environment editor in Settings. `BRAVE_SEARCH_API_KEY` (as a sensitive variable) or `SEARXNG_URL` (a public SearXNG JSON endpoint) enables `WebSearch`; without either it returns a configuration error. `WebFetch` needs no key. It rejects private and local destinations and bounds redirects, size and time.
 
 Configure MCP in `$RUIMTE_HOME/apple-mcp.json`:
 
@@ -149,86 +97,31 @@ Configure MCP in `$RUIMTE_HOME/apple-mcp.json`:
 }
 ```
 
-These are placeholders, not installed servers. Store `MY_MCP_TOKEN` as a sensitive
-Apple account variable. MCP supports stdio and Streamable HTTP, with configured
-headers. Interactive OAuth discovery and authorization are not implemented.
-Connections remain available across calls and close with the chat helper. Use
-`allowedTools` to restrict what a configured server offers.
+These are placeholders. Store `MY_MCP_TOKEN` as a sensitive Apple account variable. MCP supports stdio and Streamable HTTP with configured headers, not interactive OAuth. Connections live as long as the chat's helper. `allowedTools` restricts what a server offers.
 
-To keep schemas within local context, `MCPListTools` without arguments lists
-server names. Passing `server` lists tool names and descriptions. Passing both
-`server` and `tool` returns that tool's input schema. Oversized schemas fail with
-a bounded error instead of returning incomplete JSON.
+`MCPListTools` without arguments lists server names, with `server` that server's tools, and with `server` and `tool` the input schema. An oversized schema fails with a bounded error.
 
 ## Memory, context and storage
 
-Each chat has a UUID native session. The helper is launched with `--session UUID`
-and `--home PATH`; restarting an existing conversation also passes `--resume`.
-Completed native transcripts are stored as versioned JSON under
-`$RUIMTE_HOME/apple-foundation/sessions`, in private directories and mode-0600
-files. Writes use an atomic replacement; an exclusive lock prevents two helpers
-from modifying the same conversation. Missing, corrupt, mismatched or unsafe
-resume files produce an explicit startup error.
+Each chat has a UUID native session. The helper starts with `--session UUID` and `--home PATH`, plus `--resume` for an existing conversation. Transcripts are versioned JSON under `$RUIMTE_HOME/apple-foundation/sessions`, in private directories with mode-0600 files, written atomically under an exclusive lock. A missing, corrupt, mismatched or unsafe resume file is a startup error.
 
-Each successful turn retains its model transcript, including tool results, in an
-original history separate from the active context. Checkpoint format 2 stores
-both, a SHA-256 fingerprint of the tool definitions, and an interrupted-turn
-marker. Version-1 checkpoints migrate without discarding their available history.
-Changed tool definitions require a new chat; instruction-only updates refresh
-on restore. Checkpoints remain bounded to 2 MiB and an oversized replacement
-leaves the previous checkpoint intact.
+A checkpoint (format 2) stores the original history beside the active context, a SHA-256 fingerprint of the tool definitions and an interrupted-turn marker. Version 1 migrates. Changed tool definitions need a new chat. A checkpoint is at most 2 MiB, and an oversized one leaves the previous intact.
 
-Before generation, the helper persists a checkpoint marked as interrupted.
-Success clears that marker. A process crash leaves a warning on restore: actions
-may already have affected files or services and are never automatically replayed.
-An ordinary failure restores the previous model context. If a mutation may have
-started, the next turn also receives the recovery warning. Clearing a chat starts
-a new native session; previous checkpoint files are retained.
+The helper saves a checkpoint marked interrupted before generation and clears the mark on success. After a crash, restore warns that actions may already have run; they are never replayed. An ordinary failure restores the previous context, with the same warning if a mutation may have started. Clearing a chat starts a new session and keeps the old files.
 
-Before inference, Apple's tokenizer measures the active transcript, prompt and
-structured response schema against `SystemLanguageModel.contextSize`, with 1280
-tokens reserved for response and overhead. Fixed components that cannot fit fail
-before summarization. At context overflow or 12 native exchanges, a separate
-local session without tools summarizes older history while retaining the latest
-two exchanges verbatim. Manual compaction uses the same path.
+Before inference, Apple's tokenizer measures transcript, prompt and response schema against `SystemLanguageModel.contextSize`, with 1280 tokens reserved. At overflow or after 12 exchanges, a separate tool-less session summarizes older history and keeps the last two exchanges verbatim. Manual compaction takes the same path. A summary that is empty, incomplete or too large fails without touching saved history; nothing truncates silently. A single huge exchange may need a new chat. The context is small (8192 tokens on macOS 27), and the helper reports instruction and tool token counts at startup.
 
-Complete tool exchanges are validated before rewriting history. The candidate
-context is measured again before it is installed. Empty summaries, incomplete
-exchanges, a summarizer input that does not fit, or an oversized candidate fail
-without discarding the saved history. There is no silent truncation fallback.
-Summaries can still omit or misstate facts; original history stays on disk and
-source files should be reread before edits. A single very large recent exchange
-may require a new chat rather than compaction.
-
-User messages are limited to 6000 UTF-8 bytes and each generation to 1024 output
-tokens. Tool results can still exhaust context during a native generation; the
-failure is reported and the turn is not retried. Use smaller reads or shorter
-tasks when needed.
-
-The provider does not load linked nodes, attachments, skills or mentioned files
-automatically. There is no agent delegation, durable background task queue,
-cross-chat searchable memory, native fork, thinking stream or cloud fallback.
-Model quality is separate from runtime correctness; `docs/ACCEPTANCE.md` lists the
-model-quality checks that are still open.
+The provider loads no linked nodes, attachments, skills or mentioned files. It has no delegation, background task queue, cross-chat memory, native fork, thinking stream or cloud fallback.
 
 ## Streaming performance
 
-The helper starts prewarming its restored or new session before reporting ready.
-Snapshots go straight to the backend; there is no per-character timer in that
-bridge. The chat UI still uses its shared reveal animation. Prewarming can prepare
-model resources, but cannot guarantee faster text generation.
-
-Run a repeatable three-turn measurement in a temporary session:
+The helper prewarms its session ([Apple's docs](https://developer.apple.com/documentation/foundationmodels/languagemodelsession/prewarm(promptprefix:))) before it reports ready, and sends snapshots straight to the backend. Measure three turns in a temporary session with:
 
 ```sh
 bun apps/foundation-models/stream-benchmark.ts
 ```
 
-This measures time to first text, streamed characters per second, and delay from
-the helper's stdout to backend text events. It does not measure network or browser
-rendering, and one session is an observation, not a guarantee.
-
-Apple documents [session prewarming](https://developer.apple.com/documentation/foundationmodels/languagemodelsession/prewarm(promptprefix:)).
+It reports time to first text, characters per second and the delay from stdout to backend events, not network or rendering.
 
 ## Verification
 
@@ -242,64 +135,32 @@ bun apps/foundation-models/smoke.ts --trim
 bun apps/foundation-models/workflow-smoke.ts /path/to/workday-fixture
 ```
 
-The workflow smoke copies the supplied fixture into temporary directories. Its
-default checks verify a natural-language question card, the returned answer,
-cancellation, and a denied read ending without another question. Add
-`--evaluate-workday` to evaluate the complete planning task. This is a model-quality
-evaluation: an early question or a missing output fails it, even if transport works.
+The smokes use temporary fixtures and state, approve only their scripted operations and need no cloud keys. `--trim` also checks retention after summarization. The workflow smoke checks a question card, its answer, cancellation and a denied read. `--evaluate-workday` adds the full planning task, which is a model-quality check.
 
-Native context integration is opt-in so ordinary Swift tests need no model/XPC:
+Native context integration is opt-in, so ordinary Swift tests need no model:
 
 ```sh
 RUIMTE_TEST_NATIVE_APPLE=1 swift test --package-path apps/foundation-models \
   --filter nativeSummaryPreservesSavedHistoryAndRestoresConversation
 ```
 
-It seeds completed conversation facts, runs the actual local summarizer, verifies
-the saved history, restores the helper and asks for facts from the summary. It stays
-sensitive to model quality. Recorded runs are in [`verification.json`](verification.json).
+Recorded runs are in [`verification.json`](verification.json).
 
-The real-model smoke creates temporary project fixtures and a separate state folder,
-approves only its scripted fixture operations and removes its state afterward. `--trim`
-also checks retention after automatic summarization. It uses no cloud keys; network
-and MCP behavior is tested with controlled fixtures.
-
-Apple's local model service needs XPC access. A command sandbox may permit the
-availability probe but reject generation, so run the smoke outside it. In a restricted
-build environment, Swift may need:
+Apple's model service needs XPC, so run the smokes outside a command sandbox. In a restricted build environment Swift may need:
 
 ```sh
 CLANG_MODULE_CACHE_PATH=/private/tmp/ruimte-foundation-clang \
   swift test --disable-sandbox --package-path apps/foundation-models
 ```
 
-The model's context is small (8192 tokens on macOS 27), and the instructions, tool
-definitions and response schema take part of it. The helper reports instruction and
-tool token counts at startup.
-
 ## Protocol
 
-The transport is JSONL on stdin and stdout, with schemas in
-`packages/contracts/src/apple-foundation.ts`; Swift mirrors those frames. Stdout carries
-protocol only. The helper reports a protocol version, and the daemon refuses an older
-helper at startup so it cannot misread whether an edit failure is recoverable or
-terminal. Input frames are capped at 64 KiB. Cumulative Apple text snapshots become
-suffix deltas or replacements.
+JSONL on stdin and stdout, schemas in `packages/contracts/src/apple-foundation.ts`, mirrored in Swift. Stdout carries protocol only. The daemon refuses a helper with an older protocol version. Cumulative text snapshots become suffix deltas or replacements.
 
-Per-turn metrics report elapsed time, time to first answer text, tool-call count,
-schema tokens and the measured retained context, which feeds the chat usage event.
-Elapsed time includes approvals and questions, so it is no inference timing. The
-metrics frame carries no prompt, tool arguments or credentials.
+Per-turn metrics report elapsed time (approvals included), time to first text, tool calls, schema tokens and retained context, which feeds the chat usage event. They carry no prompt, tool arguments or credentials.
 
-References: [Foundation Models](https://developer.apple.com/documentation/foundationmodels)
-and [tool calling](https://developer.apple.com/documentation/foundationmodels/expanding-generation-with-tool-calling).
-Implementation and availability annotations were checked against the installed SDK.
+References: [Foundation Models](https://developer.apple.com/documentation/foundationmodels) and [tool calling](https://developer.apple.com/documentation/foundationmodels/expanding-generation-with-tool-calling).
 
 ## Reference implementation
 
-The helper adapts ideas from FoundationModelsAgent revision
-[`4bc5676`](https://github.com/rudrankriyam/FoundationModelsAgent/tree/4bc5676bb25b78d691cbcca4b8c2f98d430eaba7):
-typed tool-policy failures, hard budgets, schema accounting, validated context
-transforms and original-history preservation. The MIT notice ships beside the binary
-(`THIRD_PARTY_NOTICES.txt`). Ruimte keeps macOS 26.4 and its own approval, web, MCP
-and persistence interfaces.
+The helper adapts ideas from FoundationModelsAgent revision [`4bc5676`](https://github.com/rudrankriyam/FoundationModelsAgent/tree/4bc5676bb25b78d691cbcca4b8c2f98d430eaba7): typed tool-policy failures, hard budgets, schema accounting, validated context transforms and original-history preservation. The MIT notice ships beside the binary (`THIRD_PARTY_NOTICES.txt`).

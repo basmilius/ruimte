@@ -19,6 +19,7 @@ import {
     ArtifactListResultSchema,
     ArtifactRemovePayloadSchema,
     ArtifactRemoveResultSchema,
+    ArtifactSaveFolderPayloadSchema,
     ArtifactSavePayloadSchema,
     ArtifactSaveResultSchema,
     ArtifactStorageResultSchema
@@ -913,6 +914,7 @@ export const REQUEST_SCHEMAS = {
     'artifact.watch': { payload: EmptySchema, result: EmptySchema },
     'artifact.unwatch': { payload: EmptySchema, result: EmptySchema },
     'artifact.save': { payload: ArtifactSavePayloadSchema, result: ArtifactSaveResultSchema },
+    'artifact.saveFolder': { payload: ArtifactSaveFolderPayloadSchema, result: ArtifactSaveResultSchema },
     'artifact.copyToProject': { payload: ArtifactCopyToProjectPayloadSchema, result: ArtifactCopyToProjectResultSchema },
     'artifact.storage': { payload: EmptySchema, result: ArtifactStorageResultSchema },
     'artifact.cleanup': { payload: ArtifactCleanupPayloadSchema, result: ArtifactCleanupResultSchema },

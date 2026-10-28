@@ -1,11 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    designFolderOf,
+    designPlaces,
     EMPTY_PRIVATE_FILE,
+    isDesignPath,
     PROJECT_VERSION,
+    ProjectDocumentSchema,
     ProjectSharedFileSchema,
     storedViewsOf,
+    viewChats,
     type ProjectCanvasView,
     type ProjectContent,
+    type ProjectDesignView,
     type ProjectSharedFile,
     type ProjectView
 } from './project.ts';
@@ -147,6 +153,101 @@ describe('splitContent', () => {
         expect(viewShareRefusal(climbing)).toBe('path-outside-project');
         expect(canShareView({ ...climbing, path: 'docs/../README.md' })).toBe(true);
         expect(splitContent(content([climbing]), ['f1'], 1).shared.views).toEqual([]);
+    });
+
+    test('a design whose folder is off the project folder is kept back, and one inside it travels with its chat', () => {
+        const outside: ProjectDesignView = { kind: 'design', id: 'd1', name: 'Old', node: { provider: 'claude' }, path: '/home/bas/designs' };
+        const inside: ProjectDesignView = { kind: 'design', id: 'd2', name: 'Onboarding', node: { provider: 'claude' }, path: 'designs/onboarding' };
+        expect(viewShareRefusal(outside)).toBe('path-outside-project');
+        expect(viewShareRefusal({ ...inside, path: '../designs' })).toBe('path-outside-project');
+        expect(canShareView(inside)).toBe(true);
+        const split = splitContent(content([outside, inside]), ['d1', 'd2'], 1);
+        expect(split.shared.views).toEqual([inside]);
+    });
+
+    test('a design node off the project folder on a shared canvas keeps its folder back and is no design anywhere', () => {
+        const outside = node('n1', { kind: 'design', path: '/home/bas/designs' });
+        const views = [canvas('main', [outside])];
+        expect(designPlaces(views)).toEqual([]);
+
+        const split = splitContent(content(views), ['main'], 1);
+        expect((split.shared.views[0] as ProjectCanvasView).nodes[0]?.path).toBeUndefined();
+        expect(split.private.overlay.n1).toEqual({ path: '/home/bas/designs' });
+
+        const pushed = mergeFiles(parsedSharedFile([canvas('main', [node('n1', { kind: 'design', path: '../../elsewhere' })])]), EMPTY_PRIVATE_FILE, fallback);
+        expect((pushed.content.views[0] as ProjectCanvasView).nodes[0]?.path).toBeUndefined();
+    });
+
+    test('a design holds its chat session under its own id, the way a chat view does', () => {
+        const design: ProjectDesignView = {
+            kind: 'design',
+            id: 'd1',
+            name: 'Onboarding',
+            node: { provider: 'claude', resume: 'sess-9' },
+            path: 'designs/onboarding'
+        };
+        const split = splitContent(content([design]), ['d1'], 1);
+        expect(split.shared.views[0]).toEqual({ ...design, node: { provider: 'claude' } });
+        expect(split.private.overlay.d1).toEqual({ resume: 'sess-9' });
+    });
+
+    test("a design's folder is private until the design is shared, and a folder a design named itself stays put", () => {
+        expect(designFolderOf({ path: 'onboarding' }, false)).toBe('.ruimte/private/designs/onboarding');
+        expect(designFolderOf({ path: 'onboarding' }, true)).toBe('.ruimte/designs/onboarding');
+        expect(designFolderOf({ path: 'designs/onboarding' }, false)).toBe('designs/onboarding');
+    });
+
+    test('a design whose name is no folder of its own is kept as it was read and is no design anywhere', () => {
+        expect(['onboarding', 'Pricing v2', 'designs/onboarding'].every(isDesignPath)).toBe(true);
+        expect(['.', '..', '.hidden', 'a\\b', 'a\0b', ''].some(isDesignPath)).toBe(false);
+        expect(['designs/.hidden', 'designs/v2.0'].every(isDesignPath)).toBe(true);
+        expect(
+            ['/etc/designs', '../../elsewhere', 'designs/../..', 'designs/./a', 'designs//a', 'designs/', 'C:/designs', 'a/b`c', 'a/b\nc', 'a\u007fb'].some(
+                isDesignPath
+            )
+        ).toBe(false);
+
+        const raw = { kind: 'design', id: 'd1', name: 'Everything', node: {}, path: '.' };
+        const views = ProjectDocumentSchema.shape.views.parse([raw]);
+        expect(views).toEqual([{ kind: 'unknown', id: 'd1', name: 'Everything', raw }]);
+        expect(designPlaces(views)).toEqual([]);
+        expect(storedViewsOf(splitContent(content(views), ['d1'], 1).shared.views)).toEqual([raw]);
+    });
+
+    test('one later chat of a design view this version cannot read never makes the file unreadable, and goes along as it is', () => {
+        const chats = [{ id: 'd1-2', name: 'Dark', node: { resume: 'sess-2' } }, { id: 'd1-3' }];
+        const [view] = ProjectDocumentSchema.shape.views.parse([{ kind: 'design', id: 'd1', name: 'Onboarding', node: {}, path: 'onboarding', chats }]);
+        expect(viewChats(view!).map((chat) => chat.id)).toEqual(['d1', 'd1-2']);
+
+        const split = splitContent(content([view!]), ['d1'], 1);
+        expect((split.shared.views[0] as ProjectDesignView).chats).toEqual([{ id: 'd1-2', name: 'Dark', node: {} }, { id: 'd1-3' }]);
+        expect(split.private.overlay['d1-2']).toEqual({ resume: 'sess-2' });
+    });
+
+    test('every later chat of a design keeps its session under its own id, out of the shared file', () => {
+        const design: ProjectDesignView = {
+            kind: 'design',
+            id: 'd1',
+            name: 'Onboarding',
+            node: { provider: 'claude' },
+            path: 'designs/onboarding',
+            chats: [{ id: 'd1-2', name: 'Dark mode', node: { provider: 'codex', resume: 'thread-4', cwd: '/home/bas/repo' } }]
+        };
+        const split = splitContent(content([design]), ['d1'], 1);
+        expect(split.shared.views[0]).toEqual({ ...design, chats: [{ id: 'd1-2', name: 'Dark mode', node: { provider: 'codex' } }] });
+        expect(split.private.overlay['d1-2']).toEqual({ resume: 'thread-4', cwd: '/home/bas/repo' });
+    });
+
+    test("a design node's later chats keep their sessions under their own ids out of the shared file, with its canvas", () => {
+        const board = node('board', {
+            kind: 'design',
+            path: 'pricing',
+            chats: [{ id: 'board-2', name: 'Dense', node: { provider: 'codex', resume: 'thread-4' } }]
+        });
+        const split = splitContent(content([canvas('c1', [board])]), ['c1'], 1);
+        const [travelled] = (split.shared.views[0] as ProjectCanvasView).nodes;
+        expect(travelled!.chats).toEqual([{ id: 'board-2', name: 'Dense', node: { provider: 'codex' } }]);
+        expect(split.private.overlay['board-2']).toEqual({ resume: 'thread-4' });
     });
 
     test('a separator travels with the group under it and stays home when that whole stretch is private', () => {

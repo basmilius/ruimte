@@ -38,6 +38,30 @@ test('a node whose agents would end waits for the answer, and the delete takes w
     expect(store.getState().nodes.note).toBeDefined();
 });
 
+test('a design node asks about the agents of every chat it holds, its later ones included', async () => {
+    const design = { ...node('design', 'design', 0), chats: [{ id: 'later', name: 'Second pass', node: {} }] };
+    const store = canvasWith(design);
+    store.getState().select(['design']);
+    await deleteSelectionAsking(store, machine({ later: ['child-a'] }));
+
+    expect(useEndingAgents.getState().pending).toMatchObject({ what: 'design', agents: 1 });
+    expect(store.getState().nodes.design).toBeDefined();
+});
+
+test('a design node leaves behind the worktree a later chat of it works in', async () => {
+    const design = { ...node('design', 'design', 0), chats: [{ id: 'later', name: 'Second pass', node: { cwd: '/wt/later' } }] };
+    const store = canvasWith(design);
+    store.getState().select(['design']);
+    const transport = {
+        request: async (type: string) =>
+            type === 'agent.children' ? { nodeIds: [] } : { worktrees: [{ path: '/wt/later', branch: 'later', work: { changed: 0, untracked: 0, ahead: 0 } }] }
+    } as never;
+
+    await deleteSelectionAsking(store, transport, '/project');
+
+    expect(useEndingAgents.getState().pending).toMatchObject({ agents: 0, worktrees: { folder: '/project', worktrees: [{ branch: 'later' }] } });
+});
+
 test('a node that opened nothing goes at once', async () => {
     const store = canvasWith(node('shell', 'terminal', 0));
     store.getState().select(['shell']);

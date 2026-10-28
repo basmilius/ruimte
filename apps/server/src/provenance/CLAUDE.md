@@ -1,13 +1,13 @@
 # Provenance
 
-The invariants of this folder. The repository root's `CLAUDE.md` has the map, the wire protocol and the rules that hold everywhere; `apps/server/README.md` has the format and the requests.
+`apps/server/README.md` has the format and the requests.
 
-- It lives under `$RUIMTE_HOME/provenance`, never in a project file, which an agent with a shell can rewrite. The daemon is its only writer: a client reads (`provenance.read`) and sets a review state (`provenance.review`), and no verb reaches it.
-- It is an observer (`ChatCore.observe`) and only notes. Nothing in a chat waits on it, nothing acts on what it finds, and a failure is logged and forgotten. A turn sent from inside an event would run in the chat's call stack, so no event handler here starts work beyond its own file.
-- A write is found again in the file on disk and never trusted from the tool call alone. The call only says which hunks of the diff are the agent's (`WriteSignature`), so a person's edit saved in the same moment is not claimed. A turn's checkpoint tree is the version to diff against, the file's own record the second choice.
-- A run made from the checkpoint alone is `via: 'checkpoint'`. It is a guess about who ran the shell command or the formatter, and a client words it as one. When HEAD moved during a turn, a file the move touched gets a checkpoint-only run only if its working copy differs from HEAD after the move, and what the commits hold is dropped from it as usual; a move that cannot be read claims nothing. A run noted over a checkpoint that already differed from the turn's starting HEAD (a person's uncommitted edits) is not dropped against HEAD at note time, since the hunk and the HEAD diff may line up a twin of a HEAD line differently.
-- Provenance ends where git blame begins: a line the file at HEAD holds unchanged is dropped, whoever wrote it. Never keep a run to show it next to a commit.
-- A run is a place and not an identity: it is mapped through every change of the file by line hashes, and a run cut in pieces keeps one id so a review of it reaches every piece. Lines a change replaced lose their run.
-- Only a file inside the project's folder counts, and every request is held to that folder and to `MachineHome` like a file request. A chat in a worktree marks files of that worktree, which are not the project's.
-- The records are bounded: runs older than 30 days, files that are gone, a project that left the registry (`ProjectStore.delete` calls `forget`), 300 records per project, 500 runs per file, and `before` only up to 200 lines or 16 KB (it is left out, never cut, since half of it would put back a broken file).
-- Nothing here changes a file, and nothing schedules work on a clock.
+- It lives under `$RUIMTE_HOME/provenance`, written only by the daemon. A client reads it and sets a review state; no verb reaches it.
+- It is an observer (`ChatCore.observe`) and only notes: nothing waits on it, nothing acts on it, a failure is logged and forgotten, and no handler starts work beyond its own file.
+- A write is found again on disk, never trusted from the tool call, which only says which hunks are the agent's (`WriteSignature`). Diff against the turn's checkpoint tree first, the file's record second.
+- A run from the checkpoint alone is `via: 'checkpoint'`, a guess. When HEAD moved in a turn, a touched file gets such a run only if it differs from the new HEAD, and an unreadable move claims nothing. A run noted over a checkpoint that already differed from the turn's starting HEAD is not dropped against HEAD at note time.
+- Provenance ends where git blame begins: a line HEAD holds unchanged is dropped, whoever wrote it. Never keep a run to show it next to a commit.
+- A run is a place, mapped through every change by line hashes, one id across its pieces. Replaced lines lose their run.
+- Only files inside the project folder count, and every request is held to that folder and `MachineHome`. A worktree chat's files are not the project's.
+- Bounds: runs past 30 days, gone files and forgotten projects (`forget`) are dropped; 300 records per project, 500 runs per file; `before` up to 200 lines or 16 KB, left out above that, never cut.
+- Nothing here changes a file or schedules work on a clock.

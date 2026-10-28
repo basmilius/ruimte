@@ -9,6 +9,7 @@ import {
     PenTool,
     Smartphone,
     StickyNote,
+    SwatchBook,
     Terminal,
     Workflow,
     type LucideIcon
@@ -28,5 +29,6 @@ export const NODE_KIND_ICONS: Record<CanvasNodeKind, LucideIcon> = {
     file: FileText,
     artifact: Package,
     routine: CalendarClock,
+    design: SwatchBook,
     unknown: CircleQuestionMark
 };

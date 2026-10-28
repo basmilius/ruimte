@@ -125,7 +125,7 @@ interface SidebarInput {
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
 export function isSessionKind(kind: CanvasNodeKind): boolean {
-    return kind === 'terminal' || kind === 'chat' || kind === 'browser' || kind === 'device';
+    return kind === 'terminal' || kind === 'chat' || kind === 'browser' || kind === 'device' || kind === 'design';
 }
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };

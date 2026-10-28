@@ -3,7 +3,7 @@ import { ActionRegistry } from '@ruimte/actions';
 import type { ChatForkResult, ChatInfo, ChatItem, Plan, PlanPersonOp, RequestMap, RequestType } from '@ruimte/contracts';
 import { applyPlanOps } from '@adecore/plan';
 import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
-import { sessionActions, type SessionMachine } from './session-actions';
+import { sessionActions, sessionTitle, type SessionMachine } from './session-actions';
 import type { ChatState } from '@adecore/agents-react/state';
 import { useDocument } from '@/state/document';
 import type { SessionState } from '@/state/sessions';
@@ -268,6 +268,22 @@ beforeEach(() => {
 
 afterEach(() => {
     useDocument.getState().load(null, null);
+});
+
+test('the chat of a design is found under the design, and never as a terminal', () => {
+    useDocument.getState().load(
+        {
+            version: 3,
+            rev: 1,
+            name: 'Atlas',
+            color: '#000',
+            views: [{ kind: 'design', id: 'onboarding', name: 'Onboarding', node: {}, path: 'designs/onboarding' }]
+        },
+        { activeViewId: 'onboarding', views: {} }
+    );
+
+    expect(sessionTitle(useDocument, 'onboarding', 'chat')).toBe('Onboarding');
+    expect(sessionTitle(useDocument, 'onboarding', 'terminal')).toBeNull();
 });
 
 describe('stopping', () => {

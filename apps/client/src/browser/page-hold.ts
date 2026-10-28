@@ -1,4 +1,5 @@
 import type { BrowserDriveEvent, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
+import { pageSnapshots } from '@/browser/page-snapshots';
 import { browserRegistry, useBrowser, type BrowserState } from '@/browser/registry';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { watchPool } from '@/transport/pool-watch';
@@ -73,7 +74,8 @@ async function answer(endpointId: string, event: BrowserDriveEvent): Promise<Bro
     };
     const action = event.action;
     if (action.kind === 'shot') {
-        const image = await browserRegistry.capture(key);
+        // A page past the render distance is hidden, and only drawn again for a moment can it be photographed.
+        const image = await pageSnapshots.photograph(key);
         return image === null
             ? { askId: event.askId, state: state(), error: 'This client could not photograph the page' }
             : { askId: event.askId, state: state(), image: base64Of(image) };

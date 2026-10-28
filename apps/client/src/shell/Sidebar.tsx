@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ChartNoAxesColumn, Plus, Settings } from 'lucide-re
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { usePanelGap } from '@/shell/panel-layout';
-import { isSessionView, isUnlistedView, type AgentKind } from '@ruimte/contracts';
+import { isSessionView, isUnlistedView, sessionKindOfView, type AgentKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@adecore/agents-react/chat';
@@ -160,7 +160,7 @@ export function Sidebar() {
                     provider: nodeProvider(node, chats, endpointId) ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
                     work: nodeWork(node, sessions, chats, endpointId),
-                    draft: node.kind === 'chat' && drafts.includes(node.id),
+                    draft: (node.kind === 'chat' || node.kind === 'design') && drafts.includes(node.id),
                     alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, machine, node.id),
                     task: childTask(tasks[machine], node.id),
@@ -181,7 +181,7 @@ export function Sidebar() {
                 nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
                 // Only a session view is a node of its own; a divider and a drawing have no status.
                 self: isSessionView(view)
-                    ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider: provider ?? undefined })
+                    ? asRow({ id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, provider: provider ?? undefined })
                     : null,
                 hidden: isUnlistedView(view)
             };

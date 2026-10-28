@@ -11,18 +11,19 @@ import { openOnboarding } from '@/onboarding/open';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
-import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
+import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, SPONSOR_PAGE, useReleaseNotes } from '@/state/release-notes';
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
 import { describeUpdate, setAutoDownload, useUpdates } from '@/state/updates';
 import { useFocusedMachine } from '@/transport/connections';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse, type EclipseOrbit } from '@/ui/Eclipse';
 
-/* The three links, each with its words under `about.links.<id>`. */
+/* The links, each with its words under `about.links.<id>`. */
 const LINKS = [
     { id: 'website', href: 'https://ruimte.app' },
     { id: 'source', href: 'https://github.com/basmilius/ruimte' },
-    { id: 'report', href: 'https://github.com/basmilius/ruimte/issues/new' }
+    { id: 'report', href: 'https://github.com/basmilius/ruimte/issues/new' },
+    { id: 'sponsor', href: SPONSOR_PAGE }
 ];
 
 const ABOUT_ORBITS: readonly EclipseOrbit[] = [
@@ -170,6 +171,20 @@ export function AboutPane() {
                     />
                 </SettingsSection>
             )}
+            <SettingsSection title={t('about.links.title')}>
+                {LINKS.map((link) => (
+                    <SettingsRow
+                        key={link.href}
+                        label={t(`about.links.${link.id}.label`)}
+                        description={t(`about.links.${link.id}.description`)}
+                        control={
+                            <Button variant="secondary" size="sm" href={link.href}>
+                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
+                            </Button>
+                        }
+                    />
+                ))}
+            </SettingsSection>
             <SettingsSection
                 title={t('about.details.title')}
                 action={
@@ -185,20 +200,6 @@ export function AboutPane() {
                         description={row.description}
                         control={
                             <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-xs text-text-muted'}>{row.value}</span>
-                        }
-                    />
-                ))}
-            </SettingsSection>
-            <SettingsSection title={t('about.links.title')}>
-                {LINKS.map((link) => (
-                    <SettingsRow
-                        key={link.href}
-                        label={t(`about.links.${link.id}.label`)}
-                        description={t(`about.links.${link.id}.description`)}
-                        control={
-                            <Button variant="secondary" size="sm" href={link.href}>
-                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
-                            </Button>
                         }
                     />
                 ))}

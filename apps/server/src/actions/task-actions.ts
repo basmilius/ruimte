@@ -73,7 +73,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         if (!target) {
             const own = ownViewOf(content, nodeId);
             if (own) {
-                throw refuseOwnView(own, 'there is no node there to give a task to', lines());
+                throw refuseOwnView(own, 'there is no node there to give a task to', lines(), nodeId);
             }
             throw new VerbRefusal('unknown-node', `${nodeId} is not a node of this project`, lines());
         }

@@ -7,6 +7,7 @@ import type { NodeKind } from '@/state/canvas';
 export type EmptyCanvasTile =
     | { id: string; kind: 'agent'; target: 'terminal'; provider: AgentKind; name: string }
     | { id: string; kind: 'node'; node: Extract<NodeKind, 'chat' | 'terminal' | 'browser' | 'note' | 'group'> }
+    | { id: 'design'; kind: 'design' }
     | { id: 'file'; kind: 'file' }
     | { id: 'text'; kind: 'text' }
     | { id: string; kind: 'layout'; name: string }
@@ -21,12 +22,14 @@ export interface EmptyCanvasSections {
 export interface EmptyCanvasInput {
     providers: readonly ProviderInfo[];
     hasFolder: boolean;
+    /* A design is offered here as in the menus that add to a canvas (`useDesignOffered`). */
+    design: boolean;
     layouts: readonly { name: string }[];
     views: readonly ProjectView[];
 }
 
 /* Chat providers have their own rows; the remaining choices become tiles below them. */
-export function emptyCanvasSections({ providers, hasFolder, layouts, views }: EmptyCanvasInput): EmptyCanvasSections {
+export function emptyCanvasSections({ providers, hasFolder, design, layouts, views }: EmptyCanvasInput): EmptyCanvasSections {
     const agents: EmptyCanvasTile[] = [
         ...availableAgents(providers, 'terminal').map((provider): EmptyCanvasTile => ({
             id: `agent-terminal-${provider.kind}`,
@@ -35,7 +38,8 @@ export function emptyCanvasSections({ providers, hasFolder, layouts, views }: Em
             provider: provider.kind,
             name: provider.name
         })),
-        { id: 'node-chat', kind: 'node', node: 'chat' }
+        { id: 'node-chat', kind: 'node', node: 'chat' },
+        ...(design ? [{ id: 'design', kind: 'design' } as const] : [])
     ];
 
     const place: EmptyCanvasTile[] = [

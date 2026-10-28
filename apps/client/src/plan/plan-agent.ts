@@ -1,14 +1,15 @@
-import type { ProjectNode, ProjectView } from '@ruimte/contracts';
+import { chatHostOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { agentName } from '@/plan/plan-view';
 import { useChatRow } from '@adecore/agents-react/state';
 import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 
 /* The provider of a chat as the project names it, for a chat this client has not attached yet. */
 function providerIn(views: readonly ProjectView[], nodesOf: NodesOfView<ProjectNode>, chatId: string): string | null {
+    const host = chatHostOf(views, chatId);
+    if (host !== null) {
+        return host.chat.node.provider ?? null;
+    }
     for (const view of views) {
-        if (view.kind === 'chat' && view.id === chatId) {
-            return view.node.provider ?? null;
-        }
         const node = nodesOf(view).find((candidate) => candidate.id === chatId);
         if (node) {
             return node.provider ?? null;

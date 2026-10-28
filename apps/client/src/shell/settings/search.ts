@@ -105,6 +105,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         available: () => Object.keys(useServers.getState().byEndpoint).length > 0
     },
     row('views.canvas.minimap'),
+    row('views.canvas.renderDistance'),
     row('views.drawing.snap'),
     row('views.browser.swipe', canSwipeBetweenPages),
     row('files.files.openFiles'),
@@ -132,6 +133,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
     row('agents.chats.sendKey'),
     row('agents.chats.steerByDefault'),
+    row('agents.chats.hideToolCalls'),
     {
         id: 'agents.chats.streaming',
         section: 'agents',

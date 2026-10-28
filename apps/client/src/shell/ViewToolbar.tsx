@@ -1,4 +1,6 @@
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
+import { DesignActions } from '@/design/DesignActions';
+import { placeOfView } from '@/design/design-chat';
 import { useNodeComputerSession } from '@/computer/indicator';
 import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
 import { useDictation } from '@/dictation/controller';
@@ -16,17 +18,17 @@ import { isFileTab } from '@/state/files';
 import { useEndpointId } from '@/state/keys';
 import { useHasPlans } from '@/state/plans';
 import { Pill, Tooltip } from '@adecore/ui';
-import { hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork } from '@/shell/view-toolbar';
+import { chatIdOf, hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork } from '@/shell/view-toolbar';
 
 export function ViewToolbar({ view, focused }: { view: CellView | null; focused: boolean }) {
     const host = useNodeHost(hostIdOf(view));
     const { mount } = useFileToolbarSlot();
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     const forked = useIsFork(view);
-    const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
+    const planned = useHasPlans(chatIdOf(view));
     const endpointId = useEndpointId();
     const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');
-    const operating = useNodeComputerSession(endpointId, view?.kind === 'chat' || view?.kind === 'terminal' ? view.id : '') !== null;
+    const operating = useNodeComputerSession(endpointId, view?.kind === 'terminal' ? view.id : chatIdOf(view)) !== null;
 
     // The active renderer of a file, a diagram or an artifact portals its controls up into this slot after the body mounts.
     const slot = <div ref={mount} className="flex min-w-0 grow items-center justify-end gap-1" />;
@@ -52,6 +54,16 @@ export function ViewToolbar({ view, focused }: { view: CellView | null; focused:
     }
     if (view.kind === 'file' || view.kind === 'diagram' || view.kind === 'artifact') {
         return slot;
+    }
+    if (view.kind === 'design') {
+        return (
+            <div className="flex min-w-0 grow items-center gap-1.5">
+                {forked && <ForkPill chatId={view.id} />}
+                {planned && <PlanPill chatId={view.id} />}
+                {operating && <ComputerIndicator nodeId={view.id} />}
+                <DesignActions design={placeOfView(view)} />
+            </div>
+        );
     }
     if (view.kind === 'chat') {
         if (!forked && !planned && !operating) {

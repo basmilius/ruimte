@@ -204,3 +204,69 @@ test('a node in a group resizes from its handle without moving the group', async
         }
     );
 }, 15000);
+
+test('a node in a group draws a line from its port without moving the group', async () => {
+    await withBrowserFixture(
+        `
+        import { Canvas } from ${JSON.stringify(join(import.meta.dir, 'Canvas.tsx'))};
+        import { defaultCanvasStore } from ${JSON.stringify(join(import.meta.dir, '../state/canvas.ts'))};
+        import { ChatScopeProvider } from ${JSON.stringify(join(import.meta.dir, '../transport/ChatScopeProvider.tsx'))};
+        import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
+        import { machineTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        defaultCanvasStore.setState({
+            viewId: 'fixture', camera: { x: 0, y: 0, zoom: 1 }, texts: {}, order: ['group', 'note'],
+            nodes: {
+                group: { id: 'group', kind: 'group', title: 'Group', x: 0, y: 0, w: 600, h: 500, memberIds: ['note'] },
+                note: { id: 'note', kind: 'note', title: 'Note', body: '', x: 200, y: 160, w: 200, h: 160 }
+            }
+        });
+        window.canvas = defaultCanvasStore;
+        createRoot(document.getElementById('root')).render(React.createElement(UIProvider, {i18n:i18next}, React.createElement(ConnectionContext.Provider, {value:{endpointId:'fixture',transport:machineTransport('fixture')}}, React.createElement(ChatScopeProvider, null, React.createElement(Canvas)))));
+    `,
+        '.absolute{position:absolute}.relative{position:relative}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}[data-canvas-surface]{position:relative;width:800px;height:600px;overflow:hidden}svg{overflow:visible}',
+        async (view) => {
+            // The east port of the note, a gap outside its frame and over the group's.
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 409, y: 240 });
+            await view.evaluate(frame);
+            expect(await view.evaluate<string | null>(`document.elementFromPoint(409, 240)?.getAttribute('data-port') ?? null`)).toBe('note');
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 409, y: 240, button: 'left', buttons: 1, clickCount: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 500, y: 240, button: 'left', buttons: 1 });
+            expect(await view.evaluate<string | null>('window.canvas.getState().linkDraft?.from ?? null')).toBe('note');
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 500, y: 240, button: 'left', buttons: 0, clickCount: 1 });
+            expect(await view.evaluate<number[]>('[window.canvas.getState().nodes.group.x, window.canvas.getState().nodes.group.y]')).toEqual([0, 0]);
+            expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+        }
+    );
+}, 15000);
+
+test('a line between two nodes in a group is selected by a press on it, and the group stays', async () => {
+    await withBrowserFixture(
+        `
+        import { Canvas } from ${JSON.stringify(join(import.meta.dir, 'Canvas.tsx'))};
+        import { defaultCanvasStore } from ${JSON.stringify(join(import.meta.dir, '../state/canvas.ts'))};
+        import { ChatScopeProvider } from ${JSON.stringify(join(import.meta.dir, '../transport/ChatScopeProvider.tsx'))};
+        import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
+        import { machineTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        defaultCanvasStore.setState({
+            viewId: 'fixture', camera: { x: 0, y: 0, zoom: 1 }, texts: {}, order: ['group', 'left', 'right'],
+            nodes: {
+                group: { id: 'group', kind: 'group', title: 'Group', x: 0, y: 0, w: 600, h: 500, memberIds: ['left', 'right'] },
+                left: { id: 'left', kind: 'note', title: 'Left', body: '', x: 40, y: 160, w: 160, h: 160 },
+                right: { id: 'right', kind: 'note', title: 'Right', body: '', x: 400, y: 160, w: 160, h: 160 }
+            },
+            edges: [{ id: 'line', from: 'left', to: 'right' }]
+        });
+        window.canvas = defaultCanvasStore;
+        createRoot(document.getElementById('root')).render(React.createElement(UIProvider, {i18n:i18next}, React.createElement(ConnectionContext.Provider, {value:{endpointId:'fixture',transport:machineTransport('fixture')}}, React.createElement(ChatScopeProvider, null, React.createElement(Canvas)))));
+    `,
+        '.absolute{position:absolute}.relative{position:relative}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}[data-canvas-surface]{position:relative;width:800px;height:600px;overflow:hidden}svg{overflow:visible}',
+        async (view) => {
+            await view.evaluate(frame);
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 300, y: 240, button: 'left', buttons: 1, clickCount: 1 });
+            await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 300, y: 240, button: 'left', buttons: 0, clickCount: 1 });
+            expect(await view.evaluate<string[]>('window.canvas.getState().selection')).toEqual(['line']);
+            expect(await view.evaluate<number[]>('[window.canvas.getState().nodes.group.x, window.canvas.getState().nodes.group.y]')).toEqual([0, 0]);
+            expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+        }
+    );
+}, 15000);

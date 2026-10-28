@@ -18,7 +18,7 @@ import {
     Users,
     X
 } from 'lucide-react';
-import { canShareView, chatIsWorking, isCanvasView, isEmptyChatView, type ProjectView } from '@ruimte/contracts';
+import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatView, type ProjectView } from '@ruimte/contracts';
 import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
 import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
 import { ForkMenuItem } from '@/chat/ForkMenuItem';
@@ -88,7 +88,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
 
     const { asChat, asTerminal } = sessionHandoffs(kind, view, chat, { agent, account: sessionAccount }, providers);
     // The node of a session view works somewhere; without a folder of its own that is the project's. The Chats project shows none.
-    const workingFolder = !scratch && (view?.kind === 'chat' || view?.kind === 'terminal') ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
+    const workingFolder = !scratch && view !== undefined && (isChatHostView(view) || view.kind === 'terminal') ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
     // What a file view holds is stored against the project folder; the menu acts on the daemon's path.
     const filePath = view?.kind === 'file' ? resolveStoredPath(folder, view.path) : null;
     const offers = viewOffers({
@@ -113,7 +113,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const offerPut = offers.putOnCanvas;
     const offerShow = offers.showOnCanvas;
     // A chat's own rows go under one heading once there is more than the bookmarks to put there.
-    const conversation = kind === 'chat' && (offerFork || asTerminal !== null);
+    const conversation = (kind === 'chat' || kind === 'design') && (offerFork || asTerminal !== null);
     const handoffs = !conversation && (asChat !== null || asTerminal !== null);
     const kindRows = conversation || handoffs || offerMove;
     const place = offerPut || offerShow || filePath !== null || workingFolder !== null;
@@ -148,7 +148,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
                     </Menu.Popup>
                 </Menu.SubmenuRoot>
             )}
-            {!conversation && kind === 'chat' && <BookmarkSubmenu chatId={viewId} />}
+            {!conversation && (kind === 'chat' || kind === 'design') && <BookmarkSubmenu chatId={viewId} />}
             {handoffs && asChat !== null && (
                 <Menu.Item onClick={() => void openSessionInKind(viewId, 'chat', asChat)}>
                     <Icon icon={MessageSquare} size={14} /> {t('viewMenu.openInChat')}

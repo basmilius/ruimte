@@ -135,6 +135,7 @@ function ChatsSection() {
                 }
             />
             <SettingSwitchRow id="agents.chats.steerByDefault" setting="chatSteerByDefault" />
+            <SettingSwitchRow id="agents.chats.hideToolCalls" setting="chatHideToolCalls" />
             <SettingsRow
                 searchId="agents.chats.streaming"
                 label={t('agents.chats.streaming.label')}

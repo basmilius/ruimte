@@ -14,7 +14,7 @@ import { TeamVignette } from '@/components/features/TeamVignette.tsx';
 import { QuestionVignette } from '@/components/features/QuestionVignette.tsx';
 import { ArrowUpRight } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader.tsx';
-import { PLATFORMS, type Platform, REPOSITORY_URL } from '@/lib/release.ts';
+import { PLATFORMS, type Platform, REPOSITORY_URL, SPONSOR_URL } from '@/lib/release.ts';
 
 const STATION_URL = 'https://station.ruimte.app';
 
@@ -209,6 +209,9 @@ export default function Home() {
                         </a>
                         <a href="/privacy" className="hover:text-text">
                             Privacy
+                        </a>
+                        <a href={SPONSOR_URL} className="hover:text-text">
+                            Sponsor
                         </a>
                     </span>
                 </div>

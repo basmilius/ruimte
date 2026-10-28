@@ -56,7 +56,7 @@ export function viewOffers(input: ViewOffersInput): ViewOffers {
         duplicate: drawn,
         openInChat: input.asChat !== null,
         openInTerminal: input.asTerminal !== null,
-        fork: input.kind === 'chat' && input.offersFork,
+        fork: (input.kind === 'chat' || input.kind === 'design') && input.offersFork,
         putOnCanvas: !drawn && input.kind !== 'file' && input.kind !== 'database' && input.hasCanvas,
         showOnCanvas: (input.kind === 'drawing' || input.kind === 'diagram') && input.onCanvas,
         reveal: input.workingFolder !== null && input.scratch !== true,

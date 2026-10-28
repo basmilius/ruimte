@@ -75,7 +75,7 @@ export function Panel() {
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />
                 <SectionLabel className="panel-title shrink-0">{label}</SectionLabel>
                 {/* The panel's own controls, between its name and the close button. */}
-                <div ref={setHeaderSlot} className="peer flex min-w-0 grow items-center gap-2" />
+                <div ref={setHeaderSlot} className="peer flex grow shrink-0 items-center gap-2" />
                 <Separator className="peer-empty:hidden" />
                 <CloseButton
                     label={t('panel.close', { name: label })}

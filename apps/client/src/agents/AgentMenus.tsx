@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Bot, MessageSquare } from 'lucide-react';
+import type { ReactElement, ReactNode } from 'react';
+import { Bot, MessageSquare, type LucideIcon } from 'lucide-react';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { AccountDot, AgentIcon } from '@adecore/agents-react/providers';
@@ -9,7 +9,7 @@ import { useProviders } from '@adecore/agents-react/state';
 import { availableAgents, separatesGroups } from './creation';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
-import { Icon, Menu } from '@adecore/ui';
+import { Icon, IconButton, Menu } from '@adecore/ui';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (
@@ -181,10 +181,47 @@ export function ChatAgentSubmenu({ label, icon, onPick }: { label: string; icon:
     );
 }
 
-/* One target on its own, for a menu that puts its rows in an order of its own. */
-export function AgentSubmenu({ target, onPick }: { target: AgentTarget; onPick: PickAgent }) {
+/* The same rows behind a button of their own, for a bar that offers only a new chat. */
+export function ChatAgentMenu({
+    label,
+    icon,
+    tabIndex,
+    onPick
+}: {
+    label: string;
+    icon: LucideIcon;
+    tabIndex?: number;
+    onPick(provider: ProviderInfo, account?: string): void;
+}) {
     return (
-        <Submenu label={agentTargetLabel(target)} icon={<Icon icon={target === 'chat' ? MessageSquare : Bot} size={14} />}>
+        <Menu.Root>
+            <IconButton render={<Menu.Trigger />} icon={icon} size="sm" label={label} tabIndex={tabIndex} />
+            <Menu.Popup align="end" className="min-w-48">
+                <AgentRows target="chat" onPick={(_target, provider, account) => onPick(provider, account)} />
+            </Menu.Popup>
+        </Menu.Root>
+    );
+}
+
+/* The same rows behind a trigger the surface draws itself, such as a tile. */
+export function ChatAgentPicker({ trigger, onPick }: { trigger: ReactElement; onPick(provider: ProviderInfo, account?: string): void }) {
+    return (
+        <Menu.Root>
+            <Menu.Trigger render={trigger} />
+            <Menu.Popup align="start" className="min-w-48">
+                <AgentRows target="chat" onPick={(_target, provider, account) => onPick(provider, account)} />
+            </Menu.Popup>
+        </Menu.Root>
+    );
+}
+
+/*
+ * One target on its own, for a menu that puts its rows in an order of its own. `label` and `icon` name
+ * what the picked agent goes into when that is more than its chat or terminal, such as a design.
+ */
+export function AgentSubmenu({ target, onPick, label, icon }: { target: AgentTarget; onPick: PickAgent; label?: string; icon?: LucideIcon }) {
+    return (
+        <Submenu label={label ?? agentTargetLabel(target)} icon={<Icon icon={icon ?? (target === 'chat' ? MessageSquare : Bot)} size={14} />}>
             <AgentRows target={target} onPick={onPick} />
         </Submenu>
     );

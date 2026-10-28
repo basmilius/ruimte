@@ -1,5 +1,15 @@
 import { create } from 'zustand';
-import { isCanvasView, type AgentKind, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isChatHostView,
+    isUnlistedView,
+    viewChats,
+    type AgentKind,
+    type ProjectNode,
+    type ProjectView,
+    type SplitLayout,
+    designNodeChats
+} from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
 import { viewIdsIn } from '@/shell/split';
@@ -21,17 +31,22 @@ interface ChooserSections {
 }
 
 /* What the chooser reads of a node. */
-type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider'>;
+type ChooserNode = Pick<ProjectNode, 'id' | 'kind' | 'title' | 'provider' | 'chats'>;
 
 /* Every chat of the project with the CLI it runs, node or view, in sidebar order. */
 export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView<ChooserNode>): ChooserChat[] {
     return views.flatMap((view): ChooserChat[] => {
-        if (view.kind === 'chat') {
-            return view.empty === true || view.hidden === true ? [] : [{ id: view.id, title: view.name, provider: view.node.provider ?? null }];
+        if (isChatHostView(view)) {
+            return isUnlistedView(view) ? [] : viewChats(view).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }));
         }
-        return nodesOf(view)
-            .filter((node) => node.kind === 'chat')
-            .map((node) => ({ id: node.id, title: node.title, provider: node.provider ?? null }));
+        return nodesOf(view).flatMap((node) =>
+            node.kind === 'chat' || node.kind === 'design'
+                ? [
+                      { id: node.id, title: node.title, provider: node.provider ?? null },
+                      ...designNodeChats(node).map((chat) => ({ id: chat.id, title: chat.name, provider: chat.node.provider ?? null }))
+                  ]
+                : []
+        );
     });
 }
 
@@ -39,19 +54,28 @@ export function chooserChats(views: readonly ProjectView[], nodesOf: NodesOfView
  * The chats a person can see right now: a chat view in a cell, or a chat node on a canvas in a cell.
  * A canvas that is in a cell but panned away still counts, since it is one tap from the screen.
  */
-export function chatsOpenHere(views: readonly ProjectView[], nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind'>>, layout: SplitLayout | null): Set<string> {
+export function chatsOpenHere(
+    views: readonly ProjectView[],
+    nodesOf: NodesOfView<Pick<ProjectNode, 'id' | 'kind' | 'chats'>>,
+    layout: SplitLayout | null
+): Set<string> {
     const inCells = new Set(layout === null ? [] : viewIdsIn(layout));
     const open = new Set<string>();
     for (const view of views) {
         if (!inCells.has(view.id)) {
             continue;
         }
-        if (view.kind === 'chat') {
-            open.add(view.id);
+        if (isChatHostView(view)) {
+            for (const chat of viewChats(view)) {
+                open.add(chat.id);
+            }
         } else if (isCanvasView(view)) {
             for (const node of nodesOf(view)) {
-                if (node.kind === 'chat') {
+                if (node.kind === 'chat' || node.kind === 'design') {
                     open.add(node.id);
+                }
+                for (const chat of designNodeChats(node)) {
+                    open.add(chat.id);
                 }
             }
         }

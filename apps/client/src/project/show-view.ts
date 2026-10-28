@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ProjectNode, ProjectView } from '@ruimte/contracts';
+import { chatNameOf, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
 
 /*
@@ -17,7 +17,8 @@ export function callerName(views: readonly ProjectView[], nodesOf: NodesOfView<P
             return node.title;
         }
     }
-    return null;
+    // A later chat of a design is no node and no view of its own.
+    return chatNameOf(views, by);
 }
 
 export interface ShowViewNotice {

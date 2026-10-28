@@ -73,10 +73,14 @@ extension ChatModel {
 
     /// Another account of the chat's CLI with room left, offered once the last turn stopped on a usage limit.
     var continueTarget: ProviderAccountEntry? {
+        continueTargets.first
+    }
+
+    var continueTargets: [ProviderAccountEntry] {
         guard info?.limit?.kind == .usage, info?.activeTurnId == nil, let accounts,
             accounts.hasChoice(provider)
-        else { return nil }
-        return accounts.continueTarget(provider, current: info?.account, limits: limits)
+        else { return [] }
+        return accounts.continueTargets(provider, current: info?.account, limits: limits)
     }
 
     /// Reads the plan windows once something shows them. A machine reads an account other than a CLI's default one only
@@ -154,6 +158,14 @@ struct ChatLimitBanner: View {
     let resumeAllowed: Bool
     let openFork: (String) -> Void
 
+    private struct Reading: Equatable {
+        let connected: Bool
+        let provider: String
+        let account: String
+        let limit: ChatInfoLimit?
+        let accounts: ProviderAccountList?
+    }
+
     var body: some View {
         TimelineView(.everyMinute) { context in
             if let view = ChatLimits.view(info: model.info, moment: { ChatLimits.moment($0, now: context.date) }) {
@@ -177,7 +189,11 @@ struct ChatLimitBanner: View {
                 }
                 .chatDockCard(vertical: 12)
                 .accessibilityElement(children: .contain)
-                .task(id: model.info?.limit) {
+                .task(
+                    id: Reading(
+                        connected: model.connected, provider: model.provider, account: model.accountID,
+                        limit: model.info?.limit, accounts: model.accounts)
+                ) {
                     if model.info?.limit?.kind == .usage && model.accounts?.hasChoice(model.provider) == true {
                         await model.readLimits(unread: true)
                     }
@@ -228,6 +244,27 @@ struct ChatLimitBanner: View {
             .accessibilityLabel("Continue on \(name)")
             .accessibilityHint(
                 "Switches to \(name), which has the most room left, and resends the turn.")
+            if model.continueTargets.count > 1 {
+                Menu {
+                    ForEach(model.continueTargets) { account in
+                        Button {
+                            Task {
+                                if let fork = await model.continueOn(account) { openFork(fork) }
+                            }
+                        } label: {
+                            let name = account.name(provider: usageProviderName(model.provider))
+                            Text(name)
+                            if let window = ProviderAccountList.sessionWindow(model.limits, account: account.id) {
+                                Text(ChatLimits.sessionLine(window, now: now))
+                            }
+                        }
+                    }
+                } label: {
+                    Image(lucide: "chevron-down", size: 16).frame(width: 44, height: 44)
+                }
+                .disabled(model.continuing || !model.connected)
+                .accessibilityLabel("Choose account")
+            }
         }
     }
 }

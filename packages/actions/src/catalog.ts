@@ -196,8 +196,8 @@ const AGENT_NODE_KINDS = ['drawing', 'diagram', 'device'] as const;
 /* A node of an artifact this machine keeps in Output, or of a routine of the project, which Voice has no words to name. */
 const OUTPUT_NODE_KINDS = ['artifact', 'routine'] as const;
 
-/* A view only a person makes: a device is picked from a panel of what this machine has attached. */
-const PERSON_VIEW_KINDS = ['device'] as const;
+/* A view only a person makes: a device is picked from a panel of what this machine has attached, and a design's folder and CLI are theirs to pick. */
+const PERSON_VIEW_KINDS = ['device', 'design'] as const;
 
 /* In world units, the canvas's own coordinates, so a camera move does not change where it lands. */
 const worldPoint = z.object({ x: z.number(), y: z.number() });
@@ -855,7 +855,7 @@ export const ACTION_DEFINITIONS = {
     'view.create': {
         title: 'Create view',
         description:
-            'Creates and focuses a new canvas, drawing, diagram, terminal, browser, AI Chat, file or database view, or adds a separator or subheader to the view list. A chat or terminal can run a specific agent CLI; a file view shows the file at a path, relative to the project folder or absolute; a database view shows one table of a database connection, as its rows or its structure.',
+            'Creates and focuses a new canvas, drawing, diagram, terminal, browser, AI Chat, file, database or design view, or adds a separator or subheader to the view list. A chat or terminal can run a specific agent CLI; a file view shows the file at a path, relative to the project folder or absolute; a database view shows one table of a database connection, as its rows or its structure; a design is an AI Chat that works on the HTML files of the folder at the path, relative to the project folder, and shows them beside its thread.',
         agentDescription: 'Adds a view to the sidebar, written down as yours.',
         effect: 'shared',
         domain: 'views',

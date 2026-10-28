@@ -323,6 +323,15 @@ describe('changing the list of views', () => {
         expect(focusedCanvas().getState().edges).toEqual([]);
         expect(canvasAt(1).nodes.map((each) => each.id)).toEqual(['n2', 'n1']);
     });
+
+    test('a node moved onto the canvas in front lands in its editor', () => {
+        useDocument.getState().moveNodeToView('n1', 'b');
+        useDocument.getState().moveNodeToView('n1', 'a');
+
+        expect(focusedCanvas().getState().order).toEqual(['n1']);
+        expect(useDocument.getState().exportViews()[0]).toMatchObject({ id: 'a', nodes: [{ id: 'n1' }] });
+        expect(useDocument.getState().exportViews()[1]).toMatchObject({ id: 'b', nodes: [{ id: 'n2' }] });
+    });
 });
 
 describe('a node and a view of its own', () => {
@@ -402,6 +411,14 @@ describe('a node and a view of its own', () => {
         expect(useDocument.getState().views.at(-1)).toMatchObject({ kind: 'chat', name: 'Claude', node: { provider: 'claude' } });
         useDocument.getState().updateStandalone(id, { cwd: '/repo' });
         expect(useDocument.getState().views.at(-1)).toMatchObject({ node: { cwd: '/repo', provider: 'claude' } });
+    });
+
+    test('a later chat of a design view keeps what changes in the design list of chats, beside what it carried', () => {
+        const design = { kind: 'design', id: 'd1', name: 'Landing', path: 'landing', node: {}, chats: [{ id: 'later-1', name: 'Second', node: {}, extra: 1 }] };
+        useDocument.getState().load(document([view('a'), design as unknown as ProjectCanvasView]), { activeViewId: 'a', views: {} });
+        useDocument.getState().updateStandalone('later-1', { cwd: '/repo/wt', url: 'https://ignored' });
+        expect(useDocument.getState().views[1]).toMatchObject({ node: {}, chats: [{ id: 'later-1', node: { cwd: '/repo/wt' }, extra: 1 }] });
+        expect(useDocument.getState().views[1]).not.toHaveProperty(['chats', 0, 'node', 'url']);
     });
 });
 

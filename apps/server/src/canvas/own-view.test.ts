@@ -17,7 +17,8 @@ const content: Pick<ProjectContent, 'views'> = {
         },
         { kind: 'chat', id: 'chat-of-its-own', name: 'Sidebar', node: {} },
         { kind: 'terminal', id: 'terminal-of-its-own', name: 'Shell', node: {} },
-        { kind: 'drawing', id: 'sketch-1', name: 'Sketch' }
+        { kind: 'drawing', id: 'sketch-1', name: 'Sketch' },
+        { kind: 'design', id: 'site', name: 'Site', path: 'site', node: {}, chats: [{ id: 'header', name: 'Header', node: {} }] }
     ]
 };
 
@@ -50,6 +51,14 @@ describe('refuseMissingNodes', () => {
         expect(refusal.code).toBe('not-on-a-canvas');
         expect(refusal.message).toBe(
             'terminal-of-its-own is a terminal that is a view of its own, not a node on any canvas of this project, so there is no node to rename'
+        );
+    });
+
+    test('a later chat of a design view is refused as a chat of that view, not as an id of nothing', () => {
+        const refusal = refuseMissingNodes(content, ['header'], 'main', 'there is no node to rename');
+        expect(refusal.code).toBe('not-on-a-canvas');
+        expect(refusal.message).toBe(
+            'header is a chat of the design site, which is a view of its own, not a node on any canvas of this project, so there is no node to rename'
         );
     });
 

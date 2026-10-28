@@ -1,6 +1,7 @@
 export const REPOSITORY = 'basmilius/ruimte';
 export const REPOSITORY_URL = `https://github.com/${REPOSITORY}`;
 export const RELEASES_URL = `${REPOSITORY_URL}/releases/latest`;
+export const SPONSOR_URL = 'https://github.com/sponsors/basmilius';
 
 const LATEST_API = `https://api.github.com/repos/${REPOSITORY}/releases/latest`;
 

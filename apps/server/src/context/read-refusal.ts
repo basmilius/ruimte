@@ -1,4 +1,4 @@
-import { isAgentKind, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
+import { isAgentKind, lineEndOf, nodeChats, type ContextSource, type ProjectCanvasView } from '@ruimte/contracts';
 import type { ParsedRefusal } from '@adecore/agents/context';
 
 function body(code: string, message: string, ...lines: string[]): ParsedRefusal {
@@ -28,19 +28,23 @@ export function readRefusal(readerId: string, sourceId: string, sources: readonl
     if (!canvas) {
         return body('unknown-source', `${sourceId} is not linked to this session`, referenceLine(sourceId));
     }
-    // A drawing or a diagram is read under its view id, while the line runs into the node showing it.
-    const node = canvas.nodes.find((candidate) => candidate.id === sourceId || candidate.viewId === sourceId);
+    /* A drawing or a diagram is read under its view id, and a later chat of a design under its own,
+       while the line runs into the node showing it. */
+    const node = canvas.nodes.find(
+        (candidate) => candidate.id === sourceId || candidate.viewId === sourceId || nodeChats(candidate).some((chat) => chat.id === sourceId)
+    );
     const text = canvas.texts.find((candidate) => candidate.id === sourceId);
     if (!node && !text) {
         return body('unknown-source', `${sourceId} is not linked to this session, and no node of ${canvas.id} carries that id either`);
     }
     const linkId = node?.id ?? sourceId;
+    const readerEnd = lineEndOf(canvas.nodes, readerId);
     const what = node ? `a ${node.kind} node` : 'a text';
-    if (canvas.edges.some((edge) => edge.from === readerId && edge.to === linkId)) {
+    if (canvas.edges.some((edge) => edge.from === readerEnd && edge.to === linkId)) {
         return body(
             'not-linked',
             `${sourceId} is ${what} on ${canvas.id} with a line from you into it, which is what makes you readable to it; reading it takes a line the other way`,
-            drawLine(linkId, readerId),
+            drawLine(linkId, readerEnd),
             referenceLine(linkId)
         );
     }
@@ -49,7 +53,7 @@ export function readRefusal(readerId: string, sourceId: string, sources: readonl
     return body(
         'not-linked',
         `${sourceId} is ${what} on ${canvas.id}, but ${missing}, and that line is what a read takes`,
-        drawLine(linkId, readerId),
+        drawLine(linkId, readerEnd),
         referenceLine(linkId)
     );
 }

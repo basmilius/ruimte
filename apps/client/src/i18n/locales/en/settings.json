@@ -668,6 +668,15 @@
             "minimap": {
                 "label": "Canvas map",
                 "description": "A small map in the bottom right shows every node and the part you see. Click to jump there, drag the frame to pan. Hidden on a narrow canvas."
+            },
+            "renderDistance": {
+                "label": "Render distance",
+                "description": "How far out the canvas still draws pages, files, diagrams and devices live. Further out they show a still picture or their name. In the desktop app a page carries on out of sight. Applies at once to every window on this computer, not to your other devices. Far and Unlimited ask more of this computer.",
+                "options": {
+                    "standard": "Standard",
+                    "far": "Far",
+                    "unlimited": "Unlimited"
+                }
             }
         },
         "drawing": {
@@ -1051,6 +1060,10 @@
             "steerByDefault": {
                 "label": "Steer running agents by default",
                 "description": "A message you send while Codex or Claude works reaches it at its next step. Off, it waits until the agent is done. Hold Option or Alt while sending to do the opposite."
+            },
+            "hideToolCalls": {
+                "label": "Hide tool calls",
+                "description": "Show only the agent's messages, not the files it read or the commands it ran. Design chats always hide them."
             }
         },
         "integrations": {
@@ -1138,6 +1151,10 @@
             "report": {
                 "label": "Report a problem",
                 "description": "Describe what you saw and what you expected."
+            },
+            "sponsor": {
+                "label": "Sponsor Ruimte",
+                "description": "Support the development of Ruimte on GitHub."
             }
         }
     },

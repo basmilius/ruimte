@@ -78,6 +78,7 @@ export const USAGE_DESKTOP_COMMANDS = [
     'tabUngroup',
     'cellMaximize',
     'nodeMaximize',
+    'noteLockPreview',
     'fit',
     'zoomSelection',
     'zoomNode',

@@ -7,10 +7,12 @@ import {
     isDrawingView,
     isSessionView,
     isUnknownNode,
+    lineEndOf,
     nodeColorOf,
     nodeColorPatch,
     type ProjectNode,
-    type ProviderInfo
+    type ProviderInfo,
+    nodeChats
 } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { agentNodeOptions } from '@/agents/nodes';
@@ -18,6 +20,7 @@ import { LOCK_KEYS } from '@/canvas/locks';
 import { centerOf } from '@adecore/drawing';
 import { isMeasured, visibleRect } from '@/canvas/math';
 import { liesWithin, nearestFreeNodeRect } from '@/canvas/place-node';
+import { useDesignChat } from '@/design/design-chat';
 import { nodeDeletionFacts, saveNodeFiles, type ViewDeletionMachine } from '@/project/view-deletion';
 import { nodesOfView } from '@/project/view-nodes';
 import { basenameOf } from '@/shell/panels/files-tree';
@@ -112,8 +115,13 @@ export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasRe
     const { providers, viewDeletion } = reach;
     return {
         'node.focus': ({ viewId, nodeId }) => {
-            const { view, canvas, node } = nodeOnScreen(document, viewId, nodeId);
-            canvas.goToNode(nodeId);
+            // A later chat of a design is no node: the design that holds it goes in front, on that chat.
+            const holderId = lineEndOf(Object.values(canvasOnScreen(document, viewId).canvas.nodes), nodeId);
+            const { view, canvas, node } = nodeOnScreen(document, viewId, holderId);
+            if (holderId !== nodeId) {
+                useDesignChat.getState().pick(holderId, nodeId);
+            }
+            canvas.goToNode(holderId);
             return {
                 output: {
                     viewId,
@@ -307,7 +315,7 @@ export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasRe
                         title: `Delete ${what}?`,
                         consequences: [
                             nodeIds.length === 1 ? 'The node and its connections will be removed.' : 'The nodes and their connections will be removed.',
-                            ...sessionsEnded(going.filter((node) => node.kind === 'chat' || node.kind === 'terminal').length),
+                            ...sessionsEnded(going.reduce((count, node) => count + (node.kind === 'terminal' ? 1 : nodeChats(node).length), 0)),
                             ...deletionConsequences(facts, nodeIds.length === 1 ? 'this node' : 'these nodes')
                         ]
                     }
@@ -441,10 +449,10 @@ export function canvasActions(document: StoreApi<DocumentState>, reach: CanvasRe
         },
         'node.promoteToView': ({ viewId, nodeId }, { confirmed }) => {
             const { canvas, node } = nodeOnScreen(document, viewId, nodeId);
-            if (node.kind !== 'chat' && node.kind !== 'terminal' && node.kind !== 'browser' && node.kind !== 'device') {
+            if (node.kind !== 'chat' && node.kind !== 'terminal' && node.kind !== 'browser' && node.kind !== 'device' && node.kind !== 'design') {
                 throw new ActionRefusal(
                     'node-not-promotable',
-                    `“${node.title}” is a ${node.kind} node; only a chat, terminal, browser or device becomes a view.`
+                    `“${node.title}” is a ${node.kind} node; only a chat, terminal, browser, device or design becomes a view.`
                 );
             }
             const lines = linesOf(canvas, nodeId);

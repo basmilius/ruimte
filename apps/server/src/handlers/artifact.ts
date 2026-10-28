@@ -25,6 +25,8 @@ export function registerArtifactHandlers(dispatcher: Dispatcher, artifacts: Arti
 
     dispatcher.register('artifact.save', (payload) => artifacts.save(payload));
 
+    dispatcher.register('artifact.saveFolder', (payload) => artifacts.saveFolder(payload));
+
     dispatcher.register('artifact.copyToProject', async (payload) => ({ paths: await artifacts.copyToProject(payload) }));
 
     dispatcher.register('artifact.storage', () => artifacts.storage());

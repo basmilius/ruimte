@@ -175,6 +175,8 @@ export interface WorktreeNode {
     kind: CanvasNodeKind;
     title: string;
     cwd?: string;
+    /* The later chats of a design node, each working in a folder of its own. */
+    chats?: readonly Record<string, unknown>[];
 }
 
 /* The nodes of every canvas of the project, with every canvas on screen as it is now rather than as last saved. */

@@ -1,4 +1,4 @@
-import { isCanvasView, isHiddenChatView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { chatHostOf, isCanvasView, isHiddenChatView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { VerbRefusal, canvasNamed } from './verb.ts';
 
 /*
@@ -7,7 +7,9 @@ import { VerbRefusal, canvasNamed } from './verb.ts';
  * is its to read and operate. A chat an inline edit runs in is no such chat.
  */
 export function isChatView(content: Pick<ProjectContent, 'views'>, caller: string): boolean {
-    return content.views.some((view) => view.id === caller && view.kind === 'chat' && !isHiddenChatView(view));
+    const host = chatHostOf(content.views, caller);
+
+    return host !== null && !isHiddenChatView(host.view);
 }
 
 /* The canvas that holds this id: as a node, a text, or the drawing or diagram view a node shows. */

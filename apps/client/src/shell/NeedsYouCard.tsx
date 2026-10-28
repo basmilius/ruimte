@@ -72,8 +72,10 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
     const session = useSessions((state) => (node.kind === 'terminal' ? state.byKey[key] : undefined));
     const since = useWaitingSince((state) => state.byKey.get(key));
     const local = useEndpointId() === endpointId;
-    const [held] = useState(() => node.kind === 'chat' && (chatClientFor(endpointId)?.isMounted(node.id) ?? false));
-    const inspects = node.kind === 'chat' && !held;
+    // A design's row stands for its own chat, under the node's id.
+    const isChat = node.kind === 'chat' || node.kind === 'design';
+    const [held] = useState(() => isChat && (chatClientFor(endpointId)?.isMounted(node.id) ?? false));
+    const inspects = isChat && !held;
     const heldChat = useChats((state) => (held ? state.byKey[key] : undefined));
     // The machine's cards are only answered through the workspace's own actions.
     const computer = useComputer((state) => (local ? (state.approvals[endpointId] ?? NO_APPROVALS) : NO_APPROVALS));
@@ -232,7 +234,7 @@ export function NeedsYouCard({ endpointId, node, onOpen, children }: { endpointI
     const [open, setOpen] = useState(false);
     const close = () => setOpen(false);
     return (
-        <PreviewCard.Root open={open && (node.kind === 'chat' || asksForApp)} onOpenChange={setOpen}>
+        <PreviewCard.Root open={open && (node.kind === 'chat' || node.kind === 'design' || asksForApp)} onOpenChange={setOpen}>
             <PreviewCard.Trigger delay={300} closeDelay={200} render={<div />}>
                 {children}
             </PreviewCard.Trigger>
