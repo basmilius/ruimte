@@ -5682,14 +5682,16 @@ public struct ChatToolItemWorkflow: Codable, Sendable, Equatable {
     public let `agents`: [ChatToolItemWorkflowAgentsItem]
     public let `lastProgressAt`: Double?
     public let `stalledAt`: Double?
+    public let `finishedAt`: Double?
 
-    public init(`name`: String?, `taskId`: String? = nil, `phases`: [ChatToolItemWorkflowPhasesItem], `agents`: [ChatToolItemWorkflowAgentsItem], `lastProgressAt`: Double? = nil, `stalledAt`: Double? = nil) {
+    public init(`name`: String?, `taskId`: String? = nil, `phases`: [ChatToolItemWorkflowPhasesItem], `agents`: [ChatToolItemWorkflowAgentsItem], `lastProgressAt`: Double? = nil, `stalledAt`: Double? = nil, `finishedAt`: Double? = nil) {
         self.`name` = `name`
         self.`taskId` = `taskId`
         self.`phases` = `phases`
         self.`agents` = `agents`
         self.`lastProgressAt` = `lastProgressAt`
         self.`stalledAt` = `stalledAt`
+        self.`finishedAt` = `finishedAt`
     }
 
     public init(from decoder: Decoder) throws {
@@ -5700,6 +5702,7 @@ public struct ChatToolItemWorkflow: Codable, Sendable, Equatable {
         `agents` = try container.decode([ChatToolItemWorkflowAgentsItem].self, forKey: .`agents`)
         `lastProgressAt` = try container.decodeIfPresent(Double.self, forKey: .`lastProgressAt`)
         `stalledAt` = try container.decodeIfPresent(Double.self, forKey: .`stalledAt`)
+        `finishedAt` = try container.decodeIfPresent(Double.self, forKey: .`finishedAt`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -5710,6 +5713,7 @@ public struct ChatToolItemWorkflow: Codable, Sendable, Equatable {
         try container.encode(`agents`, forKey: .`agents`)
         try container.encodeIfPresent(`lastProgressAt`, forKey: .`lastProgressAt`)
         try container.encodeIfPresent(`stalledAt`, forKey: .`stalledAt`)
+        try container.encodeIfPresent(`finishedAt`, forKey: .`finishedAt`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -5719,6 +5723,7 @@ public struct ChatToolItemWorkflow: Codable, Sendable, Equatable {
         case `agents` = "agents"
         case `lastProgressAt` = "lastProgressAt"
         case `stalledAt` = "stalledAt"
+        case `finishedAt` = "finishedAt"
     }
 }
 
@@ -7801,9 +7806,10 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
     public let `bookmarks`: [ChatAttachResultBookmarksItem]?
     public let `visuals`: [ChatAttachResultVisualsItem]?
     public let `subagents`: [ChatSubagentItem]?
+    public let `workflows`: [ChatToolItem]?
     public let `outline`: [ChatItem]?
 
-    public init(`info`: ChatInfo, `items`: [ChatItem], `history`: ChatHistoryPage? = nil, `pending`: [ChatItem]? = nil, `seq`: Int64? = nil, `events`: [ChatEvent]? = nil, `bookmarks`: [ChatAttachResultBookmarksItem]? = nil, `visuals`: [ChatAttachResultVisualsItem]? = nil, `subagents`: [ChatSubagentItem]? = nil, `outline`: [ChatItem]? = nil) {
+    public init(`info`: ChatInfo, `items`: [ChatItem], `history`: ChatHistoryPage? = nil, `pending`: [ChatItem]? = nil, `seq`: Int64? = nil, `events`: [ChatEvent]? = nil, `bookmarks`: [ChatAttachResultBookmarksItem]? = nil, `visuals`: [ChatAttachResultVisualsItem]? = nil, `subagents`: [ChatSubagentItem]? = nil, `workflows`: [ChatToolItem]? = nil, `outline`: [ChatItem]? = nil) {
         self.`info` = `info`
         self.`items` = `items`
         self.`history` = `history`
@@ -7813,6 +7819,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         self.`bookmarks` = `bookmarks`
         self.`visuals` = `visuals`
         self.`subagents` = `subagents`
+        self.`workflows` = `workflows`
         self.`outline` = `outline`
     }
 
@@ -7827,6 +7834,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         `bookmarks` = try container.decodeIfPresent([ChatAttachResultBookmarksItem].self, forKey: .`bookmarks`)
         `visuals` = try container.decodeIfPresent([ChatAttachResultVisualsItem].self, forKey: .`visuals`)
         `subagents` = try container.decodeIfPresent([ChatSubagentItem].self, forKey: .`subagents`)
+        `workflows` = try container.decodeIfPresent([ChatToolItem].self, forKey: .`workflows`)
         `outline` = try container.decodeIfPresent([ChatItem].self, forKey: .`outline`)
     }
 
@@ -7841,6 +7849,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`bookmarks`, forKey: .`bookmarks`)
         try container.encodeIfPresent(`visuals`, forKey: .`visuals`)
         try container.encodeIfPresent(`subagents`, forKey: .`subagents`)
+        try container.encodeIfPresent(`workflows`, forKey: .`workflows`)
         try container.encodeIfPresent(`outline`, forKey: .`outline`)
     }
 
@@ -7854,6 +7863,7 @@ public struct ChatAttachResult: Codable, Sendable, Equatable {
         case `bookmarks` = "bookmarks"
         case `visuals` = "visuals"
         case `subagents` = "subagents"
+        case `workflows` = "workflows"
         case `outline` = "outline"
     }
 }
