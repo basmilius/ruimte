@@ -178,6 +178,7 @@ export function Canvas() {
     const farIds = new Set(far === '' ? [] : far.split('\n'));
     const drawIds = order.filter((id) => !farIds.has(id)).sort();
     const stacking = stackingOrder(nodes, order);
+    const groupCount = order.filter((id) => nodes[id]?.kind === 'group').length;
     const maximizedId = useCanvas(maximizedNodeOf);
 
     useLayoutEffect(() => {
@@ -831,8 +832,14 @@ export function Canvas() {
                         <NodeFrame key={id} id={id} z={id === maximizedId ? order.length + 1 : (stacking[id] ?? 1)} />
                     ))}
                     {maximizedId === null && <DerivedCards stacking={stacking} />}
-                    {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
-                    {maximizedId === null && <PortHints rootRef={rootRef} />}
+                    {/* Over every group and under every other node: groups take the lowest z-indexes and this comes
+                        later in the DOM. A press on the port of a node in a group would otherwise land on the group's
+                        frame and move the group, and a port beside a node stays covered by the node standing there. */}
+                    {maximizedId === null && (
+                        <div className="absolute left-0 top-0" style={{ zIndex: groupCount }}>
+                            <PortHints rootRef={rootRef} />
+                        </div>
+                    )}
                     {/* Over every node, or a press on the handle of a node in a group lands on the group's frame and moves the group. */}
                     {maximizedId === null && (
                         <div className="absolute left-0 top-0" style={{ zIndex: order.length + 1 }}>
