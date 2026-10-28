@@ -1,5 +1,4 @@
 import { isCanvasView, isSessionView } from '@ruimte/contracts';
-import { READABLE_ZOOM } from '@/canvas/culling';
 import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
 import { shownViewIdsIn } from '@/shell/split';
 import { liveCanvas, maximizedNodeOf, type CanvasNode, type CanvasState } from '@/state/canvas';
@@ -10,6 +9,14 @@ import { useDocument } from '@/state/document';
  * all read. Kept apart from `state/attention.ts` so anything that announces something can ask about
  * the node it is about without importing the watcher that announces it.
  */
+
+/*
+ * Under this a node is a few dozen pixels tall, a shape on the canvas rather than something anyone is
+ * reading, so it does not count as seen. Fixed on purpose: the render distance a person sets is about
+ * what their machine can draw and moves only further out than this (`canvas/render-distance.ts`), so
+ * a node that counts as seen is always drawn live, and a faster machine never marks more as read.
+ */
+export const SEEN_ZOOM = 0.4;
 
 /* One canvas as a question about sight: where the camera is and what stands in front of it. */
 export interface CanvasSight {
@@ -35,7 +42,7 @@ export function visibleNodes(canvas: CanvasSight, { readable }: { readable: bool
     if (canvas.maximized) {
         return [canvas.maximized];
     }
-    if (readable && canvas.camera.zoom < READABLE_ZOOM) {
+    if (readable && canvas.camera.zoom < SEEN_ZOOM) {
         return [];
     }
     const rect = visibleRect(canvas.camera, canvas.viewport);

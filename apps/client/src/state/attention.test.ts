@@ -4,6 +4,7 @@ import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import { groupAttention, isUnseen, nextUnseen, readableNodes, seenNodes, settledSince, visibleNodes, type AttentionPass } from '@/state/attention';
 import type { ChatState } from '@adecore/agents-react/state';
 import type { SessionState, StatusOf } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 
 function pass(input: Partial<AttentionPass>): AttentionPass {
     return {
@@ -57,6 +58,19 @@ describe('what a person can read on a canvas', () => {
 
     test('nothing zoomed further out than reading, where a node is a shape', () => {
         expect(readableNodes({ ...canvas, camera: { x: 0, y: 0, zoom: 0.2 } })).toEqual([]);
+    });
+
+    /* The render distance is about what the machine can draw; a person on a far distance who sees a
+       live page at 0.3 is still not close enough to have read it. */
+    test('the line of reading stays at 0.4 whatever render distance this client chose', () => {
+        const previous = useSettings.getState().canvasRenderDistance;
+        useSettings.setState({ canvasRenderDistance: 'far' });
+        try {
+            expect(readableNodes({ ...canvas, camera: { x: 0, y: 0, zoom: 0.3 } })).toEqual([]);
+            expect(readableNodes({ ...canvas, camera: { x: 0, y: 0, zoom: 0.4 } })).toEqual(['a']);
+        } finally {
+            useSettings.setState({ canvasRenderDistance: previous });
+        }
     });
 
     test('nothing folded into a collapsed group', () => {
