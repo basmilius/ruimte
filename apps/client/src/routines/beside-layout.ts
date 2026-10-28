@@ -1,4 +1,5 @@
 import type { RoutineRun } from '@ruimte/contracts';
+import { COLUMN_W, GUTTER, LINE_H, OPEN_H, OPEN_MIN_H, STACK_GAP } from '@/canvas/beside-metrics';
 import { GRID, snapToGrid, type Rect } from '@/canvas/math';
 import type { CardSize } from '@/routines/output-size';
 
@@ -15,15 +16,7 @@ interface BesideSizes {
 /* The run cards beside a routine node, the open one included; the rest wait behind the line under them. */
 const BESIDE_RUNS = 4;
 
-const GUTTER = 72;
-const COLUMN_W = 440;
-/* The open run grows with its thread up to this, and scrolls inside past it. */
-export const OPEN_H = 480;
-/* Its header and a line of the thread, while that is not measured yet or shorter. */
-export const OPEN_MIN_H = 120;
-const LINE_H = 40;
 const OLDER_H = 28;
-const STACK_GAP = 8;
 
 export type BesideCard =
     | { kind: 'run'; key: string; run: RoutineRun; open: boolean; rect: Rect }

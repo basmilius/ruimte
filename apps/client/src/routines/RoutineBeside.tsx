@@ -1,17 +1,19 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { Archive, ChevronRight, History, Package, SquareArrowOutUpRight } from 'lucide-react';
+import { Archive, History, Package, SquareArrowOutUpRight } from 'lucide-react';
 import { nodeColorOf, type RoutineRun } from '@ruimte/contracts';
 import { EmptyState, Icon, IconButton, Pill } from '@adecore/ui';
 import { formatClock, formatElapsedShort } from '@adecore/ui/format';
 import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
+import { OPEN_H } from '@/canvas/beside-metrics';
+import { CardLine, CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/DerivedCardLook';
 import { DerivedSet, type DerivedCard } from '@/canvas/DerivedSet';
 import { KindIcon } from '@/canvas/KindIcon';
 import { ArtifactOnCanvas } from '@/output/ArtifactNode';
 import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
 import { lookOfRun, type BlockLook } from '@/routines/agenda';
-import { besideLayout, OPEN_H, type BesideCard } from '@/routines/beside-layout';
+import { besideLayout, type BesideCard } from '@/routines/beside-layout';
 import { LookIcon } from '@/routines/look';
 import { OutputShownBesideContext } from '@/output/chat-scope';
 import { RoutineRunChat } from '@/routines/RoutineRunChat';
@@ -25,14 +27,6 @@ import type { Rect } from '@/canvas/math';
 import type { ResizeEdge } from '@/canvas/resize-handles';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-
-const FRAME = 'flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-clip-padding shadow-node';
-const HEADER = 'flex h-[39px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised pr-1 pl-3 text-sm text-text';
-
-/* Where a line meets a card, and the node: the middle of a 39px header, which a collapsed run of 40 is all of. */
-const HEADER_MIDDLE = 20;
-/* An open run's 39px header and the 1px border above and below it. */
-const CHROME_H = 41;
 
 /* The card is placed by its top-left corner beside the node, so only its right and bottom edges move. */
 const OUTPUT_EDGES: readonly ResizeEdge[] = ['e', 's', 'se'];
@@ -195,39 +189,15 @@ function StateDot({ run }: { run: RoutineRun }) {
     return <span role="img" aria-label={t(`looks.${look}`)} className={clsx('size-2 shrink-0 rounded-full', DOT[look])} />;
 }
 
-/* The style of a card's frame beside a colored node, the way that node's own frame wears it. */
-function frameStyle(accent: string | undefined): CSSProperties | undefined {
-    return accent === undefined ? undefined : { borderColor: accentShades(accent).frameBorder };
-}
-
 function RunLine({ run, timeZone, accent, onOpen }: { run: RoutineRun; timeZone: string; accent: string | undefined; onOpen: () => void }) {
-    // A collapsed run is all header, so a colored one is tinted as a colored node's header is.
-    const shades = accent === undefined ? null : accentShades(accent);
     return (
-        <button
-            type="button"
-            aria-expanded={false}
-            className={clsx(
-                FRAME,
-                'group/header flex-row items-center gap-2 px-3 text-left text-sm text-text',
-                shades === null ? 'bg-surface hover:bg-surface-raised' : 'bg-(--run-tint) hover:bg-(--run-hover)'
-            )}
-            style={
-                shades === null ? undefined : ({ borderColor: shades.frameBorder, '--run-tint': shades.header, '--run-hover': shades.hover } as CSSProperties)
-            }
-            onClick={onOpen}
-        >
-            {/* The run's kind icon, which shows the chevron to open it while the pointer is on the line, as a node's header does. */}
-            <span aria-hidden className="relative flex size-3.5 shrink-0 items-center justify-center text-text-muted">
-                <Icon icon={History} size={14} className="transition-opacity group-hover/header:opacity-0" />
-                <Icon icon={ChevronRight} size={14} className="absolute opacity-0 transition-opacity group-hover/header:opacity-100" />
-            </span>
+        <CardLine icon={<Icon icon={History} size={14} />} accent={accent} onOpen={onOpen}>
             <span className="min-w-0 grow truncate">
                 {dayWords(run.due, timeZone)} <span className="text-text-muted">· {formatClock(run.at, timeZone)}</span>
             </span>
             <RunMark run={run} />
             <StateDot run={run} />
-        </button>
+        </CardLine>
     );
 }
 
