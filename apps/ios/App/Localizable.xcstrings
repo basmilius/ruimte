@@ -8345,6 +8345,16 @@
         }
       }
     },
+    "Choose account" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account kiezen"
+          }
+        }
+      }
+    },
     "Choose model" : {
       "localizations" : {
         "nl" : {

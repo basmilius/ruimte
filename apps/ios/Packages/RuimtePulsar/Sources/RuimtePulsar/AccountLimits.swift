@@ -33,11 +33,16 @@ extension ProviderAccountList {
     /// in and has room, the one with the least of its session spent. Nil when none has room or none was read yet; the
     /// choice is only ever offered, never made.
     public func continueTarget(_ kind: String, current: String?, limits: JSONValue?) -> ProviderAccountEntry? {
+        continueTargets(kind, current: current, limits: limits).first
+    }
+
+    /// Every account with room, in the order the continuation picker offers them.
+    public func continueTargets(_ kind: String, current: String?, limits: JSONValue?) -> [ProviderAccountEntry] {
         let roomy = others(kind, current: current).compactMap { account -> (ProviderAccountEntry, Double)? in
             guard let entry = Self.limitsEntry(limits, account: account.id), Self.hasRoom(entry) else { return nil }
             return (account, Self.pressure(entry))
         }
-        return roomy.min { $0.1 < $1.1 }?.0
+        return roomy.sorted { $0.1 < $1.1 }.map(\.0)
     }
 
     /// Whether another account a chat could go on under has no numbers yet: a machine reads an account other than a

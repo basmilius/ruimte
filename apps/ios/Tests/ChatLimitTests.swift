@@ -1,5 +1,6 @@
 import RuimtePulsar
 import RuimteTransport
+import SwiftUI
 import XCTest
 
 @testable import Ruimte
@@ -83,6 +84,30 @@ import XCTest
         XCTAssertNil(model.continueTarget)
     }
 
+    func testAccountsArrivingAfterTheLimitOfferContinuationWithoutAnotherMessage() async {
+        let machine = LimitMachine()
+        let model = ChatModel(client: machine, chatID: "chat", machineID: "mac")
+        model.connected = true
+        model.info = info(limit: .object(["kind": .string("usage")]))
+        let window = UIWindow.showing(
+            UIHostingController(rootView: ChatLimitBanner(model: model, resumeAllowed: true, openFork: { _ in })),
+            size: CGSize(width: 390, height: 400))
+        defer { window.close() }
+        await displayFrames(2)
+        XCTAssertTrue(machine.requests.isEmpty)
+        model.accounts = machine.accounts
+        await displayFrames(3)
+        XCTAssertEqual(model.continueTarget?.id, "work")
+        XCTAssertEqual(model.continueTargets.map(\.id), ["work", "spare"])
+        XCTAssertEqual(machine.requests.map(\.0), ["usage.limits"])
+        model.connected = false
+        await displayFrames(2)
+        model.connected = true
+        await displayFrames(3)
+        XCTAssertEqual(machine.requests.map(\.0), ["usage.limits", "usage.limits"])
+        capture(window, name: "usage-limit-account-continuation")
+    }
+
     func testAccountsNobodyReadAreAskedForAtMostEveryFiveMinutes() async {
         let machine = LimitMachine()
         machine.workRead = false
@@ -107,8 +132,10 @@ import XCTest
         XCTAssertNil(inPlace)
         XCTAssertEqual(machine.requests.last?.1, .object(["chatId": .string("chat"), "account": .string("work")]))
         machine.fork = true
-        let fork = await model.continueOn(work)
+        let spare = ProviderAccountEntry(id: "spare", kind: "claude", label: "Personal")
+        let fork = await model.continueOn(spare)
         XCTAssertEqual(fork, "fork-node")
+        XCTAssertEqual(machine.requests.last?.1, .object(["chatId": .string("chat"), "account": .string("spare")]))
         XCTAssertNil(model.error)
     }
 
@@ -148,6 +175,7 @@ import XCTest
     let accounts = ProviderAccountList(entries: [
         ProviderAccountEntry(id: "claude", kind: "claude", state: "ready"),
         ProviderAccountEntry(id: "work", kind: "claude", label: "Work", state: "ready"),
+        ProviderAccountEntry(id: "spare", kind: "claude", label: "Personal", state: "ready"),
     ])
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
@@ -160,13 +188,15 @@ import XCTest
                 "used": .number(0.2), "resetsAt": .null, "durationMs": .null,
             ])
             return .object([
-                "providers": .array([
-                    .object([
-                        "kind": .string("claude"), "account": .object(["id": .string("work")]), "plan": .null,
-                        "checkedAt": .number(workRead ? 1 : 0), "source": .string("probe"),
-                        "windows": .array([window]), "cost": .null, "unavailable": .null,
-                    ])
-                ])
+                "providers": .array(
+                    ["work", "spare"].map { id in
+                        .object([
+                            "kind": .string("claude"), "account": .object(["id": .string(id)]), "plan": .null,
+                            "checkedAt": .number(workRead ? 1 : 0), "source": .string("probe"),
+                            "windows": .array([window.setting("used", .number(id == "work" ? 0.2 : 0.4))]),
+                            "cost": .null, "unavailable": .null,
+                        ])
+                    })
             ])
         case "chat.continueOn":
             guard fork else { return .object(["chatId": .string("chat")]) }
