@@ -1,64 +1,46 @@
 # Map service
 
-`ruimte-maps` at `maps.ruimte.app`: a Cloudflare Worker that puts TomTom's Orbis map display behind a
-ticket from the address book. It holds the TomTom key and nothing else of value, stores nothing and has no database.
-`observability` is off in `wrangler.jsonc`, since Workers Logs would record which area was looked at. What goes to
-Observatory (`src/telemetry.ts`, app Maps) is an error the service answered with `internal` and a warning when TomTom
-failed, by what went wrong and whether it was the style or an asset, without the request, a path, a tile or a ticket.
+`ruimte-maps` at `maps.ruimte.app` puts TomTom's Orbis map display behind a ticket from the address book. It holds the TomTom key, stores nothing and has no database. `observability` is off in `wrangler.jsonc`, since Workers Logs would record which area was viewed. Observatory (`src/telemetry.ts`, app Maps) gets only `internal` errors and TomTom failures, by kind and by style or asset, never a request, path, tile or ticket.
 
 ## Routes
 
-Every route but `/health` needs `Authorization: Bearer <ticket>`, a ticket from `POST /v1/maps/ticket` of the address
-book (`apps/pulsar-worker`). The ticket rides in a header, never the URL, so it is in no log or cache key.
+Every route but `/health` needs `Authorization: Bearer <ticket>`, from `POST /v1/maps/ticket` on the address book (`apps/pulsar-worker`). The ticket never rides in the URL, so it stays out of logs and cache keys.
 
 | Route | What |
 | --- | --- |
 | `GET /health` | `{ ok: true }`, without a ticket |
-| `GET /v1/style?theme=light\|dark` | The monochrome Orbis style, with every address in it pointed at this service and the key removed |
-| `GET /v1/m/<grant>/<tail>` | A tile, sprite, glyph range or TileJSON the style named, and only that: see below |
+| `GET /v1/style?theme=light\|dark` | The monochrome Orbis style, every address pointed at this service and the key removed |
+| `GET /v1/m/<grant>/<tail>` | A tile, sprite, glyph range or TileJSON the style named, and only that |
 
-Answers that fail are `{ error: { code, message } }` with `maps-unconfigured` (503), `bad-ticket` (401), `rate-limited`
-(429, with `retry-after`), `not-found` (404), `bad-request` (400) or `upstream` (502). TomTom's own error body is never
-passed on, since it may echo the key.
+Errors are `{ error: { code, message } }` with `maps-unconfigured` (503), `bad-ticket` (401), `rate-limited` (429, with `retry-after`), `not-found` (404), `bad-request` (400) or `upstream` (502). TomTom's error body is never passed on, since it may echo the key.
 
 ## What it serves
 
-Nothing but the style and what the style names. While the style is rewritten, each TomTom address in the places a style keeps one
-(`sprite`, `glyphs`, a source's `tiles` and `url`) becomes `/v1/m/<grant>/<tail>`. The grant is the address as TomTom wrote it,
-placeholders such as `{z}` included, under a mark only this service can make (`signMapsPath`, a key derived from `MAP_TICKET_SECRET`). A
-request names a grant and fills the placeholders in the tail: three numbers for a tile, a font stack and a range for glyphs
-(`Noto%20Sans%20Regular%2CNoto%20Sans%20Italic/0-255.pbf`), `sprite[@2x].json|png` for a sprite. The tail is matched
-against that shape as it was sent, never decoded, and the upstream path is checked once more before it leaves: it must be map display or
-its assets, the URL parser must not change it, and a `%` may only be a space or a comma. A TomTom address anywhere else in a body is blanked.
-A client's query is never forwarded. An upstream body is JSON (rewritten, then searched for the key) or a known binary type
-(vector tile, protobuf, png, webp, jpeg, gif); any other type is refused.
+Only the style and what the style names. The rewrite turns each TomTom address in `sprite`, `glyphs` and a source's `tiles` and `url` into `/v1/m/<grant>/<tail>`. The grant is TomTom's address with its placeholders, signed by `signMapsPath` with a key derived from `MAP_TICKET_SECRET`. A TomTom address anywhere else in a body is blanked.
+
+The tail fills the placeholders: three numbers for a tile, a font stack and range for glyphs (`Noto%20Sans%20Regular%2CNoto%20Sans%20Italic/0-255.pbf`), or `sprite[@2x].json|png`. It is matched as sent, never decoded. Before a request leaves, the upstream path must be map display or assets, unchanged by the URL parser, with `%` only for a space or comma. A client's query is never forwarded.
+
+An upstream body must be JSON (rewritten, then searched for the key) or a known binary type (vector tile, protobuf, png, webp, jpeg, gif). Any other type is refused.
 
 ## What stays out
 
-- The key is added to the upstream request. A JSON body is rewritten and then searched for it, and a body that still holds it is not sent at all.
-- Upstream requests carry only `user-agent: ruimte-maps`, `accept` and the key: no client address, cookie, referer or
-  `x-forwarded-for`. A `key` parameter in a client's query is dropped.
-- Each ticket's subject is a keyed digest of the account, so a request is counted per account without anyone reading whose it is.
-  The platform rate limit (`TICKET_LIMIT`, 600 a minute per subject) uses it as its key.
+- The worker adds the key upstream. A JSON body that still holds the key after the rewrite is not sent.
+- Upstream requests carry only `user-agent: ruimte-maps`, `accept` and the key. No client address, cookie, referer or `x-forwarded-for`. A `key` parameter in a client's query is dropped.
+- A ticket's subject is a keyed digest of the account. The rate limit (`TICKET_LIMIT`, 600 a minute per subject) counts by it.
 
 ## Cache
 
-A successful response is kept at the edge (`caches.default`) for no longer than TomTom's `Cache-Control` says (`s-maxage`
-before `max-age`, less its `Age`), and not at all under `no-store`, `no-cache`, `private` or no header. The key of an entry is
-the upstream path and the sorted query without the key, so no ticket or key is in it. The client gets `private, max-age=<remaining>`.
-Whether TomTom's terms allow a shared cache is not verified; turning it off is replacing `deps.cache` by one that never hits.
+`caches.default` keeps a successful response no longer than TomTom's `Cache-Control` allows (`s-maxage` before `max-age`, minus `Age`). Nothing is cached under `no-store`, `no-cache`, `private` or without the header. The key is the upstream path and sorted query without the key. The client gets `private, max-age=<remaining>`. Whether TomTom's terms allow a shared cache is unverified; to turn it off, replace `deps.cache` with one that never hits.
 
 ## Who calls it
 
-The client asks the address book for a ticket with its session (`AddressBookClient.mapsTicket`), keeps it until five minutes before it ends and sends it as a header
-on every request to this origin and no other (`apps/client/src/chat/map-source.ts`). The page's
-policy already lets `https:` be fetched and `blob:` workers run, which is all MapLibre needs (`packages/csp`).
+The client fetches a ticket with its session (`AddressBookClient.mapsTicket`), renews it five minutes before it ends, and sends it only to this origin (`apps/client/src/chat/map-source.ts`). The page's policy already allows `https:` fetches and `blob:` workers, which MapLibre needs (`packages/csp`).
 
 ## Secrets
 
 | Secret | What |
 | --- | --- |
-| `TOMTOM_API_KEY` | A TomTom key with Map Display and Assets (Orbis) rights; the Search right is not used |
+| `TOMTOM_API_KEY` | A TomTom key with Map Display and Assets (Orbis) rights; Search is not used |
 | `MAP_TICKET_SECRET` | The same value as the address book's, at least 32 bytes in base64url |
 
 ```sh
@@ -67,18 +49,12 @@ bunx wrangler@4.136.3 secret put TOMTOM_API_KEY
 bunx wrangler@4.136.3 secret put MAP_TICKET_SECRET
 ```
 
-Until both exist every route but `/health` answers `maps-unconfigured`. A push to `main` that touches this folder or
-`packages/pulsar` deploys it (`.github/workflows/maps-worker.yml`, repository secret `CLOUDFLARE_API_TOKEN`); the custom
-domain `maps.ruimte.app` is created by the first deploy when the zone is on the same account.
+Until both exist, every route but `/health` answers `maps-unconfigured`. A push to `main` that touches this folder or `packages/pulsar` deploys it (`.github/workflows/maps-worker.yml`, repository secret `CLOUDFLARE_API_TOKEN`). The first deploy creates the custom domain when the zone is on the same account.
 
 ## The style version
 
-The style path (`maps/orbis/assets/styles/0.6.*/style`) is pinned to a minor version: TomTom answers 403 for `0.*` and 200 for `0.6.*`
-(checked with the real key), and patch updates come along. What the style names is served whatever its shape, as long as it is
-map display or assets with the placeholders of a tile (`{z}/{x}/{y}`) or of glyphs (`{fontstack}/{range}`); another placeholder, such as
-`{ratio}`, makes the address unservable and it is blanked from the style.
+The style path (`maps/orbis/assets/styles/0.6.*/style`) pins the minor version, because TomTom answers 403 for `0.*` and 200 for `0.6.*`. Patch updates come along. An address with a placeholder other than a tile's (`{z}/{x}/{y}`) or glyphs' (`{fontstack}/{range}`), such as `{ratio}`, is blanked from the style.
 
 ## Development
 
-`bun test` runs the handlers against a fake upstream and a fake cache. `bun run dev` serves them locally with secrets from
-`.dev.vars` (ignored by git).
+`bun test` runs the handlers against a fake upstream and cache. `bun run dev` serves them locally with secrets from `.dev.vars` (ignored by git).

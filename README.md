@@ -8,23 +8,23 @@ https://ruimte.app
 
 ## What it does
 
-Each project has views you open from the sidebar. A canvas holds nodes side by side, and a grid of up to three by three shows several views at once, so an agent, a terminal and a browser each get a cell of their own.
+Each project has views you open from the sidebar. A canvas holds nodes side by side, and a grid of up to three by three shows several views at once.
 
-Ruimte is for anyone running several Claude Code or Codex sessions at once and losing track of which one needs attention. A chat shows the moment an agent stops and waits for input, so there's no tailing a log to catch it. Close the window mid-session and open it again later. The terminal is where you left it, scrollback included, because the session keeps running on your machine and not inside the window you closed.
+Ruimte is for anyone running several Claude Code or Codex sessions and losing track of which one needs attention. A chat shows the moment an agent waits for input. Close the window mid-session and the terminal is still there when you come back, scrollback included, because the session runs on your machine and not in the window.
 
-An agent runs in a terminal, in its CLI's own interface, or in a chat that Ruimte draws, where you answer its questions and approvals from the app or your phone. Agents open other agents, hand them tasks and wake up when the work is done. A child never gets a wider permission mode than its parent, and an agent started with `--worktree` gets a worktree of its own. A chat keeps a plan you and the agent both edit, and an agent can answer with a page it wrote instead of a wall of text.
+An agent runs in a terminal, in its CLI's own interface, or in a chat Ruimte draws, where you answer its questions and approvals from the app or your phone. Agents open other agents, hand them tasks and wake up when the work is done. A child never gets a wider permission mode than its parent, and `--worktree` gives it a worktree of its own. A chat keeps a plan you and the agent both edit, and an agent can answer with a page it wrote.
 
-A browser node is a real page next to your terminals. A device node shows an iOS simulator, an Android emulator or a phone connected to the machine, and an agent you connect to it can take screenshots and tap. On a Mac, computer use lets an agent operate another app, but only an app you let it into.
+A browser node is a real page next to your terminals. A device node shows an iOS simulator, an Android emulator or a connected phone, which an agent can screenshot and tap. On a Mac, computer use lets an agent operate another app, but only one you let it into.
 
-Files open in an editor backed by language servers the machine runs for the project, for TypeScript, Vue, PHP, SQL, CSS, Python and more. The git panel commits, pulls and pushes across every repository in the project folder, and a merge conflict is resolved in the app, never through markers in the file. Drawings and diagrams are views of their own, saved with the project.
+Files open in an editor backed by language servers for TypeScript, Vue, PHP, SQL, CSS, Python and more. The git panel commits, pulls and pushes across every repository in the project folder, and you resolve merge conflicts in the app. Drawings and diagrams are views of their own.
 
-The databases panel connects to SQLite and MySQL or MariaDB, with table views, a SQL console, a table designer and row editing. Agents query through the same connections and only read, unless you set a connection to write.
+The databases panel connects to SQLite and MySQL or MariaDB, with table views, a SQL console, a table designer and row editing. Agents use the same connections and only read, unless you set a connection to write.
 
-Launches are the commands a project runs, such as a dev server or a test suite, picked up from its `package.json`, `composer.json` or run configurations. You approve a launch before it runs, and an agent can start only a launch you approved.
+Launches are a project's commands, such as a dev server or test suite, picked up from `package.json`, `composer.json` or run configurations. You approve a launch before it runs, and an agent can start only an approved launch.
 
-On a Mac, Speech to Text dictates into a text field or a terminal once you turn it on. Its model runs on your computer, so audio is never uploaded or saved. Voice Control is a separate feature on a cloud model, which you ask about what is on screen or tell to focus another view or open a terminal.
+On a Mac, Speech to Text dictates into a text field or terminal with a model on your computer, so audio is never uploaded or saved. Voice Control runs on a cloud model; you ask it about the screen or tell it to switch views or open a terminal.
 
-Projects on another machine of your account open like local ones, in the desktop app or on the web at station.ruimte.app. A processes panel shows each session's CPU and memory use. The usage page adds up costs across models and providers.
+Projects on another machine of your account open like local ones, in the desktop app or at station.ruimte.app. A processes panel shows each session's CPU and memory, and the usage page adds up costs across models and providers.
 
 ## Principles
 
@@ -44,23 +44,33 @@ bun install
 bun dev
 ```
 
-`bun dev` starts the daemon on `localhost:4211`, the Vite client and the Electron shell. The daemon keeps its state in `~/.ruimte-dev`; set `RUIMTE_DEV_HOME` to choose another folder. The Vite client proxies `/ws` to it. An installed Ruimte keeps `4210` and `~/.ruimte`, so both versions can run on one machine.
+`bun dev` starts the daemon on `localhost:4211`, the Vite client (which proxies `/ws` to it) and the Electron shell. The daemon keeps its state in `~/.ruimte-dev`, or in `RUIMTE_DEV_HOME`. An installed Ruimte keeps `4210` and `~/.ruimte`, so both can run on one machine.
 
-`bun run dev:built` builds the production client, then starts its preview server on `localhost:4212`, the development daemon with watch and the Electron shell. The shell waits for the daemon before opening, so native helper preparation stays in the terminal. It uses the same dev profile, data folder and daemon proxy as `bun dev`. Restart the command to rebuild after client changes. `bun run dev:client:built` serves an existing client build on its own.
+`bun run dev:built` builds the production client and serves its preview on `localhost:4212`, with the watched development daemon and the Electron shell on the same profile, data folder and proxy as `bun dev`. Restart it to rebuild after client changes. `bun run dev:client:built` serves an existing client build on its own.
 
-`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running development server as "Ruimte Dev", with a profile of its own. Browser nodes only work there. `bun run check` typechecks, lints and checks the formatting and the generated files of every package. `bun run build` builds the client, `bun run test` runs the unit tests, and `bun run test:dom` the client tests that need a page.
+`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running server as "Ruimte Dev", with its own profile. Browser nodes only work there.
 
-`bun run test:integration` runs all automatic integration tests, including the compiled daemon and npm launcher. CI runs the core suite (`bun run test:integration --suite core`) and the packaged daemon (`bun run test:package`) in parallel. Tests that need an already running simulator or device run only on request with `bun run test:devices`. Browser and Electron checks run only on request, with `bun run test:browser` (which builds the client first) or the Browser tests workflow in GitHub Actions.
+| Command | What |
+| --- | --- |
+| `bun run check` | Types, lint, formatting and generated files of every package |
+| `bun run build` | Builds the client |
+| `bun run test` | Unit tests |
+| `bun run test:dom` | Client tests that need a page |
+| `bun run test:integration` | All automatic integration tests, including the compiled daemon and npm launcher (`--suite core` for the core only) |
+| `bun run test:package` | The packaged daemon |
+| `bun run test:devices` | Tests that need a running simulator or device, on request only |
+| `bun run test:browser` | Browser and Electron checks, on request only (builds the client first) |
+| `bun run test:timings` | Measures the per-file durations CI balances its shards by |
 
-CI (`.github/workflows/ci.yml`) runs the unit tests in two shards with isolated files, balanced by the per-file durations in `test-timings.json`; `bun run test:timings` measures them again. Type, lint and formatting checks, the unit shards and the DOM tests run on Linux, since every platform a unit test names is passed in. The core integration tests and the packaged daemon run on macOS and Linux (`ubuntu-latest`; the packaged daemon on `ubuntu-22.04`, the release's glibc floor). Generated native fixtures, builds and the file system tests again on a case-insensitive volume run on macOS only. Checks, the client and desktop build, the core integrations and the packaged daemon run as independent jobs, and the final CI check requires them all.
+How CI splits these jobs is in `CLAUDE.md` ("Conventions") and `.github/workflows/ci.yml`.
 
-`bun run adecore:link` uses the live shared packages in `../adecore`; `bun run adecore:npm` restores the pinned npm versions. `bun run adecore:status` shows which mode is active. Restart `bun dev` after switching. See [developing with ADE CORE](docs/ADECORE-DEVELOPMENT.md) for setup, source updates and release order.
+`bun run adecore:link` uses the live shared packages in `../adecore`, `bun run adecore:npm` restores the pinned npm versions, and `bun run adecore:status` shows which is active. Restart `bun dev` after switching. See [developing with ADE CORE](docs/ADECORE-DEVELOPMENT.md).
 
-The repo is a Bun workspace. The core is `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell) and `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined); the iPhone app, the web client, the website and the native helpers sit beside them, and `CLAUDE.md` maps every one. Shared code comes from ADE CORE packages on npm, such as `@adecore/drawing` (the geometry, the SVG painter and the reading order of a drawing, without a DOM).
+The repo is a Bun workspace. The core is `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell) and `packages/contracts` (the zod schemas of the wire). `CLAUDE.md` maps the rest. Shared code comes from ADE CORE packages on npm.
 
 ## Release
 
-`bun run dist` builds the client, compiles the daemon for this machine and packages the desktop app into `apps/desktop/release` (signed when a Developer ID is in the keychain). A `v*` tag does the same on GitHub Actions for macOS and Linux and uploads a draft release that the app updates from; see `docs/RELEASE.md` for the icon, the signature and the notarization.
+`bun run dist` builds the client, compiles the daemon for this machine and packages the desktop app into `apps/desktop/release`, signed when a Developer ID is in the keychain. A `v*` tag does the same on GitHub Actions for macOS and Linux and uploads a draft release the app updates from. See `docs/RELEASE.md`.
 
 ## License
 
