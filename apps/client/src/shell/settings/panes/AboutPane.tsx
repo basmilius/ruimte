@@ -171,6 +171,20 @@ export function AboutPane() {
                     />
                 </SettingsSection>
             )}
+            <SettingsSection title={t('about.links.title')}>
+                {LINKS.map((link) => (
+                    <SettingsRow
+                        key={link.href}
+                        label={t(`about.links.${link.id}.label`)}
+                        description={t(`about.links.${link.id}.description`)}
+                        control={
+                            <Button variant="secondary" size="sm" href={link.href}>
+                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
+                            </Button>
+                        }
+                    />
+                ))}
+            </SettingsSection>
             <SettingsSection
                 title={t('about.details.title')}
                 action={
@@ -186,20 +200,6 @@ export function AboutPane() {
                         description={row.description}
                         control={
                             <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-xs text-text-muted'}>{row.value}</span>
-                        }
-                    />
-                ))}
-            </SettingsSection>
-            <SettingsSection title={t('about.links.title')}>
-                {LINKS.map((link) => (
-                    <SettingsRow
-                        key={link.href}
-                        label={t(`about.links.${link.id}.label`)}
-                        description={t(`about.links.${link.id}.description`)}
-                        control={
-                            <Button variant="secondary" size="sm" href={link.href}>
-                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
-                            </Button>
                         }
                     />
                 ))}
