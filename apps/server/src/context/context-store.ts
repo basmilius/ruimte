@@ -73,7 +73,7 @@ interface ContextReaders {
     /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
-    chatItems(chatId: string): ChatItem[] | null;
+    chatItems(chatId: string): ChatItem[] | null | Promise<ChatItem[] | null>;
     /* The page under a browser node wherever it is open, here or in a client holding it; null when nobody has it open. */
     browserPage?(browserId: string): Promise<PageReading | null>;
     /* The devices this machine has right now, for looking up what a device node points at. */
@@ -86,7 +86,7 @@ interface ContextReaders {
        it is a view of its own, or when no known project places it. */
     canvasOf?(targetId: string): ProjectCanvasView | null;
     /* The model and usage of a chat, which a read of it starts with; null when there is none. */
-    chatInfo?(chatId: string): ChatUsageInfo | null;
+    chatInfo?(chatId: string): ChatUsageInfo | null | Promise<ChatUsageInfo | null>;
     now?(): number;
 }
 
@@ -336,7 +336,7 @@ export class ContextStore {
     }
 
     private async readChat(chatId: string, tail: number | null): Promise<ContextReading | null> {
-        const items = this.readers.chatItems(chatId);
+        const items = await this.readers.chatItems(chatId);
         if (!items) {
             return null;
         }
@@ -344,7 +344,7 @@ export class ContextStore {
         // Above the thread, where a tail never cuts it off: how far a child got is what its parent reads for first.
         const plans = (await this.readers.chatPlans?.(chatId).catch(() => [])) ?? [];
         const text = plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
-        const info = this.readers.chatInfo?.(chatId) ?? null;
+        const info = (await this.readers.chatInfo?.(chatId)) ?? null;
         if (info === null) {
             return { text };
         }

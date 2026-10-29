@@ -232,8 +232,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         opened: (targetId, sourceId) =>
             openedChildSource(targetId, sourceId, { startedBy: (id) => lineage.startedBy(id), agentSource: (id) => index().agentSource(id) }),
         terminalText: (sessionId) => sessions.get(sessionId)?.plainText() ?? Promise.resolve(null),
-        chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
-        chatInfo: (chatId) => chats.get(chatId)?.info ?? null,
+        // A chat no window read for a while is out of memory, so its record answers; reading it starts no CLI.
+        chatItems: async (chatId) => chats.get(chatId)?.thread.list() ?? (await chats.readChat(chatId))?.items ?? null,
+        chatInfo: async (chatId) => chats.get(chatId)?.info ?? (await chats.readChat(chatId))?.info ?? null,
         now: Date.now,
         browserPage: (browserId) => later.devices().browserDriver.read(browserId),
         devices: () => later.devices().devices.list(),
