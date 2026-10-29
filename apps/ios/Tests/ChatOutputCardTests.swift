@@ -79,13 +79,50 @@ import XCTest
             presentation.entries.map(\.id), ["u1", "fold-t1", "tools-b1", "n1", "app-card-output:v1", "tools-b2", "a1"])
     }
 
-    func testACardFromBeforeTheThreadOpensItAndOneFromAfterClosesIt() {
+    func testACardFromBeforeTheConversationStaysOutAndOneFromAfterClosesIt() {
         let presentation = ChatPresentation()
         presentation.replace(settledTurn.map(\.chatItem), info: nil)
         presentation.setSaved([saved("late", at: 20_000), saved("early", at: 10)])
         XCTAssertEqual(
             presentation.entries.map(\.id),
-            ["app-card-output:early", "u1", "fold-t1", "a1", "app-card-output:late"])
+            ["u1", "fold-t1", "a1", "app-card-output:late"])
+    }
+
+    func testClearedOutputCardsStayGoneAfterARefreshNewMessageAndReopening() {
+        let old = saved("old", at: 3500)
+        let presentation = ChatPresentation()
+        presentation.replace(settledTurn.map(\.chatItem), info: nil)
+        presentation.setSaved([old])
+        XCTAssertEqual(presentation.entries.compactMap(\.output).map(\.id), ["output:old"])
+
+        presentation.replace([], info: nil)
+        XCTAssertTrue(presentation.entries.isEmpty)
+        presentation.setSaved([old])
+        XCTAssertTrue(presentation.entries.isEmpty)
+
+        let next = item("u2", "user", turn: "t2", at: 10_000, ["text": .string("again")]).chatItem
+        presentation.upsert(next)
+        XCTAssertEqual(presentation.entries.map(\.id), ["u2"])
+
+        let reopened = ChatPresentation()
+        reopened.setSaved([old])
+        reopened.replace([next], info: nil)
+        XCTAssertEqual(reopened.entries.map(\.id), ["u2"])
+
+        reopened.setSaved([old, saved("new", at: 11_000)])
+        XCTAssertEqual(reopened.entries.map(\.id), ["u2", "app-card-output:new"])
+        XCTAssertEqual(reopened.saved.map(\.version.id), ["old", "new"])
+    }
+
+    func testAnEarlierOutputCardAppearsWhenItsHistoryPageLoads() {
+        let presentation = ChatPresentation()
+        presentation.earlierPageWaits = true
+        presentation.replace(settledTurn.map(\.chatItem), info: nil)
+        presentation.setSaved([saved("early", at: 10)])
+        XCTAssertTrue(presentation.entries.compactMap(\.output).isEmpty)
+
+        presentation.prepend([item("u0", "user", turn: "t0", at: 1, ["text": .string("first")]).chatItem])
+        XCTAssertEqual(presentation.entries.compactMap(\.output).map(\.id), ["output:early"])
     }
 
     func testARunningTurnKeepsItsWorkingRowLastUnderEveryCard() {

@@ -508,7 +508,11 @@ final class ChatPresentation {
         }
         if let activeID { rows.append(ChatTimelineEntry(id: "working-\(activeID)", kind: .activity)) }
         let heldFrom = earlierPageWaits ? order.first.flatMap { records[$0]?.item.createdAt } : nil
-        let groups = saved.isEmpty ? [] : ChatOutputCards.groups(saved, itemTimes: records.values.map(\.item.createdAt))
+        let itemTimes = all.map(\.item.createdAt)
+        // Output survives a clear; only versions from the conversation still in this thread belong here.
+        let from = itemTimes.min() ?? .infinity
+        let visibleSaved = saved.filter { $0.version.createdAt >= from }
+        let groups = ChatOutputCards.groups(visibleSaved, itemTimes: itemTimes)
         let cards = groups.map(ChatOutputCard.init(saved:))
         rows = ChatVisuals.placed(rows, visuals: visuals, cards: cards, heldFrom: heldFrom)
         guard rows != entries else { return }
