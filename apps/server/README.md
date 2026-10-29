@@ -61,7 +61,7 @@ A release build always reports crashes and errors, and nothing else (`src/teleme
 
 Under the same stamp and scrubber (`src/telemetry/reporter.ts`) go a session per run without a user, every `console.warn` line (first line only), up to 30 breadcrumbs of fixed words (`DAEMON_MOMENTS`), and four metrics: `daemon.request.duration` by request area, `daemon.loop.lag`, `daemon.memory` (resident MB) and `daemon.clients` by kind. Metrics gather in a quarter-hour window (`startQuarterMeter` in `@ruimte/telemetry`), sent every 15 minutes and on shutdown.
 
-Each report carries the version, platform, architecture and launcher (`service`, `desktop` or `standalone`). Bun maps a stack to source with the embedded source map before it leaves. The same error goes out at most once a day (`telemetry/sent.json`).
+Each report carries the version, platform, architecture and launcher (`service`, `desktop` or `standalone`). The binary ships without a source map: its frames point into the bundle, and Observatory maps them back with the map `scripts/compile.ts` keeps in `dist/<os>-<arch>.symbols` under the build's debug id (`src/telemetry/debug-id.ts`), which a release uploads (`scripts/upload-source-map.ts`). The same error goes out at most once a day (`telemetry/sent.json`).
 
 An allow-list in `@ruimte/telemetry` builds every payload: stack frames without source lines or variables, the error type, the first line of its message, and fixed tags. The scrubber strips home, user and host names, project names and folders, the local secret, anything shaped like a credential, e-mail and IP addresses, URL paths, SQL, paths and quoted text. Never sent: wire traffic, prompts and chats, file contents, terminal output, environment variables, cookies, the machine's name or address.
 

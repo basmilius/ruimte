@@ -11,7 +11,8 @@ import {
     type QuarterMeter
 } from '@ruimte/telemetry';
 import { fileDedupeStore } from '@ruimte/telemetry/file-store';
-import { COMPILED, VERSION } from '../version.ts';
+import { COMPILED, DEBUG_ID, VERSION } from '../version.ts';
+import { registerDebugId } from './debug-id.ts';
 
 type Sentry = typeof import('@sentry/bun');
 
@@ -157,8 +158,8 @@ export function daemonBeforeSend(current: TelemetrySettings, redactions: () => I
 }
 
 /*
- * Bun maps the frames of the compiled daemon back to the source itself, to paths relative to the
- * build, which the SDK does not count as the app's own.
+ * The frames of the compiled daemon all sit in its one bundle file, which the SDK does not count as
+ * the app's own. Observatory maps them back to the source and takes the dependencies out again.
  */
 export function markInApp<T extends object>(event: T): T {
     const exception = (event as { exception?: { values?: Array<{ stacktrace?: { frames?: Array<{ filename?: string; in_app?: boolean }> } }> } }).exception;
@@ -297,6 +298,10 @@ function startMeters(active: Sentry): void {
 export async function startTelemetry(current: TelemetrySettings): Promise<void> {
     const loaded = await import('@sentry/bun');
     const redactions = (): string[] => [...secrets, ...projectRedactions];
+
+    if (DEBUG_ID !== null) {
+        registerDebugId(DEBUG_ID);
+    }
 
     loaded.initWithoutDefaultIntegrations(
         daemonClientOptions(loaded, current, daemonBeforeSend(current, redactions), undefined, daemonBeforeSendLog(current, redactions))

@@ -10,5 +10,8 @@ export const VERSION: string = process.env.RUIMTE_VERSION ?? pkg.version;
  */
 export const BUILD: string | null = process.env.RUIMTE_BUILD || null;
 
+/* The id Observatory keeps this compile's source map under, stamped in by `scripts/compile.ts`; null in a checkout. */
+export const DEBUG_ID: string | null = process.env.RUIMTE_DEBUG_ID || null;
+
 /* A binary from `bun build --compile` runs its bundle out of Bun's virtual file system. */
 export const COMPILED: boolean = import.meta.dir.startsWith('/$bunfs') || import.meta.dir.includes('~BUN');

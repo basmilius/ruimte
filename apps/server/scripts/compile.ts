@@ -1,7 +1,7 @@
-import { chmod, copyFile, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { downloadScrcpyServer } from '../src/devices/scrcpy-server.ts';
 import { placeDatabaseHelper } from './database-helper.ts';
@@ -44,6 +44,12 @@ const outDir = flags.outdir ? resolve(flags.outdir) : join(root, 'dist', `${valu
 const binary = join(outDir, values.os === 'win' ? 'ruimte.exe' : 'ruimte');
 await mkdir(outDir, { recursive: true });
 
+const entries = [
+    join(root, 'src', 'main.ts'),
+    // A worker is a module of its own in the binary; `src/fs/grep.ts` finds it at `./fs/grep-worker.ts`.
+    join(root, 'src', 'fs', 'grep-worker.ts'),
+    join(root, 'src', 'telemetry', 'watchdog-worker.ts')
+];
 const args = [
     'build',
     '--conditions=source',
@@ -52,16 +58,10 @@ const args = [
     // Keep top-level await and dynamic imports while moving JavaScript compilation out of every daemon start.
     '--bytecode',
     '--format=esm',
-    // Names stay, and the source map goes into the binary, so Bun maps every stack trace back to the source: in the log and in a crash report.
+    // Names stay, so a stack trace reads without a source map.
     '--minify-whitespace',
     '--minify-syntax',
-    '--sourcemap',
-    join(root, 'src', 'main.ts'),
-    // A worker is a module of its own in the binary; `src/fs/grep.ts` finds it at `./fs/grep-worker.ts`.
-    join(root, 'src', 'fs', 'grep-worker.ts'),
-    join(root, 'src', 'telemetry', 'watchdog-worker.ts'),
-    '--outfile',
-    binary
+    ...entries
 ];
 // A release believes the pinned statement keys and nothing else, whatever its environment holds.
 args.push('--define', 'process.env.RUIMTE_PULSAR_TEST_STATEMENT_KEY=""');
@@ -74,6 +74,10 @@ args.push('--define', `process.env.RUIMTE_TELEMETRY=${JSON.stringify(process.env
 // tells the daemon in its bundle from an older one still running as the background service.
 const buildId = `${process.env.RUIMTE_VERSION ?? 'dev'}-${crypto.randomUUID()}`;
 args.push('--define', `process.env.RUIMTE_BUILD=${JSON.stringify(buildId)}`);
+// The binary ships without its source map; `scripts/upload-source-map.ts` hands it to Observatory under this id.
+const debugId = crypto.randomUUID();
+args.push('--define', `process.env.RUIMTE_DEBUG_ID=${JSON.stringify(debugId)}`);
+const symbolsDir = `${outDir}.symbols`;
 if (values.os === 'mac' && process.platform !== 'darwin') {
     // Only `codesign` can repair the daemon's signature, so a macOS binary built elsewhere is one the kernel refuses to start.
     console.error('A macOS binary has to be compiled on macOS.');
@@ -88,22 +92,14 @@ const cargo = process.env.CARGO ?? (existsSync(installedCargo) ? installedCargo 
 
 // The daemon and every native helper write to places of their own, so they build side by side.
 const builds: Array<Promise<number>> = [
-    run(['bun', ...args], root).then(async (exitCode) => {
-        if (exitCode !== 0) {
-            return exitCode;
-        }
-        // The binary carries its source map; the copies Bun writes beside it would only ship along.
-        for (const map of await readdir(outDir)) {
-            if (map.endsWith('.map')) {
-                await rm(join(outDir, map));
-            }
-        }
-        if (values.os !== 'mac') {
+    run(['bun', ...args, '--sourcemap=none', '--outfile', binary], root).then(async (exitCode) => {
+        if (exitCode !== 0 || values.os !== 'mac') {
             return exitCode;
         }
         // Bun 1.4 writes the bundle after signing, which leaves a signature the kernel refuses (SIGKILL on launch); an ad-hoc re-sign fixes it and a release signs again with the real identity anyway.
         return run(['codesign', '--sign', '-', '--force', binary], root, 'ignore');
-    })
+    }),
+    sourceMap()
 ];
 
 if (values.os === 'mac') {
@@ -210,6 +206,36 @@ await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context
 await chmod(join(outDir, 'ruimte-context'), 0o755);
 await writeFile(join(outDir, 'ruimte.build'), `${buildId}\n`);
 console.log(`Compiled ${binary}`);
+
+/*
+ * The source map of the binary, from a second build with the same arguments, which lays the bundle out
+ * the same way. Bun puts any source map into the binary as well, so that binary is thrown away and
+ * only its map is kept, beside the binary's folder rather than in it, under the stamped debug id.
+ */
+async function sourceMap(): Promise<number> {
+    const scratch = `${outDir}.map-build`;
+    await rm(scratch, { recursive: true, force: true });
+    await mkdir(scratch, { recursive: true });
+    try {
+        const exitCode = await run(['bun', ...args, '--sourcemap=external', '--outfile', join(scratch, basename(binary))], root);
+        if (exitCode !== 0) {
+            return exitCode;
+        }
+        // The workers get maps of their own, named after them; the one named after the binary is the daemon's.
+        const name = (await readdir(scratch)).find((file) => file.startsWith('ruimte') && file.endsWith('.map'));
+        if (name === undefined) {
+            console.error('The source map build wrote no map of the daemon.');
+            return 1;
+        }
+        const map = JSON.parse(await readFile(join(scratch, name), 'utf8')) as Record<string, unknown>;
+        await rm(symbolsDir, { recursive: true, force: true });
+        await mkdir(symbolsDir, { recursive: true });
+        await writeFile(join(symbolsDir, 'ruimte.map'), JSON.stringify({ ...map, debugId, debug_id: debugId }));
+        return 0;
+    } finally {
+        await rm(scratch, { recursive: true, force: true });
+    }
+}
 
 /* Runs one build step and settles with its exit code. */
 async function run(command: string[], cwd: string, stdout: 'inherit' | 'ignore' = 'inherit'): Promise<number> {

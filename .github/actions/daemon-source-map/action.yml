@@ -1,0 +1,28 @@
+name: Daemon source map
+description: Upload the source map a daemon compile kept beside its binary, which ships without one
+
+inputs:
+  map:
+    description: The map `scripts/compile.ts` wrote, `<outdir>.symbols/ruimte.map`
+    required: true
+  token:
+    description: OBSERVATORY_UPLOAD_TOKEN; without it the map is not uploaded
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: No token, no upload
+      if: inputs.token == ''
+      shell: bash
+      run: echo "::warning::OBSERVATORY_UPLOAD_TOKEN is empty; the daemon's crash reports will not map to source"
+    # A tracker that is down never holds up a release: its stack traces only stay in the bundle.
+    - name: Upload
+      if: inputs.token != ''
+      continue-on-error: true
+      shell: bash
+      env:
+        OBSERVATORY_UPLOAD_TOKEN: ${{ inputs.token }}
+        MAP: ${{ inputs.map }}
+      run: bun apps/server/scripts/upload-source-map.ts "$MAP"

@@ -75,6 +75,12 @@ jobs:
                   RUIMTE_VERSION: ${{ needs.version.outputs.version }}
                   RUIMTE_TELEMETRY: '1'
               run: bun apps/server/scripts/compile.ts --target ${{ matrix.target }} --outdir binaries/${{ matrix.target }}
+            # A dispatch can rebuild a tag from before the action existed.
+            - uses: ./.github/actions/daemon-source-map
+              if: hashFiles('.github/actions/daemon-source-map/action.yml') != ''
+              with:
+                  map: binaries/${{ matrix.target }}.symbols/ruimte.map
+                  token: ${{ secrets.OBSERVATORY_UPLOAD_TOKEN }}
             - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
               with:
                   name: ${{ matrix.target }}
