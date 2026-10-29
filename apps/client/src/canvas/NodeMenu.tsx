@@ -35,7 +35,6 @@ import {
     colorNodeAction,
     createNodeAction,
     duplicateNodeAction,
-    focusNodeAction,
     ignoreRefusal,
     linkNodesAction,
     perform
@@ -159,7 +158,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
         }
         return canvasOfNode(id) ?? canvasStore;
     };
-    const zoomTo = (): void => focusNodeAction(canvas().getState().viewId, id);
+    const zoomTo = (): void => canvas().getState().goToNode(id, { fit: true });
     const remove = (): void => {
         const store = canvas();
         store.getState().select([id]);

@@ -11,7 +11,7 @@ export interface Viewport {
  * lands in a cell, which is before the element holding it has been measured, and a camera worked out
  * against nothing parks what it was aimed at in the corner.
  */
-export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string } | { kind: 'view'; view: ViewCamera };
+export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string; fit?: boolean } | { kind: 'view'; view: ViewCamera };
 
 /* What every surface with a camera holds. A canvas, a drawing and a diagram hold exactly these. */
 export interface CameraFields {

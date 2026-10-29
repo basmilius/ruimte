@@ -4,7 +4,7 @@ import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'reac
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, Eye, GitBranch, Hand, Link2, Shrink, X, type LucideIcon } from 'lucide-react';
-import { focusNodeAction, renameNodeAction } from '@/actions/client-actions';
+import { renameNodeAction } from '@/actions/client-actions';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { taskStatusWord, useSubagentTrail } from '@adecore/agents-react/chat';
 import { UnseenMark } from '@/attention/UnseenMark';
@@ -488,6 +488,13 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                 { borderColor: accentShades(noteAccent).headerBorder, ...tintStyle(noteAccent, 'transparent') }
                               : undefined
                     }
+                    onDoubleClick={(e) => {
+                        // Only the empty part of the bar: the title renames, and every button and pill keeps its own press.
+                        const target = e.target as HTMLElement;
+                        if (target === e.currentTarget || target.hasAttribute('data-header-space')) {
+                            canvasStore.getState().goToNode(id, { fit: true });
+                        }
+                    }}
                 >
                     {isGroup && (
                         <IconButton
@@ -518,14 +525,16 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             <Icon icon={NODE_KIND_ICONS[node.kind]} size={14} />
                         )}
                     </KindIcon>
-                    <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(!isUnknown)}>
-                        {isChat && !renaming ? (
-                            <SubagentTitleCrumb chatId={chatId}>
-                                <Title id={id} title={visibleTitle} editing={false} muted={inSubagents} onDone={() => setRenaming(false)} />
-                            </SubagentTitleCrumb>
-                        ) : (
-                            <Title id={id} title={visibleTitle} editing={renaming} muted={false} onDone={() => setRenaming(false)} />
-                        )}
+                    <span className="flex min-w-0 grow items-center" data-header-space>
+                        <span className={clsx('flex min-w-0 items-center', renaming && 'grow')} onDoubleClick={() => setRenaming(!isUnknown)}>
+                            {isChat && !renaming ? (
+                                <SubagentTitleCrumb chatId={chatId}>
+                                    <Title id={id} title={visibleTitle} editing={false} muted={inSubagents} onDone={() => setRenaming(false)} />
+                                </SubagentTitleCrumb>
+                            ) : (
+                                <Title id={id} title={visibleTitle} editing={renaming} muted={false} onDone={() => setRenaming(false)} />
+                            )}
+                        </span>
                     </span>
                     {!renaming && <FlagMarkOf id={id} />}
                     {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
@@ -583,7 +592,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                 icon={Crosshair}
                                 size="sm"
                                 label={t('node.zoomTo')}
-                                onClick={() => focusNodeAction(canvasStore.getState().viewId, id)}
+                                onClick={() => canvasStore.getState().goToNode(id, { fit: true })}
                             />
                         )}
                         <IconButton icon={X} size="sm" label={t('node.close')} onClick={remove} />

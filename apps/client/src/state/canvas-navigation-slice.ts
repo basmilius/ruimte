@@ -6,17 +6,17 @@ import { maximizedNodeOf, zoomNodeTargetOf, type CanvasGet, type CanvasSet } fro
 /* Where the camera goes to show one node, and which node the arrow keys select next. */
 export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'goToNode' | 'zoomToNode' | 'selectNeighbor'> {
     return {
-        goToNode(id) {
+        goToNode(id, { fit = false } = {}) {
             const { nodes, viewport, camera, maximizedId } = get();
             const node = nodes[id];
             if (!node) {
                 return;
             }
-            const next = cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75));
+            const next = fit ? cameraToFit(node, viewport, 48, 1) : cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75));
             /* Revealing a node on another view switches to it first, which makes the editor this
            runs on one frame old, so it waits for the size rather than landing in the corner. */
             set({
-                ...(next === null ? { pendingCamera: { kind: 'node', id } } : { camera: next, pendingCamera: null }),
+                ...(next === null ? { pendingCamera: fit ? { kind: 'node', id, fit } : { kind: 'node', id } } : { camera: next, pendingCamera: null }),
                 // Another node would land under the maximized one.
                 ...(maximizedId !== id ? { maximizedId: null } : {}),
                 selection: [id]

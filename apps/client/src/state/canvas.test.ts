@@ -259,6 +259,37 @@ describe('the camera of an editor that has not been measured', () => {
         expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual({ x: 1100, y: 650 });
     });
 
+    test('goToNode with fit zooms until the node just fits, out for a large node and in up to 100% for a small one', () => {
+        const store = createCanvasStore();
+        const large = { ...node('a', 0, 0), w: 2000, h: 1000 };
+        const small = { ...node('b', 3000, 0), w: 200, h: 100 };
+        store.getState().loadView(viewWith(large, small), { camera: { center: { x: 600, y: 400 }, zoom: 0.4 }, focusedNodeId: null });
+        store.getState().setViewport({ w: 1200, h: 800 });
+
+        store.getState().goToNode('a', { fit: true });
+        expect(store.getState().camera.zoom).toBeCloseTo((1200 - 96) / 2000);
+        const center = toWorld(store.getState().camera, { x: 600, y: 400 });
+        expect(center.x).toBeCloseTo(1000);
+        expect(center.y).toBeCloseTo(500);
+
+        store.getState().goToNode('b', { fit: true });
+        expect(store.getState().camera.zoom).toBe(1);
+        expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual({ x: 3100, y: 50 });
+        expect(store.getState().selection).toEqual(['b']);
+    });
+
+    test('goToNode with fit on an editor without a size fits once it has one', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith({ ...node('a', 0, 0), w: 2000, h: 1000 }), { camera: { center: { x: 0, y: 0 }, zoom: 1 }, focusedNodeId: null });
+
+        store.getState().goToNode('a', { fit: true });
+        expect(store.getState().pendingCamera).toEqual({ kind: 'node', id: 'a', fit: true });
+
+        store.getState().setViewport({ w: 1200, h: 800 });
+        expect(store.getState().pendingCamera).toBeNull();
+        expect(store.getState().camera.zoom).toBeCloseTo((1200 - 96) / 2000);
+    });
+
     test('a view with no camera of its own fits itself once there is room, and an empty one waits for nothing', () => {
         const store = createCanvasStore();
         store.getState().loadView(viewWith(node('a', 0, 0), node('b', 800, 400)), null);

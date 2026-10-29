@@ -112,8 +112,8 @@ export interface CanvasState extends CameraSlice {
     past: Snapshot[];
     future: Snapshot[];
 
-    /* Brings the camera to one node and selects it. */
-    goToNode(id: string): void;
+    /* Brings the camera to one node and selects it; `fit` zooms until the node just fits the view. */
+    goToNode(id: string, options?: { fit?: boolean }): void;
     zoomToNode(id?: string): void;
     /* One step back (-1) or forward (1) through the places this view's camera was; false where there is none. */
     stepCamera(direction: -1 | 1): boolean;
@@ -230,7 +230,7 @@ export function createCanvasStore(): StoreApi<CanvasState> {
             boundsOfSelection: (state) => unionOf(state.selection.flatMap((id) => boundsOfElement(id, state.nodes, state.texts, state.lines))),
             resume: (state, request) => {
                 if (request.kind === 'node') {
-                    state.goToNode(request.id);
+                    state.goToNode(request.id, { fit: request.fit });
                 }
             }
         });

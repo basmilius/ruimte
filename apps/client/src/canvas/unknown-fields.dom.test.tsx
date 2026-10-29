@@ -23,7 +23,7 @@ describe('a node with a field this version does not know', () => {
     test('renaming it saves the new title and the field as it was', async () => {
         canvas = await openCanvasPage(machine, [MAIN], PLAN.id);
 
-        const title = [...canvas.page.host.querySelectorAll(`[data-node-id="${PLAN.id}"] header span`)].find((span) => span.textContent === 'Plan')!;
+        const title = [...canvas.page.host.querySelectorAll(`[data-node-id="${PLAN.id}"] header span`)].findLast((span) => span.textContent === 'Plan')!;
         await act(async () => {
             title.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
         });
