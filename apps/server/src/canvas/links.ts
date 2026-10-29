@@ -7,7 +7,7 @@ export const MAX_LINKS = 20;
 /* What each role is for, offered whenever a call names one this version does not have. */
 export const ROLE_LINES: readonly string[] = [
     `roles\t${EDGE_ROLES.join('\t')}`,
-    'role\tcontext\tThe head reads the tail with ruimte-context read and may notify along the line; this is what a line without a role already is',
+    'role\tcontext\tThe head reads the tail with ruimte-context read; this is what a line without a role already is',
     'role\ttarget\tFrom an agent into something it can drive, such as a device or a page',
     'role\torigin\tOne node opened the other; it says where a node came from and nothing more'
 ];

@@ -18,7 +18,7 @@ export function noticeNote(notice: Notice): string {
  * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
 export function messageText(count: number): string {
-    return `${count === 1 ? 'A node linked to you sent you the message above' : `${count} nodes linked to you sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. A message starts one turn and no further: what you send from this turn is read by that node at the start of its next one.`;
+    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. A message starts one turn and no further: what you send from this turn is read by that node at the start of its next one.`;
 }
 
 /* What a person reads above the turn in the thread: who it came from, by the name they see on the canvas. */

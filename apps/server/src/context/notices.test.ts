@@ -51,7 +51,7 @@ describe('the words of a message', () => {
         const notice = (from: string, fromTitle: string): Notice => ({ ...left('hi'), from, fromTitle, createdAt: 0 });
         expect(messageLabel([notice('term-1', 'shell')])).toBe('Message from shell');
         expect(messageLabel([notice('term-1', 'shell'), notice('term-3', ''), notice('term-1', 'shell')])).toBe('Messages from shell, node term-3');
-        expect(messageText(2)).toStartWith('2 nodes linked to you sent you the messages above.');
+        expect(messageText(2)).toStartWith('2 agents of this project sent you the messages above.');
         expect(messageText(1)).toContain('A message starts one turn and no further');
     });
 });

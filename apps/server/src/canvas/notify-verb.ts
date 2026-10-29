@@ -12,9 +12,8 @@ const NOTICE_HOURS = Math.round(NOTICE_MAX_AGE_MS / 3_600_000);
 
 const NOTIFY_DETAIL: readonly string[] = [
     'prints\tnotified\tid\twhen\twhat happened\twhen is now for a message that is acted on as you call, on a screen or in a turn the chat takes on it, and waiting for one that is held until that node takes a turn of its own',
-    'who\tOnly a node a line runs from you into, which is the same direction that makes you readable to it; ruimte-context link new draws that line',
-    'who\tA chat or a terminal the person pointed you at with # in one of your messages takes a message too, a view of its own included, for as long as that message is in your thread; it never takes a task from you that way, since task new goes only to an agent you opened',
-    'who\tA link --to that names a terminal or a chat draws both ways at once, two edges and two rows, so one call is enough to be able to notify it and be notified back',
+    'who\tEvery terminal and chat of your project, on any canvas or a view of its own, with no line or # needed; a node that wrote to you is answered the same way, by its id',
+    'who\tIt never takes a task from you that way, since task new goes only to an agent you opened',
     'terminal\tA shell with no agent in it gets the line on its screen at once, dimmed, the way the linked context is announced',
     'terminal\tAn agent that answers a context hook (Claude Code or Codex) hears it at the start of its next turn; another CLI gets the line on its screen instead',
     'terminal\tA terminal is never given a turn over a message: a turn there means typing into the shell a person types in, which nothing does',
@@ -27,10 +26,10 @@ const NOTIFY_DETAIL: readonly string[] = [
     `waiting\tAt most ${MAX_NOTICES} messages wait per node, the oldest dropped first, and one nobody picks up in ${NOTICE_HOURS} hours is dropped; each is delivered once`,
     'not\tThis is a message, not a command: nothing is typed into a shell, and what the node does with it is its own call',
     'not\tYou never hear that it was read: the answer says where it went and nothing after that, and waiting means it sits there until that agent takes its next turn',
-    `reply\tThere is no reply channel: ${NO_REPLY_NOTICE}. Do not wait on the node you wrote to; it answers only by sending a notify of its own, which needs a line running the other way, and what it did you read with ruimte-context read`,
+    `reply\tThere is no reply channel: ${NO_REPLY_NOTICE}. Do not wait on the node you wrote to; it answers only by sending a notify of its own, and what it did you read with ruimte-context read`,
     'see\truimte-context task new\ta task comes back to you with its result and settles, a message does not: ask with a task when you need the answer, send a message when the other agent needs to know',
-    'refusals\tnot-linked\tself-notify\tnot-an-agent\tunknown-node\tnot-on-a-canvas\tthe whole set this verb refuses with',
-    'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'
+    'refusals\tself-notify\tnot-an-agent\tunknown-node\tnode-on-other-machine\tthe whole set this verb refuses with',
+    'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs, ruimte-context view list the views'
 ];
 
 export const notifyVerb = defineStandaloneActionVerb({
@@ -38,7 +37,7 @@ export const notifyVerb = defineStandaloneActionVerb({
     action: 'agent.notify',
     usage: '<id> --text "..."',
     params: [
-        { syntax: '<id>', need: 'required', field: 'nodeId', more: 'ruimte-context link list lists the lines you have' },
+        { syntax: '<id>', need: 'required', field: 'nodeId', more: 'any terminal or chat of this project' },
         {
             syntax: '--text M',
             need: 'required',

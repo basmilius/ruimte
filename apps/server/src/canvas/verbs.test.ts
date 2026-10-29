@@ -3566,22 +3566,10 @@ describe('notify', () => {
         expect(notified).toEqual([]);
     });
 
-    test('a message travels along a line from the caller and nowhere else', async () => {
+    test('a message reaches a terminal of the project with no line to it', async () => {
         const [target, , , drawn] = (await post('node', ['new', 'terminal', '--title', 'builder'])).lines[0]!.split('\t') as [string, string, string, string];
-        // node new drew the line this travels along, so it goes again: without one there is nothing to notify along.
         expect((await post('link', ['delete', drawn])).lines[0]).toStartWith('deleted\t');
-        const refused = await post('notify', [target, '--text', 'the build is green']);
-        expect(refused.status).toBe(422);
-        expect(refused.lines[0]).toBe(
-            `refused\tnot-linked\t${target} is a terminal node on main, but no line runs from you into it: draw that line and it can be notified`
-        );
-        expect(refused.lines).toContain(
-            `note\tNothing on main has a line from you into it yet; ruimte-context link new --to ${target} draws the one this call needs`
-        );
-        expect(refused.lines).toContain(`see\truimte-context link new --to ${target}\tdraws the line this needs`);
-        expect(notified).toEqual([]);
 
-        await post('link', ['new', '--to', target]);
         const sent = await post('notify', [target, '--text', 'the build is green']);
         expect(sent.status).toBe(200);
         expect(sent.lines).toEqual([`notified\t${target}\twaiting\t${delivery.detail}`]);
@@ -3597,20 +3585,14 @@ describe('notify', () => {
         expect(notified).toEqual([{ projectId, targetId: 'term-1', from: 'later-1', fromTitle: 'Header', text: 'the header is done' }]);
     });
 
-    test('a later chat of a design node takes a message along a line into that node, delivered to the chat itself', async () => {
+    test('a later chat of a design node takes a message, delivered to the chat itself', async () => {
         await withDesignNode([]);
-        const refused = await post('notify', ['later-1', '--text', 'hi']);
-        expect(refused.lines[0]).toStartWith('refused\tnot-linked\tlater-1 is a design node on main');
-        expect(refused.lines).toContain('see\truimte-context link new --to design-1\tdraws the line this needs');
-
-        await post('link', ['new', '--to', 'design-1']);
         expect((await post('notify', ['later-1', '--text', 'hi'])).status).toBe(200);
         expect(notified).toEqual([{ projectId, targetId: 'later-1', from: 'term-1', fromTitle: 'shell', text: 'hi' }]);
     });
 
     test('says where the message landed, in the words the daemon gave it', async () => {
         const target = await madeId(post('node', ['new', 'terminal']));
-        await post('link', ['new', '--to', target]);
         delivery = { at: 'now', wake: false, detail: 'printed on the screen of that terminal' };
         expect((await post('notify', [target, '--text', 'look at the log'])).lines).toEqual([
             `notified\t${target}\tnow\tprinted on the screen of that terminal`
@@ -3619,7 +3601,7 @@ describe('notify', () => {
 
     test('refuses a node that is not there, is not an agent, or is the caller itself', async () => {
         const unknown = await post('notify', ['nowhere', '--text', 'hi']);
-        expect(unknown.lines[0]).toBe('refused\tunknown-node\tnowhere is not a node on main');
+        expect(unknown.lines[0]).toBe('refused\tunknown-node\tnowhere is no terminal or chat of this project');
         const plain = await post('notify', ['note-1', '--text', 'hi']);
         expect(plain.lines[0]).toBe('refused\tnot-an-agent\tnote-1 is a note node; only a terminal or a chat has an agent that could read a message');
         const self = await post('notify', ['term-1', '--text', 'hi']);
@@ -3627,21 +3609,13 @@ describe('notify', () => {
         expect(notified).toEqual([]);
     });
 
-    test('a caller that is a view of its own has no line to travel', async () => {
-        const { status, lines } = await post('notify', ['term-1', '--text', 'hi'], 'chat');
-        expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tnot-on-a-canvas\tA message travels along a line between two nodes of one canvas, and this view has none');
-    });
-
-    test('a chat that is a view of its own cannot be notified, and the refusal says why in one sentence', async () => {
-        const { status, lines } = await post('notify', ['chat-1', '--text', 'hi']);
-        expect(status).toBe(422);
-        expect(lines[0]).toBe(
-            'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so no line can run from you into it, and that is what a message travels along'
-        );
-        expect(notified).toEqual([]);
-        // An id this project has nowhere is the other case and keeps its own sentence.
-        expect((await post('notify', ['nowhere', '--text', 'hi'])).lines[0]).toBe('refused\tunknown-node\tnowhere is not a node on main');
+    test('a chat that is a view of its own and a node on a canvas write to each other both ways', async () => {
+        expect((await post('notify', ['chat-1', '--text', 'look at the diff'])).status).toBe(200);
+        expect((await post('notify', ['term-1', '--text', 'the build is green'], 'chat')).status).toBe(200);
+        expect(notified).toEqual([
+            { projectId, targetId: 'chat-1', from: 'term-1', fromTitle: 'shell', text: 'look at the diff' },
+            { projectId, targetId: 'term-1', from: 'chat-1', fromTitle: 'Planner', text: 'the build is green' }
+        ]);
     });
 
     test('help notify names the whole set of refusals it can answer with, and what it cannot promise', async () => {
@@ -3650,12 +3624,10 @@ describe('notify', () => {
             .find((line) => line.startsWith('refusals\t'))!
             .split('\t')
             .slice(1);
-        for (const code of ['not-linked', 'self-notify', 'not-an-agent', 'unknown-node', 'not-on-a-canvas']) {
-            expect(refusals).toContain(code);
-        }
+        expect(refusals).toEqual(['self-notify', 'not-an-agent', 'unknown-node', 'node-on-other-machine', 'the whole set this verb refuses with']);
         expect(lines.some((line) => line.startsWith('not\t') && line.includes('never hear that it was read'))).toBe(true);
         expect(lines.some((line) => line.startsWith('reply\t') && line.includes('no reply channel'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('who\t') && line.includes('draws both ways at once'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('who\t') && line.includes('with no line or # needed'))).toBe(true);
         expect(lines.some((line) => line.startsWith('terminal\t') && line.includes('wrapped across lines'))).toBe(true);
     });
 
@@ -4603,20 +4575,6 @@ describe('a # in a message', () => {
         expect((await post('node', ['edit', 'note-1', '--text', 'mine'])).lines[0]).toStartWith('refused\tnot-linked\t');
         await pointAt('term-1', ['note-1']);
         expect((await post('node', ['edit', 'note-1', '--text', 'mine'])).lines).toEqual(['edited\tnote-1\t1\t4']);
-    });
-
-    test('lets a message reach a chat or a terminal it points at, a view of its own included', async () => {
-        await pointAt('term-1', ['chat-1']);
-        expect((await post('notify', ['chat-1', '--text', 'look at the diff'])).status).toBe(200);
-        await pointAt('chat-1', ['term-1']);
-        expect((await post('notify', ['term-1', '--text', 'the build is green'], 'chat')).status).toBe(200);
-        expect(notified).toEqual([
-            { projectId, targetId: 'chat-1', from: 'term-1', fromTitle: 'shell', text: 'look at the diff' },
-            { projectId, targetId: 'term-1', from: 'chat-1', fromTitle: 'Planner', text: 'the build is green' }
-        ]);
-        // A note is no agent, so a # to it carries no message.
-        await pointAt('term-1', ['note-1']);
-        expect((await post('notify', ['note-1', '--text', 'hi'])).lines[0]).toStartWith('refused\tnot-an-agent\t');
     });
 
     test('lets a chat view drive the browser node it points at, with no --view', async () => {

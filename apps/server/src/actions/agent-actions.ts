@@ -3,16 +3,15 @@ import {
     chatNameOf,
     isAgentKind,
     isCanvasView,
-    lineEndOf,
     nodeChats,
+    viewChats,
+    type CanvasNodeKind,
     type ChatApprovalItem,
     type ChatQuestionItem,
-    type ProjectContent,
     type ProjectView
 } from '@ruimte/contracts';
-import { refuseMissingNodes } from '../canvas/own-view.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
-import { VerbRefusal, canvasFor, field, orNote, type ChatRequestHost } from '../canvas/verb.ts';
+import { VerbRefusal, field, orNote, type ChatRequestHost } from '../canvas/verb.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 /* One row per request an agent waits on, which is what a refusal of `answer` offers instead. */
@@ -38,6 +37,26 @@ function callerTitle(views: readonly ProjectView[], caller: string): string {
         }
     }
     return '';
+}
+
+/* What a message to this id would reach: an agent, the kind of a node that has none, or null where the project has no such id. */
+function messageTarget(views: readonly ProjectView[], id: string): 'agent' | CanvasNodeKind | null {
+    for (const view of views) {
+        if (view.id === id && view.kind === 'terminal') {
+            return 'agent';
+        }
+        if (viewChats(view).some((chat) => chat.id === id)) {
+            return 'agent';
+        }
+        const node = isCanvasView(view)
+            ? view.nodes.find((candidate) => candidate.id === id || nodeChats(candidate).some((chat) => chat.id === id))
+            : undefined;
+        if (node) {
+            return isAgentKind(node.kind) ? 'agent' : node.kind;
+        }
+    }
+
+    return null;
 }
 
 function waitingLines(requests: ChatRequestHost, nodeId: string): string[] {
@@ -124,64 +143,30 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
             throw new VerbRefusal('self-notify', `${nodeId} is you; a node needs no message to itself`);
         }
 
-        // Delivered, waiting, and the one step a message wakes and no further are decided in `deliverNotice`.
-        const notify = async (content: ProjectContent) => {
-            const delivery = await host.messages.notify({
-                projectId: place.projectId,
-                targetId: nodeId,
-                from: caller,
-                fromTitle: field(callerTitle(content.views, caller)),
-                text
-            });
-
-            return { output: { nodeId, at: delivery.at, detail: delivery.detail } };
-        };
-
-        // A chat or terminal a person pointed the caller at with `#` takes a message as along a line, wherever it stands.
-        const referenced = host.context?.referenced?.(caller).find((reference) => reference.id === nodeId);
-        if (referenced?.kind === 'chat' || referenced?.kind === 'terminal') {
-            refuseOtherMachine(host, nodeId);
-            return notify(await host.projects.read(place.projectId));
-        }
-        if (place.canvasId === null) {
-            throw new VerbRefusal('not-on-a-canvas', 'A message travels along a line between two nodes of one canvas, and this view has none', [
-                'see\truimte-context link new\ta line needs both of its ends on one canvas'
+        /* A message reaches every terminal and chat of the caller's project, on any canvas or a view of
+           its own, with no line: the one step a message wakes and no further, decided in `deliverNotice`,
+           is what keeps two agents from waking each other on and on. */
+        const content = await host.projects.read(place.projectId);
+        const target = messageTarget(content.views, nodeId);
+        if (target === null) {
+            throw new VerbRefusal('unknown-node', `${nodeId} is no terminal or chat of this project`, [
+                'see\truimte-context node list\tlists the nodes of a canvas with their ids',
+                'see\truimte-context view list\tlists the views of this project, a terminal or chat of its own among them'
             ]);
         }
-        const content = await host.projects.read(place.projectId);
-        const canvas = canvasFor(content, place, undefined);
-        /* A message travels where `deriveContextSources` already lets a read go: along a line from the
-           caller into an agent node, which the person who drew it can see. A later chat of a design
-           node sends and takes along the lines of that node. */
-        const callerEnd = lineEndOf(canvas.nodes, caller);
-        const reachable = canvas.nodes.filter((node) => isAgentKind(node.kind) && canvas.edges.some((edge) => edge.from === callerEnd && edge.to === node.id));
-        const target = canvas.nodes.find((node) => node.id === nodeId || nodeChats(node).some((chat) => chat.id === nodeId));
-        /* Only the nodes this same call would accept, and where there are none, what to do about
-           the node that was asked for rather than a sentence about the canvas in general. */
-        const lines = (): string[] =>
-            orNote(
-                reachable.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
-                `Nothing on ${canvas.id} has a line from you into it yet; ruimte-context link new --to ${nodeId} draws the one this call needs`
-            );
-        if (!target) {
-            throw refuseMissingNodes(content, [nodeId], canvas.id, 'no line can run from you into it, and that is what a message travels along', lines());
+        if (target !== 'agent') {
+            throw new VerbRefusal('not-an-agent', `${nodeId} is a ${target} node; only a terminal or a chat has an agent that could read a message`);
         }
         refuseOtherMachine(host, nodeId);
-        if (!isAgentKind(target.kind)) {
-            throw new VerbRefusal(
-                'not-an-agent',
-                `${nodeId} is a ${target.kind} node; only a terminal or a chat has an agent that could read a message`,
-                lines()
-            );
-        }
-        if (!reachable.some((node) => node.id === target.id)) {
-            throw new VerbRefusal(
-                'not-linked',
-                `${nodeId} is a ${target.kind} node on ${canvas.id}, but no line runs from you into it: draw that line and it can be notified`,
-                [...lines(), `see\truimte-context link new --to ${target.id}\tdraws the line this needs`]
-            );
-        }
 
-        return notify(content);
+        const delivery = await host.messages.notify({
+            projectId: place.projectId,
+            targetId: nodeId,
+            from: caller,
+            fromTitle: field(callerTitle(content.views, caller)),
+            text
+        });
+
+        return { output: { nodeId, at: delivery.at, detail: delivery.detail } };
     }
 };

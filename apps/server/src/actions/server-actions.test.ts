@@ -301,12 +301,7 @@ describe('the daemon actions', () => {
         expect(await serverActions.execute('node.list', { viewId: 'main' }, voice())).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
     });
 
-    test('agent.notify travels only along a line from the caller into an agent, and says where the message went', async () => {
-        const refused = await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'hello' }, agent());
-        expect(refused).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });
-        expect(notices).toEqual([]);
-
-        lineOnMain('term-1', 'term-2');
+    test('agent.notify reaches an agent of the project with no line, and says where the message went', async () => {
         const sent = await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'hello' }, agent());
         expect(sent).toMatchObject({ status: 'completed', output: { nodeId: 'term-2', at: 'waiting' } });
         expect(notices).toMatchObject([{ targetId: 'term-2', from: 'term-1', fromTitle: 'shell', text: 'hello' }]);

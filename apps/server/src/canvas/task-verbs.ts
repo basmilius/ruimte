@@ -77,7 +77,7 @@ const TASK_NEW_DETAIL: readonly string[] = [
     'depth\tNo node is opened here, so neither the depth an agent may open at nor the number of agents you may have open comes in',
     'refusals\tnot-a-chat-parent\tself-task\tunknown-node\tnot-on-a-canvas\tnot-an-agent\tnot-yours\tnot-a-chat\tno-agent\ttask-running\tthe whole set this action refuses with',
     'see\truimte-context agent --task\topens an agent that is not there yet, with a task of its own',
-    'see\truimte-context notify\tsends a message along a line, which a chat takes a turn on but never reports back from: a task comes back to you with its result and settles, a message does not',
+    'see\truimte-context notify\tsends a message to any terminal or chat of this project, which a chat takes a turn on but never reports back from: a task comes back to you with its result and settles, a message does not',
     ...TASK_LINES,
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'
 ];
