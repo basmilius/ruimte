@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PUSH_HKDF_SALT, pushEncryptionInfo, pushMessage, pushRoutingMessage, type PushEnvelope } from '@ruimte/pulsar';
-import type { AgentStatus, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
+import type { AgentRequest, AgentStatus, ChatRequestSummary, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { admitClient } from '../auth/test-admit.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
@@ -102,15 +102,58 @@ function approvalFrame(
     };
 }
 
-function status(value: AgentStatus, nodeId = 'node', destination = service): void {
+function status(value: AgentStatus, nodeId = 'node', destination = service, requests?: AgentRequest[]): void {
     return destination.consume({
         event: 'session.status',
         payload: {
             sessionId: nodeId,
-            agent: { kind: 'codex', agentSessionId: 'cli', transcriptPath: null, status: value, suggestedTitle: 'Secret project', live: true, updatedAt: NOW }
+            agent: {
+                kind: 'codex',
+                agentSessionId: 'cli',
+                transcriptPath: null,
+                status: value,
+                suggestedTitle: 'Secret project',
+                ...(requests ? { requests } : {}),
+                live: true,
+                updatedAt: NOW
+            }
         }
     });
 }
+
+function shellRequest(command: string): AgentRequest {
+    return { id: command, source: '', kind: 'approval', toolName: 'Bash', title: null, text: command, createdAt: NOW };
+}
+
+function chatInfo(value: AgentStatus, requests?: ChatRequestSummary[]): Parameters<PushService['consume']>[0] {
+    return {
+        event: 'chat.event',
+        payload: {
+            chatId: 'node',
+            event: {
+                type: 'info',
+                info: {
+                    chatId: 'node',
+                    provider: 'claude',
+                    cwd: home,
+                    agentSessionId: 'cli',
+                    model: null,
+                    selection: { model: 'default', options: {} },
+                    runtimeMode: 'supervised',
+                    status: value,
+                    running: true,
+                    activeTurnId: 'turn',
+                    slashCommands: [],
+                    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                    ...(requests ? { requests } : {}),
+                    createdAt: NOW
+                }
+            }
+        }
+    };
+}
+
+const alertBodies = (): unknown[] => pushes.filter((push) => push.pushType === 'alert').map((push) => (decrypt(push) as { body: string }).body);
 
 describe('offline push delivery', () => {
     for (const target of ['terminal', 'chat'] as const) {
@@ -294,6 +337,44 @@ describe('offline push delivery', () => {
         status('running');
         await service.settled();
         expect(pushes.length).toBe(1);
+    });
+});
+
+describe('what a wait says on the phone', () => {
+    test('a terminal waiting on a command names the kind, never the command', async () => {
+        status('running');
+        status('needs-you', 'node', service, [shellRequest('export TOKEN=secret && deploy')]);
+        await service.settled();
+        expect(alertBodies()).toEqual(['Wants to run a command']);
+        expect(JSON.stringify(pushes.map((push) => decrypt(push)))).not.toContain('secret');
+    });
+
+    test('a chat question says it asks one, and counts what waits behind it', async () => {
+        const question: ChatRequestSummary = {
+            requestId: 'question',
+            itemId: 'question',
+            kind: 'question',
+            createdAt: NOW,
+            question: { questions: [{ id: 'q', header: 'Database', question: 'Which customer database?', choices: [], multiSelect: false }] }
+        };
+        const approval: ChatRequestSummary = {
+            requestId: 'approval',
+            itemId: 'approval',
+            kind: 'approval',
+            createdAt: NOW,
+            approval: { toolName: 'WebFetch', subject: 'example.com', description: null, canAllowAlways: false }
+        };
+        service.consume(chatInfo('running'));
+        service.consume(chatInfo('needs-you', [question, approval]));
+        await service.settled();
+        expect(alertBodies()).toEqual(['Asks a question, and 1 more']);
+    });
+
+    test('a wait without a request keeps the words it always had', async () => {
+        status('running');
+        status('needs-you');
+        await service.settled();
+        expect(alertBodies()).toEqual(['The agent needs your attention.']);
     });
 });
 
@@ -600,6 +681,15 @@ describe('a snoozed node', () => {
         expect(alerts().map((push) => decrypt(push))).toEqual([expect.objectContaining({ kind: 'attention', nodeId: 'node' })]);
     });
 
+    test('a snooze that runs out says what the node still asks', async () => {
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        status('running', 'node', snoozing);
+        status('needs-you', 'node', snoozing, [shellRequest('bun test')]);
+        clock.advance(60_000);
+        await snoozing.settled();
+        expect(alertBodies()).toEqual(['Wants to run a command']);
+    });
+
     test('takes back the alert it already raised', async () => {
         await auth.setPush(sessionId, { ...subscription, readSync: true });
         status('running', 'node', snoozing);
@@ -901,6 +991,14 @@ describe('a person at a desktop', () => {
         held.reportPresence('desktop', true);
         await advance(30_000);
         expect(pushes.length).toBe(1);
+    });
+
+    test('a held wait says what the node asks when it goes out', async () => {
+        status('running', 'node', held);
+        status('needs-you', 'node', held);
+        status('needs-you', 'node', held, [shellRequest('bun test')]);
+        await advance(60_000);
+        expect(alertBodies()).toEqual(['Wants to run a command']);
     });
 
     test('drops a held wait the desktop read', async () => {

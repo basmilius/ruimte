@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentInfo, AgentKind, AgentStatus } from '@ruimte/contracts';
+import { chatWaitAsk, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import type { ChatStatuses } from '@adecore/agents-react/state';
 import { dropEndpoint, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
@@ -154,6 +154,16 @@ export function nodeStatus(node: StatusOf, sessions: SessionsByKey, chats: ChatS
         return chats[endpointKey(machine, node.id)]?.info.status;
     }
     return node.status;
+}
+
+/* What a node waits on a person for, from the requests its session or its thread reports. */
+export function nodeWaitAsk(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): WaitAsk | null {
+    const key = endpointKey(endpointOfNode(node, endpointId), node.id);
+    if (node.kind === 'terminal') {
+        return terminalWaitAsk(sessions[key]?.agent?.requests);
+    }
+
+    return node.kind === 'chat' || node.kind === 'design' ? chatWaitAsk(chats[key]?.info.requests) : null;
 }
 
 /* A chat opened for no CLI in particular stores none, so the CLI it runs on is its thread's. */

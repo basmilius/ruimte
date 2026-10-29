@@ -12,7 +12,11 @@ import {
 } from '@ruimte/pulsar';
 import {
     PUSH_NOTIFY_DEFAULT,
+    chatWaitAsk,
     clipText,
+    pushWaitText,
+    terminalWaitAsk,
+    type WaitAsk,
     type ChatItem,
     type EventMap,
     type AgentStatus,
@@ -60,6 +64,9 @@ interface HeldAlert {
     preference: PushNotifyKind;
     ledger: boolean;
     dueAt: number;
+
+    /* A wait's alert, whose body says what the node asks when it goes out rather than when it was raised. */
+    wait?: boolean;
 }
 
 interface NodeState {
@@ -67,6 +74,7 @@ interface NodeState {
     status: AgentStatus;
     title: string;
     startedAt: number;
+    ask: WaitAsk | null;
 }
 
 const APPROVAL_MAX_AGE_MS = 110_000;
@@ -223,11 +231,11 @@ export class PushService {
         }
         if (event.event === 'session.status' && event.payload.agent) {
             const { sessionId, agent } = event.payload;
-            this.status('terminal', sessionId, agent.status, agent.suggestedTitle ?? 'Agent');
+            this.status('terminal', sessionId, agent.status, agent.suggestedTitle ?? 'Agent', terminalWaitAsk(agent.requests));
         } else if (event.event === 'chat.event') {
             const { chatId, event: chat } = event.payload;
             if (chat.type === 'info') {
-                this.status('chat', chatId, chat.info.status, chat.info.suggestedTitle ?? 'Agent');
+                this.status('chat', chatId, chat.info.status, chat.info.suggestedTitle ?? 'Agent', chatWaitAsk(chat.info.requests));
             } else if (chat.type === 'item' && chat.item.kind === 'tool' && chat.item.state === 'running') {
                 const node = this.nodes.get(chatId);
                 if (node) {
@@ -275,13 +283,13 @@ export class PushService {
         }
     }
 
-    private status(target: PushAlertContent['target'], nodeId: string, status: AgentStatus, title: string): void {
+    private status(target: PushAlertContent['target'], nodeId: string, status: AgentStatus, title: string, ask: WaitAsk | null): void {
         title = this.titleOf(nodeId, title);
         this.options.snoozes?.noteStatus(nodeId, status === 'needs-you');
         const previous = this.nodes.get(nodeId);
         const startedAt =
             status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
-        this.nodes.set(nodeId, { target, status, title, startedAt });
+        this.nodes.set(nodeId, { target, status, title, startedAt, ask });
         this.synchronizeActivities();
         if (status === previous?.status) {
             return;
@@ -293,7 +301,7 @@ export class PushService {
             }
         }
         if (status === 'needs-you' && !this.snoozed(nodeId)) {
-            this.alert(target, nodeId, title, NEEDS_YOU_BODY);
+            this.waitAlert(target, nodeId, title);
         }
         if (previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId)) {
             this.broadcast(
@@ -362,7 +370,7 @@ export class PushService {
                 this.enqueue({ ...card, expiresAt: this.now() + APPROVAL_MAX_AGE_MS });
             }
             if (cards.length === 0) {
-                this.alert(node.target, nodeId, this.titleOf(nodeId, node.title), NEEDS_YOU_BODY);
+                this.waitAlert(node.target, nodeId, this.titleOf(nodeId, node.title));
             }
         }
         if (node?.status === 'needs-you') {
@@ -376,6 +384,16 @@ export class PushService {
     /* Something a person has to step in on that no status says: a task that failed, a wake the daemon gave up on. */
     alert(target: PushAlertContent['target'], nodeId: string, title: string, body: string): void {
         this.enqueue(this.attentionContent(target, nodeId, title, body));
+    }
+
+    private waitAlert(target: PushAlertContent['target'], nodeId: string, title: string): void {
+        this.enqueue(this.attentionContent(target, nodeId, title, this.waitBody(nodeId)), false, true);
+    }
+
+    private waitBody(nodeId: string): string {
+        const ask = this.nodes.get(nodeId)?.ask;
+
+        return ask ? pushWaitText(ask) : NEEDS_YOU_BODY;
     }
 
     private attentionContent(target: PushAlertContent['target'], nodeId: string, title: string, body: string): PushAlertContent {
@@ -478,13 +496,13 @@ export class PushService {
         }
     }
 
-    private enqueue(content: PushAlertContent, immediate = false): void {
+    private enqueue(content: PushAlertContent, immediate = false, wait = false): void {
         const entry = this.attention.notify(content.nodeId);
         this.tell(entry);
         if (immediate) {
             this.queueAlert(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true));
         } else {
-            this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true });
+            this.dispatch({ content, issuedAt: entry.issuedAt, preference: 'needs-you', ledger: true, ...(wait ? { wait } : {}) });
         }
     }
 
@@ -529,7 +547,7 @@ export class PushService {
         const due = present ? this.held.filter((alert) => alert.dueAt <= now) : this.held;
         this.held = present ? this.held.filter((alert) => alert.dueAt > now) : [];
         for (const alert of due) {
-            const { content } = alert;
+            const content = alert.wait ? { ...alert.content, body: clipText(this.waitBody(alert.content.nodeId), BODY_MAX) } : alert.content;
             if (
                 (present && !alert.ledger) ||
                 this.snoozed(content.nodeId) ||

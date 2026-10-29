@@ -1,20 +1,22 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleCheck } from 'lucide-react';
-import { useProjectNodes } from '@/project/view-nodes';
+import { useProjectNodes, type ProjectNodeRef } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
 import { shownChatOfNode } from '@/design/design-chat';
 import { useCanvasStore } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
 import { useEndpointId } from '@/state/keys';
-import { useSessions } from '@/state/sessions';
+import { nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { oldestWaitingFirst, useWaitingSince } from '@/state/waiting';
+import { waitAskLine } from './wait-ask';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Button, Icon, Separator, Tooltip } from '@adecore/ui';
 
 /* A count that walks through the nodes behind it, across views, one per click. */
-function Walker({ label, count, ids, children }: { label: string; count: number; ids: string[]; children: ReactNode }) {
+function Walker({ label, detail, count, ids, children }: { label: string; detail?: ReactNode; count: number; ids: string[]; children: ReactNode }) {
     const canvasStore = useCanvasStore();
     const next = (): void => {
         // Starts after the selected node, so repeated clicks visit every node in the list. A design is
@@ -28,12 +30,56 @@ function Walker({ label, count, ids, children }: { label: string; count: number;
         }
     };
     return (
-        <Tooltip label={label} name>
-            <Button className="tabular-nums" onClick={next}>
+        <Tooltip
+            label={
+                <>
+                    {label}
+                    {detail}
+                </>
+            }
+        >
+            <Button className="tabular-nums" aria-label={label} onClick={next}>
                 {children}
                 {count}
             </Button>
         </Tooltip>
+    );
+}
+
+const WAITING_LINES = 3;
+
+/* What the nodes that wait ask, the one that waited longest first. */
+function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: readonly string[] }) {
+    const { t } = useTranslation('shell');
+    const endpointId = useEndpointId();
+    const sessions = useSessions((s) => s.byKey);
+    const chats = useChats((s) => s.statusByKey);
+    const since = useWaitingSince((s) => s.byKey);
+
+    const waiting = new Set(ids);
+    const byId = new Map(nodes.filter((node) => waiting.has(node.id)).map((node) => [node.id, node]));
+    const order = oldestWaitingFirst([...byId.values()], sessions, chats, since, endpointId);
+    const lines = order.slice(0, WAITING_LINES).flatMap(({ id }) => {
+        const node = byId.get(id);
+        if (!node) {
+            return [];
+        }
+
+        const ask = nodeWaitAsk(node, sessions, chats, endpointId);
+
+        return [{ id, line: t('status.waitingLine', { title: node.title, ask: ask ? waitAskLine(ask) : t('notifications.needsYou') }) }];
+    });
+    const rest = order.length - lines.length;
+
+    return (
+        <>
+            {lines.map(({ id, line }) => (
+                <span key={id} className="block truncate text-text-muted">
+                    {line}
+                </span>
+            ))}
+            {rest > 0 && <span className="block text-text-muted">{t('status.moreWaiting', { count: rest })}</span>}
+        </>
     );
 }
 
@@ -60,7 +106,12 @@ export function StatusSummary() {
         <>
             <div className="flex items-center gap-1">
                 {groups.needsYou.length > 0 && (
-                    <Walker label={t('status.nextNeedsYou')} count={groups.needsYou.length} ids={groups.needsYou}>
+                    <Walker
+                        label={t('status.nextNeedsYou')}
+                        detail={<WaitingLines nodes={nodes} ids={groups.needsYou} />}
+                        count={groups.needsYou.length}
+                        ids={groups.needsYou}
+                    >
                         <StatusDot status="needs-you" plain />
                     </Walker>
                 )}
