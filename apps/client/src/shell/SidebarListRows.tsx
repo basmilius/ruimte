@@ -18,6 +18,7 @@ import { heaviestWork, viewNameOf, waitsOnYou, type SidebarGroup, type SidebarNo
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
+import { showsTaskMark } from '@/tasks/task-mark';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { resetTitle } from '@/nodes/node-host';
@@ -213,7 +214,7 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                         </Tooltip>
                     )}
-                    {node.task && <TaskMark task={node.task} />}
+                    {node.task && showsTaskMark(node.task, node.work, node.finished === true) && <TaskMark task={node.task} />}
                     {node.finished && <UnseenMark />}
                     {node.alert && <ProcessWarningMark />}
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}

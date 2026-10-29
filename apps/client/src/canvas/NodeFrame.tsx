@@ -6,10 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, CircleDot, CirclePower, CircleX, Crosshair, Eye, GitBranch, Hand, Link2, Shrink, X, type LucideIcon } from 'lucide-react';
 import { renameNodeAction } from '@/actions/client-actions';
 import { openInSystemBrowser } from '@/desktop/bridge';
-import { taskStatusWord, useSubagentTrail } from '@adecore/agents-react/chat';
+import { useSubagentTrail } from '@adecore/agents-react/chat';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
+import { showsTaskMark } from '@/tasks/task-mark';
 import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
 import { useHiddenNeedsYou } from '@/canvas/use-group-waits';
@@ -571,7 +572,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                         </Tooltip>
                     )}
                     {status && !renaming && <StatusMark status={status} work={work} />}
-                    {task && !renaming && (work === null || taskStatusWord(task) !== 'running') && <TaskMark task={task} />}
+                    {task && !renaming && showsTaskMark(task, work, unseen) && <TaskMark task={task} />}
                     {/* Looking clears it, so this is for a canvas zoomed out and a window beside another app. */}
                     {unseen && !renaming && <UnseenMark />}
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
