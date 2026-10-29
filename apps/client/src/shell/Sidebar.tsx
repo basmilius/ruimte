@@ -202,7 +202,7 @@ export function Sidebar() {
             useUi.getState().setSidebarExpanded([activeViewId]);
         }
     }, [expanded, activeViewId]);
-    const { groups, incomplete, separators: placed } = useSidebarGroups(combined || everywhere, project, expandedIds);
+    const { groups, incomplete, separators: placed } = useSidebarGroups(combined || everywhere, combined, project, expandedIds);
     const separators = combined ? placed : NO_SEPARATORS;
     /* The projects and separators a person can move, in the order they show; the Chats project leads and stays. */
     const movable = movableKeys(

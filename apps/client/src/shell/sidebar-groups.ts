@@ -9,14 +9,20 @@ import { machineTransport } from '@/transport';
 import { placeSeparators, sidebarProjectKey, useSidebarMachines, useSidebarProjects, type SeparatorPlaces } from './sidebar-projects';
 import type { SidebarGroup, SidebarNode, SidebarProject } from './sidebar-rows';
 
-export function useSidebarGroups(enabled: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) {
+export function useSidebarGroups(enabled: boolean, allOpen: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) {
     const endpoints = useEndpoints((state) => state.endpoints);
     const current = useProject((state) => state.current);
     const currentEndpointId = useProject((state) => state.currentEndpointId);
     const cached = useProjectList((state) => state.projects);
     const selected = useMemo(
-        () => sidebarSelection(cached, listedEndpoints(endpoints), current && currentEndpointId ? { endpointId: currentEndpointId, summary: current } : null),
-        [cached, endpoints, current, currentEndpointId]
+        () =>
+            sidebarSelection(
+                cached,
+                listedEndpoints(endpoints),
+                current && currentEndpointId ? { endpointId: currentEndpointId, summary: current } : null,
+                allOpen
+            ),
+        [cached, endpoints, current, currentEndpointId, allOpen]
     );
     const machines = useSidebarMachines(enabled, [...new Set(selected.map((row) => row.endpointId))]);
     const collapsed = useSidebarProjects((state) => state.collapsed);

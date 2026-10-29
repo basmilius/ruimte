@@ -70,3 +70,18 @@ test('the Chats project is only in the sidebar of the window that shows it', () 
     expect(sidebarSelection(rows, [endpoint('mac')], null).map((row) => row.summary.projectId)).toEqual(['Skills']);
     expect(sidebarSelection(rows, [endpoint('mac')], chats).map((row) => row.summary.projectId)).toEqual(['chats', 'Skills']);
 });
+
+test('a list of all open projects leads with the Chats project of every known machine, whichever project is current', () => {
+    const skills = { endpointId: 'mac', summary: summary('Skills') };
+    const rows = [
+        skills,
+        { endpointId: 'vps', summary: { ...summary('vps-chats'), scratch: true } },
+        { endpointId: 'mac', summary: { ...summary('chats'), scratch: true } },
+        { endpointId: 'removed', summary: { ...summary('old-chats'), scratch: true } }
+    ];
+    expect(sidebarSelection(rows, [endpoint('mac'), endpoint('vps')], skills, true).map((row) => row.summary.projectId)).toEqual([
+        'chats',
+        'vps-chats',
+        'Skills'
+    ]);
+});
