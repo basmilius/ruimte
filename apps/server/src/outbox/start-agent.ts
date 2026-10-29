@@ -85,6 +85,8 @@ interface AgentStartHostDeps {
     lineage: Pick<AgentLineageStore, 'ceilingOf'>;
     /* The agent nodes a caller holds open, which caps one caller in a loop. */
     openedCount(callerId: string): number;
+    /* The accounts of a CLI a project turned off. */
+    accountsOff?(projectId: string, kind: AgentKind): readonly string[];
 }
 
 /* What the verbs start an agent node through, the same for the daemon and the test daemon. */
@@ -103,7 +105,8 @@ export function agentStartHost(deps: AgentStartHostDeps): AgentStartHost {
         accountOf: nodeAccount({ chat: (id) => deps.chats.get(id)?.info, session: (id) => deps.sessions.get(id) }),
         terminalModePreference: () => deps.chats.composerPreferences.terminalMode(),
         preferredSelection: (kind) => deps.chats.composerPreferences.for(kind).selection,
-        openedCount: (callerId) => deps.openedCount(callerId)
+        openedCount: (callerId) => deps.openedCount(callerId),
+        accountsOff: (projectId, kind) => deps.accountsOff?.(projectId, kind) ?? []
     };
 }
 

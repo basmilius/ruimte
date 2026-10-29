@@ -107,7 +107,7 @@ function projectSink(endpointId: () => string): ProjectSink {
 }
 
 function preferencesFor(endpointId: string): ReturnType<typeof chatPreferencesPayload> {
-    return chatPreferencesPayload(useChatPreferences.getState(), endpointId, knownAccounts(providerAccountsOf(endpointId)));
+    return chatPreferencesPayload(useChatPreferences.getState(), knownAccounts(providerAccountsOf(endpointId)));
 }
 
 function buildMachine(endpoint: Endpoint): Machine {

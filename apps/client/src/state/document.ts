@@ -9,6 +9,7 @@ import {
     type NodeTitleSource,
     type ProjectDatabaseTarget,
     type ProjectDocument,
+    type ProjectAccounts,
     type ProjectFlags,
     type ProjectIconChoice,
     type ProjectLocal,
@@ -72,6 +73,8 @@ export interface DocumentState {
     shared: string[];
     /* This person's flags on views and nodes, by id. Only ever in the private file, like `shared` beside the views. */
     flags: ProjectFlags;
+    /* This person's accounts per agent kind for the project's new starts, as the private file has them; only `project.setAccounts` changes them. */
+    accounts: ProjectAccounts;
     /*
      * Views a person deleted that can still come back, oldest first. They are gone from the list and
      * the grid but not from the file, since another client and the daemon end what a view holds the
@@ -89,6 +92,8 @@ export interface DocumentState {
      * and no view opens by itself: a person's grid only moves when the person moves it.
      */
     applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[], flags: ProjectFlags): void;
+    /* The accounts as the private file now has them; not an edit, since only the machine writes them. */
+    takeAccounts(accounts: ProjectAccounts): void;
     /* Puts a view in the shared file or takes it back out. Only a person does this; see `SharedViewIdsSchema`. */
     setShared(id: string, shared: boolean): void;
     /* Flags views and nodes in one color, or takes their flags off with null. */
@@ -233,6 +238,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             reloading: false,
             shared: [],
             flags: {},
+            accounts: {},
             trashed: [],
 
             ...createDocumentContentSlice(kit),

@@ -307,6 +307,15 @@ describe('splitContent', () => {
         expect('sql' in splitContent({ ...content([canvas('main')]), sql: {} }, [], 1).private).toBe(false);
     });
 
+    test("a person's accounts stay in the private file and come back with it, and none leave no key behind", () => {
+        const accounts = { claude: { default: 'client', off: ['private'] } };
+        const split = splitContent({ ...content([canvas('main')]), accounts }, ['main'], 1);
+        expect(split.private.accounts).toEqual(accounts);
+        expect(JSON.stringify(split.shared)).not.toContain('client');
+        expect(mergeFiles(null, split.private, fallback).content.accounts).toEqual(accounts);
+        expect('accounts' in splitContent({ ...content([canvas('main')]), accounts: {} }, [], 1).private).toBe(false);
+    });
+
     test('an id in the list that names no view of this project is ignored', () => {
         const split = splitContent(content([canvas('main')]), ['main', 'ghost'], 1);
         expect(split.shared.views.map((view) => view.id)).toEqual(['main']);

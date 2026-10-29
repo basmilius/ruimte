@@ -357,7 +357,8 @@ export function splitContent(
             overlay,
             ...(privateFields.length > 0 ? { overlayFields: privateFields } : {}),
             ...(Object.keys(flags).length > 0 ? { flags } : {}),
-            ...(content.sql && !isEmptySql(content.sql) ? { sql: content.sql } : {})
+            ...(content.sql && !isEmptySql(content.sql) ? { sql: content.sql } : {}),
+            ...(content.accounts && Object.keys(content.accounts).length > 0 ? { accounts: content.accounts } : {})
         }
     };
 }
@@ -426,7 +427,8 @@ export function mergeFiles(
             ...(shared?.icon ? { icon: shared.icon } : {}),
             views: orderedViews(sharedViews, file.views.map(withoutHome), file.order),
             ...(file.flags ? { flags: file.flags } : {}),
-            ...(file.sql ? { sql: file.sql } : {})
+            ...(file.sql ? { sql: file.sql } : {}),
+            ...(file.accounts ? { accounts: file.accounts } : {})
         },
         shared: sharedViews.map((view) => view.id),
         overlayFields

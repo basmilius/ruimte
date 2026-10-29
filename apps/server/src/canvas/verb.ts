@@ -247,6 +247,8 @@ export interface AgentStartHost {
     modeOf(nodeId: string): RuntimeMode;
     /* The CLI and the account the agent of a node runs under; null for a node that runs none. */
     accountOf?(nodeId: string): NodeAccount | null;
+    /* The accounts of a CLI a project turned off, which a child of that project never inherits. */
+    accountsOff?(projectId: string, kind: AgentKind): readonly string[];
     /* The mode a person picked for terminal agents, from the clients connected now; undefined with none. */
     terminalModePreference(): RuntimeMode | undefined;
     /* The model and options a person picked for new chats of this CLI, from the clients connected now; undefined with none. */

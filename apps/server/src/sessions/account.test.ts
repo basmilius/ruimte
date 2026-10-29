@@ -34,7 +34,7 @@ beforeEach(async () => {
             return 'Named';
         }
     };
-    harness = await makeHarness({ env, accounts, preferredAccount: () => preferred, codexTitles }, home);
+    harness = await makeHarness({ env, accounts, openingAccount: (_sessionId, _kind, named) => named ?? preferred, codexTitles }, home);
 });
 
 afterEach(async () => {
@@ -121,7 +121,7 @@ describe('a terminal agent that names no account', () => {
         preferred = undefined;
         const home = harness.home;
         harness.manager.killAll();
-        const restarted = await makeHarness({ env, accounts, preferredAccount: () => preferred }, home);
+        const restarted = await makeHarness({ env, accounts, openingAccount: (_sessionId, _kind, named) => named ?? preferred }, home);
         await restarted.manager.create({ sessionId: 'terminal-a', cols: 80, rows: 24, cwd: home, agent: { kind: 'claude' } });
         expect(restarted.adapter.forSession('terminal-a').options.env.CLAUDE_CONFIG_DIR).toBe(join(home, '.claude_personal'));
         restarted.manager.killAll();

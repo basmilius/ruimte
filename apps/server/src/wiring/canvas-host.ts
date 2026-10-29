@@ -92,7 +92,8 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
             chats,
             sessions,
             lineage,
-            openedCount: (callerId) => openedAgentCount({ lineage, hiddenAgents: projects.hiddenAgents, tasks, outbox, chats, sessions }, callerId)
+            openedCount: (callerId) => openedAgentCount({ lineage, hiddenAgents: projects.hiddenAgents, tasks, outbox, chats, sessions }, callerId),
+            accountsOff: (projectId, kind) => projects.index.accountsOf(projectId)?.[kind]?.off ?? []
         }),
         checkouts: git.checkouts,
         untrusted: agents.untrusted,

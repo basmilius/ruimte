@@ -25,6 +25,7 @@
         "none": "No agent CLI found",
         "connecting": "Connecting…",
         "onAccount": "{{provider}} ({{account}})",
+        "projectDefault": "Project default",
         "newChat": "New chat",
         "setup": "Set up agents",
         "defaultModel": "Default model"

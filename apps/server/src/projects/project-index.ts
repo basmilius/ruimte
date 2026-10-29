@@ -17,6 +17,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectFlags,
+    type ProjectAccounts,
     type ProjectSql,
     type ProjectView,
     type ViewSessionNode,
@@ -35,7 +36,7 @@ export interface IndexedPlace {
 
 interface IndexedProject {
     folder: string;
-    content: Pick<ProjectContent, 'views' | 'flags' | 'sql'> & { shared?: readonly string[] };
+    content: Pick<ProjectContent, 'views' | 'flags' | 'sql' | 'accounts'> & { shared?: readonly string[] };
     sources: Map<string, ContextSource[]>;
     places: Map<string, string | null>;
 }
@@ -109,7 +110,7 @@ export class ProjectIndex {
     }
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
-    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags' | 'sql'> & { shared?: readonly string[] }): void {
+    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags' | 'sql' | 'accounts'> & { shared?: readonly string[] }): void {
         const sources = flaggedSources(deriveProjectContextSources(content.views, folder), content.flags);
         this.projects.set(projectId, { folder, content, sources, places: placesOf(content.views) });
         this.changedPlaces(projectId);
@@ -150,6 +151,10 @@ export class ProjectIndex {
 
     sqlOf(projectId: string): ProjectSql | undefined {
         return this.projects.get(projectId)?.content.sql;
+    }
+
+    accountsOf(projectId: string): ProjectAccounts | undefined {
+        return this.projects.get(projectId)?.content.accounts;
     }
 
     /* Every version a node of a known project is pinned to; a node that follows the latest pins nothing, since the latest is never proposed. */

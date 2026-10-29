@@ -29,7 +29,12 @@ beforeEach(async () => {
     });
     // A gate that refuses every command, as it does for a node no project places.
     harness = await makeHarness(
-        { env, accounts, preferredAccount: () => 'claude_work', commands: { approved: () => false, approve: async () => undefined } },
+        {
+            env,
+            accounts,
+            openingAccount: (_sessionId, _kind, named) => named ?? 'claude_work',
+            commands: { approved: () => false, approve: async () => undefined }
+        },
         home
     );
     dispatcher = new Dispatcher();

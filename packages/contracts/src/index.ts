@@ -418,6 +418,8 @@ import {
     ProjectSaveResultSchema,
     ProjectSetIconPayloadSchema,
     ProjectSetIdentityPayloadSchema,
+    ProjectSetAccountsPayloadSchema,
+    ProjectSetAccountsResultSchema,
     ProjectShowViewEventSchema,
     ProjectSummaryResultSchema,
     ProjectTargetPayloadSchema
@@ -710,6 +712,7 @@ export const REQUEST_SCHEMAS = {
     'accounts.refresh': AGENT_REQUEST_SCHEMAS['accounts.refresh'],
     'accounts.create': AGENT_REQUEST_SCHEMAS['accounts.create'],
     'accounts.watchLogin': AGENT_REQUEST_SCHEMAS['accounts.watchLogin'],
+    'accounts.reorder': AGENT_REQUEST_SCHEMAS['accounts.reorder'],
     'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
@@ -720,6 +723,8 @@ export const REQUEST_SCHEMAS = {
     'project.release': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
     'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
     'project.setIdentity': { payload: ProjectSetIdentityPayloadSchema, result: ProjectSummaryResultSchema },
+    // One person's accounts for a project's new starts, in its private file. Only a person on this machine sets them, never a verb.
+    'project.setAccounts': { payload: ProjectSetAccountsPayloadSchema, result: ProjectSetAccountsResultSchema },
     'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
     'project.newChat': { payload: ProjectNewChatPayloadSchema, result: ProjectNewChatResultSchema },
     'project.newInlineChat': { payload: ProjectNewInlineChatPayloadSchema, result: ProjectNewInlineChatResultSchema },
