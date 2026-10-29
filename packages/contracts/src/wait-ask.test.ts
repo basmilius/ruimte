@@ -69,6 +69,13 @@ describe('terminalWaitAsk', () => {
         expect(detail.endsWith('…')).toBe(true);
     });
 
+    test("an edited file's name is cut to one line too", () => {
+        const edit = (path: string) => terminalWaitAsk([terminalRequest({ toolName: 'Write', text: JSON.stringify({ file_path: path }) })])?.detail ?? '';
+
+        expect(edit(`/repo/${'x'.repeat(200)}.ts`).length).toBe(120);
+        expect(edit('/repo/first\nsecond.ts')).toBe('first');
+    });
+
     test('no request says nothing', () => {
         expect(terminalWaitAsk(undefined)).toBeNull();
         expect(terminalWaitAsk([])).toBeNull();

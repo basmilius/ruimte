@@ -64,7 +64,7 @@ function terminalAsk(request: AgentRequest, more: number): WaitAsk {
     }
 
     if (EDIT_TOOLS.has(tool)) {
-        return { kind: 'edit', tool, detail: editedFile(request.text) ?? oneLine(request.title), more };
+        return { kind: 'edit', tool, detail: oneLine(editedFile(request.text)) ?? oneLine(request.title), more };
     }
 
     return { kind: 'tool', tool, detail: oneLine(request.title), more };
