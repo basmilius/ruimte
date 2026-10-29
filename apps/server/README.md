@@ -427,7 +427,8 @@ cd apps/server && RUIMTE_HOME=~/.ruimte-dev bun src/main.ts voice key set   # as
 The chat lifecycle and backends live in `@adecore/agents/chat`; `src/chat/chat-manager.ts` binds them, and `src/chat/CLAUDE.md` covers forks, plans, bookmarks, visuals and agent attachments. On disk:
 
 - Every broadcast event goes to `chats/<id>.log`. Reading plays the log over `chats/<id>.json` and skips a torn last line. The log folds into the snapshot past 1 MB, on a clear and on shutdown.
-- A tool output or checkpoint diff past 64 KiB goes gzipped to `chats/<id>.payloads/<sha256>.gz`; the record keeps the first 8 KiB. `chat.toolOutput` and `chat.turnDiff` answer the whole.
+- A tool output or checkpoint diff past 8 KiB goes gzipped to `chats/<id>.payloads/<sha256>.gz`; the record keeps the first 2 KiB. `chat.toolOutput` and `chat.turnDiff` answer the whole.
+- A chat no client reads, without a CLI and with nothing under way, leaves memory after ten minutes and keeps only its status for `chat.list`. Opening it loads it from its record.
 - A turn running when the daemon went down resumes at start through a `resume-run` outbox entry, or ends `aborted` with a note.
 - Attachments are any type, at most 25 MB each and 8 per message, in `attachments/<chatId>/<id>.<ext>`. `GET /attachments/<chatId>/<id>` serves them behind the `/ws` access rules, `inline` only for what a browser paints, with `nosniff` and an immutable cache; a visual's page is always a download.
 - An agent's `ruimte-context chat attach` reads the file in its own process. The verb route takes bodies up to 72 MiB; every other route stops at 24 MiB.

@@ -46,6 +46,8 @@ import type { ProvidersBundle } from './providers.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { UsageBundle } from './usage.ts';
 
+const CHAT_UNLOAD_AFTER_MS = 10 * 60_000;
+
 /* What the daemon keeps for agents across a restart, loaded before anything can take from it. */
 export interface AgentStores {
     shellEnvironment: ShellEnvironment;
@@ -272,6 +274,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             databases: () => later.databases().agents
         }),
         store: new ChatStore(config.home, { attachments, isSidecar: isPlanFileName }),
+        // A chat no window shows and whose CLI is gone holds its whole thread for nobody; its record has it.
+        unloadAfterMs: CHAT_UNLOAD_AFTER_MS,
         attachments,
         checkpoints,
         contextUrl: runtime.contextUrl,
