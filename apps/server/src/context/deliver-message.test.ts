@@ -19,6 +19,7 @@ function content(): ProjectContent {
                 nodes: [
                     { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
                     { id: 'chat-other', kind: 'chat', title: 'Builder', x: 600, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'chat-third', kind: 'chat', title: 'Reviewer', x: 1200, y: 0, w: 560, h: 640, provider: 'claude' },
                     { id: 'note-1', kind: 'note', title: 'A note', x: 600, y: 700, w: 320, h: 200 }
                 ],
                 texts: [],
@@ -114,7 +115,7 @@ describe('a message to a chat', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
-    test('sent from a turn a message started wakes nobody, and says why', async () => {
+    test('an answer to the chat that asked wakes it, once', async () => {
         const daemon = await boot();
         await idle(daemon, 'chat-lead');
         await idle(daemon, 'chat-other');
@@ -123,26 +124,46 @@ describe('a message to a chat', () => {
         // The second line keeps the woken turn open, so the answer goes out while that turn runs.
         await notify(daemon, 'chat-lead', 'chat-other', 'what is the secret word\\nslow');
         await daemon.until(() => daemon.chats.get('chat-other')?.info.activeTurnId !== null);
-        const before = turnsOf(daemon, 'chat-lead').length;
 
         const lines = await notify(daemon, 'chat-other', 'chat-lead', 'the word is walnut');
+        expect(lines).toEqual([notified('chat-lead', 'now', 'that chat takes a turn on it, and reads it there')]);
+        await daemon.until(() => repliesOf(daemon, 'chat-lead').some((text) => text.includes('the word is walnut')));
+        expect(turnsOf(daemon, 'chat-lead').filter((turn) => (turn.messageFrom ?? []).length > 0)).toEqual([
+            expect.objectContaining({ messageFrom: ['chat-other'] })
+        ]);
+        daemon.chats.cancel('chat-other');
+    });
+
+    test('sent from a turn a message started to anyone but the sender wakes nobody, and says why', async () => {
+        const daemon = await boot();
+        await idle(daemon, 'chat-lead');
+        await idle(daemon, 'chat-other');
+        await idle(daemon, 'chat-third');
+        await link(daemon, 'chat-lead', 'chat-other');
+        await link(daemon, 'chat-other', 'chat-third');
+
+        await notify(daemon, 'chat-lead', 'chat-other', 'what is the secret word\\nslow');
+        await daemon.until(() => daemon.chats.get('chat-other')?.info.activeTurnId !== null);
+        const before = turnsOf(daemon, 'chat-third').length;
+
+        const lines = await notify(daemon, 'chat-other', 'chat-third', 'the word is walnut');
         expect(lines).toEqual([
             notified(
-                'chat-lead',
+                'chat-third',
                 'waiting',
-                'a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+                'a message started the turn you are in, and from such a turn only an answer to a node that asked wakes it; that chat reads this one in front of its next turn (1 waiting)'
             )
         ]);
-        // The lead is between turns and still gets none: this is the step the daemon does not take.
-        expect(daemon.chats.get('chat-lead')?.info.activeTurnId).toBeNull();
-        expect(turnsOf(daemon, 'chat-lead')).toHaveLength(before);
+        // The third chat is between turns and still gets none: this is the step the daemon does not take.
+        expect(daemon.chats.get('chat-third')?.info.activeTurnId).toBeNull();
+        expect(turnsOf(daemon, 'chat-third')).toHaveLength(before);
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
-        expect(daemon.notices.waiting('chat-lead')).toHaveLength(1);
+        expect(daemon.notices.waiting('chat-third')).toHaveLength(1);
 
-        // What was said still reaches the lead, in the next turn a person gives it.
+        // What was said still reaches it, in the next turn a person gives it.
         daemon.chats.cancel('chat-other');
-        await daemon.chats.send('chat-lead', 'anything back?');
-        await daemon.until(() => repliesOf(daemon, 'chat-lead').some((text) => text.includes('the word is walnut')));
+        await daemon.chats.send('chat-third', 'anything back?');
+        await daemon.until(() => repliesOf(daemon, 'chat-third').some((text) => text.includes('the word is walnut')));
     });
 
     test('to a chat that is in a turn keeps that turn, and lands in front of its next one', async () => {
