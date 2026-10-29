@@ -9,6 +9,7 @@ import { cellElement } from '@/shell/cell-rects';
 import { requiredShortcut } from '@/shell/editor-keymap';
 import { createFocusRegistry } from '@/shell/panels/focus-registry';
 import { useDocument } from '@/state/document';
+import { useFiles } from '@/state/files';
 
 interface DiffCaretStore {
     /* Where the caret of each diff tab stands in its file, keyed by the tab, so the tab's menu can say the line. In memory only. */
@@ -40,6 +41,13 @@ function openAt(path: string, source: DiffSource): boolean {
     return true;
 }
 
+/* Whether the view in front of the focused cell is a diff, a commit or a checkout's changes: a file tab with a view. */
+export function diffInFront(): boolean {
+    const { activeViewId } = useDocument.getState();
+    const tab = activeViewId === null ? undefined : useFiles.getState().tabs.find((entry) => entry.key === activeViewId);
+    return tab !== undefined && 'view' in tab && tab.view !== undefined;
+}
+
 /* Opens the file at the caret of the diff with the keyboard, else of the diff the active view had it last. */
 export function openFileAtDiffCaret(): boolean {
     const focused = diffs.focused();
@@ -57,28 +65,34 @@ export function openFileAtDiffCaret(): boolean {
  */
 export function useDiffCaret(path: string, tabKey: string): { surface: RefObject<HTMLDivElement | null>; onSource(source: DiffSource): () => void } {
     const surface = useRef<HTMLDivElement>(null);
-    // The pane the caret moved in last, which is the one a split diff means.
+    // The pane that had the keyboard last, which is the one a split diff means.
     const last = useRef<DiffSource | null>(null);
 
     // The panes mount once the diff is read, so they register the element around them, which exists by then.
     const onSource = (source: DiffSource): (() => void) => {
         const apple = isApplePlatform();
-        const remember = (): void => {
+        // Only the pane with the keyboard speaks: the caret of the other one also moves when a gap unfolds.
+        const take = (): void => {
+            if (!source.editor.hasFocus?.()) {
+                return;
+            }
             last.current = source;
             useDiffCarets.getState().setCaret(tabKey, source.at());
         };
         const element = surface.current;
         const offFocus = element === null ? undefined : diffs.register(() => last.current !== null && openAt(path, last.current), element);
-        const offCaret = source.editor.onCaret(remember);
+        // A pane takes over as it gets the keyboard, also before its caret first moves.
+        element?.addEventListener('focusin', take);
+        const offCaret = source.editor.onCaret(take);
         const offKey = source.editor.onKeyDown((event) => {
             if (!matchesShortcut(requiredShortcut('jumpToSource'), event, apple)) {
                 return false;
             }
-            remember();
             return openAt(path, source);
         });
         return () => {
             offFocus?.();
+            element?.removeEventListener('focusin', take);
             offCaret();
             offKey();
             if (last.current === source) {

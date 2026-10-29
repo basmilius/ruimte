@@ -446,7 +446,7 @@ const TABLE = {
         icon: FileText,
         shortcut: editorShortcut('jumpToSource'),
         palette: true,
-        menu: { menu: 'go', group: 'editor-navigation', order: 100 }
+        menu: { menu: 'go', group: 'editor-navigation', order: 100, enabled: (context) => context.diff }
     },
     'next-problem': {
         key: 'nextProblem',

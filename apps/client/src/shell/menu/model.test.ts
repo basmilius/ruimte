@@ -70,6 +70,7 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         chat: false,
         terminalKeys: false,
         terminalFind: false,
+        diff: false,
         prRepos: [],
         ...patch
     };
@@ -354,6 +355,11 @@ describe('the menus', () => {
         expect(find(spec, 'edit-undo')).toMatchObject({ keys: '⌘Z', enabled: true });
         expect(offered(spec, 'fullscreen').checked).toBe(false);
         expect(offered(menuModel(context({ host: 'station', view: 'terminal' })), 'edit-undo').enabled).toBe(false);
+    });
+
+    test('Open File at Line in Go only acts while a diff is in front', () => {
+        expect(offered(menuModel(context({ diff: false })), 'open-file-at-line').enabled).toBe(false);
+        expect(offered(menuModel(context({ diff: true })), 'open-file-at-line').enabled).not.toBe(false);
     });
 
     test('a terminal can be cleared and the project has its settings in File', () => {
