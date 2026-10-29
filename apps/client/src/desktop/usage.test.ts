@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { USAGE_DESKTOP_COMMANDS, USAGE_DESKTOP_PANELS, USAGE_DESKTOP_SETTINGS_SECTIONS } from '@ruimte/pulsar';
-import { commandUsageName, openedBy } from '@/desktop/usage';
+import { commandUsageName, openedBy, usageSectionOf } from '@/desktop/usage';
 import { COMMAND_IDS } from '@/shell/command-table';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
 import { PANELS } from '@/shell/panels';
@@ -41,7 +41,16 @@ describe('commandUsageName', () => {
 describe('the counted panels and sections', () => {
     test('are the panels and settings sections the client has', () => {
         expect(PANELS.map((entry) => entry.kind).toSorted()).toEqual([...USAGE_DESKTOP_PANELS].toSorted());
-        expect(ALL_SETTINGS_SECTIONS.map((section) => section.id).toSorted()).toEqual([...USAGE_DESKTOP_SETTINGS_SECTIONS].toSorted());
+        expect(ALL_SETTINGS_SECTIONS.flatMap((section) => usageSectionOf(section.id) ?? []).toSorted()).toEqual(
+            [...USAGE_DESKTOP_SETTINGS_SECTIONS].toSorted()
+        );
+    });
+
+    test('leave Pets uncounted: opening it counts the dialog and no section', () => {
+        const closed = { panel: CLOSED, panelsRestoring: false, settings: { open: false, section: 'pets' } } as never;
+        const open = { panel: CLOSED, panelsRestoring: false, settings: { open: true, section: 'pets' } } as never;
+        expect(usageSectionOf('pets')).toBeNull();
+        expect(openedBy(open, closed)).toEqual(['dialogs.settings']);
     });
 });
 

@@ -12,6 +12,7 @@ export type SettingsSectionId =
     | 'editor'
     | 'terminal'
     | 'views'
+    | 'pets'
     | 'files'
     | 'storage'
     | 'providers'

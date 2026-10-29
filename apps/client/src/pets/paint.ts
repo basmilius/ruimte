@@ -1,5 +1,5 @@
-import { spriteImage, type CustomPetSprite } from '@/canvas/pets/custom-sprites';
-import { bubbleCell, petFrame, type PetFrame, type PetMood } from '@/canvas/pets/pet-state';
+import { spriteImage, stripFor, type CustomPetSprite } from '@/pets/custom-sprites';
+import { bubbleCell, petFrame, type PetFrame, type PetMood } from '@/pets/pet-state';
 import {
     BUBBLE_ROWS,
     bubble,
@@ -12,8 +12,9 @@ import {
     SPRITE_COLUMNS,
     SPRITE_ROWS,
     type BowColors,
-    type DrawnSprite
-} from '@/canvas/pets/pixel';
+    type DrawnSprite,
+    type PetPose
+} from '@/pets/pixel';
 
 /* A built-in figure, or a strip a person added. */
 export type PetLook = { kind: 'drawn'; sprite: DrawnSprite } | { kind: 'sheet'; sprite: CustomPetSprite };
@@ -30,10 +31,16 @@ const GROUND = BUBBLE_ROWS + JUMP_ROWS;
 const SHEET_CELLS = SPRITE_ROWS;
 const SHEET_LEFT = (SPRITE_COLUMNS - SHEET_CELLS) / 2;
 
-/* What a frame puts on screen, so two ticks that would draw the same picture paint once. */
+/*
+ * What a frame puts on screen, so two ticks that would draw the same picture paint once. A strip counts
+ * the frames of the one it plays, which is the standing one where its own decoded to another size.
+ */
 export function drawnFrameKey(look: PetLook, frame: PetFrame): string {
-    const index = look.kind === 'drawn' ? frame.frame % DRAWN_CYCLE : frame.frame % look.sprite.frames;
-    return `${look.sprite.id}:${frame.pose}:${index}:${frame.lift}:${frame.bubble}`;
+    if (look.kind === 'drawn') {
+        return `${look.sprite.id}:${frame.pose}:${frame.frame % DRAWN_CYCLE}:${frame.lift}:${frame.bubble}`;
+    }
+    const played = spriteImage(look.sprite, frame.pose) ?? stripFor(look.sprite, frame.pose);
+    return `${look.sprite.id}:${frame.pose}:${played.pose}:${frame.frame % played.strip.frames}:${frame.lift}:${frame.bubble}`;
 }
 
 /*
@@ -45,12 +52,19 @@ export function petPainter(
     mood: PetMood,
     still: boolean,
     paint: (frame: PetFrame) => boolean,
-    walking: () => boolean = () => false
+    walking: () => boolean = () => false,
+    shown?: PetPose
 ): (tick: number) => void {
     let painted: string | null = null;
     return (tick) => {
-        // Asked on every beat, since a pet along the bottom of the screen starts and stops walking without its mood changing.
-        const frame: PetFrame = !still && walking() ? { pose: 'walk', frame: tick, lift: 0, bubble: false } : petFrame(mood, tick, still);
+        // A preview of one state shows that pose whatever the mood, on its first frame with reduced motion. Walking
+        // is asked on every beat, since a pet along the bottom of the screen starts and stops without its mood changing.
+        const frame: PetFrame =
+            shown !== undefined
+                ? { pose: shown, frame: still ? 0 : tick, lift: 0, bubble: false }
+                : !still && walking()
+                  ? { pose: 'walk', frame: tick, lift: 0, bubble: false }
+                  : petFrame(mood, tick, still);
         const key = drawnFrameKey(look, frame);
         if (key !== painted && paint(frame)) {
             painted = key;
@@ -79,26 +93,31 @@ export function paintPet(context: CanvasRenderingContext2D, look: PetLook, frame
     return complete;
 }
 
-/* A strip has no poses, so a stopped agent tips its figure over and fades it, and the rest only changes the pace. */
+/*
+ * A state plays its own strip, or the one the sprite stands in. A stopped agent without a strip of its
+ * own tips that one over and fades it; the other states only change the pace.
+ */
 function paintSheet(context: CanvasRenderingContext2D, sprite: CustomPetSprite, frame: PetFrame, top: number): boolean {
-    const image = spriteImage(sprite);
-    if (image === null) {
+    const played = spriteImage(sprite, frame.pose);
+    if (played === null) {
         return false;
     }
+    const { image } = played;
+    const { frameSize, frames } = played.strip;
     const size = SHEET_CELLS * PAINT_CELL;
     const left = SHEET_LEFT * PAINT_CELL;
     const y = top * PAINT_CELL;
-    const source = (frame.frame % sprite.frames) * sprite.frameSize;
+    const source = (frame.frame % frames) * frameSize;
     context.imageSmoothingEnabled = false;
-    if (frame.pose !== 'stopped') {
-        context.drawImage(image, source, 0, sprite.frameSize, sprite.frameSize, left, y, size, size);
+    if (frame.pose !== 'stopped' || played.pose === 'stopped') {
+        context.drawImage(image, source, 0, frameSize, frameSize, left, y, size, size);
         return true;
     }
     context.save();
     context.globalAlpha = 0.6;
     context.translate(left + size / 2, y + size / 2);
     context.rotate(Math.PI / 2);
-    context.drawImage(image, source, 0, sprite.frameSize, sprite.frameSize, -size / 2, -size / 2, size, size);
+    context.drawImage(image, source, 0, frameSize, frameSize, -size / 2, -size / 2, size, size);
     context.restore();
     return true;
 }

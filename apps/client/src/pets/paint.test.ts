@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'bun:test';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@/canvas/pets/buddies';
-import { FOX_SPRITE, FROG_SPRITE } from '@/canvas/pets/animals';
-import { drawnFrameKey, petPainter, type PetLook } from '@/canvas/pets/paint';
-import type { PetFrame, PetMood } from '@/canvas/pets/pet-state';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from '@/pets/buddies';
+import { FOX_SPRITE, FROG_SPRITE } from '@/pets/animals';
+import { drawnFrameKey, paintPet, petPainter, type PetLook } from '@/pets/paint';
+import type { PetFrame, PetMood } from '@/pets/pet-state';
 import {
     bowColors,
     DRAWN_CYCLE,
@@ -14,7 +14,7 @@ import {
     type DrawnSprite,
     type PaintTarget,
     type PetPose
-} from '@/canvas/pets/pixel';
+} from '@/pets/pixel';
 
 const STILL_STRIP: PetLook = { kind: 'sheet', sprite: { id: 'still', name: 'Still', image: 'data:image/png;base64,AAAA', frameSize: 16, frames: 1 } };
 const BUDDY: PetLook = { kind: 'drawn', sprite: CLAUDE_BUDDY };
@@ -78,6 +78,84 @@ describe('a pet paints only a picture that changed', () => {
         }
         const frame: PetFrame = { pose: 'work', frame: 3, lift: 0, bubble: false };
         expect(drawnFrameKey(BUDDY, frame)).toBe(drawnFrameKey(BUDDY, { ...frame, frame: 3 + DRAWN_CYCLE }));
+    });
+});
+
+describe('a figure with strips per state', () => {
+    // Standing has one frame, working its own strip of three.
+    const STRIPS: PetLook = {
+        kind: 'sheet',
+        sprite: { ...STILL_STRIP.sprite, strips: { work: { image: 'data:image/png;base64,BBBB', frameSize: 16, frames: 3 } } }
+    };
+
+    test('a state with a strip of its own paints each of its frames', () => {
+        expect(paintsOver(STRIPS, 'working', 9)).toHaveLength(9);
+        expect(drawnFrameKey(STRIPS, { pose: 'work', frame: 1, lift: 0, bubble: false })).toBe(
+            drawnFrameKey(STRIPS, { pose: 'work', frame: 4, lift: 0, bubble: false })
+        );
+    });
+
+    test('a state without one plays the standing strip of one frame, and so paints once', () => {
+        for (const mood of ['idle', 'stopped', 'visiting'] as const) {
+            expect(paintsOver(STRIPS, mood, 40)).toHaveLength(1);
+        }
+    });
+});
+
+describe('a preview of one state', () => {
+    test('shows that pose whatever the mood, and holds its first frame with reduced motion', () => {
+        const shown = (still: boolean): PetFrame[] => {
+            const painted: PetFrame[] = [];
+            const tick = petPainter(
+                BUDDY,
+                'idle',
+                still,
+                (frame) => painted.push(frame) > 0,
+                () => false,
+                'walk'
+            );
+            for (let i = 0; i < 6; i++) {
+                tick(i);
+            }
+            return painted;
+        };
+        expect(shown(false).map((frame) => [frame.pose, frame.frame])).toEqual([0, 1, 2, 3, 4, 5].map((frame) => ['walk', frame]));
+        expect(shown(true)).toEqual([{ pose: 'walk', frame: 0, lift: 0, bubble: false }]);
+    });
+});
+
+describe('a stopped figure of your own', () => {
+    class FakeImage {
+        src = '';
+        complete = true;
+        naturalWidth = 16;
+        naturalHeight = 16;
+    }
+    const STOPPED = { image: 'data:image/png;base64,CCCC', frameSize: 16, frames: 1 };
+
+    function rotations(look: PetLook): number {
+        let turned = 0;
+        const context = {
+            clearRect() {},
+            drawImage() {},
+            save() {},
+            restore() {},
+            translate() {},
+            fillRect() {},
+            rotate() {
+                turned += 1;
+            }
+        } as unknown as CanvasRenderingContext2D;
+        expect(paintPet(context, look, { pose: 'stopped', frame: 0, lift: 0, bubble: false }, false)).toBe(true);
+        return turned;
+    }
+
+    beforeEach(() => Object.defineProperty(globalThis, 'Image', { configurable: true, value: FakeImage }));
+    afterEach(() => Reflect.deleteProperty(globalThis, 'Image'));
+
+    test('stands as its own stopped strip draws it, and tips the standing strip over without one', () => {
+        expect(rotations({ kind: 'sheet', sprite: { ...STILL_STRIP.sprite, id: 'own', strips: { stopped: STOPPED } } })).toBe(0);
+        expect(rotations({ kind: 'sheet', sprite: { ...STILL_STRIP.sprite, id: 'fallback' } })).toBe(1);
     });
 });
 

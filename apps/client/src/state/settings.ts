@@ -5,6 +5,7 @@ import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoi
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
+import { BEAM_SETTINGS, type BeamSetting } from '@/pets/beam';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
@@ -97,6 +98,36 @@ function chatStreamingFrom(stored: unknown): ChatStreamingMode {
 }
 
 export type PetsPlace = 'nodes' | 'screen';
+
+// More than the built-in sets and every figure a client may keep, so a hand-edited list cannot slow every pet down.
+const MAX_PET_SETS = 32;
+const MAX_PET_SET_LENGTH = 64;
+
+/*
+ * The stored sets, or the one choice before sets could be combined, under `petsSprite`, as a set of one.
+ * Each once and never none. Whether a custom set is still there is the pets' own question, so a name is kept as it is.
+ */
+function petSetsFrom(stored: unknown, legacy: unknown): string[] {
+    const named: unknown[] = Array.isArray(stored) ? stored : [legacy];
+    const sets = [...new Set(named.filter((set): set is string => typeof set === 'string' && set !== '' && set.length <= MAX_PET_SET_LENGTH))];
+    return sets.length > 0 ? sets.slice(0, MAX_PET_SETS) : ['buddies'];
+}
+
+/* A CLI is named by a short word, and a person gives a figure to the few CLIs they use. */
+const MAX_PET_AGENTS = 16;
+const MAX_PET_AGENT_LENGTH = 64;
+
+/* The figure set given to each CLI, as `petsSets` names one; anything else stored is left out. */
+function petsByAgentFrom(stored: unknown): Record<string, string> {
+    if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) {
+        return {};
+    }
+
+    const named = (value: unknown): value is string => typeof value === 'string' && value !== '' && value.length <= MAX_PET_SET_LENGTH;
+    const entries = Object.entries(stored).filter(([agent, set]) => agent !== '' && agent.length <= MAX_PET_AGENT_LENGTH && named(set));
+
+    return Object.fromEntries(entries.slice(0, MAX_PET_AGENTS));
+}
 
 /* When this computer stays awake: never, while an agent works, or all the time. */
 export type KeepAwakeMode = 'off' | 'working' | 'always';
@@ -285,10 +316,18 @@ export interface Settings {
     pets: boolean;
     /* Where the pets are: on their nodes, or along the bottom of the screen, around the dock (`canvas/pets/roam.ts`). */
     petsPlace: PetsPlace;
-    /* Which pets: a built-in set (`PET_SETS`) or `custom:<id>` for a sprite a person added (`canvas/pets/custom-sprites.ts`). */
-    petsSprite: string;
+    /* The sets pets come from, each a built-in set (`PET_SETS`) or `custom:<id>` for one a person added (`pets/custom-sprites.ts`). Never empty. */
+    petsSets: string[];
     /* Whether, while Pets is off, a pet now and then drops by beside a node for a moment. On to start with. */
     petsVisitor: boolean;
+    /* Whether a pet takes a smaller one along for each sub-agent of its chat at work (`pets/kids.ts`). On to start with, since it only shows once Pets is on. */
+    petsSubagents: boolean;
+    /* Whether a chat or a terminal open as a view of its own has its pet too (`pets/ViewPet.tsx`). On to start with, since it only shows once Pets is on. */
+    petsInViews: boolean;
+    /* A figure set per CLI, by its kind, as `petsSets` names one; a CLI without one takes its pets from `petsSets`. */
+    petsByAgent: Record<string, string>;
+    /* How a pet comes and goes (`pets/beam.ts`), the same for every pet. */
+    petsBeam: BeamSetting;
 }
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
@@ -376,8 +415,12 @@ const DEFAULT_SETTINGS: Settings = {
     canvasRenderDistance: 'standard',
     pets: false,
     petsPlace: 'nodes',
-    petsSprite: 'buddies',
-    petsVisitor: true
+    petsSets: ['buddies'],
+    petsVisitor: true,
+    petsSubagents: true,
+    petsInViews: true,
+    petsByAgent: {},
+    petsBeam: 'gather'
 };
 
 // Rounded as well as clamped: storage can still hold a half pixel, and text renders sharpest on a whole one.
@@ -486,12 +529,15 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         terminalFont:
             stored.terminalFont === 'editor' ? 'editor' : (MONO_FONTS.find((entry) => entry.id === stored.terminalFont)?.id ?? DEFAULT_SETTINGS.terminalFont),
         canvasRenderDistance: renderDistanceFrom(stored.canvasRenderDistance),
-        // Only a stored `true` brings the pets, and only a stored `false` keeps the visitor away.
+        // Only a stored `true` brings the pets, and only a stored `false` keeps the visitor, the kids or the pets in views away.
         pets: stored.pets === true,
         petsPlace: stored.petsPlace === 'screen' ? 'screen' : 'nodes',
-        // Whether a custom sprite is still there is the pets' own question, so a string is kept as it is.
-        petsSprite: typeof stored.petsSprite === 'string' && stored.petsSprite !== '' ? stored.petsSprite : DEFAULT_SETTINGS.petsSprite,
-        petsVisitor: stored.petsVisitor !== false
+        petsSets: petSetsFrom(stored.petsSets, (stored as Partial<Settings> & { petsSprite?: unknown }).petsSprite),
+        petsVisitor: stored.petsVisitor !== false,
+        petsSubagents: stored.petsSubagents !== false,
+        petsInViews: stored.petsInViews !== false,
+        petsByAgent: petsByAgentFrom(stored.petsByAgent),
+        petsBeam: BEAM_SETTINGS.find((each) => each === stored.petsBeam) ?? 'gather'
     };
 }
 

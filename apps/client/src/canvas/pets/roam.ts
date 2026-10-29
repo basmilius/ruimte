@@ -1,4 +1,4 @@
-import type { PetMood } from '@/canvas/pets/pet-state';
+import type { PetMood } from '@/pets/pet-state';
 
 /* A box over the bottom of a canvas that a pet keeps out of, in pixels from the layer's left edge and up from its bottom. */
 export interface Obstacle {
@@ -59,6 +59,11 @@ const GOAL_TRIES = 8;
 /* Beats a pet rests between two walks, about three to ten seconds. */
 const REST_TICKS = { min: 20, max: 60 } as const;
 const LEDGE_CHANCE = 0.3;
+/* How far behind the one it follows a kid walks and comes to rest, and how far it walks on a beat: a little more than a pet, so it catches up after a jump. */
+const KID_GAP = 24;
+const KID_STEP = 6;
+/* How far up a row a kid looks for its pet, more than the kids a pet takes along. */
+const MAX_ROW = 8;
 
 /* Where pets may stand in a layer this wide, around these obstacles. */
 export function groundOf(width: number, obstacles: readonly Obstacle[]): Ground {
@@ -136,6 +141,17 @@ interface Roamer {
     hop: Hop | null;
     restLeft: number;
     placed: boolean;
+
+    /* For a kid, the pet or the kid ahead of it in its row that it walks behind; null for a pet. */
+    leader: string | null;
+
+    /* Whether a kid moved on this beat: it plans again on every beat while it trails, so its route alone does not say. */
+    stepped: boolean;
+}
+
+/* Whether it walks or jumps on this beat, or is about to. */
+function moving(roamer: Roamer): boolean {
+    return roamer.hop !== null || roamer.route.length > 0 || roamer.stepped;
 }
 
 /* Whether a pet in this mood stays where it is: one that waits on you or stopped does not walk off. */
@@ -146,7 +162,8 @@ function holds(mood: PetMood): boolean {
 /*
  * The pets of one canvas along the bottom of its screen. Each rests a while in its own pose, walks
  * somewhere else on the floor or onto the dock, and rests again; one that waits on you or stopped
- * stays put. A step is one beat of the pets' clock, so the walk keeps time with the figure's frames.
+ * stays put. The kids of a pet's sub-agents walk in a row behind it (`follow`). A step is one beat of
+ * the pets' clock, so the walk keeps time with the figure's frames.
  */
 export class Roam {
     readonly #roamers = new Map<string, Roamer>();
@@ -166,7 +183,41 @@ export class Roam {
             }
             return;
         }
-        this.#roamers.set(id, { mood, on: 'floor', x: 0, facing: 1, route: [], goal: null, hop: null, restLeft: 0, placed: false });
+        this.#roamers.set(id, {
+            mood,
+            on: 'floor',
+            x: 0,
+            facing: 1,
+            route: [],
+            goal: null,
+            hop: null,
+            restLeft: 0,
+            placed: false,
+            leader: null,
+            stepped: false
+        });
+    }
+
+    /* A kid of a sub-agent at work, which walks behind `leader`: its pet, or the kid ahead of it in the row. */
+    follow(id: string, leader: string): void {
+        const roamer = this.#roamers.get(id);
+        if (roamer !== undefined) {
+            roamer.leader = leader;
+            return;
+        }
+        this.#roamers.set(id, {
+            mood: 'working',
+            on: 'floor',
+            x: 0,
+            facing: 1,
+            route: [],
+            goal: null,
+            hop: null,
+            restLeft: 0,
+            placed: false,
+            leader,
+            stepped: false
+        });
     }
 
     leave(id: string): void {
@@ -178,6 +229,7 @@ export class Roam {
         const changed = JSON.stringify(ground) !== JSON.stringify(this.#ground);
         this.#ground = ground;
         this.#placeNewcomers();
+        this.#placeKids();
         for (const roamer of this.#roamers.values()) {
             if (changed) {
                 roamer.route = [];
@@ -206,7 +258,7 @@ export class Roam {
                 walking: true
             };
         }
-        return { x: Math.round(roamer.x), y: this.#levelOf(roamer.on), facing: roamer.facing, walking: roamer.route.length > 0 };
+        return { x: Math.round(roamer.x), y: this.#levelOf(roamer.on), facing: roamer.facing, walking: roamer.route.length > 0 || roamer.stepped };
     }
 
     #levelOf(on: 'floor' | 'ledge'): number {
@@ -215,7 +267,7 @@ export class Roam {
 
     /* Spreads pets that just came over the floor, apart from one another, so they do not start in a pile. */
     #placeNewcomers(): void {
-        const all = [...this.#roamers.values()];
+        const all = [...this.#roamers.values()].filter((roamer) => roamer.leader === null);
         const newcomers = all.filter((roamer) => !roamer.placed);
         const floors = this.#ground.floors;
         if (newcomers.length === 0 || floors.length === 0) {
@@ -242,6 +294,24 @@ export class Roam {
             roamer.restLeft = this.#restTicks();
             roamer.placed = true;
         });
+    }
+
+    /* Puts a kid that just came behind the one it follows, where that one stands now, once it is on the ground. */
+    #placeKids(): void {
+        for (const kid of this.#roamers.values()) {
+            const leader = kid.leader === null ? undefined : this.#roamers.get(kid.leader);
+            if (kid.placed || leader === undefined || !leader.placed || leader.hop !== null) {
+                continue;
+            }
+            const place = this.#beside({ on: leader.on, x: leader.x }, -leader.facing, true);
+            if (place === null) {
+                continue;
+            }
+            kid.on = place.on;
+            kid.x = place.x;
+            kid.facing = leader.facing;
+            kid.placed = true;
+        }
     }
 
     #restTicks(): number {
@@ -317,6 +387,10 @@ export class Roam {
         if (this.#settle(roamer, false) || holds(roamer.mood)) {
             return;
         }
+        if (roamer.leader !== null) {
+            this.#follow(roamer);
+            return;
+        }
         if (roamer.route.length === 0) {
             // One that came to rest in another, after its walk was cut short, walks off at once.
             if (roamer.restLeft > 0 && !this.#crowded(roamer)) {
@@ -351,6 +425,121 @@ export class Roam {
     }
 
     /*
+     * A kid trails the one it follows while that one walks, a gap behind where it is now, and takes its
+     * place in the row once its pet rests. Where nothing leads there from where it stands, past the
+     * minimap say, it jumps over. It is not jumped over and does not keep a pet from resting.
+     */
+    #follow(kid: Roamer): void {
+        kid.stepped = false;
+        const leader = kid.leader === null ? undefined : this.#roamers.get(kid.leader);
+        if (leader === undefined || !leader.placed) {
+            return;
+        }
+        const target = this.#trail(kid, leader);
+        if (target === null || (target.on === kid.on && near(target.x, kid.x))) {
+            kid.route = [];
+            if (leader.x !== kid.x) {
+                kid.facing = leader.x > kid.x ? 1 : -1;
+            }
+            return;
+        }
+        kid.route = this.#routeTo(kid, target);
+        // A walk it already did, to the foot of the dock say, is left out, so it never stands still on its way.
+        while (kid.route[0]?.kind === 'walk' && near(kid.route[0].x, kid.x)) {
+            kid.route.shift();
+        }
+        const next = kid.route[0];
+        kid.stepped = true;
+        if (next === undefined) {
+            this.#startHop(kid, target.on, target.x, true);
+            return;
+        }
+        if (next.kind === 'hop') {
+            kid.route.shift();
+            this.#startHop(kid, next.on, next.x);
+            return;
+        }
+        const distance = next.x - kid.x;
+        kid.facing = distance >= 0 ? 1 : -1;
+        kid.x = Math.abs(distance) <= KID_STEP ? next.x : kid.x + KID_STEP * kid.facing;
+    }
+
+    /*
+     * Where a kid heads now. Once its pet rests, its own place in the row (`#rowPlace`). While the one it
+     * follows walks or jumps, a gap behind where it is; on the same ground a kid ahead of it, or closer
+     * than the gap, waits for it to pass, so it never walks in front.
+     */
+    #trail(kid: Roamer, leader: Roamer): { on: 'floor' | 'ledge'; x: number } | null {
+        const row = this.#rowPlace(kid);
+        if (row !== null) {
+            return row;
+        }
+        const place = { on: leader.on, x: leader.x };
+        if (!moving(leader)) {
+            return this.#beside(place, kid.x !== leader.x ? Math.sign(kid.x - leader.x) : -leader.facing, true);
+        }
+        const behind = this.#beside(place, -leader.facing, false);
+        if (behind === null || (kid.on === behind.on && (behind.x - kid.x) * leader.facing <= 0)) {
+            return null;
+        }
+        return behind;
+    }
+
+    /*
+     * Where a kid rests while its pet rests: its place in a row laid out from the pet, a gap apart, on the
+     * side its first kid is on. Where the ground ends the row goes on at the pet's other side, so no two
+     * stand in one place. Null while the pet walks or jumps.
+     */
+    #rowPlace(kid: Roamer): { on: 'floor' | 'ledge'; x: number } | null {
+        let index = 0;
+        let first = kid;
+        let pet = kid.leader === null ? undefined : this.#roamers.get(kid.leader);
+        while (pet !== undefined && pet.leader !== null && index < MAX_ROW) {
+            first = pet;
+            index += 1;
+            pet = this.#roamers.get(pet.leader);
+        }
+        if (pet === undefined || pet.leader !== null || moving(pet)) {
+            return null;
+        }
+        const span = pet.on === 'ledge' ? this.#ground.ledge : this.#ground.floors.find((floor) => inSpan(floor, pet.x));
+        if (span === null || span === undefined) {
+            return null;
+        }
+        const side = first.x !== pet.x ? Math.sign(first.x - pet.x) : -pet.facing;
+        const places: number[] = [];
+        for (const way of [side, -side]) {
+            for (let step = 1; places.length <= index && inSpan(span, pet.x + way * step * KID_GAP); step++) {
+                places.push(pet.x + way * step * KID_GAP);
+            }
+        }
+        return { on: pet.on, x: places[index] ?? clampTo(span, pet.x + side * (index + 1) * KID_GAP) };
+    }
+
+    /*
+     * A gap from a place to one side, on the same ground. With `turn`, where that ground ends too soon it
+     * is the other side instead, if there is more room there.
+     */
+    #beside(place: { on: 'floor' | 'ledge'; x: number }, side: number, turn: boolean): { on: 'floor' | 'ledge'; x: number } | null {
+        const span = place.on === 'ledge' ? this.#ground.ledge : this.#ground.floors.find((floor) => inSpan(floor, place.x));
+        if (span === null || span === undefined) {
+            return null;
+        }
+        const behind = clampTo(span, place.x + side * KID_GAP);
+        const beyond = clampTo(span, place.x - side * KID_GAP);
+        return { on: place.on, x: turn && Math.abs(behind - place.x) < KID_GAP && Math.abs(beyond - place.x) > Math.abs(behind - place.x) ? beyond : behind };
+    }
+
+    #routeTo(roamer: Roamer, target: { on: 'floor' | 'ledge'; x: number }): Step[] {
+        const place = this.#placeOf(roamer);
+        const floor = this.#ground.floors.findIndex((span) => inSpan(span, target.x));
+        if (place === null || (target.on === 'floor' && floor === -1)) {
+            return [];
+        }
+        return this.#route(place, target.on === 'ledge' ? { on: 'ledge' } : { on: 'floor', floor }, target.x, roamer.x);
+    }
+
+    /*
      * Where a pet lands when another stands just ahead of it on the same ground: right past it, so they
      * pass over one another instead of through. Null when nobody is in the way, when it stops before the
      * one ahead (`togo`), when that one is already in the air (it passes under), or when the landing
@@ -358,7 +547,7 @@ export class Roam {
      */
     #leapOver(roamer: Roamer, togo: number): number | null {
         const blocker = [...this.#roamers.values()].find((other) => {
-            if (other === roamer || !other.placed || other.hop !== null || other.on !== roamer.on) {
+            if (other === roamer || !other.placed || other.leader !== null || other.hop !== null || other.on !== roamer.on) {
                 return false;
             }
             const ahead = (other.x - roamer.x) * roamer.facing;
@@ -429,7 +618,7 @@ export class Roam {
 
     #free(roamer: Roamer, on: 'floor' | 'ledge', x: number): boolean {
         return [...this.#roamers.values()].every((other) => {
-            if (other === roamer || !other.placed) {
+            if (other === roamer || !other.placed || other.leader !== null) {
                 return true;
             }
             const place = this.#restingPlace(other);
@@ -443,6 +632,7 @@ export class Roam {
             (other) =>
                 other !== roamer &&
                 other.placed &&
+                other.leader === null &&
                 other.hop === null &&
                 other.route.length === 0 &&
                 other.on === roamer.on &&

@@ -610,7 +610,7 @@
         },
         "views": {
             "label": "Weergaven",
-            "description": "Nodegroottes, canvaskaart, pets, tekeningen en browserpagina's."
+            "description": "Nodegroottes, canvaskaart, tekeningen en browserpagina's."
         },
         "files": {
             "label": "Bestanden en Git",
@@ -639,6 +639,10 @@
         "about": {
             "label": "Over",
             "description": "Versie, gegevens van de machine en links."
+        },
+        "pets": {
+            "label": "Pets",
+            "description": "Kleine figuurtjes die laten zien wat je agents doen."
         }
     },
     "gesture": {
@@ -676,50 +680,6 @@
                     "standard": "Standaard",
                     "far": "Ver",
                     "unlimited": "Onbeperkt"
-                }
-            }
-        },
-        "pets": {
-            "title": "Pets",
-            "enabled": {
-                "label": "Pets",
-                "description": "Een klein figuurtje op elke agent laat zien wat die doet, en springt als hij je nodig heeft. Klik op een figuurtje om naar zijn node te gaan."
-            },
-            "place": {
-                "label": "Waar pets staan",
-                "description": "Op hun node, of rondlopend onderin het scherm.",
-                "nodes": "Op hun node",
-                "screen": "Onderin het scherm"
-            },
-            "visitor": {
-                "label": "Bezoeker",
-                "description": "Zolang Pets uit staat, komt er af en toe een figuurtje een paar seconden bij een node langs."
-            },
-            "sprite": {
-                "label": "Figuren",
-                "description": "Claude en Codex hebben elk een eigen figuur; andere agents krijgen die van Claude. Een figuur die je toevoegde staat voor elke agent.",
-                "sets": {
-                    "buddies": "Buddy's",
-                    "animals": "Vos en kikker"
-                }
-            },
-            "custom": {
-                "label": "Je eigen figuren",
-                "description": "Een PNG- of WebP-strook van vierkante frames naast elkaar. Tot {{frames}} frames van {{size}} pixels, hoogstens {{kilobytes}} KB.",
-                "add": "Figuur toevoegen",
-                "remove": "{{name}} verwijderen",
-                "frames_one": "{{count}} frame, {{size}} px",
-                "frames_other": "{{count}} frames, {{size}} px",
-                "problem": {
-                    "type": "Kies een PNG- of WebP-afbeelding.",
-                    "bytes": "Deze afbeelding is groter dan {{kilobytes}} KB.",
-                    "unreadable": "Dit bestand kon niet worden gelezen als PNG- of WebP-afbeelding.",
-                    "frame-small": "Een frame is minstens {{min}} pixels hoog.",
-                    "frame-large": "Een frame is hoogstens {{max}} pixels hoog.",
-                    "frames-whole": "De breedte moet een heel aantal vierkante frames zijn.",
-                    "frames-many": "Een strook heeft hoogstens {{frames}} frames.",
-                    "full": "Je kunt hoogstens {{limit}} figuren bewaren. Verwijder er eerst een.",
-                    "storage": "Er is geen ruimte meer om deze figuur te bewaren."
                 }
             }
         },
@@ -1385,7 +1345,9 @@
             "failed": "De controle is niet afgerond: {{message}}",
             "checkedAt": "Gecontroleerd {{when}}.",
             "causes": {
-                "ok": { "problem": "Je andere apparaten kunnen deze machine bereiken." },
+                "ok": {
+                    "problem": "Je andere apparaten kunnen deze machine bereiken."
+                },
                 "brokerOff": {
                     "problem": "De verbindingsdienst staat uit, dus apparaten buiten dit netwerk bereiken de machine niet.",
                     "fix": "Zet de verbindingsdienst hierboven aan."
@@ -1426,7 +1388,9 @@
                     "problem": "Poort {{port}} is bezet, dus apparaten op dit netwerk verbinden via je account.",
                     "fix": "Stop wat de poort gebruikt, of start de machine met een andere --lan-port."
                 },
-                "unknown": { "problem": "De machine meldt een probleem dat deze versie van Ruimte niet kent: {{cause}}." }
+                "unknown": {
+                    "problem": "De machine meldt een probleem dat deze versie van Ruimte niet kent: {{cause}}."
+                }
             }
         },
         "worktreeFolder": {
@@ -1853,6 +1817,109 @@
                 "description": "Het meeste dat een antwoord mag gebruiken, 1.024 tot 128.000, binnen de grens van het model. Denken telt mee."
             },
             "noKey": "Geen API-sleutel ingesteld"
+        }
+    },
+    "pets": {
+        "title": "Pets",
+        "enabled": {
+            "label": "Pets",
+            "description": "Een klein figuurtje op elke agent laat zien wat die doet, en springt als hij je nodig heeft. Klik op een figuurtje om naar zijn node te gaan."
+        },
+        "place": {
+            "label": "Waar pets staan",
+            "description": "Op hun node, of rondlopend onderin het scherm.",
+            "nodes": "Op hun node",
+            "screen": "Onderin het scherm"
+        },
+        "subagents": {
+            "label": "Sub-agents",
+            "description": "Voor elke sub-agent die bezig is, loopt er een kleiner figuurtje mee, tot drie."
+        },
+        "visitor": {
+            "label": "Bezoeker",
+            "description": "Zolang Pets uit staat, komt er af en toe een figuurtje een paar seconden bij een node langs."
+        },
+        "sprite": {
+            "label": "Figuren",
+            "description": "Kies er één of meer; elke agent houdt een figuur uit een ervan. Claude en Codex hebben elk een eigen figuur; andere agents krijgen die van Claude.",
+            "sets": {
+                "buddies": "Buddy's",
+                "animals": "Vos en kikker"
+            },
+            "builtIn": "Ingebouwd",
+            "use": "{{name}} gebruiken",
+            "preview": "Voorbeeld van {{name}}"
+        },
+        "custom": {
+            "label": "Je eigen figuren",
+            "description": "Een PNG- of WebP-strook van vierkante frames naast elkaar. Tot {{frames}} frames van {{size}} pixels, hoogstens {{kilobytes}} KB.",
+            "add": "Figuur toevoegen",
+            "remove": "{{name}} verwijderen",
+            "frames_one": "{{count}} frame, {{size}} px",
+            "frames_other": "{{count}} frames, {{size}} px",
+            "edit": "{{name}} bewerken",
+            "stateCount_one": "{{count}} houding",
+            "stateCount_other": "{{count}} houdingen",
+            "states": {
+                "stand": "Staan",
+                "walk": "Lopen",
+                "work": "Bezig",
+                "wait": "Wacht op jou",
+                "sleep": "Inactief",
+                "stopped": "Gestopt"
+            },
+            "dialog": {
+                "new": "Nieuwe figuur",
+                "edit": "Figuur bewerken",
+                "description": "Elke houding kan een eigen strook hebben. Een houding zonder speelt Staan, die elke figuur nodig heeft.",
+                "name": "Naam",
+                "save": "Opslaan",
+                "choose": "Kies bestand",
+                "chooseFor": "Kies bestand voor {{state}}",
+                "replaceFor": "Strook voor {{state}} vervangen",
+                "replace": "Vervangen",
+                "drop": "Strook voor {{state}} verwijderen",
+                "needed": "Elke figuur heeft deze nodig",
+                "standing": "Speelt Staan",
+                "tipped": "Speelt Staan, omgevallen"
+            },
+            "problem": {
+                "type": "Kies een PNG- of WebP-afbeelding.",
+                "bytes": "Deze afbeelding is groter dan {{kilobytes}} KB.",
+                "unreadable": "Dit bestand kon niet worden gelezen als PNG- of WebP-afbeelding.",
+                "frame-small": "Een frame is minstens {{min}} pixels hoog.",
+                "frame-large": "Een frame is hoogstens {{max}} pixels hoog.",
+                "frames-whole": "De breedte moet een heel aantal vierkante frames zijn.",
+                "frames-many": "Een strook heeft hoogstens {{frames}} frames.",
+                "full": "Je kunt hoogstens {{limit}} figuren bewaren. Verwijder er eerst een.",
+                "room": "Je figuren nemen samen hoogstens {{total}} KB in. Verwijder er een of kies een kleinere strook.",
+                "storage": "Er is geen ruimte meer om deze figuur te bewaren."
+            }
+        },
+        "groups": {
+            "place": "Waar ze staan",
+            "show": "Wat ze laten zien"
+        },
+        "inViews": {
+            "label": "In eigen weergaven",
+            "description": "Een chat of terminal die als eigen weergave open staat, heeft ook zijn figuurtje: op de composer, of in de balk van de terminal."
+        },
+        "agents": {
+            "title": "Per agent",
+            "label": "Een figuur per agent",
+            "description": "Geef een CLI een eigen figuur, zoals je kat voor Codex. Een CLI op Standaard krijgt zijn pets uit de figuren die aan staan.",
+            "default": "Standaard",
+            "choose": "Figuur voor {{name}}"
+        },
+        "beam": {
+            "label": "Teleport",
+            "description": "Hoe een pet komt en gaat: als zijn agent start of stopt, en als je pets aan- of uitzet.",
+            "gather": "Samentrekken",
+            "scan": "Scanlijn",
+            "rain": "Pixelregen",
+            "transporter": "Transporter",
+            "portal": "Portaal",
+            "random": "Willekeurig"
         }
     }
 }

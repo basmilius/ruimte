@@ -9,7 +9,7 @@ import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
 import { Button, copyText, Icon, ListRow, Menu, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu, useNow } from '@adecore/ui';
-import { formatClock, formatElapsedShort, isSameDay } from '@adecore/ui/format';
+import { formatAgo, formatClock, formatElapsedShort, isSameDay } from '@adecore/ui/format';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
@@ -229,6 +229,10 @@ function sameRow(before: CommitRowProps, after: CommitRowProps): boolean {
 const CommitRow = memo(function CommitRow({ commit, picture, selected, now, onOpen }: CommitRowProps) {
     const { t } = useTranslation('panels');
     const refs = shownRefs(commit);
+    const elapsedMs = Math.max(0, (now - commit.at) * 1000);
+    const unitMs = elapsedMs < 3_600_000 ? MINUTE_MS : 3_600_000;
+    const age = elapsedMs < MINUTE_MS ? formatAgo(0) : formatElapsedShort(Math.floor(elapsedMs / unitMs) * unitMs);
+
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
@@ -269,7 +273,7 @@ const CommitRow = memo(function CommitRow({ commit, picture, selected, now, onOp
                 )}
                 {/* Under a date the age says that date again; the time of day says what it does not. */}
                 <span className="ml-auto shrink-0 text-text-faint tabular-nums">
-                    {isSameDay(commit.at * 1000, now * 1000) ? formatElapsedShort((now - commit.at) * 1000) : formatClock(commit.at * 1000)}
+                    {isSameDay(commit.at * 1000, now * 1000) ? age : formatClock(commit.at * 1000)}
                 </span>
             </ContextMenu.Trigger>
             <ContextMenu.Popup>

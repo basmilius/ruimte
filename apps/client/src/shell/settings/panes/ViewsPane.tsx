@@ -5,7 +5,6 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { Segmented, Switch, Keys, shortcut } from '@adecore/ui';
 import { RENDER_DISTANCES, type RenderDistance } from '@/canvas/render-distance';
 import { NodeSizeSections } from '@/shell/settings/NodeSizeSection';
-import { PetsSection } from '@/shell/settings/panes/PetsSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
@@ -38,7 +37,6 @@ export function ViewsPane() {
                     }
                 />
             </SettingsSection>
-            <PetsSection />
             <SettingsSection title={t('views.drawing.title')} icon={PenTool}>
                 <SettingsRow
                     searchId="views.drawing.snap"

@@ -42,7 +42,7 @@ function StandaloneView({ view }: { view: ProjectView }) {
                 the app's own: a thread reads the same here as it does in a node on the canvas. */}
             {view.kind === 'chat' && (
                 <div className="chat-column flex h-full w-full flex-col">
-                    <ChatBody id={view.id} focused={focused} />
+                    <ChatBody id={view.id} focused={focused} pet={{ title: view.name }} />
                 </div>
             )}
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}

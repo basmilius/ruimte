@@ -1,5 +1,6 @@
 import type { Rect } from '@/canvas/math';
-import { coversOtherNode, hitBoxAt, PET_HEIGHT, PET_WIDTH, visitorPlace } from '@/canvas/pets/pet-state';
+import { coversOtherNode, hitBoxAt, visitorPlace } from '@/canvas/pets/placement';
+import { PET_HEIGHT, PET_WIDTH } from '@/pets/pet-state';
 import type { CanvasNode } from '@/state/canvas';
 
 /* How long after the last visit, or after a canvas opened, a pet may drop by: somewhere in this window. */

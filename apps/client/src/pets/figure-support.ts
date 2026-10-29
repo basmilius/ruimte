@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { TFunction } from 'i18next';
-import type { PetMood } from '@/canvas/pets/pet-state';
+import type { PetMood } from '@/pets/pet-state';
 import type { CanvasNode } from '@/state/canvas';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
@@ -26,9 +26,21 @@ export function usePrefersStill(): boolean {
     return useSyncExternalStore(followMotion, prefersStill, () => false);
 }
 
-/* What a pet's button says: where it leads, and that it waits on you when it does. */
-export function petLabel(t: TFunction<'canvas'>, node: CanvasNode, mood: PetMood): string {
+/*
+ * What a pet's button says: where it leads, and that it waits on you when it does. On a canvas a press
+ * goes to the node; in a view of its own, where a person already is, it hands the keyboard over (`focus`).
+ */
+export function petLabel(t: TFunction<'canvas'>, node: { kind: CanvasNode['kind']; title?: string }, mood: PetMood, press: 'goTo' | 'focus' = 'goTo'): string {
     // A node a person never named reads as its kind, so the label always says which node it leads to.
     const title = node.title?.trim() || t(KIND_LABELS[node.kind] ?? 'kinds.chat');
-    return t(mood === 'waiting' || mood === 'snoozed' ? 'pets.waiting' : 'pets.goTo', { title });
+
+    if (mood === 'waiting' || mood === 'snoozed') {
+        return t('pets.waiting', { title });
+    }
+
+    if (press === 'goTo') {
+        return t('pets.goTo', { title });
+    }
+
+    return t(node.kind === 'terminal' ? 'pets.typeIn' : 'pets.writeTo', { title });
 }

@@ -1,4 +1,4 @@
-import { BUBBLE, PROPS } from '@/canvas/pets/sprite-colors';
+import { BUBBLE, PROPS } from '@/pets/sprite-colors';
 
 /* A rectangle on a pet's grid, in cells. An outlined one gets a rim of one cell in the outline color. */
 export interface Cell {

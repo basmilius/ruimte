@@ -1,5 +1,5 @@
-import { bow, cell, cloud, crossEye, outlined, snore, type DrawnSprite, type Parts } from '@/canvas/pets/pixel';
-import { BUDDY_CLAUDE, BUDDY_CODEX, PROPS } from '@/canvas/pets/sprite-colors';
+import { bow, cell, cloud, crossEye, outlined, snore, type DrawnSprite, type Parts } from '@/pets/pixel';
+import { BUDDY_CLAUDE, BUDDY_CODEX, PROPS } from '@/pets/sprite-colors';
 
 type BuddyColors = typeof BUDDY_CLAUDE | typeof BUDDY_CODEX;
 

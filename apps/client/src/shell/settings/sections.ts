@@ -10,6 +10,7 @@ import {
     Mic,
     MousePointer2,
     Palette,
+    PawPrint,
     Server,
     SquareTerminal,
     type LucideIcon
@@ -49,6 +50,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
             { id: 'editor', icon: CodeXml },
             { id: 'terminal', icon: SquareTerminal },
             { id: 'views', icon: LayoutGrid },
+            { id: 'pets', icon: PawPrint },
             { id: 'files', icon: Folder },
             { id: 'storage', icon: HardDrive }
         ]

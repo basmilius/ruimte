@@ -29,9 +29,13 @@ import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/node
 import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
+import { ChatViewPetMount } from '@/pets/ViewPetMounts';
 
-/* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
-export function ChatBody({ id, focused, onCanvas = false }: { id: string; focused: boolean; onCanvas?: boolean }) {
+/*
+ * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view its
+ * pet stands on the composer (`pet`), since no node frame is there to carry it.
+ */
+export function ChatBody({ id, focused, onCanvas = false, pet }: { id: string; focused: boolean; onCanvas?: boolean; pet?: { title: string | undefined } }) {
     useMountCount('chat');
     const { t } = useTranslation('canvas');
     const info = useChatRow(id, (row) => row?.info);
@@ -116,6 +120,20 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
             });
     };
 
+    const composer = info && (
+        <Composer
+            chatId={id}
+            info={info}
+            focused={focused}
+            answerPromptsElsewhere={onCanvas && !PROMPTS_IN_NODES ? () => bringPromptToFront(id) : undefined}
+            disabled={status !== 'open'}
+            readOnly={!composerWrites(trail)}
+            providerFixed={providerFixed}
+            onSend={send}
+            onRetarget={retarget}
+        />
+    );
+
     return (
         <div className="relative flex h-full flex-col bg-surface">
             <ConnectionNotice status={status} />
@@ -136,19 +154,15 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
                     <Timeline
                         chatId={id}
                         composer={
-                            info && (
-                                <Composer
-                                    chatId={id}
-                                    info={info}
-                                    focused={focused}
-                                    answerPromptsElsewhere={onCanvas && !PROMPTS_IN_NODES ? () => bringPromptToFront(id) : undefined}
-                                    disabled={status !== 'open'}
-                                    readOnly={!composerWrites(trail)}
-                                    providerFixed={providerFixed}
-                                    onSend={send}
-                                    onRetarget={retarget}
-                                />
-                            )
+                            composer &&
+                            (pet === undefined ? (
+                                composer
+                            ) : (
+                                <div className="relative">
+                                    <ChatViewPetMount id={id} title={pet.title} />
+                                    {composer}
+                                </div>
+                            ))
                         }
                         overlay={
                             shown && (

@@ -30,3 +30,6 @@ export const PROPS = {
 
 /* Black with an orange mark, as asked, and a light rim so it still reads on a dark canvas. */
 export const BUBBLE = { ground: '#000000', rim: '#f4f4f5', mark: '#ff9f1a' } as const;
+
+/* The flash of a figure that came whole (`beam.ts`), and the light of a beam where the app's accent cannot be read. */
+export const BEAM_LIGHT = { flash: '#ffffff', fallback: '#ffffff' } as const;

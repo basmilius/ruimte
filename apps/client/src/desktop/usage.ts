@@ -8,7 +8,7 @@ import {
 } from '@ruimte/pulsar';
 import { desktop } from '@/desktop/bridge';
 import { isCommandId } from '@/shell/command-table';
-import { useUi } from '@/state/ui';
+import { useUi, type SettingsSectionId } from '@/state/ui';
 
 /*
  * What the desktop app counts for its own usage report that no machine sees: the commands a person
@@ -57,6 +57,11 @@ export function countCommand(id: string, source: UsageCommandSource): void {
     }
 }
 
+/* The counter a settings section opens; Pets is counted nowhere. */
+export function usageSectionOf(section: SettingsSectionId): UsageDesktopSettingsSection | null {
+    return section === 'pets' ? null : section;
+}
+
 type Watched = Pick<ReturnType<typeof useUi.getState>, 'panel' | 'panelsRestoring' | 'settings'>;
 
 /* What one change of the UI state opened: a panel a person brought up, never one a project put back, and the settings and the section they show. */
@@ -66,12 +71,15 @@ export function openedBy(state: Watched, previous: Watched): UsageDesktopCounter
     if (panel.open && !state.panelsRestoring && (!previous.panel.open || previous.panel.kind !== panel.kind)) {
         opened.push(`panels.${panel.kind satisfies UsageDesktopPanel}`);
     }
-    const section: UsageDesktopSettingsSection = state.settings.section;
+    const section = usageSectionOf(state.settings.section);
     if (state.settings.open && !previous.settings.open) {
-        opened.push('dialogs.settings', `settingsSections.${section}`);
-    } else if (state.settings.open && previous.settings.section !== section) {
+        opened.push('dialogs.settings');
+    }
+
+    if (section !== null && state.settings.open && (!previous.settings.open || previous.settings.section !== state.settings.section)) {
         opened.push(`settingsSections.${section}`);
     }
+
     return opened;
 }
 

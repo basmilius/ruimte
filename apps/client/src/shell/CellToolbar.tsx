@@ -20,6 +20,7 @@ import { isDatabaseTab } from '@/state/files';
 import { cellAt, type CellAt } from '@/shell/split';
 import { CloseButton, Icon, IconButton, Menu, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
+import { TerminalViewPetMount } from '@/pets/ViewPetMounts';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
 const CONTROLS = 'input, textarea, select, button, a, [contenteditable=""], [contenteditable="true"], [role="button"]';
@@ -203,6 +204,17 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                 </>
                             )}
                         </span>
+                        {/* A terminal's text takes every pixel of its body, so its pet stands in the bar, on the line over the text. */}
+                        {view.kind === 'terminal' && (
+                            <TerminalViewPetMount
+                                id={view.id}
+                                title={visibleTitle}
+                                onPress={() => {
+                                    useDocument.getState().focusCellAt(at);
+                                    useDocument.getState().setBodyFocused(true);
+                                }}
+                            />
+                        )}
                         {!separateToolbar && toolbarActions}
                         {maximized && <MaximizedIndicator at={at} />}
                         {closable && (

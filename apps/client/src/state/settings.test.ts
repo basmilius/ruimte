@@ -168,18 +168,63 @@ describe('pets', () => {
         expect(settingsFrom({ pets: 'yes' as unknown as boolean }).pets).toBe(false);
     });
 
-    test('start as the buddies and keep a custom choice for the pets to look up', () => {
-        expect(settingsFrom({}).petsSprite).toBe('buddies');
-        expect(settingsFrom({ petsSprite: 'animals' }).petsSprite).toBe('animals');
-        expect(settingsFrom({ petsSprite: 'custom:abc' }).petsSprite).toBe('custom:abc');
-        expect(settingsFrom({ petsSprite: '' }).petsSprite).toBe('buddies');
-        expect(settingsFrom({ petsSprite: 3 as unknown as string }).petsSprite).toBe('buddies');
+    test('start as the buddies and keep the sets a person picked, custom ones for the pets to look up', () => {
+        expect(settingsFrom({}).petsSets).toEqual(['buddies']);
+        expect(settingsFrom({ petsSets: ['animals', 'custom:abc'] }).petsSets).toEqual(['animals', 'custom:abc']);
+        expect(settingsFrom({ petsSets: ['animals', 'animals', '', 3 as unknown as string] }).petsSets).toEqual(['animals']);
+        expect(settingsFrom({ petsSets: [] }).petsSets).toEqual(['buddies']);
+        expect(settingsFrom({ petsSets: 'animals' as unknown as string[] }).petsSets).toEqual(['buddies']);
+    });
+
+    test('keep a hand-edited list of sets small', () => {
+        const many = Array.from({ length: 1000 }, (_, i) => `custom:${i}`);
+        expect(settingsFrom({ petsSets: many }).petsSets).toHaveLength(32);
+        expect(settingsFrom({ petsSets: [`custom:${'x'.repeat(100)}`, 'animals'] }).petsSets).toEqual(['animals']);
+    });
+
+    test('take the one choice of a client from before sets could be combined as a set of one', () => {
+        const legacy = (petsSprite: unknown) => settingsFrom({ petsSprite } as Parameters<typeof settingsFrom>[0]).petsSets;
+        expect(legacy('animals')).toEqual(['animals']);
+        expect(legacy('custom:abc')).toEqual(['custom:abc']);
+        expect(legacy('')).toEqual(['buddies']);
+        expect(legacy(3)).toEqual(['buddies']);
+        // Once sets are stored, they are what counts.
+        expect(settingsFrom({ petsSets: ['buddies', 'animals'], petsSprite: 'custom:abc' } as Parameters<typeof settingsFrom>[0]).petsSets).toEqual([
+            'buddies',
+            'animals'
+        ]);
     });
 
     test('let the visitor come unless a stored false keeps it away', () => {
         expect(settingsFrom({}).petsVisitor).toBe(true);
         expect(settingsFrom({ petsVisitor: false }).petsVisitor).toBe(false);
         expect(settingsFrom({ petsVisitor: 0 as unknown as boolean }).petsVisitor).toBe(true);
+    });
+
+    test('give a chat or a terminal in a view of its own its pet until a stored false keeps it away', () => {
+        expect(settingsFrom({}).petsInViews).toBe(true);
+        expect(settingsFrom({ petsInViews: false }).petsInViews).toBe(false);
+        expect(settingsFrom({ petsInViews: 'no' as unknown as boolean }).petsInViews).toBe(true);
+    });
+
+    test('beam pets in and out by gathering unless a stored style or Random says otherwise', () => {
+        expect(settingsFrom({}).petsBeam).toBe('gather');
+        expect(settingsFrom({ petsBeam: 'portal' }).petsBeam).toBe('portal');
+        expect(settingsFrom({ petsBeam: 'random' }).petsBeam).toBe('random');
+        expect(settingsFrom({ petsBeam: 'warp' as unknown as 'portal' }).petsBeam).toBe('gather');
+    });
+
+    test('keep the figure given to each CLI, and leave out what is no name of a set', () => {
+        expect(settingsFrom({}).petsByAgent).toEqual({});
+        expect(settingsFrom({ petsByAgent: { claude: 'custom:tabby', codex: 'animals' } }).petsByAgent).toEqual({ claude: 'custom:tabby', codex: 'animals' });
+        expect(settingsFrom({ petsByAgent: { claude: 3, codex: '', '': 'animals' } as unknown as Record<string, string> }).petsByAgent).toEqual({});
+        expect(settingsFrom({ petsByAgent: ['animals'] as unknown as Record<string, string> }).petsByAgent).toEqual({});
+    });
+
+    test('take the kids of sub-agents along until a person turns them off', () => {
+        expect(settingsFrom({}).petsSubagents).toBe(true);
+        expect(settingsFrom({ petsSubagents: false }).petsSubagents).toBe(false);
+        expect(settingsFrom({ petsSubagents: 'no' as unknown as boolean }).petsSubagents).toBe(true);
     });
 
     test('keep pets on their nodes unless a stored choice sends them to the bottom of the screen', () => {

@@ -610,7 +610,7 @@
         },
         "views": {
             "label": "Views",
-            "description": "Node sizes, canvas map, pets, drawings and browser pages."
+            "description": "Node sizes, canvas map, drawings and browser pages."
         },
         "files": {
             "label": "Files and Git",
@@ -639,6 +639,10 @@
         "about": {
             "label": "About",
             "description": "Version, machine details and links."
+        },
+        "pets": {
+            "label": "Pets",
+            "description": "Small figures that show what your agents do."
         }
     },
     "gesture": {
@@ -676,50 +680,6 @@
                     "standard": "Standard",
                     "far": "Far",
                     "unlimited": "Unlimited"
-                }
-            }
-        },
-        "pets": {
-            "title": "Pets",
-            "enabled": {
-                "label": "Pets",
-                "description": "A small figure on every agent shows what it does, and jumps when it needs you. Click a pet to go to its node."
-            },
-            "place": {
-                "label": "Where pets are",
-                "description": "On their nodes, or roaming the bottom of the screen.",
-                "nodes": "On their nodes",
-                "screen": "Bottom of the screen"
-            },
-            "visitor": {
-                "label": "Visitor",
-                "description": "While Pets is off, a pet now and then drops by beside a node for a few seconds."
-            },
-            "sprite": {
-                "label": "Figures",
-                "description": "Claude and Codex each have their own figure; other agents get Claude's. A figure you added stands for every agent.",
-                "sets": {
-                    "buddies": "Buddies",
-                    "animals": "Fox and frog"
-                }
-            },
-            "custom": {
-                "label": "Your own figures",
-                "description": "A PNG or WebP strip of square frames side by side. Up to {{frames}} frames of {{size}} pixels, {{kilobytes}} KB at most.",
-                "add": "Add figure",
-                "remove": "Remove {{name}}",
-                "frames_one": "{{count}} frame, {{size}} px",
-                "frames_other": "{{count}} frames, {{size}} px",
-                "problem": {
-                    "type": "Pick a PNG or WebP image.",
-                    "bytes": "This image is larger than {{kilobytes}} KB.",
-                    "unreadable": "This file could not be read as a PNG or WebP image.",
-                    "frame-small": "A frame is at least {{min}} pixels high.",
-                    "frame-large": "A frame is at most {{max}} pixels high.",
-                    "frames-whole": "The width must be a whole number of square frames.",
-                    "frames-many": "A strip has at most {{frames}} frames.",
-                    "full": "You can keep {{limit}} figures at most. Remove one first.",
-                    "storage": "There is no room left to keep this figure."
                 }
             }
         },
@@ -1385,7 +1345,9 @@
             "failed": "The check did not finish: {{message}}",
             "checkedAt": "Checked {{when}}.",
             "causes": {
-                "ok": { "problem": "Your other devices can reach this machine." },
+                "ok": {
+                    "problem": "Your other devices can reach this machine."
+                },
                 "brokerOff": {
                     "problem": "The connection service is off, so devices outside this network cannot reach the machine.",
                     "fix": "Turn the connection service on above."
@@ -1426,7 +1388,9 @@
                     "problem": "Port {{port}} is taken, so devices on this network connect through your account.",
                     "fix": "Stop what uses the port, or start the machine with another --lan-port."
                 },
-                "unknown": { "problem": "The machine reports a problem this version of Ruimte does not know: {{cause}}." }
+                "unknown": {
+                    "problem": "The machine reports a problem this version of Ruimte does not know: {{cause}}."
+                }
             }
         },
         "worktreeFolder": {
@@ -1853,6 +1817,109 @@
                 "description": "The most a reply may use, 1,024 to 128,000, within the model's limit. Thinking counts too."
             },
             "noKey": "No API key saved"
+        }
+    },
+    "pets": {
+        "title": "Pets",
+        "enabled": {
+            "label": "Pets",
+            "description": "A small figure on every agent shows what it does, and jumps when it needs you. Click a pet to go to its node."
+        },
+        "place": {
+            "label": "Where pets are",
+            "description": "On their nodes, or roaming the bottom of the screen.",
+            "nodes": "On their nodes",
+            "screen": "Bottom of the screen"
+        },
+        "subagents": {
+            "label": "Sub-agents",
+            "description": "A smaller figure walks along with a pet for each sub-agent at work, up to three."
+        },
+        "visitor": {
+            "label": "Visitor",
+            "description": "While Pets is off, a pet now and then drops by beside a node for a few seconds."
+        },
+        "sprite": {
+            "label": "Figures",
+            "description": "Pick one or more; each agent keeps a figure from one of them. Claude and Codex each have their own; other agents get Claude's.",
+            "sets": {
+                "buddies": "Buddies",
+                "animals": "Fox and frog"
+            },
+            "builtIn": "Built in",
+            "use": "Use {{name}}",
+            "preview": "Preview of {{name}}"
+        },
+        "custom": {
+            "label": "Your own figures",
+            "description": "A PNG or WebP strip of square frames side by side. Up to {{frames}} frames of {{size}} pixels, {{kilobytes}} KB at most.",
+            "add": "Add figure",
+            "remove": "Remove {{name}}",
+            "frames_one": "{{count}} frame, {{size}} px",
+            "frames_other": "{{count}} frames, {{size}} px",
+            "edit": "Edit {{name}}",
+            "stateCount_one": "{{count}} state",
+            "stateCount_other": "{{count}} states",
+            "states": {
+                "stand": "Standing",
+                "walk": "Walking",
+                "work": "Working",
+                "wait": "Needs you",
+                "sleep": "Idle",
+                "stopped": "Stopped"
+            },
+            "dialog": {
+                "new": "New figure",
+                "edit": "Edit figure",
+                "description": "Every state can have a strip of its own. One without plays Standing, which every figure needs.",
+                "name": "Name",
+                "save": "Save",
+                "choose": "Choose file",
+                "chooseFor": "Choose file for {{state}}",
+                "replaceFor": "Replace the strip for {{state}}",
+                "replace": "Replace",
+                "drop": "Remove the strip for {{state}}",
+                "needed": "Every figure needs this one",
+                "standing": "Plays Standing",
+                "tipped": "Plays Standing, tipped over"
+            },
+            "problem": {
+                "type": "Pick a PNG or WebP image.",
+                "bytes": "This image is larger than {{kilobytes}} KB.",
+                "unreadable": "This file could not be read as a PNG or WebP image.",
+                "frame-small": "A frame is at least {{min}} pixels high.",
+                "frame-large": "A frame is at most {{max}} pixels high.",
+                "frames-whole": "The width must be a whole number of square frames.",
+                "frames-many": "A strip has at most {{frames}} frames.",
+                "full": "You can keep {{limit}} figures at most. Remove one first.",
+                "room": "Your figures take {{total}} KB together at most. Remove one or pick a smaller strip.",
+                "storage": "There is no room left to keep this figure."
+            }
+        },
+        "groups": {
+            "place": "Where they stand",
+            "show": "What they show"
+        },
+        "inViews": {
+            "label": "In views of their own",
+            "description": "A chat or a terminal open as a view of its own has its pet too: on the composer, or in the terminal's bar."
+        },
+        "agents": {
+            "title": "Per agent",
+            "label": "A figure per agent",
+            "description": "Give a CLI a figure of its own, such as your cat for Codex. A CLI on Default takes its pets from the figures switched on.",
+            "default": "Default",
+            "choose": "Figure for {{name}}"
+        },
+        "beam": {
+            "label": "Teleport",
+            "description": "How a pet comes and goes: when its agent starts or ends, and when you turn pets on or off.",
+            "gather": "Gather",
+            "scan": "Scanline",
+            "rain": "Pixel rain",
+            "transporter": "Transporter",
+            "portal": "Portal",
+            "random": "Random"
         }
     }
 }

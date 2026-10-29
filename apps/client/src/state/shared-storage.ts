@@ -1,6 +1,6 @@
 import { CHAT_PREFERENCES_KEY, reloadChatPreferences } from '@adecore/agents-react/chat';
 import { reloadUsagePreferences, USAGE_PREFERENCES_KEY } from '@adecore/agents-react/state';
-import { PET_SPRITES_STORAGE_KEY, petSpritesChanged } from '@/canvas/pets/sprites-key';
+import { PET_SPRITES_STORAGE_KEY, petSpritesChanged } from '@/pets/sprites-key';
 import { ENDPOINTS_STORAGE_KEY, useEndpoints } from '@/state/endpoints';
 import { followOtherWindows, type StorageTarget } from '@/state/other-windows';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';

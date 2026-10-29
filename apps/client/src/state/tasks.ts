@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { Task } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
 
-type TasksById = Readonly<Record<string, Task>>;
+export type TasksById = Readonly<Record<string, Task>>;
 
 interface TasksStore {
     /* Per machine, the tasks it told this client about, by task id. */

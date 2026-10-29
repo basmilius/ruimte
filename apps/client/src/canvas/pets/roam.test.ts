@@ -168,3 +168,185 @@ describe('pets along the bottom of the screen', () => {
         expect(first?.walking).toBe(false);
     });
 });
+
+describe('kids along the bottom of the screen', () => {
+    test('start beside their pet, in a row on its ground', () => {
+        const roam = new Roam(seeded(1));
+        roam.join('a', 'idle');
+        roam.follow('kid-0', 'a');
+        roam.follow('kid-1', 'kid-0');
+        roam.step(groundOf(WIDTH, [DOCK]), false);
+        const [pet, first, second] = ['a', 'kid-0', 'kid-1'].map((id) => roam.spot(id)!);
+        expect(Math.abs(first.x - pet.x)).toBe(24);
+        expect(Math.abs(second.x - first.x)).toBe(24);
+        expect([first.y, second.y]).toEqual([pet.y, pet.y]);
+    });
+
+    test('walk after their pet, onto the dock as well, and come to rest behind it on its ground, never in the air', () => {
+        const roam = new Roam(seeded(7));
+        const ground = groundOf(WIDTH, [DOCK]);
+        roam.join('a', 'working');
+        roam.follow('kid', 'a');
+        let onDock = false;
+        let rests = 0;
+        for (let i = 0; i < 4000; i++) {
+            roam.step(ground, false);
+            const pet = roam.spot('a')!;
+            const kid = roam.spot('kid')!;
+            if (kid.walking) {
+                continue;
+            }
+            expect([FLOOR_LEVEL, ground.ledge!.level]).toContain(kid.y);
+            onDock ||= kid.y === ground.ledge!.level;
+            if (!pet.walking) {
+                rests += 1;
+                expect(kid.y).toBe(pet.y);
+                // A spot is in whole pixels, so a gap of 24 can read one more or less.
+                expect(Math.abs(kid.x - pet.x)).toBeGreaterThanOrEqual(11);
+                expect(Math.abs(kid.x - pet.x)).toBeLessThanOrEqual(25);
+            }
+        }
+        expect(onDock).toBe(true);
+        expect(rests).toBeGreaterThan(0);
+    });
+
+    test('rest in a row from their pet, going on at its other side where the ground ends, so no two stand in one place', () => {
+        let rests = 0;
+        for (const seed of [1, 2, 3, 5, 8, 13]) {
+            const roam = new Roam(seeded(seed));
+            const ground = groundOf(WIDTH, [DOCK]);
+            const row = ['a', 'kid-0', 'kid-1', 'kid-2'];
+            roam.join('a', 'working');
+            roam.follow('kid-0', 'a');
+            roam.follow('kid-1', 'kid-0');
+            roam.follow('kid-2', 'kid-1');
+            for (let i = 0; i < 4000; i++) {
+                roam.step(ground, false);
+                const spots = row.map((id) => roam.spot(id)!);
+                if (spots.some((spot) => spot.walking)) {
+                    continue;
+                }
+                rests += 1;
+                // Every pair, not only a kid and the one ahead of it.
+                for (const [index, spot] of spots.entries()) {
+                    for (const other of spots.slice(index + 1)) {
+                        expect(other.y === spot.y && Math.abs(other.x - spot.x) < 12).toBe(false);
+                    }
+                }
+            }
+        }
+        expect(rests).toBeGreaterThan(1000);
+    });
+
+    test('trail their pet while it walks, and one ahead of it waits for it to pass instead of walking in front', () => {
+        let walking = 0;
+        let ahead = 0;
+        for (const seed of [3, 7, 11, 19, 23]) {
+            const roam = new Roam(seeded(seed));
+            const ground = groundOf(WIDTH, [DOCK]);
+            roam.join('a', 'working');
+            roam.follow('kid', 'a');
+            let before: number | null = null;
+            for (let i = 0; i < 3000; i++) {
+                roam.step(ground, false);
+                const pet = roam.spot('a')!;
+                const kid = roam.spot('kid')!;
+                if (pet.walking && kid.y === pet.y && pet.y === FLOOR_LEVEL && before !== null) {
+                    walking += 1;
+                    if ((kid.x - pet.x) * pet.facing > 0) {
+                        ahead += 1;
+                        // In front of its pet it holds still, and never walks on ahead of it.
+                        expect(kid.x).toBe(before);
+                    } else {
+                        // Close behind, a little further only while it catches up after a jump of its pet.
+                        expect(Math.abs(kid.x - pet.x)).toBeLessThanOrEqual(2 * 24 + 1);
+                    }
+                }
+                before = kid.x;
+            }
+        }
+        expect(walking).toBeGreaterThan(1000);
+        // Only while a pet that turned around has not passed it yet.
+        expect(ahead / walking).toBeLessThan(0.1);
+    });
+
+    test('a kid that comes while its pet walks starts right behind it, not where the walk ends', () => {
+        const roam = new Roam(seeded(7));
+        const ground = groundOf(WIDTH, []);
+        roam.join('a', 'working');
+        let i = 0;
+        while (roam.spot('a')?.walking !== true && i < 1000) {
+            roam.step(ground, false);
+            i += 1;
+        }
+        roam.follow('kid', 'a');
+        for (let beat = 0; beat < 40; beat++) {
+            roam.step(ground, false);
+            const pet = roam.spot('a')!;
+            const kid = roam.spot('kid')!;
+            if (!pet.walking) {
+                break;
+            }
+            // A gap behind it, give or take the step it took after the kid came.
+            expect((kid.x - pet.x) * pet.facing).toBeLessThanOrEqual(0);
+            expect(Math.abs(kid.x - pet.x)).toBeLessThanOrEqual(24 + 4 + 1);
+        }
+    });
+
+    test('one cut off from its pet, with nothing that leads there, jumps across', () => {
+        const roam = new Roam(seeded(2));
+        // A wall in the middle and no dock: two floors with no way between them.
+        const ground = groundOf(WIDTH, [{ left: 560, right: 640, bottom: 0, top: 400, ledge: false }]);
+        roam.join('left', 'waiting');
+        roam.join('right', 'waiting');
+        roam.follow('kid', 'left');
+        roam.step(ground, false);
+        expect(roam.spot('kid')!.x).toBeLessThan(560);
+        roam.follow('kid', 'right');
+        for (let i = 0; i < 20; i++) {
+            roam.step(ground, false);
+        }
+        const kid = roam.spot('kid')!;
+        expect(kid.x).toBeGreaterThanOrEqual(640);
+        expect(kid.walking).toBe(false);
+        expect(Math.abs(kid.x - roam.spot('right')!.x)).toBeLessThanOrEqual(25);
+    });
+
+    test('are no reason for a pet to jump or to rest elsewhere', () => {
+        const alone = new Roam(seeded(11));
+        const followed = new Roam(seeded(11));
+        const ground = groundOf(WIDTH, [DOCK]);
+        alone.join('a', 'working');
+        followed.join('a', 'working');
+        followed.follow('kid', 'a');
+        for (let i = 0; i < 2000; i++) {
+            alone.step(ground, false);
+            followed.step(ground, false);
+            expect(followed.spot('a')).toEqual(alone.spot('a'));
+        }
+    });
+
+    test('go once their sub-agent ends', () => {
+        const roam = new Roam(seeded(3));
+        roam.join('a', 'idle');
+        roam.follow('kid', 'a');
+        roam.step(groundOf(WIDTH, []), false);
+        expect(roam.spot('kid')).not.toBeNull();
+        roam.leave('kid');
+        expect(roam.spot('kid')).toBeNull();
+    });
+
+    test('with reduced motion only take their place beside it', () => {
+        const roam = new Roam(seeded(5));
+        const ground = groundOf(WIDTH, [DOCK]);
+        roam.join('a', 'working');
+        roam.follow('kid', 'a');
+        roam.step(ground, true);
+        const first = roam.spot('kid');
+        for (let i = 0; i < 500; i++) {
+            roam.step(ground, true);
+        }
+        expect(roam.spot('kid')).toEqual(first);
+        expect(first?.walking).toBe(false);
+    });
+});

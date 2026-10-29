@@ -357,6 +357,8 @@
     },
     "pets": {
         "goTo": "Go to {{title}}",
+        "writeTo": "Write to {{title}}",
+        "typeIn": "Type in {{title}}",
         "waiting": "{{title}} needs you",
         "failed": "The pets could not be shown"
     },

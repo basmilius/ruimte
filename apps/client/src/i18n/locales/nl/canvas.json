@@ -357,6 +357,8 @@
     },
     "pets": {
         "goTo": "Ga naar {{title}}",
+        "writeTo": "Schrijf naar {{title}}",
+        "typeIn": "Typ in {{title}}",
         "waiting": "{{title}} heeft je nodig",
         "failed": "De pets konden niet worden getoond"
     },
