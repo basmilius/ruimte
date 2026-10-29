@@ -131,7 +131,8 @@ struct ChatUserMessage: View {
     }
 }
 
-/// A message another node sent the chat: said to it like a person's, under a chip that names and opens the sender.
+/// A message another node sent the chat: a bubble like a person's, under a chip that names and opens the sender, but
+/// on the leading side, since the person did not write it.
 struct ChatSentMessage: View {
     let message: ChatNoteItemMessage
     @Environment(\.chatReferenceLookup) private var lookup
@@ -139,7 +140,7 @@ struct ChatSentMessage: View {
     private var long: Bool { message.text.count > 600 || message.text.split(separator: "\n").count > 8 }
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             ChatReferenceChip(look: ChatReferenceChip.look(message.from, chat: false, lookup: lookup, lastName: message.title))
             VStack(alignment: .leading, spacing: 4) {
                 MarkdownMessage(text: message.text)
@@ -169,10 +170,10 @@ struct ChatSentMessage: View {
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(MobileStyle.active, in: RoundedRectangle(cornerRadius: 18))
+            .background(MobileStyle.hover, in: RoundedRectangle(cornerRadius: 18))
         }
-        .frame(maxWidth: 620, alignment: .trailing)
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        .frame(maxWidth: 620, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
             message.title.isEmpty
