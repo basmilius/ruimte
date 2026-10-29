@@ -49,6 +49,23 @@ export const usePromptFold = create<PromptFoldStore>((set, get) => ({
     }
 }));
 
+interface SnoozedListStore {
+    /* The canvas whose list of snoozed prompts is open, by view id; a request for a snoozed node opens it. */
+    openFor: string | null;
+    setOpen(viewId: string, open: boolean): void;
+}
+
+export const useSnoozedList = create<SnoozedListStore>((set, get) => ({
+    openFor: null,
+    setOpen(viewId, open) {
+        if (open) {
+            set({ openFor: viewId });
+        } else if (get().openFor === viewId) {
+            set({ openFor: null });
+        }
+    }
+}));
+
 export const PROMPT_STACK_ATTRIBUTE = 'data-prompt-stack';
 
 /* Where the keyboard was before the shortcut took it to a card, so Escape can hand it back there. */

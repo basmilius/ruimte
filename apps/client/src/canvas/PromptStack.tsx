@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import clsx from 'clsx';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { AlarmClock, AlarmClockOff, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
-import { leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFold, usePromptFront } from '@/canvas/prompt-stack';
+import { bringPromptToFront, leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFold, usePromptFront, useSnoozedList } from '@/canvas/prompt-stack';
 import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
 import { agentName } from '@/processes/format';
@@ -18,15 +18,88 @@ import { useChatHost } from '@adecore/agents-react';
 import { formatClock } from '@adecore/agents-react/usage';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
+import { endpointOfNode, useEndpointId } from '@/state/keys';
+import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { SnoozeButton } from '@/shell/Snooze';
+import { formatMoment } from '@adecore/ui/format';
 import { useProviders } from '@adecore/agents-react/state';
 import { useTransportStatus } from '@/transport/status';
-import { ButtonGroup, ErrorBoundary, IconButton, Pill, Tooltip } from '@adecore/ui';
+import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip } from '@adecore/ui';
 
 /* Marks the chevron that folds or opens the stack, which keeps the keyboard across the change. */
 const FOLD_ATTRIBUTE = 'data-prompt-fold';
 
 function idOf(prompt: CanvasPrompt): string {
     return prompt.id;
+}
+
+/* Whether a prompt is the one a request to bring `nodeId` to the front means. */
+function asks(prompt: CanvasPrompt, nodeId: string): boolean {
+    return (prompt.sourceNodeId ?? prompt.subject.nodeId) === nodeId || prompt.ownerId === nodeId;
+}
+
+/* The machine a prompt's owner runs on, which is where its snooze is kept. */
+function useOwnerMachine(ownerId: string): string {
+    const endpointId = useEndpointId();
+    const node = useCanvas((s) => s.nodes[ownerId]);
+    return node ? endpointOfNode(node, endpointId) : endpointId;
+}
+
+/* Where the stack stands on its canvas: bottom center, above the dock while it shows. */
+function StackPlace({ viewId, dockShown, children }: { viewId: string; dockShown: boolean; children: ReactNode }) {
+    return (
+        <div
+            {...{ [PROMPT_STACK_ATTRIBUTE]: viewId }}
+            className={clsx(
+                'pointer-events-none absolute inset-x-0 flex justify-center px-4 transition-[bottom] duration-200',
+                dockShown ? 'bottom-16' : 'bottom-4'
+            )}
+        >
+            {children}
+        </div>
+    );
+}
+
+/* One row per snoozed node, each ending its snooze early. The snooze clock takes a row out by itself once its time runs out. */
+function SnoozedMenu({ snoozed, open, onOpenChange }: { snoozed: readonly CanvasPrompt[]; open: boolean; onOpenChange(open: boolean): void }) {
+    const { t } = useTranslation(['canvas', 'shell']);
+    const endpointId = useEndpointId();
+    const nodes = useCanvas((s) => s.nodes);
+    const snoozes = useSnoozes((s) => s.byKey);
+    const owners = [...new Set(snoozed.map((prompt) => prompt.ownerId))];
+    const unsnooze = (ownerId: string, machine: string): void => {
+        useSnoozes.getState().unsnooze(machine, ownerId);
+        bringPromptToFront(ownerId);
+    };
+    return (
+        <Menu.Root open={open} onOpenChange={onOpenChange}>
+            <Menu.Trigger className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs text-text-muted shadow-float hover:text-text">
+                <Icon icon={AlarmClock} size={12} />
+                {t('promptStack.snoozed', { count: owners.length })}
+            </Menu.Trigger>
+            <Menu.Popup align="end" className="min-w-56">
+                <Menu.Group>
+                    <Menu.GroupLabel>{t('promptStack.snoozedList')}</Menu.GroupLabel>
+                    {owners.map((ownerId) => {
+                        const node = nodes[ownerId];
+                        const machine = node ? endpointOfNode(node, endpointId) : endpointId;
+                        const until = snoozeOf(snoozes, machine, ownerId);
+                        const title = node?.title ?? snoozed.find((prompt) => prompt.ownerId === ownerId)!.title;
+                        return (
+                            <Menu.Item key={ownerId} aria-label={`${t('shell:snooze.unsnooze')} ${title}`} onClick={() => unsnooze(ownerId, machine)}>
+                                <Icon icon={AlarmClockOff} size={14} />
+                                <span className="truncate">{title}</span>
+                                <span className="shrink-0 text-text-muted tabular-nums">
+                                    {t('promptStack.prompts', { count: snoozed.filter((prompt) => prompt.ownerId === ownerId).length })}
+                                </span>
+                                {until !== null && <Menu.Hint>{formatMoment(until)}</Menu.Hint>}
+                            </Menu.Item>
+                        );
+                    })}
+                </Menu.Group>
+            </Menu.Popup>
+        </Menu.Root>
+    );
 }
 
 /* The status of the node that asks, for the dot beside its title. */
@@ -53,6 +126,7 @@ function SourceRow({
 }) {
     const { t } = useTranslation('canvas');
     const status = useAskingStatus(prompt);
+    const machine = useOwnerMachine(prompt.ownerId);
     return (
         <div className="flex min-w-0 items-center gap-2 border-b border-dashed border-border px-3 py-1.5 text-xs text-text-muted">
             {status && <StatusDot status={status} />}
@@ -74,6 +148,7 @@ function SourceRow({
                     <IconButton icon={ChevronRight} size="xs" label={t('promptStack.next')} disabled={index === count - 1} onClick={() => onStep(1)} />
                 </ButtonGroup>
             )}
+            <SnoozeButton endpointId={machine} nodeId={prompt.ownerId} />
             <IconButton {...{ [FOLD_ATTRIBUTE]: '' }} icon={ChevronDown} size="xs" label={t('promptStack.fold')} aria-expanded onClick={onFold} />
         </div>
     );
@@ -86,6 +161,7 @@ function SourceRow({
 function FoldedBar({ prompt, count, onGoTo, onOpen }: { prompt: CanvasPrompt; count: number; onGoTo(): void; onOpen(): void }) {
     const { t } = useTranslation('canvas');
     const status = useAskingStatus(prompt);
+    const machine = useOwnerMachine(prompt.ownerId);
     return (
         <div className="flex min-w-0 items-center gap-2 px-3 py-2 text-xs text-text-muted">
             {status && <StatusDot status={status} />}
@@ -103,6 +179,7 @@ function FoldedBar({ prompt, count, onGoTo, onOpen }: { prompt: CanvasPrompt; co
             <button type="button" tabIndex={-1} className="min-w-0 grow truncate text-left" onClick={onOpen}>
                 {promptHeadline(prompt.subject)}
             </button>
+            <SnoozeButton endpointId={machine} nodeId={prompt.ownerId} />
             <IconButton {...{ [FOLD_ATTRIBUTE]: '' }} icon={ChevronUp} size="xs" label={t('promptStack.open')} aria-expanded={false} onClick={onOpen} />
         </div>
     );
@@ -115,7 +192,9 @@ function FoldedBar({ prompt, count, onGoTo, onOpen }: { prompt: CanvasPrompt; co
  */
 export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: boolean }) {
     const { t } = useTranslation('canvas');
-    const prompts = useCanvasPrompts();
+    const { prompts, snoozed } = useCanvasPrompts();
+    const snoozedOpen = useSnoozedList((s) => s.openFor === viewId);
+    const setSnoozedOpen = (open: boolean): void => useSnoozedList.getState().setOpen(viewId, open);
     const canvasStore = useCanvasStore();
     const disabled = useTransportStatus() !== 'open';
     const chatHost = useChatHost();
@@ -140,13 +219,19 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
         if (front === null) {
             return;
         }
-        const target = waiting.find((prompt) => (prompt.sourceNodeId ?? prompt.subject.nodeId) === front.nodeId);
+        const target = waiting.find((prompt) => asks(prompt, front.nodeId));
         if (target) {
             setActive(target.id);
             usePromptFold.getState().open(viewId);
             usePromptFront.getState().consume(front.seq);
+            return;
         }
-    }, [front, waiting, setActive, viewId]);
+        // A snoozed node stays snoozed; the list says why its prompt is not in front, with the way back.
+        if (snoozed.some((prompt) => asks(prompt, front.nodeId))) {
+            useSnoozedList.getState().setOpen(viewId, true);
+            usePromptFront.getState().consume(front.seq);
+        }
+    }, [front, waiting, snoozed, setActive, viewId]);
 
     const folded = usePromptFold((s) => s.folded.has(viewId));
     const empty = waiting.length === 0;
@@ -157,8 +242,16 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
         }
     }, [empty, viewId]);
 
+    const snoozedMenu = snoozed.length > 0 && <SnoozedMenu snoozed={snoozed} open={snoozedOpen} onOpenChange={setSnoozedOpen} />;
+
     if (active === null) {
-        return null;
+        return snoozedMenu ? (
+            <StackPlace viewId={viewId} dockShown={dockShown}>
+                <div data-holds-dock className="pointer-events-auto">
+                    {snoozedMenu}
+                </div>
+            </StackPlace>
+        ) : null;
     }
 
     const chatOrNodeId = active.sourceNodeId ?? active.subject.nodeId;
@@ -194,13 +287,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     };
 
     return (
-        <div
-            {...{ [PROMPT_STACK_ATTRIBUTE]: viewId }}
-            className={clsx(
-                'pointer-events-none absolute inset-x-0 flex justify-center px-4 transition-[bottom] duration-200',
-                dockShown ? 'bottom-16' : 'bottom-4'
-            )}
-        >
+        <StackPlace viewId={viewId} dockShown={dockShown}>
             <div
                 ref={container}
                 data-holds-dock
@@ -263,7 +350,8 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
                         </div>
                     </>
                 )}
+                {snoozedMenu && <div className="absolute right-0 bottom-full mb-4">{snoozedMenu}</div>}
             </div>
-        </div>
+        </StackPlace>
     );
 }

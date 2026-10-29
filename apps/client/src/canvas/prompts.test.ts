@@ -9,6 +9,9 @@ import { canvasPrompts, samePrompts, stackFront, standingRequestsOf, type Canvas
 
 const ENDPOINT = 'local';
 
+/* When a snooze in these tests runs out; the stack reads only whether one stands. */
+const LATER = 9_999_999_999_999;
+
 /* A chat's own request, or which of Ruimte's own cards it is. */
 function kindOf(prompt: CanvasPrompt): string {
     return prompt.subject.kind === 'chat' ? 'chat' : isRuimtePrompt(prompt.subject.prompt) ? prompt.subject.prompt.data.kind : 'host';
@@ -178,6 +181,47 @@ describe('canvasPrompts', () => {
         expect(waiting.subject).toEqual({ kind: 'host', nodeId: 'ios', prompt: waitingPrompt('ios', 400) });
         later.sessions = { ...later.sessions, [key('ios')]: { attached: true, agent: agent('running', 950) } };
         expect(canvasPrompts({ ...later, waitingSince: second.waitingSince }).waitingSince.has(key('ios'))).toBe(false);
+    });
+
+    test('the prompts of a snoozed chat or terminal leave the stack for the snoozed list, in the same order', () => {
+        const { prompts, snoozed } = canvasPrompts(input({ snoozes: { [key('docs')]: LATER, [key('api')]: LATER } }));
+        expect(prompts.map((prompt) => prompt.title)).toEqual(['merge', 'ios']);
+        expect(snoozed.map((prompt) => [prompt.title, prompt.ownerId])).toEqual([
+            ['api', 'api'],
+            ['docs', 'docs']
+        ]);
+    });
+
+    test("a design's later chat and a sub-agent's question belong to the node on the canvas, and go with its snooze", () => {
+        const design = {
+            id: 'design',
+            kind: 'design' as const,
+            title: 'Design',
+            chats: [{ id: 'design-chat-2', name: 'Second', node: { kind: 'chat', provider: 'claude' } }]
+        };
+        const question = { ...optional, id: 'sub-q', requestId: 'sub-q', createdAt: 20 };
+        const base = input({
+            nodes: [design, node('docs', 'chat')],
+            chats: { [key('design-chat-2')]: chatOf([{ ...approval, id: 'later-a', requestId: 'later-a', createdAt: 10 }]) },
+            descendants: new Map([[key('docs'), [{ kind: 'chat', nodeId: 'sub-agent', item: question }]]])
+        });
+        const owners = canvasPrompts(base).prompts.map((prompt) => [prompt.title, prompt.ownerId]);
+        expect(owners).toEqual([
+            ['Second', 'design'],
+            ['docs', 'docs']
+        ]);
+        const { prompts, snoozed } = canvasPrompts({ ...base, snoozes: { [key('design')]: LATER, [key('docs')]: LATER } });
+        expect(prompts).toEqual([]);
+        expect(snoozed.map((prompt) => prompt.ownerId)).toEqual(['design', 'docs']);
+    });
+
+    test('a snooze counts on the machine its node runs on', () => {
+        const remote = { ...node('docs', 'chat'), machine: 'other' };
+        const chats = { [endpointKey('other', 'docs')]: chatOf([{ ...approval, id: 'docs-a', requestId: 'docs-a', createdAt: 10 }]) };
+        const here = canvasPrompts(input({ nodes: [remote], chats, snoozes: { [key('docs')]: LATER } }));
+        const there = canvasPrompts(input({ nodes: [remote], chats, snoozes: { [endpointKey('other', 'docs')]: LATER } }));
+        expect(here.prompts).toHaveLength(1);
+        expect(there.snoozed).toHaveLength(1);
     });
 });
 

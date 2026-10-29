@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import type { ChatApprovalItem, ChatInfo, ChatQuestionItem, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
-import { usePromptFold } from '@/canvas/prompt-stack';
+import { usePromptFold, useSnoozedList } from '@/canvas/prompt-stack';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useSnoozes } from '@/state/snooze';
 import { chatInfoOf } from '../../testing/chat-info';
 import { FakeMachine } from '../../testing/fake-machine';
 import { clickOn, pressKey, until } from '../../testing/dom';
-import { openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
+import { menuItem, openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
 
 const WRITER: ProjectNode = { id: 'writer', kind: 'chat', title: 'Writer', x: 40, y: 80, w: 480, h: 520 };
 const TEAM: ProjectNode = { id: 'team', kind: 'group', title: 'Team', x: 0, y: 0, w: 600, h: 700, memberIds: [WRITER.id] };
@@ -39,6 +40,18 @@ function stackButton(label: string): HTMLElement | null {
     return document.querySelector<HTMLElement>(`[data-prompt-stack="${MAIN.id}"] button[aria-label="${label}"]`);
 }
 
+/* The count at the edge of the stack that opens the snoozed list. */
+function snoozedButton(): HTMLElement | null {
+    return ([...stack().querySelectorAll('button')] as HTMLElement[]).find((button) => button.textContent?.includes('snoozed')) ?? null;
+}
+
+async function snoozeFromRow(): Promise<void> {
+    await clickOn(stackButton('Snooze'));
+    await until(() => menuItem('10 minutes') !== null);
+    await clickOn(menuItem('10 minutes'));
+    await until(() => stackCard() === null);
+}
+
 async function status(info: ChatInfo): Promise<void> {
     await act(async () => machine.emit('chat.status', { chatId: WRITER.id, info }));
 }
@@ -59,6 +72,8 @@ beforeEach(async () => {
 afterEach(async () => {
     await canvas.close();
     usePromptFold.setState({ folded: new Set() });
+    useSnoozes.setState({ byKey: {} });
+    useSnoozedList.setState({ openFor: null });
 });
 
 describe('the prompt stack of a canvas', () => {
@@ -110,6 +125,33 @@ describe('the prompt stack of a canvas', () => {
 
         expect(stackCard()).not.toBeNull();
         expect(stackCard()!.contains(document.activeElement)).toBe(true);
+    });
+
+    test('snoozing from the row snoozes the node that asks, and leaves the way back in its place', async () => {
+        await snoozeFromRow();
+
+        expect(machine.requests('snooze.set').map((payload) => payload.nodeId)).toEqual([WRITER.id]);
+        expect(snoozedButton()).not.toBeNull();
+        expect(snoozedButton()!.textContent).toContain('1 snoozed');
+    });
+
+    test('Unsnooze in the list ends the snooze and brings the card back', async () => {
+        await snoozeFromRow();
+        await clickOn(snoozedButton());
+        await until(() => document.querySelector('[role="menuitem"][aria-label="Unsnooze Writer"]') !== null);
+        await clickOn(document.querySelector('[role="menuitem"][aria-label="Unsnooze Writer"]'));
+
+        expect(machine.requests('snooze.clear')).toEqual([{ nodeId: WRITER.id }]);
+        await until(() => stackCard() !== null);
+        expect(snoozedButton()).toBeNull();
+    });
+
+    test('a snooze the machine sets or ends moves the card out of the stack and back', async () => {
+        await act(async () => machine.emit('snooze.changed', { snoozes: [{ projectId: 'project-atlas', nodeId: WRITER.id, until: 9_999_999_999_999 }] }));
+        await until(() => stackCard() === null);
+
+        await act(async () => machine.emit('snooze.changed', { snoozes: [] }));
+        await until(() => stackCard() !== null);
     });
 
     test('opens when Next That Needs You goes to the node that asks', async () => {

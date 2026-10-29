@@ -12,18 +12,25 @@ import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
 import { proposalsOf, useProposals } from '@/state/proposals';
 import { secretRequestsOf, useSecrets } from '@/state/secrets';
 import { useSessions } from '@/state/sessions';
+import { useSnoozes } from '@/state/snooze';
 import { useWaitingSince } from '@/state/waiting';
 
-const NONE: CanvasPrompt[] = [];
+export interface StackPrompts {
+    prompts: CanvasPrompt[];
+    /* The prompts of snoozed nodes, kept out of the stack until the snooze ends or a person ends it. */
+    snoozed: CanvasPrompt[];
+}
+
+const NONE: StackPrompts = { prompts: [], snoozed: [] };
 
 /*
  * The prompts of the canvas in this cell. It subscribes rather than selecting: every streamed word
  * changes the chats store, and the stack should only hear about a prompt that came or went.
  */
-export function useCanvasPrompts(): CanvasPrompt[] {
+export function useCanvasPrompts(): StackPrompts {
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
-    const [prompts, setPrompts] = useState<CanvasPrompt[]>(NONE);
+    const [prompts, setPrompts] = useState<StackPrompts>(NONE);
 
     useEffect(() => {
         const feeds = new Map<string, ChatPromptFeed>();
@@ -41,9 +48,14 @@ export function useCanvasPrompts(): CanvasPrompt[] {
                 computer: machines.flatMap(computerApprovalsOf),
                 secrets: machines.flatMap(secretRequestsOf),
                 proposals: machines.flatMap(proposalsOf),
-                waitingSince: useWaitingSince.getState().byKey
+                waitingSince: useWaitingSince.getState().byKey,
+                snoozes: useSnoozes.getState().byKey
             });
-            setPrompts((current) => (samePrompts(current, next.prompts) ? current : next.prompts));
+            setPrompts((current) =>
+                samePrompts(current.prompts, next.prompts) && samePrompts(current.snoozed, next.snoozed)
+                    ? current
+                    : { prompts: next.prompts, snoozed: next.snoozed }
+            );
         };
         const reconcile = (): void => {
             const active = new Set<string>();
@@ -79,7 +91,8 @@ export function useCanvasPrompts(): CanvasPrompt[] {
             useSessions.subscribe(update),
             useComputer.subscribe(update),
             useSecrets.subscribe(update),
-            useProposals.subscribe(update)
+            useProposals.subscribe(update),
+            useSnoozes.subscribe(update)
         ];
         return () => {
             for (const feed of feeds.values()) {
