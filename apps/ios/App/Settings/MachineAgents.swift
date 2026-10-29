@@ -14,8 +14,13 @@ import SwiftUI
         let chat: Bool
         let models: [JSONValue]
         let defaultModel: String?
-        let accounts: [Account]
+        var accounts: [Account]
         var id: String { kind }
+
+        /// The top account that is on, where a chat that names none starts; nil while there is no choice to point out.
+        var defaultAccount: String? {
+            accounts.count > 1 ? accounts.first { $0.state != "disabled" }?.id : nil
+        }
     }
 
     struct Account: Identifiable, Equatable {
@@ -29,6 +34,9 @@ import SwiftUI
     let client: any MachineRequesting
     let state = RemotePageState()
     private(set) var agents: [Agent] = []
+    /// Whether the machine keeps an order of accounts that a person can change from here.
+    private(set) var reorders = false
+    private var providers: [JSONValue] = []
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer here.
     private(set) var loginCommands: [String: String] = [:]
     private(set) var endpoint: JSONValue?
@@ -46,11 +54,37 @@ import SwiftUI
             let endpoint = try? await client.request("endpoint.info")
             let computer = try? await client.request("computer.status")
             try stillTheLatest()
-            agents = Self.agents(providers: providers, accounts: accounts)
-            loginCommands = (accounts?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+            self.providers = providers
+            reorders = (client as? MachineFeatures)?.answers(.accountsReorder) == true
+            apply(accounts: accounts)
             self.endpoint = endpoint
             self.computer = computer?["present"] == .bool(true) ? computer : nil
         }
+    }
+
+    /// Moves accounts of one CLI at once and has the machine keep that order, taking its answer as the new list. A
+    /// refusal reads the accounts again, so the list never shows an order the machine does not keep.
+    func move(_ agent: Agent, from source: IndexSet, to destination: Int) async {
+        guard !state.busy, let index = agents.firstIndex(where: { $0.kind == agent.kind }) else { return }
+        agents[index].accounts.move(fromOffsets: source, toOffset: destination)
+        let payload = Self.reorderPayload(kind: agent.kind, ids: agents[index].accounts.map(\.id))
+        await state.perform {
+            do {
+                apply(accounts: try await client.request(.accountsReorder, payload: payload))
+            } catch {
+                await load()
+                throw error
+            }
+        }
+    }
+
+    static func reorderPayload(kind: String, ids: [String]) -> JSONValue {
+        .object(["kind": .string(kind), "ids": .array(ids.map(JSONValue.string))])
+    }
+
+    private func apply(accounts: JSONValue?) {
+        agents = Self.agents(providers: providers, accounts: accounts)
+        loginCommands = (accounts?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
     }
 
     /// Turns a switch the machine keeps in `endpoint.json`, leaving its name and icon as they stand.
@@ -115,6 +149,7 @@ struct MachineAgentsPage: View {
     let session: SharedMachineSession
     @State private var model: MachineAgentsModel
     @State private var login: AgentLogin?
+    @State private var editMode: EditMode = .inactive
     private let preferences = ChatPreferences.shared
 
     init(session: SharedMachineSession) {
@@ -126,7 +161,11 @@ struct MachineAgentsPage: View {
         MobileForm {
             RemotePageStatus(state: model.state) { Task { await model.load() } }
             if !model.state.loading || !model.agents.isEmpty {
-                installed
+                if editMode.isEditing && canOrder {
+                    ordering
+                } else {
+                    installed
+                }
                 defaults
                 computerUse
             }
@@ -134,6 +173,12 @@ struct MachineAgentsPage: View {
         .navigationTitle("Agents")
         .navigationSubtitle(session.machine.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if canOrder {
+                ToolbarItem(placement: .topBarTrailing) { EditButton() }
+            }
+        }
+        .environment(\.editMode, $editMode)
         .task {
             await RemotePageLifecycle.run(
                 client: session.rpc, events: ["endpoint.changed", "accounts.changed"], load: model.load)
@@ -177,12 +222,7 @@ struct MachineAgentsPage: View {
             if agent.accounts.count > 1 {
                 ForEach(agent.accounts) { account in
                     HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(account.name).font(.subheadline)
-                            Text(account.detail).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        accountLabel(agent, account)
                         loginButton(agent, account)
                     }
                     .padding(.leading, MobileMetrics.statusColumn + MobileSpacing.medium)
@@ -190,6 +230,42 @@ struct MachineAgentsPage: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func accountLabel(_ agent: MachineAgentsModel.Agent, _ account: MachineAgentsModel.Account) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(account.name).font(.subheadline)
+                if account.id == agent.defaultAccount {
+                    Text("Default").font(.caption).foregroundStyle(MobileStyle.muted)
+                }
+            }
+            Text(account.detail).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A machine that keeps an order of accounts lets a CLI with a choice of them be ordered here.
+    private var canOrder: Bool {
+        model.reorders && model.agents.contains { $0.accounts.count > 1 }
+    }
+
+    @ViewBuilder private var ordering: some View {
+        ForEach(model.agents.filter { $0.accounts.count > 1 }) { agent in
+            Section {
+                ForEach(agent.accounts) { account in
+                    accountLabel(agent, account).moveDisabled(model.state.busy)
+                }
+                .onMove { source, destination in
+                    Task { await model.move(agent, from: source, to: destination) }
+                }
+            } header: {
+                Text(agent.name)
+            } footer: {
+                Text("A chat that names no account starts under the top one that is on.")
+            }
+        }
     }
 
     private func agentSubtitle(_ agent: MachineAgentsModel.Agent) -> String {

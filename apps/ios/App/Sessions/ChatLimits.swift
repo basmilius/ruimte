@@ -126,11 +126,13 @@ extension ChatModel {
         }
     }
 
-    /// From the next turn on, and the default for new agents of this CLI on this machine, as a model pick is.
+    /// From the next turn on. On a machine without an order of accounts it is also the default for new agents of this
+    /// CLI there, as a model pick is; one with an order starts where that order says.
     func chooseAccount(_ id: String) {
         let provider = provider
+        let ordered = (client as? MachineFeatures)?.answers(.accountsReorder) == true
         Task {
-            if await configure(["account": .string(id)]) {
+            if await configure(["account": .string(id)]), !ordered {
                 ChatPreferences.shared.rememberAccount(id, provider: provider, machineID: machineID)
             }
         }

@@ -47,9 +47,10 @@ final class NewChatModel {
         accounts = (try? await client.request(.accountsList)).map(ProviderAccountList.init)
     }
 
-    /// The account a new chat of this CLI starts under, as remembered for this machine; nil is the CLI's own.
+    /// The account a new chat of this CLI names, as remembered for this machine; nil leaves it to the machine.
     func account(for provider: String) -> String? {
-        preferences.account(machineID: machineID, provider: provider, accounts: accounts)
+        let ordered = (client as? MachineFeatures)?.answers(.accountsReorder) == true
+        return preferences.account(machineID: machineID, provider: provider, accounts: accounts, ordered: ordered)
     }
 
     func start(provider: String) async -> NewChatPlace? {

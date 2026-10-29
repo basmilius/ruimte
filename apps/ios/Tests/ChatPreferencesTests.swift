@@ -51,9 +51,10 @@ final class ChatPreferencesTests: XCTestCase {
         preferences.rememberAccount("spare", provider: "codex", machineID: "mac")
         preferences.rememberAccount("home", provider: "claude", machineID: "mini")
         let restored = ChatPreferences(defaults: store)
-        XCTAssertEqual(restored.account(machineID: "mac", provider: "claude", accounts: nil), "work")
-        XCTAssertEqual(restored.account(machineID: "mini", provider: "claude", accounts: nil), "home")
-        XCTAssertNil(restored.account(machineID: "mini", provider: "codex", accounts: nil))
+        XCTAssertEqual(restored.account(machineID: "mac", provider: "claude", accounts: nil, ordered: false), "work")
+        XCTAssertEqual(restored.account(machineID: "mini", provider: "claude", accounts: nil, ordered: false), "home")
+        XCTAssertNil(restored.account(machineID: "mini", provider: "codex", accounts: nil, ordered: false))
+        XCTAssertNil(restored.account(machineID: "mac", provider: "claude", accounts: nil, ordered: true))
         restored.rememberAccount("claude", provider: "claude", machineID: "mini")
         XCTAssertNil(restored.accounts["mini"])
     }

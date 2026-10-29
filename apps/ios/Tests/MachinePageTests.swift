@@ -480,8 +480,8 @@ final class MachinePageTests: XCTestCase {
                     ("off", "claude", "Off", false, "ready"), ("broken", "claude", "Broken", true, "ready"),
                     ("gone", "claude", "Gone", true, "not-found"), ("codex", "codex", nil, true, "ready"),
                 ])))
-        XCTAssertEqual(card.lines.map(\.accountID), ["claude", "old", "broken"])
-        XCTAssertEqual(card.lines.dropFirst().map(\.content), [.status("Not logged in"), .status("Unavailable")])
+        XCTAssertEqual(card.lines.map(\.accountID), ["claude", "broken", "old"])
+        XCTAssertEqual(card.lines.dropFirst().map(\.content), [.status("Unavailable"), .status("Not logged in")])
     }
 
     @MainActor func testTheAccountListDecidesWhichAccountsThereAre() {
@@ -534,8 +534,8 @@ final class MachinePageTests: XCTestCase {
                     ("claude", "claude", nil, true, "ready"), ("work", "claude", "Work", true, "ready"),
                     ("off", "claude", "Off", false, "ready"), ("new", "claude", "New", true, "ready"),
                 ])))
-        XCTAssertEqual(listed.lines.map(\.accountID), ["claude", "work", "new"])
-        XCTAssertEqual(listed.lines.last?.content, .status("Not read yet"))
+        XCTAssertEqual(listed.lines.map(\.accountID), ["claude", "new", "work"])
+        XCTAssertEqual(listed.lines[1].content, .status("Not read yet"))
     }
 
     @MainActor func testTheRecorderListsTheAccountsOncePerConnectionAndFollowsThem() async {

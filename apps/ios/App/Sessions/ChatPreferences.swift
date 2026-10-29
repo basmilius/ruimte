@@ -53,17 +53,18 @@ final class ChatPreferences {
     func payload(machineID: String, accounts list: ProviderAccountList?) -> JSONValue {
         var picks: [String: String] = [:]
         for provider in (accounts[machineID] ?? [:]).keys {
-            picks[provider] = account(machineID: machineID, provider: provider, accounts: list)
+            picks[provider] = account(machineID: machineID, provider: provider, accounts: list, ordered: false)
         }
         guard !picks.isEmpty, var values = payload.objectValue else { return payload }
         values["accounts"] = .object(picks.mapValues(JSONValue.string))
         return .object(values)
     }
 
-    /// The account a new agent of this CLI starts under on this machine; nil is the CLI's default account. A machine
-    /// that did not say which accounts it has leaves the pick standing.
-    func account(machineID: String, provider: String, accounts list: ProviderAccountList?) -> String? {
-        guard let picked = accounts[machineID]?[provider] else { return nil }
+    /// The account a new agent of this CLI starts under on this machine; nil leaves it to the machine. A machine that
+    /// keeps its accounts `ordered` (it answers `accounts.reorder`) starts where that order and the project say, so no
+    /// pick goes along there. A machine that did not say which accounts it has leaves the pick standing.
+    func account(machineID: String, provider: String, accounts list: ProviderAccountList?, ordered: Bool) -> String? {
+        guard !ordered, let picked = accounts[machineID]?[provider] else { return nil }
         guard let list else { return picked }
         let entry = list.entries.first { $0.id == picked }
         return entry?.kind == provider && entry?.enabled == true ? picked : nil

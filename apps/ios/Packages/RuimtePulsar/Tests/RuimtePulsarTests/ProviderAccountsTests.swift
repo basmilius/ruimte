@@ -24,15 +24,44 @@ private let twoClaudes = """
     }
     """
 
-@Test func accountsOfAKindPutTheDefaultFirstAndKeepTheMachinesOrder() throws {
+@Test func accountsNobodyPlacedPutTheDefaultFirstAndTheRestById() throws {
     var value = try #require(JSONValue.decode(Data(twoClaudes.utf8)).objectValue)
     let statuses = try #require(value["statuses"]?.arrayValue)
-    value["statuses"] = .array([statuses[2], statuses[1], statuses[0], statuses[3]])
+    value["statuses"] = .array([statuses[3], statuses[2], statuses[1], statuses[0]])
     let accounts = ProviderAccountList(.object(value))
-    #expect(accounts.entries.map(\.id) == ["work", "old", "claude", "codex"])
-    #expect(accounts.accounts(of: "claude").map(\.id) == ["claude", "work", "old"])
+    #expect(accounts.entries.map(\.id) == ["codex", "claude", "old", "work"])
+    #expect(accounts.accounts(of: "claude").map(\.id) == ["claude", "old", "work"])
     #expect(accounts.accounts(of: "codex").map(\.id) == ["codex"])
     #expect(accounts.entries.first { $0.id == "work" }?.state == "signed-out")
+    #expect(accounts.startingAccount(of: "claude")?.id == "claude")
+}
+
+@Test func accountsFollowTheirPlaces() {
+    let accounts = ProviderAccountList(entries: [
+        ProviderAccountEntry(id: "claude", kind: "claude", order: 2),
+        ProviderAccountEntry(id: "work", kind: "claude", order: 0),
+        ProviderAccountEntry(id: "home", kind: "claude", order: 1),
+    ])
+    #expect(accounts.accounts(of: "claude").map(\.id) == ["work", "home", "claude"])
+    #expect(accounts.startingAccount(of: "claude")?.id == "work")
+}
+
+@Test func aPlacedAccountGoesAboveTheDefaultAndTheUnplacedFollowIt() throws {
+    let accounts = try list(
+        """
+        {
+            "accounts": {
+                "claude": { "kind": "claude" },
+                "b": { "kind": "claude" },
+                "a": { "kind": "claude" },
+                "work": { "kind": "claude", "order": 0, "enabled": false },
+                "home": { "kind": "claude", "order": 1 }
+            },
+            "statuses": []
+        }
+        """)
+    #expect(accounts.accounts(of: "claude").map(\.id) == ["work", "home", "claude", "a", "b"])
+    #expect(accounts.startingAccount(of: "claude")?.id == "home")
 }
 
 @Test func aDefaultAccountNobodyNamedGoesByItsCLIsName() throws {
