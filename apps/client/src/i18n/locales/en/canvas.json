@@ -170,7 +170,16 @@
         "previous": "Previous prompt",
         "next": "Next prompt",
         "position": "{{index}} of {{count}}",
-        "failed": "This prompt could not be shown"
+        "failed": "This prompt could not be shown",
+        "fold": "Fold prompt",
+        "open": "Open prompt",
+        "waiting_one": "{{count}} waiting",
+        "waiting_other": "{{count}} waiting",
+        "snoozed_one": "{{count}} snoozed",
+        "snoozed_other": "{{count}} snoozed",
+        "snoozedList": "Snoozed prompts",
+        "prompts_one": "{{count}} prompt",
+        "prompts_other": "{{count}} prompts"
     },
     "text": {
         "placeholder": "Type something",

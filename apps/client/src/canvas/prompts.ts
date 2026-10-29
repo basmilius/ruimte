@@ -14,15 +14,20 @@ import { waitingRequestsOf, type ChatsById, type ChatState } from '@adecore/agen
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import { computerPrompt, proposalPrompt, ruimtePayloadOf, secretPrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
 import { nodeStatus, type SessionsByKey } from '@/state/sessions';
+import { snoozeOf, type Snoozes } from '@/state/snooze';
 
 export interface CanvasPrompt {
     id: string;
     subject: PromptSubject;
     sourceNodeId?: string;
+    /* The node on the canvas the prompt belongs to, which a snooze is set on: a design node for each of its chats, a parent chat for its sub-agents. */
+    ownerId: string;
     title: string;
     provider: AgentKind | null;
     surface: 'chat' | 'terminal';
 }
+
+type AskingNode = CanvasPromptsInput['nodes'][number] & { ownerId: string };
 
 export interface CanvasPromptsInput {
     nodes: readonly Pick<CanvasNode, 'id' | 'kind' | 'title' | 'provider' | 'machine' | 'chats'>[];
@@ -38,10 +43,14 @@ export interface CanvasPromptsInput {
     proposals?: readonly ProjectProposal[];
     /* When each waiting terminal was first seen waiting, by session key, as the previous call returned it. */
     waitingSince: ReadonlyMap<string, number>;
+    /* The snoozes that stand; a prompt whose owner is snoozed goes to `snoozed`, out of the stack. */
+    snoozes?: Snoozes;
 }
 
 export interface CanvasPrompts {
     prompts: CanvasPrompt[];
+    /* The prompts of snoozed owners, in the same order, for the way back early. */
+    snoozed: CanvasPrompt[];
     waitingSince: Map<string, number>;
 }
 
@@ -60,20 +69,29 @@ export function canvasPrompts({
     computer,
     secrets = [],
     proposals = [],
-    waitingSince
+    waitingSince,
+    snoozes = {}
 }: CanvasPromptsInput): CanvasPrompts {
     const prompts: CanvasPrompt[] = [];
     const since = new Map(waitingSince);
-    const add = (node: CanvasPromptsInput['nodes'][number], subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
-        prompts.push({ id: promptIdOf(subject), subject, title: node.title, provider, surface });
+    const snoozedOwners = new Set<string>();
+    const add = (node: AskingNode, subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
+        prompts.push({ id: promptIdOf(subject), subject, ownerId: node.ownerId, title: node.title, provider, surface });
     // A design node asks as each of its chats, the one under its own id and every later one.
-    const asked = nodes.flatMap((node): CanvasPromptsInput['nodes'][number][] =>
+    const asked = nodes.flatMap((node): AskingNode[] =>
         node.kind === 'design'
             ? [
-                  { ...node, kind: 'chat' },
-                  ...designNodeChats(node).map((chat) => ({ ...node, id: chat.id, kind: 'chat' as const, title: chat.name, provider: chat.node.provider }))
+                  { ...node, kind: 'chat', ownerId: node.id },
+                  ...designNodeChats(node).map((chat) => ({
+                      ...node,
+                      id: chat.id,
+                      kind: 'chat' as const,
+                      title: chat.name,
+                      provider: chat.node.provider,
+                      ownerId: node.id
+                  }))
               ]
-            : [node]
+            : [{ ...node, ownerId: node.id }]
     );
     for (const node of asked) {
         if (node.kind !== 'chat' && node.kind !== 'terminal') {
@@ -81,6 +99,9 @@ export function canvasPrompts({
         }
         const machine = endpointOfNode(node, endpointId);
         const key = endpointKey(machine, node.id);
+        if (snoozeOf(snoozes, machine, node.ownerId) !== null) {
+            snoozedOwners.add(node.ownerId);
+        }
         const provider = (node.kind === 'chat' ? chats[key]?.info.provider : sessions[key]?.agent?.kind) ?? node.provider ?? null;
         for (const request of computer) {
             if (request.nodeId === node.id) {
@@ -107,6 +128,7 @@ export function canvasPrompts({
                         id: promptIdOf(subject),
                         subject,
                         sourceNodeId: node.id,
+                        ownerId: node.ownerId,
                         title: node.title,
                         provider: subject.source?.provider ?? provider,
                         surface: 'chat'
@@ -132,12 +154,14 @@ export function canvasPrompts({
             }
         }
     }
+    const ordered = orderPrompts(
+        prompts.filter((prompt, index) => prompts.findIndex((other) => other.id === prompt.id) === index),
+        (prompt) => isBlockingSubject(prompt.subject),
+        (prompt) => promptCreatedAt(prompt.subject)
+    );
     return {
-        prompts: orderPrompts(
-            prompts.filter((prompt, index) => prompts.findIndex((other) => other.id === prompt.id) === index),
-            (prompt) => isBlockingSubject(prompt.subject),
-            (prompt) => promptCreatedAt(prompt.subject)
-        ),
+        prompts: ordered.filter((prompt) => !snoozedOwners.has(prompt.ownerId)),
+        snoozed: ordered.filter((prompt) => snoozedOwners.has(prompt.ownerId)),
         waitingSince: since
     };
 }
@@ -188,6 +212,7 @@ export function samePrompts(a: readonly CanvasPrompt[], b: readonly CanvasPrompt
                 prompt.id === other.id &&
                 prompt.title === other.title &&
                 prompt.sourceNodeId === other.sourceNodeId &&
+                prompt.ownerId === other.ownerId &&
                 prompt.provider === other.provider &&
                 prompt.subject.kind === other.subject.kind &&
                 (prompt.subject.kind !== 'chat' ||
