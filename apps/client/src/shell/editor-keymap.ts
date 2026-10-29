@@ -39,6 +39,10 @@ export const RUIMTE_EDITOR_KEYMAP = resolveKeymap({
     methodDown: {
         other: 'Ctrl+ArrowDown'
     },
+    // Only a diff answers it, where Method Down has no file to step through, so off macOS it shares Ctrl+Down with it instead of IntelliJ's F4.
+    jumpToSource: {
+        other: 'Ctrl+ArrowDown'
+    },
     // Off macOS the IntelliJ keys for the code block are Ctrl with a bracket, which History Back and Previous View hold in Ruimte.
     codeBlockStart: {
         mac: 'Ctrl+Alt+[',

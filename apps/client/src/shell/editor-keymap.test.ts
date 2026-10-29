@@ -162,13 +162,18 @@ describe('the keys of the statement, clipboard, word, change and navigation comm
             const seen = new Map<string, string>();
             for (const id of KEYMAP_IDS) {
                 const found = shortcutFor(id, apple);
-                if (found === undefined) {
+                // Only a diff answers Jump to Source, which no file's editor shows.
+                if (found === undefined || id === 'jumpToSource') {
                     continue;
                 }
                 const key = signature(found, apple);
                 expect(seen.get(key), `${id} shares ${key} with ${seen.get(key)}`).toBeUndefined();
                 seen.set(key, id);
             }
+        });
+
+        test(`opens the file from a diff with ${apple ? 'Cmd' : 'Ctrl'}+Down on ${platform}`, () => {
+            expect(signature(shortcutFor('jumpToSource', apple)!, apple)).toBe(signature(shortcut(apple ? 'Meta+ArrowDown' : 'Ctrl+ArrowDown'), apple));
         });
     }
 });

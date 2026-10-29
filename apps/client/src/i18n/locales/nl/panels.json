@@ -124,6 +124,7 @@
             "copyCommit": "Commit hash kopiëren",
             "keepInSidebar": "In zijbalk houden",
             "openItself": "Bestand openen",
+            "openItselfAt": "Bestand openen op regel {{line}}",
             "pin": "Tab vastzetten",
             "stage": "Bestand stagen",
             "unpin": "Tab losmaken",

@@ -38,6 +38,7 @@ import { languageForCommand } from '@/language/focused-language';
 import { languageCommandRows } from '@/language/language-commands';
 import { editorCommandRows } from '@/shell/editor-commands';
 import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
+import { openFileAtDiffCaret } from '@/shell/panels/diff-caret';
 import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
@@ -381,6 +382,10 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
                   row(
                       'find-previous',
                       afterPaletteCloses(() => stepFocusedEditorFind(-1))
+                  ),
+                  row(
+                      'open-file-at-line',
+                      afterPaletteCloses(() => openFileAtDiffCaret())
                   ),
                   row(
                       'next-problem',

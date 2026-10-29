@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { DiffSourceLine } from '@adecore/merge';
 import type { FileTreeVisibleRow } from '@pierre/trees';
 import type { GitDiffFile } from '@ruimte/contracts';
 import { diffFileParts, firstFile, folderParts } from '@/shell/panels/commit-tree';
@@ -19,6 +20,8 @@ interface CommitFileTreeProps {
     marks?(file: GitDiffFile): DecorationPart[];
     /* Where the paths count from, and the commit they are part of; without it a row has no menu. */
     menu?: { cwd: string; commit?: string };
+    /* Where the caret of the shown file's diff stands in the file, which its row's menu opens it at. */
+    caret?: DiffSourceLine;
 }
 
 /*
@@ -26,7 +29,7 @@ interface CommitFileTreeProps {
  * A commit is read, not staged, so a row has no box and its menu only reads: selecting it is what
  * shows its diff, by the pointer or by the arrow keys, and the keyboard stays here while it does.
  */
-export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, menu }: CommitFileTreeProps) {
+export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, menu, caret }: CommitFileTreeProps) {
     const { t } = useTranslation('panels');
     /* The file a right click landed on, which the menu acts on. */
     const [menuPath, setMenuPath] = useState<string | null>(null);
@@ -141,6 +144,7 @@ export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, me
                         path={menuFile.path}
                         gone={menuFile.kind === 'delete'}
                         commit={menu.commit}
+                        caret={menuFile.path === shown ? caret : undefined}
                         onOpenChanges={() => selectOnly(model, menuFile.path)}
                     />
                 )}
