@@ -10,7 +10,7 @@
         "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
     },
     "dependencies": {
-        "@adecore/agents": "0.46.3",
+        "@adecore/agents": "0.47.0",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
         "@sentry/cloudflare": "11.8.0",

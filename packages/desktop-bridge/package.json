@@ -10,7 +10,7 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "@adecore/shell": "0.46.3",
+        "@adecore/shell": "0.47.0",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*"
     },
