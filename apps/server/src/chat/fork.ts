@@ -196,11 +196,14 @@ function folderLine(cut: Cut, files: ForkFiles): string {
         : 'You work in the same folder as the original; its files may be newer than that turn, so check before you assume.';
 }
 
-/* What the person reads under the copied history, and what the agent is told in front of its first prompt. */
+/*
+ * What the person reads under the copied history, after "Forked", and what the agent is told in front of
+ * its first prompt. The note leaves the original's name to the line or the chip it stands under.
+ */
 function forkNotes(cut: Cut, original: { id: string; title: string; view: boolean }, files: ForkFiles): { note: string; preamble: string } {
     const counted = cut.exact || cut.last ? '' : ' The cut was made by counting turns, since this turn is older than the names the CLI gives them.';
     const outside = files.kind === 'shared' && !files.repository ? ' The folder is in no git repository, so the fork has no worktree of its own.' : '';
-    const note = `Forked from ${original.title} after ${cutPlace(cut)}. ${filesLine(cut, files)}${outside}${counted}`;
+    const note = `after ${cutPlace(cut)}. ${filesLine(cut, files)}${outside}${counted}`;
     const preamble = [
         `Ruimte: this conversation was forked from ${original.view ? 'view' : 'node'} ${original.id} ("${original.title}") after ${cutPlace(cut)}; what follows that turn there did not happen here.`,
         folderLine(cut, files),
@@ -212,10 +215,10 @@ function forkNotes(cut: Cut, original: { id: string; title: string; view: boolea
 /* The CLIs with a chat that can be forked and go on a fork. */
 const CHAT_CLIS: ReadonlySet<AgentKind> = new Set(['claude', 'codex']);
 
-/* What the person reads under the copied history of a fork that goes on with another CLI. */
+/* What the person reads under the copied history of a fork that goes on with another CLI, after "Forked". */
 function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
     const read = handoff.all ? 'the whole conversation' : `the last ${handoff.turns === 1 ? 'turn' : `${handoff.turns} turns`}`;
-    return `Forked from ${original.title} after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
+    return `after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
 }
 
 function cliRefusal(error: unknown): ChatError {
@@ -448,7 +451,17 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
         cut,
         now
     });
-    const items: ChatItem[] = [...copied, { id: `note-fork-${now}`, kind: 'note', createdAt: now, turnId: null, level: 'info', text: notes.note }];
+    // Said as a message from the original, so a client draws it under a chip that opens it.
+    const note: ChatItem = {
+        id: `note-fork-${now}`,
+        kind: 'note',
+        createdAt: now,
+        turnId: null,
+        level: 'info',
+        text: `Forked from ${originalTitle} ${notes.note}`,
+        message: { from: payload.chatId, title: originalTitle, text: `Forked ${notes.note}` }
+    };
+    const items: ChatItem[] = [...copied, note];
     undo.push(() => deps.deleteRecord(forkId));
     await undo.guard(async () => {
         await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);

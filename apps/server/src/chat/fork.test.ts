@@ -94,7 +94,12 @@ describe('forking a Claude chat', () => {
         expect(turnsOf(record.items).map((turn) => turn.id)).toEqual([turns[0]!.id, turns[1]!.id]);
         expect(record.items.at(-1)).toMatchObject({
             kind: 'note',
-            text: 'Forked from Lexer after turn 2 of 4. The files stay as they are now, which may be newer than that turn. The folder is in no git repository, so the fork has no worktree of its own.'
+            text: 'Forked from Lexer after turn 2 of 4. The files stay as they are now, which may be newer than that turn. The folder is in no git repository, so the fork has no worktree of its own.',
+            message: {
+                from: 'chat-lead',
+                title: 'Lexer',
+                text: 'Forked after turn 2 of 4. The files stay as they are now, which may be newer than that turn. The folder is in no git repository, so the fork has no worktree of its own.'
+            }
         });
         expect(record.preambles).toEqual([expect.stringContaining('forked from node chat-lead ("Lexer") after turn 2 of 4')]);
 
