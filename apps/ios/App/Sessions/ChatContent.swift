@@ -255,7 +255,7 @@ struct ChatPill: Hashable, Sendable {
         case code
         case file(String)
         case skill
-        /// A view, node or chat, by its kind.
+        /// A view, node or chat, by the Lucide mark its sidebar row wears.
         case reference(String)
     }
 
@@ -269,7 +269,7 @@ struct ChatPill: Hashable, Sendable {
         case .code: nil
         case .file(let path): FileKinds.icon(name: path, kind: path.hasSuffix("/") ? "directory" : "file")
         case .skill: "zap"
-        case .reference(let kind): ChatReferables.icon(kind)
+        case .reference(let mark): mark
         }
     }
 
@@ -333,8 +333,8 @@ enum ChatInlineMarks {
             switch token.kind {
             case "#":
                 guard !references.named || !links.contains(where: { $0.overlaps(span) }) else { continue }
-                let kind = lookup.item(token.value)?.kind ?? "text"
-                pills.append((span, .reference(kind), chipFont, ChatReferables.url(token.value)))
+                let mark = lookup.item(token.value)?.mark ?? ChatReferables.icon("text")
+                pills.append((span, .reference(mark), chipFont, ChatReferables.url(token.value)))
             case "$": pills.append((span, .skill, chipFont, nil))
             default: pills.append((span, .file(token.value), chipFont, nil))
             }

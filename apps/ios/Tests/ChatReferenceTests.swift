@@ -60,6 +60,25 @@ import XCTest
         XCTAssertEqual(offered.map(\.detail), fixture.referables.map(\.detail))
     }
 
+    func testAReferenceWearsTheMarkItsSidebarRowWears() throws {
+        let json = """
+            [
+                {"kind": "canvas", "id": "canvas", "name": "Canvas", "nodes": [
+                    {"id": "chat-lead", "kind": "chat", "title": "Lead"},
+                    {"id": "node-sketch", "kind": "drawing", "title": "Sketch", "viewId": "drawing-sketch"}
+                ]},
+                {"kind": "drawing", "id": "drawing-sketch", "name": "Sketch", "icon": {"kind": "lucide", "value": "brain"}},
+                {"kind": "chat", "id": "chat-plan", "name": "Plan"}
+            ]
+            """
+        let views = try JSONDecoder().decode([JSONValue].self, from: Data(json.utf8))
+        let offered = ChatReferables.project(views: views, chatID: "chat-lead")
+        XCTAssertEqual(offered.map(\.id), ["drawing-sketch", "canvas", "chat-plan"])
+        XCTAssertEqual(offered.map(\.mark), ["brain", "frame", "message-square"])
+        let lookup = ChatReferenceLookup(items: offered, known: true)
+        XCTAssertEqual(ChatReferenceChip.look("drawing-sketch", chat: false, lookup: lookup).icon, "brain")
+    }
+
     func testAReferenceSentFromTheIPhoneCarriesWhatTheDesktopSends() async throws {
         let fixture = try fixture()
         let client = ReferenceClientFake()

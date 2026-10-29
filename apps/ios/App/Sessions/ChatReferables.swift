@@ -15,6 +15,10 @@ struct ChatReferable: Equatable, Identifiable, Sendable {
     /// What tells it apart from another of the same name and kind: the canvas it stands on.
     var detail: String?
     let group: Group
+    /// The Lucide mark its row in the sidebar wears, such as the icon a person picked; nil wears its kind's.
+    var icon: String?
+
+    var mark: String { icon ?? ChatReferables.icon(kind) }
 }
 
 /// Where a chat finds what its `#` offers. Closures, so the picker reads the project as it is when it asks.
@@ -41,7 +45,9 @@ enum ChatReferables {
         }
         var onCanvas: [ChatReferable] = []
         if let canvas {
-            onCanvas += canvas.list("nodes").compactMap { node in node.stableID == chatID ? nil : nodeReferable(node) }
+            onCanvas += canvas.list("nodes").compactMap { node in
+                node.stableID == chatID ? nil : nodeReferable(node, views: views)
+            }
             onCanvas += canvas.list("texts").map { text in
                 ChatReferable(id: text.stableID, name: textName(text.text("text")), kind: "text", group: .canvas)
             }
@@ -198,22 +204,27 @@ enum ChatReferables {
 
     /// A node as a `#` reaches it, or nil for one no verb reaches: a group, a node with nothing to read, one on another
     /// machine. A node showing a drawing or a diagram stands for that view.
-    private static func nodeReferable(_ node: JSONValue) -> ChatReferable? {
+    private static func nodeReferable(_ node: JSONValue, views: [JSONValue]) -> ChatReferable? {
         if let machine = node["machine"], machine != .null { return nil }
         let kind = node.text("kind")
         let title = node.text("title")
+        let icon = WorkspaceViewIcon.name(for: node)
         switch kind {
         case "chat", "terminal", "note", "browser":
-            return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas)
+            return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
         case "drawing", "diagram":
             let viewID = node.text("viewId")
-            return viewID.isEmpty ? nil : ChatReferable(id: viewID, name: title, kind: kind, group: .canvas)
+            guard !viewID.isEmpty else { return nil }
+            // The node stands for its view, so it wears the view's mark.
+            let view = views.first { $0.stableID == viewID }
+            return ChatReferable(
+                id: viewID, name: title, kind: kind, group: .canvas, icon: view.map(WorkspaceViewIcon.name) ?? icon)
         case "file":
             return node.text("path").isEmpty
-                ? nil : ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas)
+                ? nil : ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
         case "device":
             guard let device = node["device"], device != .null else { return nil }
-            return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas)
+            return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
         default:
             return nil
         }
@@ -222,7 +233,9 @@ enum ChatReferables {
     private static func viewReferable(_ view: JSONValue) -> ChatReferable? {
         let kind = view.text("kind")
         guard viewKinds.contains(kind), !unlisted(view) else { return nil }
-        return ChatReferable(id: view.stableID, name: view.text("name"), kind: kind, group: .views)
+        return ChatReferable(
+            id: view.stableID, name: view.text("name"), kind: kind, group: .views,
+            icon: WorkspaceViewIcon.name(for: view))
     }
 
     /// A chat nobody wrote in yet, or a view that is shown nowhere (an inline chat, another machine's canvas).

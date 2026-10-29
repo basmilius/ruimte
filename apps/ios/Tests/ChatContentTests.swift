@@ -148,9 +148,9 @@ final class ChatContentTests: XCTestCase {
             references: ChatInlineReferences(
                 picked: [ChatDraftReference(id: "sketch", title: "Sketch")], lookup: lookup))
         let pills = marked.runs[ChatPillAttribute.self].compactMap { pill, _ in pill?.kind }
-        XCTAssertEqual(pills, [.reference("drawing"), .code])
+        XCTAssertEqual(pills, [.reference("pen-tool"), .code])
         XCTAssertEqual(marked.runs[\.link].compactMap(\.0).first, ChatReferables.url("sketch"))
-        XCTAssertEqual(ChatPill(kind: .reference("drawing"), id: 0).icon, "pen-tool")
+        XCTAssertEqual(ChatPill(kind: .reference("pen-tool"), id: 0).icon, "pen-tool")
     }
 
     func testAReplyNamesAViewByExactlyItsNameAndTheLongestNameWins() {

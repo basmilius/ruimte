@@ -234,7 +234,7 @@ struct ChatReferenceChip: View {
                 opens: false, gone: true)
         }
         return Look(
-            id: id, icon: ChatReferables.icon(item.kind),
+            id: id, icon: item.mark,
             title: item.name.isEmpty ? String(localized: "Untitled") : item.name, opens: true, gone: false)
     }
 }
