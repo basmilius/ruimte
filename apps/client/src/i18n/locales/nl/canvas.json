@@ -170,7 +170,16 @@
         "previous": "Vorige prompt",
         "next": "Volgende prompt",
         "position": "{{index}} van {{count}}",
-        "failed": "Deze prompt kon niet worden getoond"
+        "failed": "Deze prompt kon niet worden getoond",
+        "fold": "Prompt inklappen",
+        "open": "Prompt openen",
+        "waiting_one": "{{count}} wachtend",
+        "waiting_other": "{{count}} wachtend",
+        "snoozed_one": "{{count}} gesnoozed",
+        "snoozed_other": "{{count}} gesnoozed",
+        "snoozedList": "Gesnoozede prompts",
+        "prompts_one": "{{count}} prompt",
+        "prompts_other": "{{count}} prompts"
     },
     "text": {
         "placeholder": "Typ iets",
