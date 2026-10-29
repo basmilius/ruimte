@@ -1066,7 +1066,7 @@ const MOTION_RIGS: Record<string, MotionRig> = {
         eyes: [[18, 7]],
         ticks: 8,
         anchor: [17, 4]
-    },
+    }
 };
 
 function rigOf(pet: PetDesign): MotionRig {
