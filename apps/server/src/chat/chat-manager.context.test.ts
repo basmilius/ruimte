@@ -327,7 +327,7 @@ describe('a message another node left', () => {
                 terminal: () => null,
                 // No outbox in these tests, so the message waits for the turn the test sends itself.
                 chat: async (id) => (manager.get(id) === undefined ? 'none' : 'running'),
-                fromMessage: () => false
+                wokenBy: () => []
             },
             notice
         );

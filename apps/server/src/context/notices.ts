@@ -18,7 +18,7 @@ export function noticeNote(notice: Notice): string {
  * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
 export function messageText(count: number): string {
-    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. A message starts one turn and no further: what you send from this turn is read by that node at the start of its next one.`;
+    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. A message starts one turn: your answer wakes the node that asked once, and anything else you send from this turn is read by its node at the start of its next one.`;
 }
 
 /* What a person reads above the turn in the thread: who it came from, by the name they see on the canvas. */
@@ -38,7 +38,8 @@ export interface NoticeDelivery {
 }
 
 // Without this tail on every answer to a notify, a model polls the node it wrote to until it gives up.
-export const NO_REPLY_NOTICE = 'nothing comes back to you, and ruimte-context task new is what brings a result back';
+export const NO_REPLY_NOTICE =
+    'do not wait on it: an answer reaches you only as a message of its own, and ruimte-context task new is what brings a result back';
 
 function delivered(at: NoticeDelivery['at'], wake: boolean, detail: string): NoticeDelivery {
     return { at, wake, detail: `${detail}; ${NO_REPLY_NOTICE}` };
@@ -60,7 +61,7 @@ function chatDelivered({ outcome, waiting }: ChatDelivery): NoticeDelivery {
             return delivered(
                 'waiting',
                 false,
-                `a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (${count})`
+                `a message started the turn you are in, and from such a turn only an answer to a node that asked wakes it; that chat reads this one in front of its next turn (${count})`
             );
         case 'wake':
             return delivered('now', true, 'that chat takes a turn on it, and reads it there');

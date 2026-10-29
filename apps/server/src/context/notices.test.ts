@@ -52,7 +52,7 @@ describe('the words of a message', () => {
         expect(messageLabel([notice('term-1', 'shell')])).toBe('Message from shell');
         expect(messageLabel([notice('term-1', 'shell'), notice('term-3', ''), notice('term-1', 'shell')])).toBe('Messages from shell, node term-3');
         expect(messageText(2)).toStartWith('2 agents of this project sent you the messages above.');
-        expect(messageText(1)).toContain('A message starts one turn and no further');
+        expect(messageText(1)).toContain('your answer wakes the node that asked once');
     });
 });
 
@@ -60,7 +60,7 @@ describe('deliverNotice', () => {
     const targets = (overrides: Partial<NoticeTargets> = {}): NoticeTargets => ({
         terminal: () => null,
         chat: async () => 'none',
-        fromMessage: () => false,
+        wokenBy: () => [],
         ...overrides
     });
 
@@ -120,25 +120,25 @@ describe('deliverNotice', () => {
     test('a sender in a turn a message started wakes nobody, and hears why', async () => {
         const delivery = await deliverNotice(
             store,
-            targets({ chat: async () => 'idle', fromMessage: (id) => id === 'term-1' }),
+            targets({ chat: async () => 'idle', wokenBy: (id) => (id === 'term-1' ? ['chat-9'] : []) }),
             left('and what about the tests', 'chat-2')
         );
         expect(delivery).toEqual({
             at: 'waiting',
             wake: false,
             detail: answer(
-                'a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+                'a message started the turn you are in, and from such a turn only an answer to a node that asked wakes it; that chat reads this one in front of its next turn (1 waiting)'
             )
         });
         expect(store.waiting('chat-2')).toHaveLength(1);
     });
 
     /* The sender reads this line at the one moment it decides whether to wait, so every road out says it. */
-    test('every answer tells the sender that nothing comes back, and what does', async () => {
+    test('every answer tells the sender not to wait, and what brings a result back', async () => {
         const deliveries = [
             await deliverNotice(store, targets({ chat: async () => 'idle' }), left('the build is green', 'chat-2')),
             await deliverNotice(store, targets({ chat: async () => 'running' }), left('and the tests', 'chat-3')),
-            await deliverNotice(store, targets({ chat: async () => 'idle', fromMessage: () => true }), left('and the docs', 'chat-4')),
+            await deliverNotice(store, targets({ chat: async () => 'idle', wokenBy: () => ['chat-9'] }), left('and the docs', 'chat-4')),
             await deliverNotice(store, targets(), left('and the types', 'chat-5')),
             await deliverNotice(store, targets({ terminal: () => ({ agent: null, notice: () => {} }) }), left('and the lint', 'term-9')),
             await deliverNotice(store, targets({ terminal: () => ({ agent: agent('claude'), notice: () => {} }) }), left('and the rest', 'term-8'))
@@ -146,6 +146,8 @@ describe('deliverNotice', () => {
         for (const delivery of deliveries) {
             expect(delivery.detail).toEndWith(`; ${NO_REPLY_NOTICE}`);
         }
-        expect(NO_REPLY_NOTICE).toBe('nothing comes back to you, and ruimte-context task new is what brings a result back');
+        expect(NO_REPLY_NOTICE).toBe(
+            'do not wait on it: an answer reaches you only as a message of its own, and ruimte-context task new is what brings a result back'
+        );
     });
 });
