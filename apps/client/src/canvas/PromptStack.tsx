@@ -29,6 +29,9 @@ import { ButtonGroup, ErrorBoundary, Icon, IconButton, Menu, Pill, Tooltip } fro
 /* Marks the chevron that folds or opens the stack, which keeps the keyboard across the change. */
 const FOLD_ATTRIBUTE = 'data-prompt-fold';
 
+/* Names the node of a row in the snoozed list, so a request for that node can put the keyboard on it. */
+const SNOOZED_OWNER_ATTRIBUTE = 'data-snoozed-owner';
+
 function idOf(prompt: CanvasPrompt): string {
     return prompt.id;
 }
@@ -61,12 +64,32 @@ function StackPlace({ viewId, dockShown, children }: { viewId: string; dockShown
 }
 
 /* One row per snoozed node, each ending its snooze early. The snooze clock takes a row out by itself once its time runs out. */
-function SnoozedMenu({ snoozed, open, onOpenChange }: { snoozed: readonly CanvasPrompt[]; open: boolean; onOpenChange(open: boolean): void }) {
+function SnoozedMenu({
+    snoozed,
+    open,
+    focusOwner,
+    onOpenChange
+}: {
+    snoozed: readonly CanvasPrompt[];
+    open: boolean;
+    focusOwner: string | null;
+    onOpenChange(open: boolean): void;
+}) {
     const { t } = useTranslation(['canvas', 'shell']);
     const endpointId = useEndpointId();
     const nodes = useCanvas((s) => s.nodes);
     const snoozes = useSnoozes((s) => s.byKey);
     const owners = [...new Set(snoozed.map((prompt) => prompt.ownerId))];
+    // After the menu put the keyboard on its list, so the row asked for is the one that is highlighted.
+    useEffect(() => {
+        if (!open || focusOwner === null) {
+            return;
+        }
+        const frame = requestAnimationFrame(() => {
+            document.querySelector<HTMLElement>(`[${SNOOZED_OWNER_ATTRIBUTE}="${CSS.escape(focusOwner)}"]`)?.focus({ preventScroll: true });
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [open, focusOwner]);
     const unsnooze = (ownerId: string, machine: string): void => {
         useSnoozes.getState().unsnooze(machine, ownerId);
         bringPromptToFront(ownerId);
@@ -86,8 +109,10 @@ function SnoozedMenu({ snoozed, open, onOpenChange }: { snoozed: readonly Canvas
                         const until = snoozeOf(snoozes, machine, ownerId);
                         const title = node?.title ?? snoozed.find((prompt) => prompt.ownerId === ownerId)!.title;
                         return (
-                            <Menu.Item key={ownerId} aria-label={`${t('shell:snooze.unsnooze')} ${title}`} onClick={() => unsnooze(ownerId, machine)}>
+                            <Menu.Item key={ownerId} {...{ [SNOOZED_OWNER_ATTRIBUTE]: ownerId }} onClick={() => unsnooze(ownerId, machine)}>
                                 <Icon icon={AlarmClockOff} size={14} />
+                                {/* Read as part of the row, so its name says what a press does and the count and time stay in it. */}
+                                <span className="sr-only">{`${t('shell:snooze.unsnooze')} `}</span>
                                 <span className="truncate">{title}</span>
                                 <span className="shrink-0 text-text-muted tabular-nums">
                                     {t('promptStack.prompts', { count: snoozed.filter((prompt) => prompt.ownerId === ownerId).length })}
@@ -194,6 +219,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     const { t } = useTranslation('canvas');
     const { prompts, snoozed } = useCanvasPrompts();
     const snoozedOpen = useSnoozedList((s) => s.openFor === viewId);
+    const focusOwner = useSnoozedList((s) => (s.openFor === viewId ? s.focusOwner : null));
     const setSnoozedOpen = (open: boolean): void => useSnoozedList.getState().setOpen(viewId, open);
     const canvasStore = useCanvasStore();
     const disabled = useTransportStatus() !== 'open';
@@ -227,22 +253,38 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
             return;
         }
         // A snoozed node stays snoozed; the list says why its prompt is not in front, with the way back.
-        if (snoozed.some((prompt) => asks(prompt, front.nodeId))) {
-            useSnoozedList.getState().setOpen(viewId, true);
+        const asleep = snoozed.find((prompt) => asks(prompt, front.nodeId));
+        if (asleep) {
+            useSnoozedList.getState().setOpen(viewId, true, asleep.ownerId);
             usePromptFront.getState().consume(front.seq);
         }
     }, [front, waiting, snoozed, setActive, viewId]);
 
     const folded = usePromptFold((s) => s.folded.has(viewId));
     const empty = waiting.length === 0;
+    /* Whether this stack has shown a prompt; a stack that mounts reads nothing at first, which is no quiet moment. */
+    const seenWaiting = useRef(false);
     // A fold lasts while something waits: what asks after a quiet moment is new, and arrives open.
     useEffect(() => {
-        if (empty) {
+        if (!empty) {
+            seenWaiting.current = true;
+            return;
+        }
+        if (seenWaiting.current) {
+            seenWaiting.current = false;
             usePromptFold.getState().open(viewId);
         }
     }, [empty, viewId]);
 
-    const snoozedMenu = snoozed.length > 0 && <SnoozedMenu snoozed={snoozed} open={snoozedOpen} onOpenChange={setSnoozedOpen} />;
+    const noneSnoozed = snoozed.length === 0;
+    // A list whose last row woke is gone, and stays closed for the next snooze.
+    useEffect(() => {
+        if (noneSnoozed) {
+            useSnoozedList.getState().setOpen(viewId, false);
+        }
+    }, [noneSnoozed, viewId]);
+
+    const snoozedMenu = !noneSnoozed && <SnoozedMenu snoozed={snoozed} open={snoozedOpen} focusOwner={focusOwner} onOpenChange={setSnoozedOpen} />;
 
     if (active === null) {
         return snoozedMenu ? (
@@ -269,7 +311,10 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     const step = (delta: number): void => {
         const next = waiting[index + delta];
         if (next) {
-            refocus.hold();
+            // Folded, the keyboard stays on the bar's chevron, which outlives the change; there is no card to take it.
+            if (!folded) {
+                refocus.hold();
+            }
             setActive(next.id);
         }
     };

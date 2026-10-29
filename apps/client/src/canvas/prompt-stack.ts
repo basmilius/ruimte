@@ -52,16 +52,19 @@ export const usePromptFold = create<PromptFoldStore>((set, get) => ({
 interface SnoozedListStore {
     /* The canvas whose list of snoozed prompts is open, by view id; a request for a snoozed node opens it. */
     openFor: string | null;
-    setOpen(viewId: string, open: boolean): void;
+    /* The node whose row takes the keyboard as the list opens: the snoozed node a request asked for. */
+    focusOwner: string | null;
+    setOpen(viewId: string, open: boolean, focusOwner?: string): void;
 }
 
 export const useSnoozedList = create<SnoozedListStore>((set, get) => ({
     openFor: null,
-    setOpen(viewId, open) {
+    focusOwner: null,
+    setOpen(viewId, open, focusOwner) {
         if (open) {
-            set({ openFor: viewId });
+            set({ openFor: viewId, focusOwner: focusOwner ?? null });
         } else if (get().openFor === viewId) {
-            set({ openFor: null });
+            set({ openFor: null, focusOwner: null });
         }
     }
 }));
@@ -77,14 +80,16 @@ export function focusPromptStack(): boolean {
     if (viewId === null) {
         return false;
     }
+    // Read before the fold opens: opening takes a focused chevron of the bar out of the page, and with it where the keyboard was.
+    const current = document.activeElement;
+    const fromOutside = current instanceof HTMLElement && !isInPromptStack(current);
     // Drawn now, so the card is there to take the keyboard on this same press.
     flushSync(() => usePromptFold.getState().open(viewId));
     const stack = document.querySelector<HTMLElement>(`[${PROMPT_STACK_ATTRIBUTE}="${CSS.escape(viewId)}"]`);
     if (!stack?.querySelector('.prompt-card')) {
         return false;
     }
-    const current = document.activeElement;
-    if (current instanceof HTMLElement && !current.closest(`[${PROMPT_STACK_ATTRIBUTE}]`)) {
+    if (fromOutside) {
         returnFocus = current;
     }
     return focusPromptStart(stack);

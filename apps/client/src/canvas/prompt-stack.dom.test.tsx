@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import type { ChatApprovalItem, ChatInfo, ChatQuestionItem, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
-import { usePromptFold, useSnoozedList } from '@/canvas/prompt-stack';
+import { bringPromptToFront, usePromptFold, useSnoozedList } from '@/canvas/prompt-stack';
 import { isApplePlatform } from '@/desktop/bridge';
+import { showView } from '@/project/views';
 import { useSnoozes } from '@/state/snooze';
 import { chatInfoOf } from '../../testing/chat-info';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -13,6 +14,7 @@ import { menuItem, openCanvasPage, type CanvasPage } from '../../testing/canvas-
 const WRITER: ProjectNode = { id: 'writer', kind: 'chat', title: 'Writer', x: 40, y: 80, w: 480, h: 520 };
 const TEAM: ProjectNode = { id: 'team', kind: 'group', title: 'Team', x: 0, y: 0, w: 600, h: 700, memberIds: [WRITER.id] };
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [TEAM, WRITER], texts: [], edges: [], layouts: [] };
+const OTHER: ProjectCanvasView = { kind: 'canvas', id: 'other', name: 'Other', nodes: [], texts: [], edges: [], layouts: [] };
 
 const SAMPLE = PROMPT_SAMPLES.find((sample) => sample.label === 'Permission · Command')!.items[0] as ChatApprovalItem;
 const WRITE: ChatApprovalItem = { ...SAMPLE, id: 'approval-write', requestId: 'write', decision: 'pending', createdAt: 100 };
@@ -66,7 +68,7 @@ beforeEach(async () => {
         info: chatId === WRITER.id ? WAITING : chatInfoOf(chatId),
         items: chatId === WRITER.id ? [ASK, WRITE] : []
     }));
-    canvas = await openCanvasPage(machine, [MAIN], () => stackCard() !== null);
+    canvas = await openCanvasPage(machine, [MAIN, OTHER], () => stackCard() !== null);
 });
 
 afterEach(async () => {
@@ -138,12 +140,65 @@ describe('the prompt stack of a canvas', () => {
     test('Unsnooze in the list ends the snooze and brings the card back', async () => {
         await snoozeFromRow();
         await clickOn(snoozedButton());
-        await until(() => document.querySelector('[role="menuitem"][aria-label="Unsnooze Writer"]') !== null);
-        await clickOn(document.querySelector('[role="menuitem"][aria-label="Unsnooze Writer"]'));
+        await until(() => menuItem('Unsnooze Writer') !== null);
+
+        expect(menuItem('Unsnooze Writer')!.textContent).toContain('2 prompts');
+
+        await clickOn(menuItem('Unsnooze Writer'));
 
         expect(machine.requests('snooze.clear')).toEqual([{ nodeId: WRITER.id }]);
         await until(() => stackCard() !== null);
         expect(snoozedButton()).toBeNull();
+    });
+
+    test('a list whose last row woke stays closed for the next snooze', async () => {
+        await snoozeFromRow();
+        await clickOn(snoozedButton());
+        await until(() => menuItem('Unsnooze Writer') !== null);
+        await act(async () => machine.emit('snooze.changed', { snoozes: [] }));
+        await until(() => stackCard() !== null);
+        await snoozeFromRow();
+
+        expect(snoozedButton()).not.toBeNull();
+        expect(menuItem('Unsnooze Writer')).toBeNull();
+    });
+
+    test('asking for a snoozed node opens the list on its row and leaves it snoozed', async () => {
+        await snoozeFromRow();
+        await act(async () => bringPromptToFront(WRITER.id));
+
+        await until(() => document.activeElement === menuItem('Unsnooze Writer'));
+        expect(machine.requests('snooze.clear')).toEqual([]);
+    });
+
+    test('a fold outlasts a visit to another canvas', async () => {
+        await clickOn(stackButton('Fold prompt'));
+        await act(async () => void showView(OTHER.id));
+        await until(() => document.querySelector(`[data-prompt-stack="${MAIN.id}"]`) === null);
+        await act(async () => void showView(MAIN.id));
+        await until(() => stackButton('Open prompt') !== null);
+
+        expect(stackCard()).toBeNull();
+    });
+
+    test('paging a folded stack keeps the keyboard on the bar', async () => {
+        await clickOn(stackButton('Fold prompt'));
+        await pressKey(stackButton('Open prompt')!, 'ArrowRight', { [MOD]: true, shiftKey: true });
+
+        expect(stack().textContent).toContain('Bash bun run check');
+        expect(document.activeElement).toBe(stackButton('Open prompt'));
+    });
+
+    test('Escape after the shortcut opened a folded stack hands the keyboard back to where it was', async () => {
+        const field = document.createElement('input');
+        canvas.page.host.append(field);
+        field.focus();
+        await pressKey(field, 'p', { [MOD]: true, shiftKey: true });
+        await clickOn(stackButton('Fold prompt'));
+        await pressKey(document.activeElement!, 'p', { [MOD]: true, shiftKey: true });
+        await pressKey(document.activeElement!, 'Escape');
+
+        expect(document.activeElement).toBe(field);
     });
 
     test('a snooze the machine sets or ends moves the card out of the stack and back', async () => {
