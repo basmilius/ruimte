@@ -463,7 +463,13 @@
         "tooLarge": "Die afbeelding is groter dan 256 KB",
         "unreadable": "Kon dat bestand niet lezen",
         "color": "Kleur",
-        "defaultColor": "Standaard"
+        "defaultColor": "Standaard",
+        "accounts": "Accounts",
+        "accountsNote": "Alleen op deze machine, voor jou. Collega's kiezen hun eigen.",
+        "accountsFailed": "Kon de accounts van dit project niet wijzigen",
+        "defaultAccount": "Standaardaccount voor {{provider}} in dit project",
+        "machineDefault": "Standaard van de machine ({{account}})",
+        "offerAccount": "{{account}} aanbieden in dit project"
     },
     "linkMachine": {
         "title": "Machine koppelen met code",

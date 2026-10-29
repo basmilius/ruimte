@@ -463,7 +463,13 @@
         "tooLarge": "That image is larger than 256 KB",
         "unreadable": "Could not read that file",
         "color": "Color",
-        "defaultColor": "Default"
+        "defaultColor": "Default",
+        "accounts": "Accounts",
+        "accountsNote": "Only on this machine, for you. Colleagues choose their own.",
+        "accountsFailed": "Could not change the accounts of this project",
+        "defaultAccount": "Default account for {{provider}} in this project",
+        "machineDefault": "Machine default ({{account}})",
+        "offerAccount": "Offer {{account}} in this project"
     },
     "linkMachine": {
         "title": "Link machine with code",

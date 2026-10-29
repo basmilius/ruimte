@@ -3,6 +3,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { countProjectOpened, countViewShown } from '../stats/usage-stats.ts';
 import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from '../projects/inline-chat.ts';
 import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
+import { setProjectAccounts } from '../projects/project-accounts.ts';
 
 export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectStore, written?: ChatWritten, inline?: InlineChatHost): void {
     dispatcher.register('project.sidebar', () => store.sidebar());
@@ -47,6 +48,8 @@ export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectSt
     dispatcher.register('project.setIcon', async (payload) => ({ summary: await store.setIcon(payload) }));
 
     dispatcher.register('project.setIdentity', async (payload) => ({ summary: await store.setIdentity(payload) }));
+
+    dispatcher.register('project.setAccounts', async (payload) => ({ accounts: await setProjectAccounts(store, payload) }));
 
     dispatcher.register('project.newChat', (payload) => newScratchChat(store, payload, written));
 
