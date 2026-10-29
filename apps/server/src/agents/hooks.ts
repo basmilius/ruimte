@@ -72,7 +72,8 @@ export function requestOfHook(body: unknown, createdAt: number): AgentRequest | 
     }
     const hook = body as Record<string, unknown>;
     const toolName = asString(hook.tool_name);
-    const question = hook.hook_event_name === 'PreToolUse' && toolName !== null && ASKING_TOOLS.has(toolName);
+    // In bypass Claude Code still asks for an asking tool's permission after its PreToolUse, and that request takes the question's place.
+    const question = (hook.hook_event_name === 'PreToolUse' || hook.hook_event_name === 'PermissionRequest') && toolName !== null && ASKING_TOOLS.has(toolName);
     if (!toolName || (!question && hook.hook_event_name !== 'PermissionRequest')) {
         return null;
     }

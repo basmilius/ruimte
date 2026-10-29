@@ -23,6 +23,19 @@ describe('normalizeHook', () => {
         expect(requestOfHook(hook('PostToolUse'), 2)).toBeNull();
     });
 
+    test('the permission request a bypass session still sends for a question stays that question', () => {
+        const body = hook('PermissionRequest', {
+            tool_name: 'AskUserQuestion',
+            tool_input: { questions: [{ question: 'Which database?', options: [{ label: 'SQLite' }, { label: 'Postgres' }] }] }
+        });
+
+        expect(requestOfHook(body, 1)).toMatchObject({ kind: 'question', toolName: 'AskUserQuestion', text: 'Which database?\n• SQLite\n• Postgres' });
+        expect(requestOfHook(hook('PermissionRequest', { tool_name: 'Bash', tool_input: { command: 'bun test' } }), 2)).toMatchObject({
+            kind: 'approval',
+            text: 'bun test'
+        });
+    });
+
     test('maps the lifecycle to running, needs-you, idle and gone', () => {
         expect(normalizeHook(hook('SessionStart'))?.status).toBe('idle');
         expect(normalizeHook(hook('UserPromptSubmit'))?.status).toBe('running');
