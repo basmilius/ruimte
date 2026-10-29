@@ -5,6 +5,7 @@ import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
 import { ONE_WRITE, idBatch } from './batch.ts';
 import { MAX_LINKS } from './links.ts';
 import { idList } from './nodes.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 import { MAX_TITLE_LENGTH, REVISION_ROW, SCOPE_LINE, field, placeOf, titleField, oneArgument, VIEW_FLAG } from './verb.ts';
 
 /* The flag `agent` and `team` take for the nodes their new agent has to be able to read at once. */
@@ -92,10 +93,11 @@ export const linkListAction = defineActionVerb('link', {
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
         'note\tA canvas with no lines on it prints only the revision row',
         REVISION_ROW,
+        PROJECT_LINE,
         SCOPE_LINE
     ],
     positionals: z.tuple([], { error: 'link list takes no arguments, only flags' }),
-    flags: z.object({ view: VIEW_FLAG }),
+    flags: z.object({ view: VIEW_FLAG, project: PROJECT_FLAG }),
     async run({ flags }, call) {
         const listed = await runAction(call, 'link.list', { viewId: await canvasIdFor(call, placeOf(call), flags.view) });
         return [...listed.edges.map((edge) => [edge.edgeId, edge.from, edge.to, field(edge.label ?? '')].join('\t')), `revision\t${listed.revision}`];

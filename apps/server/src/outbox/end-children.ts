@@ -24,6 +24,8 @@ interface EndChildrenWiringDeps {
     ended?: (nodeIds: readonly string[]) => Promise<void>;
     /* Ends what runs on another machine for a node, which nothing here shows. */
     remoteStop?: ((nodeId: string) => Promise<void>) | undefined;
+    /* Whether another project of this machine places the node, as it does the opener of an agent started there with `--project`. */
+    placedElsewhere?: (nodeId: string, projectId: string) => boolean;
 }
 
 export interface EndChildrenWiring {
@@ -53,7 +55,8 @@ export function wireEndChildren({
     now = Date.now,
     log = console.error,
     ended,
-    remoteStop
+    remoteStop,
+    placedElsewhere = () => false
 }: EndChildrenWiringDeps): EndChildrenWiring {
     const ending = endChildren({
         lineage,
@@ -81,13 +84,13 @@ export function wireEndChildren({
             early.set(projectId, ids);
             return;
         }
-        /* An agent another machine's agent opened has its opener there, and a chat Voice started has a
-           Voice session for one: neither opener is ever in this project, and a Voice session that ends
-           leaves what it started running. */
+        /* An agent another machine's agent opened has its opener there, a chat Voice started has a Voice
+           session for one, and one started with `--project` has it in another project here: none of them
+           is ever in this project, and a Voice session that ends leaves what it started running. */
         for (const openedBy of new Set(
             lineage
                 .orphans(projectId, ids)
-                .filter((orphan) => lineage.peerOf(orphan.nodeId) === null && !isVoiceActor(orphan.openedBy))
+                .filter((orphan) => lineage.peerOf(orphan.nodeId) === null && !isVoiceActor(orphan.openedBy) && !placedElsewhere(orphan.openedBy, projectId))
                 .map((orphan) => orphan.openedBy)
         )) {
             void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));

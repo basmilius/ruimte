@@ -58,6 +58,7 @@ import type { StartRemoteAgentPayload } from '../outbox/outbox.ts';
 import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
+import type { ReachHost } from './reach.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
 import type { TemplateStore } from '../templates/template-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
@@ -182,6 +183,8 @@ export interface CanvasHost {
     routines?: RoutineAgentHost;
     /* The editor templates an agent lists and adds to; absent on a host that keeps none. */
     templates?: Pick<TemplateStore, 'listForAgent' | 'addByAgent' | 'checkAgentAdd'>;
+    /* The other open projects an agent may reach with `--project`; absent on a host that reaches none. */
+    reach?: ReachHost;
 }
 
 /*
@@ -357,7 +360,7 @@ export interface ContextHost {
     /* One linked source as text; a source it cannot answer throws a `CodedError` that says why. */
     answer(targetId: string, sourceId: string, tail: number | null, subagent: string | null): Promise<ContextReading>;
     /* A source the caller reads without a line, such as a node of the canvas a chat view names. */
-    answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<ContextReading>;
+    answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null, projectId?: string): Promise<ContextReading>;
     /* What a person pointed this agent at with `#` or `@` in its messages, read again at every call. */
     referenced?(targetId: string): Reference[];
     /* The source behind an id the caller may read, by a line, a reference or as its own child; null for any other. */
@@ -461,6 +464,8 @@ export interface VerbCall {
     /* The session or chat id the bearer token speaks for. */
     caller: string;
     host: CanvasHost;
+    /* The other project `--project` named, as the route checked it; absent, the verb works in the caller's own. */
+    reached?: IndexedPlace;
     /* The rev of the project file the caller read before it decided on this write. */
     expectedRevision?: number;
 }
@@ -477,7 +482,7 @@ export const { defineVerb, defineAction, defineNoun, defineHelp, dryRunVerbNames
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree, launches, routine, database and language are the project itself, artifact is the Output of the project, plan, visual and chat are the chat of the caller, secret is a card in that chat for a launch, template the editor templates of the person on this machine and of the project, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you; a chat view has no lines and reads and operates every node of the canvas it names with --view';
+    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree, launches, routine, database and language are the project itself, project list names the other open projects that --project reaches on view list, node list, link list, read, notify, agent, team and task new, while a person lets agents reach them, artifact is the Output of the project, plan, visual and chat are the chat of the caller, secret is a card in that chat for a launch, template the editor templates of the person on this machine and of the project, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you; a chat view has no lines and reads and operates every node of the canvas it names with --view';
 
 /* What a snooze means to an agent, said wherever a list prints the column. */
 export const SNOOZE_LINE =
@@ -503,8 +508,14 @@ export function newNode(name = 'new node'): string {
 
 export const NEW_NODE = newNode();
 
-/* The project the caller is in, from the index of every known project: an open one would miss an agent whose person switched away. */
+/*
+ * The project the verb works in: the one `--project` reached, else the caller's own, from the index
+ * of every known project, since an open one would miss an agent whose person switched away.
+ */
 export function placeOf(call: VerbCall): IndexedPlace {
+    if (call.reached !== undefined) {
+        return call.reached;
+    }
     const place = call.host.projects.locate(call.caller);
     if (!place) {
         throw new VerbRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');

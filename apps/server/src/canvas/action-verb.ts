@@ -34,7 +34,8 @@ export function linesOf(details: unknown): string[] {
  * prints: a refusal under the action's own code, or a plain error for a handler that broke.
  */
 export async function runAction<Name extends ActionName>(call: VerbCall, name: Name, input: ActionInput<Name>, dryRun = false): Promise<ActionOutput<Name>> {
-    const result = await serverActions.execute(name, input, serverActionCall(call.host, placeOf(call), call.caller, dryRun, call.expectedRevision));
+    const origin = call.reached === undefined ? undefined : placeOf({ caller: call.caller, host: call.host });
+    const result = await serverActions.execute(name, input, serverActionCall(call.host, placeOf(call), call.caller, dryRun, call.expectedRevision, origin));
     if (result.status === 'needs_confirmation') {
         throw new VerbRefusal('confirmation-required', `${name} asks for a confirmation an agent cannot give`);
     }

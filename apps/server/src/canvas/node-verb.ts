@@ -3,6 +3,7 @@ import { MAX_PER_CALL } from '@ruimte/actions';
 import { COLOR_LINES } from '../actions/node-actions.ts';
 import { z } from 'zod';
 import { canvasIdFor, defineActionVerb, runAction } from './action-verb.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 import { ONE_WRITE, idBatch, jsonBatch } from './batch.ts';
 import { EVERY_KIND_LINE, JSON_NODE_KINDS, NODE_VERB_KINDS, REQUIRED_FLAG, kindLine, kindsFor } from './node-kinds.ts';
 import { MAX_CANVAS_NODES } from './nodes.ts';
@@ -316,10 +317,11 @@ export const nodeListAction = defineActionVerb('node', {
         SNOOZE_LINE,
         'see\truimte-context link list\tthe lines of the same canvas, which this list does not show',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
+        PROJECT_LINE,
         SCOPE_LINE
     ],
     positionals: z.tuple([], { error: 'node list takes no arguments, only flags' }),
-    flags: z.object({ view: VIEW_FLAG }),
+    flags: z.object({ view: VIEW_FLAG, project: PROJECT_FLAG }),
     async run({ flags }, call) {
         const listed = await runAction(call, 'node.list', { viewId: await canvasIdFor(call, placeOf(call), flags.view) });
         return [

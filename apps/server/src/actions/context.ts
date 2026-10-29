@@ -8,6 +8,11 @@ export interface ServerActionContext {
     host: CanvasHost;
     /* Where the caller stands, looked up by its id before the action runs: project, folder and canvas. */
     place: IndexedPlace;
+    /*
+     * Where the caller itself stands, set only when `place` is another project `--project` reached:
+     * whatever judges the caller (its kind, whether it is a chat) reads this one, never `place`.
+     */
+    origin?: IndexedPlace;
     /* Set only for the voice actor, so a handler open to Voice and an agent tells the two apart. */
     voice?: VoiceCaller;
 }
@@ -62,8 +67,8 @@ export function hostService<Key extends keyof CanvasHost>(context: ServerActionC
 }
 
 /* The kind of node the caller is, or null when it is no node of this project. */
-export async function callerNodeKind({ host, place }: ServerActionContext, caller: string): Promise<string | null> {
-    return callerKind(await host.projects.read(place.projectId), caller) ?? host.hiddenAgents?.get(caller)?.node.kind ?? null;
+export async function callerNodeKind({ host, place, origin }: ServerActionContext, caller: string): Promise<string | null> {
+    return callerKind(await host.projects.read((origin ?? place).projectId), caller) ?? host.hiddenAgents?.get(caller)?.node.kind ?? null;
 }
 
 /* What the caller is, as a refusal says it to a caller that is no chat. */
@@ -114,11 +119,26 @@ function contextOf(host: CanvasHost, place: IndexedPlace | null): ServerActionCo
     };
 }
 
-/* Whoever calls the daemon's actions is a session or a chat of a project, so the actor is an agent under that id. */
-export function serverActionCall(host: CanvasHost, place: IndexedPlace | null, caller: string, dryRun = false, expectedRevision?: number): ServerActionCall {
+/*
+ * Whoever calls the daemon's actions is a session or a chat of a project, so the actor is an agent under that id.
+ * `origin` is the caller's own place when `place` is another project `--project` reached.
+ */
+export function serverActionCall(
+    host: CanvasHost,
+    place: IndexedPlace | null,
+    caller: string,
+    dryRun = false,
+    expectedRevision?: number,
+    origin?: IndexedPlace
+): ServerActionCall {
+    const context = contextOf(expectedRevision === undefined ? host : heldTo(host, expectedRevision), place);
+    if (origin !== undefined) {
+        context.origin = origin;
+    }
+
     return {
         actor: { kind: 'agent', id: caller },
-        context: contextOf(expectedRevision === undefined ? host : heldTo(host, expectedRevision), place),
+        context,
         dryRun,
         ...(expectedRevision === undefined ? {} : { expectedRevision })
     };

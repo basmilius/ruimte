@@ -230,6 +230,8 @@ export interface ProjectLinks {
     viewFiles(): readonly ProjectViewFiles[];
     /* Whether a chat is in a turn or runs work beside it, and so may still write to a design folder that moved; nothing is without it. */
     chatWorking?(chatId: string): boolean;
+    /* The last window closed this project and its sessions are about to end; told while the index still places them. */
+    closing?(name: string, nodeIds: readonly string[]): void;
 }
 
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
@@ -1054,6 +1056,12 @@ export class ProjectStore {
         const loaded = this.open.get(projectId);
         const reopened = (): boolean => this.holds.holders(projectId) > 0 || this.open.get(projectId) !== loaded;
         let ended = 0;
+        if (this.links.closing && sessions.length > 0) {
+            this.links.closing(
+                (await this.registry.entry(projectId)).name,
+                sessions.map((node) => node.id)
+            );
+        }
         for (const node of sessions) {
             if (reopened()) {
                 break;

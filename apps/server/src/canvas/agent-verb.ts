@@ -7,6 +7,7 @@ import { readsFlag, readsLines } from './link-verb.ts';
 import { modeFlag } from '@adecore/agents/providers';
 import { MODE_FLAG_HELP, MODE_LINES } from './mode.ts';
 import { MACHINE_LINES } from './remote-agent.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 import { effortFlag, modelFlag, modelLines } from './model.ts';
 import { MAX_CANVAS_NODES, idList } from './nodes.ts';
 import { TASK_LINES, nextLine } from './task-verbs.ts';
@@ -46,6 +47,8 @@ const AGENT_DETAIL: readonly string[] = [
     ...MODE_LINES,
     ...WORKTREE_LINES,
     ...MACHINE_LINES,
+    PROJECT_LINE,
+    'project\tWith --project the agent opens on the canvas of that project that --view names, with no edge to you; --cwd and --worktree stay inside that project, and --machine works only from your own',
     'retry\t--request-id R: the same id with the same command answers with the node, task and worktree the first call made, also after the machine restarted; another command under the same id is refused',
     'operation\tStarting is not succeeding: ruimte-context operation get agent.start:<id> says whether the agent is queued, running, completed, failed or cancelled, from its task when it has one',
     'note\tThe machine starts the node right away, whether or not anyone has its canvas open; a client that shows it later joins what runs'
@@ -143,6 +146,7 @@ export const agentVerb = defineStandaloneActionVerb({
     }),
     switches: ['terminal', 'worktree'],
     flags: z.object({
+        project: PROJECT_FLAG,
         prompt: z.string().optional(),
         'prompt-file': z.string().min(1, '--prompt-file needs the path of a file').optional(),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),

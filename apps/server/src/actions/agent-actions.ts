@@ -159,11 +159,14 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
         }
         refuseOtherMachine(host, nodeId);
 
+        // A caller in another project, which `--project` reached this one from, is named with its project, so the answer knows where to go.
+        const own = context.origin === undefined ? null : await host.projects.read(context.origin.projectId);
+        const fromTitle = own === null ? callerTitle(content.views, caller) : `${callerTitle(own.views, caller)} in ${own.name}`;
         const delivery = await host.messages.notify({
             projectId: place.projectId,
             targetId: nodeId,
             from: caller,
-            fromTitle: field(callerTitle(content.views, caller)),
+            fromTitle: field(fromTitle),
             text
         });
 

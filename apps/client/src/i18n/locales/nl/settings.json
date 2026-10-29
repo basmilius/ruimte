@@ -968,6 +968,12 @@
             "description": "Als dit uit staat, verwijdert een agent alleen de weergaven en nodes die hij zelf maakte.",
             "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
         },
+        "reachOpenProjects": {
+            "label": "Agents mogen alle open projecten bereiken",
+            "rowLabel": "Agents op {{machine}} mogen alle open projecten bereiken",
+            "description": "Agents in het ene project kunnen je andere open projecten lezen en daar agents starten.",
+            "notConnected": "{{machine}} is niet verbonden. Pas dit aan in de details onder Account, of open een van zijn projecten."
+        },
         "resumeAtReset": {
             "label": "Doorgaan na een verbruikslimiet",
             "rowLabel": "Chats op {{machine}} gaan door na een verbruikslimiet",

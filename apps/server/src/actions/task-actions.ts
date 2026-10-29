@@ -55,7 +55,9 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
             throw new VerbRefusal('self-task', `${nodeId} is you; a task is what you give another agent`);
         }
         const content = await host.projects.read(place.projectId);
-        requireChatParent(content, caller, host.hiddenAgents?.get(caller)?.node.kind);
+        // The caller is judged in its own project, which `--project` may have left for another.
+        const callerContent = context.origin === undefined ? content : await host.projects.read(context.origin.projectId);
+        requireChatParent(callerContent, caller, host.hiddenAgents?.get(caller)?.node.kind);
         // Only the nodes this same call would accept, so a refusal answers with what can be asked instead.
         const lines = (): string[] =>
             orNote(

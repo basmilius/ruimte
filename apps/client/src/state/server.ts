@@ -19,6 +19,8 @@ export interface ServerInfo {
     /* Whether an agent on this machine may remove a view it did not make. The daemon enforces it, so
        this is only what the Machines pane stands at. */
     agentsDeleteAnyView: boolean;
+    /* Whether an agent on this machine may reach its other open projects. The daemon enforces it. */
+    reachOpenProjects: boolean;
     /* Whether the daemon permits browser and device streaming. */
     streamingAllowed: boolean;
     /* Whether a chat that stopped on a limit may be taken up again on a clock. */
@@ -76,6 +78,7 @@ const UNKNOWN: ServerInfo = {
     nameSource: 'default',
     icon: null,
     agentsDeleteAnyView: false,
+    reachOpenProjects: false,
     streamingAllowed: true,
     resumeAtReset: false,
     visualReplies: true,
@@ -113,6 +116,7 @@ interface ServersStore {
             | 'nameSource'
             | 'icon'
             | 'agentsDeleteAnyView'
+            | 'reachOpenProjects'
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'visualReplies'
@@ -150,6 +154,7 @@ interface ServersStore {
             Partial<
                 Pick<
                     ServerInfo,
+                    | 'reachOpenProjects'
                     | 'streamingAllowed'
                     | 'resumeAtReset'
                     | 'visualReplies'

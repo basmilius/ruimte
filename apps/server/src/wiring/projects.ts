@@ -14,6 +14,7 @@ import type { DatabasesBundle } from './databases.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { TemplatesBundle } from './templates.ts';
+import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 
 /* The projects of this machine and the drawing and diagram files beside them. */
 export interface ProjectsBundle {
@@ -95,6 +96,12 @@ export async function wireProjects({ home, machineId, stores, agents, computer, 
             started: async (nodeId) => sessions.get(nodeId) !== undefined || stores.lineage.madeBy(nodeId) !== null || (await chats.readChat(nodeId)) !== null
         },
         viewFiles: () => [drawings, diagrams],
+        closing: (name, nodeIds) =>
+            failTasksOfClosedProject(
+                { tasks: stores.tasks, locate: (id) => store.index.locate(id), coordinator: later.work().tasks.coordinator },
+                name,
+                nodeIds
+            ),
         chatWorking: (chatId) => {
             const session = chats.get(chatId);
 

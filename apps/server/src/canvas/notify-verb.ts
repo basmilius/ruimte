@@ -3,6 +3,7 @@ import { MAX_NOTICE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import { NO_REPLY_NOTICE } from '../context/notices.ts';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 import { unescapeText } from './text-escapes.ts';
 import { lengthOf, oneArgument } from './verb.ts';
 
@@ -28,6 +29,8 @@ const NOTIFY_DETAIL: readonly string[] = [
     'not\tYou never hear that it was read: the answer says where it went and nothing after that, and waiting means it sits there until that agent takes its next turn',
     `reply\tThere is no reply channel: ${NO_REPLY_NOTICE}. Do not wait on the node you wrote to; it answers only by sending a notify of its own, and what it did you read with ruimte-context read`,
     'see\truimte-context task new\ta task comes back to you with its result and settles, a message does not: ask with a task when you need the answer, send a message when the other agent needs to know',
+    PROJECT_LINE,
+    'project\tWith --project the message reaches every terminal and chat of that project the same way, signed with your title and your project; its agent answers with --project back to yours',
     'refusals\tself-notify\tnot-an-agent\tunknown-node\tnode-on-other-machine\tthe whole set this verb refuses with',
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs, ruimte-context view list the views'
 ];
@@ -48,6 +51,7 @@ export const notifyVerb = defineStandaloneActionVerb({
     detail: NOTIFY_DETAIL,
     positionals: oneArgument('notify takes the id of the node to notify', 'notify takes one id and nothing else; the message goes in --text'),
     flags: z.object({
+        project: PROJECT_FLAG,
         text: z
             .string({ error: NEEDS_TEXT })
             .min(1, NEEDS_TEXT)

@@ -143,7 +143,12 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         snoozes: work.snoozes,
         artifacts: input.artifacts.artifacts,
         routines: agentRoutines(input.routines.routines, (id) => projects.index.titleFor(id)),
-        templates: input.templates.store
+        templates: input.templates.store,
+        reach: {
+            enabled: () => identity.reachOpenProjects,
+            open: async () =>
+                (await projects.known()).filter((project) => project.folder !== projects.scratchFolder && projects.holdersOf(project.projectId).length > 0)
+        }
     };
     const forkDeps = chatForkDeps({
         chats,

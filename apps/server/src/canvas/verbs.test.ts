@@ -65,6 +65,7 @@ import type { Notice } from '@adecore/agents/coordination';
 import type { NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
+import { reachedPlace } from './reach.ts';
 import { StartClaims } from '../actions/start-claims.ts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
@@ -633,7 +634,7 @@ describe('the tree', () => {
         const { lines } = await post('link', ['list', 'main']);
         expect(lines).toEqual([
             'refused\tbad-arguments\tlink list takes no arguments, only flags',
-            'usage\tlink list\t[--view V]',
+            'usage\tlink list\t[--view V] [--project P]',
             'detail\truimte-context help link list'
         ]);
     });
@@ -655,7 +656,7 @@ describe('help', () => {
             'refusal'
         ]);
         expect(lines[2]).toBe(
-            'verb\tread\t<id> [--tail N] [--subagent T] [--view V] [--elements | --image] [--json]\tPrints one linked source, whole or its last lines.'
+            'verb\tread\t<id> [--tail N] [--subagent T] [--view V | --project P] [--elements | --image] [--json]\tPrints one linked source, whole or its last lines.'
         );
         expect(lines).toContain(
             'noun\tnode\tlist|new|edit|rename|color|delete|group|arrange\tLists, adds, writes in, renames, colors, removes, frames and lays out the nodes of a canvas'
@@ -942,7 +943,7 @@ describe('refusals', () => {
                 message:
                     '--cmd is not one of --title, --text, --url, --path, --source, --device, --cwd, --artifact, --version, --routine, --view, --beside, --color, --json, --revision, --dry-run'
             },
-            { verb: 'view list', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
+            { verb: 'project ignored', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
             {
                 verb: 'node new',
                 argv: ['note', '--text'],
@@ -4736,5 +4737,151 @@ describe('reading what a # points at in another form', () => {
         expect(previews[0]).toMatchObject({ chatId: 'chat-1', width: 240 });
         expect(previews[0]!.html).toContain('<svg');
         expect(textOf(await read('chat-1', { sourceId: 'sketch-1', form: 'image' }))).toBe('failed preview-unavailable');
+    });
+});
+
+describe('reaching another open project', () => {
+    let other: string;
+    let otherId: string;
+    let reachOn: boolean;
+    let openIds: string[];
+
+    beforeEach(async () => {
+        reachOn = true;
+        other = join(root, 'other');
+        await mkdir(other);
+        const opened = await store.openProject({ folder: other });
+        otherId = opened.summary.projectId;
+        await store.save(otherId, opened.document.rev, {
+            name: 'other',
+            color: '#654321',
+            views: [
+                {
+                    kind: 'canvas',
+                    id: 'work',
+                    name: 'Work',
+                    nodes: [{ id: 'note-b', kind: 'note', title: 'Their plan', x: 0, y: 0, w: 320, h: 240, body: 'ship it' }],
+                    texts: [],
+                    edges: [],
+                    layouts: []
+                },
+                { kind: 'chat', id: 'chat-b', name: 'Their chat', node: {} }
+            ]
+        });
+        store.release(otherId);
+        openIds = [projectId, otherId];
+    });
+
+    function reaching(): CanvasHost {
+        return {
+            ...host(),
+            reach: {
+                enabled: () => reachOn,
+                open: async () => openIds.map((id) => ({ projectId: id, name: id === otherId ? 'other' : 'repo', folder: id === otherId ? other : folder }))
+            }
+        };
+    }
+
+    test('project list names the other open projects only while the switch is on', async () => {
+        expect((await post('project', ['list'], 'term', reaching())).lines).toEqual([`project\t${otherId}\tother`]);
+        reachOn = false;
+        expect((await post('project', ['list'], 'term', reaching())).lines).toEqual([]);
+    });
+
+    test('--project refuses while the switch is off, for the own project and for a project nobody has open', async () => {
+        reachOn = false;
+        expect((await post('view', ['list', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
+        reachOn = true;
+        expect((await post('view', ['list', '--project', projectId], 'term', reaching())).lines).toEqual([
+            `refused\town-project\t${projectId} is your own project; leave --project out to work in it`,
+            `project\t${otherId}\tother`
+        ]);
+        openIds = [projectId];
+        expect((await post('view', ['list', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tproject-not-open\t');
+    });
+
+    test('a verb that does not cross refuses --project before it does anything', async () => {
+        const refused = await post('node', ['new', 'note', '--title', 'x', '--project', otherId], 'term', reaching());
+        expect(refused.lines[0]).toStartWith('refused\tcross-project-refused\tnode new works only in your own project');
+        expect((await post('launches', ['list', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tcross-project-refused\t');
+        expect((await store.read(otherId)).views).toHaveLength(2);
+    });
+
+    test('view list and node list read the other project, a canvas there named with --view', async () => {
+        const views = await post('view', ['list', '--project', otherId], 'term', reaching());
+        expect(views.lines.slice(0, 2).map((line) => line.split('\t').slice(0, 3))).toEqual([
+            ['work', 'canvas', 'Work'],
+            ['chat-b', 'chat', 'Their chat']
+        ]);
+        expect((await post('node', ['list', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tview-required\t');
+        const nodes = await post('node', ['list', '--project', otherId, '--view', 'work'], 'term', reaching());
+        expect(nodes.lines[0]!.split('\t').slice(0, 3)).toEqual(['note-b', 'note', 'Their plan']);
+        expect(nodes.lines[1]).toBe('self\t-\tnone of these nodes is you');
+    });
+
+    test('agent opens on a canvas of the other project, in its folder, never wider than its caller', async () => {
+        modes = { 'term-1': 'supervised' };
+        expect((await post('agent', ['claude', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tview-required\t');
+        const made = await post('agent', ['claude', '--project', otherId, '--view', 'work', '--mode', 'full-access'], 'term', reaching());
+        expect(made.lines[0]).toStartWith('refused\tmode-above-parent\t');
+        const id = await madeId(post('agent', ['claude', '--project', otherId, '--view', 'work'], 'term', reaching()));
+        const placed = (await store.read(otherId)).views.find((view): view is ProjectCanvasView => view.id === 'work')!;
+        expect(placed.nodes.map((node) => node.id)).toContain(id);
+        expect(placed.edges).toEqual([]);
+        expect(started.at(-1)).toMatchObject({ projectId: otherId, nodeId: id, openedBy: 'term-1', cwd: other });
+        expect(lineage.madeBy(id)).toBe('term-1');
+        expect(lineage.ceilingOf(id)).toBe('supervised');
+        expect((await canvasOnDisk()).nodes.map((node) => node.id)).not.toContain(id);
+    });
+
+    test('--cwd stays inside the other project and --machine works only from the own one', async () => {
+        const outsideCwd = await post('agent', ['claude', '--project', otherId, '--view', 'work', '--cwd', folder], 'term', reaching());
+        expect(outsideCwd.lines[0]).toStartWith('refused\tcwd-outside-project\t');
+        const remote = await post(
+            'agent',
+            ['claude', '--project', otherId, '--view', 'work', '--machine', 'm', '--task', 't', '--prompt', 'p'],
+            'term',
+            reaching()
+        );
+        expect(remote.lines[0]).toStartWith('refused\tcross-project-refused\t');
+    });
+
+    test('a chat gives a task in the other project, judged a chat in its own', async () => {
+        const made = await post('agent', ['claude', '--project', otherId, '--view', 'work', '--task', 'Look', '--prompt', 'look around'], 'chat', reaching());
+        expect(made.status).toBe(200);
+        const [id, , , , , taskId] = made.lines[0]!.split('\t');
+        expect(tasks.get(taskId!)).toMatchObject({ parentId: 'chat-1', childId: id, projectId: otherId });
+        const terminal = await post('agent', ['claude', '--project', otherId, '--view', 'work', '--task', 'Look', '--prompt', 'p'], 'term', reaching());
+        expect(terminal.lines[0]).toStartWith('refused\tnot-a-chat-parent\t');
+    });
+
+    test('notify --project reaches a chat of the other project, signed with the caller and its project', async () => {
+        const sent = await post('notify', ['chat-b', '--project', otherId, '--text', 'Your API changed'], 'term', reaching());
+        expect(sent.status).toBe(200);
+        expect(notified).toEqual([{ projectId: otherId, targetId: 'chat-b', from: 'term-1', fromTitle: 'shell in repo', text: 'Your API changed' }]);
+        expect((await post('notify', ['chat-1', '--project', otherId, '--text', 'x'], 'term', reaching())).lines[0]).toStartWith('refused\tunknown-node\t');
+        reachOn = false;
+        expect((await post('notify', ['chat-b', '--project', otherId, '--text', 'x'], 'term', reaching())).lines[0]).toStartWith(
+            'refused\tprojects-not-reachable\t'
+        );
+        expect(notified).toHaveLength(1);
+    });
+
+    test('read --project reads any node of the other project without a line, and nothing outside it', async () => {
+        const reader: CanvasHost = {
+            ...reaching(),
+            context: {
+                ...host().context!,
+                answerSource: async (_target, source, _tail, _subagent, project) => ({ text: `${source.id} in ${project}` })
+            }
+        };
+        const reached = await reachedPlace(reader, 'term-1', otherId);
+        const call = serverActionCall(reader, reached, 'term-1', false, undefined, store.locate('term-1')!);
+        const read = (sourceId: string, viewId: string | null = null) =>
+            serverActions.execute('context.read', { sourceId, tail: null, subagent: null, viewId, form: null }, call);
+        expect(await read('note-b')).toMatchObject({ status: 'completed', output: { text: `note-b in ${otherId}` } });
+        expect(await read('chat-b')).toMatchObject({ status: 'completed', output: { text: `chat-b in ${otherId}` } });
+        expect(await read('note-1')).toMatchObject({ status: 'failed', error: { code: 'unknown-source' } });
+        expect(await read('note-b', 'work')).toMatchObject({ status: 'failed', error: { code: 'bad-arguments' } });
     });
 });

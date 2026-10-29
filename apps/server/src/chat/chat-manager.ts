@@ -77,6 +77,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     standalone?: (chatId: string) => boolean;
     // Whether computer use is on for this machine, read when a chat's CLI starts.
     computer?: () => boolean;
+    // Whether agents may reach the machine's other open projects, read when a chat's CLI starts.
+    reachOpenProjects?: () => boolean;
     // Whether an agent may show a page above its reply, read when a chat's CLI starts.
     visualReplies?: () => boolean;
     // Whether the chat's project has database connections, read when a chat's CLI starts.
@@ -253,6 +255,7 @@ export class ChatManager extends ChatCore {
     private readonly depthOf: (chatId: string) => number;
     private readonly standalone: (chatId: string) => boolean;
     private readonly computer: () => boolean;
+    private readonly reachOpenProjects: () => boolean;
     private readonly visualReplies: () => boolean;
     private readonly databases: (chatId: string) => boolean;
     private readonly opening: NonNullable<ChatManagerOptions['openingAgent']>;
@@ -325,6 +328,7 @@ export class ChatManager extends ChatCore {
         this.depthOf = options.depthOf ?? (() => 0);
         this.standalone = options.standalone ?? (() => false);
         this.computer = options.computer ?? (() => false);
+        this.reachOpenProjects = options.reachOpenProjects ?? (() => false);
         this.visualReplies = options.visualReplies ?? (() => false);
         this.databases = options.databases ?? (() => false);
         this.opening = options.openingAgent ?? (() => undefined);
@@ -621,6 +625,7 @@ export class ChatManager extends ChatCore {
             // An inline edit answers with one replacement block, which a page above it would only contradict.
             visuals: this.visualReplies() && !this.inlineChat(chatId),
             databases: !this.inlineChat(chatId) && this.databases(chatId),
+            reach: !this.inlineChat(chatId) && this.reachOpenProjects(),
             design: this.design(chatId)
         };
     }

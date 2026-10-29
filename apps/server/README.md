@@ -120,6 +120,7 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | --- | --- |
 | `name`, `icon` | The machine's name and Lucide icon. A null name falls back to `--label`, `RUIMTE_LABEL`, else the hostname. |
 | `agentsDeleteAnyView` | Lets an agent's `view delete`, `node delete` and `link delete` remove what it did not make. Off by default. |
+| `reachOpenProjects` | Lets an agent's `--project` read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
 | `streamingAllowed` | Browser pages and device screens stream to clients. On by default. |

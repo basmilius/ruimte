@@ -182,6 +182,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         depthOf: (sessionId) => lineage.depthOf(sessionId),
         standalone: (sessionId) => index().locate(sessionId)?.canvasId === null,
         computerUse: () => computer.usable,
+        reachOpenProjects: () => identity.reachOpenProjects,
         // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
         commands: {
             approved: (sessionId, command) => {
@@ -231,18 +232,18 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         chatPlans: (chatId) => plans.read(chatId),
         subagentItems: (chatId, toolUseId) => chats.subagentItems(chatId, toolUseId),
         drawingElements: (viewId) => later.projects().drawings.elementsOf(viewId),
-        diagramDocument: async (targetId, viewId) => {
-            const place = index().locate(targetId);
-            return place ? later.projects().diagrams.read(place.projectId, viewId) : null;
+        diagramDocument: async (targetId, viewId, projectId) => {
+            const project = projectId ?? index().locate(targetId)?.projectId;
+            return project ? later.projects().diagrams.read(project, viewId) : null;
         },
         canvasOf: (targetId) => index().canvasOf(targetId),
-        artifactReport: async (targetId, artifact) => {
-            const place = index().locate(targetId);
-            return place ? artifactReport(later.artifacts().artifacts, place.projectId, artifact) : null;
+        artifactReport: async (targetId, artifact, projectId) => {
+            const project = projectId ?? index().locate(targetId)?.projectId;
+            return project ? artifactReport(later.artifacts().artifacts, project, artifact) : null;
         },
-        routineReport: async (targetId, routineId) => {
-            const place = index().locate(targetId);
-            return place ? routineReport(later.routines().routines, place.projectId, routineId) : null;
+        routineReport: async (targetId, routineId, projectId) => {
+            const project = projectId ?? index().locate(targetId)?.projectId;
+            return project ? routineReport(later.routines().routines, project, routineId) : null;
         }
     });
     const outboxLink = new OutboxLink({ outbox, projectOf: (id) => index().locate(id)?.projectId ?? null });
@@ -282,6 +283,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         binDir: runtime.binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
         computer: () => computer.usable,
+        reachOpenProjects: () => identity.reachOpenProjects,
         visualReplies: () => identity.visualReplies,
         databases: (chatId) => {
             const folder = index().locate(chatId)?.folder;

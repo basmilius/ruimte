@@ -172,6 +172,16 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     const enqueue = (projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> =>
         link.enqueue(projectId, target, work, notBefore);
     const placed = (nodeId: string): boolean => projects.index.locate(nodeId) !== null;
+    const placedElsewhere = (nodeId: string, projectId: string): boolean => {
+        const place = projects.index.locate(nodeId);
+        return place !== null && place.projectId !== projectId;
+    };
+    // The parents of this project's tasks that another project of this machine places, as one that used `--project` is.
+    const parentsElsewhere = (projectId: string): string[] =>
+        tasks
+            .ofProject(projectId)
+            .map((task) => task.parentId)
+            .filter((parentId) => placedElsewhere(parentId, projectId));
     const now = deps.now ?? Date.now;
     const failed = (what: string, error: unknown): void => {
         if (deps.onFailed) {
@@ -207,6 +217,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
         sessions,
         enqueue,
         remoteStop: remoteTasks ? (nodeId) => remoteTasks.oweStop(nodeId) : undefined,
+        placedElsewhere,
         ended: async (nodeIds) => {
             const projectIds = new Set(nodeIds.map((id) => lineage.projectOf(id)).filter((id) => id !== null));
             for (const projectId of projectIds) {
@@ -319,9 +330,11 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
             }
             void lineage.prune(projectId, ids).catch((e) => failed('Pruning agent lineage failed', e));
             void notices.prune(projectId, ids).catch((e) => failed('Pruning waiting messages failed', e));
-            void outbox.prune(projectId, ids).catch((e) => failed('Pruning the outbox failed', e));
+            // A parent in another project, which gave its task here with `--project`, is not gone from this one.
+            const kept = new Set([...ids, ...parentsElsewhere(projectId)]);
+            void outbox.prune(projectId, kept).catch((e) => failed('Pruning the outbox failed', e));
             void taskWiring
-                .prune(projectId, deps.peerTasks ? new Set([...ids, ...deps.peerTasks.parents(projectId)]) : ids)
+                .prune(projectId, deps.peerTasks ? new Set([...kept, ...deps.peerTasks.parents(projectId)]) : kept)
                 .catch((e) => failed('Pruning tasks failed', e));
         }
     };

@@ -166,6 +166,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     row('agents.resumeAtReset'),
     row('agents.deleteAnyView'),
+    row('agents.reachOpenProjects'),
     row('agents.working.sound'),
     {
         id: 'agents.keepAwake.mode',

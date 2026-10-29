@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { ProjectError } from '../projects/project-error.ts';
 import { VerbRefusal, type CanvasHost } from './verb.ts';
+import { CROSSING_VERBS, crossingRefused, reachedPlace, takeProjectFlag } from './reach.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
 import { errorText } from '../error-text.ts';
 import { countVerb } from '../stats/usage-stats.ts';
 import { refusalBody } from '@adecore/agents/context';
@@ -34,6 +36,19 @@ export function bearerToken(request: Request): string | null {
 export function bearerCaller(request: Request, targetForToken: (token: string) => string | null): string | null {
     const token = bearerToken(request);
     return token === null ? null : targetForToken(token);
+}
+
+/*
+ * The other project a verb asked for with `--project`, checked here so no verb parses it on its own:
+ * only the verbs that cross take it, and only while the switch is on and that project is open.
+ */
+async function reachFor(name: string, argv: readonly string[], caller: string, project: string, host: CanvasHost, noun: boolean): Promise<IndexedPlace> {
+    const action = noun && argv[0] !== undefined && !argv[0].startsWith('--') ? `${name} ${argv[0]}` : name;
+    if (!CROSSING_VERBS.includes(action)) {
+        throw crossingRefused(action);
+    }
+
+    return reachedPlace(host, caller, project);
 }
 
 interface CanvasRouteDeps {
@@ -84,7 +99,9 @@ export async function handleCanvasRequest(request: Request, pathname: string, de
         return refusal('bad-request', 'The body must be { "argv": string[] }');
     }
     try {
-        const lines = await verb.run(body.data.argv, { caller, host: deps.host });
+        const { project, argv } = takeProjectFlag(body.data.argv);
+        const reached = project === undefined ? undefined : await reachFor(name, argv, caller, project, deps.host, 'actions' in verb);
+        const lines = await verb.run(argv, reached === undefined ? { caller, host: deps.host } : { caller, host: deps.host, reached });
         countVerb(name);
         return text(lines);
     } catch (e) {

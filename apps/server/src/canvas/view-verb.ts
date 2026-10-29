@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
 import { REVISION_ROW, TITLE_LINE, VerbRefusal, field, titleField, type Action, oneArgument } from './verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewKindsFor } from './views.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 
 // A canvas with more nodes than this would bury the one line that says the view is gone.
 const DELETED_NODE_LINES = 20;
@@ -217,10 +218,11 @@ const listSub = defineActionVerb('view', {
         'self\tThe row after the views is self and the id of the view you are in',
         REVISION_ROW,
         'note\tA separator is a line in the sidebar and has an empty name',
+        PROJECT_LINE,
         'see\truimte-context help view\tmaking a view, renaming it, marking it, moving it, removing it'
     ],
     positionals: z.tuple([], { error: 'view list takes no arguments' }),
-    flags: z.object({}),
+    flags: z.object({ project: PROJECT_FLAG }),
     async run(_input, call) {
         const { views, self, revision } = await runAction(call, 'view.list', {});
         return [

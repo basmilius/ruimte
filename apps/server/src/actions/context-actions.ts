@@ -1,6 +1,7 @@
 import type { ActionHandlers } from '@ruimte/actions';
 import { CodedError } from '@adecore/agents';
-import { canvasContextSources, type ContextSource } from '@ruimte/contracts';
+import { canvasContextSources, isHiddenCanvasView, type ContextSource } from '@ruimte/contracts';
+import { resolveReference, type Reference } from '../context/references.ts';
 import { arrangedCanvas, canvasHolding, isChatView, notOnView, viewRequired } from '../canvas/chat-view.ts';
 import { VerbRefusal, snoozedAt, type ContextHost } from '../canvas/verb.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
@@ -33,6 +34,21 @@ async function arrangedSource({ host, place }: ServerActionContext, caller: stri
     return null;
 }
 
+/*
+ * What an id names in the other project `--project` reached, read without a line: a person opened every
+ * open project to agents with the switch, as a `#` opens one canvas. Another machine's canvas stays out.
+ */
+async function reachedReference({ host, place }: ServerActionContext, sourceId: string): Promise<Reference> {
+    const content = await host.projects.read(place.projectId);
+    const views = content.views.filter((view) => !isHiddenCanvasView(view));
+    const reference = resolveReference(views, sourceId, place.folder);
+    if (reference === null) {
+        throw new ContextRefusal('unknown-source', `${sourceId} is no view, node or text of ${place.projectId}`);
+    }
+
+    return reference;
+}
+
 /* Why a chat view's read of a node found nothing: it named no canvas, which is what stands in for a line. */
 async function chatViewRefusal({ host }: ServerActionContext, caller: string, sourceId: string): Promise<VerbRefusal | null> {
     const place = host.projects.locate(caller);
@@ -59,6 +75,23 @@ export const contextActions: ActionHandlers<ServerActionContext> = {
     'context.read': async ({ sourceId, tail, subagent, viewId, form }, { actor, context }) => {
         const store = contextOf(context);
         refuseOtherMachine(context.host, sourceId);
+        if (context.origin !== undefined) {
+            if (viewId != null) {
+                throw new VerbRefusal('bad-arguments', '--project reads every node of that project without --view; leave --view out');
+            }
+            const reached = await reachedReference(context, sourceId);
+            if (reached.kind === 'canvas' || reached.kind === 'database') {
+                return { output: await readReference(context, actor.id, reached, form ?? null) };
+            }
+            const source = reached.sources.find((candidate) => candidate.id === sourceId || candidate.nodeId === sourceId) ?? reached.sources[0];
+            if (source === undefined) {
+                throw new ContextRefusal('unreadable', `${sourceId} is in ${context.place.projectId}, but it holds nothing to read`);
+            }
+            if (form != null) {
+                return { output: await readInForm(context, actor.id, source, form) };
+            }
+            return { output: await store.answerSource(actor.id, source, tail ?? null, subagent ?? null, context.place.projectId) };
+        }
         const whole = store
             .referenced?.(actor.id)
             .find((reference) => reference.id === sourceId && (reference.kind === 'canvas' || reference.kind === 'database'));

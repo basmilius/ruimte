@@ -361,6 +361,7 @@ describe('auth handlers', () => {
                     nameSource: 'chosen',
                     icon: { kind: 'lucide', value: 'server' },
                     agentsDeleteAnyView: false,
+                    reachOpenProjects: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,

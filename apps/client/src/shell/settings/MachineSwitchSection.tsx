@@ -10,7 +10,12 @@ import { useServers } from '@/state/server';
 import { useEndpointConnection } from '@/transport/status';
 
 // The i18n group under `agents` each switch reads its words from.
-const WORDS: Record<MachineSwitch, string> = { agentsDeleteAnyView: 'deleteAnyView', resumeAtReset: 'resumeAtReset', visualReplies: 'visualReplies' };
+const WORDS: Record<MachineSwitch, string> = {
+    agentsDeleteAnyView: 'deleteAnyView',
+    reachOpenProjects: 'reachOpenProjects',
+    resumeAtReset: 'resumeAtReset',
+    visualReplies: 'visualReplies'
+};
 
 function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint; setting: MachineSwitch; searchId?: string }) {
     const { t } = useTranslation('settings');

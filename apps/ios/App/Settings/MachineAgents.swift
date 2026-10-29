@@ -235,6 +235,10 @@ struct MachineAgentsPage: View {
                 Toggle("Agents may delete any view or node", isOn: endpointBinding("agentsDeleteAnyView"))
                     .disabled(model.state.busy)
             }
+            if model.endpoint?["reachOpenProjects"]?.boolValue != nil {
+                Toggle("Agents may reach all open projects", isOn: endpointBinding("reachOpenProjects"))
+                    .disabled(model.state.busy)
+            }
             if model.endpoint?["visualReplies"]?.boolValue != nil {
                 Toggle(isOn: endpointBinding("visualReplies")) {
                     Text("Visual replies")

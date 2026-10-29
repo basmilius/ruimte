@@ -90,6 +90,10 @@ async function runRead(url: string, id: string | undefined, flags: string[], hea
     if (view === '') {
         return refuse('bad-arguments', '--view needs the id of the canvas the source stands on', [READ_USAGE, READ_HELP]);
     }
+    const project = flagValue(flags, 'project');
+    if (project === '') {
+        return refuse('bad-arguments', '--project needs the id of a project; ruimte-context project list lists them', [READ_USAGE, READ_HELP]);
+    }
     const elements = flags.includes('--elements');
     const image = flags.includes('--image');
     if (elements && image) {
@@ -98,6 +102,9 @@ async function runRead(url: string, id: string | undefined, flags: string[], hea
     const query = new URLSearchParams();
     if (view !== null) {
         query.set('view', view);
+    }
+    if (project !== null) {
+        query.set('project', project);
     }
     if (elements || image) {
         query.set('form', elements ? 'elements' : 'image');
@@ -248,7 +255,7 @@ interface ContextRow {
     snoozedUntil?: string;
 }
 
-const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T] [--view V] [--elements | --image] [--json]';
+const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T] [--view V | --project P] [--elements | --image] [--json]';
 const READ_HELP = 'detail\truimte-context help read';
 
 /*

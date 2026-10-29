@@ -116,6 +116,8 @@ export interface SessionManagerOptions {
     standalone?: (sessionId: string) => boolean;
     // Whether computer use is on for this machine, which is when the note names the `computer` noun.
     computerUse?: () => boolean;
+    /* Whether agents may reach the machine's other open projects, read when a terminal agent starts. */
+    reachOpenProjects?: () => boolean;
     // Lets a test move the clock the resume guard reads.
     now?: () => number;
     // Where Claude Code's own name for a session is read from the transcript its hooks point at.
@@ -202,6 +204,7 @@ export class SessionManager {
     private readonly depthOf: (sessionId: string) => number;
     private readonly standalone: (sessionId: string) => boolean;
     private readonly computerUse: () => boolean;
+    private readonly reachOpenProjects: () => boolean;
     private readonly commands: CommandGate | null;
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
     private readonly personMode: (sessionId: string) => RuntimeMode | null;
@@ -233,6 +236,7 @@ export class SessionManager {
         this.depthOf = options.depthOf ?? (() => 0);
         this.standalone = options.standalone ?? (() => false);
         this.computerUse = options.computerUse ?? (() => false);
+        this.reachOpenProjects = options.reachOpenProjects ?? (() => false);
         this.now = options.now ?? Date.now;
         this.claudeTitles = options.claudeTitles ?? null;
         this.codexTitles = options.codexTitles ?? null;
@@ -762,7 +766,13 @@ export class SessionManager {
 
     /* The note about the verbs a CLI of this session starts with. */
     private noteFor(sessionId: string): string {
-        return verbsNote({ depth: this.depthOf(sessionId), standalone: this.standalone(sessionId), terminal: true, computer: this.computerUse() });
+        return verbsNote({
+            depth: this.depthOf(sessionId),
+            standalone: this.standalone(sessionId),
+            terminal: true,
+            computer: this.computerUse(),
+            reach: this.reachOpenProjects()
+        });
     }
 
     // Restored shells resume after attach; typing here could land in the input of a CLI that is still alive.

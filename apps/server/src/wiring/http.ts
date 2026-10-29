@@ -254,7 +254,8 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                         depth: stores.lineage.depthOf(sessionId),
                         standalone: projects.store.index.locate(sessionId)?.canvasId === null,
                         verbs,
-                        computer: devices.computer.usable
+                        computer: devices.computer.usable,
+                        reach: identity.reachOpenProjects
                     });
                 })
         },

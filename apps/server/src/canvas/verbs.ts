@@ -76,12 +76,13 @@ const listVerb: ContextVerb = {
 const readVerb: ContextVerb = {
     served: 'context',
     name: 'read',
-    usage: '<id> [--tail N] [--subagent T] [--view V] [--elements | --image] [--json]',
+    usage: '<id> [--tail N] [--subagent T] [--view V | --project P] [--elements | --image] [--json]',
     summary: actionDescription('context.read', 'agent'),
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list, or of an agent you opened yourself, or of what a person pointed you at with #, or with --view of any node or text on that canvas; a drawing or diagram also takes the id of the node that shows it',
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
         'flag\t--view V\toptional\tOnly from a chat view: the canvas the source stands on, which lets you read every node and text there, other chats and terminals included, without a line; a node on a canvas reads over its lines and leaves it out',
+        'flag\t--project P\toptional\tAny view, node or text of another project open on this machine, other chats and terminals included, without a line, while a person lets agents reach them; ruimte-context project list lists them. Not together with --view',
         `flag\t--subagent T\toptional\tThe whole conversation of one subagent of a chat you may read instead of the chat, T the id in its > Subagent line; read from ${ChatSubagentSourceSchema.options.join(' or ')}; --tail counts lines of that conversation`,
         'flag\t--elements\toptional\tOnly a drawing: its revision and its elements as JSON, each with id, kind, box, stroke, fill, fillColor and text, which is what ruimte-context view drawing edits by id',
         "flag\t--image\toptional\tA drawing, a diagram or a canvas a person pointed you at, drawn to a PNG in this chat's own folder outside the project; prints the path, which your own tool that reads images opens. Only an AI chat has that folder",
@@ -111,7 +112,7 @@ const readVerb: ContextVerb = {
         'direction\tBetween two agents a line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws; an agent you opened yourself needs none',
         'direction\tA node that is no agent, a note, a page, a file, a drawing or a diagram, you read over a line whichever way that line runs',
         'chat view\tA chat that is a view of its own has no lines, since a line only joins two nodes of one canvas: it reads a node by naming its canvas with --view, and without it a node of a canvas refuses with view-required',
-        'refusals\tnot-linked\tunreadable\tunknown-source\tunknown-subagent\tview-required\tnot-on-view\tnot-a-chat-view\tnot-a-canvas\tbad-arguments\tvisual-needs-chat\tvisual-too-large\tpreview-unavailable\tpreview-timeout\tpreview-failed\tthe whole set this verb refuses with',
+        'refusals\tnot-linked\tunreadable\tunknown-source\tunknown-subagent\tview-required\tnot-on-view\tnot-a-chat-view\tnot-a-canvas\tbad-arguments\tprojects-not-reachable\town-project\tproject-not-open\tvisual-needs-chat\tvisual-too-large\tpreview-unavailable\tpreview-timeout\tpreview-failed\tthe whole set this verb refuses with',
         SCOPE_LINE
     ]
 };

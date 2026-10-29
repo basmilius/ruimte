@@ -6949,6 +6949,16 @@
         }
       }
     },
+    "Agents may reach all open projects" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agents mogen alle open projecten bereiken"
+          }
+        }
+      }
+    },
     "Agents on %@" : {
       "localizations" : {
         "nl" : {
@@ -14066,16 +14076,6 @@
         }
       }
     },
-    "Message the agent" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bericht aan de agent"
-          }
-        }
-      }
-    },
     "Message from %@" : {
       "comment" : "%@ is the name the sending node had on the canvas",
       "localizations" : {
@@ -14093,6 +14093,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bericht van een andere node"
+          }
+        }
+      }
+    },
+    "Message the agent" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht aan de agent"
           }
         }
       }

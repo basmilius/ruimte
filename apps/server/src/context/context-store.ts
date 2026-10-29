@@ -64,12 +64,12 @@ interface ContextReaders {
     opened?(targetId: string, sourceId: string): ContextSource | null;
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
-    /* The diagram of a view in the project of the agent asking, whether or not anyone has that project open. */
-    diagramDocument(targetId: string, viewId: string): Promise<DiagramDocument | null>;
-    /* The version an artifact node shows, as text when its first file is text, checked against the project of the one reading; null when it is not there. */
-    artifactReport?(targetId: string, artifact: NonNullable<ContextSource['artifact']>): Promise<string | null>;
-    /* A routine node's routine and its newest runs, checked against the project of the one reading; null when it is not there. */
-    routineReport?(targetId: string, routineId: string): Promise<string | null>;
+    /* The diagram of a view in the project of the agent asking, or in `projectId` when given, whether or not anyone has that project open. */
+    diagramDocument(targetId: string, viewId: string, projectId?: string): Promise<DiagramDocument | null>;
+    /* The version an artifact node shows, as text when its first file is text, checked against the project of the one reading, or `projectId`; null when it is not there. */
+    artifactReport?(targetId: string, artifact: NonNullable<ContextSource['artifact']>, projectId?: string): Promise<string | null>;
+    /* A routine node's routine and its newest runs, checked against the project of the one reading, or `projectId`; null when it is not there. */
+    routineReport?(targetId: string, routineId: string, projectId?: string): Promise<string | null>;
     /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
@@ -259,7 +259,13 @@ export class ContextStore {
         return source ? ((await this.reading(targetId, source, tail, subagent))?.text ?? null) : null;
     }
 
-    private async reading(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<ContextReading | null> {
+    private async reading(
+        targetId: string,
+        source: ContextSource,
+        tail: number | null,
+        subagent: string | null,
+        projectId?: string
+    ): Promise<ContextReading | null> {
         if (subagent !== null) {
             return { text: await this.readSubagent(source, subagent, tail) };
         }
@@ -293,7 +299,7 @@ export class ContextStore {
                 return asReading(elements ? renderDrawing(elements, tail) : null);
             }
             case 'diagram': {
-                const document = await this.readers.diagramDocument(targetId, source.id);
+                const document = await this.readers.diagramDocument(targetId, source.id, projectId);
                 return asReading(document ? renderDiagram(document, tail) : null);
             }
             /*
@@ -303,11 +309,11 @@ export class ContextStore {
             case 'file':
                 return asReading(source.text ? `This is a file on disk. Read it with your own tools.\n\n${source.text}` : null);
             case 'artifact': {
-                const text = source.artifact ? ((await this.readers.artifactReport?.(targetId, source.artifact).catch(() => null)) ?? null) : null;
+                const text = source.artifact ? ((await this.readers.artifactReport?.(targetId, source.artifact, projectId).catch(() => null)) ?? null) : null;
                 return asReading(text === null ? null : lastLines(text, tail));
             }
             case 'routine': {
-                const text = source.routine ? ((await this.readers.routineReport?.(targetId, source.routine).catch(() => null)) ?? null) : null;
+                const text = source.routine ? ((await this.readers.routineReport?.(targetId, source.routine, projectId).catch(() => null)) ?? null) : null;
                 return asReading(text === null ? null : lastLines(text, tail));
             }
         }
@@ -378,9 +384,12 @@ export class ContextStore {
         return reading;
     }
 
-    /* The same for a source that comes with its own reason to be read, so there is no line to explain. */
-    async answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null): Promise<ContextReading> {
-        const reading = await this.reading(targetId, source, tail, subagent);
+    /*
+     * The same for a source that comes with its own reason to be read, so there is no line to explain;
+     * `projectId` is the project it stands in when that is not the reader's own.
+     */
+    async answerSource(targetId: string, source: ContextSource, tail: number | null, subagent: string | null, projectId?: string): Promise<ContextReading> {
+        const reading = await this.reading(targetId, source, tail, subagent, projectId);
         if (reading === null) {
             throw new ContextRefusal('unreadable', `${source.nodeId ?? source.id} is there, but there is nothing to read in it right now`);
         }

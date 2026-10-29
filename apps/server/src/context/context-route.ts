@@ -3,7 +3,9 @@ import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { linesOf } from '../canvas/action-verb.ts';
 import { bearerCaller } from '../canvas/canvas-route.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import { VerbRefusal, type CanvasHost } from '../canvas/verb.ts';
+import { reachedPlace } from '../canvas/reach.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
 import { refusalRows } from '@adecore/agents/context';
 import { CONTEXT_PATH } from './context-store.ts';
 import { READ_FORM_REFUSALS, type ReadForm } from './read-forms.ts';
@@ -30,7 +32,7 @@ function failed(result: ActionResult): Response {
     if (error.code === 'unknown-subagent') {
         return new Response(error.message, { status: 422, headers: TEXT });
     }
-    if (READ_FORM_REFUSALS.has(error.code)) {
+    if (READ_FORM_REFUSALS.has(error.code) || error.code === 'bad-arguments') {
         return new Response(refusalRows(error.code, error.message, linesOf(error.details)), { status: 422, headers: TEXT });
     }
     return new Response(`The read failed: ${error.message}`, { status: 500, headers: TEXT });
@@ -81,10 +83,22 @@ export async function handleContextRequest(request: Request, pathname: string, d
         return new Response('form takes elements or image', { status: 400 });
     }
     const form: ReadForm | null = asForm;
+    const project = query.get('project');
+    let reached: IndexedPlace | null = null;
+    if (project !== null) {
+        try {
+            reached = await reachedPlace(deps.host, caller, project);
+        } catch (e) {
+            if (e instanceof VerbRefusal) {
+                return new Response(refusalRows(e.code, e.message, e.lines), { status: 422, headers: TEXT });
+            }
+            throw e;
+        }
+    }
     const read = await serverActions.execute(
         'context.read',
         { sourceId, tail, subagent: query.get('subagent') || null, viewId: query.get('view') || null, form },
-        call
+        reached === null ? call : serverActionCall(deps.host, reached, caller, false, undefined, deps.host.projects.locate(caller) ?? undefined)
     );
     if (read.status !== 'completed') {
         return failed(read);

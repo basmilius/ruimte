@@ -6388,6 +6388,9 @@
           "agentsDeleteAnyView": {
             "type": "boolean"
           },
+          "reachOpenProjects": {
+            "type": "boolean"
+          },
           "streamingAllowed": {
             "type": "boolean"
           },
@@ -61536,6 +61539,9 @@
       "agentsDeleteAnyView": {
         "type": "boolean"
       },
+      "reachOpenProjects": {
+        "type": "boolean"
+      },
       "streamingAllowed": {
         "type": "boolean"
       },
@@ -62058,6 +62064,9 @@
       "agentsDeleteAnyView": {
         "type": "boolean"
       },
+      "reachOpenProjects": {
+        "type": "boolean"
+      },
       "streamingAllowed": {
         "type": "boolean"
       },
@@ -62363,6 +62372,9 @@
         ]
       },
       "agentsDeleteAnyView": {
+        "type": "boolean"
+      },
+      "reachOpenProjects": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -62678,6 +62690,9 @@
       "agentsDeleteAnyView": {
         "type": "boolean"
       },
+      "reachOpenProjects": {
+        "type": "boolean"
+      },
       "streamingAllowed": {
         "type": "boolean"
       },
@@ -62979,6 +62994,9 @@
         ]
       },
       "agentsDeleteAnyView": {
+        "type": "boolean"
+      },
+      "reachOpenProjects": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -63556,6 +63574,9 @@
         ]
       },
       "agentsDeleteAnyView": {
+        "type": "boolean"
+      },
+      "reachOpenProjects": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -64330,6 +64351,9 @@
         ]
       },
       "agentsDeleteAnyView": {
+        "type": "boolean"
+      },
+      "reachOpenProjects": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -78815,6 +78839,9 @@
         ]
       },
       "agentsDeleteAnyView": {
+        "type": "boolean"
+      },
+      "reachOpenProjects": {
         "type": "boolean"
       },
       "streamingAllowed": {

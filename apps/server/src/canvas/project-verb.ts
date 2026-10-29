@@ -2,7 +2,8 @@ import { PROJECT_PROPOSAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
 import { PROPOSAL_CARD_MS } from '../projects/project-proposals.ts';
 import { defineActionVerb, runAction } from './action-verb.ts';
-import { SCOPE_LINE, field, orNote, textFlag } from './verb.ts';
+import { CROSSING_VERBS, reachableLines, reachableProjects } from './reach.ts';
+import { SCOPE_LINE, defineAction, field, orNote, textFlag } from './verb.ts';
 
 const PROJECT_CARD_HOURS = PROPOSAL_CARD_MS / 3_600_000;
 
@@ -68,8 +69,28 @@ const ignoredAction = defineActionVerb('project', {
     }
 });
 
+const listAction = defineAction('project', {
+    name: 'list',
+    usage: '',
+    summary: 'Lists the other projects open on this machine that --project reaches, while a person lets agents reach them',
+    detail: [
+        'prints\tproject\tid\ttitle\tone line per project a window has open on this machine, your own and Chats left out',
+        'empty\tNothing while the machine keeps agents in their own project; a person turns reaching on under Agents in the settings',
+        `crosses\t--project <id> goes with ${CROSSING_VERBS.join(', ')}; every other verb refuses it with cross-project-refused`,
+        'read\tread <id> --project P reads every view, node and text of P without a line, other chats and terminals included',
+        'agent\tagent and team --project P open their agents on a canvas of P that --view names, where a person there sees them; --cwd and --worktree stay inside P',
+        'closed\tA project is reachable only while a window has it open: closing it in its last window ends the agents there and fails their tasks',
+        SCOPE_LINE
+    ],
+    positionals: z.tuple([], { error: 'project list takes no arguments' }),
+    flags: z.object({}),
+    async run(_input, call) {
+        return reachableLines(await reachableProjects(call.host, call.host.projects.locate(call.caller)?.projectId ?? null));
+    }
+});
+
 export const PROJECT_SUMMARY =
-    'Suggests, in a card of your chat in Chats, that the chat becomes a project, and lists the files git ignores in the project, the ones a clone elsewhere does not bring';
+    'Lists the other open projects agents may reach, suggests in a card of your chat in Chats that the chat becomes a project, and lists the files git ignores in the project, the ones a clone elsewhere does not bring';
 
 export const PROJECT_DETAIL: readonly string[] = [
     'note\tOnly an AI chat in Chats suggests; the card shows in that chat until the person reviews it or declines',
@@ -77,4 +98,4 @@ export const PROJECT_DETAIL: readonly string[] = [
     SCOPE_LINE
 ];
 
-export const PROJECT_ACTIONS = [proposeAction, ignoredAction] as const;
+export const PROJECT_ACTIONS = [listAction, proposeAction, ignoredAction] as const;

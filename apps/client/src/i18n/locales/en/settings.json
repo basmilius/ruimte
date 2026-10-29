@@ -968,6 +968,12 @@
             "description": "When off, an agent deletes only the views and nodes it created.",
             "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
         },
+        "reachOpenProjects": {
+            "label": "Agents may reach all open projects",
+            "rowLabel": "Agents on {{machine}} may reach all open projects",
+            "description": "Agents in one project can read your other open projects and start agents there.",
+            "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
+        },
         "resumeAtReset": {
             "label": "Continue after a usage limit",
             "rowLabel": "Chats on {{machine}} continue after a usage limit",

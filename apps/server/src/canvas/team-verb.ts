@@ -7,6 +7,7 @@ import { readsFlag, readsLines } from './link-verb.ts';
 import { modeFlag } from '@adecore/agents/providers';
 import { MODE_FLAG_HELP, MODE_LINES } from './mode.ts';
 import { MACHINE_LINES } from './remote-agent.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 import { effortFlag, modelFlag, modelLines } from './model.ts';
 import { MAX_CANVAS_NODES, idList } from './nodes.ts';
 import { TEAM_COLUMNS } from './placement.ts';
@@ -84,6 +85,7 @@ const TEAM_DETAIL: readonly string[] = [
     ...MODE_LINES,
     ...WORKTREE_LINES,
     ...MACHINE_LINES,
+    PROJECT_LINE,
     `depth\tA role lands at depth ${MAX_TEAM_DEPTH}: it may open a single agent of its own with agent, and a team of its own is refused`,
     'operation\tStarting is not succeeding: ruimte-context operation get team.start:<id>,<id> with the ids of the roles in the order they were printed says how the team goes, role by role',
     'note\tThe machine starts every agent right away, whether or not anyone has its canvas open; a client that shows one later joins what runs'
@@ -159,6 +161,7 @@ export const teamVerb = defineStandaloneActionVerb({
     switches: ['task', 'worktree'],
     positionals: z.tuple([], { error: 'team takes no arguments, only flags; the agents go in --roles' }),
     flags: z.object({
+        project: PROJECT_FLAG,
         label: titleField('--label', '--label needs a name for the group'),
         roles: z.string().min(1, `--roles needs the roles as JSON, ${ROLES_SHAPE}`),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),

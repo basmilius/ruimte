@@ -3,6 +3,7 @@ import { defineActionVerb, defineStandaloneActionVerb, runAction } from './actio
 import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, taskLine } from './tasks.ts';
 import { unescapeText } from './text-escapes.ts';
 import { MAX_TITLE_LENGTH, titleField, oneArgument } from './verb.ts';
+import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 
 export { taskBrief } from './tasks.ts';
 
@@ -67,6 +68,7 @@ export const doneVerb = defineStandaloneActionVerb({
 });
 
 const TASK_NEW_DETAIL: readonly string[] = [
+    PROJECT_LINE,
     'prints\ttask\tid\tnode\twhen\tthe task that was opened, the agent it went to, and now for one that starts as you call or waiting for one that is still in a turn',
     'prints\tnext\tthe last line, saying what to do while the task runs',
     'who\tOnly an agent you opened yourself, which the machine wrote down outside the project: a line into a node is not enough, since two agents that read each other would then be able to set each other to work in turn, without a person ever asking for it',
@@ -109,7 +111,8 @@ export const taskNewAction = defineActionVerb('task', {
     flags: z.object({
         prompt: z.string().optional(),
         'prompt-file': z.string().min(1, '--prompt-file needs the path of a file').optional(),
-        title: titleField('--title', '--title needs the title of the task').optional()
+        title: titleField('--title', '--title needs the title of the task').optional(),
+        project: PROJECT_FLAG
     }),
     async run({ positionals: [id], flags }, call) {
         const given = await runAction(call, 'task.create', {

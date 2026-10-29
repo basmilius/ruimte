@@ -137,6 +137,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     nameSource: 'chosen',
                     icon: null,
                     agentsDeleteAnyView: false,
+                    reachOpenProjects: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,
@@ -177,6 +178,7 @@ describe('readOrCreateEndpointIdentity', () => {
     // A switch is stored only away from its default, and a rename leaves it where it stands.
     test.each([
         { key: 'agentsDeleteAnyView', fallback: false, change: true, set: 'setIdentity' },
+        { key: 'reachOpenProjects', fallback: false, change: true, set: 'setSwitches' },
         { key: 'streamingAllowed', fallback: true, change: false, set: 'setIdentity' },
         { key: 'resumeAtReset', fallback: false, change: true, set: 'setIdentity' },
         { key: 'visualReplies', fallback: true, change: false, set: 'setIdentity' },

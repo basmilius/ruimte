@@ -185,7 +185,7 @@ describe('runContext', () => {
         expect(stderr).toBe(
             [
                 'refused\tbad-arguments\tread takes the id of a linked source',
-                'usage\tread\t<id> [--tail N] [--subagent T] [--view V] [--elements | --image] [--json]',
+                'usage\tread\t<id> [--tail N] [--subagent T] [--view V | --project P] [--elements | --image] [--json]',
                 'detail\truimte-context help read',
                 'n1\ttext\tPlan'
             ].join('\n') + '\n'
