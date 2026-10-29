@@ -100,6 +100,22 @@ export async function clickOn(element: Element | null): Promise<void> {
     });
 }
 
+function foldedToolGroups(host: Element): HTMLElement[] {
+    return ([...host.querySelectorAll('button[aria-expanded="false"]')] as HTMLElement[]).filter(
+        (button) => button.classList.contains('group/line') && button.closest('[data-find-item]') === null
+    );
+}
+
+/* Unfolds the tool groups of a thread until the row of `itemId` is drawn; a thread folds even a single call. */
+export async function openToolCall(host: Element, itemId: string): Promise<void> {
+    const row = (): Element | null => host.querySelector(`[data-find-item="${itemId}"]`);
+    await until(() => row() !== null || foldedToolGroups(host).length > 0);
+    for (const button of foldedToolGroups(host)) {
+        await clickOn(button);
+    }
+    await until(() => row() !== null);
+}
+
 /* Opens the submenu behind the row that says `label` in a menu that is open, the way a click on its trigger does. */
 export async function openSubmenu(label: string): Promise<void> {
     const before = document.querySelectorAll('[role="menu"]').length;

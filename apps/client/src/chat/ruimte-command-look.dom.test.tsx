@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem, ProjectCanvasView } from '@ruimte/contracts';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { layOutChat, mount, until, type Mounted } from '../../testing/dom';
+import { layOutChat, mount, openToolCall, type Mounted } from '../../testing/dom';
 import { claudeProvider } from '../../testing/fake-provider';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
@@ -98,7 +98,7 @@ beforeEach(async () => {
     workspace = await openFakeWorkspace(machine, { views: [chat, CANVAS] } as never, { activeViewId: chatId, views: {} });
     page = mount();
     await page.renderApp();
-    await until(() => lineOf('call-go') !== null);
+    await openToolCall(page.host, 'call-go');
 });
 
 afterEach(async () => {

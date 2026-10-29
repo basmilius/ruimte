@@ -8,7 +8,7 @@ import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
+import { clickOn, layOutChat, mount, openToolCall, until, type Mounted } from '../../testing/dom';
 import { claudeProvider } from '../../testing/fake-provider';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
@@ -120,7 +120,7 @@ beforeEach(async () => {
     workspace = await openFakeWorkspace(machine, { views: [chat] } as never, { activeViewId: chatId, views: {} });
     page = mount();
     await page.renderApp();
-    await until(() => page.host.querySelector('[data-find-item="read-shot"]') !== null);
+    await openToolCall(page.host, 'read-shot');
 });
 
 afterEach(async () => {
@@ -157,7 +157,7 @@ describe('what a chat saved to Output', () => {
         });
         page = mount();
         await page.renderApp();
-        await until(() => page.host.querySelector('[data-find-item="next-shot"]') !== null);
+        await openToolCall(page.host, 'next-shot');
         expect(cards()).toHaveLength(0);
         expect(saved).toHaveLength(1);
 

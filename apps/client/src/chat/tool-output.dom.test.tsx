@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
+import { clickOn, layOutChat, mount, openToolCall, until, type Mounted } from '../../testing/dom';
 import { claudeProvider } from '../../testing/fake-provider';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
@@ -62,7 +62,7 @@ async function openChat(): Promise<void> {
     workspace = await openFakeWorkspace(machine, { views: [chat] } as never, { activeViewId: chatId, views: {} });
     page = mount();
     await page.renderApp();
-    await until(() => page.host.querySelector('[data-find-item="build"]') !== null);
+    await openToolCall(page.host, 'build');
 }
 
 /* Opens the call's row when the thread draws it folded, so its output is on screen. */
