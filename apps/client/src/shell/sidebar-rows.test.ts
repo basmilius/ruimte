@@ -259,6 +259,7 @@ function group(endpointId: string, collapsed = false): SidebarGroup {
         active: false,
         collapsed,
         state: 'ready',
+        waitingCount: 1,
         expandedIds: new Set(['main']),
         project: { activeViewId: null, openViewIds: [], views: [view('main', [node('same-node', 'needs-you')])] }
     };

@@ -54,12 +54,8 @@ function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: r
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
-    const since = useWaitingSince((s) => s.byKey);
-
-    const waiting = new Set(ids);
-    const byId = new Map(nodes.filter((node) => waiting.has(node.id)).map((node) => [node.id, node]));
-    const order = oldestWaitingFirst([...byId.values()], sessions, chats, since, endpointId);
-    const lines = order.slice(0, WAITING_LINES).flatMap(({ id }) => {
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const lines = ids.slice(0, WAITING_LINES).flatMap((id) => {
         const node = byId.get(id);
         if (!node) {
             return [];
@@ -69,7 +65,7 @@ function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: r
 
         return [{ id, line: t('status.waitingLine', { title: node.title, ask: ask ? waitAskLine(ask) : t('notifications.needsYou') }) }];
     });
-    const rest = order.length - lines.length;
+    const rest = ids.length - lines.length;
 
     return (
         <>
@@ -117,7 +113,7 @@ export function StatusSummary() {
                 {groups.needsYou.length > 0 && (
                     <Walker
                         label={t('status.nextNeedsYou')}
-                        detail={<WaitingLines nodes={nodes} ids={groups.needsYou} />}
+                        detail={<WaitingLines nodes={nodes} ids={waitingIds} />}
                         count={groups.needsYou.length}
                         ids={waitingIds}
                     >

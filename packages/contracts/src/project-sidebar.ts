@@ -8,6 +8,7 @@ import {
     isDesignView,
     isSessionView,
     isUnlistedView,
+    designNodeChats,
     sessionKindOfView,
     NodeTitleSourceSchema,
     ProjectIconChoiceSchema,
@@ -24,7 +25,9 @@ const SidebarNodeSchema = z.object({
     titleSource: NodeTitleSourceSchema.optional(),
     kind: z.enum(['terminal', 'chat', 'browser', 'device']),
     provider: AgentKindSchema.nullable(),
-    status: AgentStatusSchema.optional()
+    status: AgentStatusSchema.optional(),
+    // A design's later chats, absent from older machines. Their statuses arrive under their own ids.
+    chats: z.array(z.string()).optional()
 });
 
 export const ProjectSidebarViewSchema = z.object({
@@ -95,13 +98,23 @@ export function projectSidebarViews(views: readonly ProjectView[], shared: reado
                                         title: node.title,
                                         titleSource: node.titleSource,
                                         kind: node.kind === 'design' ? ('chat' as const) : node.kind,
-                                        provider: node.provider ?? null
+                                        provider: node.provider ?? null,
+                                        ...(node.kind === 'design' ? { chats: designNodeChats(node).map((chat) => chat.id) } : {})
                                     }
                                 ]
                               : []
                       )
                     : [],
-                self: isSessionView(view) ? { id: view.id, title: view.name, titleSource: view.titleSource, kind: sessionKindOfView(view), provider } : null,
+                self: isSessionView(view)
+                    ? {
+                          id: view.id,
+                          title: view.name,
+                          titleSource: view.titleSource,
+                          kind: sessionKindOfView(view),
+                          provider,
+                          ...(isDesignView(view) ? { chats: designNodeChats(view).map((chat) => chat.id) } : {})
+                      }
+                    : null,
                 ...(isDesignView(view) ? { design: true } : {})
             };
         });

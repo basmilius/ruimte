@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useEndpoints } from '@/state/endpoints';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { useProject } from '@/state/project';
+import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
 import { useProjectList } from '@/state/project-list';
 import { listedEndpoints } from '@/state/local-machine';
 import { sidebarSelection } from './sidebar-selection';
@@ -24,6 +25,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
     const order = useSidebarProjects((state) => state.order);
     const separators = useSidebarProjects((state) => state.separators);
     const snoozes = useSnoozes((state) => state.byKey);
+    const activeWaiting = useWaitingCount();
     const result = useMemo(() => {
         if (!enabled) {
             return { groups: [], incomplete: [], order: [], separators: { before: {}, trailing: [] } as SeparatorPlaces };
@@ -73,6 +75,8 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                     active: isActive,
                     collapsed: collapsed.includes(key),
                     state,
+                    waitingCount:
+                        state !== 'ready' ? 0 : isActive ? activeWaiting : sidebarWaitingCount(views ?? [], snapshot?.statuses ?? {}, endpoint.id, snoozes),
                     expandedIds: isActive ? expandedIds : new Set(expandedViews[key] ?? []),
                     project: isActive
                         ? {
@@ -114,7 +118,22 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
             separators
         );
         return { groups, incomplete, order: nextOrder, separators: places };
-    }, [enabled, machines, endpoints, current, currentEndpointId, selected, collapsed, expandedViews, expandedIds, active, order, separators, snoozes]);
+    }, [
+        enabled,
+        machines,
+        endpoints,
+        current,
+        currentEndpointId,
+        selected,
+        collapsed,
+        expandedViews,
+        expandedIds,
+        active,
+        activeWaiting,
+        order,
+        separators,
+        snoozes
+    ]);
     useEffect(() => {
         if (!enabled) {
             return;

@@ -14,6 +14,14 @@ import { emptyCanvas } from '../../testing/project-fixtures';
 
 const CHAT: ProjectView = { kind: 'chat', id: 'chat-view', name: 'Notes chat', node: {} };
 const SHELL: ProjectView = { kind: 'terminal', id: 'shell-view', name: 'Shell', node: {} };
+const DESIGN: ProjectView = {
+    kind: 'design',
+    id: 'design-view',
+    name: 'Onboarding',
+    node: {},
+    path: 'onboarding',
+    chats: [{ id: 'design-review', name: 'Review', node: {} }]
+};
 const FILE = '/work/atlas/src/a.ts';
 const CANVAS = {
     ...emptyCanvas('writers', 'Writers'),
@@ -68,7 +76,7 @@ beforeEach(async () => {
     machine = new FakeMachine();
     machine.answer('fs.read', () => ({ kind: 'text', text: 'export {};\n', encoding: 'utf-8', size: 11, mtime: 1, language: 'typescript' }) as never);
     useViewPins.setState({ pins: {} });
-    workspace = await openFakeWorkspace(machine, { views: [CHAT, SHELL, CANVAS] } as never, { activeViewId: CHAT.id, views: {} });
+    workspace = await openFakeWorkspace(machine, { views: [CHAT, SHELL, CANVAS, DESIGN] } as never, { activeViewId: CHAT.id, views: {} });
     page = mount();
     await page.renderApp();
     await until(() => chatCell() !== null);
@@ -87,6 +95,20 @@ afterEach(async () => {
 });
 
 describe('the tabs of a host', () => {
+    test('a design tab counts both its original chat and a later chat', async () => {
+        machine.answer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId, { status: 'needs-you' }), items: [] }));
+
+        await act(async () => {
+            useDocument.getState().dropViewAsTab(DESIGN.id, { column: 0, cell: 0 }, null);
+            useDocument.getState().activateTab(FILE);
+            for (const chatId of [DESIGN.id, 'design-review']) {
+                machine.emit('chat.status', { chatId, info: chatInfoOf(chatId, { status: 'needs-you' }) });
+            }
+        });
+        await until(() => (tab(DESIGN.id)?.querySelector('[aria-label="2 waiting"]') ?? null) !== null);
+        expect(tab(DESIGN.id)!.querySelector('[aria-label="2 waiting"]')!.textContent).toBe('2');
+    });
+
     test('a background canvas counts waiting sessions and follows snoozes and answers', async () => {
         machine.answer('chat.attach', ({ chatId }) => ({
             info: chatInfoOf(chatId, { status: CANVAS.nodes.some((node) => node.id === chatId) ? 'needs-you' : 'idle' }),

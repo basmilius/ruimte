@@ -188,7 +188,7 @@ export function useWaitingCount(viewId?: string): number {
     });
 }
 
-/* Background projects carry compact rows rather than live nodes. Status events outrank the snapshot they were read with. */
+/* Compact rows only know the project machine's statuses. Remote nodes stay out rather than opening a link for a badge. */
 export function sidebarWaitingCount(
     views: readonly ProjectSidebarView[],
     statuses: Readonly<Record<string, AgentStatus>>,
@@ -199,10 +199,12 @@ export function sidebarWaitingCount(
 
     for (const row of views) {
         for (const node of [...row.nodes, ...(row.self === null ? [] : [row.self])]) {
-            const status = statuses[`${node.kind}:${node.id}`] ?? node.status;
+            const ids = node.kind === 'chat' ? [node.id, ...(node.chats ?? [])] : [node.id];
 
-            if (status === 'needs-you' && snoozeOf(snoozes, endpointId, node.id) === null) {
-                waiting.add(node.id);
+            for (const id of ids) {
+                if (statuses[`${node.kind}:${id}`] === 'needs-you' && snoozeOf(snoozes, endpointId, id) === null) {
+                    waiting.add(id);
+                }
             }
         }
     }

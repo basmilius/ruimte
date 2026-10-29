@@ -37391,6 +37391,12 @@
                                 "error",
                                 "exited"
                               ]
+                            },
+                            "chats": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
                             }
                           },
                           "required": [
@@ -37457,6 +37463,12 @@
                                   "error",
                                   "exited"
                                 ]
+                              },
+                              "chats": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
                               }
                             },
                             "required": [
@@ -84461,6 +84473,12 @@
                       "error",
                       "exited"
                     ]
+                  },
+                  "chats": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 },
                 "required": [
@@ -84527,6 +84545,12 @@
                         "error",
                         "exited"
                       ]
+                    },
+                    "chats": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [

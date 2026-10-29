@@ -111,14 +111,24 @@ export function ProjectTabs({ dirty }: { readonly dirty: boolean }) {
     const tabs = useWindowTabs((s) => s.tabs);
     const pins = pinnedOf(tabs);
     const rows = useProjectList((s) => s.projects);
+    const current = useProject((s) => s.current);
+    const currentEndpointId = useProject((state) => state.currentEndpointId);
     const machines = useSidebarMachines(
         true,
-        [...new Set(rows.filter((row) => tabs.keys.includes(`${row.endpointId}:${row.summary.projectId}`)).map((row) => row.endpointId))],
+        [
+            ...new Set(
+                rows
+                    .filter(
+                        (row) =>
+                            tabs.keys.includes(`${row.endpointId}:${row.summary.projectId}`) &&
+                            !(row.endpointId === currentEndpointId && row.summary.projectId === current?.projectId)
+                    )
+                    .map((row) => row.endpointId)
+            )
+        ],
         false
     );
     const snoozes = useSnoozes((state) => state.byKey);
-    const current = useProject((s) => s.current);
-    const currentEndpointId = useProject((state) => state.currentEndpointId);
     const endpoints = useEndpoints((s) => s.endpoints);
     const servers = useServers((s) => s.byEndpoint);
     const [menuKey, setMenuKey] = useState<string | null>(null);

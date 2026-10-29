@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { projectSidebarViews, type ProjectSummary } from '@ruimte/contracts';
 import type { DesktopBridge } from '@/desktop/bridge';
-import { startWindowTabs } from '@/project/window-tabs';
+import { startWindowTabs, useWindowTabs } from '@/project/window-tabs';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { chatInfoOf } from '../../testing/chat-info';
@@ -65,6 +65,7 @@ function fakeShell(): FakeShell {
 const scope = globalThis as unknown as { window: { ruimteDesktop?: DesktopBridge } };
 const previousNavigation = useSettings.getState().projectNavigation;
 const previousScope = useSettings.getState().sidebarScope;
+const previousEverywhere = useSettings.getState().needsYouAllProjects;
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
@@ -107,7 +108,7 @@ beforeEach(async () => {
     shell = fakeShell();
     scope.window.ruimteDesktop = shell.bridge;
     history.replaceState(null, '', `?state=${encodeURIComponent(JSON.stringify([BEHIND, SHOWN]))}`);
-    useSettings.setState({ projectNavigation: 'tabs' });
+    useSettings.setState({ projectNavigation: 'tabs', sidebarScope: 'current', needsYouAllProjects: false });
     stopTabs = startWindowTabs();
     page = mount();
     await page.renderApp();
@@ -118,7 +119,7 @@ afterEach(async () => {
     await page.unmount();
     stopTabs();
     useSettings.setState({ projectNavigation: previousNavigation });
-    useSettings.setState({ sidebarScope: previousScope });
+    useSettings.setState({ sidebarScope: previousScope, needsYouAllProjects: previousEverywhere });
     history.replaceState(null, '', location.pathname);
     removeDesktop();
     workspace.close();
@@ -166,6 +167,46 @@ test('the project tabs and the all-project sidebar share one read of their machi
     await act(async () => useSettings.setState({ sidebarScope: 'all-open' }));
     await until(() => page.host.querySelector('[data-sidebar-row^="project:"]') !== null);
     expect(machine.requests('project.sidebar')).toHaveLength(reads);
+});
+
+test('a window that shows only the current project starts no background project reads', async () => {
+    await act(async () => useWindowTabs.setState({ tabs: { keys: [SHOWN], active: SHOWN } }));
+    await until(() => tab(BEHIND) === null);
+    await page.unmount();
+    const reads = machine.requests('project.sidebar').length;
+    page = mount();
+
+    await page.renderApp();
+    await until(() => tab(SHOWN) !== null);
+    expect(machine.requests('project.sidebar')).toHaveLength(reads);
+});
+
+test('the background project tab and sidebar heading count a later design chat together', async () => {
+    await act(async () => machine.emit('chat.status', { chatId: 'borealis-chat', info: chatInfoOf('borealis-chat', { status: 'needs-you' }) }));
+    await until(() => (tab(BEHIND)?.querySelector('[aria-label="1 waiting"]') ?? null) !== null);
+    const views = projectSidebarViews(
+        [
+            {
+                kind: 'design',
+                id: 'onboarding',
+                name: 'Onboarding',
+                path: 'onboarding',
+                node: {},
+                chats: [{ id: 'design-review', name: 'Review', node: {} }]
+            }
+        ],
+        []
+    );
+
+    await act(async () => {
+        machine.emit('project.summary', { summary: BOREALIS, views });
+        machine.emit('chat.status', { chatId: 'design-review', info: chatInfoOf('design-review', { status: 'needs-you' }) });
+        useSettings.setState({ sidebarScope: 'all-open' });
+    });
+    const heading = (): Element | null => page.host.querySelector('[data-sidebar-row=\'project:["fake-machine","project-borealis"]\']');
+    await until(() => heading()?.querySelector('[aria-label="1 waiting"]') !== undefined && heading()?.querySelector('[aria-label="1 waiting"]') !== null);
+    expect(tab(BEHIND)!.querySelector('[aria-label="1 waiting"]')!.textContent).toBe('1');
+    expect(heading()!.querySelector('[aria-label="1 waiting"]')!.textContent).toBe('1');
 });
 
 test('the current project counts its live sessions without needing a background snapshot', async () => {

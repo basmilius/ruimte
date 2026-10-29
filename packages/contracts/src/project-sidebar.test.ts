@@ -49,14 +49,53 @@ test('a row carries the flag of its view, and none for a color this version cann
 
 test('a design goes as a row an older client draws as unknown, with its chat as the session of the row', () => {
     const views: ProjectView[] = [
-        { id: 'design', kind: 'design', name: 'Onboarding', node: { provider: 'claude' }, path: 'designs/onboarding' },
+        {
+            id: 'design',
+            kind: 'design',
+            name: 'Onboarding',
+            node: { provider: 'claude' },
+            path: 'designs/onboarding',
+            chats: [{ id: 'second', name: 'Review', node: {} }, { future: true }]
+        },
         { id: 'chat', kind: 'chat', name: 'Discussion', node: { provider: 'claude' } }
     ];
     const projected = projectSidebarViews(views, []);
     expect(projected[0]).toMatchObject({ kind: 'unknown', design: true, provider: 'claude' });
-    expect(projected[0]?.self).toMatchObject({ id: 'design', kind: 'chat', provider: 'claude' });
+    expect(projected[0]?.self).toMatchObject({ id: 'design', kind: 'chat', provider: 'claude', chats: ['second'] });
     expect('design' in projected[1]!).toBe(false);
     expect(ProjectSidebarViewSchema.array().parse(projected)).toEqual(projected);
+});
+
+test('a design on a canvas sends later chat ids without their prompts or settings', () => {
+    const [projected] = projectSidebarViews(
+        [
+            {
+                id: 'canvas',
+                kind: 'canvas',
+                name: 'Designs',
+                texts: [],
+                edges: [],
+                layouts: [],
+                nodes: [
+                    {
+                        id: 'design',
+                        kind: 'design',
+                        title: 'Onboarding',
+                        path: 'onboarding',
+                        x: 0,
+                        y: 0,
+                        w: 480,
+                        h: 520,
+                        chats: [{ id: 'second', name: 'Private review', node: { prompt: 'Private prompt' } }]
+                    }
+                ]
+            }
+        ],
+        []
+    );
+
+    expect(projected?.nodes[0]).toMatchObject({ id: 'design', kind: 'chat', chats: ['second'] });
+    expect(JSON.stringify(projected)).not.toContain('Private');
 });
 
 test('an empty sidebar result is valid for a machine with no open projects', () => {

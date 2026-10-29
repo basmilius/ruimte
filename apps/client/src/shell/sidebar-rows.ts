@@ -240,6 +240,7 @@ export interface SidebarGroup {
     collapsed: boolean;
     expandedIds: ReadonlySet<string>;
     state: 'ready' | 'loading' | 'offline' | 'error';
+    waitingCount: number;
 }
 
 function needsYou(waiting: SidebarWaitingGroup[]): SidebarSection {

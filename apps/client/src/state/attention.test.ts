@@ -234,11 +234,34 @@ test('compact project counts use current statuses, count a session once and keep
         ],
         []
     );
-    views[0]!.self!.status = 'needs-you';
     const statuses = { 'chat:c1': 'running', 'terminal:t1': 'needs-you' } as const;
 
     expect(sidebarWaitingCount([...views, ...views], statuses, 'local', {})).toBe(1);
     expect(sidebarWaitingCount(views, statuses, 'local', { 'other:t1': 2_000 })).toBe(1);
     expect(sidebarWaitingCount(views, statuses, 'local', { 'local:t1': 2_000 })).toBe(0);
-    expect(sidebarWaitingCount(views, {}, 'local', {})).toBe(1);
+    expect(sidebarWaitingCount(views, {}, 'local', {})).toBe(0);
+});
+
+test('a background design counts later chats under their own status and snooze ids', () => {
+    const views = projectSidebarViews(
+        [
+            {
+                kind: 'design',
+                id: 'design',
+                name: 'Onboarding',
+                path: 'onboarding',
+                node: {},
+                chats: [
+                    { id: 'review', name: 'Review', node: {} },
+                    { id: 'copy', name: 'Copy', node: {} }
+                ]
+            }
+        ],
+        []
+    );
+    const statuses = { 'chat:design': 'running', 'chat:review': 'needs-you', 'chat:copy': 'needs-you' } as const;
+
+    expect(sidebarWaitingCount(views, statuses, 'local', {})).toBe(2);
+    expect(sidebarWaitingCount(views, statuses, 'local', { 'local:review': 2_000 })).toBe(1);
+    expect(sidebarWaitingCount(views, { 'chat:design': 'needs-you' }, 'local', {})).toBe(1);
 });

@@ -14,7 +14,8 @@ import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useUi } from '@/state/ui';
 import { useEndpointId } from '@/state/keys';
 import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
-import { heaviestWork, viewNameOf, waitsOnYou, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
+import { heaviestWork, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
+import { WaitingCount } from '@/attention/WaitingCount';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -540,7 +541,6 @@ export function ProjectHeading({
     const { t } = useTranslation('shell');
     const machineIcon = useServers((state) => state.byEndpoint[group.endpointId]?.icon ?? null);
     const collapse = (value: boolean) => useSidebarProjects.getState().collapse(group.key, value);
-    const count = group.project.views.flatMap((view) => [...view.nodes, ...(view.self ? [view.self] : [])]).filter(waitsOnYou).length;
     return (
         <ContextMenu.Root>
             <MaybeTooltip label={`${group.summary.name} · ${group.machineLabel}`}>
@@ -584,11 +584,7 @@ export function ProjectHeading({
                             <MachineGlyph icon={machineIcon} size={14} />
                         </span>
                     </Tooltip>
-                    {group.state === 'ready' && count > 0 && (
-                        <span className="tabular-nums text-status-needs-you" aria-label={t('sidebar.waitingCount', { count })}>
-                            {count}
-                        </span>
-                    )}
+                    {group.state === 'ready' && <WaitingCount count={group.waitingCount} />}
                 </ContextMenu.Trigger>
             </MaybeTooltip>
             <ContextMenu.Popup>
