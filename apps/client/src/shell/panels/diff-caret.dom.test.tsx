@@ -77,6 +77,8 @@ describe('a diff opens its file at the line of the caret', () => {
         await pressKey(input, 'ArrowDown', JUMP);
         await until(fileRead);
         await until(() => document.body.textContent?.includes('Ln 3, Col 3') === true);
+        // The keyboard is in the file's editor, so the line can be edited at once.
+        await until(() => document.activeElement instanceof HTMLTextAreaElement && document.activeElement.closest('.file-diff') === null);
     });
 
     test('a removed line opens on the line that took its place', async () => {

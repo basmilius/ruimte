@@ -37,7 +37,10 @@ function openAt(path: string, source: DiffSource): boolean {
     if (at === null) {
         return false;
     }
-    void perform('file.preview', { path, line: at.line, column: at.column }).catch(ignoreRefusal);
+    // The cell takes the keyboard for the tab; the jump hands it on to the editor, so the line can be edited at once.
+    void perform('file.preview', { path, line: at.line, column: at.column })
+        .then(({ path: opened }) => useFiles.getState().requestCaret(opened))
+        .catch(ignoreRefusal);
     return true;
 }
 
