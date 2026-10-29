@@ -111,6 +111,9 @@ describe('what the Account pane shows', () => {
         expect(pickForTarget('machines.machine.broker', entries, studio)).toEqual({ kind: 'machine', id: 'studio' });
         expect(pickForTarget('machines.machine.broker', entries, attic)).toEqual({ kind: 'machine', id: 'home' });
         expect(pickForTarget('machines.machine.broker', remoteOnly, null)).toEqual({ kind: 'machine', id: 'studio' });
+        // Without a pick, the Storage of a window on another machine is that machine's, not this one's.
+        expect(pickForTarget('machines.machine.storage.output', entries, null, studio.endpoint!.id)).toEqual({ kind: 'machine', id: 'studio' });
+        expect(pickForTarget('machines.machine.storage.output', entries, null)).toEqual({ kind: 'machine', id: 'home' });
         expect(pickForTarget('machines.machine.keepRunning', entries, studio)).toEqual({ kind: 'machine', id: 'home' });
         expect(pickForTarget('machines.machine.keepRunning', remoteOnly, null)).toBeNull();
         expect(pickForTarget('machines.machine.stopRunning', entries, studio)).toEqual({ kind: 'machine', id: 'home' });

@@ -171,22 +171,25 @@ export function NodeSizeSection() {
     const sizes = useServers((s) => (endpoint === null ? undefined : s.byEndpoint[endpoint.id]?.nodeSizes));
     const connection = useEndpointConnection(endpoint?.id ?? '');
 
-    if (endpoint === null || sizes === undefined) {
+    if (endpoint === null) {
         return null;
     }
 
     return (
         <SettingsSection title={t('views.nodeSizes.title')} description={t('views.nodeSizes.description')} icon={Scaling} scope="machine" machine="picked">
-            {NodeKindSchema.options.map((kind, index) => (
-                <NodeSizeRow
-                    key={`${endpoint.id}:${kind}`}
-                    endpoint={endpoint}
-                    kind={kind}
-                    custom={sizes[kind]}
-                    connected={connection.status === 'open'}
-                    searchId={index === 0 ? SEARCH_ID : undefined}
-                />
-            ))}
+            {/* The section stays, so its picker can go back to a machine that did answer. */}
+            {sizes === undefined && <SettingsRow searchId={SEARCH_ID} muted label={t('views.nodeSizes.unknown', { machine: endpoint.label })} />}
+            {sizes !== undefined &&
+                NodeKindSchema.options.map((kind, index) => (
+                    <NodeSizeRow
+                        key={`${endpoint.id}:${kind}`}
+                        endpoint={endpoint}
+                        kind={kind}
+                        custom={sizes[kind]}
+                        connected={connection.status === 'open'}
+                        searchId={index === 0 ? SEARCH_ID : undefined}
+                    />
+                ))}
         </SettingsSection>
     );
 }

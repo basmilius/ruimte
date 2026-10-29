@@ -668,6 +668,7 @@
             "title": "Nieuwe nodes",
             "description": "De grootte waarmee een nieuwe node begint, ook als een agent hem toevoegt. Of klik met rechts op een node en kies Als standaardgrootte instellen.",
             "searchLabel": "Standaardgrootte van nodes",
+            "unknown": "{{machine}} heeft nog niet geantwoord. Open een van zijn projecten om de groottes te zien.",
             "builtIn": "Ingebouwd",
             "custom": "Eigen grootte, ingebouwd {{builtIn}}",
             "width": "Breedte",
@@ -1667,7 +1668,6 @@
         "output": {
             "title": "Output",
             "description": "Bewaarde resultaten, op de machine.",
-            "machine": "Machine",
             "on": "Output op {{machine}}",
             "bar": "Output per project",
             "free": "{{size}} vrij op de schijf"

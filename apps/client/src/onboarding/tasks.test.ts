@@ -142,7 +142,7 @@ describe('the end of the walk', () => {
             'Claude Code is logged in and computer use is on. Log in to Codex later under Settings › Providers.'
         );
         expect(summaryOf(tasks, facts({ loggedIn: ['Claude Code', 'Codex'], computer: 'off' }))).toBe(
-            'Claude Code and Codex are logged in. Turn on computer use later under Settings › Computer use.'
+            'Claude Code and Codex are logged in. Turn on computer use later under Settings › Agents › Computer use.'
         );
         expect(summaryOf(tasksOf('unsupported'), facts({ computer: 'unsupported' }))).toBe(
             'Log in to an agent CLI under Settings › Providers before your first chat.'

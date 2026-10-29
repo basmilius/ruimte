@@ -99,10 +99,15 @@ const LOCAL_ONLY_TARGETS = ['machines.machine.keepRunning', 'machines.machine.st
 
 /*
  * Where a search result of the Account pane lands, or null for one of another pane. A row of a
- * machine's detail lands on the machine picked when this client opened it, else on this machine,
- * else on the first one it opened.
+ * machine's detail lands on the machine picked when this client opened it, else on the machine of
+ * this window, else on this machine, else on the first one it opened.
  */
-export function pickForTarget(target: string, entries: readonly MachineEntry[], picked: MachineEntry | null): MachinePick | null {
+export function pickForTarget(
+    target: string,
+    entries: readonly MachineEntry[],
+    picked: MachineEntry | null,
+    windowEndpointId: string | null = null
+): MachinePick | null {
     if (target === 'machines.signIn' || target === 'machines.add') {
         return { kind: 'account' };
     }
@@ -113,7 +118,8 @@ export function pickForTarget(target: string, entries: readonly MachineEntry[], 
         return null;
     }
     const local = entries.find((entry) => entry.local) ?? null;
-    const opened = picked?.endpoint ? picked : (local ?? entries.find((entry) => entry.endpoint !== null) ?? null);
+    const windowEntry = entries.find((entry) => entry.endpoint !== null && entry.endpoint.id === windowEndpointId) ?? null;
+    const opened = picked?.endpoint ? picked : (windowEntry ?? local ?? entries.find((entry) => entry.endpoint !== null) ?? null);
     // Running in the background, stopping it and Direct are about this machine only.
     const entry = LOCAL_ONLY_TARGETS.includes(target) ? local : opened;
     return entry === null ? null : { kind: 'machine', id: entry.id };

@@ -668,6 +668,7 @@
             "title": "New nodes",
             "description": "The size a new node starts at, also when an agent adds it. Or right-click a node and choose Set as default size.",
             "searchLabel": "Default node sizes",
+            "unknown": "{{machine}} has not answered yet. Open one of its projects to see its sizes.",
             "builtIn": "Built in",
             "custom": "Custom, built in {{builtIn}}",
             "width": "Width",
@@ -1667,7 +1668,6 @@
         "output": {
             "title": "Output",
             "description": "Saved results, kept on the machine.",
-            "machine": "Machine",
             "on": "Output on {{machine}}",
             "bar": "Output by project",
             "free": "{{size}} free on the disk"

@@ -14,6 +14,7 @@ import { currentPick, mergeMachines, pickForTarget, type MachinePick } from '@/s
 import { RuimteAccountDetail } from '@/shell/settings/RuimteAccountDetail';
 import { ThisComputerDetail } from '@/shell/settings/ThisComputerDetail';
 import { useEndpoints } from '@/state/endpoints';
+import { useEndpointId } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
 
@@ -31,6 +32,7 @@ export function MachinesPane() {
     const machinesError = usePulsarMachines((s) => s.error);
     const target = useUi((s) => s.settings.target);
     const [picked, setPicked] = useState<MachinePick | null>(null);
+    const windowEndpointId = useEndpointId();
 
     // An open pane is one of the moments a client learns what the account says, removals included.
     useEffect(() => {
@@ -50,7 +52,7 @@ export function MachinesPane() {
     const [seenTarget, setSeenTarget] = useState<string | null>(null);
     if (target !== seenTarget) {
         setSeenTarget(target);
-        const next = target === null ? null : pickForTarget(target, entries, currentEntry);
+        const next = target === null ? null : pickForTarget(target, entries, currentEntry, windowEndpointId);
         if (next !== null) {
             setPicked(next);
         }

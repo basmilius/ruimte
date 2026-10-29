@@ -81,7 +81,7 @@
             "computer": "Computer use is on.",
             "logInLater": "Log in to {{clis}} later under Settings › Providers.",
             "noProvider": "Log in to an agent CLI under Settings › Providers before your first chat.",
-            "computerLater": "Turn on computer use later under Settings › Computer use."
+            "computerLater": "Turn on computer use later under Settings › Agents › Computer use."
         }
     },
     "about": {
