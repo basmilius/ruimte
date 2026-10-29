@@ -49,7 +49,7 @@ import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@adecore/agents-react/usage';
 import { ConnectionDot } from '@/shell/ConnectionDot';
-import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
+import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useSettings } from '@/state/settings';
 import { isScratchProject, useProject } from '@/state/project';
@@ -81,6 +81,10 @@ const FOOTER_BUTTON =
 /* Where a dragged row would land. It sits in the gap, so the rows around it do not move while
    the pointer travels. */
 const INSERT_LINE = 'pointer-events-none -my-px h-0.5 shrink-0 rounded-full bg-accent';
+
+/* Without traffic lights the 18px logo centers on the 16px row icons below it (8px list padding plus
+   8px row padding), which also lines the wordmark up with the row labels. */
+const BRAND_PADDING_PX = 15;
 
 function insertionIndex(list: HTMLElement, clientY: number, viewCount: number): number {
     const rows = [...list.querySelectorAll<HTMLElement>('[data-view-index]')].map((row) => {
@@ -407,7 +411,7 @@ export function Sidebar() {
                 <SidebarGlow />
                 <div
                     className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
-                    style={{ paddingLeft: inset === undefined ? STRIP_PADDING_PX : inset + 8 }}
+                    style={{ paddingLeft: inset === undefined ? BRAND_PADDING_PX : inset + 8 }}
                 >
                     {IS_STATION ? <StationMenu variant="wordmark" /> : <Brand className="pointer-events-none" />}
                     <SidebarToggle />
