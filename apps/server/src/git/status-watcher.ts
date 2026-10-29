@@ -19,8 +19,10 @@ const MAX_TRACKED_FILES = 5000;
 const DEGRADED_MS = 5 * 60 * 1000;
 
 /* Loose objects and lock files move on every git command and say nothing about the status. */
-function isNoise(path: string): boolean {
-    return path.includes(`${sep}objects${sep}`) || path.endsWith('.lock') || path.endsWith('~');
+function isNoise(path: string, root: string): boolean {
+    const metadata = !isUnder(path, root) || isUnder(path, join(root, '.git'));
+
+    return metadata && (path.includes(`${sep}objects${sep}`) || path.endsWith('.lock') || path.endsWith('~'));
 }
 
 /* One repository watched for every client that asked, in whichever folder of it each one asked. */
@@ -286,15 +288,14 @@ export class GitStatusWatcher {
         }
         await this.run(watch.root);
         // A diff reads the bytes, not the status, so it is told about a burst the status slept through.
-        const paths = touched.filter((path) => !isNoise(path));
-        const broad = paths.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
-        const hint = broad ? {} : { changedPaths: paths.sort() };
+        const broad = touched.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
+        const hint = broad ? {} : { changedPaths: touched.sort() };
         this.publish(watch, (cwd) => ({ event: 'git.changed', payload: { cwd, ...hint } }));
     }
 
     /* Whether a burst is worth a status run: a build writing into an ignored folder is not. */
     private async matters(watch: RootWatch, touched: string[]): Promise<boolean> {
-        const paths = touched.filter((path) => !isNoise(path));
+        const paths = touched.filter((path) => !isNoise(path, watch.root));
         if (paths.length === 0) {
             return false;
         }

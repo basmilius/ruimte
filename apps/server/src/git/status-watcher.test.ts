@@ -320,3 +320,16 @@ test.each([null, '.git/index', '.git/refs/heads/main'])('a metadata or unnamed c
     await fake.settle();
     expect(changed).toEqual([{ cwd: repo }]);
 });
+
+test.each(['bun.lock', 'Cargo.lock', 'src/objects/item.ts', 'notes~'])('working-tree path %s survives mixed and standalone bursts', async (path) => {
+    await watcher.watch('c1', repo);
+    fake.on(repo).emit('tracked.txt');
+    fake.on(repo).emit(path);
+    await fake.settle();
+    expect(changed).toEqual([{ cwd: repo, changedPaths: [join(repo, path), join(repo, 'tracked.txt')].sort() }]);
+
+    changed.length = 0;
+    fake.on(repo).emit(path);
+    await fake.settle();
+    expect(changed).toEqual([{ cwd: repo, changedPaths: [join(repo, path)] }]);
+});

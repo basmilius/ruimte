@@ -121,3 +121,11 @@ test('a precise save re-reads its editor while unrelated files in the folder sta
         await until(() => machine.requests('fs.read').length === before + 1);
     }
 });
+
+test('an older machine with only a root directory hint refreshes a nested editor conservatively', async () => {
+    await render('/watch-test/src/file.txt');
+    await act(async () => gates[0]!.resolve());
+    await until(() => page.host.querySelector('output')?.textContent === 'fresh');
+    await act(async () => machine.emit('fs.changed', { root: '/watch-test', paths: ['/watch-test'] }));
+    await until(() => machine.requests('fs.read').length === 2);
+});
