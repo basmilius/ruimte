@@ -11,6 +11,7 @@ interface ProjectAccountsDeps {
     accountsOf(projectId: string): ProjectAccounts | undefined;
     providerAccounts: Pick<ProviderAccountsService, 'snapshot'>;
     limits(): UsageLimitsSnapshot | null;
+    now(): number;
 }
 
 /*
@@ -36,13 +37,16 @@ export function projectAccountChooser(deps: ProjectAccountsDeps): ProjectAccount
             named,
             preferred: rule.default,
             off: rule.off ?? [],
-            unusable: (account) => unusableReason(snapshot, deps.limits(), account)
+            unusable: (account) => unusableReason(snapshot, deps.limits(), account, deps.now())
         });
     };
 }
 
-/* Why an account cannot take a start now, from what the machine last heard; one never checked or read counts as usable. */
-export function unusableReason(snapshot: ProviderAccounts, limits: UsageLimitsSnapshot | null, id: string): AccountUnusable | null {
+/*
+ * Why an account cannot take a start now, from what the machine last heard; one never checked or read
+ * counts as usable, and so does a spent window whose reset has passed, which a stale read still holds.
+ */
+export function unusableReason(snapshot: ProviderAccounts, limits: UsageLimitsSnapshot | null, id: string, now: number): AccountUnusable | null {
     if (snapshot.accounts[id]?.enabled === false) {
         return 'turned off on this machine';
     }
@@ -59,8 +63,9 @@ export function unusableReason(snapshot: ProviderAccounts, limits: UsageLimitsSn
 
     const kind = snapshot.accounts[id]?.kind ?? id;
     const read = limits?.providers.find((entry) => entry.kind === kind && (entry.account?.id ?? entry.kind) === id);
+    const spent = read?.windows.some((window) => window.used >= 1 && (window.resetsAt === null || window.resetsAt > now)) ?? false;
 
-    return read !== undefined && read.windows.some((window) => window.used >= 1) ? 'at its usage limit' : null;
+    return spent ? 'at its usage limit' : null;
 }
 
 /* What a chat says when its start passed over the project's default account. */
@@ -68,15 +73,28 @@ export function passedOverNote(took: string, passed: string, reason: AccountUnus
     return `Started on ${took}: ${passed} is ${reason}.`;
 }
 
-/* One person's accounts for one kind in a project; a default it also turns off is refused. */
+function sameChoice(a: { default?: string; off?: readonly string[] } | undefined, b: { default?: string; off?: readonly string[] } | undefined): boolean {
+    const offOf = (choice: typeof a): string => [...new Set(choice?.off ?? [])].sort().join('\n');
+
+    return a?.default === b?.default && offOf(a) === offOf(b);
+}
+
+/*
+ * One person's accounts for one kind in a project; a default it also turns off is refused, and so is a
+ * choice made on what another client changed since (`seen`), so one never silently undoes the other.
+ */
 export async function setProjectAccounts(store: Pick<ProjectStore, 'mutate'>, payload: ProjectSetAccountsPayload): Promise<ProjectAccounts> {
-    const { projectId, kind, default: preferred, off } = payload;
+    const { projectId, kind, default: preferred, off, seen } = payload;
 
     if (preferred !== null && off.includes(preferred)) {
         throw new ProjectError('project-invalid', `The account '${preferred}' cannot be this project's default and be turned off in it`);
     }
 
     return store.mutate(projectId, (content) => {
+        if (seen !== undefined && !sameChoice(content.accounts?.[kind], seen)) {
+            throw new ProjectError('rev-conflict', 'The accounts of this project changed since they were read; read them again');
+        }
+
         const { [kind]: _before, ...others } = content.accounts ?? {};
         const choice = { ...(preferred === null ? {} : { default: preferred }), ...(off.length === 0 ? {} : { off: [...new Set(off)] }) };
         const accounts = Object.keys(choice).length === 0 ? others : { ...others, [kind]: choice };

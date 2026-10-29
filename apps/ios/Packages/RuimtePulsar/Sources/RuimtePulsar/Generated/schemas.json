@@ -47763,6 +47763,22 @@
           "type": "string",
           "minLength": 1
         }
+      },
+      "seen": {
+        "type": "object",
+        "properties": {
+          "default": {
+            "type": "string",
+            "minLength": 1
+          },
+          "off": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
       }
     },
     "required": [

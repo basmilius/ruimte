@@ -545,7 +545,8 @@ export class ChatManager extends ChatCore {
         if (to === from) {
             throw new ChatError('same-account', `The chat already runs under the account '${this.accountLabel(kind, to)}'`);
         }
-        // As named and not as stored, which reads the default account as none: a turned-off default account is refused.
+        // As named and not as stored, which reads the default account as none: a turned-off default account is refused, and one the chat's project turned off.
+        this.projectAccount(chatId, kind, account);
         this.requireAccount(kind, account);
         if (session.info.activeTurnId !== null) {
             throw new ChatError('chat-busy', 'The chat is working on a turn; go on under another account once it ends');
@@ -712,7 +713,8 @@ export class ChatManager extends ChatCore {
         if (chosen === null) {
             return undefined;
         }
-        if (chosen.passedOver) {
+        // A chat that is already open asks for another start of its own, such as a fork, which gets no note.
+        if (chosen.passedOver && !this.get(chatId)) {
             this.passedOver.set(chatId, chosen.passedOver);
         }
         return chosen.account;

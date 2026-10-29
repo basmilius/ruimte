@@ -28,7 +28,8 @@ export function ProjectAccountsSection({ projectId, endpointId }: { projectId: s
     const { busy, failure, run } = useAsyncAction(t('projectSettings.accountsFailed'));
 
     const kinds = [...new Set(Object.values(machine?.accounts ?? {}).map((account) => account.kind))].filter(
-        (kind) => accountsOfKind(machine, kind).filter((entry) => entry.account.enabled !== false).length >= 2
+        // Every account counts, also one turned off on the machine, so a choice made before stays where it can be undone.
+        (kind) => accountsOfKind(machine, kind).length >= 2
     );
 
     if (!answers || kinds.length === 0) {
@@ -39,7 +40,7 @@ export function ProjectAccountsSection({ projectId, endpointId }: { projectId: s
         void run(async () => {
             const choice = choiceAfter(rule[kind], change);
             // The project file changes, and its change brings the new choice to this window as to every other.
-            await (transportFor(endpointId)?.request('project.setAccounts', { projectId, kind, ...choice }) ??
+            await (transportFor(endpointId)?.request('project.setAccounts', { projectId, kind, ...choice, seen: rule[kind] ?? {} }) ??
                 Promise.reject(new Error(t('projectSettings.accountsFailed'))));
         });
     };
@@ -52,10 +53,10 @@ export function ProjectAccountsSection({ projectId, endpointId }: { projectId: s
             <p className="mb-1.5 text-sm text-text-faint">{t('projectSettings.accountsNote')}</p>
             {kinds.map((kind) => {
                 const providerName = providers?.find((provider) => provider.kind === kind)?.name ?? kind;
-                const entries = accountsOfKind(machine, kind).filter((entry) => entry.account.enabled !== false);
+                const entries = accountsOfKind(machine, kind);
                 const top = topAccountEntry(entries);
                 const off = rule[kind]?.off ?? [];
-                const offered = entries.filter((entry) => !off.includes(entry.id));
+                const offered = entries.filter((entry) => entry.account.enabled !== false && !off.includes(entry.id));
                 const preferred = offered.some((entry) => entry.id === rule[kind]?.default) ? (rule[kind]?.default ?? MACHINE_DEFAULT) : MACHINE_DEFAULT;
 
                 return (
@@ -84,12 +85,14 @@ export function ProjectAccountsSection({ projectId, endpointId }: { projectId: s
                         </div>
                         {entries.map((entry) => {
                             const isOffered = !off.includes(entry.id);
-                            const locked = entry.id === preferred || (isOffered && offered.length === 1);
+                            const locked = entry.id === preferred || (offered.length === 1 && offered[0]?.id === entry.id);
 
                             return (
                                 <div key={entry.id} className="flex items-center gap-2 pl-6 text-sm text-text">
                                     <AccountDot color={entry.account.color} />
-                                    <span className="grow truncate">{nameOf(entry, providerName)}</span>
+                                    <span className={`grow truncate ${entry.account.enabled === false ? 'text-text-faint' : ''}`}>
+                                        {nameOf(entry, providerName)}
+                                    </span>
                                     <Switch
                                         checked={isOffered}
                                         disabled={busy || locked}

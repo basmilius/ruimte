@@ -156,7 +156,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         projectOf: (id) => index().locate(id)?.projectId ?? null,
         accountsOf: (projectId) => index().accountsOf(projectId),
         providerAccounts: providers.accounts,
-        limits: () => later.usage().limits.snapshot()
+        limits: () => later.usage().limits.snapshot(),
+        now: () => Date.now()
     });
     const startCwd = startCwdGuard({
         madeByAgent: (nodeId) => lineage.madeBy(nodeId) !== null,

@@ -103,6 +103,8 @@ export interface ChatForkDeps {
     accounts?: {
         /* Throws for an account a CLI of this kind cannot start under on this machine. */
         require(kind: AgentKind, account: string | undefined): void;
+        /* Where a start the chat makes goes, given the account it names: its project's choice, else the order of the accounts. Throws for one its project turned off. */
+        opening?(chatId: string, kind: AgentKind, named: string | undefined): string | undefined;
         canContinue(kind: AgentKind, from: string | undefined, to: string | undefined): boolean;
         label(kind: AgentKind, account: string | undefined): string;
     };
@@ -378,10 +380,10 @@ export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload, ope
     }
     const provider = payload.provider ?? info.provider;
     const switching = provider !== info.provider;
+    const named = forkAccount(deps, payload.chatId, provider, payload.account, switching ? undefined : (info.account ?? info.provider));
     // Checked as named, before the default account becomes none: a turned-off default account is refused, also from a chat on it.
-    requireAccount(deps, provider, payload.account);
-    // The original's account while the fork stays with its CLI; another CLI starts on its own default one.
-    const account = storedAccount(provider, payload.account ?? (switching ? undefined : info.account));
+    requireAccount(deps, provider, payload.account === undefined ? undefined : named);
+    const account = storedAccount(provider, named);
     const sameAccount = !switching && account === info.account;
     // Another CLI, or an account that cannot read the original's transcripts, reads the conversation as text instead.
     const handoff = switching || (!sameAccount && deps.accounts?.canContinue(provider, info.account, account) !== true);
@@ -671,6 +673,29 @@ async function landFork(
     };
 }
 
+/*
+ * The account a fork starts under. One a person named goes through the original's project, which
+ * refuses one it turned off. Without one the fork keeps the original's account while it stays with its
+ * CLI, unless the project turned that off; another CLI starts where the project and the order say.
+ */
+function forkAccount(deps: ChatForkDeps, chatId: string, kind: AgentKind, named: string | undefined, kept: string | undefined): string | undefined {
+    const opening = deps.accounts?.opening;
+    if (opening === undefined) {
+        return named ?? kept;
+    }
+    if (named !== undefined || kept === undefined) {
+        return opening(chatId, kind, named) ?? named;
+    }
+    try {
+        return opening(chatId, kind, kept) ?? kept;
+    } catch (e) {
+        if (e instanceof AccountError && e.code === 'account-off-in-project') {
+            return opening(chatId, kind, undefined);
+        }
+        throw e;
+    }
+}
+
 function requireAccount(deps: ChatForkDeps, kind: AgentKind, account: string | undefined): void {
     if (account === undefined) {
         return;
@@ -831,6 +856,7 @@ export function chatForkDeps(wiring: {
         now: () => Date.now(),
         accounts: {
             require: (kind, account) => wiring.chats.requireAccount(kind, account),
+            opening: (chatId, kind, named) => wiring.chats.openingAccount(chatId, kind, named),
             canContinue: (kind, from, to) => wiring.chats.canContinue(kind, from, to),
             label: (kind, account) => wiring.chats.accountLabel(kind, account)
         }

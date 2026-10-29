@@ -165,7 +165,8 @@ export async function bootTestDaemon({
         projectOf: (id) => store.index.locate(id)?.projectId ?? null,
         accountsOf: (projectId) => store.index.accountsOf(projectId),
         providerAccounts: { snapshot: () => accounts?.snapshot?.() ?? { accounts: {}, statuses: [] } },
-        limits: () => null
+        limits: () => null,
+        now: () => clock.now()
     });
     const prompts = new PendingPromptStore(home);
     await prompts.load();

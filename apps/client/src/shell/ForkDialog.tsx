@@ -18,6 +18,7 @@ import {
     forkShapes,
     type ForkCliChoice,
     type ForkShape,
+    accountFor,
     readChatPreferences,
     selectionFor
 } from '@adecore/agents-react/chat';
@@ -38,6 +39,7 @@ import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { useWorkspace } from '@/transport/connections';
 import { useTransport } from '@/transport/context';
+import { useMachineAnswers } from '@/transport/features';
 import { NodeMachineScope } from '@/transport/node-machine';
 
 /*
@@ -96,6 +98,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
     const [cli, setCli] = useState<ForkCliChoice | null>(null);
     const providers = useProviders((s) => s.providers);
     const endpointId = useEndpointId();
+    const ordered = useMachineAnswers(endpointId, 'accounts.reorder');
     const transport = useTransport();
     const workspace = useWorkspace();
     const projectFolder = useProject((s) => s.current?.folder ?? null);
@@ -128,7 +131,10 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
         if (provider === originalCli?.provider && originalCli.account !== undefined) {
             return originalCli.account;
         }
-        return topAccountEntry(accountsOfKind(knownAccounts(providerAccountsOf(endpointId)) ?? null, provider))?.id ?? provider;
+        const accounts = knownAccounts(providerAccountsOf(endpointId));
+        return ordered
+            ? (topAccountEntry(accountsOfKind(accounts ?? null, provider))?.id ?? provider)
+            : (accountFor(readChatPreferences(), endpointId, provider, accounts) ?? provider);
     };
     const chooseCli = (provider: ForkCliChoice['provider'], model: string): void => {
         const remembered = provider === info?.provider ? info.selection : selectionFor(readChatPreferences(), provider);

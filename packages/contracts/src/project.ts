@@ -1565,7 +1565,9 @@ export const ProjectSetAccountsPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     kind: z.string().min(1),
     default: z.string().min(1).nullable(),
-    off: z.array(z.string().min(1))
+    off: z.array(z.string().min(1)),
+    // What the client read for this kind; a project that holds something else since refuses with `rev-conflict`.
+    seen: z.object({ default: z.string().min(1).optional(), off: z.array(z.string().min(1)).optional() }).optional()
 });
 export type ProjectSetAccountsPayload = z.infer<typeof ProjectSetAccountsPayloadSchema>;
 

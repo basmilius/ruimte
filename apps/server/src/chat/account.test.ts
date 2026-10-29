@@ -482,6 +482,27 @@ describe("a project's accounts", () => {
         expect(notes.map((item) => (item as { text: string }).text)).toContain('Started on Claude Code: Gone is turned off on this machine.');
     });
 
+    test('refuse a switch, a fork and going on after a limit onto an account they turned off', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
+        await say('chat-lead', `limit:${1_600_000 / 1000}`);
+        await setProjectAccounts(store, { projectId, kind: 'claude', default: null, off: ['claude_personal'] });
+
+        expect(await daemon.request('chat.configure', { chatId: 'chat-lead', account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-off-in-project' }
+        });
+        const [turn] = turnsIn('chat-lead');
+        expect(await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turn!.id, account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-off-in-project' }
+        });
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-off-in-project' }
+        });
+        expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
+    });
+
     test('drop an inherited account they turned off, for a chat child and a terminal child alike', async () => {
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
         await say('chat-lead', 'plan');

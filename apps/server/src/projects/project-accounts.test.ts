@@ -17,12 +17,15 @@ const snapshot: Snapshot = {
     ]
 };
 
+const NOW = 1_000_000;
+
 function chooser(accounts: ProjectAccounts | undefined, limits: UsageLimitsSnapshot | null = null) {
     return projectAccountChooser({
         projectOf: (id) => (id.startsWith('node') ? 'project' : null),
         accountsOf: () => accounts,
         providerAccounts: { snapshot: () => snapshot },
-        limits: () => limits
+        limits: () => limits,
+        now: () => NOW
     });
 }
 
@@ -46,34 +49,37 @@ describe('the account of a start in a project', () => {
         expect(chooser({ claude: { off: ['work'] } })('node', 'claude', 'client')).toEqual({ account: 'client' });
     });
 
-    test('passes over a default that is at its usage limit', () => {
-        const limits = {
-            providers: [
-                {
-                    kind: 'claude',
-                    account: { id: 'work', label: 'Work' },
-                    plan: null,
-                    checkedAt: 1,
-                    source: 'probe',
-                    windows: [{ used: 1 }],
-                    cost: null,
-                    unavailable: null
-                }
-            ]
-        };
-        expect(chooser({ claude: { default: 'work' } }, limits as unknown as UsageLimitsSnapshot)('node', 'claude', undefined)).toEqual({
+    test('passes over a default that is at its usage limit, and takes it again once that window reset', () => {
+        const spent = (resetsAt: number | null) =>
+            ({
+                providers: [
+                    {
+                        kind: 'claude',
+                        account: { id: 'work', label: 'Work' },
+                        plan: null,
+                        checkedAt: 1,
+                        source: 'probe',
+                        windows: [{ id: 'session', kind: 'session', label: 'Session', used: 1, resetsAt, durationMs: null }],
+                        cost: null,
+                        unavailable: null
+                    }
+                ]
+            }) as unknown as UsageLimitsSnapshot;
+
+        expect(chooser({ claude: { default: 'work' } }, spent(NOW + 60_000))('node', 'claude', undefined)).toEqual({
             account: 'claude',
             passedOver: { account: 'work', reason: 'at its usage limit' }
         });
+        expect(chooser({ claude: { default: 'work' } }, spent(NOW - 60_000))('node', 'claude', undefined)).toEqual({ account: 'work' });
     });
 });
 
 describe('why an account cannot take a start', () => {
     test('from what the machine last heard', () => {
-        expect(unusableReason(snapshot, null, 'off')).toBe('turned off on this machine');
-        expect(unusableReason(snapshot, null, 'client')).toBe('signed out');
-        expect(unusableReason(snapshot, null, 'work')).toBeNull();
-        expect(unusableReason(snapshot, null, 'claude')).toBeNull();
+        expect(unusableReason(snapshot, null, 'off', NOW)).toBe('turned off on this machine');
+        expect(unusableReason(snapshot, null, 'client', NOW)).toBe('signed out');
+        expect(unusableReason(snapshot, null, 'work', NOW)).toBeNull();
+        expect(unusableReason(snapshot, null, 'claude', NOW)).toBeNull();
     });
 
     test('says so in the words a chat shows', () => {
@@ -110,6 +116,18 @@ describe("a person's accounts for a project", () => {
         await setProjectAccounts(project as never, { projectId: 'p', kind: 'claude', default: null, off: [] });
         await setProjectAccounts(project as never, { projectId: 'p', kind: 'codex', default: null, off: [] });
         expect('accounts' in project.content()).toBe(false);
+    });
+
+    test('refuses a choice made on what another client changed since', async () => {
+        const project = store({ ...base, accounts: { claude: { off: ['private'] } } });
+        expect(setProjectAccounts(project as never, { projectId: 'p', kind: 'claude', default: null, off: ['work'], seen: {} })).rejects.toThrow(
+            'changed since'
+        );
+        expect(
+            await setProjectAccounts(project as never, { projectId: 'p', kind: 'claude', default: null, off: ['private', 'work'], seen: { off: ['private'] } })
+        ).toEqual({
+            claude: { off: ['private', 'work'] }
+        });
     });
 
     test('refuses a default that is also turned off', async () => {
