@@ -120,7 +120,7 @@ export function StatusDot({ status, className, plain = false }: { status: AgentS
         <span
             role="img"
             aria-label={label}
-            className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)}
+            className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'status-pulse', className)}
         />
     );
     if (plain) {

@@ -400,6 +400,26 @@
         }
     }
 
+    /* A status dot that breathes while something runs. `animate-pulse` changes its opacity every
+       frame, so one 8px dot keeps the compositor drawing the whole window at the display's rate.
+       This one holds still for half the cycle and fades in steps; Chromium presents no frame while
+       the value stays the same. */
+    .status-pulse {
+        animation: status-pulse 2s steps(4) infinite;
+    }
+    @keyframes status-pulse {
+        0%,
+        50% {
+            opacity: 1;
+        }
+        75% {
+            opacity: 0.5;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+
     /* In the desktop app the top band drags the window. Electron lets children inherit
        the region, so they go back to `initial` (an explicit `none` counts as no-drag and breaks the
        drag), and the controls inside opt out on purpose. */

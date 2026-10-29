@@ -23,7 +23,7 @@ function dotClass(view: LaunchView): string {
     switch (view.phase) {
         case 'starting':
         case 'stopping':
-            return 'bg-status-running animate-pulse';
+            return 'bg-status-running status-pulse';
         case 'running':
             return 'bg-positive';
         case 'failed':
