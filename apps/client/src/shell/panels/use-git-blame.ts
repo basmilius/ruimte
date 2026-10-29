@@ -17,7 +17,7 @@ export function useGitBlame(language: EditorLanguage | null, path: string, disk:
     const authors = useSettings((s) => s.codeVisionAuthors);
     const root = useGitRoot(path);
     // Goes up when the checkout moved; the head tells whether that moved the blame.
-    const signal = useGitSignal(root ?? null);
+    const signal = useGitSignal(root ?? null, path);
     const shown = useRef<{ head: string; disk: string } | null>(null);
 
     // Held for the answer while it is on its way, so the rows keep room for it.

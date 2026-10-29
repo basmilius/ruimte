@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import type { FsReadResult, FsReadText } from '@ruimte/contracts';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { readLargeText } from '@/shell/panels/large-text';
+import { pathAffected } from '@/state/changed-paths';
 import { folderWatches } from '@/state/fs-watch';
 import { useEndpointId } from '@/state/keys';
 import { TransportError } from '@/transport';
@@ -92,11 +93,11 @@ export function useFileRead(path: string): { state: FileRead; retry(): void } {
 
     useEffect(() => {
         return transport.on('fs.changed', (payload) => {
-            if (payload.paths.includes(folder)) {
+            if (pathAffected(path, payload.changedPaths ?? payload.paths)) {
                 setAttempt((count) => count + 1);
             }
         });
-    }, [transport, folder]);
+    }, [transport, path]);
 
     const retry = () => {
         setState({ status: 'loading' });

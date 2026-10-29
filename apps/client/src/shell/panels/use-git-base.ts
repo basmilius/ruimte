@@ -18,7 +18,7 @@ export function useGitBase(path: string, disk: string): string | null {
     const latestDisk = useRef(disk);
     const root = useGitRoot(path);
     // Goes up when the checkout moved: a commit, a stage or a write of this file all do.
-    const signal = useGitSignal(root ?? null);
+    const signal = useGitSignal(root ?? null, path);
 
     useEffect(() => {
         latestDisk.current = disk;

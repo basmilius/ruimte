@@ -166,7 +166,9 @@ export type FsWatchPayload = z.infer<typeof FsWatchPayloadSchema>;
 // The directories that changed under a watched root, coalesced over a settle window.
 export const FsChangedEventSchema = z.object({
     root: z.string(),
-    paths: z.array(z.string())
+    paths: z.array(z.string()),
+    // Absolute files or directories; absent when a watcher could not name every change.
+    changedPaths: z.array(z.string()).optional()
 });
 export type FsChangedEvent = z.infer<typeof FsChangedEventSchema>;
 

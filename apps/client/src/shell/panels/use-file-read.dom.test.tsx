@@ -102,3 +102,22 @@ test('an in-flight response from the old watch is not shown after its barrier ch
     await act(async () => gates[1]!.resolve());
     await until(() => page.host.querySelector('output')?.textContent === 'fresh');
 });
+
+test('a precise save re-reads its editor while unrelated files in the folder stay untouched', async () => {
+    await render('/watch-test/src/file.txt');
+    await act(async () => gates[0]!.resolve());
+    await until(() => page.host.querySelector('output')?.textContent === 'fresh');
+
+    await act(async () => {
+        machine.emit('fs.changed', { root: '/watch-test', paths: ['/watch-test/src'], changedPaths: ['/watch-test/src/other.txt'] });
+    });
+    expect(machine.requests('fs.read')).toHaveLength(1);
+
+    for (const changedPaths of [['/watch-test/src/file.txt'], ['/watch-test/src'], undefined]) {
+        const before = machine.requests('fs.read').length;
+        await act(async () => {
+            machine.emit('fs.changed', { root: '/watch-test', paths: ['/watch-test/src'], ...(changedPaths === undefined ? {} : { changedPaths }) });
+        });
+        await until(() => machine.requests('fs.read').length === before + 1);
+    }
+});

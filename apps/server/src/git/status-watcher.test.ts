@@ -92,6 +92,7 @@ describe('GitStatusWatcher', () => {
         expect(events[0]!.cwd).toBe(repo);
         expect(events[0]!.status.live).toBe(true);
         expect(events[0]!.status.files.map((file) => file.path).sort()).toEqual(['a.txt', 'b.txt', 'tracked.txt']);
+        expect(changed).toEqual([{ cwd: repo, changedPaths: ['a.txt', 'b.txt', 'tracked.txt'].map((path) => join(repo, path)) }]);
     });
 
     test('a status that did not change is not sent again', async () => {
@@ -310,4 +311,12 @@ describe('GitStatusWatcher', () => {
 
         expect(events.map((event) => event.status.files.map((file) => file.path))).toEqual([['a.txt']]);
     });
+});
+
+test.each([null, '.git/index', '.git/refs/heads/main'])('a metadata or unnamed change %s invalidates every file', async (name) => {
+    await watcher.watch('c1', repo);
+    fake.on(repo).emit('tracked.txt');
+    fake.on(repo).emit(name);
+    await fake.settle();
+    expect(changed).toEqual([{ cwd: repo }]);
 });

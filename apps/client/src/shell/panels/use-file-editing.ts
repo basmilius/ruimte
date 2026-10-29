@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { FsReadText } from '@ruimte/contracts';
+import { absoluteOf, type FsReadText } from '@ruimte/contracts';
 import type { EditorEngine, EditorIndentation } from '@adecore/editor';
 import { type EditBlock, editBlockOf, isCoarsePointer, useFileNodeGate } from '@/shell/panels/edit-gate';
 import { DEFAULT_INDENTATION, editorConfigDirs, type EditorStyle, editorStyleFor } from '@/shell/panels/editor-config';
 import { loadEditorEngine, loadedEditorEngine } from '@/shell/panels/editor-engine';
+import { pathAffected } from '@/state/changed-paths';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { textDrafts } from '@/state/text-drafts';
@@ -90,7 +91,9 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
         read();
         const dirs = editorConfigDirs(path, roots);
         const off = transport.on('fs.changed', (payload) => {
-            if (payload.paths.some((changed) => dirs.includes(changed))) {
+            const affected = dirs.some((dir) => pathAffected(absoluteOf(dir, '.editorconfig'), payload.changedPaths ?? payload.paths));
+
+            if (affected) {
                 read();
             }
         });

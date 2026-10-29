@@ -120,7 +120,7 @@ describe('SharedWatch', () => {
         fake.on(root).emit(join('src', 'a.ts'));
         await fake.settle();
 
-        expect(changes).toEqual([{ root, paths: [join(root, 'src')] }]);
+        expect(changes).toEqual([{ root, paths: [join(root, 'src')], changedPaths: [join(root, 'src', 'a.ts')] }]);
         expect(batches).toEqual([[{ path: join(root, 'src', 'a.ts'), type: 2 }]]);
 
         language.close();

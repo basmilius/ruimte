@@ -86652,6 +86652,12 @@
         "items": {
           "type": "string"
         }
+      },
+      "changedPaths": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [
@@ -86806,6 +86812,12 @@
     "properties": {
       "cwd": {
         "type": "string"
+      },
+      "changedPaths": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [

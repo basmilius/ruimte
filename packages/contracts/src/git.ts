@@ -167,7 +167,9 @@ export type GitStatusEvent = z.infer<typeof GitStatusEventSchema>;
 // Apart from `git.status`, which only goes out when the status reads differently: a second edit to a
 // modified file leaves the status alone while its diff changed.
 export const GitChangedEventSchema = z.object({
-    cwd: z.string()
+    cwd: z.string(),
+    // Absolute working-tree paths; absent when metadata or an unnamed event can affect any file.
+    changedPaths: z.array(z.string()).optional()
 });
 export type GitChangedEvent = z.infer<typeof GitChangedEventSchema>;
 

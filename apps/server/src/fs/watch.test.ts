@@ -39,7 +39,7 @@ describe('FolderWatcher', () => {
         expect(changes).toEqual([]);
 
         await fake.settle();
-        expect(changes).toEqual([{ root, paths: [join(root, 'src')] }]);
+        expect(changes).toEqual([{ root, paths: [join(root, 'src')], changedPaths: [join(root, 'src', 'a.ts'), join(root, 'src', 'b.ts')] }]);
     });
 
     test('a change without a name reports the root', async () => {
@@ -156,7 +156,7 @@ describe('watch startup handoff', () => {
             await Promise.all([childReady, parentReady]);
             expect(readable).toBe(true);
             await fake.settle();
-            expect(changes).toEqual([{ root, paths: [child] }]);
+            expect(changes).toEqual([{ root, paths: [child], changedPaths: [join(child, 'a.ts')] }]);
         } finally {
             watcher.detachAll('client-1');
         }
@@ -193,4 +193,20 @@ describe('watch startup handoff', () => {
             watcher.detachAll('client-1');
         }
     });
+});
+
+test('an unnamed change makes a mixed burst broad, including across watch replacement', async () => {
+    const watcher = watcherOn('darwin');
+    const child = join(root, 'src');
+    await watcher.watch('client-1', child);
+    fake.on(child).emit(null);
+    await watcher.watch('client-1', root);
+    fake.on(root).emit('other.txt');
+    await fake.settle();
+    expect(changes).toEqual([{ root, paths: [root, child] }]);
+
+    fake.on(root).emit(join('src', 'a.ts'));
+    await fake.settle();
+    expect(changes[1]?.changedPaths).toEqual([join(child, 'a.ts')]);
+    watcher.detachAll('client-1');
 });

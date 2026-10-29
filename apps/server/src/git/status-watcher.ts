@@ -7,6 +7,7 @@ import { nativePath } from './native-path.ts';
 import { git, repositoryRoot } from './run.ts';
 import { noRepository, readStatusAt, trackedFiles } from './status.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { isUnder } from '../fs/path-segment.ts';
 
 // A save, a formatter and a checkout all touch the repository in a burst; one status per burst is enough.
 const SETTLE_MS = 300;
@@ -285,7 +286,10 @@ export class GitStatusWatcher {
         }
         await this.run(watch.root);
         // A diff reads the bytes, not the status, so it is told about a burst the status slept through.
-        this.publish(watch, (cwd) => ({ event: 'git.changed', payload: { cwd } }));
+        const paths = touched.filter((path) => !isNoise(path));
+        const broad = paths.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
+        const hint = broad ? {} : { changedPaths: paths.sort() };
+        this.publish(watch, (cwd) => ({ event: 'git.changed', payload: { cwd, ...hint } }));
     }
 
     /* Whether a burst is worth a status run: a build writing into an ignored folder is not. */

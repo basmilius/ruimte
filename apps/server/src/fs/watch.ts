@@ -18,6 +18,7 @@ interface Watch {
     replacement?: Watch;
     // The directories that changed since the last flush, absolute.
     touched: Set<string>;
+    changedPaths: Set<string> | null;
     settle: Settled;
 }
 
@@ -62,6 +63,13 @@ export class FolderWatcher {
                 const name = typeof filename === 'string' ? filename : null;
                 // A platform that reports no name could have touched anything under the root.
                 state.touched.add(name === null ? root : dirname(join(root, name)));
+
+                if (name === null) {
+                    state.changedPaths = null;
+                } else {
+                    state.changedPaths?.add(join(root, name));
+                }
+
                 state.settle.nudge();
             });
         } catch {
@@ -74,7 +82,15 @@ export class FolderWatcher {
                   this.seams.schedule(resolve, this.streamStartMs);
               })
             : Promise.resolve();
-        const state: Watch = { root, recursive, watcher, ready, touched: new Set(), settle: settled(this.seams, SETTLE_MS, () => this.flush(clientId, state)) };
+        const state: Watch = {
+            root,
+            recursive,
+            watcher,
+            ready,
+            touched: new Set(),
+            changedPaths: new Set(),
+            settle: settled(this.seams, SETTLE_MS, () => this.flush(clientId, state))
+        };
         watcher.on('error', () => undefined);
         this.watches.put(clientId, root, state);
         state.ready = ready.then(() => state.replacement?.ready);
@@ -103,6 +119,14 @@ export class FolderWatcher {
                 for (const path of existing.touched) {
                     state.touched.add(path);
                 }
+                if (existing.changedPaths === null) {
+                    state.changedPaths = null;
+                } else {
+                    for (const path of existing.changedPaths) {
+                        state.changedPaths?.add(path);
+                    }
+                }
+
                 if (existing.touched.size > 0) {
                     state.settle.nudge();
                 }
@@ -113,10 +137,13 @@ export class FolderWatcher {
 
     private flush(clientId: string, state: Watch): void {
         const paths = [...state.touched].sort();
+        const changedPaths = state.changedPaths === null ? undefined : [...state.changedPaths].sort();
         state.touched.clear();
+        state.changedPaths = new Set();
+
         if (paths.length === 0) {
             return;
         }
-        this.sinks.to(clientId, { event: 'fs.changed', payload: { root: state.root, paths } });
+        this.sinks.to(clientId, { event: 'fs.changed', payload: { root: state.root, paths, ...(changedPaths === undefined ? {} : { changedPaths }) } });
     }
 }

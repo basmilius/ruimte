@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { GitStatus, GitWatchResult } from '@ruimte/contracts';
+import { pathAffected } from '@/state/changed-paths';
 import { HeldWatches, type HeldWatch } from '@/state/held-watches';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
 import { machineTransport, transportFor } from '@/transport';
@@ -85,10 +86,10 @@ function bumped(key: string) {
  * itself and only needs to know that something did. It holds the watch of its own, so a diff tab
  * keeps up with no panel open beside it.
  */
-export function useGitSignal(cwd: string | null): number {
+export function useGitSignal(cwd: string | null, path?: string): number {
     const endpointId = useEndpointId();
     const [held, setHeld] = useState<{ key: string; count: number } | null>(null);
-    const key = endpointKey(endpointId, String(cwd));
+    const key = endpointKey(endpointId, `${cwd}\u0000${path ?? ''}`);
 
     useEffect(() => {
         if (cwd === null) {
@@ -102,11 +103,11 @@ export function useGitSignal(cwd: string | null): number {
 
     useEffect(() => {
         return transportFor(endpointId)?.on('git.changed', (payload) => {
-            if (payload.cwd === cwd) {
+            if (payload.cwd === cwd && (path === undefined || pathAffected(path, payload.changedPaths))) {
                 setHeld(bumped(key));
             }
         });
-    }, [cwd, endpointId, key]);
+    }, [cwd, endpointId, key, path]);
 
     // A checkout that just changed starts over, so the reader is not told it moved when it did not.
     return held?.key === key ? held.count : 0;
