@@ -15851,6 +15851,26 @@
                 "from": {
                   "type": "string",
                   "minLength": 1
+                },
+                "message": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "title",
+                    "text"
+                  ]
                 }
               },
               "required": [
@@ -18251,6 +18271,26 @@
                 "from": {
                   "type": "string",
                   "minLength": 1
+                },
+                "message": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "title",
+                    "text"
+                  ]
                 }
               },
               "required": [
@@ -19885,6 +19925,26 @@
                 "from": {
                   "type": "string",
                   "minLength": 1
+                },
+                "message": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "title",
+                    "text"
+                  ]
                 }
               },
               "required": [
@@ -21513,6 +21573,26 @@
                         "from": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "message": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "text": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "title",
+                            "text"
+                          ]
                         }
                       },
                       "required": [
@@ -24873,6 +24953,26 @@
                           "from": {
                             "type": "string",
                             "minLength": 1
+                          },
+                          "message": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "title",
+                              "text"
+                            ]
                           }
                         },
                         "required": [
@@ -27027,6 +27127,26 @@
                 "from": {
                   "type": "string",
                   "minLength": 1
+                },
+                "message": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "title",
+                    "text"
+                  ]
                 }
               },
               "required": [
@@ -32221,6 +32341,26 @@
                 "from": {
                   "type": "string",
                   "minLength": 1
+                },
+                "message": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "title",
+                    "text"
+                  ]
                 }
               },
               "required": [
@@ -74099,6 +74239,26 @@
                       "from": {
                         "type": "string",
                         "minLength": 1
+                      },
+                      "message": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "title",
+                          "text"
+                        ]
                       }
                     },
                     "required": [
@@ -77459,6 +77619,26 @@
                         "from": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "message": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "text": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "title",
+                            "text"
+                          ]
                         }
                       },
                       "required": [

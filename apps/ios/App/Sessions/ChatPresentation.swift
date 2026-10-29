@@ -465,7 +465,8 @@ final class ChatPresentation {
                 rows += turnID != nil && turnID == activeID ? Self.withLiveThought(live, items: items) : live
                 continue
             }
-            if turnItem.origin == .agent {
+            // A turn a message opened needs no line of its own when that message stands right above it.
+            if turnItem.origin == .agent && !Self.opensUnderItsMessages(turnItem, rows: rows) {
                 rows.append(ChatTimelineEntry(id: "start-\(turnID)", kind: .turnStart, items: [turn]))
             }
             let conversation = items.filter { Self.turn($0) == nil }
@@ -650,6 +651,19 @@ final class ChatPresentation {
                 guard let note = $0.noteItem else { return false }
                 return note.turnId == turnID && note.level == .warning && note.text.hasPrefix(notResumedPrefix)
             }
+    }
+
+    /// Whether every node whose message opened the turn has that message among the rows right above it.
+    static func opensUnderItsMessages(_ turn: ChatTurnItem, rows: [ChatTimelineEntry]) -> Bool {
+        let from = turn.messageFrom ?? []
+        guard !from.isEmpty else { return false }
+        var senders = Set<String>()
+        for row in rows.reversed() {
+            guard row.kind == .message, case .note(let note)? = row.items.first?.item, let message = note.message
+            else { break }
+            senders.insert(message.from)
+        }
+        return from.allSatisfy(senders.contains)
     }
 
     /// The header of a turn the chat did not start from a person's message.

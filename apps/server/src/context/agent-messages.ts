@@ -1,4 +1,4 @@
-import { chatNoticeTargets, showNotices, type NoticeStore } from '@adecore/agents/coordination';
+import { chatNoticeTargets, showNotices, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
 import type { MessageHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
@@ -21,9 +21,9 @@ interface AgentMessageDeps {
 export function agentMessages(deps: AgentMessageDeps): MessageHost {
     const { notices, sessions, chats, projects } = deps;
     /* Where a message a person has not seen goes: the thread of the chat left under that node id. */
-    const noticeChat = {
-        has: (id: string) => chats.hasStored(id),
-        note: (id: string, text: string) => chats.addNote(id, 'info', text)
+    const noticeChat: NoticeChat = {
+        has: (id) => chats.hasStored(id),
+        note: (id, text, message) => chats.addNote(id, 'info', text, message)
     };
     return {
         alert: (nodeId, text) => {

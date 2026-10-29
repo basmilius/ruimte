@@ -6624,8 +6624,9 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
     public let `level`: ChatNoteItemLevel
     public let `text`: String
     public let `from`: String?
+    public let `message`: ChatNoteItemMessage?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "note", `level`: ChatNoteItemLevel, `text`: String, `from`: String? = nil) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "note", `level`: ChatNoteItemLevel, `text`: String, `from`: String? = nil, `message`: ChatNoteItemMessage? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
@@ -6633,6 +6634,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         self.`level` = `level`
         self.`text` = `text`
         self.`from` = `from`
+        self.`message` = `message`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6644,6 +6646,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         `level` = try container.decode(ChatNoteItemLevel.self, forKey: .`level`)
         `text` = try container.decode(String.self, forKey: .`text`)
         `from` = try container.decodeIfPresent(String.self, forKey: .`from`)
+        `message` = try container.decodeIfPresent(ChatNoteItemMessage.self, forKey: .`message`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6655,6 +6658,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         try container.encode(`level`, forKey: .`level`)
         try container.encode(`text`, forKey: .`text`)
         try container.encodeIfPresent(`from`, forKey: .`from`)
+        try container.encodeIfPresent(`message`, forKey: .`message`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6665,6 +6669,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         case `level` = "level"
         case `text` = "text"
         case `from` = "from"
+        case `message` = "message"
     }
 }
 
@@ -6672,6 +6677,38 @@ public enum ChatNoteItemLevel: String, CaseIterable, Codable, Sendable, Equatabl
     case `info` = "info"
     case `warning` = "warning"
     case `error` = "error"
+}
+
+public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
+    public let `from`: String
+    public let `title`: String
+    public let `text`: String
+
+    public init(`from`: String, `title`: String, `text`: String) {
+        self.`from` = `from`
+        self.`title` = `title`
+        self.`text` = `text`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `from` = try container.decode(String.self, forKey: .`from`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `text` = try container.decode(String.self, forKey: .`text`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`from`, forKey: .`from`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`text`, forKey: .`text`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `from` = "from"
+        case `title` = "title"
+        case `text` = "text"
+    }
 }
 
 public struct ChatCompactionItem: Codable, Sendable, Equatable {

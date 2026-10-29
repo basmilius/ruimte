@@ -331,7 +331,12 @@ describe('a message another node left', () => {
             },
             notice
         );
-        await showNotices(notices, { has: (id) => manager.hasStored(id), note: (id, line) => manager.addNote(id, 'info', line) }, MESSAGE_WORDS, targetId);
+        await showNotices(
+            notices,
+            { has: (id) => manager.hasStored(id), note: (id, line, message) => manager.addNote(id, 'info', line, message) },
+            MESSAGE_WORDS,
+            targetId
+        );
     };
 
     const heard = 'Ruimte: node term-1 ("dev server") sent you a message: the build is green';
@@ -350,7 +355,12 @@ describe('a message another node left', () => {
         await notify('chat-msg', 'the build is green');
         await recorder.until(() => recorder.ofKind('note').length === 1);
         // Outside any turn, since nothing the model did put it there.
-        expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'info', turnId: null, text: read });
+        expect(recorder.ofKind('note')[0]).toMatchObject({
+            level: 'info',
+            turnId: null,
+            text: read,
+            message: { from: 'term-1', title: 'dev server', text: 'the build is green' }
+        });
 
         await manager.send('chat-msg', 'second');
         await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
@@ -369,7 +379,15 @@ describe('a message another node left', () => {
         expect(notices.waiting('chat-cold')).toHaveLength(1);
 
         await manager.create({ chatId: 'chat-cold', cwd: home });
-        expect(manager.attach('chat-cold', 'c1').items).toEqual([expect.objectContaining({ kind: 'note', level: 'info', turnId: null, text: read })]);
+        expect(manager.attach('chat-cold', 'c1').items).toEqual([
+            expect.objectContaining({
+                kind: 'note',
+                level: 'info',
+                turnId: null,
+                text: read,
+                message: { from: 'term-1', title: 'dev server', text: 'the build is green' }
+            })
+        ]);
 
         await manager.send('chat-cold', 'what happened');
         await recorder.untilIdle();

@@ -131,6 +131,58 @@ struct ChatUserMessage: View {
     }
 }
 
+/// A message another node sent the chat: said to it like a person's, under a chip that names and opens the sender.
+struct ChatSentMessage: View {
+    let message: ChatNoteItemMessage
+    @Environment(\.chatReferenceLookup) private var lookup
+    @State private var expanded = false
+    private var long: Bool { message.text.count > 600 || message.text.split(separator: "\n").count > 8 }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            ChatReferenceChip(look: ChatReferenceChip.look(message.from, chat: false, lookup: lookup, lastName: message.title))
+            VStack(alignment: .leading, spacing: 4) {
+                MarkdownMessage(text: message.text)
+                    .frame(maxHeight: long && !expanded ? 180 : nil, alignment: .top)
+                    .clipped()
+                    .mask {
+                        if long && !expanded {
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .black, location: 0), .init(color: .black, location: 0.75),
+                                    .init(color: .clear, location: 1),
+                                ], startPoint: .top, endPoint: .bottom)
+                        } else {
+                            Rectangle()
+                        }
+                    }
+                if long {
+                    ChatExpansionButton(expanding: !expanded) {
+                        expanded.toggle()
+                    } label: {
+                        Label(
+                            expanded ? String(localized: "Show less") : String(localized: "Show all"),
+                            lucideIcon: expanded ? "chevron-up" : "chevron-down", iconSize: 12
+                        )
+                        .font(.caption).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
+                    }.buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background(MobileStyle.active, in: RoundedRectangle(cornerRadius: 18))
+        }
+        .frame(maxWidth: 620, alignment: .trailing)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(
+            message.title.isEmpty
+                ? String(localized: "Message from another node")
+                : String(
+                    localized: "Message from \(message.title)",
+                    comment: "%@ is the name the sending node had on the canvas"))
+    }
+}
+
 /// A view, node or chat a message points at that its text does not spell, under the name it has now; one that went
 /// says so. It opens what it points at, as the chips in the text do.
 struct ChatReferenceChip: View {
@@ -167,15 +219,18 @@ struct ChatReferenceChip: View {
     }
 
     /// Without the project around it a thread cannot tell a reference that left it from one it does not know.
-    static func look(_ id: String, chat: Bool, lookup: ChatReferenceLookup) -> Look {
+    /// `lastName` is what the message knows the reference was called, shown when it is not in the project now.
+    static func look(_ id: String, chat: Bool, lookup: ChatReferenceLookup, lastName: String = "") -> Look {
         guard lookup.known else {
+            let fallback = chat ? String(localized: "Chat") : String(localized: "View or node")
             return Look(
                 id: id, icon: chat ? "message-square" : "hash",
-                title: chat ? String(localized: "Chat") : String(localized: "View or node"), opens: false, gone: false)
+                title: lastName.isEmpty ? fallback : lastName, opens: false, gone: false)
         }
         guard let item = lookup.item(id) else {
             return Look(
-                id: id, icon: "circle-off", title: String(localized: "Not in this project"), opens: false, gone: true)
+                id: id, icon: "circle-off", title: lastName.isEmpty ? String(localized: "Not in this project") : lastName,
+                opens: false, gone: true)
         }
         return Look(
             id: id, icon: ChatReferables.icon(item.kind),

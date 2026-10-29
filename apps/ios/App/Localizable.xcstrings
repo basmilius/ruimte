@@ -14076,6 +14076,27 @@
         }
       }
     },
+    "Message from %@" : {
+      "comment" : "%@ is the name the sending node had on the canvas",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht van %@"
+          }
+        }
+      }
+    },
+    "Message from another node" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht van een andere node"
+          }
+        }
+      }
+    },
     "Message the agent…" : {
       "localizations" : {
         "nl" : {

@@ -8,6 +8,7 @@ import type {
     ChatEvent,
     ChatInfo,
     ChatItem,
+    ChatNoteMessage,
     ChatSubagentPayload,
     ChatSubagentResult,
     ChatSubagentItem,
@@ -89,7 +90,7 @@ interface ChatManagerOptions extends ChatCoreOptions {
     // What another node left for this chat, taken once and put in front of the next prompt (`NoticeNotes`).
     messageNotes?: (chatId: string) => PromptNotes;
     // The same messages, as the lines a person reads in the thread; asked once, when the chat is loaded.
-    unshownMessages?: (chatId: string) => Promise<string[]>;
+    unshownMessages?: (chatId: string) => Promise<{ text: string; message: ChatNoteMessage }[]>;
     // The prompt an agent node was made with, taken once; it becomes the thread's first message, and its brief is heard beside it.
     firstPrompt?: (chatId: string) => Promise<FirstPrompt | null>;
     // When stopping the agent that opened a chat ended it too; a turn from before that is never resumed.
@@ -258,7 +259,7 @@ export class ChatManager extends ChatCore {
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly reference: (chatId: string, id: string) => Reference | null;
     private readonly messageNotes: ((chatId: string) => PromptNotes) | null;
-    private readonly unshownMessages: (chatId: string) => Promise<string[]>;
+    private readonly unshownMessages: (chatId: string) => Promise<{ text: string; message: ChatNoteMessage }[]>;
     private readonly firstPrompt: (chatId: string) => Promise<FirstPrompt | null>;
     // Ruimte's instructions for a chat's next prompt, handed out once (`ContextNotes`).
     private readonly briefs = new Map<string, string>();
@@ -706,8 +707,8 @@ export class ChatManager extends ChatCore {
         }
         // A message that landed while nobody held this chat shows here; the model hears it from the queue.
         try {
-            for (const text of await this.unshownMessages(chatId)) {
-                session.addNote('info', text);
+            for (const { text, message } of await this.unshownMessages(chatId)) {
+                session.addNote('info', text, message);
             }
         } catch (e) {
             // The messages wait in the queue either way, and a chat must open regardless.
