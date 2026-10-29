@@ -125,13 +125,21 @@ export function VisitorTile() {
     );
 }
 
-/* One figure of a set standing in its tile, as the tiles of the rows above show theirs. */
-export function FigureTile({ look }: { look: PetLook }) {
+/* The figures of a set side by side in one tile, as the tiles of the rows above show theirs. */
+export function FigureTile({ looks }: { looks: readonly PetLook[] }) {
+    // A figure leaves empty columns at either side, so two of them overlap there to fit the tile.
+    const lefts = centered(
+        looks.map(() => FIGURE_WIDTH),
+        -8
+    );
+
     return (
         <Tile>
-            <Standing left={centered([FIGURE_WIDTH], 0)[0]}>
-                <PetFigure look={look} mood="visiting" crowded={false} cell={FIGURE_CELL} />
-            </Standing>
+            {looks.map((look, index) => (
+                <Standing key={index} left={lefts[index]!}>
+                    <PetFigure look={look} mood="visiting" crowded={false} cell={FIGURE_CELL} />
+                </Standing>
+            ))}
         </Tile>
     );
 }

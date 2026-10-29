@@ -42,10 +42,15 @@ function FigureRow({
     return (
         <tr data-pet-set={petChoiceKey(choice)} className="border-t border-border first:border-t-0">
             <td className="py-2 pr-3">
-                <span className="flex gap-1.5" aria-label={t('pets.sprite.preview', { name })} role="img">
-                    <FigureTile look={lookOf(choice, 'claude', sprites)} />
+                <span className="flex" aria-label={t('pets.sprite.preview', { name })} role="img">
                     {/* A built-in set has a figure of its own for Codex; a strip a person added stands for every agent. */}
-                    {choice.kind === 'built-in' && <FigureTile look={lookOf(choice, 'codex', sprites)} />}
+                    <FigureTile
+                        looks={
+                            choice.kind === 'built-in'
+                                ? [lookOf(choice, 'claude', sprites), lookOf(choice, 'codex', sprites)]
+                                : [lookOf(choice, 'claude', sprites)]
+                        }
+                    />
                 </span>
             </td>
             <td className="w-full py-2 pr-3">
