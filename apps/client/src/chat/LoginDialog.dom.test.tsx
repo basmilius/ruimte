@@ -36,7 +36,7 @@ afterEach(async () => {
 });
 
 function dialogText(): string {
-    return document.querySelector('[role="dialog"]')?.textContent ?? '';
+    return [...document.querySelectorAll('[role="dialog"]')].at(-1)?.textContent ?? '';
 }
 
 async function openLogin(kind: 'claude' | 'grok', name: string, sentence: string): Promise<string> {
@@ -54,5 +54,67 @@ describe('the login dialog', () => {
     test('asks a person to close it for a CLI whose login cannot report back', async () => {
         const text = await openLogin('grok', 'Grok', 'Close this once you are logged in.');
         expect(text).not.toContain('This closes once');
+    });
+});
+
+describe('typing the code of a login over the settings', () => {
+    let terminal: HTMLTextAreaElement;
+
+    function written(): string {
+        return machine
+            .requests('session.write')
+            .map((request) => request.data)
+            .join('');
+    }
+
+    async function windowRefocused(): Promise<void> {
+        await act(async () => {
+            window.dispatchEvent(new FocusEvent('focus'));
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+        });
+    }
+
+    beforeEach(async () => {
+        machine.answer('session.login', ({ sessionId, cols, rows }) => ({ sessionId, cols, rows }) as never);
+        act(() => useUi.getState().setSettings({ open: true, section: 'accounts' } as never));
+        await until(() => document.querySelector('[role="dialog"]') !== null);
+        await openLogin('claude', 'Claude Code', 'This closes once you are logged in.');
+        await until(() => document.activeElement?.classList.contains('xterm-helper-textarea') === true);
+        terminal = document.activeElement as HTMLTextAreaElement;
+    });
+
+    afterEach(() => {
+        act(() => useUi.getState().setSettings({ open: false }));
+    });
+
+    test('a typed key and a paste reach the session', async () => {
+        await act(async () => {
+            terminal.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', keyCode: 65, bubbles: true, cancelable: true }));
+            terminal.dispatchEvent(new KeyboardEvent('keypress', { key: 'a', charCode: 97, keyCode: 97, bubbles: true, cancelable: true }));
+        });
+        await until(() => written().includes('a'));
+
+        const paste = new Event('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, 'clipboardData', { value: { getData: () => 'code-123' } });
+        await act(async () => {
+            terminal.dispatchEvent(paste);
+        });
+        await until(() => written().includes('code-123'));
+    });
+
+    test('a window that comes back with the focus on nothing gives it to the terminal', async () => {
+        await act(async () => terminal.blur());
+        expect(document.activeElement).toBe(document.body);
+
+        await windowRefocused();
+        expect(document.activeElement).toBe(terminal);
+    });
+
+    test('a window that comes back leaves the focus on a control that has it', async () => {
+        const close = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].at(-1)!.querySelector<HTMLElement>('button')!;
+        await act(async () => close.focus());
+
+        await windowRefocused();
+        expect(document.activeElement).toBe(close);
     });
 });

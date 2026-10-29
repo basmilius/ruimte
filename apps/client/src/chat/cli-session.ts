@@ -71,11 +71,15 @@ export function useCliSession({ endpointId, sessionPrefix, start, typed, onStart
                 copyText(term.getSelection());
             }
         };
+        // A press in the terminal gives it the keyboard, whatever the dialogs around it did with the focus.
+        const focusTerminal = (): void => view.focus();
         const element = term.element;
         element?.addEventListener('pointerup', copySelection);
+        element?.addEventListener('pointerdown', focusTerminal);
 
         return () => {
             element?.removeEventListener('pointerup', copySelection);
+            element?.removeEventListener('pointerdown', focusTerminal);
             offs.forEach((off) => off());
             // The session is this dialog's alone; a retry starts another.
             if (started.current) {
@@ -112,6 +116,28 @@ export function useCliSession({ endpointId, sessionPrefix, start, typed, onStart
         };
         void run();
     }, [connected, endpointId, sessionId, start, onStarted]);
+
+    /* A login's code flow sends a person to the browser for a code, and the code is typed on return. A
+       window that comes back with the focus on nothing gives it to the terminal; focus that landed on
+       a control or another popup stays there. */
+    useEffect(() => {
+        if (phase.kind !== 'running') {
+            return;
+        }
+        let frame = 0;
+        const onFocus = (): void => {
+            frame = requestAnimationFrame(() => {
+                if (document.activeElement === null || document.activeElement === document.body) {
+                    viewRef.current?.focus();
+                }
+            });
+        };
+        window.addEventListener('focus', onFocus);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            cancelAnimationFrame(frame);
+        };
+    }, [phase.kind]);
 
     // The machine ends a session whose client left, so a link that drops ends this one too.
     useEffect(() => {
