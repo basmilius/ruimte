@@ -1245,7 +1245,7 @@ struct ChatObservedRow: View {
         case .user(let message): message.text
         case .assistant(let reply): reply.text
         case .thinking(let thought): thought.text
-        case .note(let note): note.message?.text ?? note.text
+        case .note(let note): note.message?.text ?? (note.said == true ? ChatRuimteSaid.words(note.text) : note.text)
         default: ""
         }
     }
@@ -1345,6 +1345,8 @@ private struct ChatTimelineRow: View {
             case .note(let note):
                 if let message = note.message {
                     ChatSentMessage(message: message)
+                } else if note.said == true {
+                    ChatRuimteSaid(text: note.text)
                 } else {
                     ChatNoteRow(item: note, presentation: presentation)
                 }

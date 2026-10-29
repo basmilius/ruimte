@@ -439,6 +439,19 @@ final class ChatToolPresentationTests: XCTestCase {
         XCTAssertFalse(ChatToolPresentation.summaryIsPath(name: "Bash", input: .object(["command": .string("ls")])))
     }
 
+    func testRuimteSaysANoteWithoutTheNameEachParagraphLedWith() {
+        let note = ChatWire.item([
+            "kind": .string("note"), "level": .string("info"), "said": .bool(true),
+            "text": .string("Ruimte: First line\nstill first.\n\nRuimte: Second.\n\nThird, Ruimte: kept."),
+        ]).chatItem
+        guard case .note(let decoded) = note else {
+            return XCTFail("Expected a note")
+        }
+        XCTAssertEqual(decoded.said, true)
+        XCTAssertEqual(ChatRuimteSaid.words(decoded.text), "First line\nstill first.\n\nSecond.\n\nThird, Ruimte: kept.")
+        XCTAssertEqual(ChatRuimteSaid.words("Ruimte:no space"), "Ruimte:no space")
+    }
+
     private func summary(_ name: String, _ input: [String: JSONValue]) -> String {
         ChatToolPresentation.summary(
             ChatWire.item(["kind": .string("tool"), "name": .string(name), "input": .object(input)]).chatTool)

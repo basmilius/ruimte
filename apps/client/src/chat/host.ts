@@ -38,6 +38,7 @@ import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
+import { RuimteMark } from '@/ui/RuimteMark';
 import { prefetcher, messageOf } from '@adecore/ui';
 import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
 
@@ -270,5 +271,6 @@ export const CHAT_HOST: Partial<ChatHost> = {
     useHidesFolder: () => useProject((s) => isScratchProject(s.current)),
     // A chat of the Chats project is a conversation of its own, so it opens the way one does.
     useWelcome: () => useProject((s) => isScratchProject(s.current)),
-    commandLooks: RUIMTE_COMMAND_LOOKS
+    commandLooks: RUIMTE_COMMAND_LOOKS,
+    saidBy: { name: 'Ruimte', mark: createElement(RuimteMark, { size: 14 }) }
 };

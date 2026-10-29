@@ -6630,8 +6630,9 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
     public let `text`: String
     public let `from`: String?
     public let `message`: ChatNoteItemMessage?
+    public let `said`: Bool?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "note", `level`: ChatNoteItemLevel, `text`: String, `from`: String? = nil, `message`: ChatNoteItemMessage? = nil) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "note", `level`: ChatNoteItemLevel, `text`: String, `from`: String? = nil, `message`: ChatNoteItemMessage? = nil, `said`: Bool? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
@@ -6640,6 +6641,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         self.`text` = `text`
         self.`from` = `from`
         self.`message` = `message`
+        self.`said` = `said`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6652,6 +6654,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         `text` = try container.decode(String.self, forKey: .`text`)
         `from` = try container.decodeIfPresent(String.self, forKey: .`from`)
         `message` = try container.decodeIfPresent(ChatNoteItemMessage.self, forKey: .`message`)
+        `said` = try container.decodeIfPresent(Bool.self, forKey: .`said`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6664,6 +6667,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         try container.encode(`text`, forKey: .`text`)
         try container.encodeIfPresent(`from`, forKey: .`from`)
         try container.encodeIfPresent(`message`, forKey: .`message`)
+        try container.encodeIfPresent(`said`, forKey: .`said`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6675,6 +6679,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         case `text` = "text"
         case `from` = "from"
         case `message` = "message"
+        case `said` = "said"
     }
 }
 

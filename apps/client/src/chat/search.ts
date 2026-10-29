@@ -82,6 +82,13 @@ function findableFields(item: ChatItem, nameOf?: CallNames, hideTools = false): 
             ];
         }
         case 'note': {
+            // A message or what Ruimte told the agent is drawn as a bubble, which folds as a whole.
+            if (item.message !== undefined) {
+                return [{ field: 'text', text: item.message.text }];
+            }
+            if (item.said) {
+                return [{ field: 'text', text: item.text }];
+            }
             // A note shows its first line and folds the rest.
             const breakAt = item.text.indexOf('\n');
             return breakAt === -1

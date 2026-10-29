@@ -52,6 +52,24 @@ describe('searchChat', () => {
         expect(searchChat([call], query('3f2a9k1d')).hits).toHaveLength(1);
     });
 
+    test('a note drawn as a bubble is found in the words the bubble shows', () => {
+        const notes: ChatItem[] = [
+            {
+                id: 'fork',
+                kind: 'note',
+                createdAt: 1,
+                turnId: null,
+                level: 'info',
+                text: 'Forked from Lexer after turn 2',
+                message: { from: 'chat-lead', title: 'Lexer', text: 'Forked after turn 2' }
+            },
+            { id: 'said', kind: 'note', createdAt: 2, turnId: 't2', level: 'info', text: 'Ruimte: you take over\nFolder: here', said: true }
+        ];
+        expect(keys(notes, query('Lexer'))).toEqual([]);
+        expect(keys(notes, query('Forked'))).toEqual(['fork:text:0']);
+        expect(keys(notes, query('Folder'))).toEqual(['said:text:0']);
+    });
+
     test('a thread that hides its tool lines finds only what it draws', () => {
         expect(searchChat(thread, query('sidebar'), undefined, true).hits.map((hit) => hit.itemId)).toEqual(['u1', 'a1', 'a1']);
     });

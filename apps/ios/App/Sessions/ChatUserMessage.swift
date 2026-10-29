@@ -136,14 +136,59 @@ struct ChatUserMessage: View {
 struct ChatSentMessage: View {
     let message: ChatNoteItemMessage
     @Environment(\.chatReferenceLookup) private var lookup
+
+    var body: some View {
+        ChatSaidMessage(
+            text: message.text,
+            label: message.title.isEmpty
+                ? String(localized: "Message from another node")
+                : String(
+                    localized: "Message from \(message.title)",
+                    comment: "%@ is the name the sending node had on the canvas")
+        ) {
+            ChatReferenceChip(look: ChatReferenceChip.look(message.from, chat: false, lookup: lookup, lastName: message.title))
+        }
+    }
+}
+
+/// What Ruimte told the agent in front of a prompt, said under Ruimte's own name, which the text then no longer has to
+/// lead with.
+struct ChatRuimteSaid: View {
+    let text: String
+
+    var body: some View {
+        ChatSaidMessage(text: Self.words(text), label: RuimteCommandLook.brand) {
+            HStack(spacing: 4) {
+                Image("RuimteMark").resizable().frame(width: 12, height: 12).accessibilityHidden(true)
+                Text(RuimteCommandLook.brand).lineLimit(1)
+            }
+            .chatChip(gone: false)
+        }
+    }
+
+    /// The text without the "Ruimte: " each paragraph leads with for an agent that reads it as a plain line.
+    static func words(_ text: String) -> String {
+        let prefix = "\(RuimteCommandLook.brand): "
+        return text.components(separatedBy: "\n\n")
+            .map { $0.hasPrefix(prefix) ? String($0.dropFirst(prefix.count)) : $0 }
+            .joined(separator: "\n\n")
+    }
+}
+
+/// A message the person did not write: a bubble like theirs, quieter and on the leading side, under a chip of who said
+/// it. A long one folds.
+private struct ChatSaidMessage<Chip: View>: View {
+    let text: String
+    let label: String
+    @ViewBuilder let chip: Chip
     @State private var expanded = false
-    private var long: Bool { message.text.count > 600 || message.text.split(separator: "\n").count > 8 }
+    private var long: Bool { text.count > 600 || text.split(separator: "\n").count > 8 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ChatReferenceChip(look: ChatReferenceChip.look(message.from, chat: false, lookup: lookup, lastName: message.title))
+            chip
             VStack(alignment: .leading, spacing: 4) {
-                MarkdownMessage(text: message.text)
+                MarkdownMessage(text: text)
                     .frame(maxHeight: long && !expanded ? 180 : nil, alignment: .top)
                     .clipped()
                     .mask {
@@ -175,12 +220,7 @@ struct ChatSentMessage: View {
         .frame(maxWidth: 620, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(
-            message.title.isEmpty
-                ? String(localized: "Message from another node")
-                : String(
-                    localized: "Message from \(message.title)",
-                    comment: "%@ is the name the sending node had on the canvas"))
+        .accessibilityLabel(label)
     }
 }
 
@@ -207,12 +247,7 @@ struct ChatReferenceChip: View {
                 Image(lucide: look.icon, size: 12)
                 Text(look.title).lineLimit(1)
             }
-            .font(.footnote.weight(.medium)).foregroundStyle(look.gone ? MobileStyle.faint : MobileStyle.text)
-            .padding(.horizontal, 6).frame(minHeight: 22)
-            .background(MobileStyle.text.opacity(look.gone ? 0.04 : 0.08), in: RoundedRectangle(cornerRadius: 6))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6).strokeBorder(MobileStyle.text.opacity(look.gone ? 0.08 : 0.16))
-            }
+            .chatChip(gone: look.gone)
         }
         .buttonStyle(.plain)
         .disabled(!look.opens)
@@ -236,6 +271,17 @@ struct ChatReferenceChip: View {
         return Look(
             id: id, icon: item.mark,
             title: item.name.isEmpty ? String(localized: "Untitled") : item.name, opens: true, gone: false)
+    }
+}
+
+extension View {
+    fileprivate func chatChip(gone: Bool) -> some View {
+        font(.footnote.weight(.medium)).foregroundStyle(gone ? MobileStyle.faint : MobileStyle.text)
+            .padding(.horizontal, 6).frame(minHeight: 22)
+            .background(MobileStyle.text.opacity(gone ? 0.04 : 0.08), in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6).strokeBorder(MobileStyle.text.opacity(gone ? 0.08 : 0.16))
+            }
     }
 }
 
