@@ -113,25 +113,26 @@ describe('pets on a canvas', () => {
         await until(() => useSettings.getState().petsVisitor === false);
     });
 
-    test('a person switches on several sets of figures in Settings, Pets, each with a preview, and never none', async () => {
+    test('a person switches on several packs of figures in Settings, Pets, each with a preview and its figures, and never none', async () => {
         await open();
         await act(async () => useUi.getState().setSettings({ open: true, section: 'pets' }));
         const setSwitch = (name: string): HTMLElement | null => document.querySelector(`[role="switch"][aria-label="Use ${name}"]`);
         await until(() => setSwitch('Buddies') !== null);
-        expect(document.querySelector('[role="img"][aria-label="Preview of Fox and frog"]')).not.toBeNull();
+        expect(document.querySelector('[role="img"][aria-label="Preview of Animals"]')).not.toBeNull();
+        expect(document.querySelector('[data-pet-set="woodland"]')?.textContent).toContain('Hazel, Bramble, Oak, Bandit');
         expect(setSwitch('Buddies')?.getAttribute('aria-checked')).toBe('true');
-        expect(setSwitch('Fox and frog')?.getAttribute('aria-checked')).toBe('false');
+        expect(setSwitch('Nox and Chanel')?.getAttribute('aria-checked')).toBe('false');
         // The only set picked cannot be left out.
         expect(setSwitch('Buddies')?.hasAttribute('data-disabled')).toBe(true);
 
-        await clickOn(setSwitch('Fox and frog'));
-        await until(() => setSwitch('Fox and frog')?.getAttribute('aria-checked') === 'true');
-        expect(useSettings.getState().petsSets).toEqual(['buddies', 'animals']);
+        await clickOn(setSwitch('Nox and Chanel'));
+        await until(() => setSwitch('Nox and Chanel')?.getAttribute('aria-checked') === 'true');
+        expect(useSettings.getState().petsSets).toEqual(['buddies', 'nox-and-chanel']);
 
         await clickOn(setSwitch('Buddies'));
         await until(() => setSwitch('Buddies')?.getAttribute('aria-checked') === 'false');
-        expect(useSettings.getState().petsSets).toEqual(['animals']);
-        expect(setSwitch('Fox and frog')?.hasAttribute('data-disabled')).toBe(true);
+        expect(useSettings.getState().petsSets).toEqual(['nox-and-chanel']);
+        expect(setSwitch('Nox and Chanel')?.hasAttribute('data-disabled')).toBe(true);
     });
 
     test('a chat that waits on you has a pet that says so, until the question is answered', async () => {
@@ -290,9 +291,15 @@ describe('a figure per agent', () => {
 
         await clickOn(trigger('Codex'));
         await until(() => document.querySelector('[role="option"]') !== null);
-        await clickOn([...document.querySelectorAll('[role="option"]')].find((option) => option.textContent?.startsWith('Fox and frog')) ?? null);
+        await clickOn([...document.querySelectorAll('[role="option"]')].find((option) => option.textContent?.startsWith('Animals')) ?? null);
         await until(() => useSettings.getState().petsByAgent.codex === 'animals');
         expect(useSettings.getState().petsByAgent).toEqual({ codex: 'animals' });
+
+        await clickOn(trigger('Codex'));
+        await until(() => document.querySelector('[role="option"]') !== null);
+        await clickOn([...document.querySelectorAll('[role="option"]')].find((option) => option.textContent?.trim() === 'Nox') ?? null);
+        await until(() => useSettings.getState().petsByAgent.codex === 'figure:nox');
+        expect(trigger('Codex')?.textContent).toContain('Nox');
 
         await clickOn(trigger('Codex'));
         await until(() => document.querySelector('[role="option"]') !== null);

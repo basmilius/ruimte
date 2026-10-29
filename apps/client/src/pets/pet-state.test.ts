@@ -3,7 +3,8 @@ import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { ChatState } from '@adecore/agents-react/state';
 import { CLAUDE_BUDDY, CODEX_BUDDY } from '@/pets/buddies';
 import { FOX_SPRITE, FROG_SPRITE } from '@/pets/animals';
-import { JUMP_ROWS, PET_POSES } from '@/pets/pixel';
+import { EXTRA_FIGURES, PET_PACKS, packFigures } from '@/pets/catalog';
+import { DRAWN_CYCLE, JUMP_ROWS, PET_POSES, type DrawnSprite } from '@/pets/pixel';
 import { agentPetChoice, builtInSprite, petChoiceFor, petFrame, petOf, petPoolOf, petSetsWith, type PetChoice } from '@/pets/pet-state';
 import type { SessionsByKey, SessionState, StatusOf } from '@/state/sessions';
 import type { Snoozes } from '@/state/snooze';
@@ -86,18 +87,36 @@ describe('what a pet shows', () => {
 });
 
 describe('the figures', () => {
-    test('Codex has its own, and every other CLI gets the one Claude has', () => {
-        expect(builtInSprite('buddies', 'codex')).toBe(CODEX_BUDDY);
-        expect(builtInSprite('buddies', 'claude')).toBe(CLAUDE_BUDDY);
-        expect(builtInSprite('buddies', 'gemini')).toBe(CLAUDE_BUDDY);
-        expect(builtInSprite('animals', 'codex')).toBe(FROG_SPRITE);
-        expect(builtInSprite('animals', undefined)).toBe(FOX_SPRITE);
+    test('the buddies and the animals give every provider its own, and a CLI without one the one Claude has', () => {
+        expect(builtInSprite('buddies', 'codex', 'writer')).toBe(CODEX_BUDDY);
+        expect(builtInSprite('buddies', 'claude', 'writer')).toBe(CLAUDE_BUDDY);
+        expect(builtInSprite('buddies', 'gemini', 'writer')).toBe(CLAUDE_BUDDY);
+        expect(builtInSprite('buddies', 'antigravity', 'writer').id).toBe('orbit');
+        expect(builtInSprite('animals', 'codex', 'writer')).toBe(FROG_SPRITE);
+        expect(builtInSprite('animals', undefined, 'writer')).toBe(FOX_SPRITE);
+        expect(builtInSprite('animals', 'nanogpt', 'writer').id).toBe('nano-bee');
+    });
+
+    test('any other pack spreads its figures over the nodes, the same one for a node every time', () => {
+        const NODES = Array.from({ length: 60 }, (_, i) => `node-${i}`);
+        const figures = NODES.map((id) => builtInSprite('woodland', 'claude', id).id);
+
+        expect(NODES.map((id) => builtInSprite('woodland', 'codex', id).id)).toEqual(figures);
+        expect(new Set(figures)).toEqual(new Set(packFigures('woodland').map((figure) => figure.id)));
+    });
+
+    test('the catalog holds 54 figures in 11 packs, each id once', () => {
+        const figures = [...PET_PACKS.flatMap((pack) => pack.figures as readonly DrawnSprite[]), ...EXTRA_FIGURES];
+
+        expect(PET_PACKS).toHaveLength(11);
+        expect(figures).toHaveLength(54);
+        expect(new Set(figures.map((figure) => figure.id)).size).toBe(54);
     });
 
     test('every pose of every figure draws inside its grid', () => {
-        for (const sprite of [CLAUDE_BUDDY, CODEX_BUDDY, FOX_SPRITE, FROG_SPRITE]) {
+        for (const sprite of [...PET_PACKS.flatMap((pack) => pack.figures as readonly DrawnSprite[]), ...EXTRA_FIGURES]) {
             for (const pose of PET_POSES) {
-                for (let frame = 0; frame < 12; frame++) {
+                for (let frame = 0; frame < DRAWN_CYCLE; frame++) {
                     const parts = sprite.poses[pose](frame);
                     for (const part of [...parts.silhouette, ...parts.details, ...parts.props]) {
                         expect(part.x).toBeGreaterThanOrEqual(0);
@@ -105,6 +124,17 @@ describe('the figures', () => {
                         expect(part.x + part.w).toBeLessThanOrEqual(26);
                         expect(part.y + part.h).toBeLessThanOrEqual(18);
                     }
+                }
+            }
+        }
+    });
+
+    test('every pose of every figure has a bow and repeats after the paint cycle', () => {
+        for (const sprite of [...PET_PACKS.flatMap((pack) => pack.figures as readonly DrawnSprite[]), ...EXTRA_FIGURES]) {
+            for (const pose of PET_POSES) {
+                for (let frame = 0; frame < DRAWN_CYCLE; frame++) {
+                    expect(sprite.poses[pose](frame).bow?.length ?? 0).toBeGreaterThan(0);
+                    expect(sprite.poses[pose](frame + DRAWN_CYCLE)).toEqual(sprite.poses[pose](frame));
                 }
             }
         }
@@ -176,6 +206,11 @@ describe('a figure per agent', () => {
         expect(agentPetChoice(byAgent, 'claude', [BUDDIES], CATS, 'writer')).toEqual({ kind: 'custom', id: 'tabby' });
         expect(agentPetChoice(byAgent, 'codex', [BUDDIES], CATS, 'writer')).toEqual({ kind: 'custom', id: 'tux' });
         expect(agentPetChoice({ claude: 'animals' }, 'claude', [BUDDIES], CATS, 'writer')).toEqual(ANIMALS);
+    });
+
+    test('gives a CLI one fixed figure of the catalog, and leaves it to the pool for an id that is gone', () => {
+        expect(agentPetChoice({ codex: 'figure:nox' }, 'codex', [BUDDIES], CATS, 'writer')).toEqual({ kind: 'figure', id: 'nox' });
+        expect(agentPetChoice({ codex: 'figure:dragon' }, 'codex', [ANIMALS], CATS, 'writer')).toEqual(ANIMALS);
     });
 
     test('leaves a CLI without one, a visitor and a figure removed since to the pool', () => {

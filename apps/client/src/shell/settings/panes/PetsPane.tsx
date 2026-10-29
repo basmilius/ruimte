@@ -6,7 +6,9 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { useProviders } from '@adecore/agents-react/state';
 import { BEAM_SETTINGS } from '@/pets/beam';
 import { SHEET_LIMITS, stripsOf, usePetSprites, type CustomPetSprite } from '@/pets/custom-sprites';
-import { CUSTOM_PET_PREFIX, PET_SETS, petChoiceKey, petChoiceOfKey, petSetsWith, type PetChoice } from '@/pets/pet-state';
+import { EXTRA_FIGURES, packFigures } from '@/pets/catalog';
+import type { DrawnSprite } from '@/pets/pixel';
+import { CUSTOM_PET_PREFIX, FIGURE_PET_PREFIX, PET_SETS, petChoiceKey, petChoiceOfKey, petSetsWith, type PetChoice } from '@/pets/pet-state';
 import { lookOf, usePetPool } from '@/pets/use-pet-look';
 import { PetFigureDialog, type PetFigureEdit } from '@/shell/settings/panes/PetFigureDialog';
 import { PetsPreview } from '@/shell/settings/panes/PetsPreview';
@@ -43,12 +45,14 @@ function FigureRow({
         <tr data-pet-set={petChoiceKey(choice)} className="border-t border-border first:border-t-0">
             <td className="py-2 pr-3">
                 <span className="flex" aria-label={t('pets.sprite.preview', { name })} role="img">
-                    {/* A built-in set has a figure of its own for Codex; a strip a person added stands for every agent. */}
+                    {/* A pack shows its first two figures; a strip a person added stands for every agent. */}
                     <FigureTile
                         looks={
                             choice.kind === 'built-in'
-                                ? [lookOf(choice, 'claude', sprites), lookOf(choice, 'codex', sprites)]
-                                : [lookOf(choice, 'claude', sprites)]
+                                ? packFigures(choice.set)
+                                      .slice(0, 2)
+                                      .map((sprite) => ({ kind: 'drawn', sprite }))
+                                : [lookOf(choice, 'claude', sprites, 'settings-tile')]
                         }
                     />
                 </span>
@@ -82,10 +86,20 @@ function AgentFigures({ sprites }: { sprites: readonly CustomPetSprite[] }) {
     const update = useSettings((s) => s.update);
     const customIds = sprites.map((sprite) => sprite.id);
 
+    const figureItems = (figures: readonly DrawnSprite[]) =>
+        figures.map((figure) => ({ value: `${FIGURE_PET_PREFIX}${figure.id}`, label: t(`pets.sprite.figures.${figure.id}` as 'pets.sprite.figures.nox') }));
+
+    // A pack, then one fixed figure of any pack, then a figure a person added.
     const items = [
-        { value: BY_POOL, label: t('pets.agents.default') },
-        ...PET_SETS.map((set) => ({ value: set, label: t(`pets.sprite.sets.${set}`) })),
-        ...sprites.map((sprite) => ({ value: `${CUSTOM_PET_PREFIX}${sprite.id}`, label: sprite.name }))
+        {
+            label: t('pets.agents.packs'),
+            items: [{ value: BY_POOL, label: t('pets.agents.default') }, ...PET_SETS.map((set) => ({ value: set, label: t(`pets.sprite.sets.${set}`) }))]
+        },
+        ...PET_SETS.map((set) => ({ label: t(`pets.sprite.sets.${set}`), items: figureItems(packFigures(set)) })),
+        { label: t('pets.sprite.extras'), items: figureItems(EXTRA_FIGURES) },
+        ...(sprites.length > 0
+            ? [{ label: t('pets.agents.own'), items: sprites.map((sprite) => ({ value: `${CUSTOM_PET_PREFIX}${sprite.id}`, label: sprite.name })) }]
+            : [])
     ];
 
     const give = (agent: string, set: string): void => {
@@ -99,19 +113,20 @@ function AgentFigures({ sprites }: { sprites: readonly CustomPetSprite[] }) {
 
     return (
         <SettingsRow searchId="pets.agents" label={t('pets.agents.label')} description={t('pets.agents.description')}>
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col">
                 {providers.map((provider) => {
                     const given = byAgent[provider.kind];
                     // A figure given and removed since reads as Default, which is what the pets do then.
                     const value = given !== undefined && petChoiceOfKey(given, customIds) !== null ? given : BY_POOL;
 
                     return (
-                        <li key={provider.kind} data-pet-agent={provider.kind} className="flex items-center gap-2">
+                        <li key={provider.kind} data-pet-agent={provider.kind} className="flex items-center gap-2 border-t border-border py-2 first:border-t-0">
                             <span className="min-w-0 grow truncate text-sm text-text">{provider.name}</span>
                             <Select
                                 value={value}
                                 label={t('pets.agents.choose', { name: provider.name })}
                                 align="end"
+                                searchable
                                 items={items}
                                 onValueChange={(next) => give(provider.kind, next)}
                             />
@@ -213,7 +228,9 @@ export function PetsPane() {
                                     key={set}
                                     choice={{ kind: 'built-in', set }}
                                     name={t(`pets.sprite.sets.${set}`)}
-                                    detail={t('pets.sprite.builtIn')}
+                                    detail={packFigures(set)
+                                        .map((figure) => t(`pets.sprite.figures.${figure.id}` as 'pets.sprite.figures.nox'))
+                                        .join(', ')}
                                     on={picked.includes(set)}
                                     last={picked.length === 1}
                                     sprites={sprites}

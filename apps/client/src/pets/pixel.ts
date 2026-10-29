@@ -68,8 +68,11 @@ export const BUBBLE_BESIDE = 20;
 export const PAINT_COLUMNS = BUBBLE_BESIDE + BUBBLE_SIZE.columns;
 export const PAINT_ROWS = BUBBLE_ROWS + JUMP_ROWS + SPRITE_ROWS;
 
-/* Every pose of a built-in figure repeats after this many frames (its steps are 2, 3, 4 and 6 long), so a frame and the one this far on look the same. */
-export const DRAWN_CYCLE = 12;
+/*
+ * Every pose of a built-in figure repeats after this many frames (its steps are 2, 3, 4, 6 and 8 long,
+ * a slow walk 16), so a frame and the one this far on look the same.
+ */
+export const DRAWN_CYCLE = 48;
 
 export function cell(x: number, y: number, w: number, h: number, color: string): Cell {
     return { x, y, w, h, color };

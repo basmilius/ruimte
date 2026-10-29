@@ -1,7 +1,6 @@
 import type { AgentKind } from '@ruimte/contracts';
 import type { ChatStatuses } from '@adecore/agents-react/state';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@/pets/buddies';
-import { FOX_SPRITE, FROG_SPRITE } from '@/pets/animals';
+import { PET_PACKS, packFigures, petFigure, providerFigure, type PetPackId } from '@/pets/catalog';
 import { BUBBLE_ABOVE, BUBBLE_BESIDE, BUBBLE_ROWS, JUMP_ROWS, PAINT_COLUMNS, PAINT_ROWS, SPRITE_COLUMNS, type DrawnSprite, type PetPose } from '@/pets/pixel';
 import { nodeWorking } from '@/state/agent-work';
 import { groupAttention } from '@/state/attention';
@@ -109,23 +108,44 @@ export function bubbleCell(lift: number, beside: boolean): { x: number; y: numbe
     return beside ? { x: BUBBLE_BESIDE, y: spriteTop + 2 } : { x: BUBBLE_ABOVE, y: spriteTop - BUBBLE_ROWS };
 }
 
-export const PET_SETS = ['buddies', 'animals'] as const;
+/* The built-in packs, as the settings name them. */
+export const PET_SETS: readonly PetSet[] = PET_PACKS.map((pack) => pack.id);
 
-export type PetSet = (typeof PET_SETS)[number];
+export type PetSet = PetPackId;
 
 export const CUSTOM_PET_PREFIX = 'custom:';
 
-/* The figure of a built-in set for an agent: Codex has its own, every other CLI the one Claude has. */
-export function builtInSprite(set: PetSet, agent: AgentKind | undefined): DrawnSprite {
-    const codex = agent === 'codex';
-    if (set === 'animals') {
-        return codex ? FROG_SPRITE : FOX_SPRITE;
+/* How the settings name one built-in figure given to a CLI, as `figure:<id>`. */
+export const FIGURE_PET_PREFIX = 'figure:';
+
+/*
+ * The figure of a built-in pack for an agent's node. The buddies and the animals give every provider its
+ * own, and Claude's to a CLI without one; any other pack gives the figure that scores highest for the
+ * node, so a node keeps its figure in every window.
+ */
+export function builtInSprite(set: PetSet, agent: AgentKind | undefined, nodeId: string): DrawnSprite {
+    if (set === 'buddies' || set === 'animals') {
+        return providerFigure(set, agent);
     }
-    return codex ? CODEX_BUDDY : CLAUDE_BUDDY;
+
+    const figures = packFigures(set);
+    let best = figures[0];
+    let bestScore = -1;
+
+    for (const figure of figures) {
+        const each = score(`${figure.id}\n${nodeId}`);
+
+        if (each > bestScore) {
+            best = figure;
+            bestScore = each;
+        }
+    }
+
+    return best;
 }
 
-/* A set pets come from: a built-in one, or one a person added. */
-export type PetChoice = { kind: 'built-in'; set: PetSet } | { kind: 'custom'; id: string };
+/* A set pets come from: a built-in pack, one figure of the catalog given to a CLI, or a figure a person added. */
+export type PetChoice = { kind: 'built-in'; set: PetSet } | { kind: 'figure'; id: string } | { kind: 'custom'; id: string };
 
 /*
  * The sets the setting names that are still there, each once, the built-in ones first. A set a person
@@ -143,15 +163,25 @@ export function petPoolOf(setting: readonly string[], customIds: readonly string
 
 /* What the setting holds for a set. */
 export function petChoiceKey(choice: PetChoice): string {
-    return choice.kind === 'custom' ? `${CUSTOM_PET_PREFIX}${choice.id}` : choice.set;
+    if (choice.kind === 'built-in') {
+        return choice.set;
+    }
+
+    return `${choice.kind === 'custom' ? CUSTOM_PET_PREFIX : FIGURE_PET_PREFIX}${choice.id}`;
 }
 
-/* The set a key the settings hold names, while it is still there: a built-in set, or a figure a person kept. */
+/* The set a key the settings hold names, while it is still there: a built-in pack, a figure of the catalog, or a figure a person kept. */
 export function petChoiceOfKey(key: string, customIds: readonly string[]): PetChoice | null {
     const set = PET_SETS.find((each) => each === key);
 
     if (set !== undefined) {
         return { kind: 'built-in', set };
+    }
+
+    const figure = key.startsWith(FIGURE_PET_PREFIX) ? key.slice(FIGURE_PET_PREFIX.length) : null;
+
+    if (figure !== null) {
+        return petFigure(figure) === undefined ? null : { kind: 'figure', id: figure };
     }
 
     const id = key.startsWith(CUSTOM_PET_PREFIX) ? key.slice(CUSTOM_PET_PREFIX.length) : null;

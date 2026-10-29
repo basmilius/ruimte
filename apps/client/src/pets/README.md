@@ -84,15 +84,25 @@ default; Settings, Pets, Visitor turns it off (`petsVisitor`).
 
 ## Sets
 
-Settings, Pets, Figures switches one set or more on (`petsSets`): the buddies, the fox and the frog,
-and the figures a person added. A node's pet comes from the set that scores highest for its id
-(`petChoiceFor`), so it keeps its set in every window, and a set that joins or leaves moves only the
-pets it takes or gave up. The visitor comes from the set of the node it visits. The last set picked
+Settings, Pets, Figures switches one set or more on (`petsSets`): the eleven built-in packs of
+`catalog.ts`, and the figures a person added. A node's pet comes from the set that scores highest for
+its id (`petChoiceFor`), so it keeps its set in every window, and a set that joins or leaves moves only
+the pets it takes or gave up. The visitor comes from the set of the node it visits. The last set picked
 stays, and a stored `petsSprite` is read as a set of one.
 
-Settings, Pets, Per agent gives a CLI a set of its own (`petsByAgent`, by the CLI's kind), such as
-a cat a person added for Claude and another for Codex (`agentPetChoice`). A CLI on Default, a visitor,
-and a CLI whose figure was removed since take theirs from the sets switched on.
+- The buddies and the animals give every provider a figure of its own (`providerFigure`), and Claude's
+  to a CLI without one. Every other pack gives the figure of its own that scores highest for the node
+  (`builtInSprite`), so a node keeps it too.
+- The buddies of Claude and Codex, the fox and the frog keep their own code (`buddies.ts`,
+  `animals.ts`). Every other figure is drawn from its shape and palette and moved by its shape's rig
+  (`sketches.ts`), with its own bow, sleep and stopped poses. Six figures stand in no pack and are only
+  given to a CLI by hand.
+- A pose repeats after `DRAWN_CYCLE` frames, which a painted frame is cached by.
+
+Settings, Pets, Per agent gives a CLI a pack, one fixed figure of the catalog (`figure:<id>`) or a
+figure a person added (`petsByAgent`, by the CLI's kind), such as Nox for Codex (`agentPetChoice`). It
+goes before the packs switched on. A CLI on Default, a visitor, and a CLI whose figure is gone take
+theirs from the sets switched on.
 
 ## A figure of your own
 

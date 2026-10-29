@@ -79,7 +79,7 @@ export function PetsPreview() {
         const { agent, left } = SLOTS[slot];
         // The figure its CLI was given, or else the next set picked, so two sets show side by side as they would spread over a canvas.
         const given = byAgent[agent] === undefined ? null : petChoiceOfKey(byAgent[agent], customIds);
-        const look = lookOf(given ?? pool[slot % pool.length], agent, sprites);
+        const look = lookOf(given ?? pool[slot % pool.length], agent, sprites, `preview-${slot}`);
         const own = slot === 0 ? mood : MOODS[(step + 1) % MOODS.length];
         const kids = slot === 0 && withKids && own === 'working' ? 2 : 0;
 
