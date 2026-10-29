@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
-import type { ProjectSummary } from '@ruimte/contracts';
+import { projectSidebarViews, type ProjectSummary } from '@ruimte/contracts';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { startWindowTabs } from '@/project/window-tabs';
 import { useSettings } from '@/state/settings';
+import { useSnoozes } from '@/state/snooze';
+import { chatInfoOf } from '../../testing/chat-info';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { menuItem, removeDesktop } from '../../testing/dom-helpers';
@@ -11,6 +13,7 @@ import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const SHOWN = 'fake-machine:project-atlas';
 const BEHIND = 'fake-machine:project-borealis';
+const CURRENT_CHAT = { kind: 'chat' as const, id: 'atlas-chat', name: 'Notes', node: {} };
 
 const BOREALIS: ProjectSummary = {
     projectId: 'project-borealis',
@@ -61,6 +64,7 @@ function fakeShell(): FakeShell {
 
 const scope = globalThis as unknown as { window: { ruimteDesktop?: DesktopBridge } };
 const previousNavigation = useSettings.getState().projectNavigation;
+const previousScope = useSettings.getState().sidebarScope;
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
@@ -95,7 +99,10 @@ async function dragOut(element: HTMLElement): Promise<void> {
 
 beforeEach(async () => {
     machine = new FakeMachine();
-    workspace = await openFakeWorkspace(machine, { views: [] } as never, { activeViewId: null, views: {} } as never);
+    workspace = await openFakeWorkspace(machine, { views: [CURRENT_CHAT] } as never, { activeViewId: null, views: {} } as never);
+    machine.answer('project.sidebar', () => ({
+        projects: [{ summary: BOREALIS, views: projectSidebarViews([{ kind: 'chat', id: 'borealis-chat', name: 'Review', node: {} }], []) }]
+    }));
     machine.emit('project.summary', { summary: BOREALIS } as never);
     shell = fakeShell();
     scope.window.ruimteDesktop = shell.bridge;
@@ -111,6 +118,7 @@ afterEach(async () => {
     await page.unmount();
     stopTabs();
     useSettings.setState({ projectNavigation: previousNavigation });
+    useSettings.setState({ sidebarScope: previousScope });
     history.replaceState(null, '', location.pathname);
     removeDesktop();
     workspace.close();
@@ -127,6 +135,46 @@ describe('tearing a project tab out of its window', () => {
         expect(page.host.textContent).toContain('Atlas');
         expect(machine.requests('project.open')).toHaveLength(1);
     });
+});
+
+test('a background project counts waits from status events and removes a snoozed or answered wait without opening the project', async () => {
+    const badge = (): Element | null => tab(BEHIND)?.querySelector('[aria-label="1 waiting"]') ?? null;
+
+    await until(() => machine.requests('project.sidebar').length > 0);
+    await act(async () => machine.emit('chat.status', { chatId: 'borealis-chat', info: chatInfoOf('borealis-chat', { status: 'needs-you' }) }));
+    await until(() => badge() !== null);
+    expect(badge()!.textContent).toBe('1');
+
+    await act(async () => useSnoozes.getState().receive('fake-machine', [{ nodeId: 'borealis-chat', until: 4_000_000_000_000 }]));
+    await until(() => badge() === null);
+    await act(async () => useSnoozes.getState().receive('fake-machine', []));
+    await until(() => badge() !== null);
+    await act(async () => machine.emit('chat.status', { chatId: 'borealis-chat', info: chatInfoOf('borealis-chat', { status: 'running' }) }));
+    await until(() => badge() === null);
+    expect(machine.requests('project.open')).toHaveLength(1);
+
+    await act(async () => machine.emit('chat.status', { chatId: 'borealis-chat', info: chatInfoOf('borealis-chat', { status: 'needs-you' }) }));
+    await until(() => badge() !== null);
+    await act(async () => machine.drop());
+    await until(() => badge() === null);
+});
+
+test('the project tabs and the all-project sidebar share one read of their machine', async () => {
+    await until(() => machine.requests('project.sidebar').length > 0);
+    const reads = machine.requests('project.sidebar').length;
+
+    await act(async () => useSettings.setState({ sidebarScope: 'all-open' }));
+    await until(() => page.host.querySelector('[data-sidebar-row^="project:"]') !== null);
+    expect(machine.requests('project.sidebar')).toHaveLength(reads);
+});
+
+test('the current project counts its live sessions without needing a background snapshot', async () => {
+    const badge = (): Element | null => tab(SHOWN)?.querySelector('[aria-label="1 waiting"]') ?? null;
+
+    await act(async () => machine.emit('chat.status', { chatId: CURRENT_CHAT.id, info: chatInfoOf(CURRENT_CHAT.id, { status: 'needs-you' }) }));
+    await until(() => badge() !== null);
+    await act(async () => machine.emit('chat.status', { chatId: CURRENT_CHAT.id, info: chatInfoOf(CURRENT_CHAT.id, { status: 'idle' }) }));
+    await until(() => badge() === null);
 });
 
 function tabOrder(): string[] {

@@ -1,9 +1,18 @@
 import { create } from 'zustand';
-import { isCanvasView, isChatHostView, isDesignView, type ProjectNode, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isChatHostView,
+    isDesignView,
+    type AgentStatus,
+    type ProjectNode,
+    type ProjectSidebarView,
+    type ProjectView,
+    type SplitLayout
+} from '@ruimte/contracts';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
 import { desktop } from '@/desktop/bridge';
-import { projectNodes } from '@/project/view-nodes';
+import { nodeRefsOfView, projectNodes, useViewNodes } from '@/project/view-nodes';
 import { shownViewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
 import { nodesInSight, seenNodes, sightOf, type CanvasSight } from '@/state/in-sight';
@@ -163,6 +172,42 @@ export function groupAttention(
         }
     }
     return groups;
+}
+
+export function useWaitingCount(viewId?: string): number {
+    const endpointId = useEndpointId();
+    const sessions = useSessions((state) => state.byKey);
+    const chats = useChats((state) => state.statusByKey);
+    const snoozes = useSnoozes((state) => state.byKey);
+
+    return useViewNodes((views) => {
+        const view = views.find((entry) => entry.id === viewId);
+        const nodes = viewId === undefined ? projectNodes() : view === undefined ? [] : nodeRefsOfView(view);
+
+        return groupAttention(nodes, sessions, chats, endpointId, {}, snoozes).needsYou.length;
+    });
+}
+
+/* Background projects carry compact rows rather than live nodes. Status events outrank the snapshot they were read with. */
+export function sidebarWaitingCount(
+    views: readonly ProjectSidebarView[],
+    statuses: Readonly<Record<string, AgentStatus>>,
+    endpointId: string,
+    snoozes: Snoozes
+): number {
+    const waiting = new Set<string>();
+
+    for (const row of views) {
+        for (const node of [...row.nodes, ...(row.self === null ? [] : [row.self])]) {
+            const status = statuses[`${node.kind}:${node.id}`] ?? node.status;
+
+            if (status === 'needs-you' && snoozeOf(snoozes, endpointId, node.id) === null) {
+                waiting.add(node.id);
+            }
+        }
+    }
+
+    return waiting.size;
 }
 
 interface AttentionStore {

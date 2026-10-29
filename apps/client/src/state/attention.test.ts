@@ -1,7 +1,17 @@
 import { chatInfoOf } from '../../testing/chat-info';
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import { groupAttention, isUnseen, nextUnseen, readableNodes, seenNodes, settledSince, visibleNodes, type AttentionPass } from '@/state/attention';
+import { projectSidebarViews, type AgentInfo, type AgentStatus } from '@ruimte/contracts';
+import {
+    groupAttention,
+    isUnseen,
+    nextUnseen,
+    readableNodes,
+    seenNodes,
+    settledSince,
+    sidebarWaitingCount,
+    visibleNodes,
+    type AttentionPass
+} from '@/state/attention';
 import type { ChatState } from '@adecore/agents-react/state';
 import type { SessionState, StatusOf } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
@@ -214,4 +224,21 @@ describe('the counts', () => {
         const groups = groupAttention(nodes, { 'local:t1': session(agent('needs-you')) }, {}, 'local', {}, { 'Xk3p:t1': 2_000 });
         expect(groups.needsYou).toEqual(['t1']);
     });
+});
+
+test('compact project counts use current statuses, count a session once and keep snoozes on their own machine', () => {
+    const views = projectSidebarViews(
+        [
+            { kind: 'chat', id: 'c1', name: 'Notes', node: {} },
+            { kind: 'terminal', id: 't1', name: 'Build', node: {} }
+        ],
+        []
+    );
+    views[0]!.self!.status = 'needs-you';
+    const statuses = { 'chat:c1': 'running', 'terminal:t1': 'needs-you' } as const;
+
+    expect(sidebarWaitingCount([...views, ...views], statuses, 'local', {})).toBe(1);
+    expect(sidebarWaitingCount(views, statuses, 'local', { 'other:t1': 2_000 })).toBe(1);
+    expect(sidebarWaitingCount(views, statuses, 'local', { 'local:t1': 2_000 })).toBe(0);
+    expect(sidebarWaitingCount(views, {}, 'local', {})).toBe(1);
 });

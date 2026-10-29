@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, Pin, PinOff } from 'lucide-react';
 import { openProjectAction } from '@/actions/client-actions';
+import { WaitingCount } from '@/attention/WaitingCount';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { desktop } from '@/desktop/bridge';
@@ -31,10 +32,13 @@ import { ProjectAddMenu } from '@/shell/ProjectMenu';
 import { useProjectMenu } from '@/shell/project-menu-model';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { splitKey } from '@/state/keys';
+import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
+import { useSnoozes } from '@/state/snooze';
 import { useProject } from '@/state/project';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { ContextMenu, Icon, Menu, Tabs, Tooltip } from '@adecore/ui';
+import { useSidebarMachines } from './sidebar-projects';
 
 /* How far a pressed tab moves before it is a drag rather than a click. */
 const DRAG_THRESHOLD_PX = 4;
@@ -45,6 +49,10 @@ const TEAR_DISTANCE_PX = 24;
 /* The width of `.ade-tab-insertion`, and how far outside the first or last tab it stands. */
 const INSERTION_WIDTH_PX = 2;
 const INSERTION_INSET_PX = 2;
+
+function CurrentProjectAttention() {
+    return <WaitingCount count={useWaitingCount()} />;
+}
 
 /* A pressed tab: still a click, moving along the strip, out of the window, or moving the window itself. */
 interface Press {
@@ -103,7 +111,14 @@ export function ProjectTabs({ dirty }: { readonly dirty: boolean }) {
     const tabs = useWindowTabs((s) => s.tabs);
     const pins = pinnedOf(tabs);
     const rows = useProjectList((s) => s.projects);
+    const machines = useSidebarMachines(
+        true,
+        [...new Set(rows.filter((row) => tabs.keys.includes(`${row.endpointId}:${row.summary.projectId}`)).map((row) => row.endpointId))],
+        false
+    );
+    const snoozes = useSnoozes((state) => state.byKey);
     const current = useProject((s) => s.current);
+    const currentEndpointId = useProject((state) => state.currentEndpointId);
     const endpoints = useEndpoints((s) => s.endpoints);
     const servers = useServers((s) => s.byEndpoint);
     const [menuKey, setMenuKey] = useState<string | null>(null);
@@ -282,6 +297,9 @@ export function ProjectTabs({ dirty }: { readonly dirty: boolean }) {
                                 const summary = active && current?.projectId === row.summary.projectId ? current : row.summary;
                                 const machine = row.endpointId === LOCAL_ENDPOINT_ID ? null : endpoints.find((endpoint) => endpoint.id === row.endpointId);
                                 const pinned = pins.includes(key);
+                                const snapshot = machines[row.endpointId];
+                                const views = snapshot?.projects.find((project) => project.summary.projectId === summary.projectId)?.views;
+                                const isCurrent = currentEndpointId === row.endpointId && current?.projectId === summary.projectId;
                                 return (
                                     <Tabs.Tab
                                         key={key}
@@ -313,6 +331,11 @@ export function ProjectTabs({ dirty }: { readonly dirty: boolean }) {
                                     >
                                         <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} />
                                         <span className="max-w-40 truncate">{summary.name}</span>
+                                        {isCurrent ? (
+                                            <CurrentProjectAttention />
+                                        ) : snapshot?.state === 'ready' && views ? (
+                                            <WaitingCount count={sidebarWaitingCount(views, snapshot.statuses, row.endpointId, snoozes)} />
+                                        ) : null}
                                         {machine && (
                                             <Tooltip label={machine.label}>
                                                 <span className="flex items-center text-text-faint">

@@ -4,14 +4,21 @@ import type { ProjectView } from '@ruimte/contracts';
 import { useFiles } from '@/state/files';
 import { useDocument } from '@/state/document';
 import { useViewPins } from '@/state/view-pins';
+import { useSnoozes } from '@/state/snooze';
+import { chatInfoOf } from '../../testing/chat-info';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { menuItem } from '../../testing/dom-helpers';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { emptyCanvas } from '../../testing/project-fixtures';
 
 const CHAT: ProjectView = { kind: 'chat', id: 'chat-view', name: 'Notes chat', node: {} };
 const SHELL: ProjectView = { kind: 'terminal', id: 'shell-view', name: 'Shell', node: {} };
 const FILE = '/work/atlas/src/a.ts';
+const CANVAS = {
+    ...emptyCanvas('writers', 'Writers'),
+    nodes: ['writer-a', 'writer-b'].map((id) => ({ id, kind: 'chat' as const, title: id, x: 0, y: 0, w: 480, h: 520 }))
+};
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
@@ -61,7 +68,7 @@ beforeEach(async () => {
     machine = new FakeMachine();
     machine.answer('fs.read', () => ({ kind: 'text', text: 'export {};\n', encoding: 'utf-8', size: 11, mtime: 1, language: 'typescript' }) as never);
     useViewPins.setState({ pins: {} });
-    workspace = await openFakeWorkspace(machine, { views: [CHAT, SHELL] } as never, { activeViewId: CHAT.id, views: {} });
+    workspace = await openFakeWorkspace(machine, { views: [CHAT, SHELL, CANVAS] } as never, { activeViewId: CHAT.id, views: {} });
     page = mount();
     await page.renderApp();
     await until(() => chatCell() !== null);
@@ -80,6 +87,30 @@ afterEach(async () => {
 });
 
 describe('the tabs of a host', () => {
+    test('a background canvas counts waiting sessions and follows snoozes and answers', async () => {
+        machine.answer('chat.attach', ({ chatId }) => ({
+            info: chatInfoOf(chatId, { status: CANVAS.nodes.some((node) => node.id === chatId) ? 'needs-you' : 'idle' }),
+            items: []
+        }));
+
+        await act(async () => {
+            useDocument.getState().dropViewAsTab(CANVAS.id, { column: 0, cell: 0 }, null);
+            useDocument.getState().activateTab(FILE);
+            for (const node of CANVAS.nodes) {
+                machine.emit('chat.status', { chatId: node.id, info: chatInfoOf(node.id, { status: 'needs-you' }) });
+            }
+        });
+        await until(() => (tab(CANVAS.id)?.querySelector('[aria-label="2 waiting"]') ?? null) !== null);
+        expect(tab(CANVAS.id)!.querySelector('[aria-label="2 waiting"]')!.textContent).toBe('2');
+
+        await act(async () => useSnoozes.getState().receive('fake-machine', [{ nodeId: 'writer-a', until: 4_000_000_000_000 }]));
+        await until(() => (tab(CANVAS.id)?.querySelector('[aria-label="1 waiting"]') ?? null) !== null);
+        await act(async () => machine.emit('chat.status', { chatId: 'writer-b', info: chatInfoOf('writer-b', { status: 'idle' }) }));
+        await until(() => tab(CANVAS.id)?.querySelector('[aria-label$="waiting"]') === null);
+        expect(selected(FILE)).toBe(true);
+        await act(async () => useSnoozes.getState().receive('fake-machine', []));
+    });
+
     test('"Close other tabs" on a file takes the chat and the terminal off the screen and leaves them in the project', async () => {
         expect(tabIds()).toEqual([CHAT.id, SHELL.id, FILE]);
         await openMenuOf(tab(FILE));

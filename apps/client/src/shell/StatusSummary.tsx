@@ -95,9 +95,18 @@ export function StatusSummary() {
     const chats = useChats((s) => s.statusByKey);
     const unseen = useAttention((s) => s.unseen);
     const snoozes = useSnoozes((s) => s.byKey);
+    const since = useWaitingSince((state) => state.byKey);
     const nodes = useProjectNodes();
 
     const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
+    const waiting = new Set(groups.needsYou);
+    const waitingIds = oldestWaitingFirst(
+        nodes.filter((node) => waiting.has(node.id)),
+        sessions,
+        chats,
+        since,
+        endpointId
+    ).map((node) => node.id);
     if (groups.needsYou.length === 0 && groups.working.length === 0 && groups.finished.length === 0) {
         return null;
     }
@@ -110,7 +119,7 @@ export function StatusSummary() {
                         label={t('status.nextNeedsYou')}
                         detail={<WaitingLines nodes={nodes} ids={groups.needsYou} />}
                         count={groups.needsYou.length}
-                        ids={groups.needsYou}
+                        ids={waitingIds}
                     >
                         <StatusDot status="needs-you" plain />
                     </Walker>

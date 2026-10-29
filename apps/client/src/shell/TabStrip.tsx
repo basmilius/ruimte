@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AgentStatus, ProjectView } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { WaitingCount } from '@/attention/WaitingCount';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { writeMentionDrag } from '@adecore/agents-react/chat';
 import { useBrowserDisplayTitle } from '@/browser/title';
@@ -20,6 +21,7 @@ import { useCellView } from '@/shell/use-cell-view';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { isSameCell, type CellAt } from '@/shell/split';
 import { useDocument } from '@/state/document';
+import { useWaitingCount } from '@/state/attention';
 import { isArtifactTab, isCheckoutDiff, isDatabaseTab, useFiles, type ArtifactTab, type DatabaseTab, type FileTab } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useChats } from '@adecore/agents-react/state';
@@ -188,6 +190,10 @@ function TerminalAttention({ id }: { id: string }) {
     return <NeedsYouMark status={useSessionRow(id, sessionStatus)} />;
 }
 
+function ViewAttention({ id }: { id: string }) {
+    return <WaitingCount count={useWaitingCount(id)} />;
+}
+
 /* A view of the project as a tab: its mark and its name, its own menu, and a close that only takes it off the screen. */
 function ProjectTabItem({ view }: { view: ProjectView }) {
     const { t: td } = useTranslation('databases');
@@ -203,7 +209,9 @@ function ProjectTabItem({ view }: { view: ProjectView }) {
             unsavedLabel={unsubmitted ? td('tab.unsubmitted') : undefined}
             glyph={<ViewGlyph {...viewGlyphOf(view)} />}
             attention={
-                view.kind === 'chat' || view.kind === 'design' ? (
+                view.kind === 'canvas' || view.kind === 'design' ? (
+                    <ViewAttention id={view.id} />
+                ) : view.kind === 'chat' ? (
                     <ChatAttention id={view.id} />
                 ) : view.kind === 'terminal' ? (
                     <TerminalAttention id={view.id} />

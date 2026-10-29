@@ -218,7 +218,7 @@ for (const key of [SIDEBAR_PROJECTS_STORAGE_KEY, SIDEBAR_ORDER_STORAGE_KEY, SIDE
     followOtherWindows(key, () => useSidebarProjects.getState().reload());
 }
 
-export function useSidebarMachines(enabled: boolean, endpointIds: readonly string[]): Record<string, SidebarMachineSnapshot> {
+export function useSidebarMachines(enabled: boolean, endpointIds: readonly string[], holdsLink = true): Record<string, SidebarMachineSnapshot> {
     const ids = [...endpointIds].sort().join('\0');
     const [store] = useState(() => createStore<{ snapshots: Record<string, SidebarMachineSnapshot> }>(() => ({ snapshots: {} })));
     // Kept per machine across changes of the set, so a machine joining the sidebar does not make every other one ask again.
@@ -233,7 +233,7 @@ export function useSidebarMachines(enabled: boolean, endpointIds: readonly strin
             watched.clear();
             store.setState({ snapshots: {} });
         };
-    }, [enabled, store, watched]);
+    }, [enabled, holdsLink, store, watched]);
     useEffect(() => {
         if (!enabled) {
             return;
@@ -248,23 +248,48 @@ export function useSidebarMachines(enabled: boolean, endpointIds: readonly strin
         }
         for (const endpoint of listedEndpoints(useEndpoints.getState().endpoints)) {
             if (wanted.has(endpoint.id) && !watched.has(endpoint.id)) {
-                watched.set(endpoint.id, watchMachine(endpoint, store));
+                watched.set(endpoint.id, watchMachine(endpoint, store, holdsLink));
             }
         }
-    }, [enabled, ids, store, watched]);
+    }, [enabled, ids, holdsLink, store, watched]);
     return snapshots;
 }
 
-/* One machine's sidebar rows into the store, holding its link until the returned function lets go. */
-function watchMachine(endpoint: Endpoint, store: StoreApi<{ snapshots: Record<string, SidebarMachineSnapshot> }>): () => void {
-    const watcher = new SidebarWatch(machineTransport(endpoint.id));
+const machineWatches = new Map<string, { watcher: SidebarWatch; release: (() => void) | null; readers: number; holders: number }>();
+
+/* Tab badges only observe an existing link; the all-project sidebar keeps its existing hold. Both read one watcher. */
+function watchMachine(endpoint: Endpoint, store: StoreApi<{ snapshots: Record<string, SidebarMachineSnapshot> }>, holdsLink: boolean): () => void {
+    let shared = machineWatches.get(endpoint.id);
+
+    if (shared === undefined) {
+        shared = { watcher: new SidebarWatch(machineTransport(endpoint.id)), release: null, readers: 0, holders: 0 };
+        machineWatches.set(endpoint.id, shared);
+    }
+
+    const held = shared;
+    const { watcher } = held;
+    held.readers++;
+
+    if (holdsLink && held.holders++ === 0) {
+        held.release = pool.hold(endpoint);
+    }
+
     const show = (): void => store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: watcher.getSnapshot() } }));
     const off = watcher.subscribe(show);
     show();
-    const release = pool.hold(endpoint);
+
     return () => {
         off();
-        watcher.dispose();
-        release();
+        held.readers--;
+
+        if (holdsLink && --held.holders === 0) {
+            held.release?.();
+            held.release = null;
+        }
+
+        if (held.readers === 0) {
+            watcher.dispose();
+            machineWatches.delete(endpoint.id);
+        }
     };
 }

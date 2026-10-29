@@ -5,7 +5,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { chatInfoOf } from '../../testing/chat-info';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();
@@ -45,6 +45,23 @@ afterEach(async () => {
 });
 
 describe('the key that goes to what needs you', () => {
+    test('the dock also opens the oldest wait instead of the first session in project order', async () => {
+        const infos: Record<string, ChatInfo> = {
+            [NEWER.id]: waitingSince(NEWER.id, 2_000),
+            [OLDER.id]: waitingSince(OLDER.id, 1_000)
+        };
+        machine.answer('chat.attach', ({ chatId }) => ({ info: infos[chatId] ?? chatInfoOf(chatId), items: [] }));
+
+        await act(async () => {
+            for (const [chatId, info] of Object.entries(infos)) {
+                machine.emit('chat.status', { chatId, info });
+            }
+        });
+        await clickOn(page.host.querySelector<HTMLElement>('[aria-label="Next node that needs you, in any view"]'));
+        await until(() => cellTitles().includes('Flaky test'));
+        expect(cellTitles()).not.toContain('Release notes');
+    });
+
     test('goes to the chat that waited longest, then to the next, and around again', async () => {
         const infos: Record<string, ChatInfo> = {
             [NEWER.id]: waitingSince(NEWER.id, 2_000),
