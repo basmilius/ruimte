@@ -15,7 +15,7 @@ const MACHINE = 'fake-machine';
 // Named apart from the other chat tests, so no draft of theirs is in this composer.
 const LEAD: ProjectView = { kind: 'chat', id: 'chat-refs-lead', name: 'Lead', node: { provider: 'claude' } };
 const PLANNER: ProjectView = { kind: 'chat', id: 'chat-refs-planner', name: 'Planner', node: { provider: 'claude' } };
-const SKETCH: ProjectView = { kind: 'drawing', id: 'drawing-schets', name: 'Schets' };
+const SKETCH: ProjectView = { kind: 'drawing', id: 'drawing-schets', name: 'Schets', icon: { kind: 'lucide', value: 'brain' } };
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, attachments: true, mentions: true, slashCommands: true });
 
@@ -74,15 +74,17 @@ function option(name: string): Element | null {
 }
 
 describe('a # in the composer', () => {
-    test('offers the drawing, puts it in the text as a chip and sends its id', async () => {
+    test('offers the drawing under the icon picked for it, puts it in the text as a chip and sends its id', async () => {
         await open(true);
         await type('Draw a sun in #Sch');
         await until(() => option('Schets') !== null);
         expect(option('Schets')?.textContent).toBe('Schetsdrawing');
+        expect(option('Schets')?.querySelector('svg.lucide-brain')).not.toBeNull();
         await clickOn(option('Schets'));
         expect(composer()!.state.doc.toString()).toBe('Draw a sun in #Schets ');
         const chip = [...page.host.querySelectorAll('.cm-content span')].find((span) => span.className.includes('bg-text/8'));
         expect(chip?.textContent).toBe('Schets');
+        await until(() => chip?.querySelector('svg.lucide-brain') != null);
         await pressKey(composer()!.contentDOM, 'Enter');
         await until(() => machine.requests('chat.send').length === 1);
         expect(machine.requests('chat.send')[0]).toMatchObject({ chatId: LEAD.id, text: 'Draw a sun in #Schets', references: [SKETCH.id], chats: [] });
@@ -138,6 +140,7 @@ describe('a # after the message went out', () => {
         const cell = (): Element => page.host.querySelector(`[data-split-cell][data-view-id="${LEAD.id}"]`)!;
         await until(() => cell().querySelectorAll('[data-chip="reference"]').length === 2);
         expect([...cell().querySelectorAll('[data-chip="reference"]')].map((chip) => chip.getAttribute('data-chip-value'))).toEqual([SKETCH.id, SKETCH.id]);
+        expect(cell().querySelectorAll('[data-chip="reference"] svg.lucide-brain')).toHaveLength(2);
 
         // The copy goes through a copy event, which happy-dom does not fire for the command itself.
         const clipboard = clipboardOf();

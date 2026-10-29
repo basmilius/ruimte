@@ -69,7 +69,7 @@ export function ViewGlyph({ id, kind, icon = null, provider: stored = null, path
         return <Icon icon={picked} size={size} className={clsx('shrink-0', className)} />;
     }
     if (kind === 'browser') {
-        return <Favicon id={id} size={size} />;
+        return <Favicon id={id} size={size} className={className} />;
     }
     // The one place the app steps outside Lucide, the way the files panel and the tabs do.
     if (kind === 'file' && path) {

@@ -11,6 +11,7 @@ import { openReference, useReferables } from '@/chat/referables';
 import { openUiLink, openUiUrl } from '@/chat/ui-links';
 import { openNewChatAfterSend } from '@/chat/new-chat-after-send';
 import { MarkdownImage, ReadImage } from '@/chat/ReadImage';
+import { ReferenceGlyph } from '@/chat/ReferenceGlyph';
 import { useTimelineFind } from '@/chat/use-chat-find';
 import { useChatPlace } from '@/chat/use-chat-place';
 import { useContextSources } from '@/context/sources';
@@ -87,6 +88,7 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
     openNewChat: (endpointId, chatId) => void openNewChatAfterSend(endpointId, chatId),
     useReferableChats: useProjectChats,
     useReferables,
+    ReferenceIcon: ReferenceGlyph,
     openReference,
     useChatPlace,
     useContextSources,
