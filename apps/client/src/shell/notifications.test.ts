@@ -1,9 +1,10 @@
 import { expect, test } from 'bun:test';
-import type { AgentStatus } from '@ruimte/contracts';
+import type { AgentRequest, AgentStatus } from '@ruimte/contracts';
 import { startAttentionWatch, useAttention } from '@/state/attention';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { notifyRequested, startAgentNotifications } from './notifications';
 
@@ -75,6 +76,45 @@ test('completed turns only leave an unread mark; needs-you and requested alerts 
         stopAttention();
         useSessions.getState().forget(key);
         useAttention.getState().setUnseen(new Set());
+        useDocument.getState().load(null, null);
+        restore();
+    }
+});
+
+test('a wait says what it asks, and a request that joins it updates the notification without a sound', () => {
+    const shown: { title: string; options: NotificationOptions }[] = [];
+    const restore = fakeNotifications(shown);
+    const key = endpointKey(currentEndpointId(), 'agent');
+    const request = (id: string, text: string): AgentRequest => ({ id, source: '', kind: 'approval', toolName: 'Bash', title: null, text, createdAt: 1 });
+    const wait = (requests: AgentRequest[]): void => {
+        useSessions.getState().setAgent(key, {
+            kind: 'codex',
+            status: 'needs-you',
+            requests,
+            live: true,
+            agentSessionId: 'cli',
+            transcriptPath: null,
+            updatedAt: 1
+        });
+    };
+
+    const sound = useSettings.getState().agentsTurnSound;
+    let stopNotifications = () => {};
+    try {
+        useSettings.setState({ agentsTurnSound: true });
+        loadBuildTerminal();
+        stopNotifications = startAgentNotifications();
+        wait([request('first', 'bun test')]);
+        wait([request('first', 'bun test')]);
+        wait([request('first', 'bun test'), request('second', 'bun run check')]);
+        expect(shown).toEqual([
+            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test', tag: 'ruimte-agent', silent: false }) },
+            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: true }) }
+        ]);
+    } finally {
+        stopNotifications();
+        useSettings.setState({ agentsTurnSound: sound });
+        useSessions.getState().forget(key);
         useDocument.getState().load(null, null);
         restore();
     }

@@ -125,7 +125,18 @@
     },
     "notifications": {
         "finished": "Finished",
-        "needsYou": "Needs you"
+        "needsYou": "Needs you",
+        "asks": {
+            "command": "Wants to run: {{detail}}",
+            "commandBare": "Wants to run a command",
+            "edit": "Wants to edit: {{detail}}",
+            "editBare": "Wants to edit a file",
+            "tool": "Wants to use {{tool}}: {{detail}}",
+            "toolBare": "Wants to use {{tool}}",
+            "question": "Asks: {{detail}}",
+            "questionBare": "Asks a question",
+            "more": "{{line}} (+{{count}} more)"
+        }
     },
     "browse": {
         "machineSilent": "That machine is not answering",
@@ -140,6 +151,9 @@
     },
     "status": {
         "nextNeedsYou": "Next node that needs you, in any view",
+        "waitingLine": "{{title}}: {{ask}}",
+        "moreWaiting_one": "and {{count}} more",
+        "moreWaiting_other": "and {{count}} more",
         "working": "Agents working",
         "workingCount_one": "{{count}} agent working",
         "workingCount_other": "{{count}} agents working",

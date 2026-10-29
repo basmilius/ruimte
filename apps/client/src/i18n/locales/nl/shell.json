@@ -125,7 +125,18 @@
     },
     "notifications": {
         "finished": "Klaar",
-        "needsYou": "Wacht op jou"
+        "needsYou": "Wacht op jou",
+        "asks": {
+            "command": "Wil uitvoeren: {{detail}}",
+            "commandBare": "Wil een commando uitvoeren",
+            "edit": "Wil bewerken: {{detail}}",
+            "editBare": "Wil een bestand bewerken",
+            "tool": "Wil {{tool}} gebruiken: {{detail}}",
+            "toolBare": "Wil {{tool}} gebruiken",
+            "question": "Vraagt: {{detail}}",
+            "questionBare": "Stelt een vraag",
+            "more": "{{line}} (+{{count}} meer)"
+        }
     },
     "browse": {
         "machineSilent": "Die machine antwoordt niet",
@@ -140,6 +151,9 @@
     },
     "status": {
         "nextNeedsYou": "Volgende node die op je wacht, in elke weergave",
+        "waitingLine": "{{title}}: {{ask}}",
+        "moreWaiting_one": "en nog {{count}}",
+        "moreWaiting_other": "en nog {{count}}",
         "working": "Agents aan het werk",
         "workingCount_one": "{{count}} agent aan het werk",
         "workingCount_other": "{{count}} agents aan het werk",

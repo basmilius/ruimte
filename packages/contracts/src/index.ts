@@ -557,6 +557,7 @@ export * from './usage.ts';
 export * from './visual.ts';
 export * from './voice.ts';
 export * from './voice-languages.ts';
+export * from './wait-ask.ts';
 export { FileLocationSchema, type FileLocation } from './file-location.ts';
 export {
     TerminalCwdSnapshotSchema,

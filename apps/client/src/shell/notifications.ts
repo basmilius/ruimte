@@ -8,9 +8,10 @@ import { useChats } from '@adecore/agents-react/state';
 import { subscribeChatStatuses } from '@/state/chats';
 import { seenNodeIds } from '@/state/in-sight';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
-import { nodeStatus, useSessions } from '@/state/sessions';
+import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { waitAskLine } from './wait-ask';
 
 /* Whether this window may raise anything at all. What a person is looking at is asked per node. */
 function mayNotify(): boolean {
@@ -60,6 +61,7 @@ const CLOCK_SLACK_MS = 5_000;
  */
 export function startAgentNotifications(now: () => number = Date.now): () => void {
     const shown = new Map<string, Notification>();
+    const lines = new Map<string, string>();
     let previous = new Map<string, string | undefined>();
     /* When the snooze on each node that was snoozed at the last pass runs out. */
     let asleep = new Map<string, number>();
@@ -93,12 +95,26 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
             if (status !== 'needs-you') {
                 shown.get(node.id)?.close();
                 shown.delete(node.id);
+                lines.delete(node.id);
+                continue;
+            }
+
+            const ask = nodeWaitAsk(node, sessions, chats, endpointId);
+            const line = ask ? waitAskLine(ask) : i18next.t('shell:notifications.needsYou');
+            // The request can land after the status, or a second one join it: the notification follows, without a second sound.
+            if (shown.has(node.id)) {
+                if (lines.get(node.id) !== line && canNotify(node.id, seen)) {
+                    shown.set(node.id, notify(node.id, node.title, line, `ruimte-${node.id}`, true));
+                    lines.set(node.id, line);
+                }
                 continue;
             }
             if (previous.get(node.id) === 'needs-you' || endedEarly || !canNotify(node.id, seen)) {
                 continue;
             }
-            shown.set(node.id, notify(node.id, node.title, i18next.t('shell:notifications.needsYou'), `ruimte-${node.id}`, !agentsTurnSound));
+
+            shown.set(node.id, notify(node.id, node.title, line, `ruimte-${node.id}`, !agentsTurnSound));
+            lines.set(node.id, line);
         }
         previous = current;
         asleep = sleeping;
