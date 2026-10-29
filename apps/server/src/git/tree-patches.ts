@@ -6,7 +6,7 @@ export async function collectTreePatches(
     count: number,
     fileLimit: number,
     totalLimit: number
-): Promise<Array<string | null>> {
+): Promise<Array<string | null> | null> {
     const patches: Array<string | null> = Array.from({ length: count }, () => null);
     const decoder = new TextDecoder();
     let index = -1;
@@ -74,5 +74,23 @@ export async function collectTreePatches(
     finish();
 
     // An unexpected file boundary must never attach one file's patch to another file's path.
-    return index + 1 === count ? patches : Array.from({ length: count }, () => null);
+    return index + 1 === count ? patches : null;
+}
+
+/* A path can have multiple patch segments, or include descendants when a file becomes a directory. */
+export async function collectSinglePatch(stream: ReadableStream<Uint8Array>, limit: number): Promise<string | null> {
+    const decoder = new TextDecoder();
+    let body: string | null = '';
+
+    for await (const chunk of stream) {
+        const text = decoder.decode(chunk, { stream: true });
+
+        if (body !== null) {
+            body = body.length + text.length > limit ? null : body + text;
+        }
+    }
+
+    const tail = decoder.decode();
+
+    return body === null || body.length + tail.length > limit ? null : body + tail;
 }

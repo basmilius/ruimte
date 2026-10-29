@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, spyOn, test } from 'bun:test';
-import { rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { diffTrees } from './diff.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
@@ -111,4 +111,33 @@ test('long path lists use bounded argument batches and share one total patch bud
     expect(diff?.files.reduce((bytes, file) => bytes + file.diff.length, 0)).toBeLessThanOrEqual(6000);
     expect(diff?.files[0]?.diff).toContain('+new');
     expect(diff?.files.at(-1)?.omitted).toBe('too-large');
+});
+
+test('a type change keeps both patch segments without omitting a neighboring text file', async () => {
+    const target = (await gitIn(repo, ['hash-object', 'b.txt'])).trim();
+    await gitIn(repo, ['update-index', '--cacheinfo', `120000,${target},a.txt`]);
+    await writeFile(join(repo, 'b.txt'), 'changed\n');
+    await gitIn(repo, ['add', 'b.txt']);
+    const tree = (await gitIn(repo, ['write-tree'])).trim();
+    const diff = await diffTrees(repo, 'HEAD', tree);
+    const expected = await gitIn(repo, ['diff', '--no-color', '--no-ext-diff', '--no-renames', 'HEAD', tree, '--', ':(literal)a.txt']);
+    expect(diff?.files.find((file) => file.path === 'a.txt')?.diff).toBe(expected);
+    expect(diff?.files.find((file) => file.path === 'b.txt')?.diff).toContain('+changed');
+
+    const capped = await diffTrees(repo, 'HEAD', tree, '', { files: 100, fileLines: 100, fileBytes: expected.length - 1, totalBytes: expected.length - 1 });
+    expect(capped?.files.find((file) => file.path === 'a.txt')).toMatchObject({ omitted: 'too-large', diff: '' });
+    expect(capped?.files.find((file) => file.path === 'b.txt')?.diff).toContain('+changed');
+});
+
+test('a file replaced by a directory with an omitted child does not hide neighboring patches', async () => {
+    await rm(join(repo, 'a.txt'));
+    await mkdir(join(repo, 'a.txt'));
+    await writeFile(join(repo, 'a.txt', 'binary.bin'), new Uint8Array([0, 1, 2]));
+    await writeFile(join(repo, 'b.txt'), 'changed\n');
+    await gitIn(repo, ['add', '-A']);
+    const tree = (await gitIn(repo, ['write-tree'])).trim();
+    const diff = await diffTrees(repo, 'HEAD', tree);
+    expect(diff?.files.find((file) => file.path === 'a.txt')?.diff).toContain('deleted file mode');
+    expect(diff?.files.find((file) => file.path === 'a.txt/binary.bin')).toMatchObject({ omitted: 'binary', diff: '' });
+    expect(diff?.files.find((file) => file.path === 'b.txt')?.diff).toContain('+changed');
 });

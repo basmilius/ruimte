@@ -6,7 +6,7 @@ import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult
 import { climbsOut } from '../fs/path-segment.ts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
-import { collectTreePatches } from './tree-patches.ts';
+import { collectSinglePatch, collectTreePatches } from './tree-patches.ts';
 import { git, runGit, runGitBytes, toplevel, verifyRev, GitError } from './run.ts';
 
 interface DiffCaps {
@@ -122,7 +122,12 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
 
         for (let i = 0; i < batch.length; i += 1) {
             const file = batch[i]!;
-            const body = patches?.[i];
+            let body = patches?.[i];
+
+            // Type changes can emit two headers for one path; a replaced directory can add descendants.
+            if (patches === null && batch.length > 1 && budget > 0) {
+                body = (await readTreePatches(top, from, to, [file], caps.fileBytes, budget))?.[0];
+            }
 
             if (body === null || body === undefined) {
                 file.omitted = 'too-large';
@@ -189,7 +194,11 @@ async function readTreePatches(
             ],
             { cwd: top, stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' }
         );
-        const [patches, code] = await Promise.all([collectTreePatches(child.stdout, files.length, fileLimit, totalLimit).catch(() => null), child.exited]);
+        const collecting =
+            files.length === 1
+                ? collectSinglePatch(child.stdout, Math.min(fileLimit, totalLimit)).then((patch) => [patch])
+                : collectTreePatches(child.stdout, files.length, fileLimit, totalLimit);
+        const [patches, code] = await Promise.all([collecting.catch(() => null), child.exited]);
 
         return code === 0 ? patches : null;
     } catch {

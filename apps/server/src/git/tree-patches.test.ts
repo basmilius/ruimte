@@ -41,6 +41,6 @@ test('total budget counts complete accepted patches, including a final line with
     expect(result).toEqual([first, null, third]);
 });
 
-test('unexpected patch count omits the whole batch rather than attaching content to the wrong file', async () => {
-    expect(await collectTreePatches(stream(patch('one', 'kept'), 5), 2, 1024, 2048)).toEqual([null, null]);
+test('unexpected patch count asks for a per-file fallback rather than attaching content to the wrong file', async () => {
+    expect(await collectTreePatches(stream(patch('one', 'kept'), 5), 2, 1024, 2048)).toBeNull();
 });
