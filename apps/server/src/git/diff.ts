@@ -6,6 +6,7 @@ import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult
 import { climbsOut } from '../fs/path-segment.ts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
+import { collectTreePatches } from './tree-patches.ts';
 import { git, runGit, runGitBytes, toplevel, verifyRev, GitError } from './run.ts';
 
 interface DiffCaps {
@@ -24,6 +25,9 @@ const PANEL_CAPS: DiffCaps = { files: 1000, fileLines: 50_000, fileBytes: 2 * 10
 const MAX_SIDE_BYTES = 512 * 1024;
 
 const PATCH_ARGS = ['--no-color', '--no-ext-diff'];
+const TREE_ARGS = ['--no-renames', '--no-ext-diff', '--no-textconv', '--submodule=short'];
+// Leave room for the environment and git's other arguments on platforms with small argv limits.
+const PATCH_ARG_BYTES = 64 * 1024;
 
 export interface Numstat {
     path: string;
@@ -84,8 +88,8 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
     // A folder inside the repository narrows the lists to what lies under it; the patches follow the list.
     const under = prefix === '' ? [] : ['--', `:(literal)${prefix}`];
     const [numstat, status] = await Promise.all([
-        git(['diff', '--numstat', '-z', '--no-renames', from, to, ...under], top),
-        git(['diff', '--name-status', '-z', '--no-renames', from, to, ...under], top)
+        git(['diff', '--numstat', '-z', ...TREE_ARGS, from, to, ...under], top),
+        git(['diff', '--name-status', '-z', ...TREE_ARGS, from, to, ...under], top)
     ]);
     if (numstat === null || status === null) {
         return null;
@@ -93,7 +97,6 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
     const kinds = kindsByPath(status);
     const counts = parseNumstat(numstat);
     const files: ChatCheckpointFile[] = [];
-    let budget = caps.totalBytes;
     for (const count of counts.slice(0, caps.files)) {
         const file: ChatCheckpointFile = {
             path: count.path,
@@ -102,22 +105,96 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
             deleted: count.deleted,
             diff: ''
         };
+
         if (count.binary) {
             file.omitted = 'binary';
         } else if (count.added + count.deleted > caps.fileLines) {
             file.omitted = 'too-large';
-        } else {
-            const body = await git(['diff', ...PATCH_ARGS, from, to, '--', `:(literal)${count.path}`], top);
-            if (body === null || body.length > caps.fileBytes || body.length > budget) {
+        }
+
+        files.push(file);
+    }
+
+    let budget = caps.totalBytes;
+
+    for (const batch of patchBatches(files)) {
+        const patches = budget > 0 ? await readTreePatches(top, from, to, batch, caps.fileBytes, budget) : null;
+
+        for (let i = 0; i < batch.length; i += 1) {
+            const file = batch[i]!;
+            const body = patches?.[i];
+
+            if (body === null || body === undefined) {
                 file.omitted = 'too-large';
             } else {
                 file.diff = body;
                 budget -= body.length;
             }
         }
-        files.push(file);
     }
+
     return { files, truncated: counts.length > files.length };
+}
+
+function* patchBatches(files: ChatCheckpointFile[]): Generator<ChatCheckpointFile[]> {
+    let batch: ChatCheckpointFile[] = [];
+    let bytes = 0;
+
+    for (const file of files) {
+        if (file.omitted !== undefined) {
+            continue;
+        }
+
+        const size = Buffer.byteLength(file.path) + 16;
+
+        if (batch.length > 0 && bytes + size > PATCH_ARG_BYTES) {
+            yield batch;
+            batch = [];
+            bytes = 0;
+        }
+
+        batch.push(file);
+        bytes += size;
+    }
+
+    if (batch.length > 0) {
+        yield batch;
+    }
+}
+
+async function readTreePatches(
+    top: string,
+    from: string,
+    to: string,
+    files: ChatCheckpointFile[],
+    fileLimit: number,
+    totalLimit: number
+): Promise<Array<string | null> | null> {
+    try {
+        const child = Bun.spawn(
+            [
+                'git',
+                'diff',
+                ...PATCH_ARGS,
+                ...TREE_ARGS,
+                // Git config may change these prefixes, including making a content line look like a file header.
+                '--line-prefix=',
+                '--output-indicator-new=+',
+                '--output-indicator-old=-',
+                '--output-indicator-context= ',
+                from,
+                to,
+                '--',
+                ...files.map((file) => `:(literal)${file.path}`)
+            ],
+            { cwd: top, stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' }
+        );
+        const [patches, code] = await Promise.all([collectTreePatches(child.stdout, files.length, fileLimit, totalLimit).catch(() => null), child.exited]);
+
+        return code === 0 ? patches : null;
+    } catch {
+        return null;
+    }
 }
 
 export interface DiffOptions {
