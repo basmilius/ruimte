@@ -28,8 +28,9 @@ struct ChatActivityFailure: Identifiable {
     let message: String
 }
 
-/// What the chat keeps working on beside the thread, in one small row over the composer: its sub-agents and what runs
-/// in the background. Each chip is a menu that grows out of it, with what it counts; a background command has a stop.
+/// What the chat keeps working on beside the thread, in one small row over the composer: its sub-agents, its workflows
+/// and what runs in the background. Each chip is a menu that grows out of it, with what it counts; a background command
+/// has a stop.
 struct ChatActivityChips: View {
     let model: ChatModel
     let tasks: TaskStore?
@@ -40,8 +41,9 @@ struct ChatActivityChips: View {
 
     var body: some View {
         let subagents = model.activitySubagents
+        let workflows = model.activityWorkflows
         let background = model.info?.background ?? []
-        if !subagents.isEmpty || !background.isEmpty {
+        if !subagents.isEmpty || !workflows.isEmpty || !background.isEmpty {
             HStack(spacing: 6) {
                 if !subagents.isEmpty {
                     let words = subagents.map { ChatSubagents.statusWord($0, task: task(of: $0)) }
@@ -63,6 +65,18 @@ struct ChatActivityChips: View {
                         }
                     }
                     .buttonStyle(MobileGlassButtonStyle(shape: .capsule))
+                }
+                if !workflows.isEmpty {
+                    let pill = ChatWorkflows.pill(workflows)
+                    Menu {
+                        workflowRows(workflows)
+                    } label: {
+                        chip(pill.label) {
+                            WorkflowStatusIcon(word: pill.word, size: 13)
+                        }
+                    }
+                    .buttonStyle(MobileGlassButtonStyle(shape: .capsule))
+                    .accessibilityValue(workflows.count == 1 ? ChatWorkflowRow.stateWord(workflows[0].item.state) : "")
                 }
                 if !background.isEmpty {
                     let shells = ChatBackground.counts(background).shells
@@ -122,6 +136,36 @@ struct ChatActivityChips: View {
         }
     }
 
+    /// A section per workflow with its agents by phase; one that started opens its conversation. No stop here either,
+    /// for the reason of the sub-agents: the row in the thread still stops a workflow.
+    @ViewBuilder private func workflowRows(_ calls: [WorkflowCall]) -> some View {
+        ForEach(calls) { call in
+            let running = call.item.state == .running
+            Section(ChatWorkflows.title(call)) {
+                ForEach(ChatWorkflowLayout.phases(call.workflow, running: running)) { phase in
+                    ForEach(phase.agents) { view in
+                        let detail = [phase.title, ChatWorkflowLayout.time(view)].compactMap { $0 }
+                            .joined(separator: " · ")
+                        Button {
+                            guard let agentID = view.agent.agentId else { return }
+                            model.presentation.conversationRequest = SubagentCrumb(
+                                toolUseID: ChatWorkflowRow.agentRef(agentID), description: view.agent.label)
+                        } label: {
+                            Label {
+                                Text(view.agent.label)
+                                if !detail.isEmpty { Text(detail) }
+                            } icon: {
+                                Image(lucide: Self.icon(view.state), size: 16)
+                            }
+                        }
+                        // One still waiting has no transcript yet.
+                        .disabled(view.agent.agentId == nil)
+                    }
+                }
+            }
+        }
+    }
+
     @ViewBuilder private func backgroundRows(_ tasks: [ChatInfoBackgroundItem]) -> some View {
         Section(ChatBackground.label(tasks)) {
             ForEach(tasks, id: \.id) { task in
@@ -173,6 +217,35 @@ struct ChatActivityChips: View {
         case .done: "circle-check"
         case .failed: "circle-x"
         case .cancelled: "circle-slash"
+        }
+    }
+
+    private static func icon(_ state: WorkflowAgentState) -> String {
+        switch state {
+        case .running: "loader-circle"
+        case .waiting: "circle-dashed"
+        case .stopped: "circle-slash"
+        case .done: "circle-check"
+        case .failed: "circle-x"
+        }
+    }
+}
+
+/// The chip's mark for its workflows: the sub-agents' marks, and a warning for one that stalled.
+struct WorkflowStatusIcon: View {
+    let word: WorkflowWord
+    var size: CGFloat = 16
+
+    var body: some View {
+        switch word {
+        case .running: SubagentStatusIcon(word: .running, size: size)
+        case .done: SubagentStatusIcon(word: .done, size: size)
+        case .failed: SubagentStatusIcon(word: .failed, size: size)
+        case .stalled:
+            Image(lucide: "triangle-alert", size: size)
+                .foregroundStyle(MobileStyle.statusNeedsYou)
+                .frame(width: size + 2, height: size + 2)
+                .accessibilityHidden(true)
         }
     }
 }

@@ -37,6 +37,27 @@ final class ChatHistoryTests: XCTestCase {
         XCTAssertTrue(history.subagents.isEmpty)
     }
 
+    private func workflow(_ id: String, _ state: ChatToolState) -> ChatToolItem {
+        ChatToolItem(
+            id: id, createdAt: 0, turnId: nil, toolUseId: id, name: "Workflow", input: .null, output: nil, state: state,
+            parentToolUseId: nil, workflow: ChatToolItemWorkflow(name: id, phases: [], agents: []))
+    }
+
+    func testWorkflowsBeforePageFollowTheirUpdatesUntilAPageReachesThem() {
+        var history = ChatHistory()
+        history.replace(
+            history: ChatHistoryPage(start: 80, cursor: "epoch:80"), pending: [], workflows: [workflow("w0", .running)])
+        XCTAssertFalse(history.includes(.tool(workflow("w0", .done)), index: 3))
+        XCTAssertFalse(history.includes(.tool(workflow("w1", .running)), index: 5))
+        XCTAssertEqual(history.workflows, [.tool(workflow("w0", .done)), .tool(workflow("w1", .running))])
+        _ = history.prepend(
+            ChatHistoryResult(items: [.tool(workflow("w1", .running))], history: ChatHistoryPage(start: 4, cursor: "epoch:4")),
+            to: [])
+        XCTAssertEqual(history.workflows, [.tool(workflow("w0", .done))])
+        history.replace(history: nil, pending: [], workflows: [workflow("w0", .running)])
+        XCTAssertTrue(history.workflows.isEmpty)
+    }
+
     func testOlderDaemonKeepsFullHistoryAndNeedsNoPagingRequest() {
         var history = ChatHistory()
         history.replace(history: nil, pending: [])

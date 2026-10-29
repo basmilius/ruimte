@@ -2517,6 +2517,17 @@
         }
       }
     },
+    "%@ · no progress" : {
+      "comment" : "%@ is the name of a workflow that reported nothing for a while",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · geen voortgang"
+          }
+        }
+      }
+    },
     "%@ · resets %@" : {
       "localizations" : {
         "en" : {
@@ -5261,6 +5272,46 @@
         }
       }
     },
+    "%lld workflows" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 workflow"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld workflows"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 workflow"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld workflows"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld terminals" : {
       "localizations" : {
         "en" : {
@@ -6039,6 +6090,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Workflow loopt"
+          }
+        }
+      }
+    },
+    "Workflow" : {
+      "comment" : "A workflow that has no name of its own",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Workflow"
           }
         }
       }

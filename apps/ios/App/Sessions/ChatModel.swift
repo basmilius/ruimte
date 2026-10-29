@@ -23,6 +23,8 @@ final class ChatModel {
     /// Moves only when a subagent row or the work under one changes, unlike `revision`, which moves on every streamed
     /// word.
     private(set) var subagentRevision = 0
+    /// Moves only when a Workflow call changes, for the same reason.
+    private(set) var workflowRevision = 0
     let composition: ChatComposition
     var draft: String {
         get { composition.text }
@@ -53,6 +55,12 @@ final class ChatModel {
     /// moves, so a reader does not observe every streamed word.
     var activitySubagents: [ChatSubagentItem] {
         activity.subagents(revision: subagentRevision, count: messageCount) { history.subagents + items }
+    }
+    @ObservationIgnored private let workflowActivity = ChatWorkflowDerivation()
+    /// The workflows the composer's chip speaks for, derived again only when a Workflow call or the thread's length
+    /// moves.
+    var activityWorkflows: [WorkflowCall] {
+        workflowActivity.workflows(revision: workflowRevision, count: messageCount) { history.workflows + items }
     }
     var suggestions: [ChatSuggestion] = []
     var suggestionKind = ""
@@ -342,7 +350,8 @@ final class ChatModel {
         } else {
             replace(
                 info: snapshot.info, items: snapshot.items, history: snapshot.history, pending: snapshot.pending ?? [],
-                subagents: snapshot.subagents ?? [], bookmarks: bookmarks, visuals: visuals)
+                subagents: snapshot.subagents ?? [], workflows: snapshot.workflows ?? [], bookmarks: bookmarks,
+                visuals: visuals)
         }
         lastSeq = snapshot.seq.map { Int($0) }
     }
@@ -350,12 +359,13 @@ final class ChatModel {
     /// A machine without bookmarks or visuals sends none, and then this chat has none.
     private func replace(
         info: ChatInfo, items: [ChatItem], history page: ChatHistoryPage?, pending: [ChatItem],
-        subagents: [ChatSubagentItem] = [], bookmarks: [ChatBookmark], visuals: [ChatVisual]
+        subagents: [ChatSubagentItem] = [], workflows: [ChatToolItem] = [], bookmarks: [ChatBookmark],
+        visuals: [ChatVisual]
     ) {
         historyRevision += 1
         loadingHistory = false
         failedHistoryCursor = nil
-        history.replace(history: page, pending: pending, subagents: subagents)
+        history.replace(history: page, pending: pending, subagents: subagents, workflows: workflows)
         self.info = info
         self.items = items
         reindex()
@@ -365,6 +375,7 @@ final class ChatModel {
         presentation.setBookmarks(bookmarks)
         presentation.setVisuals(visuals)
         subagentRevision += 1
+        workflowRevision += 1
         revision += 1
     }
 
@@ -387,6 +398,7 @@ final class ChatModel {
             guard history.includes(item, index: change.historyIndex) else {
                 refreshPending()
                 if item.subagentItem != nil { subagentRevision += 1 }
+                if Self.isWorkflow(item) { workflowRevision += 1 }
                 return
             }
             if let index = positions[item.id] {
@@ -398,6 +410,7 @@ final class ChatModel {
             refreshPending()
             presentation.upsert(item)
             if Self.concernsSubagent(item) { subagentRevision += 1 }
+            if Self.isWorkflow(item) { workflowRevision += 1 }
             revision += 1
         case .delta(let delta):
             guard let index = positions[delta.itemId] else { return }
@@ -451,6 +464,7 @@ final class ChatModel {
                 self.presentation.earlierPageWaits = self.history.cursor != nil
                 self.presentation.prepend(page.items)
                 self.subagentRevision += 1
+                self.workflowRevision += 1
                 self.revision += 1
             }
         } catch {
@@ -473,6 +487,10 @@ final class ChatModel {
     private static func concernsSubagent(_ item: ChatItem) -> Bool {
         if case .subagent = item { return true }
         return !(item.parentToolUseID ?? "").isEmpty
+    }
+
+    private static func isWorkflow(_ item: ChatItem) -> Bool {
+        item.toolItem?.name == "Workflow"
     }
 
     func target(_ values: [String: JSONValue] = [:]) -> JSONValue {
