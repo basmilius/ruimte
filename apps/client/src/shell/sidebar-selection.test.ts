@@ -64,14 +64,7 @@ test('the active project remains visible until its project-list response arrives
     expect(sidebarSelection([], [endpoint('mac')], current).map((row) => row.summary.projectId)).toEqual(['Skills']);
 });
 
-test('the Chats project is only in the sidebar of the window that shows it', () => {
-    const chats = { endpointId: 'mac', summary: { ...summary('chats'), scratch: true } };
-    const rows = [{ endpointId: 'mac', summary: summary('Skills') }, chats];
-    expect(sidebarSelection(rows, [endpoint('mac')], null).map((row) => row.summary.projectId)).toEqual(['Skills']);
-    expect(sidebarSelection(rows, [endpoint('mac')], chats).map((row) => row.summary.projectId)).toEqual(['chats', 'Skills']);
-});
-
-test('a list of all open projects leads with the Chats project of every known machine, whichever project is current', () => {
+test('the selection leads with the Chats project of every known machine, whichever project is current', () => {
     const skills = { endpointId: 'mac', summary: summary('Skills') };
     const rows = [
         skills,
@@ -79,9 +72,5 @@ test('a list of all open projects leads with the Chats project of every known ma
         { endpointId: 'mac', summary: { ...summary('chats'), scratch: true } },
         { endpointId: 'removed', summary: { ...summary('old-chats'), scratch: true } }
     ];
-    expect(sidebarSelection(rows, [endpoint('mac'), endpoint('vps')], skills, true).map((row) => row.summary.projectId)).toEqual([
-        'chats',
-        'vps-chats',
-        'Skills'
-    ]);
+    expect(sidebarSelection(rows, [endpoint('mac'), endpoint('vps')], skills).map((row) => row.summary.projectId)).toEqual(['chats', 'vps-chats', 'Skills']);
 });
