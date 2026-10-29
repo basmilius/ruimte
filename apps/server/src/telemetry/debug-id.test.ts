@@ -12,6 +12,7 @@ afterEach(() => {
 /* The debug images a report of this error would carry, read where the reporter hands it to `beforeSend`. */
 async function imagesOf(error: Error): Promise<unknown> {
     const { promise, resolve } = Promise.withResolvers<unknown>();
+
     const client = new Sentry.BunClient({
         dsn: 'https://public@example.invalid/1',
         integrations: [],
@@ -19,10 +20,13 @@ async function imagesOf(error: Error): Promise<unknown> {
         transport: Sentry.makeFetchTransport,
         beforeSend: (event) => {
             resolve(event.debug_meta?.images);
+
             return null;
         }
     });
+
     client.captureException(error);
+
     return promise;
 }
 

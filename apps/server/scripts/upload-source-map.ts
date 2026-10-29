@@ -44,9 +44,11 @@ async function post(route: string, body: unknown): Promise<Response> {
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'content-encoding': 'gzip' },
         body: gzipSync(JSON.stringify(body))
     });
+
     if (!response.ok) {
         console.error(`${route} answered ${response.status}: ${await response.text().catch(() => '')}`);
         process.exit(1);
     }
+
     return response;
 }

@@ -5,9 +5,11 @@
  */
 export function registerDebugId(debugId: string, stack: string = new Error().stack ?? ''): void {
     const [heading, top] = stack.split('\n');
+
     if (heading === undefined || top === undefined) {
         return;
     }
+
     const global = globalThis as { _sentryDebugIds?: Record<string, string> };
     global._sentryDebugIds = { ...global._sentryDebugIds, [`${heading}\n${top}`]: debugId };
 }
