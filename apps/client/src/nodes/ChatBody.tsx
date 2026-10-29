@@ -33,9 +33,22 @@ import { ChatViewPetMount } from '@/pets/ViewPetMounts';
 
 /*
  * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view its
- * pet stands on the composer (`pet`), since no node frame is there to carry it.
+ * pet stands on the composer (`pet`), since no node frame is there to carry it. A chat node's workflows
+ * stand beside it on the canvas (`workflowsBeside`), so its composer draws no pill for them.
  */
-export function ChatBody({ id, focused, onCanvas = false, pet }: { id: string; focused: boolean; onCanvas?: boolean; pet?: { title: string | undefined } }) {
+export function ChatBody({
+    id,
+    focused,
+    onCanvas = false,
+    workflowsBeside = false,
+    pet
+}: {
+    id: string;
+    focused: boolean;
+    onCanvas?: boolean;
+    workflowsBeside?: boolean;
+    pet?: { title: string | undefined };
+}) {
     useMountCount('chat');
     const { t } = useTranslation('canvas');
     const info = useChatRow(id, (row) => row?.info);
@@ -128,6 +141,7 @@ export function ChatBody({ id, focused, onCanvas = false, pet }: { id: string; f
             answerPromptsElsewhere={onCanvas && !PROMPTS_IN_NODES ? () => bringPromptToFront(id) : undefined}
             disabled={status !== 'open'}
             readOnly={!composerWrites(trail)}
+            workflowPill={!workflowsBeside}
             providerFixed={providerFixed}
             onSend={send}
             onRetarget={retarget}

@@ -636,7 +636,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                             ) : (
                                 <>
                                     {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
-                                    {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas />}
+                                    {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas workflowsBeside />}
                                     {node.kind === 'browser' && <BrowserBody id={id} focused={active} />}
                                     {node.kind === 'device' && (live && renderBody ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
                                     {node.kind === 'note' && <NoteNode id={id} focused={active} />}

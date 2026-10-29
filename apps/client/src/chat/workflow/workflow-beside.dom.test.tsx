@@ -245,3 +245,33 @@ describe('a chat node that runs a workflow', () => {
         expect(machine.requests('chat.attach').filter((request) => request.chatId === chatId)).toEqual([]);
     });
 });
+
+describe('the workflow pill over the composer', () => {
+    const PILL = 'Review the branch · 1/3';
+
+    function pill(): HTMLButtonElement | undefined {
+        return [...page.host.querySelectorAll<HTMLButtonElement>('.chat-composer-content button')].find((candidate) => candidate.textContent?.includes(PILL));
+    }
+
+    test("in a chat view names the workflow, opens its phases, and an agent's conversation from there", async () => {
+        workspace = await openFakeWorkspace(machine, { views: [{ kind: 'chat', id: chatId, name: 'Lead', node: { provider: 'claude' } }] } as never, {
+            activeViewId: chatId,
+            views: {}
+        });
+        page = mount();
+        await page.renderApp();
+        await until(() => pill() !== undefined);
+        await clickOn(pill()!);
+        await until(() => document.body.querySelector('[data-workflow-agent="1"]') !== null);
+        expect(document.body.textContent).toContain('Verify');
+        await clickOn(document.body.querySelector('[data-workflow-agent="1"]'));
+        await until(() => machine.requests('chat.subagent').length > 0);
+    });
+
+    test('is not drawn on a chat node, whose workflow stands beside it', async () => {
+        await open();
+        await until(() => cards().length > 0);
+        expect(page.host.querySelector('.chat-composer-content')).not.toBeNull();
+        expect(pill()).toBeUndefined();
+    });
+});
