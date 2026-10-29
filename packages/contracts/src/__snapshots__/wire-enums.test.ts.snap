@@ -191,6 +191,7 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply accounts.create #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
   "reply accounts.list #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
   "reply accounts.refresh #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
+  "reply accounts.reorder #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
   "reply accounts.save #/properties/statuses/items/properties/state = ["checking", "disabled", "failed", "folder-missing", "not-found", "ready", "signed-out", "unavailable"]",
   "reply archive.list #/properties/entries/items/properties/kind = ["directory", "file", "symlink"]",
   "reply archive.list #/properties/format = ["gzip", "tar", "tar-gzip", "zip"]",

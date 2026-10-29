@@ -12,7 +12,7 @@ export function createDocumentContentSlice({
     peers
 }: DocumentKit): Pick<
     DocumentState,
-    'load' | 'reload' | 'setShared' | 'setFlags' | 'applyMerge' | 'heldNodeIds' | 'exportViews' | 'fileViews' | 'exportLocal'
+    'load' | 'reload' | 'setShared' | 'setFlags' | 'takeAccounts' | 'applyMerge' | 'heldNodeIds' | 'exportViews' | 'fileViews' | 'exportLocal'
 > {
     return {
         load(document, local, loose = NO_LOOSE) {
@@ -40,6 +40,7 @@ export function createDocumentContentSlice({
                 edits: 0,
                 shared: document?.shared ?? [],
                 flags: document?.flags ?? {},
+                accounts: document?.accounts ?? {},
                 trashed: kept.trashed
             });
             // The project that was here goes first, editors and all, so nothing of it may show through.
@@ -62,6 +63,10 @@ export function createDocumentContentSlice({
                 const without = state.shared.filter((viewId) => viewId !== id);
                 return { shared: shared ? [...without, id] : without, edits: state.edits + 1 };
             });
+        },
+
+        takeAccounts(accounts) {
+            set({ accounts });
         },
 
         setFlags(ids, color) {

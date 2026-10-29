@@ -4,6 +4,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { ManualClock, testAccounts } from '@adecore/agents/testing';
+import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { ProviderAccountsService } from '@adecore/agents/providers';
 import type { LimitsUpdate } from '@adecore/agents/usage';
@@ -347,14 +348,15 @@ describe('a turned-off default account', () => {
     });
 
     // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`, `ChatCore.createNow`).
-    test('refuses a new chat that names it, and still starts one that names no account', async () => {
+    test('refuses a new chat that names it, and starts one that names no account on the next account that is on', async () => {
         await turnOffDefault();
         const refused = await daemon.request('chat.create', { chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
         expect(refused).toMatchObject({ ok: false, error: { code: 'account-unavailable', message: expect.stringContaining('it is turned off') } });
         expect(daemon.chats.get('chat-lead')).toBeUndefined();
 
+        await accounts.reorder('claude', ['claude_personal']);
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
-        expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
+        expect(daemon.chats.get('chat-lead')!.info.account).toBe('claude_personal');
     });
 
     // Needs the daemon of ADE CORE to refuse a named default account that is off (`envFor`).
@@ -416,13 +418,10 @@ describe('a child an agent opens', () => {
     });
 });
 
-describe('the account a person picked for new agents', () => {
-    const pick = (accounts: Partial<Record<'claude' | 'codex', string>>): void => {
-        daemon.chats.composerPreferences.set('client-1', { accounts, changedAt: 1 });
-    };
-
-    test('starts a new chat that names none, and not one that names the default account', async () => {
-        pick({ claude: 'claude_personal' });
+describe('the top account of the order', () => {
+    test('starts a new chat that names none, and not one that names the default account, whatever a client picked', async () => {
+        await accounts.reorder('claude', ['claude_personal']);
+        daemon.chats.composerPreferences.set('client-1', { accounts: { codex: 'codex_work' }, changedAt: 1 });
         await daemon.chats.create({ chatId: 'chat-picked', provider: 'claude', cwd: folder });
         await daemon.chats.create({ chatId: 'chat-default', provider: 'claude', cwd: folder, account: 'claude' });
         await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
@@ -432,14 +431,15 @@ describe('the account a person picked for new agents', () => {
     });
 
     test('is refused and not replaced when that account went', async () => {
-        pick({ claude: 'claude_gone' });
+        await accounts.reorder('claude', ['claude_gone']);
         const refused = await daemon.request('chat.create', { chatId: 'chat-lead', provider: 'claude', cwd: folder });
         expect(refused).toMatchObject({ ok: false, error: { code: 'account-unavailable' } });
         expect(daemon.chats.get('chat-lead')).toBeUndefined();
     });
 
     test('never outranks the account a child inherits, and starts a child of another CLI', async () => {
-        pick({ claude: 'claude_personal', codex: 'codex_work' });
+        await accounts.reorder('claude', ['claude_personal']);
+        await accounts.reorder('codex', ['codex_work']);
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
         await say('chat-lead', 'plan');
 
@@ -455,5 +455,64 @@ describe('the account a person picked for new agents', () => {
         expect(daemon.chats.get(codexChild)!.info.account).toBe('codex_work');
         const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
         expect(canvas.nodes.find((node) => node.id === terminalChild)?.account).toBe('claude');
+    });
+});
+
+describe("a project's accounts", () => {
+    test("start a chat that names none on the project's default, and refuse one that names an account it turned off", async () => {
+        await setProjectAccounts(store, { projectId, kind: 'claude', default: 'claude_personal', off: ['claude'] });
+        const refused = await daemon.request('chat.create', { chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
+        expect(refused).toMatchObject({ ok: false, error: { code: 'account-off-in-project' } });
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        expect(daemon.chats.get('chat-lead')!.info.account).toBe('claude_personal');
+    });
+
+    test('say so in the chat when the default cannot take the start', async () => {
+        await setProjectAccounts(store, { projectId, kind: 'claude', default: 'claude_gone', off: [] });
+        await accounts.save({
+            ...accounts.snapshot().accounts,
+            claude_gone: { kind: 'claude', label: 'Gone', home: join(root, 'claude_gone'), enabled: false }
+        });
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
+        const notes = daemon.chats
+            .get('chat-lead')!
+            .thread.list()
+            .filter((item) => item.kind === 'note');
+        expect(notes.map((item) => (item as { text: string }).text)).toContain('Started on Claude Code: Gone is turned off on this machine.');
+    });
+
+    test('refuse a switch, a fork and going on after a limit onto an account they turned off', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
+        await say('chat-lead', `limit:${1_600_000 / 1000}`);
+        await setProjectAccounts(store, { projectId, kind: 'claude', default: null, off: ['claude_personal'] });
+
+        expect(await daemon.request('chat.configure', { chatId: 'chat-lead', account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-off-in-project' }
+        });
+        const [turn] = turnsIn('chat-lead');
+        expect(await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turn!.id, account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-off-in-project' }
+        });
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-lead', account: 'claude_personal' })).toMatchObject({
+            ok: false,
+            error: { code: 'account-off-in-project' }
+        });
+        expect(daemon.chats.get('chat-lead')!.info.account).toBeUndefined();
+    });
+
+    test('drop an inherited account they turned off, for a chat child and a terminal child alike', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
+        await say('chat-lead', 'plan');
+        await setProjectAccounts(store, { projectId, kind: 'claude', default: 'claude_personal', off: ['claude'] });
+
+        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
+        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
+        await daemon.until(() => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined);
+
+        expect(daemon.chats.get(chatChild)!.info.account).toBe('claude_personal');
+        expect(daemon.adapter.forSession(terminalChild).options.env.CLAUDE_CONFIG_DIR).toBe(personal);
     });
 });

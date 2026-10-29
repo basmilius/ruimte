@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult, type ProviderInfo } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
-import { AccountDot, canContinueOn } from '@adecore/agents-react/providers';
+import { AccountDot, accountsOfKind, canContinueOn, topAccountEntry } from '@adecore/agents-react/providers';
 import {
     EMPTY_DRAFT,
     writeDraft,
@@ -39,6 +39,7 @@ import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { useWorkspace } from '@/transport/connections';
 import { useTransport } from '@/transport/context';
+import { useMachineAnswers } from '@/transport/features';
 import { NodeMachineScope } from '@/transport/node-machine';
 
 /*
@@ -97,6 +98,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
     const [cli, setCli] = useState<ForkCliChoice | null>(null);
     const providers = useProviders((s) => s.providers);
     const endpointId = useEndpointId();
+    const ordered = useMachineAnswers(endpointId, 'accounts.reorder');
     const transport = useTransport();
     const workspace = useWorkspace();
     const projectFolder = useProject((s) => s.current?.folder ?? null);
@@ -111,7 +113,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
     const originalCli: ForkCliChoice | null =
         info === null ? null : { provider: info.provider, selection: info.selection, account: info.account ?? info.provider };
     const chosenCli = cli ?? originalCli;
-    const accountChoice = useAccountChoice(chosenCli?.provider ?? null, chosenCli?.account);
+    const accountChoice = useAccountChoice(chosenCli?.provider ?? null, chosenCli?.account, chatId);
     const pickable = providers.filter((entry) => FORKABLE_PROVIDERS.has(entry.kind) && entry.installed && entry.capabilities.chat);
     const switching = chosenCli !== null && originalCli !== null && chosenCli.provider !== originalCli.provider;
     // Another account of the same CLI that does not read the original's conversation gets it handed over, as another CLI does.
@@ -121,7 +123,7 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
             originalCli !== null &&
             accountChoice !== null &&
             !canContinueOn(accountChoice.accounts, chosenCli.provider, originalCli.account, chosenCli.account));
-    /* The same CLI keeps the account picked here, another starts on the account picked for its new agents. */
+    /* The same CLI keeps the account picked here, another starts on the top account of its order. */
     const accountOn = (provider: ForkCliChoice['provider']): string => {
         if (provider === chosenCli?.provider && chosenCli.account !== undefined) {
             return chosenCli.account;
@@ -129,7 +131,10 @@ function ForkForm({ chatId, turnId, source, onDone }: { chatId: string; turnId: 
         if (provider === originalCli?.provider && originalCli.account !== undefined) {
             return originalCli.account;
         }
-        return accountFor(readChatPreferences(), endpointId, provider, knownAccounts(providerAccountsOf(endpointId))) ?? provider;
+        const accounts = knownAccounts(providerAccountsOf(endpointId));
+        return ordered
+            ? (topAccountEntry(accountsOfKind(accounts ?? null, provider))?.id ?? provider)
+            : (accountFor(readChatPreferences(), endpointId, provider, accounts) ?? provider);
     };
     const chooseCli = (provider: ForkCliChoice['provider'], model: string): void => {
         const remembered = provider === info?.provider ? info.selection : selectionFor(readChatPreferences(), provider);

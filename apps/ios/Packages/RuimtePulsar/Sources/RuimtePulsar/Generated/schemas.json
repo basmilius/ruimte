@@ -35616,6 +35616,11 @@
                   "sensitive"
                 ]
               }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -35814,6 +35819,11 @@
                   "sensitive"
                 ]
               }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -35885,6 +35895,11 @@
                   "sensitive"
                 ]
               }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -36088,6 +36103,11 @@
                   "sensitive"
                 ]
               }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -36317,6 +36337,11 @@
                   "sensitive"
                 ]
               }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -36478,6 +36503,239 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.accounts.reorder.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32,
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot",
+          "apple"
+        ]
+      },
+      "ids": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        }
+      }
+    },
+    "required": [
+      "kind",
+      "ids"
+    ]
+  },
+  "request.accounts.reorder.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accounts": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "home": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shadowHome": {
+              "type": "string",
+              "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "sensitive": {
+                    "type": "boolean"
+                  },
+                  "valueRedacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value",
+                  "sensitive"
+                ]
+              }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        }
+      },
+      "statuses": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "checking",
+                "disabled",
+                "not-found",
+                "signed-out",
+                "ready",
+                "folder-missing",
+                "unavailable",
+                "failed"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "plan": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "organization": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "home": {
+              "type": "string"
+            },
+            "transcripts": {
+              "type": "string"
+            },
+            "message": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "checkedAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "state",
+            "email",
+            "plan",
+            "organization",
+            "home",
+            "message",
+            "checkedAt"
+          ]
+        }
+      },
+      "secretsAvailable": {
+        "type": "boolean"
+      },
+      "loginCommands": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "chatLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      },
+      "silentLogins": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "x-open-enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot",
+            "apple"
+          ]
+        }
+      }
+    },
+    "required": [
+      "accounts",
+      "statuses"
+    ]
   },
   "request.project.sidebar.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -41704,6 +41962,29 @@
               }
             }
           },
+          "accounts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "default": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "off": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          },
           "version": {
             "type": "number",
             "const": 3
@@ -46052,6 +46333,29 @@
                 }
               }
             }
+          },
+          "accounts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "default": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "off": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
           }
         },
         "required": [
@@ -47428,6 +47732,92 @@
     },
     "required": [
       "summary"
+    ]
+  },
+  "request.project.setAccounts.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "off": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "seen": {
+        "type": "object",
+        "properties": {
+          "default": {
+            "type": "string",
+            "minLength": 1
+          },
+          "off": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "kind",
+      "default",
+      "off"
+    ]
+  },
+  "request.project.setAccounts.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accounts": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "minLength": 1
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "string",
+              "minLength": 1
+            },
+            "off": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "accounts"
     ]
   },
   "request.project.delete.payload": {
@@ -83282,6 +83672,29 @@
               }
             }
           },
+          "accounts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "default": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "off": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          },
           "version": {
             "type": "number",
             "const": 3
@@ -86705,6 +87118,11 @@
                   "sensitive"
                 ]
               }
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [

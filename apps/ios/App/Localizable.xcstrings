@@ -6242,6 +6242,17 @@
         }
       }
     },
+    "A chat that names no account starts under the top one that is on." : {
+      "comment" : "Footer under a CLI's accounts while a person orders them in the agents settings",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een chat die geen account noemt, start onder het bovenste account dat aan staat."
+          }
+        }
+      }
+    },
     "a cherry-pick that stopped halfway" : {
       "localizations" : {
         "nl" : {

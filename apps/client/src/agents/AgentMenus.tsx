@@ -7,6 +7,7 @@ import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { runtimeModeLabel, useChatPreferences, useNewAccountChoice } from '@adecore/agents-react/chat';
 import { useProviders } from '@adecore/agents-react/state';
 import { availableAgents, separatesGroups } from './creation';
+import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
 import { Icon, IconButton, Menu } from '@adecore/ui';
@@ -47,12 +48,13 @@ interface ChainProps {
  * on to the next.
  *
  * A CLI with several accounts is a group under its own name, so a person starts on the account they
- * mean. A known account always goes along, also the CLI's own: absent would mean the account picked
- * for new agents, which may be turned off.
+ * mean, the project's default tagged. A known account always goes along, also the CLI's own: absent
+ * would leave it to the project and the order of the accounts.
  */
 function ProviderChain({ target, provider, rest, hint, onPick, drawn, previous, waiting }: ChainProps) {
     const { t } = useTranslation('agents');
-    const choice = useNewAccountChoice(provider.kind);
+    const rule = useDocument((s) => s.accounts);
+    const choice = useNewAccountChoice(provider.kind, rule);
     let own: ReactNode = null;
     let mine: Drawn = 'nothing';
     if (choice.status === 'unsupported') {
@@ -92,6 +94,7 @@ function ProviderChain({ target, provider, rest, hint, onPick, drawn, previous, 
                             <AccountDot color={entry.account.color} />
                         </span>
                         <span className="truncate">{choice.nameOf(entry)}</span>
+                        {entry.id === choice.projectDefault && <span className="shrink-0 text-xs text-text-faint">{t('menu.projectDefault')}</span>}
                         <Menu.Hint>{hint}</Menu.Hint>
                     </Menu.Item>
                 ))}

@@ -8,7 +8,10 @@ import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
+import { ProjectAccountsSection } from '@/shell/ProjectAccountsSection';
 import { submitOnEnter } from '@/shell/submit-on-enter';
+import { currentEndpointId } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { Button, ColorSwatch, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel, Tooltip } from '@adecore/ui';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
@@ -61,6 +64,8 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
     const trimmedName = name.trim();
     /* The Chats project's name is the app's word and its folder the daemon's, so only its symbol is a person's to pick. */
     const scratch = project.scratch === true;
+    // The accounts come with the project this window holds, so only its own settings show them.
+    const onScreen = useProject((s) => s.current?.projectId === project.projectId) && endpointId === currentEndpointId();
 
     const pickFile = async (file: File | undefined): Promise<void> => {
         if (!file) {
@@ -163,6 +168,8 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 onValueChange={(icon) => void run(() => actions.setChosenIcon({ kind: 'lucide', value: icon as ProjectIconChoice['value'] }))}
                 onClear={() => void run(actions.clearChosenIcon)}
             />
+
+            {!scratch && onScreen && <ProjectAccountsSection projectId={project.projectId} endpointId={endpointId} />}
 
             {failure && <FormError className="mt-3 break-words">{failure}</FormError>}
 

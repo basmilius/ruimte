@@ -3,6 +3,7 @@ import {
     PROJECT_VERSION,
     type ProjectContent,
     type ProjectDocument,
+    type ProjectAccounts,
     type ProjectFlags,
     type ProjectIconChoice,
     type ProjectLocal,
@@ -58,6 +59,7 @@ interface DocumentAccess {
         shared: string[];
         flags: ProjectFlags;
         trashed: ReadonlyArray<{ view: ProjectView }>;
+        takeAccounts(accounts: ProjectAccounts): void;
         activeViewId: string | null;
         layout: unknown;
         edits: number;
@@ -805,6 +807,7 @@ export class ProjectClient {
         /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull
            can share one, and nothing here may argue with what the daemon just read off disk. */
         this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases, document.shared ?? [], merge.content.flags ?? {});
+        this.documents.getState().takeAccounts(document.accounts ?? {});
         return true;
     }
 

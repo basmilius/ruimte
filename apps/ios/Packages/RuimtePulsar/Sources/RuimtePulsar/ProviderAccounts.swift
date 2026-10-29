@@ -9,6 +9,8 @@ public struct ProviderAccountEntry: Sendable, Equatable, Identifiable {
     /// A node accent id; any other value paints with the app's accent.
     public let color: String?
     public let enabled: Bool
+    /// Its place among the accounts of its CLI, lowest first; nil for an account nobody placed.
+    public let order: Int?
     /// `ProviderAccountState` as the machine last saw it; nil before the machine described the account.
     public let state: String?
     /// Where the account's conversations are written; nil when the machine does not say.
@@ -17,13 +19,14 @@ public struct ProviderAccountEntry: Sendable, Equatable, Identifiable {
 
     public init(
         id: String, kind: String, label: String? = nil, color: String? = nil, enabled: Bool = true,
-        state: String? = nil, transcripts: String? = nil, message: String? = nil
+        order: Int? = nil, state: String? = nil, transcripts: String? = nil, message: String? = nil
     ) {
         self.id = id
         self.kind = kind
         self.label = label
         self.color = color
         self.enabled = enabled
+        self.order = order
         self.state = state
         self.transcripts = transcripts
         self.message = message
@@ -44,7 +47,7 @@ public struct ProviderAccountList: Sendable, Equatable {
     }
 
     /// Reads a `accounts.list` result or a `accounts.changed` payload. The account map arrives as an object, which
-    /// keeps no order, so the order is the machine's list of statuses, and an account without one comes last by id.
+    /// keeps no order, so the CLIs follow the machine's list of statuses and the accounts of each CLI `ordered`.
     public init(_ value: JSONValue) {
         let statuses = value["statuses"]?.arrayValue ?? []
         let order = Dictionary(
@@ -61,20 +64,45 @@ public struct ProviderAccountList: Sendable, Equatable {
             case (nil, nil): return first.key < second.key
             }
         }
-        entries = accounts.compactMap { id, account in
+        let parsed = accounts.compactMap { id, account -> ProviderAccountEntry? in
             guard let kind = account["kind"]?.stringValue else { return nil }
             let status = statusByID[id]
             return ProviderAccountEntry(
                 id: id, kind: kind, label: account["label"]?.stringValue, color: account["color"]?.stringValue,
-                enabled: account["enabled"]?.boolValue ?? true, state: status?["state"]?.stringValue,
-                transcripts: status?["transcripts"]?.stringValue, message: status?["message"]?.stringValue)
+                enabled: account["enabled"]?.boolValue ?? true, order: account["order"]?.numberValue.map { Int($0) },
+                state: status?["state"]?.stringValue, transcripts: status?["transcripts"]?.stringValue,
+                message: status?["message"]?.stringValue)
+        }
+        var kinds: [String] = []
+        for entry in parsed where !kinds.contains(entry.kind) {
+            kinds.append(entry.kind)
+        }
+        entries = kinds.flatMap { kind in Self.ordered(parsed.filter { $0.kind == kind }) }
+    }
+
+    /// The accounts of one CLI in the machine's order.
+    public func accounts(of kind: String) -> [ProviderAccountEntry] {
+        Self.ordered(entries.filter { $0.kind == kind })
+    }
+
+    /// The order the machine keeps the accounts of one CLI in, as `orderedAccountIds` does: the placed ones by their
+    /// place, then the CLI's default account, then the rest by id. The first one that is on is where a new chat starts.
+    public static func ordered(_ accounts: [ProviderAccountEntry]) -> [ProviderAccountEntry] {
+        accounts.sorted { first, second in
+            switch (first.order, second.order) {
+            case (let one?, let other?) where one != other: return one < other
+            case (.some, nil): return true
+            case (nil, .some): return false
+            default:
+                if first.isDefault != second.isDefault { return first.isDefault }
+                return first.id < second.id
+            }
         }
     }
 
-    /// The accounts of one CLI, its default one first.
-    public func accounts(of kind: String) -> [ProviderAccountEntry] {
-        let own = entries.filter { $0.kind == kind }
-        return own.filter(\.isDefault) + own.filter { !$0.isDefault }
+    /// The account a chat of this CLI that names none starts under on a machine that keeps an order.
+    public func startingAccount(of kind: String) -> ProviderAccountEntry? {
+        accounts(of: kind).first(where: \.enabled)
     }
 
     /// Whether a person has a choice of account for this CLI, which is when a chat names its account.

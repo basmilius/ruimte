@@ -277,5 +277,28 @@ private actor FakeAccountAPI: AccountAPI {
         XCTAssertEqual(agents[0].accounts.map(\.detail), ["Max · bas@example.com", "Not logged in"])
         XCTAssertEqual(agents[0].accounts.map(\.name), ["Claude Code", "Work"])
         XCTAssertTrue(agents[0].accounts[1].signedOut)
+        XCTAssertEqual(agents[0].defaultAccount, "claude")
+    }
+
+    @MainActor func testTheAgentsSettingsFollowTheOrderAndTagTheTopAccountThatIsOn() {
+        let providers: [JSONValue] = [.object(["kind": .string("claude"), "installed": .bool(true)])]
+        let accounts = JSONValue.object([
+            "accounts": .object([
+                "claude": .object(["kind": .string("claude")]),
+                "off": .object(["kind": .string("claude"), "order": .number(0), "enabled": .bool(false)]),
+                "work": .object(["kind": .string("claude"), "order": .number(1)]),
+            ]),
+            "statuses": .array([]),
+        ])
+        let agents = MachineAgentsModel.agents(providers: providers, accounts: accounts)
+        XCTAssertEqual(agents[0].accounts.map(\.id), ["off", "work", "claude"])
+        XCTAssertEqual(agents[0].defaultAccount, "work")
+        XCTAssertEqual(
+            MachineAgentsModel.reorderPayload(kind: "claude", ids: ["work", "claude"]),
+            .object(["kind": .string("claude"), "ids": .array([.string("work"), .string("claude")])]))
+        let single = MachineAgentsModel.agents(
+            providers: providers,
+            accounts: .object(["accounts": .object(["claude": .object(["kind": .string("claude")])])]))
+        XCTAssertNil(single[0].defaultAccount)
     }
 }

@@ -36,6 +36,17 @@ import XCTest
             machine.requests.last?.1, .object(["provider": .string("claude"), "account": .string("work")]))
     }
 
+    func testAMachineThatOrdersItsAccountsGetsNoRememberedAccount() async {
+        let machine = NewChatMachine()
+        machine.features = ["accounts.reorder"]
+        preferences.rememberAccount("work", provider: "claude", machineID: "mac")
+        let model = NewChatModel(client: machine, machineID: "mac", preferences: preferences)
+        await model.load()
+        XCTAssertNil(model.account(for: "claude"))
+        _ = await model.start(provider: "claude")
+        XCTAssertEqual(machine.requests.last?.1, .object(["provider": .string("claude")]))
+    }
+
     func testAnAccountTheMachineTurnedOffIsNotAskedFor() async {
         let machine = NewChatMachine()
         machine.workEnabled = false
@@ -58,10 +69,13 @@ import XCTest
     }
 }
 
-@MainActor private final class NewChatMachine: MachineRequesting {
+@MainActor private final class NewChatMachine: MachineRequesting, MachineFeatures {
     var requests: [(String, JSONValue)] = []
     var refusal: String?
     var workEnabled = true
+    var features: Set<String> = []
+
+    func answers(_ type: WireRequest) -> Bool { features.contains(type.rawValue) }
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         requests.append((type, payload))

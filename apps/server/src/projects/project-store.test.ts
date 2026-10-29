@@ -15,6 +15,7 @@ import { FakeWatch } from '@adecore/agents/testing';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { setProjectAccounts } from './project-accounts.ts';
 import { documentOnDisk, privateFileOnDisk, rawPrivateViews, projectLinks, setPrivateViews } from './project-file-test-helpers.ts';
 import { GITIGNORE_TEXT, documentPathInFolder, fromPortable, privatePathOf, toPortable } from './project-files.ts';
 import { ProjectStore, type ProjectLinks } from './project-store.ts';
@@ -174,6 +175,18 @@ describe('ProjectStore', () => {
         await store.save(projectId, 1, content());
         expect((await privateFileOnDisk(folder)).sql).toEqual(sql);
         expect((await store.read(projectId)).sql).toEqual(sql);
+    });
+
+    test("a person's accounts live in the private file, and a save that does not send them keeps them", async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const accounts = await setProjectAccounts(store, { projectId, kind: 'claude', default: 'client', off: ['private'] });
+        expect(accounts).toEqual({ claude: { default: 'client', off: ['private'] } });
+        expect((await privateFileOnDisk(folder)).accounts).toEqual(accounts);
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).not.toContain('client');
+        await store.save(projectId, 1, content());
+        expect((await privateFileOnDisk(folder)).accounts).toEqual(accounts);
+        expect(store.index.accountsOf(projectId)).toEqual(accounts);
     });
 
     test('a save based on an older rev is refused', async () => {

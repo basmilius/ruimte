@@ -24,6 +24,7 @@ import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
+import { useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
@@ -35,6 +36,7 @@ import { useUi } from '@/state/ui';
 import { transportFor, type Transport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
+import { useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
 import { prefetcher, messageOf } from '@adecore/ui';
 import { type AgentKind, CHAT_MODEL_MAX_BYTES } from '@ruimte/contracts';
@@ -258,6 +260,12 @@ export const CHAT_HOST: Partial<ChatHost> = {
     useMachinePlatform,
     providerKeyNote: () => i18next.t('settings:providers.keyNote'),
     useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),
+    useCanReorderAccounts: (endpointId) => useMachineAnswers(endpointId, 'accounts.reorder'),
+    // A chat on screen belongs to the project the window shows; an account id only means something on that project's machine.
+    useAccountRule: (endpointId) => {
+        const accounts = useDocument((s) => s.accounts);
+        return endpointId === currentEndpointId() ? accounts : null;
+    },
     // A chat on screen belongs to the project the window shows, and the Chats project shows none of its folders.
     useHidesFolder: () => useProject((s) => isScratchProject(s.current)),
     // A chat of the Chats project is a conversation of its own, so it opens the way one does.

@@ -137,8 +137,8 @@ export interface SessionManagerOptions {
     checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
     // The accounts a launch may name; without them only a CLI's default account starts.
     accounts?: AccountLaunches;
-    // The account a person picked for new agents of a CLI, for a first launch that names none.
-    preferredAccount?: (kind: AgentKind) => string | undefined;
+    // The account a first launch takes, given the one it named: the project's choice, else the top account of the CLI. Throws to refuse it.
+    openingAccount?: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
     // CLI capabilities must be known before building a launch or resume command.
     prepareAgent?: (kind: AgentKind) => Promise<void>;
     // Lets a test pose as Windows, where a session that types a line needs Git Bash.
@@ -210,7 +210,7 @@ export class SessionManager {
     private readonly personMode: (sessionId: string) => RuntimeMode | null;
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     private readonly accounts: AccountLaunches | null;
-    private readonly preferredAccount: (kind: AgentKind) => string | undefined;
+    private readonly openingAccount: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
     private readonly prepareAgent: (kind: AgentKind) => Promise<void>;
     private readonly platform: string;
     private readonly findGitBash: () => string | null;
@@ -246,7 +246,7 @@ export class SessionManager {
         this.personMode = options.personMode ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.accounts = options.accounts ?? null;
-        this.preferredAccount = options.preferredAccount ?? (() => undefined);
+        this.openingAccount = options.openingAccount ?? ((_sessionId, _kind, named) => named);
         this.prepareAgent = options.prepareAgent ?? (() => Promise.resolve());
         this.platform = options.platform ?? process.platform;
         this.findGitBash = options.findGitBash ?? (() => gitBash(this.env));
@@ -390,10 +390,14 @@ export class SessionManager {
      */
     private startingLaunch(sessionId: string, requested: AgentLaunch | undefined, ranBefore: boolean, ranUnder: string | undefined): AgentLaunch | undefined {
         const launch = this.withinCeiling(sessionId, requested);
-        if (launch === undefined || launch.account !== undefined) {
+        if (launch === undefined) {
             return launch;
         }
-        const account = ranBefore ? ranUnder : launch.resume === undefined ? this.preferredAccount(launch.kind) : undefined;
+        if (ranBefore || launch.resume !== undefined) {
+            const account = launch.account ?? (ranBefore ? ranUnder : undefined);
+            return account === undefined ? launch : { ...launch, account };
+        }
+        const account = this.openingAccount(sessionId, launch.kind, launch.account);
         return account === undefined ? launch : { ...launch, account };
     }
 

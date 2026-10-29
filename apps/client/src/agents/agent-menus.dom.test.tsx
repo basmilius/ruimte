@@ -195,7 +195,7 @@ describe('a turned-off default account', () => {
             await start(() => ({ accounts: DEFAULT_OFF, statuses: [] }));
             await openAgentMenu(target);
             await until(() => groupRows('Claude Code').length > 0);
-            expect(groupRows('Claude Code')).toEqual(['Work', 'Side']);
+            expect(groupRows('Claude Code')).toEqual(['Side', 'Work']);
             expect(submenuLabels()).not.toContain('Personal');
             // The group stands apart from the row of Codex.
             expect(submenuSeparators()).toBe(1);
@@ -207,7 +207,7 @@ describe('a turned-off default account', () => {
             await start(() => ({ accounts: DEFAULT_OFF, statuses: [] }));
             await openAgentMenu('Agent (Chat)', from);
             await until(() => menuItem('Side') !== null);
-            expect(groupRows('Claude Code')).toEqual(['Work', 'Side']);
+            expect(groupRows('Claude Code')).toEqual(['Side', 'Work']);
             await clickOn(menuItem('Side'));
             await until(() => machine.requests('chat.create').length > 0);
             expect(machine.requests('chat.create')[0]).toMatchObject({ provider: 'claude', account: 'claude_side' });
@@ -281,7 +281,7 @@ describe('while the accounts load', () => {
 
         await act(async () => answer({ accounts: DEFAULT_OFF, statuses: [] }));
         await until(() => groupRows('Claude Code').length > 0);
-        expect(groupRows('Claude Code')).toEqual(['Work', 'Side']);
+        expect(groupRows('Claude Code')).toEqual(['Side', 'Work']);
         expect(submenuLabels()).not.toContain('Connecting…');
     });
 });
@@ -298,6 +298,24 @@ describe('turning an account off while the menu is open', () => {
 
         await accountsChange({ ...DEFAULT_OFF, claude: { ...DEFAULT_OFF.claude!, enabled: true } });
         await until(() => groupRows('Claude Code').length === 3);
-        expect(groupRows('Claude Code')).toEqual(['Personal', 'Work', 'Side']);
+        expect(groupRows('Claude Code')).toEqual(['Personal', 'Side', 'Work']);
+    });
+});
+
+describe("a project's accounts", () => {
+    test('the menu leaves out what the project turned off, tags its default, and a pick starts on it', async () => {
+        machine.answer('accounts.list', () => ({ accounts: { ...DEFAULT_OFF, claude: { kind: 'claude', label: 'Personal' } }, statuses: [] }));
+        workspace = await openFakeWorkspace(
+            machine,
+            { views: [MAIN], accounts: { claude: { default: 'claude_work', off: ['claude_side'] } } },
+            { activeViewId: MAIN.id, views: {} }
+        );
+        page = mount();
+        await page.renderApp();
+        await openAgentMenu('Agent (Chat)');
+        await until(() => groupRows('Claude Code').length > 0);
+
+        expect(groupRows('Claude Code')).toEqual(['Personal', 'WorkProject default']);
+        expect(await pick('WorkProject default', 'chat')).toMatchObject({ provider: 'claude', account: 'claude_work' });
     });
 });

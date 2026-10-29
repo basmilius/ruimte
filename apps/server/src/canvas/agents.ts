@@ -63,12 +63,14 @@ export function agentNode(spec: AgentNodeSpec): ProjectNode {
 
 /*
  * The account a child starts under: its opener's when it runs the same CLI, named even when that is
- * the default one so the person's pick for new agents does not replace it; else none, which starts
- * it under that pick. Never one the agent picks, since an account is someone's costs.
+ * the default one so the order of the accounts does not replace it; else none, which starts it where
+ * its project or that order says. One the child's project turned off is dropped rather than refused,
+ * since nobody chose it. Never one the agent picks, since an account is someone's costs.
  */
-export function inheritedAccount(call: VerbCall, kind: AgentKind): string | undefined {
+export function inheritedAccount(call: VerbCall, kind: AgentKind, projectId: string): string | undefined {
     const opener = call.host.starts.accountOf?.(call.caller) ?? null;
-    return opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
+    const account = opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
+    return account !== undefined && call.host.starts.accountsOff?.(projectId, kind).includes(account) ? undefined : account;
 }
 
 /* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */

@@ -236,7 +236,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     // Voice gives no cwd, and an agent of another project stands in none of this one's folders, so the project's own folder is judged for both.
     refuseUntrustedStart(host, caller.caller, checkedCwd, [{ provider: kind, chat }], voice || context.origin !== undefined ? place.folder : undefined);
     const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
-    const account = inheritedAccount(caller, kind);
+    const account = inheritedAccount(caller, kind, place.projectId);
     const worktrees = input.worktree
         ? await startWorktrees(caller, place, remote !== null, dryRun, () => {
               const want = input.branch == null ? { fresh: branchSlug(input.task ?? input.title ?? kind) } : { branch: input.branch };
@@ -545,7 +545,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
     const modes: Array<RuntimeMode | undefined> = roles.map((role) =>
         kindOf(role) === 'chat' ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling)
     );
-    const accounts = roles.map((role) => inheritedAccount(caller, role.provider));
+    const accounts = roles.map((role) => inheritedAccount(caller, role.provider, place.projectId));
 
     return host.projects
         .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {

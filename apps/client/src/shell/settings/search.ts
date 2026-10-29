@@ -131,12 +131,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     // On the detail of the CLI the pane opens on.
     {
-        id: 'providers.defaults.account',
-        section: 'providers',
-        label: 'agent-providers:cli.defaults.account',
-        description: 'agent-providers:cli.defaults.description'
-    },
-    {
         id: 'providers.defaults.model',
         section: 'providers',
         label: 'agent-providers:cli.defaults.model',

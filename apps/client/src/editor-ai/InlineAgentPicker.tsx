@@ -68,7 +68,8 @@ export function InlineAgentPicker({
     const { t } = useTranslation('inline-edit');
     const providers = useProviders((row) => row.providers);
     const [open, setOpen] = useState(false);
-    const choice = useAccountChoice(agent.provider, agent.account);
+    // An inline edit is no chat of its own yet; the project in view gives the rule.
+    const choice = useAccountChoice(agent.provider, agent.account, '');
     const offered = availableAgents(providers, 'chat');
     const owner = providers.find((provider) => provider.kind === agent.provider);
 

@@ -25,6 +25,7 @@
         "none": "Geen agent-CLI gevonden",
         "connecting": "Verbinden…",
         "onAccount": "{{provider}} ({{account}})",
+        "projectDefault": "Projectstandaard",
         "newChat": "Nieuwe chat",
         "setup": "Agents instellen",
         "defaultModel": "Standaardmodel"

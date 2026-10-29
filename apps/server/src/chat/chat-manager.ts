@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
+    AgentKind,
     ChatAttachment,
     ChatCreatePayload,
     ChatEvent,
@@ -25,7 +26,7 @@ import type {
 import { HOST_TASK_ORIGIN } from '@ruimte/contracts';
 import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
-import { storedAccount, narrowerMode } from '@adecore/agents/providers';
+import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import { attachedReferences, type Reference } from '../context/references.ts';
 import {
     chatNote,
@@ -37,6 +38,7 @@ import {
     VISUAL_RESUME_NOTE
 } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
+import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import { AgentImages } from './agent-images.ts';
@@ -117,6 +119,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     checkCwd?: (chatId: string, cwd: string) => Promise<void>;
     // Whether the client holds the project the chat is in; a UI block reads and links only for one that does.
     holdsProject?: (chatId: string, clientId: string) => Promise<boolean>;
+    // The account a new chat in a project takes, or null where its project says nothing about the CLI.
+    projectAccount?: ProjectAccountChooser;
 }
 
 /* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables, with `ruimte-context` on the PATH. */
@@ -285,6 +289,9 @@ export class ChatManager extends ChatCore {
     private readonly clearedTasks = new Map<string, Set<string>>();
     /* The digest of the note each chat's thread last took in, kept in its record as `instructions`. */
     private readonly instructed = new Map<string, string>();
+    /* The project default a new chat passed over and why, from its start until it opens. */
+    private readonly passedOver = new Map<string, { account: string; reason: AccountUnusable }>();
+    private readonly projectAccount: ProjectAccountChooser;
     private readonly turnUsage = new TurnUsage();
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
     private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
@@ -307,6 +314,7 @@ export class ChatManager extends ChatCore {
                 envFor: (chatId, base) => this.envFor(chatId, base),
                 admit: (chatId, cwd) => this.checkCwd(chatId, cwd),
                 runtimeModeFor: (chatId, mode) => this.runtimeModeFor(chatId, mode),
+                openingAccount: (chatId, kind, named) => this.openingAccountOf(chatId, kind, named),
                 opened: (session, stored) => this.opened(session, stored),
                 recordExtras: (chatId) => {
                     const digest = this.instructed.get(chatId);
@@ -344,6 +352,7 @@ export class ChatManager extends ChatCore {
         this.peerChat = options.peerChat ?? (() => false);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.holdsProject = options.holdsProject ?? (() => Promise.resolve(true));
+        this.projectAccount = options.projectAccount ?? (() => null);
         this.ended = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
         this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
@@ -536,7 +545,8 @@ export class ChatManager extends ChatCore {
         if (to === from) {
             throw new ChatError('same-account', `The chat already runs under the account '${this.accountLabel(kind, to)}'`);
         }
-        // As named and not as stored, which reads the default account as none: a turned-off default account is refused.
+        // As named and not as stored, which reads the default account as none: a turned-off default account is refused, and one the chat's project turned off.
+        this.projectAccount(chatId, kind, account);
         this.requireAccount(kind, account);
         if (session.info.activeTurnId !== null) {
             throw new ChatError('chat-busy', 'The chat is working on a turn; go on under another account once it ends');
@@ -697,10 +707,29 @@ export class ChatManager extends ChatCore {
         return ceiling === null ? mode : narrowerMode(mode, ceiling);
     }
 
+    /* The project's account for a new chat, remembering a default it passed over so the chat can say so once it opens. */
+    private openingAccountOf(chatId: string, kind: AgentKind, named: string | undefined): string | undefined {
+        const chosen = this.projectAccount(chatId, kind, named);
+        if (chosen === null) {
+            return undefined;
+        }
+        // A chat that is already open asks for another start of its own, such as a fork, which gets no note.
+        if (chosen.passedOver && !this.get(chatId)) {
+            this.passedOver.set(chatId, chosen.passedOver);
+        }
+        return chosen.account;
+    }
+
     private async opened(session: ChatSession, stored: ChatRecord | null): Promise<void> {
         const chatId = session.id;
+        const passed = this.passedOver.get(chatId);
+        this.passedOver.delete(chatId);
         if (stored === null) {
             countChatStarted(session.info.provider);
+            if (passed) {
+                const { provider, account } = session.info;
+                session.addNote('info', passedOverNote(this.accountLabel(provider, account), this.accountLabel(provider, passed.account), passed.reason));
+            }
         }
         this.clearedTasks.set(chatId, new Set(clearedTaskIdsOf(stored?.extras ?? {})));
         const digest = stored?.extras.instructions;

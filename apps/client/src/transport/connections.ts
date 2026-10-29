@@ -107,7 +107,9 @@ function projectSink(endpointId: () => string): ProjectSink {
 }
 
 function preferencesFor(endpointId: string): ReturnType<typeof chatPreferencesPayload> {
-    return chatPreferencesPayload(useChatPreferences.getState(), endpointId, knownAccounts(providerAccountsOf(endpointId)));
+    // A machine that keeps an order of its accounts starts on its top one; an older one on the account picked here.
+    const ordered = machineAnswers(pool.statusOf(endpointId), 'accounts.reorder');
+    return chatPreferencesPayload(useChatPreferences.getState(), endpointId, knownAccounts(providerAccountsOf(endpointId)), ordered);
 }
 
 function buildMachine(endpoint: Endpoint): Machine {

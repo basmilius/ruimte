@@ -8,6 +8,7 @@ import { ChatManager } from '../chat/chat-manager.ts';
 import { ruimteUiSources } from '../chat/ui-sources.ts';
 import { restartConnectPeers } from '../remote/connect-peer.ts';
 import { OneShotPlace } from '../peering/one-shot-place.ts';
+import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { UntrustedFolders } from '../peering/untrusted.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
@@ -151,6 +152,13 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const { snapshots, prompts, lineage, notices, outbox, tasks, commandApprovals, modeApprovals } = stores;
     const index = () => later.projects().store.index;
     const folderOf = (nodeId: string): string | null => index().locate(nodeId)?.folder ?? null;
+    const projectAccount = projectAccountChooser({
+        projectOf: (id) => index().locate(id)?.projectId ?? null,
+        accountsOf: (projectId) => index().accountsOf(projectId),
+        providerAccounts: providers.accounts,
+        limits: () => later.usage().limits.snapshot(),
+        now: () => Date.now()
+    });
     const startCwd = startCwdGuard({
         madeByAgent: (nodeId) => lineage.madeBy(nodeId) !== null,
         folderOf,
@@ -206,7 +214,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         claudeTitles,
         codexTitles: new CodexTitleReader(),
         accounts: providers.accounts,
-        preferredAccount: (kind) => chats.composerPreferences.for(kind).account,
+        openingAccount: (sessionId, kind, named) => projectAccount(sessionId, kind, named)?.account ?? named ?? providers.accounts.defaultFor(kind),
         prepareAgent: (kind) => (kind === 'codex' ? codexProbe : Promise.resolve())
     });
     const snapshotSchedule = scheduleSnapshots(sessions, snapshots);
@@ -254,6 +262,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const visuals = new VisualStore(config.home, attachments);
     const chats: ChatManager = new ChatManager({
         providers: providers.providers,
+        projectAccount,
         intelligentUi: ruimteUiSources({
             place: (chatId) => index().locate(chatId),
             node: (id) => {

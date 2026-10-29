@@ -35,10 +35,11 @@ import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
 import { agentChatOpening, agentStartHost } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import { chatAccess } from '../wiring/canvas-host.ts';
+import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { openedAgentCount } from '../agents/hidden-agents.ts';
-import type { AccountLaunches } from '@adecore/agents/providers';
+import type { AccountLaunches, ProviderAccountsService } from '@adecore/agents/providers';
 import type { LimitsUpdate } from '@adecore/agents/usage';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
@@ -114,8 +115,8 @@ interface TestDaemonOptions {
     codexCli?: FakeCli;
     /* The machine's switches a test flips; resuming after a limit is off and visual replies on, as on a fresh machine. */
     machine?: { resumeAtReset: boolean; visualReplies?: boolean };
-    /* The accounts of the CLIs; without them every CLI has only its default account. */
-    accounts?: AccountLaunches;
+    /* The accounts of the CLIs; without them every CLI has only its default account. A project's choice of accounts needs their snapshot. */
+    accounts?: AccountLaunches & Partial<Pick<ProviderAccountsService, 'snapshot'>>;
     /* The environment every CLI starts from. */
     env?: Record<string, string | undefined>;
     /* What a running turn says about the plan of its account. */
@@ -160,6 +161,13 @@ export async function bootTestDaemon({
     peer
 }: TestDaemonOptions): Promise<TestDaemon> {
     await store.hiddenAgents.load();
+    const projectAccount = projectAccountChooser({
+        projectOf: (id) => store.index.locate(id)?.projectId ?? null,
+        accountsOf: (projectId) => store.index.accountsOf(projectId),
+        providerAccounts: { snapshot: () => accounts?.snapshot?.() ?? { accounts: {}, statuses: [] } },
+        limits: () => null,
+        now: () => clock.now()
+    });
     const prompts = new PendingPromptStore(home);
     await prompts.load();
     const lineage = new AgentLineageStore(home);
@@ -180,7 +188,7 @@ export async function bootTestDaemon({
         firstPrompt: async (id) => (await prompts.take(id))?.prompt ?? null,
         modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
         ...(accounts ? { accounts } : {}),
-        preferredAccount: (kind) => chats.composerPreferences.for(kind).account,
+        openingAccount: (sessionId, kind, named) => projectAccount(sessionId, kind, named)?.account ?? named ?? accounts?.defaultFor?.(kind),
         findGitBash: () => TEST_GIT_BASH
     });
     const attachments = new AttachmentStore(home);
@@ -207,6 +215,7 @@ export async function bootTestDaemon({
     });
     const chats = new ChatManager({
         providers,
+        projectAccount,
         store: new ChatStore(home, { attachments, isSidecar: isPlanFileName }),
         attachments,
         ...(checkpoints ? { checkpoints } : {}),
@@ -343,7 +352,8 @@ export async function bootTestDaemon({
             chats,
             sessions,
             lineage,
-            openedCount: (callerId) => openedAgentCount({ lineage, hiddenAgents: store.hiddenAgents, tasks, outbox, chats, sessions }, callerId)
+            openedCount: (callerId) => openedAgentCount({ lineage, hiddenAgents: store.hiddenAgents, tasks, outbox, chats, sessions }, callerId),
+            accountsOff: (projectId, kind) => store.index.accountsOf(projectId)?.[kind]?.off ?? []
         }),
         ...(remote
             ? {

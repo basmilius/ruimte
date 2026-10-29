@@ -672,7 +672,11 @@ export class ProjectStore {
         const flags = content.flags ?? this.index.flagsOf(projectId);
         // A client never sends the SQL choices, which only `language.sql.bind` changes, so a save keeps them.
         const sql = content.sql ?? this.index.sqlOf(projectId);
-        const portable = toPortable({ ...content, ...(flags ? { flags } : {}), ...(sql ? { sql } : {}) }, state.entry.folder);
+        const accounts = content.accounts ?? this.index.accountsOf(projectId);
+        const portable = toPortable(
+            { ...content, ...(flags ? { flags } : {}), ...(sql ? { sql } : {}), ...(accounts ? { accounts } : {}) },
+            state.entry.folder
+        );
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
         /* Bound first: a document that names a node before its binding exists would let a client start it here.
            A save that names no machine for a node leaves its binding as it was, so a client that never heard of the field cannot drop it. */

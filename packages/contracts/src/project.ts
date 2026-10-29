@@ -1065,6 +1065,16 @@ export const ProjectSqlSchema = z.object({
 });
 export type ProjectSql = z.infer<typeof ProjectSqlSchema>;
 
+// Per agent kind, the account this project's new starts take and the accounts it never offers. Only ever in the private file, since an id names an account on one machine.
+export const ProjectAccountsSchema = z.record(
+    z.string().min(1),
+    z.object({
+        default: z.string().min(1).optional(),
+        off: z.array(z.string().min(1)).optional()
+    })
+);
+export type ProjectAccounts = z.infer<typeof ProjectAccountsSchema>;
+
 // What the person edits; the daemon wraps it with the version and the rev.
 export const ProjectContentSchema = z.object({
     name: z.string().min(1),
@@ -1076,7 +1086,9 @@ export const ProjectContentSchema = z.object({
     // Only ever in the private file. A save without it keeps the flags on disk, as a client from before flags does.
     flags: ProjectFlagsSchema.optional(),
     // Only ever in the private file. A save without it keeps what is on disk; only `language.sql.bind` changes it.
-    sql: ProjectSqlSchema.optional()
+    sql: ProjectSqlSchema.optional(),
+    // Only ever in the private file. A save without it keeps what is on disk; only `project.setAccounts` changes it.
+    accounts: ProjectAccountsSchema.optional()
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
@@ -1154,7 +1166,8 @@ export const ProjectPrivateFileSchema = z.object({
     // Node fields a newer Ruimte keeps one person's. This version keeps them in the overlay too and never takes them from the shared file.
     overlayFields: z.array(z.string().min(1)).optional(),
     flags: ProjectFlagsSchema.optional(),
-    sql: ProjectSqlSchema.optional()
+    sql: ProjectSqlSchema.optional(),
+    accounts: ProjectAccountsSchema.optional()
 });
 export type ProjectPrivateFile = z.infer<typeof ProjectPrivateFileSchema>;
 
@@ -1546,3 +1559,19 @@ export const ProjectSummaryResultSchema = z.object({
     summary: ProjectSummarySchema
 });
 export type ProjectSummaryResult = z.infer<typeof ProjectSummaryResultSchema>;
+
+/* One person's choice of accounts for one agent kind in a project: null `default` leaves new starts to the machine's order. */
+export const ProjectSetAccountsPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    kind: z.string().min(1),
+    default: z.string().min(1).nullable(),
+    off: z.array(z.string().min(1)),
+    // What the client read for this kind; a project that holds something else since refuses with `rev-conflict`.
+    seen: z.object({ default: z.string().min(1).optional(), off: z.array(z.string().min(1)).optional() }).optional()
+});
+export type ProjectSetAccountsPayload = z.infer<typeof ProjectSetAccountsPayloadSchema>;
+
+export const ProjectSetAccountsResultSchema = z.object({
+    accounts: ProjectAccountsSchema
+});
+export type ProjectSetAccountsResult = z.infer<typeof ProjectSetAccountsResultSchema>;
