@@ -82,8 +82,8 @@ export function nameOf(entry: MachineEntry): string {
 export type MachinePick = { kind: 'account' } | { kind: 'machine'; id: string } | { kind: 'this-computer' };
 
 /*
- * What was picked while it is still in the list, else this machine, else the account. Never another
- * machine by itself: its detail holds a link to it, and opening settings must not reach out to one.
+ * What was picked while it is still in the list, else the account. Never a machine by itself: its
+ * detail holds a link to it, and opening settings must not reach out to one.
  */
 export function currentPick(picked: MachinePick | null, entries: readonly MachineEntry[], offersThisComputer = false): MachinePick {
     if (picked?.kind === 'account' || (picked?.kind === 'this-computer' && offersThisComputer)) {
@@ -92,8 +92,7 @@ export function currentPick(picked: MachinePick | null, entries: readonly Machin
     if (picked?.kind === 'machine' && entries.some((entry) => entry.id === picked.id)) {
         return picked;
     }
-    const local = entries.find((entry) => entry.local);
-    return local ? { kind: 'machine', id: local.id } : { kind: 'account' };
+    return { kind: 'account' };
 }
 
 const LOCAL_ONLY_TARGETS = ['machines.machine.keepRunning', 'machines.machine.stopRunning', 'machines.machine.direct'];

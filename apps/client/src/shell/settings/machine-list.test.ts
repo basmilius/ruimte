@@ -86,14 +86,14 @@ describe('what the Account pane shows', () => {
     const entries = mergeMachines({ endpoints: [local('home'), row('studio')], accountMachines: [machine('attic')], showLocal: true });
     const remoteOnly = mergeMachines({ endpoints: [local('home'), row('studio')], accountMachines: [machine('attic')], showLocal: false });
 
-    test('opens on this machine, and on the account where there is none, never on another machine', () => {
-        expect(currentPick(null, entries)).toEqual({ kind: 'machine', id: 'home' });
+    test('opens on the account, never on a machine', () => {
+        expect(currentPick(null, entries)).toEqual({ kind: 'account' });
         expect(currentPick(null, remoteOnly)).toEqual({ kind: 'account' });
     });
 
     test('keeps a pick while its machine is listed, and lets go of one that was forgotten', () => {
         expect(currentPick({ kind: 'machine', id: 'studio' }, entries)).toEqual({ kind: 'machine', id: 'studio' });
-        expect(currentPick({ kind: 'machine', id: 'gone' }, entries)).toEqual({ kind: 'machine', id: 'home' });
+        expect(currentPick({ kind: 'machine', id: 'gone' }, entries)).toEqual({ kind: 'account' });
         expect(currentPick({ kind: 'account' }, entries)).toEqual({ kind: 'account' });
     });
 
