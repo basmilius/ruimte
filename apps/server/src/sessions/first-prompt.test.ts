@@ -27,14 +27,14 @@ function start(sessionId: string) {
 test('the prompt an agent node was made with lands on the line its CLI is started with', async () => {
     await prompts!.put('project', 'terminal-a', 'say hello');
     await start('terminal-a');
-    expect(harness.adapter.forSession('terminal-a').input).toEqual([`claude ${ALLOW} 'say hello'\n`]);
+    expect(harness.adapter.forSession('terminal-a').input).toEqual([`claude ${ALLOW} --permission-mode default 'say hello'\n`]);
     expect(prompts!.has('terminal-a')).toBe(false);
 });
 
 test('a session without a prompt is started the way it always was', async () => {
     await start('terminal-b');
     const pty = harness.adapter.forSession('terminal-b');
-    expect(pty.input).toEqual([`claude ${ALLOW}\n`]);
+    expect(pty.input).toEqual([`claude ${ALLOW} --permission-mode default\n`]);
     expect(pty.options.env[START_LINE_ENV]).toBeUndefined();
 });
 
@@ -44,7 +44,7 @@ test('a line longer than the tty takes before the shell reads is handed over in 
     await start('terminal-c');
     const pty = harness.adapter.forSession('terminal-c');
     expect(pty.input).toEqual([`eval "$${START_LINE_ENV}"\n`]);
-    expect(pty.options.env[START_LINE_ENV]).toBe(`claude ${ALLOW} '${prompt}'`);
+    expect(pty.options.env[START_LINE_ENV]).toBe(`claude ${ALLOW} --permission-mode default '${prompt}'`);
 });
 
 test('two creates of one id at once, the machine starting the node and a client mounting it, spawn one shell', async () => {
@@ -52,7 +52,7 @@ test('two creates of one id at once, the machine starting the node and a client 
     const [started, mounted] = await Promise.all([start('terminal-c'), start('terminal-c')]);
     expect(mounted).toEqual(started);
     expect(harness.adapter.spawned.filter((pty) => pty.options.env.RUIMTE_SESSION_ID === 'terminal-c')).toHaveLength(1);
-    expect(harness.adapter.forSession('terminal-c').input).toEqual([`claude ${ALLOW} 'say hello'\n`]);
+    expect(harness.adapter.forSession('terminal-c').input).toEqual([`claude ${ALLOW} --permission-mode default 'say hello'\n`]);
     // Once it stands, a create is the client's usual `session-exists`, which it answers by attaching.
     await expect(start('terminal-c')).rejects.toMatchObject({ code: 'session-exists' });
 });

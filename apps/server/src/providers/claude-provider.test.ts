@@ -33,5 +33,5 @@ test('a chat and a terminal let ruimte-context through without a prompt', async 
     await backend.start();
     expect(command).toContain(ALLOW_CONTEXT);
     expect(CLAUDE_ALLOW_CONTEXT).toBe(ALLOW_CONTEXT);
-    expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe("claude '--allowedTools=Bash(ruimte-context *)'");
+    expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe("claude '--allowedTools=Bash(ruimte-context *)' --permission-mode default");
 });

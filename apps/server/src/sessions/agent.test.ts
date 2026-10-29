@@ -452,9 +452,10 @@ describe('the mode of a node no agent opened', () => {
         await createAgent('s22', { kind: 'claude', runtimeMode: 'auto-accept-edits' });
         expect(harness.adapter.forSession('s22').input).toEqual([`claude ${ALLOW} --permission-mode acceptEdits\n`]);
 
-        // Supervised puts no flag on Claude's line, so the resume reads its mode from the transcript.
         await createAgent('s23', { kind: 'claude', resume: 'claude-1' });
-        expect(harness.adapter.forSession('s23').input).toEqual([`claude ${ALLOW} --resume 'claude-1' || claude ${ALLOW}\n`]);
+        expect(harness.adapter.forSession('s23').input).toEqual([
+            `claude ${ALLOW} --permission-mode default --resume 'claude-1' || claude ${ALLOW} --permission-mode default\n`
+        ]);
     });
 
     test('an agent node keeps the ceiling its opener gave it', async () => {

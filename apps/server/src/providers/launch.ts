@@ -12,8 +12,9 @@ import { providerFor } from './registry.ts';
  * ask share one policy; the sandbox is what full access widens.
  */
 const RUNTIME_FLAGS: Partial<Record<AgentKind, Record<RuntimeMode, string[]>>> = {
+    // Supervised names `default`, since a bare launch takes the `defaultMode` from a person's settings, which can be `auto`.
     claude: {
-        supervised: [],
+        supervised: ['--permission-mode', 'default'],
         'auto-accept-edits': ['--permission-mode', 'acceptEdits'],
         auto: ['--permission-mode', 'auto'],
         'full-access': ['--permission-mode', 'bypassPermissions']

@@ -16,7 +16,7 @@ describe('terminalCommand', () => {
     });
 
     test('starts a CLI in the runtime mode the node asked for', () => {
-        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe(`claude ${ALLOW}`);
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe(`claude ${ALLOW} --permission-mode default`);
         expect(terminalCommand({ kind: 'claude', runtimeMode: 'auto-accept-edits' })).toBe(`claude ${ALLOW} --permission-mode acceptEdits`);
         expect(terminalCommand({ kind: 'claude', runtimeMode: 'full-access' })).toBe(`claude ${ALLOW} --permission-mode bypassPermissions`);
         expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --ask-for-approval on-request --sandbox workspace-write');
@@ -33,12 +33,14 @@ describe('terminalCommand', () => {
     });
 
     test('a model reaches the CLIs that take one, quoted', () => {
-        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised', model: 'claude-opus-5' })).toBe(`claude ${ALLOW} --model 'claude-opus-5'`);
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised', model: 'claude-opus-5' })).toBe(
+            `claude ${ALLOW} --permission-mode default --model 'claude-opus-5'`
+        );
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'supervised', model: 'some-model' })).toBe('agy');
     });
 
     test("a first prompt rides on the line as the CLI's own prompt argument, quoted", () => {
-        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, 'say hello')).toBe(`claude ${ALLOW} 'say hello'`);
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, 'say hello')).toBe(`claude ${ALLOW} --permission-mode default 'say hello'`);
         expect(terminalCommand({ kind: 'codex', runtimeMode: 'supervised' }, "it's here")).toBe(
             "codex --ask-for-approval on-request --sandbox workspace-write 'it'\\''s here'"
         );
@@ -80,7 +82,7 @@ describe('terminalCommand', () => {
     });
 
     test('only Codex takes the note on its line, and only on a fresh launch', () => {
-        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, undefined, 'note')).toBe(`claude ${ALLOW}`);
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, undefined, 'note')).toBe(`claude ${ALLOW} --permission-mode default`);
         expect(terminalCommand({ kind: 'codex', runtimeMode: 'supervised', resume: 'abc-123' }, undefined, 'note')).toBe(
             "codex resume --ask-for-approval on-request --sandbox workspace-write 'abc-123'"
         );
@@ -96,7 +98,7 @@ describe('terminalCommand', () => {
             expect(resumeCommand({ kind: 'codex', runtimeMode: 'auto' }, 'abc-123')).toBe(
                 "codex resume --no-daemon --ask-for-approval on-request --sandbox workspace-write 'abc-123'"
             );
-            expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe(`claude ${ALLOW}`);
+            expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe(`claude ${ALLOW} --permission-mode default`);
         } finally {
             await probeCodexNoDaemon(async () => '');
         }
@@ -128,7 +130,9 @@ describe('terminalCommand', () => {
     });
 
     test('a resume continues that session in the mode the node asked for', () => {
-        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised', resume: 'abc-123' })).toBe(`claude ${ALLOW} --resume 'abc-123'`);
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised', resume: 'abc-123' })).toBe(
+            `claude ${ALLOW} --permission-mode default --resume 'abc-123'`
+        );
         expect(terminalCommand({ kind: 'claude', runtimeMode: 'auto-accept-edits', resume: 'abc-123' })).toBe(
             `claude ${ALLOW} --permission-mode acceptEdits --resume 'abc-123'`
         );
@@ -168,7 +172,7 @@ describe('resumeCommand', () => {
 describe('freshCommand', () => {
     test('drops the resume of a launch and keeps the rest of it', () => {
         expect(freshCommand({ kind: 'claude', runtimeMode: 'supervised', model: 'claude-opus-5', resume: 'abc-123' })).toBe(
-            `claude ${ALLOW} --model 'claude-opus-5'`
+            `claude ${ALLOW} --permission-mode default --model 'claude-opus-5'`
         );
     });
 });
