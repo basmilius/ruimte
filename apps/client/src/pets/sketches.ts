@@ -196,6 +196,7 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
                 body(5, 8, 4, 2);
                 body(14, 1, 1, 2);
                 body(20, 1, 1, 2);
+                detail(18, 11, 1, 1, '#eee4cf');
                 detail(19, 11, 1, 2, '#eee4cf');
                 detail(2, 7, 1, 4, colors.light);
                 detail(5, 10, 2, 1, colors.shade);
