@@ -24,6 +24,7 @@ import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
+import { diffInFront } from '@/shell/panels/diff-caret';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
@@ -177,6 +178,7 @@ export function menuContext(host: MenuHost): MenuContext {
         chat: windowWorkspace() !== null && focusedChatId() !== null,
         terminalKeys: terminalHasKeyboard(),
         terminalFind: terminalHasFind(),
+        diff: diffInFront(),
         fileManager: fileManagerName(serverInfoOf(endpointId).platform),
         view: facts?.view.kind ?? null,
         offers: facts?.offers ?? null,

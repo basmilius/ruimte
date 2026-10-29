@@ -11,7 +11,8 @@ import { CommitFileTree } from '@/shell/panels/CommitFileTree';
 import { pickedFile } from '@/shell/panels/commit-tree';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { relativeTo } from '@/shell/panels/files-tree';
+import { useDiffCaret, useDiffCarets } from '@/shell/panels/diff-caret';
+import { absoluteOf, relativeTo } from '@/shell/panels/files-tree';
 import { COMMIT_TREE_MIN_WIDTH, TreeSplit } from '@/shell/panels/TreeSplit';
 import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -132,7 +133,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                         </>
                     }
                 />
-                <DiffBody state={state} wrap={wrap} layout={layout} relative={relative} ignoreWhitespace={!whitespace} />
+                <DiffBody state={state} wrap={wrap} layout={layout} path={path} relative={relative} tabKey={tabKey} ignoreWhitespace={!whitespace} />
             </div>
         </FileActionsContext.Provider>
     );
@@ -142,16 +143,22 @@ function DiffBody({
     state,
     wrap,
     layout,
+    path,
     relative,
+    tabKey,
     ignoreWhitespace
 }: {
     state: DiffState;
     wrap: boolean;
     layout: 'stacked' | 'split';
+    /* Absolute, the file the diff opens at its caret. */
+    path: string;
     relative: string;
+    tabKey: string;
     ignoreWhitespace: boolean;
 }) {
     const { t } = useTranslation('panels');
+    const { surface, onSource } = useDiffCaret(path, tabKey);
     if (state.status === 'loading') {
         return (
             <DiffMessage>
@@ -174,7 +181,7 @@ function DiffBody({
         );
     }
     return (
-        <div className="file-diff flex min-h-0 grow flex-col overflow-auto">
+        <div ref={surface} className="file-diff flex min-h-0 grow flex-col overflow-auto">
             <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     change={{ path: relative, kind: 'update', diff: state.diff.diff }}
@@ -183,6 +190,7 @@ function DiffBody({
                     fill
                     contents={contentsOf(state.diff)}
                     ignoreWhitespace={ignoreWhitespace}
+                    onSource={onSource}
                 />
             </LazyBoundary>
         </div>
@@ -243,6 +251,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
     const shown = pickedFile(files, picked);
     const pick = (path: string) => useGit.getState().setCommitFile(tabKey, path);
     const treeWidth = useGit((s) => s.commitTreeWidth);
+    const caret = useDiffCarets((s) => s.carets[tabKey]);
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
@@ -302,7 +311,9 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                                     )}
                                 </div>
                                 <div className="flex min-h-0 grow flex-col overflow-hidden py-1">
-                                    {files.length > 0 && <CommitFileTree files={files} shown={shown?.path ?? null} onPick={pick} menu={{ cwd, commit }} />}
+                                    {files.length > 0 && (
+                                        <CommitFileTree files={files} shown={shown?.path ?? null} onPick={pick} menu={{ cwd, commit }} caret={caret} />
+                                    )}
                                     {ready.truncated === true && <p className="shrink-0 px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
                                 </div>
                             </>
@@ -312,7 +323,15 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                         onWidth={(next) => useGit.getState().setCommitTreeWidth(next)}
                         stackedHeight="h-72"
                     >
-                        <CommitFileDiff file={shown} empty={files.length === 0} commit={commit !== undefined} wrap={wrap} layout={layout} />
+                        <CommitFileDiff
+                            file={shown}
+                            cwd={cwd}
+                            tabKey={tabKey}
+                            empty={files.length === 0}
+                            commit={commit !== undefined}
+                            wrap={wrap}
+                            layout={layout}
+                        />
                     </TreeSplit>
                 </ErrorBoundary>
             )}
@@ -323,12 +342,16 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
 /* The diff of the one file of a commit the tree has picked. */
 function CommitFileDiff({
     file,
+    cwd,
+    tabKey,
     empty,
     commit,
     wrap,
     layout
 }: {
     file: GitDiffFile | null;
+    cwd: string;
+    tabKey: string;
     /* Whether the answer holds no file at all, which a checkout says above the tree already. */
     empty: boolean;
     commit: boolean;
@@ -336,6 +359,8 @@ function CommitFileDiff({
     layout: 'stacked' | 'split';
 }) {
     const { t } = useTranslation('panels');
+    // Opens the file as it is now, also from a commit, since that is the one a person edits.
+    const { surface, onSource } = useDiffCaret(absoluteOf(cwd, file?.path ?? ''), tabKey);
     if (file === null || file.diff === '') {
         return (
             <div className="file-diff grid min-h-0 min-w-0 grow place-items-center">
@@ -348,7 +373,7 @@ function CommitFileDiff({
         );
     }
     return (
-        <div className="file-diff flex min-h-0 min-w-0 grow flex-col overflow-auto">
+        <div ref={surface} className="file-diff flex min-h-0 min-w-0 grow flex-col overflow-auto">
             <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     key={file.path}
@@ -356,6 +381,7 @@ function CommitFileDiff({
                     overflow={wrap ? 'wrap' : 'scroll'}
                     diffStyle={layout === 'split' ? 'split' : 'unified'}
                     fill
+                    onSource={onSource}
                 />
             </LazyBoundary>
         </div>

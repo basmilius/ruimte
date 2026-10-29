@@ -56,6 +56,8 @@ export interface MenuContext {
     terminalKeys: boolean;
     /* That terminal has a find bar, which answers the find key. */
     terminalFind: boolean;
+    /* The view in front of the focused cell is a diff, whose file Open File at Line opens. */
+    diff: boolean;
     /* The repositories of the folder that stand on a branch, which a pull request hangs on. */
     prRepos: { path: string; label: string }[];
     fileManager: string;

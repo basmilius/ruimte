@@ -50,6 +50,7 @@ export const USAGE_DESKTOP_COMMANDS = [
     'findReplace',
     'findNext',
     'findPrevious',
+    'openFileAtLine',
     'nextProblem',
     'previousProblem',
     'nextHighlight',

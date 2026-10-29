@@ -440,6 +440,14 @@ const TABLE = {
         palette: true,
         menu: { menu: 'edit', group: 'find', order: 40, showsShortcut: () => false }
     },
+    // A diff answers the key on its own editors (`shell/panels/diff-caret.ts`), since a file's editor gives it to Text End.
+    'open-file-at-line': {
+        key: 'jumpToSource',
+        icon: FileText,
+        shortcut: editorShortcut('jumpToSource'),
+        palette: true,
+        menu: { menu: 'go', group: 'editor-navigation', order: 100, enabled: (context) => context.diff }
+    },
     'next-problem': {
         key: 'nextProblem',
         icon: ArrowDown,

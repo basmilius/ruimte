@@ -104,6 +104,7 @@ const AREA_OF_KEY: Record<KeymapId, EditorArea> = {
     historyBack: 'navigation',
     historyForward: 'navigation',
     recentLocations: 'navigation',
+    jumpToSource: 'navigation',
     nextProblem: 'navigation',
     previousProblem: 'navigation',
     nextHighlight: 'navigation',

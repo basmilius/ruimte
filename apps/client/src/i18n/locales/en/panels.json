@@ -124,6 +124,7 @@
             "copyCommit": "Copy commit hash",
             "keepInSidebar": "Keep in sidebar",
             "openItself": "Open file",
+            "openItselfAt": "Open file at line {{line}}",
             "pin": "Pin tab",
             "stage": "Stage file",
             "unpin": "Unpin tab",

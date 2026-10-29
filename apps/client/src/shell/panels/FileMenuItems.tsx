@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { promoteLooseDatabase } from '@/project/views';
 import { Copy, FileText, Minus, PanelLeftOpen, Plus, RefreshCw } from 'lucide-react';
+import { useDiffCarets } from '@/shell/panels/diff-caret';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
@@ -16,6 +17,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const { t } = useTranslation('panels');
     const tab = useFiles((s) => s.tabs.find((entry) => entry.key === tabKey) ?? null);
     const unsubmitted = useFiles((s) => s.unsubmitted[tabKey] === true);
+    const caret = useDiffCarets((s) => s.carets[tabKey]);
     if (tab === null || isArtifactTab(tab)) {
         return null;
     }
@@ -51,8 +53,8 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     return (
         <>
             {aboutFile && view !== undefined && (
-                <Menu.Item onClick={() => void perform('file.preview', { path, line: null }).catch(ignoreRefusal)}>
-                    <Icon icon={FileText} size={14} /> {t('file.tab.openItself')}
+                <Menu.Item onClick={() => void perform('file.preview', { path, line: caret?.line ?? null, column: caret?.column }).catch(ignoreRefusal)}>
+                    <Icon icon={FileText} size={14} /> {caret === undefined ? t('file.tab.openItself') : t('file.tab.openItselfAt', { line: caret.line })}
                 </Menu.Item>
             )}
             {stageable && (
