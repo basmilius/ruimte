@@ -205,7 +205,11 @@ export function OutputPanel() {
             <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3 text-xs text-text-muted">
                 <Icon icon={HardDrive} size={14} className="shrink-0 text-text-faint" />
                 <span className="grow truncate tabular-nums">{t('panel.shown', { count: shown.length, size: formatBytes(shownBytes) })}</span>
-                <Button size="xs" variant="ghost" onClick={() => useUi.getState().setSettings({ open: true, section: 'storage' })}>
+                <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => useUi.getState().setSettings({ open: true, section: 'machines', target: 'machines.machine.storage.output' })}
+                >
                     {t('panel.storage')}
                 </Button>
             </div>

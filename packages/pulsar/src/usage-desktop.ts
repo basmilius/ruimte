@@ -285,7 +285,7 @@ export type UsageCommandSource = (typeof USAGE_COMMAND_SOURCES)[number];
 export const USAGE_DESKTOP_PANELS = ['files', 'git', 'databases', 'devices', 'output', 'processes', 'launches', 'problems', 'voice'] as const;
 export type UsageDesktopPanel = (typeof USAGE_DESKTOP_PANELS)[number];
 
-// The client's `SettingsSectionId`s.
+// The client's `SettingsSectionId`s, and `computer` and `storage`, which an older client still counts: they are under Agents and a machine's detail now.
 export const USAGE_DESKTOP_SETTINGS_SECTIONS = [
     'appearance',
     'keyboard',

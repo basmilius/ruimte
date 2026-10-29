@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, CircleAlert, Eraser, Folder, Package, Server, Trash2 } from 'lucide-react';
+import { CircleAlert, Eraser, Folder, Package, Trash2 } from 'lucide-react';
 import type { ArtifactCleanupProposal, ArtifactStorageResult } from '@ruimte/contracts';
-import { Button, ErrorBoundary, Icon, Menu, SegmentBar } from '@adecore/ui';
+import { Button, ErrorBoundary, SegmentBar } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
 import { create } from 'zustand';
@@ -13,12 +13,11 @@ import { CleanupReviewDialog, type CleanupReview } from '@/shell/settings/panes/
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
-import { listedEndpoints } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { machineTransport, pool } from '@/transport';
 import { machineAnswers } from '@/transport/features';
-import { useEndpointConnection, useMachineHold } from '@/transport/status';
+import { useEndpointConnection } from '@/transport/status';
 import { isConnectionError } from '@/transport/transport';
 
 // The categorical series of the theme, a project per color in the order of their size.
@@ -97,66 +96,24 @@ function useStorage(endpointId: string, attempt: number): StorageReading {
     return held !== null && held.key === endpointId ? held.reading : LOADING;
 }
 
-/* What Ruimte keeps in Output on a machine of the account, and the versions a person may let go. */
-export function StoragePane() {
+/* What Ruimte keeps in Output on one machine, and the versions a person may let go: the Storage tab of its detail. */
+export function MachineStorage({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
+
     return (
         <ErrorBoundary label={t('storage.failed')} className="relative" compact>
-            <StorageSections />
+            <StorageSections key={endpoint.id} endpoint={endpoint} />
         </ErrorBoundary>
     );
 }
 
-function StorageSections() {
-    const { t } = useTranslation('settings');
-    const stored = useEndpoints((s) => s.endpoints);
-    const activeId = useEndpoints((s) => s.activeId);
-    const endpoints = listedEndpoints(stored);
-    const [chosen, setChosen] = useState<string | null>(null);
-    const endpoint = endpoints.find((entry) => entry.id === (chosen ?? activeId)) ?? endpoints[0] ?? null;
-    // Choosing a machine is a look at it, so its link opens for as long as the pane shows it.
-    useMachineHold(endpoint);
-    if (endpoint === null) {
-        return null;
-    }
-    return (
-        <MachineStorage
-            key={endpoint.id}
-            endpoint={endpoint}
-            picker={<MachinePicker endpoints={endpoints} value={endpoint.id} label={t('storage.output.machine')} onChange={setChosen} />}
-        />
-    );
-}
-
-function MachinePicker({ endpoints, value, label, onChange }: { endpoints: readonly Endpoint[]; value: string; label: string; onChange(id: string): void }) {
-    const current = endpoints.find((entry) => entry.id === value);
-    return (
-        <Menu.Root>
-            <Menu.Trigger render={<Button size="sm" variant="secondary" aria-label={label} />}>
-                <Icon icon={Server} size={14} />
-                <span className="max-w-40 truncate">{current?.label}</span>
-                <Icon icon={ChevronDown} size={12} />
-            </Menu.Trigger>
-            <Menu.Popup align="end" className="min-w-48">
-                <Menu.RadioGroup value={value} onValueChange={(next: string) => onChange(next)}>
-                    {endpoints.map((entry) => (
-                        <Menu.RadioItem key={entry.id} value={entry.id}>
-                            <span className="grow truncate">{entry.label}</span>
-                        </Menu.RadioItem>
-                    ))}
-                </Menu.RadioGroup>
-            </Menu.Popup>
-        </Menu.Root>
-    );
-}
-
-function MachineStorage({ endpoint, picker }: { endpoint: Endpoint; picker: ReactNode }) {
+function StorageSections({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
     const [attempt, setAttempt] = useState(0);
     const reading = useStorage(endpoint.id, attempt);
     const machine = endpoint.label;
     const outputSection = (children: ReactNode) => (
-        <SettingsSection title={t('storage.output.title')} description={t('storage.output.description')} icon={Package} action={picker}>
+        <SettingsSection title={t('storage.output.title')} description={t('storage.output.description')} icon={Package}>
             {children}
         </SettingsSection>
     );
@@ -164,7 +121,7 @@ function MachineStorage({ endpoint, picker }: { endpoint: Endpoint; picker: Reac
     if (reading.status !== 'ready') {
         return outputSection(
             <SettingsRow
-                searchId="storage.output"
+                searchId="machines.machine.storage.output"
                 muted
                 leading={reading.status === 'loading' ? undefined : <TopIcon icon={CircleAlert} className="text-text-faint" />}
                 label={t(`storage.state.${reading.status}`, { machine })}
@@ -185,7 +142,7 @@ function MachineStorage({ endpoint, picker }: { endpoint: Endpoint; picker: Reac
         <>
             {outputSection(
                 <SettingsRow
-                    searchId="storage.output"
+                    searchId="machines.machine.storage.output"
                     label={t('storage.output.on', { machine })}
                     control={<span className="text-sm font-medium text-text tabular-nums">{formatBytes(storage.total.bytes)}</span>}
                 >
@@ -232,12 +189,12 @@ function Proposals({
     return (
         <SettingsSection title={t('storage.cleanup.title')} description={t('storage.cleanup.description')} icon={Eraser}>
             {shown.length === 0 ? (
-                <SettingsRow searchId="storage.cleanup" muted label={t('storage.cleanup.nothing')} />
+                <SettingsRow searchId="machines.machine.storage.cleanup" muted label={t('storage.cleanup.nothing')} />
             ) : (
                 shown.map((proposal, index) => (
                     <SettingsRow
                         key={proposal.id}
-                        searchId={index === 0 ? 'storage.cleanup' : undefined}
+                        searchId={index === 0 ? 'machines.machine.storage.cleanup' : undefined}
                         leading={<TopIcon icon={Trash2} className="text-text-faint" />}
                         label={t('storage.cleanup.proposal', { title: proposal.title })}
                         description={t('storage.cleanup.frees', { count: proposal.versions.length, size: formatBytes(proposal.bytes) })}
@@ -290,12 +247,12 @@ function ByProject({ endpointId, machine, projects }: { endpointId: string; mach
             }
         >
             {projects.length === 0 ? (
-                <SettingsRow searchId="storage.projects" muted label={t('storage.projects.empty')} />
+                <SettingsRow searchId="machines.machine.storage.projects" muted label={t('storage.projects.empty')} />
             ) : (
                 projects.map((project, index) => (
                     <SettingsRow
                         key={project.projectId}
-                        searchId={index === 0 ? 'storage.projects' : undefined}
+                        searchId={index === 0 ? 'machines.machine.storage.projects' : undefined}
                         leading={
                             <span className="flex h-5.5 items-center">
                                 <OutputProjectGlyph endpointId={endpointId} projectId={project.projectId} size={16} />

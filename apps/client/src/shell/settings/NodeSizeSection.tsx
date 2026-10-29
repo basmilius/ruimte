@@ -1,20 +1,20 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Scaling } from 'lucide-react';
-import { NODE_SIZE, NODE_SIZE_MAX, NODE_SIZE_MIN, NodeKindSchema, type NodeKind, type NodeSize, type NodeSizes } from '@ruimte/contracts';
+import { NODE_SIZE, NODE_SIZE_MAX, NODE_SIZE_MIN, NodeKindSchema, type NodeKind, type NodeSize } from '@ruimte/contracts';
 import { Button, DisabledReason, Field, Input } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
 import { formatNodeSize, setDefaultSize } from '@/canvas/default-size';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
-import { useListedMachines } from '@/shell/settings/machine-list';
 import { readNodeSide, storedNodeSize, type NodeSide } from '@/shell/settings/node-size-fields';
+import { usePickedMachine } from '@/shell/settings/picked-machine';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useEndpointConnection } from '@/transport/status';
 
-/* The search lands on the first row of the first machine that keeps sizes. */
+/* The search lands on the first row. */
 const SEARCH_ID = 'views.nodeSizes';
 
 const SIDES: readonly NodeSide[] = ['w', 'h'];
@@ -162,44 +162,31 @@ function NodeSizeRow({ endpoint, kind, custom, connected, searchId }: NodeSizeRo
     );
 }
 
-function NodeSizeSection({ endpoint, sizes, searchId }: { endpoint: Endpoint; sizes: NodeSizes; searchId?: string }) {
+/* The sizes of the machine picked in the section's tag, a row per kind a person can add to a canvas. */
+export function NodeSizeSection() {
     const { t } = useTranslation('settings');
-    const connection = useEndpointConnection(endpoint.id);
-    const connected = connection.status === 'open';
+    useFormatLocale();
+    const endpoint = usePickedMachine();
+    // Nothing here holds a link, so the section reads what the machine last said.
+    const sizes = useServers((s) => (endpoint === null ? undefined : s.byEndpoint[endpoint.id]?.nodeSizes));
+    const connection = useEndpointConnection(endpoint?.id ?? '');
+
+    if (endpoint === null || sizes === undefined) {
+        return null;
+    }
 
     return (
-        <SettingsSection
-            title={t('views.nodeSizes.title', { machine: endpoint.label })}
-            description={t('views.nodeSizes.description')}
-            icon={Scaling}
-            scope="machine"
-        >
+        <SettingsSection title={t('views.nodeSizes.title')} description={t('views.nodeSizes.description')} icon={Scaling} scope="machine" machine="picked">
             {NodeKindSchema.options.map((kind, index) => (
                 <NodeSizeRow
-                    key={kind}
+                    key={`${endpoint.id}:${kind}`}
                     endpoint={endpoint}
                     kind={kind}
                     custom={sizes[kind]}
-                    connected={connected}
-                    searchId={index === 0 ? searchId : undefined}
+                    connected={connection.status === 'open'}
+                    searchId={index === 0 ? SEARCH_ID : undefined}
                 />
             ))}
         </SettingsSection>
-    );
-}
-
-/* A section per machine this client heard from, a row per kind a person can add to a canvas. */
-export function NodeSizeSections() {
-    useFormatLocale();
-    // Nothing here holds a link, so a section reads what a connected machine last said.
-    const servers = useServers((s) => s.byEndpoint);
-    const keeping = useListedMachines().filter((endpoint) => servers[endpoint.id] !== undefined);
-
-    return (
-        <>
-            {keeping.map((endpoint, index) => (
-                <NodeSizeSection key={endpoint.id} endpoint={endpoint} sizes={servers[endpoint.id]!.nodeSizes} searchId={index === 0 ? SEARCH_ID : undefined} />
-            ))}
-        </>
     );
 }

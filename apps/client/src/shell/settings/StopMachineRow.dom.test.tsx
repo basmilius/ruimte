@@ -30,7 +30,7 @@ async function open(choose: () => Promise<void> = async () => void order.push('c
     installDesktop({ machine: machineBridge('local', { stopPreview: () => (previewFails ? Promise.reject(new Error('no answer')) : preview), choose }) });
     page = mount();
     await page.render(<StopMachineRow />);
-    await clickOn(buttonWithText('Stop running…'));
+    await clickOn(buttonWithText('Stop using…'));
 }
 
 beforeEach(() => {
@@ -109,7 +109,7 @@ describe('stopping the machine this app runs', () => {
         await clickOn(buttonWithText('Stop and restart'));
         await until(() => everything().includes('the account refused'));
         expect(order).toEqual(['leave']);
-        expect(everything()).toContain('Stop running a machine on this computer?');
+        expect(everything()).toContain('Stop using this computer as a machine?');
     });
 
     test('a machine that cannot be reached stays on the account, and says so', async () => {

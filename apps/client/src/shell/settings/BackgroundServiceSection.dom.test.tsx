@@ -34,16 +34,16 @@ afterEach(async () => {
 describe('the way back to an app that only connects', () => {
     test('is offered where the shell can switch and this app runs a machine', async () => {
         await open('local');
-        expect(everything()).toContain('Stop running a machine here');
+        expect(everything()).toContain('Stop using this computer as a machine');
     });
 
     test('is not offered by a shell that cannot switch', async () => {
         await open(undefined);
-        expect(everything()).not.toContain('Stop running a machine here');
+        expect(everything()).not.toContain('Stop using this computer as a machine');
     });
 
     test('is not offered where this app runs no machine', async () => {
         await open('none');
-        expect(everything()).not.toContain('Stop running a machine here');
+        expect(everything()).not.toContain('Stop using this computer as a machine');
     });
 });

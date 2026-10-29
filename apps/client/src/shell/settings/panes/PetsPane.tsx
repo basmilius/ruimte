@@ -6,32 +6,16 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { useProviders } from '@adecore/agents-react/state';
 import { BEAM_SETTINGS } from '@/pets/beam';
 import { SHEET_LIMITS, stripsOf, usePetSprites, type CustomPetSprite } from '@/pets/custom-sprites';
-import { PetFigure } from '@/pets/PetFigure';
-import { CUSTOM_PET_PREFIX, PET_SETS, PET_WIDTH, petChoiceKey, petChoiceOfKey, petSetsWith, WORLD_CELL, type PetChoice } from '@/pets/pet-state';
-import { SPRITE_ROWS } from '@/pets/pixel';
+import { CUSTOM_PET_PREFIX, PET_SETS, petChoiceKey, petChoiceOfKey, petSetsWith, type PetChoice } from '@/pets/pet-state';
 import { lookOf, usePetPool } from '@/pets/use-pet-look';
 import { PetFigureDialog, type PetFigureEdit } from '@/shell/settings/panes/PetFigureDialog';
 import { PetsPreview } from '@/shell/settings/panes/PetsPreview';
-import { SubagentsTile, TeleportTile, VisitorTile } from '@/shell/settings/panes/PetTiles';
+import { FigureTile, SubagentsTile, TeleportTile, VisitorTile } from '@/shell/settings/panes/PetTiles';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings, type PetsPlace } from '@/state/settings';
 
 const PETS_PLACES: readonly PetsPlace[] = ['nodes', 'screen'];
-
-/* A figure's own rows, without the room over its head that its bubble and its jump take. */
-const FIGURE_HEIGHT = SPRITE_ROWS * WORLD_CELL;
-
-/* A figure standing, shown at the size it has on a canvas at 100%, cut to its own rows. */
-function FigurePreview({ choice, agent, sprites }: { choice: PetChoice; agent: string; sprites: readonly CustomPetSprite[] }) {
-    return (
-        <span className="relative block shrink-0 overflow-hidden" style={{ width: PET_WIDTH, height: FIGURE_HEIGHT }}>
-            <span className="absolute bottom-0 left-0">
-                <PetFigure look={lookOf(choice, agent, sprites)} mood="visiting" crowded={false} />
-            </span>
-        </span>
-    );
-}
 
 /* A row of the figures table: what the set looks like, its name, and a switch that puts it among the pets. */
 function FigureRow({
@@ -58,10 +42,10 @@ function FigureRow({
     return (
         <tr data-pet-set={petChoiceKey(choice)} className="border-t border-border first:border-t-0">
             <td className="py-2 pr-3">
-                <span className="flex items-end gap-1" aria-label={t('pets.sprite.preview', { name })} role="img">
-                    <FigurePreview choice={choice} agent="claude" sprites={sprites} />
+                <span className="flex gap-1.5" aria-label={t('pets.sprite.preview', { name })} role="img">
+                    <FigureTile look={lookOf(choice, 'claude', sprites)} />
                     {/* A built-in set has a figure of its own for Codex; a strip a person added stands for every agent. */}
-                    {choice.kind === 'built-in' && <FigurePreview choice={choice} agent="codex" sprites={sprites} />}
+                    {choice.kind === 'built-in' && <FigureTile look={lookOf(choice, 'codex', sprites)} />}
                 </span>
             </td>
             <td className="w-full py-2 pr-3">

@@ -19,16 +19,16 @@ import { formatShortcut, lazyNamed } from '@adecore/ui';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<SettingsSectionId, ComponentType> = {
+    general: lazyNamed(() => import('@/shell/settings/panes/GeneralPane'), 'GeneralPane'),
     appearance: lazyNamed(() => import('@/shell/settings/panes/AppearancePane'), 'AppearancePane'),
     editor: lazyNamed(() => import('@/shell/settings/panes/EditorPane'), 'EditorPane'),
     terminal: lazyNamed(() => import('@/shell/settings/panes/TerminalPane'), 'TerminalPane'),
     views: lazyNamed(() => import('@/shell/settings/panes/ViewsPane'), 'ViewsPane'),
     pets: lazyNamed(() => import('@/shell/settings/panes/PetsPane'), 'PetsPane'),
     files: lazyNamed(() => import('@/shell/settings/panes/FilesPane'), 'FilesPane'),
-    storage: lazyNamed(() => import('@/shell/settings/panes/StoragePane'), 'StoragePane'),
     providers: lazyNamed(() => import('@/shell/settings/panes/ProvidersPane'), 'ProvidersPane'),
+    chats: lazyNamed(() => import('@/shell/settings/panes/ChatsPane'), 'ChatsPane'),
     voice: lazyNamed(() => import('@/shell/settings/panes/VoicePane'), 'VoicePane'),
-    computer: lazyNamed(() => import('@/shell/settings/panes/ComputerPane'), 'ComputerPane'),
     usage: lazyNamed(() => import('@/shell/settings/panes/UsagePane'), 'UsagePane'),
     agents: lazyNamed(() => import('@/shell/settings/panes/AgentsPane'), 'AgentsPane'),
     machines: lazyNamed(() => import('@/shell/settings/panes/MachinesPane'), 'MachinesPane'),

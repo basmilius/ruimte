@@ -48,7 +48,7 @@ describe('searching the settings', () => {
 
     test('an interpolation the index cannot fill in is not matched as braces', () => {
         expect(searchSettings('{{')).toEqual([]);
-        expect(searchSettings('dates numbers read')).toMatchObject([{ id: 'appearance.region', description: 'Dates and numbers read as .' }]);
+        expect(searchSettings('dates numbers read')).toMatchObject([{ id: 'general.region', description: 'Dates and numbers read as .' }]);
     });
 
     test('a shortcut is found by its label, its category and its platform keys', () => {

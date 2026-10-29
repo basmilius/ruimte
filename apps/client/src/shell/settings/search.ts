@@ -43,17 +43,18 @@ function hasOpenedMachine(): boolean {
  * the search just does not know it.
  */
 export const SETTINGS_INDEX: readonly SearchEntry[] = [
+    row('general.language'),
+    row('general.region'),
+    row('general.projects'),
+    row('general.sidebar'),
+    row('general.needsYou'),
+    row('general.dock'),
+    row('general.browseStart'),
     row('appearance.theme'),
     row('appearance.palette'),
     row('appearance.accent'),
     row('appearance.interface.layout'),
-    row('appearance.interface.projects'),
-    row('appearance.interface.dock'),
-    row('appearance.sidebar'),
-    row('appearance.needsYou'),
     row('appearance.projectGlow'),
-    row('appearance.language'),
-    row('appearance.region'),
     row('appearance.font.interface'),
     row('appearance.font.interfaceSize'),
     row('editor.colors.light'),
@@ -119,12 +120,15 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('pets.agents'),
     row('files.files.openFiles'),
     row('files.files.hidden'),
-    row('files.files.browseStart'),
     row('files.git.layout'),
     row('files.git.whitespace'),
-    { id: 'storage.output', section: 'storage', label: 'settings:storage.output.title', description: 'settings:storage.output.description' },
-    { id: 'storage.cleanup', section: 'storage', label: 'settings:storage.cleanup.title', description: 'settings:storage.cleanup.description' },
-    { id: 'storage.projects', section: 'storage', label: 'settings:storage.projects.title', description: 'settings:storage.projects.footer' },
+    {
+        id: 'files.worktreeFolder',
+        section: 'files',
+        label: 'settings:machine.worktreeFolder.label',
+        description: 'settings:machine.worktreeFolder.description',
+        available: hasLocalMachine
+    },
     // On the detail of the CLI the pane opens on.
     {
         id: 'providers.defaults.account',
@@ -140,18 +144,19 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
-    row('agents.chats.sendKey'),
-    row('agents.chats.steerByDefault'),
-    row('agents.chats.hideToolCalls'),
     {
-        id: 'agents.chats.streaming',
-        section: 'agents',
-        label: 'settings:agents.chats.streaming.label',
-        description: 'settings:agents.chats.streaming.words.description'
+        id: 'chats.streaming',
+        section: 'chats',
+        label: 'settings:chats.streaming.label',
+        description: 'settings:chats.streaming.words.description'
     },
-    row('agents.chats.readingWidth'),
-    row('agents.chats.showViews'),
-    row('agents.chats.mapTiles'),
+    row('chats.readingWidth'),
+    row('chats.showToolCalls'),
+    row('chats.sendKey'),
+    row('chats.steerByDefault'),
+    row('chats.showViews'),
+    row('chats.mapTiles'),
+    { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' },
     row('providers.apple'),
     {
         id: 'providers.acpServer',
@@ -160,7 +165,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:providers.acpServer.description'
     },
     row('agents.resumeAtReset'),
-    row('agents.visualReplies'),
     row('agents.deleteAnyView'),
     row('agents.working.sound'),
     {
@@ -172,7 +176,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     {
         id: 'agents.integrations',
-        section: 'agents',
+        section: 'terminal',
         label: 'settings:agents.integrations.title',
         description: 'settings:agents.integrations.search',
         available: hasLocalMachine
@@ -213,9 +217,19 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:voice.conversation.confirm.label',
         description: 'settings:voice.conversation.confirm.description'
     },
-    { id: 'computer.enable', section: 'computer', label: 'settings:computer.allow', description: 'settings:computer.description' },
-    row('computer.grant.accessibility'),
-    row('computer.grant.screenRecording'),
+    { id: 'computer.enable', section: 'agents', label: 'settings:computer.allow', description: 'settings:computer.description' },
+    {
+        id: 'computer.grant.accessibility',
+        section: 'agents',
+        label: 'settings:computer.grant.accessibility.label',
+        description: 'settings:computer.grant.accessibility.description'
+    },
+    {
+        id: 'computer.grant.screenRecording',
+        section: 'agents',
+        label: 'settings:computer.grant.screenRecording.label',
+        description: 'settings:computer.grant.screenRecording.description'
+    },
     // On the account row of the Account pane.
     { id: 'machines.signIn', section: 'machines', label: 'settings:machines.account.title', description: 'settings:machines.account.description' },
     {
@@ -269,18 +283,33 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'settings:machine.streaming.description',
         available: hasOpenedMachine
     },
+    // On the Storage tab of a machine's detail.
+    {
+        id: 'machines.machine.storage.output',
+        section: 'machines',
+        label: 'settings:storage.output.title',
+        description: 'settings:storage.output.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.storage.cleanup',
+        section: 'machines',
+        label: 'settings:storage.cleanup.title',
+        description: 'settings:storage.cleanup.description',
+        available: hasOpenedMachine
+    },
+    {
+        id: 'machines.machine.storage.projects',
+        section: 'machines',
+        label: 'settings:storage.projects.title',
+        description: 'settings:storage.projects.footer',
+        available: hasOpenedMachine
+    },
     {
         id: 'machines.machine.usageStats',
         section: 'machines',
         label: 'settings:machine.usageStats.label',
         description: 'settings:machine.usageStats.search',
-        available: hasLocalMachine
-    },
-    {
-        id: 'machines.machine.worktreeFolder',
-        section: 'machines',
-        label: 'settings:machine.worktreeFolder.label',
-        description: 'settings:machine.worktreeFolder.description',
         available: hasLocalMachine
     },
     {

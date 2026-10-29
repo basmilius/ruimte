@@ -3,15 +3,15 @@ import {
     Bot,
     CodeXml,
     Folder,
-    HardDrive,
     Info,
     Keyboard,
     LayoutGrid,
+    MessagesSquare,
     Mic,
-    MousePointer2,
     Palette,
     PawPrint,
     Server,
+    Settings,
     SquareTerminal,
     type LucideIcon
 } from 'lucide-react';
@@ -32,14 +32,15 @@ interface SettingsNavGroup {
 }
 
 /*
- * The left navigation: how the app looks and answers, the surfaces you work in, and the agents with
- * what they may operate and what they cost. The pane for each id lives in `panes/`, and its words
- * under `sections.<id>` in the settings namespace.
+ * The left navigation: what the whole app does and how it looks, the surfaces you work in, and the
+ * agents with how their chats read, what they may do and what they cost. The pane for each id lives in
+ * `panes/`, and its words under `sections.<id>` in the settings namespace.
  */
 export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
     {
         label: null,
         sections: [
+            { id: 'general', icon: Settings },
             { id: 'appearance', icon: Palette },
             { id: 'keyboard', icon: Keyboard, split: true }
         ]
@@ -47,22 +48,21 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
     {
         label: 'workspace',
         sections: [
-            { id: 'editor', icon: CodeXml },
-            { id: 'terminal', icon: SquareTerminal },
             { id: 'views', icon: LayoutGrid },
             { id: 'pets', icon: PawPrint },
-            { id: 'files', icon: Folder },
-            { id: 'storage', icon: HardDrive }
+            { id: 'editor', icon: CodeXml },
+            { id: 'terminal', icon: SquareTerminal },
+            { id: 'files', icon: Folder }
         ]
     },
     {
         label: 'ai',
         sections: [
             { id: 'providers', icon: PROVIDERS_SECTION.icon, split: PROVIDERS_SECTION.split },
+            { id: 'chats', icon: MessagesSquare },
             { id: 'agents', icon: Bot },
-            { id: 'computer', icon: MousePointer2 },
-            { id: 'usage', icon: USAGE_SECTION.icon },
-            { id: 'voice', icon: Mic }
+            { id: 'voice', icon: Mic },
+            { id: 'usage', icon: USAGE_SECTION.icon }
         ]
     }
 ];

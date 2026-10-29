@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { usePrefersStill } from '@/pets/figure-support';
+import type { PetLook } from '@/pets/paint';
 import { PetFigure } from '@/pets/PetFigure';
 import { usePetLook } from '@/pets/use-pet-look';
 import { useSettings } from '@/state/settings';
@@ -120,6 +121,17 @@ export function VisitorTile() {
                     <PetFigure look={look} mood="visiting" crowded={false} cell={FIGURE_CELL} beam="in" />
                 </Standing>
             )}
+        </Tile>
+    );
+}
+
+/* One figure of a set standing in its tile, as the tiles of the rows above show theirs. */
+export function FigureTile({ look }: { look: PetLook }) {
+    return (
+        <Tile>
+            <Standing left={centered([FIGURE_WIDTH], 0)[0]}>
+                <PetFigure look={look} mood="visiting" crowded={false} cell={FIGURE_CELL} />
+            </Standing>
         </Tile>
     );
 }

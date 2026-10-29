@@ -1,19 +1,13 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@adecore/ui/format';
 import { Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import { chooseLanguage, chooseRegion } from '@/i18n';
-import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
 import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
 import { useTheme, type Theme } from '@/state/theme';
-
-/* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
-const EXAMPLE_MOMENT = new Date(2026, 8, 19, 14, 30);
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
 
@@ -74,78 +68,9 @@ function ThemePicker() {
     );
 }
 
-/* The language the interface is written in. A language Ruimte does not speak yet is not on the
-   list, so what the system asks for falls back to English rather than to half a translation. */
-function LanguageRow() {
-    const { t } = useTranslation('settings');
-    const language = useSettings((s) => s.language);
-
-    return (
-        <SettingsRow
-            searchId="appearance.language"
-            label={t('appearance.language.label')}
-            description={t('appearance.language.description')}
-            control={
-                <Select
-                    value={language}
-                    label={t('appearance.language.label')}
-                    align="end"
-                    items={[
-                        { value: LANGUAGE_SYSTEM, label: t('appearance.language.system') },
-                        // A language names itself, the way an operating system lists one, so whoever
-                        // opened this by accident can find the way back.
-                        ...APP_LANGUAGES.map((id) => ({ value: id, label: LANGUAGE_LABELS[id] }))
-                    ]}
-                    onValueChange={(value) => void chooseLanguage(value)}
-                />
-            }
-        />
-    );
-}
-
-/*
- * Which region writes the numbers, dates and times, a different question from the language. An
- * English interface on a Dutch machine still writes `08:05` and `1.234,5`. The example is the
- * setting, read back, so the choice is made on what it does and not on the name of a country.
- */
-function RegionRow() {
-    const { t, i18n } = useTranslation('settings');
-    const region = useSettings((s) => s.formatRegion);
-    // Subscribing is the point. The example below redraws when the region changes under it.
-    useFormatLocale();
-    const label = (choice: string): string => {
-        if (choice === FORMAT_LANGUAGE) {
-            return t('appearance.region.language');
-        }
-        if (choice === FORMAT_SYSTEM) {
-            return t('appearance.region.system');
-        }
-        return regionName(choice, i18n.language);
-    };
-
-    return (
-        <SettingsRow
-            searchId="appearance.region"
-            label={t('appearance.region.label')}
-            description={t('appearance.region.description', { example: `${formatDayClock(EXAMPLE_MOMENT)}, ${formatMoney(1234.5, 'USD')}` })}
-            control={
-                <Select
-                    value={region}
-                    label={t('appearance.region.label')}
-                    align="end"
-                    items={FORMAT_REGION_CHOICES.map((choice) => ({ value: choice, label: label(choice) }))}
-                    onValueChange={chooseRegion}
-                />
-            }
-        />
-    );
-}
-
 export function AppearancePane() {
     const { t } = useTranslation('settings');
     const panelLayout = useSettings((s) => s.panelLayout);
-    const projectNavigation = useSettings((s) => s.projectNavigation);
-    const sidebarScope = useSettings((s) => s.sidebarScope);
     const update = useSettings((s) => s.update);
 
     return (
@@ -182,41 +107,7 @@ export function AppearancePane() {
                         />
                     }
                 />
-                <SettingsRow
-                    searchId="appearance.interface.projects"
-                    label={t('appearance.interface.projects.label')}
-                    description={t('appearance.interface.projects.description')}
-                    control={
-                        <Select
-                            value={projectNavigation}
-                            label={t('appearance.interface.projects.label')}
-                            align="end"
-                            items={(['switcher', 'tabs'] as const).map((value) => ({ value, label: t(`appearance.interface.projects.${value}`) }))}
-                            onValueChange={(value) => update({ projectNavigation: value })}
-                        />
-                    }
-                />
-                <SettingSwitchRow id="appearance.interface.dock" setting="dockAutoHide" />
-                <SettingsRow
-                    searchId="appearance.sidebar"
-                    label={t('appearance.sidebar.label')}
-                    description={t('appearance.sidebar.description')}
-                    control={
-                        <Select
-                            value={sidebarScope}
-                            label={t('appearance.sidebar.label')}
-                            align="end"
-                            items={(['current', 'all-open'] as const).map((value) => ({ value, label: t(`appearance.sidebar.${value}`) }))}
-                            onValueChange={(value) => update({ sidebarScope: value })}
-                        />
-                    }
-                />
                 <SettingSwitchRow id="appearance.projectGlow" setting="projectGlow" />
-                {sidebarScope === 'current' && <SettingSwitchRow id="appearance.needsYou" setting="needsYouAllProjects" />}
-            </SettingsSection>
-            <SettingsSection title={t('appearance.languageRegion.title')}>
-                <LanguageRow />
-                <RegionRow />
             </SettingsSection>
             <FontSection />
         </>

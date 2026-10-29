@@ -41,8 +41,9 @@ describe('commandUsageName', () => {
 describe('the counted panels and sections', () => {
     test('are the panels and settings sections the client has', () => {
         expect(PANELS.map((entry) => entry.kind).toSorted()).toEqual([...USAGE_DESKTOP_PANELS].toSorted());
+        // An older client still counts the Computer use and Storage panes, which this one folded into Agents and a machine's detail.
         expect(ALL_SETTINGS_SECTIONS.flatMap((section) => usageSectionOf(section.id) ?? []).toSorted()).toEqual(
-            [...USAGE_DESKTOP_SETTINGS_SECTIONS].toSorted()
+            USAGE_DESKTOP_SETTINGS_SECTIONS.filter((section) => section !== 'computer' && section !== 'storage').toSorted()
         );
     });
 
@@ -51,6 +52,11 @@ describe('the counted panels and sections', () => {
         const open = { panel: CLOSED, panelsRestoring: false, settings: { open: true, section: 'pets' } } as never;
         expect(usageSectionOf('pets')).toBeNull();
         expect(openedBy(open, closed)).toEqual(['dialogs.settings']);
+    });
+
+    test('leave General and Chats uncounted until the counters know them', () => {
+        expect(usageSectionOf('general')).toBeNull();
+        expect(usageSectionOf('chats')).toBeNull();
     });
 });
 

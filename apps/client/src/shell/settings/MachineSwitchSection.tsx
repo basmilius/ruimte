@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingsRow } from '@adecore/ui/settings';
 import { Switch } from '@adecore/ui';
 import { MACHINE_SWITCHES, type MachineSwitch } from '@/shell/settings/machine-switches';
-import { useListedMachines } from '@/shell/settings/machine-list';
+import { usePickedMachine } from '@/shell/settings/picked-machine';
 import { useMachineSetting } from '@/shell/settings/machine-setting';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import type { Endpoint } from '@/state/endpoints';
@@ -24,7 +24,13 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
         <SettingsRow
             searchId={searchId}
             label={t(`${words}.label`)}
-            description={connected ? t(`${words}.description`) : connection.noLink === true ? t(`${words}.notConnected`) : t('machine.notAnswering')}
+            description={
+                connected
+                    ? t(`${words}.description`)
+                    : connection.noLink === true
+                      ? t(`${words}.notConnected`, { machine: endpoint.label })
+                      : t('machine.notAnswering')
+            }
             control={
                 <Switch
                     checked={info?.[setting] === true}
@@ -39,32 +45,23 @@ function MachineSwitchRow({ endpoint, setting, searchId }: { endpoint: Endpoint;
 }
 
 /*
- * One section per machine for what its agents may do, under the settings about agents rather than in
- * the Account pane. That pane is about reaching a machine and whether it answers; this is about an agent.
+ * What agents may do on the machine picked in the section's tag, under the settings about agents and
+ * chats rather than in the Account pane. That pane is about reaching a machine and whether it answers;
+ * this is about an agent.
  */
-export function MachineSwitchSections() {
+export function MachineSwitchSection({ title, settings = MACHINE_SWITCHES }: { title: string; settings?: readonly MachineSwitch[] }) {
     const { t } = useTranslation('settings');
-    const ordered = useListedMachines();
+    const endpoint = usePickedMachine();
+
+    if (endpoint === null) {
+        return null;
+    }
 
     return (
-        <>
-            {ordered.map((endpoint) => (
-                <SettingsSection
-                    key={endpoint.id}
-                    title={t('agents.machine.title', { machine: endpoint.label })}
-                    description={t('agents.machine.description')}
-                    scope="machine"
-                >
-                    {MACHINE_SWITCHES.map((setting) => (
-                        <MachineSwitchRow
-                            key={setting}
-                            endpoint={endpoint}
-                            setting={setting}
-                            searchId={ordered[0]?.id === endpoint.id ? `agents.${WORDS[setting]}` : undefined}
-                        />
-                    ))}
-                </SettingsSection>
+        <SettingsSection title={title} description={t('agents.machine.description')} scope="machine" machine="picked">
+            {settings.map((setting) => (
+                <MachineSwitchRow key={`${endpoint.id}:${setting}`} endpoint={endpoint} setting={setting} searchId={`agents.${WORDS[setting]}`} />
             ))}
-        </>
+        </SettingsSection>
     );
 }

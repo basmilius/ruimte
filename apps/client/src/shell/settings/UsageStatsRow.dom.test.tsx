@@ -42,7 +42,7 @@ async function open(usageStats: boolean | undefined): Promise<void> {
     page = mount();
     await page.renderApp();
     await act(async () => adoptEndpointInfo(LOCAL_ENDPOINT_ID, infoOf(usageStats)));
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'machines' }));
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'machines', target: 'machines.machine.usageStats' }));
 }
 
 beforeEach(() => {
@@ -51,13 +51,13 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setSettings({ open: false }));
+    await act(async () => useUi.getState().setSettings({ open: false, target: null }));
     await page.unmount();
     release();
     removeDesktop();
 });
 
-describe('Settings > Account > this machine > Usage statistics', () => {
+describe('Settings > Account > this machine > Share anonymous statistics', () => {
     test('is on, links to the privacy page, and turning it off tells the machine', async () => {
         await open(true);
         await until(() => usageSwitch() !== null);
@@ -73,7 +73,7 @@ describe('Settings > Account > this machine > Usage statistics', () => {
 
     test('is not offered by a machine from before the switch', async () => {
         await open(undefined);
-        await until(() => everything().includes('Worktree folder'));
+        await until(() => everything().includes('Name and icon'));
         expect(usageSwitch()).toBeNull();
     });
 });

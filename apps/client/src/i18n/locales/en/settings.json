@@ -47,37 +47,13 @@
             "description": "Selection rings, focus and the terminal cursor."
         },
         "interface": {
-            "title": "Interface",
-            "dock": {
-                "label": "Hide dock",
-                "description": "The bar under a canvas or drawing hides until the pointer nears the bottom edge."
-            },
-            "projects": {
-                "label": "Projects",
-                "description": "Switch projects from a menu, or show a window's projects as tabs in the toolbar.",
-                "switcher": "Switcher",
-                "tabs": "Tabs"
-            },
+            "title": "Window",
             "layout": {
                 "label": "Panel layout",
                 "description": "Roomy adds space and rounded corners between panels.",
                 "standard": "Standard",
                 "roomy": "Roomy"
             }
-        },
-        "language": {
-            "label": "Language",
-            "description": "System follows your OS, with English as fallback.",
-            "system": "System"
-        },
-        "region": {
-            "label": "Region",
-            "description": "Dates and numbers read as {{example}}.",
-            "language": "Follow language",
-            "system": "System"
-        },
-        "languageRegion": {
-            "title": "Language and region"
         },
         "font": {
             "title": "Font",
@@ -91,6 +67,33 @@
                 "description": "Scales text and spacing everywhere except terminals and code."
             }
         },
+        "projectGlow": {
+            "label": "Glow in project color",
+            "description": "Tints the top of the sidebar, or the toolbar, in the project's color."
+        }
+    },
+    "general": {
+        "languageRegion": {
+            "title": "Language and region"
+        },
+        "language": {
+            "label": "Language",
+            "description": "System follows your OS, with English as fallback.",
+            "system": "System"
+        },
+        "region": {
+            "label": "Region",
+            "description": "Dates and numbers read as {{example}}.",
+            "language": "Follow language",
+            "system": "System"
+        },
+        "projects": {
+            "title": "Projects and windows",
+            "label": "Projects",
+            "description": "Switch projects from a menu, or show a window's projects as tabs in the toolbar.",
+            "switcher": "Switcher",
+            "tabs": "Tabs"
+        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Projects in the sidebar and under Needs you, across all machines.",
@@ -98,12 +101,21 @@
             "all-open": "All open projects"
         },
         "needsYou": {
-            "label": "Needs you from every open project",
-            "description": "Also list what waits in other open projects, grouped by project."
+            "label": "Needs you across projects",
+            "description": "Also lists what waits in your other open projects, grouped by project."
         },
-        "projectGlow": {
-            "label": "Glow in project color",
-            "description": "Tints the top of the sidebar, or the toolbar, in the project's color."
+        "dock": {
+            "label": "Show dock",
+            "description": "The bar under a canvas or drawing.",
+            "always": "Always",
+            "edge": "Near the bottom edge"
+        },
+        "commandPalette": {
+            "title": "Command palette"
+        },
+        "browseStart": {
+            "label": "Start browsing in",
+            "description": "Where browsing for a folder in the command palette starts, on every machine. Empty means your home folder."
         }
     },
     "editor": {
@@ -159,7 +171,7 @@
                 },
                 "rightMargin": {
                     "label": "Right margin",
-                    "description": "A line at max_line_length from the project's .editorconfig."
+                    "description": "A line at the maximum line length in the project's .editorconfig."
                 }
             },
             "navigation": {
@@ -493,7 +505,7 @@
         "servers": {
             "title": "Language servers",
             "needsProject": "Open a project to manage its language servers.",
-            "description": "Installed once per machine, started per project when needed.",
+            "description": "Ruimte starts a server when a project needs it.",
             "failed": "Could not show the language servers",
             "groups": {
                 "scripts": "JavaScript and TypeScript",
@@ -524,7 +536,7 @@
                     "commandFound": "Found at {{path}}",
                     "commandMissing": "Not found on this machine. Give an absolute path.",
                     "args": "Arguments",
-                    "argsHint": "One per line. The server talks over stdio.",
+                    "argsHint": "One per line.",
                     "languages": "Languages",
                     "languagesHint": "Language ids, such as zig or toml, separated by commas.",
                     "patterns": "File patterns",
@@ -592,45 +604,45 @@
         }
     },
     "sections": {
+        "general": {
+            "label": "General",
+            "description": "Language, region, projects and windows."
+        },
         "appearance": {
             "label": "Appearance",
-            "description": "Theme, accent, fonts, language and region."
+            "description": "Theme, colors, fonts and panels."
         },
         "keyboard": {
             "label": "Keyboard",
-            "description": "All shortcuts."
+            "description": "Every shortcut, by area."
         },
         "editor": {
             "label": "Editor",
-            "description": "Font, wrapping, smart keys and language servers."
+            "description": "Font, colors, typing, templates and language servers."
         },
         "terminal": {
             "label": "Terminal",
-            "description": "Font size, line height and links."
+            "description": "Font, links and agent status."
         },
         "views": {
             "label": "Views",
-            "description": "Node sizes, canvas map, drawings and browser pages."
+            "description": "Canvases, drawings and browser pages."
         },
         "files": {
             "label": "Files and Git",
-            "description": "Files and Git panels, and where folder browsing starts."
+            "description": "File tabs and diffs."
         },
-        "storage": {
-            "label": "Storage",
-            "description": "What Ruimte keeps on a machine, and what you can let go."
+        "chats": {
+            "label": "Chats",
+            "description": "How replies appear and how you send messages."
         },
         "agents": {
             "label": "Agents",
-            "description": "Defaults, permissions and notifications for agents."
+            "description": "What new agents start with and what they may do."
         },
         "voice": {
             "label": "Voice",
             "description": "Microphone, dictation and Voice Control."
-        },
-        "computer": {
-            "label": "Computer Use",
-            "description": "Let agents operate apps you allow."
         },
         "machines": {
             "label": "Account",
@@ -651,8 +663,9 @@
         "click": "click"
     },
     "views": {
+        "tabs": "Kinds of view",
         "nodeSizes": {
-            "title": "New nodes on {{machine}}",
+            "title": "New nodes",
             "description": "The size a new node starts at, also when an agent adds it. Or right-click a node and choose Set as default size.",
             "searchLabel": "Default node sizes",
             "builtIn": "Built in",
@@ -675,7 +688,7 @@
             },
             "renderDistance": {
                 "label": "Render distance",
-                "description": "How far out pages, files, diagrams and devices stay live. Further out they show a still picture or their name. Applies to every window on this computer. Far and Unlimited ask more of it.",
+                "description": "How far out pages, files, diagrams and devices stay live. Further out they show a still picture or their name. Far and Unlimited ask more of this computer.",
                 "options": {
                     "standard": "Standard",
                     "far": "Far",
@@ -687,7 +700,7 @@
             "title": "Drawing",
             "snap": {
                 "label": "Snap to grid",
-                "description": "Shapes land on the 8 unit grid when you draw, move or resize them. Freehand strokes never snap."
+                "description": "Shapes land on the grid when you draw, move or resize them. Freehand strokes never snap."
             }
         },
         "browser": {
@@ -708,10 +721,6 @@
             "hidden": {
                 "label": "Show hidden and ignored files",
                 "description": "Ignored files, node_modules and dotfiles. System files stay hidden."
-            },
-            "browseStart": {
-                "label": "Start browsing in",
-                "description": "Where browsing in the command palette starts, on every machine. Empty means your home folder."
             }
         },
         "git": {
@@ -726,7 +735,7 @@
             },
             "whitespace": {
                 "label": "Show whitespace changes",
-                "description": "Off hides whitespace-only changes in diffs and counts."
+                "description": "When off, diffs and counts skip changes in whitespace only."
             }
         }
     },
@@ -874,7 +883,7 @@
     "backgroundService": {
         "title": "When Ruimte quits",
         "keepRunning": {
-            "label": "Keep this machine running",
+            "label": "Keep working after Ruimte quits",
             "description": "Sessions and agents keep working in the background, and the machine stays reachable."
         },
         "unavailable": {
@@ -895,7 +904,7 @@
         "linger": {
             "label": "Keep running after you log out",
             "on": "This machine keeps running after you log out.",
-            "off": "Off, this machine stops when you log out.",
+            "off": "When off, this machine stops when you log out.",
             "action": "Allow"
         },
         "stop": {
@@ -919,12 +928,12 @@
             "action": "Allow"
         },
         "stopRunning": {
-            "label": "Stop running a machine here",
+            "label": "Stop using this computer as a machine",
             "description": "Ruimte restarts and only connects to your machines. Your projects and chats stay on this computer.",
-            "action": "Stop running…"
+            "action": "Stop using…"
         },
         "confirmStopRunning": {
-            "title": "Stop running a machine on this computer?",
+            "title": "Stop using this computer as a machine?",
             "checking": "Checking what is running…",
             "agents_one": "An agent ends now.",
             "agents_other": "{{count}} agents end now.",
@@ -955,34 +964,37 @@
         "deleteAnyView": {
             "label": "Agents may delete any view or node",
             "rowLabel": "Agents on {{machine}} may delete any view or node",
-            "description": "Off, agents only delete views and nodes they created.",
-            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open."
+            "description": "When off, an agent deletes only the views and nodes it created.",
+            "notConnected": "{{machine}} is not connected. Change this from its details under Account, or open one of its projects."
         },
         "resumeAtReset": {
-            "label": "Chats resume after a limit",
-            "rowLabel": "Chats on {{machine}} resume after a limit",
+            "label": "Continue after a usage limit",
+            "rowLabel": "Chats on {{machine}} continue after a usage limit",
             "description": "A chat stopped by a usage limit continues once it resets. A turn that failed on an overloaded model tries again later.",
-            "notConnected": "Not connected. Change this while a project on the machine is open."
+            "notConnected": "{{machine}} is not connected. Open one of its projects to change this."
         },
         "visualReplies": {
             "label": "Visual replies",
             "rowLabel": "Agents on {{machine}} may show visual replies",
-            "description": "A chart, table or mockup above a reply. Off, agents answer in text.",
-            "notConnected": "Not connected. Change this while a project on the machine is open."
+            "description": "A chart, table or mockup above a reply. When off, agents answer in text.",
+            "notConnected": "{{machine}} is not connected. Open one of its projects to change this."
         },
         "machine": {
-            "title": "On {{machine}}",
+            "title": "What agents may do",
             "description": "Saved per machine. Applies to every device connected to it."
         },
         "defaults": {
             "title": "Defaults for new agents",
-            "description": "For every provider. Set each CLI's model and account under <link>Providers</link>.",
+            "description": "For every agent. Pick each agent's model and account under <link>Providers</link>.",
             "permissions": "Permissions",
             "terminalMode": "Terminal agents start in"
         },
+        "notifications": {
+            "title": "Notifications"
+        },
         "working": {
-            "title": "While an agent works",
-            "description": "Sleep pauses every agent.",
+            "title": "Keep awake",
+            "description": "When this computer sleeps, every agent pauses.",
             "sound": {
                 "label": "Notification sound",
                 "description": "Applies to every agent notification."
@@ -1003,11 +1015,11 @@
             },
             "battery": {
                 "label": "Also on battery",
-                "description": "Off, this computer only stays awake on the power adapter."
+                "description": "When off, this computer only stays awake on the power adapter."
             },
             "display": {
                 "label": "Keep display on",
-                "description": "Off, the display may sleep.",
+                "description": "When off, the display may sleep.",
                 "needsBattery": "Turn on Also on battery first."
             },
             "lid": {
@@ -1027,48 +1039,6 @@
                 }
             },
             "saveFailed": "Could not change keep awake"
-        },
-        "chats": {
-            "title": "Chats",
-            "streaming": {
-                "label": "Show replies",
-                "words": {
-                    "label": "Word by word",
-                    "description": "Follows the agent as it writes."
-                },
-                "blocks": {
-                    "label": "Paragraph by paragraph",
-                    "description": "Shows each paragraph once it is complete."
-                },
-                "whole": {
-                    "label": "When complete",
-                    "description": "Waits until the reply is done."
-                }
-            },
-            "readingWidth": {
-                "label": "Reading width",
-                "description": "The width of the messages in a chat view. A chat on a canvas fills its node."
-            },
-            "showViews": {
-                "label": "Let agents switch views",
-                "description": "On, a view an agent opens replaces yours, with a banner to go back. Off, the banner offers to go there."
-            },
-            "mapTiles": {
-                "label": "Map tiles",
-                "description": "Loads map tiles in chats from Ruimte's map service. Off, maps show only an outline and their places."
-            },
-            "sendKey": {
-                "label": "Send with",
-                "description": "Which key sends a message. When Enter does not send, it adds a line."
-            },
-            "steerByDefault": {
-                "label": "Steer running agents by default",
-                "description": "A message sent while Claude or Codex works reaches it at its next step. Off, it waits until the agent is done. Hold Option or Alt to do the opposite."
-            },
-            "hideToolCalls": {
-                "label": "Hide tool calls",
-                "description": "Hides the files an agent read and the commands it ran. Design chats always hide them."
-            }
         },
         "integrations": {
             "title": "Agent status in terminals",
@@ -1110,6 +1080,59 @@
             }
         }
     },
+    "chats": {
+        "replies": {
+            "title": "Replies"
+        },
+        "sending": {
+            "title": "Sending"
+        },
+        "views": {
+            "title": "Views and maps"
+        },
+        "agents": {
+            "title": "What agents may show"
+        },
+        "streaming": {
+            "label": "Show replies",
+            "words": {
+                "label": "Word by word",
+                "description": "Follows the agent as it writes."
+            },
+            "blocks": {
+                "label": "Paragraph by paragraph",
+                "description": "Shows each paragraph once it is complete."
+            },
+            "whole": {
+                "label": "When complete",
+                "description": "Waits until the reply is done."
+            }
+        },
+        "readingWidth": {
+            "label": "Reading width",
+            "description": "The width of the messages in a chat view. A chat on a canvas fills its node."
+        },
+        "showViews": {
+            "label": "Let agents switch views",
+            "description": "A view an agent opens replaces yours, with a banner to go back. When off, the banner offers to go there."
+        },
+        "mapTiles": {
+            "label": "Map tiles",
+            "description": "Loads map tiles in chats from Ruimte's map service. When off, maps show only an outline and their places."
+        },
+        "sendKey": {
+            "label": "Send with",
+            "description": "Which key sends a message. When Enter does not send, it adds a line."
+        },
+        "steerByDefault": {
+            "label": "Send to a working agent right away",
+            "description": "A message sent while Claude or Codex works reaches it at its next step. When off, it waits until the agent is done. Hold Option or Alt to do the opposite."
+        },
+        "showToolCalls": {
+            "label": "Show what an agent reads and runs",
+            "description": "The files an agent read and the commands it ran. Design chats never show them."
+        }
+    },
     "about": {
         "tagline": "Space for AI Engineering.",
         "version": "Version {{version}}",
@@ -1121,7 +1144,7 @@
             "unknown": "Unknown",
             "machine": {
                 "label": "Machine",
-                "description": "Current workspace's machine and version."
+                "description": "The machine of this window, and its version."
             },
             "platform": "Platform",
             "dataFolder": {
@@ -1133,7 +1156,7 @@
             "title": "Updates",
             "auto": {
                 "label": "Download updates automatically",
-                "description": "Off, you start each download yourself."
+                "description": "When off, you start each download yourself."
             },
             "check": "Check for updates",
             "checking": "Checking…",
@@ -1218,27 +1241,28 @@
             "preferencesFailure": "The machine did not save the choice.",
             "voice": {
                 "label": "Voice",
-                "description": "OpenAI's built-in Live voices. Marin and Cedar are recommended.",
+                "description": "OpenAI's built-in Live voices. Marin and Cedar sound the most natural.",
                 "selectLabel": "Conversation voice",
                 "default": "Default · recommended",
                 "recommended": "Recommended"
             },
             "confirm": {
                 "label": "Confirm deletions",
-                "description": "Ask before Voice Control deletes views or nodes. Off, spoken deletions run at once.",
+                "description": "Ask before Voice Control deletes views or nodes. When off, spoken deletions run at once.",
                 "toggle": "Confirm Voice Control deletions"
             }
         },
         "input": {
             "title": "Microphone and language",
-            "description": "The language Speech to Text listens for. Voice Control uses the same microphone."
+            "description": "The language Speech to text listens for. Voice Control uses the same microphone."
         }
     },
     "computer": {
+        "title": "Computer use",
         "description": "Agents see and operate only the apps you allow.",
         "enable": "Allow computer use on {{machine}}",
         "allow": "Allow computer use",
-        "failed": "Could not load Computer Use",
+        "failed": "Could not load Computer use",
         "machine": {
             "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
             "checking": "Checking…",
@@ -1273,8 +1297,8 @@
         "apps": {
             "always": "Allowed apps",
             "alwaysEmpty": "No apps allowed.",
-            "terminals": "Treated as terminals",
-            "terminalsEmpty": "No apps seen running a shell.",
+            "terminals": "Terminal apps",
+            "terminalsEmpty": "No terminal apps seen yet.",
             "thisTime": "This time",
             "allowed": "Allowed {{date}}",
             "seen": "Seen {{date}}",
@@ -1321,7 +1345,7 @@
             },
             "description": "How your signed-in devices find this machine when they are not on its network.",
             "none": "Off, so only devices on its network reach it.",
-            "fixed": "The machine was started with its own choice here, so yours applies once it starts without it.",
+            "fixed": "The machine was started with this set. Your choice applies once it starts without that.",
             "selectLabel": "Connection service for {{machine}}",
             "urlLabel": "Address of the connection service for {{machine}}"
         },
@@ -1330,7 +1354,7 @@
             "search": "Lets a device on the same network connect to the machine directly.",
             "open": "A device on the same network connects here directly.",
             "noAddress": "Open, but the machine has no address on a local network.",
-            "notListening": "Not open: the port is taken, or the machine started without it.",
+            "notListening": "Not open. Another app may hold the port, or the machine was started with it closed.",
             "closed": "Closed. Every device reaches this machine through your account.",
             "fixed": "The machine was started with this set, so the switch applies once it starts without it",
             "fixedNote": "The machine was started with this set, so the switch applies once it starts without it.",
@@ -1410,7 +1434,7 @@
             "toggle": "Allow browser and device streaming from {{machine}}"
         },
         "usageStats": {
-            "label": "Usage statistics",
+            "label": "Share anonymous statistics",
             "description": "Sends daily feature-use totals, without names, paths or anything that identifies you. <privacy>What is sent</privacy>",
             "search": "Anonymous daily totals of feature use, sent once a day",
             "toggle": "Send usage statistics from {{machine}}"
@@ -1481,6 +1505,13 @@
             "description": "Every device that reaches this machine sees these."
         },
         "connection": "Connection",
+        "tabs": {
+            "label": "Parts of this machine",
+            "overview": "Overview",
+            "connection": "Connection",
+            "storage": "Storage",
+            "access": "Access"
+        },
         "worktrees": "Worktrees",
         "privacy": "Privacy",
         "streaming": "Streaming",
@@ -1626,9 +1657,10 @@
         }
     },
     "scope": {
-        "client": "This device",
         "computer": "This computer",
-        "machine": "Machine"
+        "computerMac": "This Mac",
+        "computerPc": "This PC",
+        "pick": "Machine these settings are for"
     },
     "storage": {
         "failed": "Could not show storage.",
@@ -1712,14 +1744,14 @@
             "noKey": "No key",
             "continue": {
                 "label": "Continue automatically",
-                "description": "A chat that uses up a run's tool rounds starts the next run itself. Off, it waits for you."
+                "description": "A chat that uses up a run's steps starts the next run itself. When off, it waits for you."
             },
             "rounds": {
-                "label": "Tool rounds per run",
-                "description": "Tool rounds before a run stops, 5 to 200."
+                "label": "Steps per run",
+                "description": "Steps before a run stops, 5 to 200."
             },
             "runs": {
-                "label": "Runs before it stops",
+                "label": "Runs in a row",
                 "description": "Runs a chat starts by itself, 1 to 20. Each run spends your allowance."
             }
         },
@@ -1802,14 +1834,14 @@
             "failed": "Could not change the Claude API on this machine.",
             "continue": {
                 "label": "Continue automatically",
-                "description": "A chat that uses up a run's tool rounds starts the next run itself, and every call is billed. Off, it waits for you."
+                "description": "A chat that uses up a run's steps starts the next run itself, and every call is billed. When off, it waits for you."
             },
             "rounds": {
-                "label": "Tool rounds per run",
-                "description": "Tool rounds before a run stops, 5 to 200."
+                "label": "Steps per run",
+                "description": "Steps before a run stops, 5 to 200."
             },
             "runs": {
-                "label": "Runs before it stops",
+                "label": "Runs in a row",
                 "description": "Runs a chat starts by itself, 1 to 20. Each run is billed."
             },
             "tokens": {
@@ -1841,7 +1873,7 @@
         },
         "sprite": {
             "label": "Figures",
-            "description": "Pick one or more; each agent keeps a figure from one of them. Claude and Codex each have their own; other agents get Claude's.",
+            "description": "Pick one or more sets. Each agent keeps one figure. Claude and Codex have their own, other agents use Claude's.",
             "sets": {
                 "buddies": "Buddies",
                 "animals": "Fox and frog"

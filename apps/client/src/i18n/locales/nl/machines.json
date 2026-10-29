@@ -210,7 +210,7 @@
             }
         },
         "operated": {
-            "label": "Computer Use",
+            "label": "Computer use",
             "working": "Bezig",
             "paused": "Gepauzeerd",
             "takenOver": "Jij hebt de controle",

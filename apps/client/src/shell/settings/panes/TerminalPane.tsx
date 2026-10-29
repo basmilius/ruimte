@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Segmented, Select, Stepper } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import { IntegrationsSection } from '@/shell/settings/panes/IntegrationsSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { FONT_SIZE_RANGE, MONO_FONTS, monoFontStack, TERMINAL_LINE_HEIGHT_RANGE, terminalFontOf, useSettings } from '@/state/settings';
 
@@ -104,6 +105,7 @@ export function TerminalPane() {
                     }
                 />
             </SettingsSection>
+            <IntegrationsSection />
         </>
     );
 }

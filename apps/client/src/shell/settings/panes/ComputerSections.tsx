@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MousePointer2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerGrant } from '@ruimte/contracts';
 import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
@@ -15,7 +16,8 @@ import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
 import type { Endpoint } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 
-export function ComputerPane() {
+/* Computer use under Agents: it is something an agent may do, held to by the machine that runs it. */
+export function ComputerSections() {
     const { t } = useTranslation('settings');
     return (
         <ErrorBoundary label={t('computer.failed')} className="relative" compact>
@@ -43,7 +45,7 @@ function ThisMacUnavailable() {
     const { t } = useTranslation('settings');
     const [confirming, setConfirming] = useState(false);
     return (
-        <SettingsSection>
+        <SettingsSection title={t('computer.title')} description={t('computer.description')} icon={MousePointer2}>
             <SettingsRow
                 searchId="computer.enable"
                 muted
@@ -71,7 +73,7 @@ function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boole
 
     return (
         <>
-            <SettingsSection>
+            <SettingsSection title={t('computer.title')} description={t('computer.description')} icon={MousePointer2}>
                 <SettingsRow
                     searchId={first ? 'computer.enable' : undefined}
                     label={t('computer.enable', { machine: endpoint.label })}

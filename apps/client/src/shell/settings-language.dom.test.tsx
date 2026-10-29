@@ -47,11 +47,11 @@ afterEach(async () => {
 
 describe('Settings navigation and language', () => {
     test('names its sections and the open pane in the language picked while it is open', async () => {
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'appearance' }));
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'general' }));
         await until(() => dialogText().includes('Keyboard'));
         expect(dialogText()).toContain('Appearance');
-        await until(() => document.querySelector('[data-settings-row="appearance.language"]') !== null);
-        expect(document.querySelector('[data-settings-row="appearance.language"]')?.textContent).toContain('Language');
+        await until(() => document.querySelector('[data-settings-row="general.language"]') !== null);
+        expect(document.querySelector('[data-settings-row="general.language"]')?.textContent).toContain('Language');
         expect(dialogText()).not.toContain('Could not show this settings page');
 
         await act(async () => {
@@ -62,15 +62,15 @@ describe('Settings navigation and language', () => {
         expect(dialogText()).toContain('Uiterlijk');
         expect(dialogText()).toContain('Werkruimte');
         expect(dialogText()).not.toContain('Appearance');
-        expect(document.querySelector('[data-settings-row="appearance.language"]')?.textContent).toContain('Taal');
-        expect(document.querySelector('[data-settings-row="appearance.language"]')?.textContent).not.toContain('Language');
-        expect(document.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Thema');
+        expect(document.querySelector('[data-settings-row="general.language"]')?.textContent).toContain('Taal');
+        expect(document.querySelector('[data-settings-row="general.language"]')?.textContent).not.toContain('Language');
+        expect(dialogText()).toContain('Taal en regio');
         expect(dialogText()).not.toContain('Could not show this settings page');
     });
 
     test('a shortcut search opens the category and highlights the real keyboard row', async () => {
-        await act(async () => useUi.getState().setSettings({ open: true, section: 'appearance' }));
-        await until(() => document.querySelector('[data-settings-row="appearance.language"]') !== null);
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'general' }));
+        await until(() => document.querySelector('[data-settings-row="general.language"]') !== null);
         const field = document.querySelector<HTMLInputElement>('[role="dialog"] input')!;
         await act(async () => {
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, 'zoom out');

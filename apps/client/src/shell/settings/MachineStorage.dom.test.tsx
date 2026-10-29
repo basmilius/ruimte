@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { REQUEST_SCHEMAS, type ArtifactCleanupProposal, type ArtifactStorageResult, type RequestType } from '@ruimte/contracts';
 import { useUi } from '@/state/ui';
-import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
-import { FakeMachine } from '../../../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { buttonWithText, everything } from '../../../../testing/dom-helpers';
-import { emptyCanvas } from '../../../../testing/project-fixtures';
+import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { FakeMachine } from '../../../testing/fake-machine';
+import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
+import { buttonWithText, everything } from '../../../testing/dom-helpers';
+import { emptyCanvas } from '../../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();
 const MB = 1024 * 1024;
@@ -35,7 +35,7 @@ let workspace: FakeWorkspace;
 let page: Mounted;
 
 async function openStorage(): Promise<void> {
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'storage' }));
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'machines', target: 'machines.machine.storage.output' }));
 }
 
 beforeEach(async () => {
@@ -51,7 +51,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setSettings({ open: false }));
+    await act(async () => useUi.getState().setSettings({ open: false, target: null }));
     await act(async () => useUi.getState().setPanel({ open: false, kind: 'files' }));
     await page.unmount();
     workspace.close();

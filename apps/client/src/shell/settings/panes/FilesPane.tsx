@@ -1,16 +1,19 @@
-import { Folder, GitBranch } from 'lucide-react';
+import { Folder, FolderGit2, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SettingsRow } from '@adecore/ui/settings';
-import { Input, Segmented, Stepper } from '@adecore/ui';
+import { Segmented, Stepper } from '@adecore/ui';
+import { WorktreeFolderRow } from '@/shell/settings/MachineSettings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { hasLocalMachine } from '@/state/local-machine';
 import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
+import { useEndpointConnection } from '@/transport/status';
 
 /* The two panels beside the canvas, what the Files panel shows and keeps open, and how the Git panel lists what changed. */
 export function FilesPane() {
     const { t } = useTranslation('settings');
     const filesTabLimit = useSettings((s) => s.filesTabLimit);
-    const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const diffLayout = useSettings((s) => s.diffLayout);
     const update = useSettings((s) => s.update);
 
@@ -33,21 +36,6 @@ export function FilesPane() {
                     }
                 />
                 <SettingSwitchRow id="files.files.hidden" setting="filesShowHidden" />
-                <SettingsRow
-                    searchId="files.files.browseStart"
-                    label={t('files.files.browseStart.label')}
-                    description={t('files.files.browseStart.description')}
-                >
-                    <Input
-                        mono
-                        aria-label={t('files.files.browseStart.label')}
-                        placeholder="~/projects"
-                        value={browseStartFolder}
-                        spellCheck={false}
-                        onChange={(e) => update({ browseStartFolder: e.target.value })}
-                        onKeyDown={(e) => e.stopPropagation()}
-                    />
-                </SettingsRow>
             </SettingsSection>
             <SettingsSection title={t('files.git.title')} icon={GitBranch}>
                 <SettingsRow
@@ -68,6 +56,24 @@ export function FilesPane() {
                 />
                 <SettingSwitchRow id="files.git.whitespace" setting="diffWhitespace" />
             </SettingsSection>
+            <WorktreeSection />
         </>
+    );
+}
+
+/* Only the app on this computer may move its machine's worktrees, so the section is about that machine alone. */
+function WorktreeSection() {
+    const { t } = useTranslation('settings');
+    const local = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID) ?? null);
+    const connection = useEndpointConnection(LOCAL_ENDPOINT_ID);
+
+    if (local === null || !hasLocalMachine()) {
+        return null;
+    }
+
+    return (
+        <SettingsSection title={t('machineDialog.worktrees')} icon={FolderGit2} scope="computer">
+            <WorktreeFolderRow endpoint={local} reason={connection.status === 'open' ? null : t('machineDialog.availableWhenAnswering')} />
+        </SettingsSection>
     );
 }

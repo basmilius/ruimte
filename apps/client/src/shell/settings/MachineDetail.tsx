@@ -3,8 +3,8 @@ import { CloudUpload, Plug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { messageOf, Button, Icon, FormError } from '@adecore/ui';
-import { ConfirmDialog, DetailHeader, SettingsRow } from '@adecore/ui/settings';
+import { messageOf, Button, Icon, FormError, Segmented } from '@adecore/ui';
+import { ConfirmDialog, DetailHeader, SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
@@ -19,9 +19,9 @@ import {
     ReachRow,
     StreamingRow,
     UsageStatsRow,
-    WithReason,
-    WorktreeFolderRow
+    WithReason
 } from '@/shell/settings/MachineSettings';
+import { MachineStorage } from '@/shell/settings/MachineStorage';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
@@ -37,7 +37,26 @@ const ACTION_DEPS: MachineActionDeps = {
     refreshAccount: refreshAccountMachines
 };
 
-/* Everything about one machine, beside its row in the Account pane. */
+type MachineTab = 'overview' | 'connection' | 'storage' | 'access';
+
+const MACHINE_TABS: readonly MachineTab[] = ['overview', 'connection', 'storage', 'access'];
+
+const CONNECTION_TARGETS = ['machines.machine.broker', 'machines.machine.lanDoor', 'machines.machine.reach', 'machines.machine.direct'];
+
+/* The tab that holds the row a search result names; every other row of a machine is on its overview. */
+function tabOfTarget(target: string | null): MachineTab | null {
+    if (target === null || !target.startsWith('machines.machine.')) {
+        return null;
+    }
+
+    if (CONNECTION_TARGETS.includes(target)) {
+        return 'connection';
+    }
+
+    return target.startsWith('machines.machine.storage.') ? 'storage' : 'overview';
+}
+
+/* Everything about one machine, beside its row in the Account pane, in a tab per part of it. */
 export function MachineDetail({ entry }: { entry: MachineEntry }) {
     const { t } = useTranslation('settings');
     // The one place in the pane that connects to the machine, so its name, broker and clients with access are live.
@@ -53,6 +72,19 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
     const reason = model.settings === 'not-answering' ? t('machineDialog.availableWhenAnswering') : null;
     const name = nameOf(entry);
     const version = info?.version ?? null;
+    const { target } = useSettingsTarget();
+    const [tab, setTab] = useState<MachineTab>(() => tabOfTarget(target) ?? 'overview');
+    const [seenTarget, setSeenTarget] = useState(target);
+
+    // A search result opens its own tab; adjusted while rendering so the row exists in the frame it is lit.
+    if (target !== seenTarget) {
+        setSeenTarget(target);
+        const next = tabOfTarget(target);
+
+        if (next !== null) {
+            setTab(next);
+        }
+    }
 
     const open = (): void => {
         if (entry.machine === null) {
@@ -89,39 +121,55 @@ export function MachineDetail({ entry }: { entry: MachineEntry }) {
                     />
                 </SettingsSection>
             )}
-            {entry.endpoint !== null && (
+            {entry.endpoint === null ? (
+                <RemoveSection entry={entry} model={model} />
+            ) : (
                 <>
-                    <MachineIdentityForm
-                        key={`${info?.nameSource ?? ''}:${info?.label ?? ''}:${JSON.stringify(info?.icon ?? null)}:${reason ?? ''}`}
-                        endpointId={entry.endpoint.id}
-                        label={entry.endpoint.label}
-                        disabledReason={reason}
-                        knownIcon={icon}
+                    <Segmented<MachineTab>
+                        value={tab}
+                        options={MACHINE_TABS.map((id) => ({ id, label: t(`machineDialog.tabs.${id}`) }))}
+                        label={t('machineDialog.tabs.label')}
+                        onValueChange={setTab}
                     />
-                    <SettingsSection title={t('machineDialog.connection')}>
-                        <BrokerRow endpoint={entry.endpoint} reason={reason} />
-                        <LanDoorRow endpoint={entry.endpoint} reason={reason} />
-                        <ReachRow endpoint={entry.endpoint} reason={reason} />
-                        {model.direct && <DirectRow endpoint={entry.endpoint} />}
-                        <StreamingRow endpoint={entry.endpoint} reason={reason} />
-                    </SettingsSection>
-                    <AccountSection entry={entry} endpoint={entry.endpoint} model={model} machineAccount={machineAccount} reason={reason} />
-                    {entry.local && (
-                        <SettingsSection title={t('machineDialog.worktrees')}>
-                            <WorktreeFolderRow endpoint={entry.endpoint} reason={reason} />
+                    {tab === 'overview' && (
+                        <>
+                            <MachineIdentityForm
+                                key={`${info?.nameSource ?? ''}:${info?.label ?? ''}:${JSON.stringify(info?.icon ?? null)}:${reason ?? ''}`}
+                                endpointId={entry.endpoint.id}
+                                label={entry.endpoint.label}
+                                disabledReason={reason}
+                                knownIcon={icon}
+                            />
+                            <SettingsSection title={t('machineDialog.streaming')}>
+                                <StreamingRow endpoint={entry.endpoint} reason={reason} />
+                            </SettingsSection>
+                            {entry.local && <BackgroundServiceSection />}
+                            {entry.local && info?.usageStats !== undefined && (
+                                <SettingsSection title={t('machineDialog.privacy')}>
+                                    <UsageStatsRow endpoint={entry.endpoint} reason={reason} />
+                                </SettingsSection>
+                            )}
+                            <MachineLinks endpoint={entry.endpoint} />
+                        </>
+                    )}
+                    {tab === 'connection' && (
+                        <SettingsSection title={t('machineDialog.connection')}>
+                            <ReachRow endpoint={entry.endpoint} reason={reason} />
+                            <LanDoorRow endpoint={entry.endpoint} reason={reason} />
+                            <BrokerRow endpoint={entry.endpoint} reason={reason} />
+                            {model.direct && <DirectRow endpoint={entry.endpoint} />}
                         </SettingsSection>
                     )}
-                    {entry.local && <BackgroundServiceSection />}
-                    {entry.local && info?.usageStats !== undefined && (
-                        <SettingsSection title={t('machineDialog.privacy')}>
-                            <UsageStatsRow endpoint={entry.endpoint} reason={reason} />
-                        </SettingsSection>
+                    {tab === 'storage' && <MachineStorage endpoint={entry.endpoint} />}
+                    {tab === 'access' && (
+                        <>
+                            <MachineAccess endpoint={entry.endpoint} />
+                            <AccountSection entry={entry} endpoint={entry.endpoint} model={model} machineAccount={machineAccount} reason={reason} />
+                            <RemoveSection entry={entry} model={model} />
+                        </>
                     )}
-                    <MachineAccess endpoint={entry.endpoint} />
-                    <MachineLinks endpoint={entry.endpoint} />
                 </>
             )}
-            <RemoveSection entry={entry} model={model} />
         </>
     );
 }

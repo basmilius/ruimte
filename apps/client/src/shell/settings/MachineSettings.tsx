@@ -685,7 +685,7 @@ export function WorktreeFolderRow({ endpoint, reason }: { endpoint: Endpoint; re
     const canReset = kept !== null && kept !== undefined;
     return (
         <SettingsRow
-            searchId="machines.machine.worktreeFolder"
+            searchId="files.worktreeFolder"
             label={t('machine.worktreeFolder.label')}
             description={
                 canReset

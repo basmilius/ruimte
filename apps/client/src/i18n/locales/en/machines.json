@@ -210,7 +210,7 @@
             }
         },
         "operated": {
-            "label": "Computer Use",
+            "label": "Computer use",
             "working": "Working",
             "paused": "Paused",
             "takenOver": "You have control",

@@ -42,7 +42,7 @@ async function open(platform: string, machine: DesktopBridge['machine']): Promis
     useEndpoints.getState().add(ATTIC);
     page = mount();
     await page.renderApp();
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'computer' }));
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'agents' }));
     await until(() => everything().includes('Allow computer use on Attic'));
 }
 
@@ -75,7 +75,7 @@ afterEach(async () => {
     removeDesktop();
 });
 
-describe('Settings > Computer Use of an app that runs no machine', () => {
+describe('Settings > Agents > Computer use of an app that runs no machine', () => {
     test('a Mac shows the row off, and the button opens the restart question', async () => {
         await open(
             'darwin',
@@ -110,13 +110,13 @@ describe('Settings > Computer Use of an app that runs no machine', () => {
     });
 });
 
-describe('Settings > Computer Use app grants', () => {
+describe('Settings > Agents > Computer use app grants', () => {
     test('empty app grants show their empty states without revoke controls', async () => {
         const machine = await openGrants({ always: [], terminals: [], thisTime: [] });
         expect(everything()).toContain('No apps allowed.');
-        expect(everything()).toContain('No apps seen running a shell.');
+        expect(everything()).toContain('No terminal apps seen yet.');
         expect(everything()).not.toContain('This time');
-        for (const label of ['Allowed apps', 'Treated as terminals']) {
+        for (const label of ['Allowed apps', 'Terminal apps']) {
             const section = document.querySelector(`section[aria-label="${label}"]`);
             expect(section).not.toBeNull();
             expect(section!.querySelectorAll('button')).toHaveLength(0);

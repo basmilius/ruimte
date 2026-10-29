@@ -57,9 +57,9 @@ export function countCommand(id: string, source: UsageCommandSource): void {
     }
 }
 
-/* The counter a settings section opens; Pets is counted nowhere. */
+/* The counter a settings section opens. A section newer than Observatory's list is counted nowhere until the list there has it. */
 export function usageSectionOf(section: SettingsSectionId): UsageDesktopSettingsSection | null {
-    return section === 'pets' ? null : section;
+    return section === 'pets' || section === 'general' || section === 'chats' ? null : section;
 }
 
 type Watched = Pick<ReturnType<typeof useUi.getState>, 'panel' | 'panelsRestoring' | 'settings'>;

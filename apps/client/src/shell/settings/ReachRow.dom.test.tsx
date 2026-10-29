@@ -46,7 +46,7 @@ async function open(setUp: (machine: FakeMachine) => void): Promise<void> {
     page = mount();
     await page.renderApp();
     await act(async () => adoptEndpointInfo(LOCAL_ENDPOINT_ID, INFO));
-    await act(async () => useUi.getState().setSettings({ open: true, section: 'machines' }));
+    await act(async () => useUi.getState().setSettings({ open: true, section: 'machines', target: 'machines.machine.reach' }));
 }
 
 beforeEach(() => {
@@ -54,7 +54,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-    await act(async () => useUi.getState().setSettings({ open: false }));
+    await act(async () => useUi.getState().setSettings({ open: false, target: null }));
     await page.unmount();
     release();
     removeDesktop();
@@ -111,7 +111,7 @@ describe('Settings > Machines > this machine > Reachable from other devices', ()
 
     test('is not offered by a machine from before the check', async () => {
         await open((fake) => fake.answersOnly((Object.keys(REQUEST_SCHEMAS) as RequestType[]).filter((type) => type !== 'endpoint.reach')));
-        await until(() => everything().includes('Worktree folder'));
+        await until(() => everything().includes('Local network'));
         expect(checkAgain()).toBeNull();
         expect(machine.requests('endpoint.reach')).toEqual([]);
     });

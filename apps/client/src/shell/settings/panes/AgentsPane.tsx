@@ -1,21 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { BatteryCharging } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
-import { CLOSED_LID_BATTERY_FLOOR, type AgentIntegrationFile, type RuntimeMode } from '@ruimte/contracts';
-import {
-    rememberChatPreferences,
-    rememberReadingWidth,
-    rememberSendKey,
-    useChatPreferences,
-    CHAT_SEND_KEYS,
-    sendKeyHint,
-    sendKeyLabel,
-    CHAT_READING_WIDTHS,
-    readingWidthHint,
-    readingWidthLabel,
-    RUNTIME_MODES,
-    runtimeModeHint,
-    runtimeModeLabel
-} from '@adecore/agents-react/chat';
+import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
+import { rememberChatPreferences, useChatPreferences, RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
 import {
     setClosedLidRule,
     setKeepAwake,
@@ -25,18 +12,13 @@ import {
     useKeepAwakeChoice,
     useMachineKeepsAwake
 } from '@/state/keep-awake';
-import { IntegrationDetails, IntegrationReports } from '@/shell/AgentIntegrationsDialog';
-import { CliMark } from '@adecore/agents-react/providers';
-import { INTEGRATION_NAMES, loadIntegrationFiles, useAgentIntegrations, useIntegrationChoice } from '@/state/agent-integrations';
-import { isApplePlatform } from '@/desktop/bridge';
-import { hasLocalMachine } from '@/state/local-machine';
-import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
+import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
+import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
 import { SettingsRow } from '@adecore/ui/settings';
 import { Button, FormError, Switch, Select, type SelectItem, messageOf } from '@adecore/ui';
 import { formatPercent } from '@adecore/ui/format';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
@@ -45,16 +27,19 @@ function runtimeModeItems(): SelectItem<RuntimeMode>[] {
     return RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
 }
 
-const STREAMING_MODES = ['words', 'blocks', 'whole'] as const;
-
+/* What new agents start with, what they may do on each machine, and what this computer lets them do while they work. How a chat reads is under Chats. */
 export function AgentsPane() {
+    const { t } = useTranslation('settings');
+
     return (
         <>
             <AgentDefaultsSection />
-            <ChatsSection />
-            <MachineSwitchSections />
+            <MachineSwitchSection title={t('agents.machine.title')} settings={['agentsDeleteAnyView', 'resumeAtReset']} />
+            <SettingsSection title={t('agents.notifications.title')}>
+                <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />
+            </SettingsSection>
+            <ComputerSections />
             <WorkingSection />
-            <IntegrationsSection />
         </>
     );
 }
@@ -111,69 +96,6 @@ function AgentDefaultsSection() {
     );
 }
 
-function ChatsSection() {
-    const { t } = useTranslation('settings');
-    const chatStreaming = useSettings((s) => s.chatStreaming);
-    const update = useSettings((s) => s.update);
-    const readingWidth = useChatPreferences((preferences) => preferences.readingWidth);
-    const sendKey = useChatPreferences((preferences) => preferences.sendKey);
-    const apple = isApplePlatform();
-    return (
-        <SettingsSection title={t('agents.chats.title')} scope="client">
-            <SettingsRow
-                searchId="agents.chats.sendKey"
-                label={t('agents.chats.sendKey.label')}
-                description={t('agents.chats.sendKey.description')}
-                control={
-                    <Select
-                        value={sendKey}
-                        label={t('agents.chats.sendKey.label')}
-                        align="end"
-                        items={CHAT_SEND_KEYS.map((key) => ({ value: key, label: sendKeyLabel(key, apple), description: sendKeyHint(key, apple) }))}
-                        onValueChange={rememberSendKey}
-                    />
-                }
-            />
-            <SettingSwitchRow id="agents.chats.steerByDefault" setting="chatSteerByDefault" />
-            <SettingSwitchRow id="agents.chats.hideToolCalls" setting="chatHideToolCalls" />
-            <SettingsRow
-                searchId="agents.chats.streaming"
-                label={t('agents.chats.streaming.label')}
-                description={t(`agents.chats.streaming.${chatStreaming}.description`)}
-                control={
-                    <Select
-                        value={chatStreaming}
-                        label={t('agents.chats.streaming.label')}
-                        align="end"
-                        items={STREAMING_MODES.map((mode) => ({
-                            value: mode,
-                            label: t(`agents.chats.streaming.${mode}.label`),
-                            description: t(`agents.chats.streaming.${mode}.description`)
-                        }))}
-                        onValueChange={(value) => update({ chatStreaming: value })}
-                    />
-                }
-            />
-            <SettingsRow
-                searchId="agents.chats.readingWidth"
-                label={t('agents.chats.readingWidth.label')}
-                description={t('agents.chats.readingWidth.description')}
-                control={
-                    <Select
-                        value={readingWidth}
-                        label={t('agents.chats.readingWidth.label')}
-                        align="end"
-                        items={CHAT_READING_WIDTHS.map((width) => ({ value: width, label: readingWidthLabel(width), description: readingWidthHint(width) }))}
-                        onValueChange={rememberReadingWidth}
-                    />
-                }
-            />
-            <SettingSwitchRow id="agents.chats.showViews" setting="agentsShowViews" />
-            <SettingSwitchRow id="agents.chats.mapTiles" setting="chatMapTiles" />
-        </SettingsSection>
-    );
-}
-
 function WorkingSection() {
     const { t } = useTranslation('settings');
     const { keepAwake, keepAwakeOnBattery, keepAwakeDisplay } = useKeepAwakeChoice();
@@ -181,38 +103,40 @@ function WorkingSection() {
     const awake = useKeepAwakeAvailable();
     // The machine holds the display only with battery allowed; the shell from before weighed the power source itself.
     const displayNeedsBattery = useMachineKeepsAwake() && !keepAwakeOnBattery;
+
+    if (!awake) {
+        return null;
+    }
+
     return (
-        <SettingsSection title={t('agents.working.title')} description={awake ? t('agents.working.description') : undefined} scope="computer">
-            <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />
-            {awake && (
-                <SettingsRow
-                    searchId="agents.keepAwake.mode"
-                    label={t('agents.keepAwake.mode.label')}
-                    description={keepAwake === 'off' ? undefined : t(`agents.keepAwake.mode.${keepAwake}.description`)}
-                    control={
-                        <Select
-                            value={keepAwake}
-                            label={t('agents.keepAwake.mode.label')}
-                            align="end"
-                            items={[
-                                { value: 'off', label: t('agents.keepAwake.mode.off') },
-                                {
-                                    value: 'working',
-                                    label: t('agents.keepAwake.mode.working.label'),
-                                    description: t('agents.keepAwake.mode.working.description')
-                                },
-                                {
-                                    value: 'always',
-                                    label: t('agents.keepAwake.mode.always.label'),
-                                    description: t('agents.keepAwake.mode.always.description')
-                                }
-                            ]}
-                            onValueChange={(value) => setKeepAwake({ keepAwake: value })}
-                        />
-                    }
-                />
-            )}
-            {awake && keepAwake !== 'off' && (
+        <SettingsSection title={t('agents.working.title')} description={t('agents.working.description')} icon={BatteryCharging} scope="computer">
+            <SettingsRow
+                searchId="agents.keepAwake.mode"
+                label={t('agents.keepAwake.mode.label')}
+                description={keepAwake === 'off' ? undefined : t(`agents.keepAwake.mode.${keepAwake}.description`)}
+                control={
+                    <Select
+                        value={keepAwake}
+                        label={t('agents.keepAwake.mode.label')}
+                        align="end"
+                        items={[
+                            { value: 'off', label: t('agents.keepAwake.mode.off') },
+                            {
+                                value: 'working',
+                                label: t('agents.keepAwake.mode.working.label'),
+                                description: t('agents.keepAwake.mode.working.description')
+                            },
+                            {
+                                value: 'always',
+                                label: t('agents.keepAwake.mode.always.label'),
+                                description: t('agents.keepAwake.mode.always.description')
+                            }
+                        ]}
+                        onValueChange={(value) => setKeepAwake({ keepAwake: value })}
+                    />
+                }
+            />
+            {keepAwake !== 'off' && (
                 <SettingsRow
                     indent
                     label={t('agents.keepAwake.battery.label')}
@@ -226,8 +150,8 @@ function WorkingSection() {
                     }
                 />
             )}
-            <ClosedLidRows shown={awake && keepAwake !== 'off'} />
-            {awake && keepAwake === 'always' && (
+            <ClosedLidRows shown={keepAwake !== 'off'} />
+            {keepAwake === 'always' && (
                 <SettingsRow
                     indent
                     label={t('agents.keepAwake.display.label')}
@@ -241,56 +165,6 @@ function WorkingSection() {
                     }
                 />
             )}
-        </SettingsSection>
-    );
-}
-
-/* What Ruimte may write into the CLIs' global settings, per CLI. Only this computer's own machine has it. */
-function IntegrationsSection() {
-    const { t } = useTranslation('settings');
-    const summary = useAgentIntegrations();
-    const [files, setFiles] = useState<AgentIntegrationFile[] | null>(null);
-    const { reports, busy, error, change } = useIntegrationChoice();
-    const listed = summary !== null && hasLocalMachine();
-
-    useEffect(() => {
-        if (listed) {
-            void loadIntegrationFiles()
-                .then(setFiles)
-                .catch(() => setFiles([]));
-        }
-    }, [listed, summary]);
-
-    if (!listed) {
-        return null;
-    }
-
-    return (
-        <SettingsSection
-            title={t('agents.integrations.title')}
-            description={summary.fixed ? `${t('agents.integrations.description')} ${t('agents.integrations.fixed')}` : t('agents.integrations.description')}
-            scope="computer"
-        >
-            {summary.providers.map((entry, index) => (
-                <SettingsRow
-                    key={entry.provider}
-                    searchId={index === 0 ? 'agents.integrations' : undefined}
-                    label={INTEGRATION_NAMES[entry.provider] ?? entry.provider}
-                    leading={<CliMark kind={entry.provider} size={20} />}
-                    control={
-                        <Switch
-                            checked={entry.state === 'on'}
-                            disabled={summary.fixed || busy !== null}
-                            onCheckedChange={(checked) => void change(entry.provider, checked)}
-                            label={INTEGRATION_NAMES[entry.provider] ?? entry.provider}
-                        />
-                    }
-                >
-                    <IntegrationDetails entry={entry} files={files} />
-                    {reports[entry.provider] !== undefined && <IntegrationReports reports={reports[entry.provider]!} />}
-                    {error?.provider === entry.provider && <FormError>{error.message}</FormError>}
-                </SettingsRow>
-            ))}
         </SettingsSection>
     );
 }

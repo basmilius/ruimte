@@ -58,9 +58,8 @@ async function pasteText(text: string): Promise<void> {
 
 function settingsSection(): HTMLElement | null {
     return (
-        ([...document.querySelectorAll('section, [data-settings-section]')] as HTMLElement[]).find((section) =>
-            section.textContent?.includes('New nodes on Fake machine')
-        ) ?? null
+        ([...document.querySelectorAll('section, [data-settings-section]')] as HTMLElement[]).find((section) => section.textContent?.includes('New nodes')) ??
+        null
     );
 }
 

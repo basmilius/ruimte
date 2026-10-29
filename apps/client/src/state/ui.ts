@@ -7,6 +7,7 @@ import { isScratchProject, useProject } from '@/state/project';
 import { storedJson, storedText } from '@/state/stored-json';
 
 export type SettingsSectionId =
+    | 'general'
     | 'appearance'
     | 'keyboard'
     | 'editor'
@@ -14,10 +15,9 @@ export type SettingsSectionId =
     | 'views'
     | 'pets'
     | 'files'
-    | 'storage'
     | 'providers'
+    | 'chats'
     | 'voice'
-    | 'computer'
     | 'agents'
     | 'usage'
     | 'machines'
@@ -356,7 +356,7 @@ export const useUi = create<UiStore>((set, get) => {
         filePick: null,
         sidebarOpen: storedSidebar.read() !== 'closed',
         sidebarExpanded: null,
-        settings: { open: false, section: 'appearance', target: null, searchAt: 0 },
+        settings: { open: false, section: 'general', target: null, searchAt: 0 },
         /* Closed until a project says otherwise, so a reload cannot flash open a panel the project has closed. */
         panel: CLOSED_PANEL,
         panelWidth: null,

@@ -612,7 +612,7 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
         row('settings-keyboard', () => useUi.getState().setSettings({ open: true, section: 'keyboard' })),
         row('settings-editor', () => useUi.getState().setSettings({ open: true, section: 'editor' })),
         row('settings-machines', () => useUi.getState().setSettings({ open: true, section: 'machines' }), { hint: i18next.t('shell:palette.hints.remote') }),
-        row('settings-computer', () => useUi.getState().setSettings({ open: true, section: 'computer' })),
+        row('settings-computer', () => useUi.getState().setSettings({ open: true, section: 'agents', target: 'computer.enable' })),
         // About the machine this window runs beside, so only a client with one has it.
         ...(hasLocalMachine() ? [row('onboarding', () => openOnboarding())] : [])
     ];

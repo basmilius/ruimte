@@ -164,17 +164,17 @@ describe.each([NANOGPT, CLAUDE_API])('The key of $name in Settings', (provider) 
     test('the continue switch sends only itself, and the runs field follows it', async () => {
         await open(provider);
         const continuing = provider.defaults.autoContinue;
-        expect(field('Runs before it stops')!.disabled).toBe(!continuing);
+        expect(field('Runs in a row')!.disabled).toBe(!continuing);
 
         await clickOn(continueSwitch());
-        await until(() => field('Runs before it stops')!.disabled === continuing);
+        await until(() => field('Runs in a row')!.disabled === continuing);
         // No key, so nothing is fetched and the key stays.
         expect(machine.requests(`${provider.area}.configure`)).toEqual([{ settings: { autoContinue: !continuing } }]);
     });
 
     test('a number is sent when the field is left, and only if it is a whole number inside the range and different', async () => {
         await open(provider);
-        const rounds = field('Tool rounds per run')!;
+        const rounds = field('Steps per run')!;
         expect(rounds.value).toBe('40');
 
         await enter(rounds, '60');
