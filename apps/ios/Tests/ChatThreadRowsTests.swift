@@ -49,7 +49,7 @@ final class ChatThoughtTests: XCTestCase {
         XCTAssertEqual(ChatThought.line(""), "")
     }
 
-    @MainActor func testARunningTurnRepeatsItsLatestThoughtOverTheCallItLedTo() {
+    @MainActor func testARunningTurnKeepsItsThoughtAboveTheToolGroupWithoutRepeatingIt() {
         let presentation = ChatPresentation()
         let info = ChatWire.info(["activeTurnId": .string("turn")]).chatInfo
         presentation.replace(
@@ -60,7 +60,7 @@ final class ChatThoughtTests: XCTestCase {
                 item("live", "tool").setting("state", .string("running")),
             ].map { $0.setting("turnId", .string("turn")).chatItem }, info: info)
         XCTAssertEqual(
-            presentation.entries.map(\.id), ["thought", "tools-read", "live-thought-thought", "live", "working-turn"])
+            presentation.entries.map(\.id), ["thought", "tools-read", "working-turn"])
     }
 
     @MainActor func testTheThoughtIsNotRepeatedRightUnderItself() {

@@ -1155,22 +1155,32 @@ struct ChatEntryView: View {
                     ChatOutputCardView(card: card, presentation: presentation, client: client)
                 }
             case .tools:
-                if entry.items.count == 1, let item = entry.items.first {
-                    ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
-                } else {
-                    DisclosureGroup(isExpanded: $expanded) {
-                        ForEach(entry.items) { item in
-                            ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
-                        }
-                    } label: {
-                        let tools = entry.items.compactMap(\.item.toolItem)
-                        Label {
-                            Text(ChatToolPresentation.groupLabel(tools).attributed).lineLimit(1)
-                        } icon: {
-                            ChatToolMarkView(mark: tools.first.map(ChatToolPresentation.mark) ?? .lucide("wrench"))
-                        }
-                        .font(.footnote).foregroundStyle(MobileStyle.muted)
+                DisclosureGroup(isExpanded: $expanded) {
+                    ForEach(entry.items) { item in
+                        ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
                     }
+                } label: {
+                    let tools = entry.items.compactMap(\.item.toolItem)
+                    let running = tools.filter { $0.state == .running }.count
+                    let failed = tools.contains { $0.state == .error }
+                    HStack(spacing: 8) {
+                        if running > 0 {
+                            Spinner(size: 12).foregroundStyle(MobileStyle.statusRunning)
+                        } else {
+                            ChatToolMarkView(
+                                mark: failed
+                                    ? .lucide("circle-alert")
+                                    : tools.first.map(ChatToolPresentation.mark) ?? .lucide("wrench"))
+                        }
+                        if running > 0 {
+                            Text("\(tools.count) tool calls").lineLimit(1)
+                            Text("\(running) running").foregroundStyle(MobileStyle.faint).fixedSize()
+                        } else {
+                            Text(ChatToolPresentation.groupLabel(tools).attributed).lineLimit(1)
+                        }
+                    }
+                    .font(.footnote).monospacedDigit()
+                    .foregroundStyle(failed ? MobileStyle.statusError : MobileStyle.muted)
                 }
             }
         }

@@ -591,17 +591,13 @@ final class ChatPresentation {
         }
     }
 
-    /// A run of calls in a row collects every one of them: the settled ones on one line, the ones still running after it.
+    /// The first call anchors the group so completing calls never moves them between rows.
     private func rowsFor(_ items: [ChatItemState], children: [String: [ChatItemState]]) -> [ChatTimelineEntry] {
         var rows: [ChatTimelineEntry] = []
         var calls: [ChatItemState] = []
         func flush() {
-            let settled = calls.filter { $0.item.toolItem?.state != .running }
-            if let first = settled.first {
-                rows.append(ChatTimelineEntry(id: "tools-\(first.id)", kind: .tools, items: settled))
-            }
-            for call in calls where call.item.toolItem?.state == .running {
-                rows.append(ChatTimelineEntry(id: call.id, kind: .message, items: [call]))
+            if let first = calls.first {
+                rows.append(ChatTimelineEntry(id: "tools-\(first.id)", kind: .tools, items: calls))
             }
             calls = []
         }

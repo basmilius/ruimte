@@ -134,7 +134,7 @@ import XCTest
                 item("b3", "tool", turn: "t2", at: 2000, ["state": .string("running"), "name": .string("Bash")]),
             ].map(\.chatItem), info: ChatWire.info(["activeTurnId": .string("t2")]).chatInfo)
         presentation.setSaved([saved("v2", at: 50_000)])
-        XCTAssertEqual(presentation.entries.map(\.id), ["u2", "b3", "app-card-output:v2", "working-t2"])
+        XCTAssertEqual(presentation.entries.map(\.id), ["u2", "tools-b3", "app-card-output:v2", "working-t2"])
     }
 
     func testAVisualComesBeforeACardOfTheSameMoment() {

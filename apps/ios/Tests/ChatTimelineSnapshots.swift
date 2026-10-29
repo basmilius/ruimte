@@ -19,6 +19,33 @@ import UIKit
         "graph TD\n  A-->",
     ]
 
+    @Test(.enabled(if: folder != nil)) func toolGroups() async throws {
+        let client = ScriptedMachine()
+        let presentation = ChatPresentation()
+        let states = [["running"], ["done", "running", "done"], ["done", "done"], ["done", "error"]]
+        let entries = states.enumerated().map { index, states in
+            let records = states.enumerated().map { offset, state in
+                ChatItemState(
+                    ChatWire.item([
+                        "id": .string("call-\(index)-\(offset)"), "kind": .string("tool"),
+                        "name": .string("Bash"), "state": .string(state),
+                        "input": .object(["command": .string("bun test")]),
+                    ]).chatItem)
+            }
+            return ChatTimelineEntry(id: "tools-\(index)", kind: .tools, items: records)
+        }
+        for dark in [false, true] {
+            let view = VStack(alignment: .leading, spacing: 20) {
+                ForEach(entries) { entry in
+                    ChatEntryView(entry: entry, presentation: presentation, client: client, chatID: "snapshot")
+                }
+                Spacer()
+            }
+            .padding(20)
+            try await Self.render(view, name: "tool-groups-\(dark ? "dark" : "light")", dark: dark)
+        }
+    }
+
     @Test(.enabled(if: folder != nil)) func mermaidFences() async throws {
         let reply = "The connection goes through three steps:\n\n"
             + Self.diagrams.map { "```mermaid\n\($0)\n```" }.joined(separator: "\n\nAnd then:\n\n")

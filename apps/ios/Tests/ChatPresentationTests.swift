@@ -26,15 +26,19 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(record.item.assistantItem?.text, "Hello 🌍")
     }
 
-    @MainActor func testActiveWorkDoesNotDisappearIntoSettledTools() {
+    @MainActor func testToolGroupKeepsItsIdentityAndOrderAsCallsStartAndFinish() {
         let presentation = ChatPresentation()
-        presentation.replace(
-            [
-                item("done", "tool").setting("state", .string("done")),
-                item("live", "tool").setting("state", .string("running")),
-                item("thought", "thinking").setting("streaming", .bool(true)),
-            ].map(\.chatItem), info: nil)
-        XCTAssertEqual(presentation.entries.map(\.kind), [.tools, .message, .message])
+        let first = item("first", "tool").setting("state", .string("running"))
+        let second = item("second", "tool").setting("state", .string("running"))
+        presentation.replace([first.chatItem], info: nil)
+        XCTAssertEqual(presentation.entries.map(\.id), ["tools-first"])
+        presentation.upsert(second.chatItem)
+        presentation.upsert(second.setting("state", .string("done")).chatItem)
+        XCTAssertEqual(presentation.entries.map(\.id), ["tools-first"])
+        XCTAssertEqual(presentation.entries[0].items.map(\.id), ["first", "second"])
+        presentation.upsert(first.setting("state", .string("error")).chatItem)
+        XCTAssertEqual(presentation.entries.map(\.id), ["tools-first"])
+        XCTAssertEqual(presentation.entries[0].items.map(\.item.toolItem?.state), [.error, .done])
     }
 
     @MainActor func testBlockingRequestAndDisconnectStopActiveAnimation() {
