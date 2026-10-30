@@ -19,7 +19,7 @@ async function copy(template: RepoTemplate): Promise<string> {
 
 afterEach(async () => {
     for (const root of copies) {
-        await rm(root, { recursive: true, force: true });
+        await rm(root, { recursive: true, force: true, maxRetries: 5 });
         expect(await stat(root).catch(() => null)).toBeNull();
         copies.delete(root);
     }
@@ -129,6 +129,8 @@ describe('listRepos', () => {
 
     test('a checkout the repository ignores is not one the panel offers', async () => {
         const dir = await copy(parent);
+        // Without it no `git submodule` runs, the one call here that costs a shell on Windows and has its test above.
+        await rm(join(dir, 'parent', '.gitmodules'));
         const { repos } = await listRepos(join(dir, 'parent'));
         expect(repos.map((repo) => repo.label)).not.toContain('tools');
     });
