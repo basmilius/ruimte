@@ -12,6 +12,7 @@ import { menuModel } from '@/shell/menu/model';
 import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
 import { subscribeCameraHistories } from '@/state/camera-history';
 import { subscribeCanvases } from '@/state/canvas';
+import { useChatTextSizes } from '@/state/chat-text-size';
 import { subscribeChatThreads } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { usePrRepos } from '@/state/pr-repos';
@@ -22,7 +23,6 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
-import { useChatTextSizes } from '@/state/chat-text-size';
 import { useWindow } from '@/state/window';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */

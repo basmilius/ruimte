@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { isApplePlatform } from '@/desktop/bridge';
+import { act } from 'react';
 import { useDesignChat } from '@/design/design-chat';
+import { isApplePlatform } from '@/desktop/bridge';
+import { runMenuCommand } from '@/shell/menu/actions';
 import { focusedCanvas } from '@/state/canvas';
 import { useChatTextSizes } from '@/state/chat-text-size';
 import { useDocument } from '@/state/document';
@@ -12,12 +13,11 @@ import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { dropMachine } from '@/transport/connections';
-import { runMenuCommand } from '@/shell/menu/actions';
 import { chatInfoOf } from '../../testing/chat-info';
-import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const REVIEW: ProjectNode = { id: 'text-review', kind: 'chat', title: 'Review', x: 0, y: 0, w: 480, h: 520 };
 const OTHER: ProjectNode = { ...REVIEW, id: 'text-other', title: 'Other', x: 520 };
@@ -207,6 +207,13 @@ describe('focused chat text', () => {
         await key('=');
         expect(reading(DESIGN.id)!.dataset.chatTextSize).toBe('2');
         expect(useChatTextSizes.getState().byKey).toEqual({ [endpointKey('fake-machine', 'text-design-later')]: 2 });
+        await act(async () => {
+            focusedCanvas().getState().toggleMaximizedNode(DESIGN.id);
+            focusedCanvas().getState().setBodyFocus(null);
+        });
+        await key('=');
+        expect(reading(DESIGN.id)!.dataset.chatTextSize).toBe('3');
+        expect(useChatTextSizes.getState().byKey).toEqual({ [endpointKey('fake-machine', 'text-design-later')]: 3 });
         await act(async () => focusedCanvas().getState().deleteSelected());
         await until(() => reading(DESIGN.id) === null);
         expect(useChatTextSizes.getState().byKey).toEqual({});
@@ -261,7 +268,7 @@ describe('focused chat text', () => {
         }
     });
 
-    test('the palette restores the chat target before stepping and offers one contextual reset', async () => {
+    test('the palette restores the chat target before stepping and resetting its text size', async () => {
         await focus(REVIEW.id);
         const choose = async (label: string): Promise<void> => {
             await act(async () => useUi.getState().setPaletteOpen(true));

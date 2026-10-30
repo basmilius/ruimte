@@ -1,8 +1,8 @@
 import type { CanvasNodeKind, ProjectView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { sessionNodesOf } from '@/project/project-sessions';
-import { endpointKey } from '@/state/keys';
 import { useChatTextSizes } from '@/state/chat-text-size';
+import { endpointKey } from '@/state/keys';
 import { watchNodes, type NodeExit } from '@/terminal/lifecycle-watch';
 import { forgetScreen } from '@/terminal/registry';
 import { browserClientFor, chatClientFor, sessionClientFor } from '@/transport/connections';
