@@ -53,7 +53,7 @@ async function main(): Promise<void> {
         }
         const shard = values.shard === undefined ? [] : [`--shard=${values.shard}`];
 
-        const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...shard, ...selected], {
+        const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', '--parallel', ...shard, ...selected], {
             env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
             stdin: 'inherit',
             stdout: 'inherit',

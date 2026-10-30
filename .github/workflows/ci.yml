@@ -98,17 +98,13 @@ jobs:
       - run: bun test --conditions=source apps/server/src/fs
 
   unit:
-    name: unit (${{ matrix.shard }}/4)
+    name: unit
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      # One process took 130s of tests. Each shard has its own runner, so a scan stays under five seconds.
-      - run: bun run test --shard=${{ matrix.shard }}/4
+      # One process. The test script passes --parallel. Shards on this machine pushed scans past five seconds.
+      - run: bun run test
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
   # One runner, two workers, without the files that start git or a test daemon. windows-ci.bunfig.toml says which.
@@ -125,29 +121,21 @@ jobs:
       - run: bun --config=windows-ci.bunfig.toml test --conditions=source --parallel=2 --only-failures
 
   dom:
-    name: dom (${{ matrix.shard }}/3)
+    name: dom
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
       - uses: ./.github/actions/cache-react-compiler
-      - run: bun run test:dom --shard=${{ matrix.shard }}/3
+      - run: bun run test:dom
 
   integration:
-    name: integration (macOS, ${{ matrix.shard }}/3)
+    name: integration (macOS)
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run test:integration --suite core --shard=${{ matrix.shard }}/3
+      - run: bun run test:integration --suite core
 
   packaged:
     name: packaged (macOS)
@@ -160,12 +148,8 @@ jobs:
       - run: bun run test:package
 
   integration-linux:
-    name: integration (Linux, ${{ matrix.shard }}/3)
+    name: integration (Linux)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The shell tests start /bin/zsh, which the runner image does not promise.
@@ -173,7 +157,7 @@ jobs:
       # The runner image makes /usr/share world-writable, and Ubuntu's global zshrc then stops on compinit's prompt.
       - run: zsh -fc 'autoload -Uz compaudit; compaudit' 2>/dev/null | sort -u | xargs -r sudo chmod go-w
       - uses: ./.github/actions/install
-      - run: bun run test:integration --suite core --shard=${{ matrix.shard }}/3
+      - run: bun run test:integration --suite core
 
   # The release's own Linux runner, so the compiled daemon is proven on the glibc floor it claims.
   packaged-linux:
