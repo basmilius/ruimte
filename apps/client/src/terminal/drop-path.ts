@@ -6,16 +6,12 @@ function posixQuoted(path: string): string {
     return POSIX_SAFE.test(path) ? path : `'${path.replaceAll("'", `'\\''`)}'`;
 }
 
-/* `C:\x\y` as Git Bash writes it, `/c/x/y`; a UNC path keeps its two leading slashes. */
-function msysPath(path: string): string {
-    const slashed = path.replaceAll('\\', '/');
-    const drive = /^([A-Za-z]):(\/|$)/.exec(slashed);
-    return drive === null ? slashed : `/${drive[1]!.toLowerCase()}${slashed.slice(2) || '/'}`;
-}
-
-/* The client does not know a session's shell. On Windows it assumes Git Bash, the default terminal and the shell of every line the daemon types. */
+/*
+ * The client does not know a session's shell. Single quotes keep a Windows path literal in PowerShell and in
+ * Git Bash alike; they disagree on an apostrophe, so such a path goes in double quotes. cmd reads neither as quotes.
+ */
 function windowsQuoted(path: string): string {
-    return posixQuoted(msysPath(path));
+    return path.includes("'") ? `"${path}"` : `'${path}'`;
 }
 
 /* The paths of a drop as typed after a prompt: each quoted for the shell of the machine, one space between them and one after the last. */

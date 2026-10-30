@@ -1424,6 +1424,16 @@
                 }
             }
         },
+        "terminalShell": {
+            "label": "Terminal-shell",
+            "description": "De shell waarin een nieuwe terminal opent. Agents en launches draaien altijd in Git Bash.",
+            "options": {
+                "powershell": "PowerShell",
+                "git-bash": "Git Bash",
+                "cmd": "Opdrachtprompt",
+                "wsl": "WSL"
+            }
+        },
         "worktreeFolder": {
             "label": "Worktree-map",
             "description": "Nieuwe worktrees komen in de datamap van Ruimte, of in een map die je kiest.",

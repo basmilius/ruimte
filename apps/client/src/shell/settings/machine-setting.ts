@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import i18next from 'i18next';
+import type { TerminalShell } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { messageOf } from '@adecore/ui';
 import { perform } from '@/actions/client-actions';
@@ -13,6 +14,7 @@ export interface MachineSettingPatch extends Partial<Record<MachineSwitch, boole
     readonly lanDoor?: boolean;
     readonly streamingAllowed?: boolean;
     readonly worktreeRoot?: string;
+    readonly terminalShell?: TerminalShell;
     readonly usageStats?: boolean;
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement, type ReactNode } from '
 import { Trash } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
-import type { AuthSession, PeerLink, ReachCheck, RuntimeMode } from '@ruimte/contracts';
+import type { AuthSession, PeerLink, ReachCheck, RuntimeMode, TerminalShell } from '@ruimte/contracts';
 import { RUNTIME_MODES, runtimeModeLabel } from '@adecore/agents-react/chat';
 import { messageOf, Segmented, Select, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
 import { formatNumericDate, formatAgo } from '@adecore/ui/format';
@@ -91,6 +91,7 @@ export function DirectRow({ endpoint }: { endpoint: Endpoint }) {
 type BrokerMode = BrokerSetting['mode'];
 
 const MODES: readonly BrokerMode[] = ['default', 'custom', 'off'];
+const TERMINAL_SHELLS: readonly TerminalShell[] = ['powershell', 'git-bash', 'cmd', 'wsl'];
 
 /* Which broker the machine announces itself to, a connection service to a person. It lives on the machine because the daemon is the one that dials it. */
 export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
@@ -637,6 +638,34 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
                 onConfirm={unlink}
             />
         </MachineListSection>
+    );
+}
+
+/* The shell of a new terminal on this Windows machine. An open terminal keeps the one it started in. */
+export function TerminalShellRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
+    const chosen = useServers((s) => s.byEndpoint[endpoint.id]?.terminalShell) ?? 'powershell';
+    const [problem, setProblem] = useState<string | null>(null);
+    return (
+        <SettingsRow
+            searchId="terminal.shell"
+            label={t('machine.terminalShell.label')}
+            description={t('machine.terminalShell.description')}
+            control={
+                <WithReason reason={reason}>
+                    <Select<TerminalShell>
+                        label={t('machine.terminalShell.label')}
+                        variant="outlined"
+                        value={chosen}
+                        disabled={reason !== null}
+                        onValueChange={(terminalShell) => void saveMachineSetting(endpoint, { terminalShell }, setProblem)}
+                        items={TERMINAL_SHELLS.map((id) => ({ value: id, label: t(`machine.terminalShell.options.${id}`) }))}
+                    />
+                </WithReason>
+            }
+        >
+            {problem !== null && <FormError>{problem}</FormError>}
+        </SettingsRow>
     );
 }
 

@@ -14,7 +14,9 @@ import {
     type KeepAwakeMode,
     type AgentIntegrationsSummary,
     type LanDoor,
-    type ProjectIconChoice
+    type ProjectIconChoice,
+    TerminalShellSchema,
+    type TerminalShell
 } from '@ruimte/contracts';
 import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
@@ -65,6 +67,8 @@ const FileSchema = z.object({
     lanDoor: z.boolean().optional().catch(undefined),
     /* Absent is `worktrees` in the data folder. */
     worktreeRoot: z.string().min(1).optional().catch(undefined),
+    /* Absent is PowerShell. */
+    terminalShell: TerminalShellSchema.optional().catch(undefined),
     /* Only the kinds a person changed, read one kind at a time (`knownNodeSizes`) so a size that will
        not read costs that kind alone. */
     nodeSizes: z.unknown().optional(),
@@ -91,6 +95,7 @@ interface IdentityOptions {
     broker: BrokerSetting;
     lanDoor: boolean;
     worktreeRoot: string | null;
+    terminalShell: TerminalShell | null;
     nodeSizes: NodeSizes;
     usageStats: boolean;
 }
@@ -140,6 +145,7 @@ export interface IdentityFlags {
     lanDoor?: boolean;
     // An empty string puts it back to the data folder.
     worktreeRoot?: string;
+    terminalShell?: TerminalShell;
     usageStats?: boolean;
 }
 
@@ -168,6 +174,7 @@ export class EndpointIdentity {
     private readonly brokerSwitch = new Binding<IdentityBroker>('The broker switch of the machine identity');
     private lanDoorOpen: boolean;
     private checkoutRoot: string | null;
+    private shellChoice: TerminalShell | null;
     private sizes: NodeSizes;
     private stats: boolean;
     private readonly door = new Binding<IdentityLanDoor>('The door on the local network of the machine identity');
@@ -192,6 +199,7 @@ export class EndpointIdentity {
         this.brokerSetting = options.broker;
         this.lanDoorOpen = options.lanDoor;
         this.checkoutRoot = options.worktreeRoot;
+        this.shellChoice = options.terminalShell;
         this.sizes = options.nodeSizes;
         this.stats = options.usageStats;
     }
@@ -280,6 +288,11 @@ export class EndpointIdentity {
         return this.checkoutRoot;
     }
 
+    /* Null until a person chose one. */
+    get terminalShell(): TerminalShell | null {
+        return this.shellChoice;
+    }
+
     get usageStats(): boolean {
         return this.stats;
     }
@@ -340,6 +353,7 @@ export class EndpointIdentity {
         if (flags.worktreeRoot !== undefined) {
             this.checkoutRoot = flags.worktreeRoot === '' ? null : flags.worktreeRoot;
         }
+        this.shellChoice = flags.terminalShell ?? this.shellChoice;
         await this.persist();
         if (flags.broker !== undefined) {
             await this.brokerSwitch.get().apply();
@@ -404,6 +418,7 @@ export class EndpointIdentity {
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting }),
             ...(this.lanDoorOpen ? {} : { lanDoor: false }),
             ...(this.checkoutRoot === null ? {} : { worktreeRoot: this.checkoutRoot }),
+            ...(this.shellChoice === null ? {} : { terminalShell: this.shellChoice }),
             ...(Object.keys(this.sizes).length === 0 ? {} : { nodeSizes: this.sizes }),
             ...(this.stats ? {} : { usageStats: false })
         };
@@ -473,6 +488,7 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         broker: file?.broker ?? { mode: 'default' },
         lanDoor: file?.lanDoor ?? true,
         worktreeRoot: file?.worktreeRoot ?? null,
+        terminalShell: file?.terminalShell ?? null,
         nodeSizes: knownNodeSizes(file?.nodeSizes),
         usageStats: file?.usageStats ?? true
     });

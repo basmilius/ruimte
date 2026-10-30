@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { constants } from 'node:os';
 import { basename, win32 } from 'node:path';
+import type { TerminalShell } from '@ruimte/contracts';
 
 export interface PtySpawnOptions {
     shell: string;
@@ -34,19 +35,43 @@ export function defaultShell(
     which: (program: string) => string | null = (program) => Bun.which(program, { PATH: env.PATH ?? env.Path ?? '' }),
     exists: (path: string) => boolean = existsSync
 ): string {
+    // Before $SHELL: a daemon started from Git Bash inherits one that is no Windows path.
+    if (platform === 'win32') {
+        return windowsShell(env, which, exists);
+    }
     const fromEnv = env.SHELL?.trim();
     if (fromEnv) {
         return fromEnv;
     }
-    if (platform === 'win32') {
-        return windowsShell(env, which, exists);
-    }
     return platform === 'darwin' ? '/bin/zsh' : '/bin/bash';
 }
 
-/* Git Bash when Git for Windows is there; else a terminal still opens, in PowerShell or cmd. */
+/* The shell of a new terminal: on Windows what a person chose, while it is there; elsewhere the login shell. */
+export function personShell(
+    choice: TerminalShell | null,
+    env: Record<string, string | undefined> = process.env,
+    platform: string = process.platform,
+    which: (program: string) => string | null = (program) => Bun.which(program, { PATH: env.PATH ?? env.Path ?? '' })
+): string {
+    const fallback = defaultShell(env, platform, which);
+    if (platform !== 'win32') {
+        return fallback;
+    }
+    switch (choice) {
+        case 'git-bash':
+            return gitBash(env, which) ?? fallback;
+        case 'cmd':
+            return env.COMSPEC ?? 'cmd.exe';
+        case 'wsl':
+            return which('wsl') ?? fallback;
+        default:
+            return fallback;
+    }
+}
+
+/* What a person on Windows knows comes first. Git Bash only runs what the daemon types (`shellFor`). */
 function windowsShell(env: Record<string, string | undefined>, which: (program: string) => string | null, exists: (path: string) => boolean): string {
-    return gitBash(env, which, exists) ?? which('pwsh') ?? which('powershell') ?? env.COMSPEC ?? 'cmd.exe';
+    return which('pwsh') ?? which('powershell') ?? gitBash(env, which, exists) ?? env.COMSPEC ?? 'cmd.exe';
 }
 
 /*
@@ -82,8 +107,31 @@ export function gitBash(
 // makes them read the profile that sets PATH, which a daemon started from launchd or systemd lacks.
 const LOGIN_CAPABLE = new Set(['zsh', 'bash', 'fish', 'sh', 'dash', 'ksh']);
 
+/*
+ * Reports the cwd the way Git Bash does (OSC 7) and then draws the person's own prompt. Their profile
+ * has run by then, so it wraps whatever prompt they set. A location off the file system or a UNC path reads as unknown.
+ */
+const POWERSHELL_INTEGRATION = String.raw`
+$global:RuimtePrompt = $function:prompt
+function global:prompt {
+    $location = Get-Location
+    $path = $location.ProviderPath
+    if ($location.Provider.Name -eq 'FileSystem' -and $path -match '^[A-Za-z]:') {
+        $encoded = ($path -replace '\\', '/') -replace '%', '%25' -replace '#', '%23' -replace '\?', '%3F' -replace ' ', '%20'
+        [Console]::Write([char]27 + "]7;file://localhost/$encoded" + [char]7)
+    } else {
+        [Console]::Write([char]27 + ']7;unknown' + [char]7)
+    }
+    & $global:RuimtePrompt
+}`;
+
 export function defaultShellArgs(shell: string): string[] {
-    return LOGIN_CAPABLE.has(shellName(shell)) ? ['-l'] : [];
+    const name = shellName(shell);
+    if (name === 'pwsh' || name === 'powershell') {
+        // An encoded command is no script, so an execution policy that blocks scripts lets it through, and nothing needs quoting.
+        return ['-NoLogo', '-NoExit', '-EncodedCommand', Buffer.from(POWERSHELL_INTEGRATION, 'utf16le').toString('base64')];
+    }
+    return LOGIN_CAPABLE.has(name) ? ['-l'] : [];
 }
 
 /* The shell's own name, without a folder in either separator or the `.exe` of Windows. */

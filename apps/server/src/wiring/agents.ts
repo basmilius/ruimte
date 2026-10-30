@@ -1,3 +1,4 @@
+import { personShell } from '../pty/pty.ts';
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
 import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore, suggestChatTitle } from '@adecore/agents/chat';
 import { AgentStore } from '../agents/agent-store.ts';
@@ -178,6 +179,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const claudeTitles = new ClaudeTitleReader();
     const sessions = new SessionManager({
         adapter: new BunPtyAdapter(),
+        personShell: () => personShell(identity.terminalShell),
         shellEnvironment: stores.shellEnvironment,
         snapshots,
         agents: new AgentStore(config.home),

@@ -1424,6 +1424,16 @@
                 }
             }
         },
+        "terminalShell": {
+            "label": "Terminal shell",
+            "description": "The shell a new terminal opens in. Agents and launches always run in Git Bash.",
+            "options": {
+                "powershell": "PowerShell",
+                "git-bash": "Git Bash",
+                "cmd": "Command Prompt",
+                "wsl": "WSL"
+            }
+        },
         "worktreeFolder": {
             "label": "Worktree folder",
             "description": "New worktrees go in Ruimte's data folder, or a folder you choose.",

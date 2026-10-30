@@ -6647,6 +6647,15 @@
               "null"
             ]
           },
+          "terminalShell": {
+            "type": "string",
+            "enum": [
+              "powershell",
+              "git-bash",
+              "cmd",
+              "wsl"
+            ]
+          },
           "nodeSizes": {
             "type": "object",
             "propertyNames": {
@@ -62223,6 +62232,15 @@
           "null"
         ]
       },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
       "nodeSizes": {
         "type": "object",
         "propertyNames": {
@@ -62564,6 +62582,15 @@
       "worktreeRoot": {
         "type": "string",
         "maxLength": 4096
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
       },
       "usageStats": {
         "type": "boolean"
@@ -63058,6 +63085,15 @@
           "null"
         ]
       },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
+      },
       "nodeSizes": {
         "type": "object",
         "propertyNames": {
@@ -63190,6 +63226,15 @@
       "worktreeRoot": {
         "type": "string",
         "maxLength": 4096
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
+        ]
       },
       "usageStats": {
         "type": "boolean"
@@ -63678,6 +63723,15 @@
         "type": [
           "string",
           "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
         ]
       },
       "nodeSizes": {
@@ -64258,6 +64312,15 @@
         "type": [
           "string",
           "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
         ]
       },
       "nodeSizes": {
@@ -65035,6 +65098,15 @@
         "type": [
           "string",
           "null"
+        ]
+      },
+      "terminalShell": {
+        "type": "string",
+        "enum": [
+          "powershell",
+          "git-bash",
+          "cmd",
+          "wsl"
         ]
       },
       "nodeSizes": {

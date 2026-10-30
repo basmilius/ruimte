@@ -183,6 +183,7 @@ export async function bootTestDaemon({
     const claude = inProcess(claudeCli);
     const codex = inProcess(codexCli);
     const sessions = new SessionManager({
+        personShell: () => 'bash',
         adapter: ptyAdapter ?? adapter,
         env,
         firstPrompt: async (id) => (await prompts.take(id))?.prompt ?? null,

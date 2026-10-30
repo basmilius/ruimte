@@ -28,15 +28,12 @@ describe('shellQuotedPaths on a POSIX shell', () => {
 });
 
 describe('shellQuotedPaths on Windows', () => {
-    test('a path is typed the way Git Bash writes it', () => {
-        expect(shellQuotedPaths(['C:\\Users\\bas\\shot.png'], 'win32')).toBe('/c/Users/bas/shot.png ');
-        expect(shellQuotedPaths(['D:\\'], 'win32')).toBe('/d/ ');
-        expect(shellQuotedPaths(['\\\\server\\share\\a.txt'], 'win32')).toBe('//server/share/a.txt ');
+    test('a path stays a Windows path in single quotes, which PowerShell and Git Bash both read literally', () => {
+        expect(shellQuotedPaths(['C:\\My Files\\shot.png', 'C:\\a&b\\c.png'], 'win32')).toBe("'C:\\My Files\\shot.png' 'C:\\a&b\\c.png' ");
     });
 
-    test('a path with a space or a character a shell reads is wrapped in single quotes', () => {
-        expect(shellQuotedPaths(['C:\\My Files\\shot.png'], 'win32')).toBe("'/c/My Files/shot.png' ");
-        expect(shellQuotedPaths(['C:\\a&b\\c.png', "C:\\bas's\\y.png"], 'win32')).toBe("'/c/a&b/c.png' '/c/bas'\\''s/y.png' ");
+    test('a path with an apostrophe goes in double quotes', () => {
+        expect(shellQuotedPaths(["C:\\bas's\\y.png"], 'win32')).toBe('"C:\\bas\'s\\y.png" ');
     });
 });
 

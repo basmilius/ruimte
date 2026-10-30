@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import type { AgentIntegrationsSummary, EndpointNameSource, KeepAwakeMode, MachineUpdate, NodeSizes, ProjectIconChoice, Reachability } from '@ruimte/contracts';
+import type {
+    AgentIntegrationsSummary,
+    EndpointNameSource,
+    KeepAwakeMode,
+    MachineUpdate,
+    NodeSizes,
+    ProjectIconChoice,
+    Reachability,
+    TerminalShell
+} from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { useEndpointId } from '@/state/keys';
 
@@ -60,6 +69,7 @@ export interface ServerInfo {
     accountId: string | null | undefined;
     /* The folder new worktrees are made in, null for the data folder. Only the app on the machine is told; undefined for any other. */
     worktreeRoot: string | null | undefined;
+    terminalShell: TerminalShell | undefined;
     /* The sizes a person gave new nodes of a kind on the machine, only the kinds they changed. */
     nodeSizes: NodeSizes;
     /* Whether the machine sends its anonymous usage counts; undefined from a machine without the switch. */
@@ -100,6 +110,7 @@ const UNKNOWN: ServerInfo = {
     publicKey: null,
     accountId: undefined,
     worktreeRoot: undefined,
+    terminalShell: undefined,
     nodeSizes: {},
     usageStats: undefined,
     viewReferences: false
@@ -138,6 +149,7 @@ interface ServersStore {
             | 'publicKey'
             | 'accountId'
             | 'worktreeRoot'
+            | 'terminalShell'
             | 'nodeSizes'
             | 'usageStats'
             | 'viewReferences'
@@ -170,6 +182,7 @@ interface ServersStore {
                     | 'lanDoorFixed'
                     | 'agentIntegrations'
                     | 'worktreeRoot'
+                    | 'terminalShell'
                     | 'nodeSizes'
                     | 'usageStats'
                 >

@@ -70,7 +70,7 @@ export function launchedMode(launch: AgentLaunch | null): RuntimeMode {
     return launch.runtimeMode ?? (launch.resume ? 'supervised' : DEFAULT_RUNTIME_MODE);
 }
 
-function quote(value: string): string {
+export function quote(value: string): string {
     return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 

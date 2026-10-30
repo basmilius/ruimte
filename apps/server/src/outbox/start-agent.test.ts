@@ -111,6 +111,7 @@ async function boot(): Promise<Daemon> {
     });
     const modeCeiling = (id: string) => lineage.ceilingOf(id);
     const sessions = new SessionManager({
+        personShell: () => 'bash',
         adapter,
         env: { HOME: home, PATH: process.env.PATH },
         firstPrompt: async (id) => (await prompts.take(id))?.prompt ?? null,

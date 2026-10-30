@@ -101,7 +101,13 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         nodeSizes: identity.nodeSizes,
         usageStats: identity.usageStats,
         // Only the app on this machine is told which account it is on; it is the one that can take it off.
-        ...(isOwner(access) ? { accountId: (await store.accountBinding())?.id ?? null, worktreeRoot: identity.worktreeRoot } : {})
+        ...(isOwner(access)
+            ? {
+                  accountId: (await store.accountBinding())?.id ?? null,
+                  worktreeRoot: identity.worktreeRoot,
+                  ...(identity.terminalShell === null ? {} : { terminalShell: identity.terminalShell })
+              }
+            : {})
     });
 
     /*
@@ -165,8 +171,13 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         if (settings.usageStats !== undefined && !isOwner(access)) {
             throw new RequestError('owner-only', 'Only a person on this machine can turn its usage statistics on or off');
         }
+        // What the daemon starts as a person's shell is the owner's alone.
+        if (settings.terminalShell !== undefined && !isOwner(access)) {
+            throw new RequestError('owner-only', 'Only a person on this machine can choose the shell of its terminals');
+        }
         await write({
             worktreeRoot,
+            terminalShell: settings.terminalShell,
             usageStats: settings.usageStats,
             agentsDeleteAnyView: settings.agentsDeleteAnyView,
             reachOpenProjects: settings.reachOpenProjects,

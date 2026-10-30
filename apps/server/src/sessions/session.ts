@@ -101,6 +101,8 @@ export class Session {
     reportedMode: RuntimeMode | null = null;
     // A command from a project file the shell started without, until a person on this machine says yes to it.
     heldCommand: string | null = null;
+    // On Windows: a line typed in Git Bash ended in the shell of the person, so this session no longer reads POSIX.
+    handedBack = false;
     private readonly terminal: Terminal;
     private readonly serializer: SerializeAddon;
     private readonly outputCwd: TerminalCwd;

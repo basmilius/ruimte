@@ -1,16 +1,18 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
 import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
 import { isTerminalReply } from './terminal-replies.ts';
 import { offersKind } from '../providers/kinds.ts';
-import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
+import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode, launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers';
 import { contextHint, verbsNote } from '../context/context-note.ts';
-import { defaultShell, defaultShellArgs, gitBash, type PtyAdapter } from '../pty/pty.ts';
+import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { ShellEnvironment } from './shell-integration.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
@@ -144,6 +146,8 @@ export interface SessionManagerOptions {
     // Lets a test pose as Windows, where a session that types a line needs Git Bash.
     platform?: string;
     findGitBash?: () => string | null;
+    // The shell a person works in on Windows, which a line the daemon typed in Git Bash hands back to.
+    personShell?: () => string;
 }
 
 interface CommandGate {
@@ -214,6 +218,7 @@ export class SessionManager {
     private readonly prepareAgent: (kind: AgentKind) => Promise<void>;
     private readonly platform: string;
     private readonly findGitBash: () => string | null;
+    private readonly personShell: () => string;
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -250,6 +255,7 @@ export class SessionManager {
         this.prepareAgent = options.prepareAgent ?? (() => Promise.resolve());
         this.platform = options.platform ?? process.platform;
         this.findGitBash = options.findGitBash ?? (() => gitBash(this.env));
+        this.personShell = options.personShell ?? (() => defaultShell(this.env, this.platform));
     }
 
     /* The session a hook or context token belongs to. */
@@ -335,6 +341,8 @@ export class SessionManager {
             options.command && options.forClient === undefined && this.commands?.approved(options.sessionId, options.command) === false
                 ? options.command
                 : null;
+        const startLine = held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined;
+        const command = startLine === undefined ? undefined : this.handingBack(startLine);
         const session = this.spawn({
             id: options.sessionId,
             shell,
@@ -343,7 +351,7 @@ export class SessionManager {
             cwd,
             cols: options.cols,
             rows: options.rows,
-            command: held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined,
+            command,
             restoredScreen,
             restoredAgent,
             launch,
@@ -353,6 +361,7 @@ export class SessionManager {
         if (unoffered !== null) {
             session.notice(`Ruimte: ${unoffered} is not available on this machine, so this terminal started without it.`);
         }
+        session.handedBack = command !== undefined && this.handsBack();
         this.sessions.set(session.id, session);
         // A launch runs its command through `exec` and counts as a launch, not as a terminal.
         if (options.exec === undefined) {
@@ -374,7 +383,7 @@ export class SessionManager {
     private shellFor(options: CreateSessionOptions): string {
         const types = options.command !== undefined || options.agent !== undefined || options.exec !== undefined;
         if (this.platform !== 'win32' || !types) {
-            return options.shell ?? defaultShell(this.env);
+            return options.shell ?? this.personShell();
         }
         const bash = this.findGitBash();
         if (bash === null) {
@@ -456,9 +465,50 @@ export class SessionManager {
 
     private typeHeld(session: Session, command: string): void {
         if (!session.exited) {
-            session.write(`${command}\n`);
+            session.write(`${this.handingBack(command)}\n`);
+            session.handedBack = this.handsBack();
         }
         this.broadcastListChanged();
+    }
+
+    /* Not to WSL: a resume there could not reach the Git Bash of Windows, and the agent runs on Windows anyway. */
+    private handsBack(): boolean {
+        return this.platform === 'win32' && !['bash', 'wsl'].includes(shellName(this.personShell()));
+    }
+
+    /* A line for Git Bash that ends in the person's own shell, so what they get after an agent is what they know. */
+    private handingBack(line: string): string {
+        if (!this.handsBack()) {
+            return line;
+        }
+        const shell = this.personShell();
+        return `${line}; exec ${[shell, ...defaultShellArgs(shell)].map(quote).join(' ')}`;
+    }
+
+    /*
+     * What to type for a resume. Git Bash takes the line as it is. PowerShell has no `||` in 5.1 and cmd is another
+     * dialect, so there Git Bash runs the line from a file, which needs no quoting, and the prompt returns after.
+     */
+    private async typedResume(session: Session, line: string): Promise<string> {
+        if (this.platform !== 'win32') {
+            return line;
+        }
+        const native = ['pwsh', 'powershell', 'cmd'].includes(shellName(session.shell));
+        if (!native && !session.handedBack) {
+            session.handedBack = this.handsBack();
+            return this.handingBack(line);
+        }
+        const bash = this.findGitBash();
+        if (bash === null) {
+            throw new SessionError('git-bash-missing', 'Git for Windows is required to start this. Install it from https://gitforwindows.org and try again.');
+        }
+        const script = join(tmpdir(), `ruimte-resume-${session.id}.sh`);
+        await writeFile(script, line, { mode: 0o600 });
+        const shell = native ? session.shell : this.personShell();
+        if (shellName(shell) === 'cmd') {
+            return `"${bash}" -l "${script}"`;
+        }
+        return `& '${bash.replaceAll("'", "''")}' -l '${script.replaceAll("'", "''")}'`;
     }
 
     /* A hook POST from a CLI inside one of the shells; the token says which one. */
@@ -539,7 +589,7 @@ export class SessionManager {
                 throw new SessionError('shell-busy', 'Another program runs in front of the shell; quit it and resume again');
             }
             // Asked again, since the shell or its agent may have moved on while the foreground was asked.
-            line = this.resumeLine(session, this.resumableAgent(session));
+            line = await this.typedResume(session, this.resumeLine(session, this.resumableAgent(session)));
         } catch (e) {
             this.resuming.delete(sessionId);
             throw e;
@@ -790,7 +840,9 @@ export class SessionManager {
             return resumeOrFreshCommand(launch, launch.resume, note);
         }
         // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
-        return terminalCommand(launch, (await this.firstPrompt(sessionId)) ?? undefined, note);
+        const prompt = (await this.firstPrompt(sessionId)) ?? undefined;
+        // Git Bash reads a native program's `/init` as a path under its own root, and hands `//init` on as `/init`.
+        return terminalCommand(launch, this.platform === 'win32' && prompt?.startsWith('/') ? `/${prompt}` : prompt, note);
     }
 
     /*

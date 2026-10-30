@@ -7,6 +7,7 @@ import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
+import { serverInfoOf } from '@/state/server';
 import { useServers } from '@/state/server';
 import type { SettingsSectionId } from '@/state/ui';
 import { formatShortcut } from '@adecore/ui';
@@ -168,6 +169,13 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:agents.keepAwake.mode.label',
         description: 'settings:agents.keepAwake.mode.working.description',
         available: keepAwakeAvailable
+    },
+    {
+        id: 'terminal.shell',
+        section: 'terminal',
+        label: 'settings:machine.terminalShell.label',
+        description: 'settings:machine.terminalShell.description',
+        available: () => hasLocalMachine() && serverInfoOf(LOCAL_ENDPOINT_ID).platform === 'win32'
     },
     {
         id: 'agents.integrations',

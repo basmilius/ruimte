@@ -18,6 +18,9 @@ import { ProtocolVersionSchema } from './protocol.ts';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { AgentIntegrationsSummarySchema } from './agent-integrations.ts';
 
+export const TerminalShellSchema = z.enum(['powershell', 'git-bash', 'cmd', 'wsl']);
+export type TerminalShell = z.infer<typeof TerminalShellSchema>;
+
 // How a client reaches a daemon; the loopback one is what the app starts with.
 export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']);
 export type Reachability = z.infer<typeof ReachabilitySchema>;
@@ -109,6 +112,8 @@ export const EndpointInfoSchema = z.object({
     agentIntegrations: AgentIntegrationsSummarySchema.optional(),
     // Null while worktrees go in the data folder. Only told to a client that presented the local secret.
     worktreeRoot: z.string().nullable().optional(),
+    // The same client only: the shell of a new terminal on Windows. Absent is PowerShell.
+    terminalShell: TerminalShellSchema.optional(),
     // Kept in `endpoint.json`; empty while nobody set one.
     nodeSizes: EndpointNodeSizesSchema.optional(),
     // Anonymous daily usage counts sent from a release build. Absent reads as on, from a machine that has the switch.
@@ -170,6 +175,8 @@ export const EndpointSettingsSchema = z.object({
     lanDoor: z.boolean().optional(),
     // Only the owner of the machine may set it: the folder new worktrees are made in. An empty string puts it back.
     worktreeRoot: z.string().max(4096).optional(),
+    // Only the owner of the machine may set it.
+    terminalShell: TerminalShellSchema.optional(),
     // Only the owner of the machine may set it.
     usageStats: z.boolean().optional()
 });

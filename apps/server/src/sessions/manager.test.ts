@@ -376,6 +376,45 @@ describe('SessionManager', () => {
 describe('SessionManager on Windows', () => {
     const bash = String.raw`C:\Program Files\Git\bin\bash.exe`;
 
+    test('a line typed in Git Bash ends in the shell of the person', async () => {
+        const windows = await makeHarness({ platform: 'win32', findGitBash: () => bash, personShell: () => 'powershell.exe' });
+        try {
+            await windows.manager.create({ cols: 80, rows: 24, cwd: windows.home, sessionId: 'command', command: 'echo hi' });
+            const pty = windows.adapter.forSession('command');
+            pty.emit('$ ');
+            expect(pty.options.shell).toBe(bash);
+            expect(pty.options.env.RUIMTE_START_LINE).toStartWith("echo hi; exec 'powershell.exe' '-NoLogo' '-NoExit' '-EncodedCommand' ");
+            expect(windows.manager.get('command')!.handedBack).toBe(true);
+        } finally {
+            await windows.cleanup();
+        }
+    });
+
+    test('a first prompt that starts with a slash survives the path conversion of Git Bash', async () => {
+        const windows = await makeHarness({ platform: 'win32', findGitBash: () => bash, personShell: () => bash, firstPrompt: () => Promise.resolve('/init') });
+        try {
+            await windows.manager.create({ cols: 80, rows: 24, cwd: windows.home, sessionId: 'agent', agent: { kind: 'claude' } });
+            const pty = windows.adapter.forSession('agent');
+            pty.emit('$ ');
+            expect(`${pty.options.env.RUIMTE_START_LINE ?? ''}${pty.typed}`).toContain("'//init'");
+        } finally {
+            await windows.cleanup();
+        }
+    });
+
+    test('a person who chose Git Bash stays in it', async () => {
+        const windows = await makeHarness({ platform: 'win32', findGitBash: () => bash, personShell: () => bash });
+        try {
+            await windows.manager.create({ cols: 80, rows: 24, cwd: windows.home, sessionId: 'command', command: 'echo hi' });
+            const pty = windows.adapter.forSession('command');
+            pty.emit('$ ');
+            expect(pty.typed).toBe('echo hi\n');
+            expect(windows.manager.get('command')!.handedBack).toBe(false);
+        } finally {
+            await windows.cleanup();
+        }
+    });
+
     test('a session that types a line runs in Git Bash, whatever shell was asked for', async () => {
         const windows = await makeHarness({ platform: 'win32', findGitBash: () => bash });
         try {

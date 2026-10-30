@@ -125,6 +125,7 @@ export async function makeHarness(extra: Partial<SessionManagerOptions> = {}, ov
         env: { PATH: '/usr/bin:/bin', HOME: home },
         hookUrl: 'http://127.0.0.1:1/hooks',
         findGitBash: () => TEST_GIT_BASH,
+        personShell: () => TEST_GIT_BASH,
         ...extra
     });
     return {
