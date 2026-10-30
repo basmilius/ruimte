@@ -123,55 +123,24 @@ jobs:
               bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-4.json" --shard=4/4
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
+  # Each shard has its own runner. Nine of them on one disk lock git and the rename of project.json.
   windows:
-    name: unit (Windows)
+    name: unit (Windows, ${{ matrix.shard }}/9)
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
     defaults:
       run:
         shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
       # Two workers instead of one per core: the tests that run git start dozens of processes each, and
       # four files doing that at once on this runner pushed them past Bun's five seconds.
-      - parallel:
-          - name: unit (Windows, 1/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-1.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-1.json" --shard=1/9
-          - name: unit (Windows, 2/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-2.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-2.json" --shard=2/9
-          - name: unit (Windows, 3/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-3.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-3.json" --shard=3/9
-          - name: unit (Windows, 4/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-4.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-4.json" --shard=4/9
-          - name: unit (Windows, 5/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-5.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-5.json" --shard=5/9
-          - name: unit (Windows, 6/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-6.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-6.json" --shard=6/9
-          - name: unit (Windows, 7/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-7.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-7.json" --shard=7/9
-          - name: unit (Windows, 8/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-8.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-8.json" --shard=8/9
-          - name: unit (Windows, 9/9)
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-9.json"
-              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-9.json" --shard=9/9
+      - run: bun test --conditions=source --parallel=2 --only-failures --timings=test-timings.json --shard=${{ matrix.shard }}/9
 
   dom:
     name: dom
