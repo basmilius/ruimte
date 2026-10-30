@@ -238,8 +238,7 @@ describe('WorktreeMerge', () => {
         expect(await readFile(join(repo, 'shared.txt'), 'utf8')).toBe('uncommitted by the person\n');
     });
 
-    test('an agent merges into a target whose only change is the project file, and stops at anything else', async () => {
-        await writeFile(join(repo, 'note.txt'), 'one\n');
+    test('an agent merges into a target whose only change is the project file', async () => {
         await mkdir(join(repo, '.ruimte'), { recursive: true });
         await writeFile(documentPathInFolder(repo), '{ "version": 2, "rev": 1 }\n');
         await gitIn(repo, ['add', '.']);
@@ -249,6 +248,12 @@ describe('WorktreeMerge', () => {
         await writeFile(documentPathInFolder(repo), '{ "version": 2, "rev": 2 }\n');
         await merges.merge(payload(await madeLexer('lexer.txt', 'lexer\n'), {}), () => undefined, { cleanTarget: true });
         expect(await readFile(join(repo, 'lexer.txt'), 'utf8')).toBe('lexer\n');
+    });
+
+    test('an agent stops at any other change in the target', async () => {
+        await writeFile(join(repo, 'note.txt'), 'one\n');
+        await gitIn(repo, ['add', '.']);
+        await gitIn(repo, ['commit', '--quiet', '--message', 'note']);
 
         await writeFile(join(repo, 'note.txt'), 'two\n');
         await expect(merges.merge(payload(await madeLexer('other.txt', 'lexer\n'), {}), () => undefined, { cleanTarget: true })).rejects.toMatchObject({
