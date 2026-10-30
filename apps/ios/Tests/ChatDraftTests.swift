@@ -165,6 +165,30 @@ final class ChatDraftTests: XCTestCase {
         XCTAssertEqual(ChatDraftSyntax.query(in: text, selection: NSRange(location: text.count, length: 0))?.kind, "$")
     }
 
+    func testRepeatedMatchesKeepPatternsAndUTF16RangesIndependent() {
+        for _ in 0..<3 {
+            XCTAssertEqual(
+                ChatDraftSyntax.matches("[0-9]+", in: "🌍 42").map(\.range),
+                [NSRange(location: 3, length: 2)])
+            XCTAssertEqual(
+                ChatDraftSyntax.matches(#"\p{L}+"#, in: "42 Équipe").map(\.range),
+                [NSRange(location: 3, length: 6)])
+            XCTAssertTrue(ChatDraftSyntax.matches("(", in: "text").isEmpty)
+        }
+    }
+
+    func testChangingPickedNamesStayLiteralAndDoNotReusePreviousMatches() {
+        for path in ["src/A.swift", "src/B[1].swift", "src/A.swift"] {
+            let text = "🌍 @\(path). `@\(path)` @src/B1.swift"
+            XCTAssertEqual(
+                ChatDraftSyntax.tokens(in: text, mentions: [path], skills: []),
+                [
+                    ChatDraftToken(
+                        range: NSRange(location: 3, length: (path as NSString).length + 1), value: path, kind: "@")
+                ])
+        }
+    }
+
     @MainActor func testPromptLengthMatchesUTF16WireClientRule() async {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 struct ChatDraftToken: Equatable {
     let range: NSRange
@@ -14,6 +15,8 @@ struct ChatDraftQuery: Equatable, Hashable {
 }
 
 enum ChatDraftSyntax {
+    private static let expressions = Mutex<[String: NSRegularExpression]>([:])
+
     /// The punctuation that ends a token, as the shared composer's `TOKEN_END`: "open @a.ts." mentions a.ts.
     private static let tokenEnd = #"[.,;:!?)\]}"'\x{201D}\x{2019}]"#
 
@@ -30,8 +33,8 @@ enum ChatDraftSyntax {
         let typed = (prefix as NSString).substring(with: match.range(at: 2))
         // A `# ` heading, `#123` and a bare `#` stay text, and so does `#Admin?` once its punctuation closed it.
         if kind == "#"
-            && (typed.range(of: #"^\p{L}"#, options: .regularExpression) == nil
-                || typed.range(of: tokenEnd + "$", options: .regularExpression) != nil)
+            && (matches(#"^\p{L}"#, in: typed).isEmpty
+                || !matches(tokenEnd + "$", in: typed).isEmpty)
         {
             return nil
         }
@@ -43,7 +46,15 @@ enum ChatDraftSyntax {
     }
 
     static func matches(_ pattern: String, in text: String) -> [NSTextCheckingResult] {
-        guard let expression = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let expression = expressions.withLock { cached -> NSRegularExpression? in
+            if let expression = cached[pattern] { return expression }
+            guard let expression = try? NSRegularExpression(pattern: pattern) else { return nil }
+            // Picked names create patterns too, so the cache must not retain every name used in a session.
+            if cached.count >= 128 { cached.removeAll(keepingCapacity: true) }
+            cached[pattern] = expression
+            return expression
+        }
+        guard let expression else { return [] }
         return expression.matches(in: text, range: NSRange(location: 0, length: (text as NSString).length))
     }
 
@@ -54,8 +65,9 @@ enum ChatDraftSyntax {
     /// Whether the character at `index` closes a token: the end of the text, whitespace or closing punctuation.
     static func endsToken(at index: Int, in source: NSString) -> Bool {
         guard index < source.length else { return true }
-        return source.substring(with: NSRange(location: index, length: 1)).range(
-            of: #"^(?:\s|"# + tokenEnd + ")$", options: .regularExpression) != nil
+        return !matches(
+            #"^(?:\s|"# + tokenEnd + ")$", in: source.substring(with: NSRange(location: index, length: 1))
+        ).isEmpty
     }
 
     /// Where the picked files, skills and references sit in the text, longest first when one prefixes another. A

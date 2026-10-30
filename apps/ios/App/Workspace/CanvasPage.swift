@@ -594,6 +594,10 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
     func setAttention(
         statuses: [String: AgentStatus], unseen: Set<String>, needingYou: Set<String>, tasks: [String: JSONValue] = [:]
     ) {
+        guard
+            surface.statuses != statuses || surface.tasks != tasks || surface.unseen != unseen
+                || surface.needingYou != needingYou
+        else { return }
         surface.statuses = statuses
         surface.tasks = tasks
         surface.unseen = unseen
