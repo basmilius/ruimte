@@ -27,7 +27,7 @@
     "test": "bun test --conditions=source --parallel --only-failures --timings=test-timings.json",
     "test:windows": "bun test --conditions=source --parallel=8 --only-failures",
     "test:timings": "bun run test --update-timings",
-    "test:dom": "bun --config=dom.bunfig.toml test --conditions=source --parallel=2 .dom.test.",
+    "test:dom": "bun --config=dom.bunfig.toml test --conditions=source .dom.test.",
     "test:integration": "bun scripts/test-integration.ts",
     "test:package": "bun scripts/test-integration.ts --suite package",
     "test:devices": "bun scripts/test-integration.ts --suite devices",
