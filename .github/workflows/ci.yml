@@ -98,57 +98,109 @@ jobs:
       - run: bun test --conditions=source apps/server/src/fs
 
   unit:
-    name: unit (${{ matrix.shard }}/4)
+    name: unit
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run test --shard=${{ matrix.shard }}/4
+      # package.json's test script always writes test-timings.json, so each step copies that file.
+      - parallel:
+          - name: unit 1/4
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-1.json"
+              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-1.json" --shard=1/4
+          - name: unit 2/4
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-2.json"
+              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-2.json" --shard=2/4
+          - name: unit 3/4
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-3.json"
+              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-3.json" --shard=3/4
+          - name: unit 4/4
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-4.json"
+              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-4.json" --shard=4/4
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
   windows:
-    name: unit (Windows, ${{ matrix.shard }}/9)
+    name: unit (Windows)
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
       # Two workers instead of one per core: the tests that run git start dozens of processes each, and
       # four files doing that at once on this runner pushed them past Bun's five seconds.
-      - run: bun test --conditions=source --parallel=2 --only-failures --timings=test-timings.json --shard=${{ matrix.shard }}/9
+      - parallel:
+          - name: unit (Windows, 1/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-1.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-1.json" --shard=1/9
+          - name: unit (Windows, 2/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-2.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-2.json" --shard=2/9
+          - name: unit (Windows, 3/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-3.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-3.json" --shard=3/9
+          - name: unit (Windows, 4/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-4.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-4.json" --shard=4/9
+          - name: unit (Windows, 5/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-5.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-5.json" --shard=5/9
+          - name: unit (Windows, 6/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-6.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-6.json" --shard=6/9
+          - name: unit (Windows, 7/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-7.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-7.json" --shard=7/9
+          - name: unit (Windows, 8/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-8.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-8.json" --shard=8/9
+          - name: unit (Windows, 9/9)
+            run: |
+              cp test-timings.json "$RUNNER_TEMP/unit-9.json"
+              bun test --conditions=source --parallel=2 --only-failures --timings="$RUNNER_TEMP/unit-9.json" --shard=9/9
 
   dom:
-    name: dom (${{ matrix.shard }}/3)
+    name: dom
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
       - uses: ./.github/actions/cache-react-compiler
-      - run: bun run test:dom --shard=${{ matrix.shard }}/3
+      - parallel:
+          - name: dom 1/3
+            run: bun run test:dom --shard=1/3
+          - name: dom 2/3
+            run: bun run test:dom --shard=2/3
+          - name: dom 3/3
+            run: bun run test:dom --shard=3/3
 
   integration:
-    name: integration (macOS, ${{ matrix.shard }}/3)
+    name: integration (macOS)
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run test:integration --suite core --shard=${{ matrix.shard }}/3
+      - parallel:
+          - name: integration (macOS, 1/3)
+            run: bun run test:integration --suite core --shard=1/3
+          - name: integration (macOS, 2/3)
+            run: bun run test:integration --suite core --shard=2/3
+          - name: integration (macOS, 3/3)
+            run: bun run test:integration --suite core --shard=3/3
 
   packaged:
     name: packaged (macOS)
@@ -161,12 +213,8 @@ jobs:
       - run: bun run test:package
 
   integration-linux:
-    name: integration (Linux, ${{ matrix.shard }}/3)
+    name: integration (Linux)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The shell tests start /bin/zsh, which the runner image does not promise.
@@ -174,7 +222,13 @@ jobs:
       # The runner image makes /usr/share world-writable, and Ubuntu's global zshrc then stops on compinit's prompt.
       - run: zsh -fc 'autoload -Uz compaudit; compaudit' 2>/dev/null | sort -u | xargs -r sudo chmod go-w
       - uses: ./.github/actions/install
-      - run: bun run test:integration --suite core --shard=${{ matrix.shard }}/3
+      - parallel:
+          - name: integration (Linux, 1/3)
+            run: bun run test:integration --suite core --shard=1/3
+          - name: integration (Linux, 2/3)
+            run: bun run test:integration --suite core --shard=2/3
+          - name: integration (Linux, 3/3)
+            run: bun run test:integration --suite core --shard=3/3
 
   # The release's own Linux runner, so the compiled daemon is proven on the glibc floor it claims.
   packaged-linux:
