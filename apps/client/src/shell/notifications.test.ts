@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
-import type { AgentStatus, ChatRequestSummary } from '@ruimte/contracts';
+import type { AgentRequest, AgentStatus, ChatRequestSummary } from '@ruimte/contracts';
 import { chatInfoOf } from '../../testing/chat-info';
 import { startAttentionWatch, useAttention } from '@/state/attention';
 import { useDocument } from '@/state/document';
@@ -93,7 +93,7 @@ test('completed turns only leave an unread mark; needs-you and requested alerts 
     }
 });
 
-test('concurrent requests settle into one notification, then later requests update it quietly', () => {
+test.each(['chat', 'terminal'] as const)('%s requests settle into one notification, then later requests update it quietly', (kind) => {
     const shown: { title: string; options: NotificationOptions }[] = [];
     const restore = fakeNotifications(shown);
     const key = endpointKey(currentEndpointId(), 'agent');
@@ -106,16 +106,36 @@ test('concurrent requests settle into one notification, then later requests upda
     });
 
     const wait = (requests: ChatRequestSummary[]): void => {
-        useChats.getState().status(key, chatInfoOf('agent', { status: 'needs-you', requests }));
+        if (kind === 'chat') {
+            useChats.getState().status(key, chatInfoOf('agent', { status: 'needs-you', requests }));
+
+            return;
+        }
+
+        useSessions.getState().setAgent(key, {
+            kind: 'codex',
+            status: 'needs-you',
+            requests: requests.map<AgentRequest>((request) => ({
+                id: request.requestId,
+                source: '',
+                kind: 'approval',
+                toolName: 'Bash',
+                title: null,
+                text: request.approval?.command ?? '',
+                createdAt: 1
+            })),
+            live: true,
+            agentSessionId: 'cli',
+            transcriptPath: null,
+            updatedAt: 1
+        });
     };
 
     const sound = useSettings.getState().agentsTurnSound;
     let stopNotifications = () => {};
     try {
         useSettings.setState({ agentsTurnSound: true });
-        useDocument
-            .getState()
-            .load({ version: 3, rev: 1, name: 'Project', color: '#000', views: [{ kind: 'chat', id: 'agent', name: 'Build', node: {} }] }, null);
+        useDocument.getState().load({ version: 3, rev: 1, name: 'Project', color: '#000', views: [{ kind, id: 'agent', name: 'Build', node: {} }] }, null);
         stopNotifications = startAgentNotifications();
         wait([request('first', 'bun test')]);
         jest.advanceTimersByTime(400);
@@ -140,6 +160,7 @@ test('concurrent requests settle into one notification, then later requests upda
         stopNotifications();
         useSettings.setState({ agentsTurnSound: sound });
         useChats.getState().forget(key);
+        useSessions.getState().forget(key);
         useDocument.getState().load(null, null);
         restore();
     }
