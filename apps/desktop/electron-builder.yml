@@ -105,12 +105,12 @@ deb:
 rpm:
   compression: gzip
 win:
-  # There is no background service on Windows: the shell runs the daemon as its child (`serviceSupport`).
   target: [nsis, zip]
   # electron-builder turns the 256 px PNG `scripts/icon.ts` writes next to the icns into the .ico Windows asks for.
   icon: build/icon/AppIcon.png
   artifactName: ${productName}-${version}-${arch}.${ext}
   executableName: Ruimte
+# `build/installer.nsh`, which electron-builder finds by its name, stops the background task and the daemon first.
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   oneClick: false

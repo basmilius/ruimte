@@ -292,8 +292,8 @@ if (launcherPipe !== undefined) {
 }
 
 // The machine is asked what runs on it only when the quit ends it; the last window may be gone already.
-async function askBeforeQuit(): Promise<boolean> {
-    const survives = machine.controller.survivesQuit(machine.stopsOnQuit());
+async function askBeforeQuit(stopsMachine = machine.stopsOnQuit()): Promise<boolean> {
+    const survives = machine.controller.survivesQuit(stopsMachine);
     const question = quitQuestion({
         language: interfaceLanguage ?? app.getPreferredSystemLanguages()[0],
         survives,
@@ -790,7 +790,9 @@ ipc.handle('update:download', () => updater.download());
  * are still there. Not when `confirmed`: a person asked from another client after being told what ends.
  */
 async function installUpdate(confirmed: boolean): Promise<void> {
-    if (!confirmed && !machine.controller.survivesQuit(false) && !(await askBeforeQuit())) {
+    // Windows will not replace an executable that runs, so there the installer ends the service's daemon too.
+    const installerStopsMachine = process.platform === 'win32';
+    if (!confirmed && !machine.controller.survivesQuit(installerStopsMachine) && !(await askBeforeQuit(installerStopsMachine || machine.stopsOnQuit()))) {
         return;
     }
     quitConfirmed = true;

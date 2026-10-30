@@ -71,7 +71,7 @@ Built, not shipped ([WINDOWS.md](WINDOWS.md)). The `windows` job runs only when 
 
 Without the variable, `build.ts --skip win32-x64` leaves `@ruimte/win32-x64` out of npm. The launcher refuses Windows until `WINDOWS_REFUSAL` comes off.
 
-The build is unsigned (SmartScreen warns; electron-updater has no publisher to check). Before `WINDOWS_RELEASE` goes on, Bas decides:
+The build is unsigned (SmartScreen warns). electron-updater checks a signature only when `app-update.yml` names a `publisherName`, which electron-builder writes only for a signed build, so an unsigned app takes an unsigned update and the feed's sha512 is the only check (tried on the PC). A build with a publisher refuses an unsigned update with `ERR_UPDATER_INVALID_SIGNATURE`: once signing starts it cannot stop. Until a Latest release carries `latest.yml`, an installed app's check ends in a 404 (`no-feed`). Before `WINDOWS_RELEASE` goes on, Bas decides:
 
 - How to sign. An OV or EV certificate (`WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`, or a hardware token), or a cloud signing service with a step where the `windows` job marks it.
 - Whether an unsigned first release is acceptable.

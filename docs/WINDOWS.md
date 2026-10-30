@@ -27,7 +27,9 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 - `bun run dev` goes through `apps/server/scripts/dev.ts` (Bun's Windows shell lacks `${VAR:-default}` and `HOME`).
 - `win:` and `nsis:` in `apps/desktop/electron-builder.yml` build an unsigned installer and zip.
 - `check:types`, `lint` and `format:check` pass.
-- The background service, unverified: `taskSchedulerManager` (`@adecore/service`), wired in `packages/service/src/host.ts` as task `app.ruimte.daemon`, with `service\app.ruimte.daemon.xml` and `logs\daemon.log` under `%LOCALAPPDATA%\Ruimte`. The desktop app recognizes its own task by its `RUIMTE_HOME` (`apps/desktop/src/service/ownership.ts`). The task reruns every minute, so a daemon that ends for an update returns within a minute. `ruimte service install` copies `ruimte.exe` to `$RUIMTE_HOME\bin`, renaming a running one aside first.
+- Installer and uninstaller stop what runs from the installation first (`apps/desktop/build/installer.nsh`, `stop-machine.ps1`): they disable the task if it runs this installation's daemon, end the app, ask the daemon to stop on the local secret, and after 10 seconds end what is left with `taskkill`. A task from `ruimte service install` and a daemon elsewhere stay. An install brings back the task it disabled, an update's old uninstaller keeps it, and a real uninstall deletes it and its definition. An update asks about the sessions it ends, because the daemon does not survive it here. Tried on the PC at medium integrity, see Testing.
+- `bun run dist` on the PC gives `Ruimte-<version>-x64-setup.exe` (179 MB) and a zip (224 MB).
+- The background service: `taskSchedulerManager` (`@adecore/service`), wired in `packages/service/src/host.ts` as task `app.ruimte.daemon`, with `service\app.ruimte.daemon.xml` and `logs\daemon.log` under `%LOCALAPPDATA%\Ruimte`. The desktop app recognizes its own task by its `RUIMTE_HOME` (`apps/desktop/src/service/ownership.ts`). The task reruns every minute, so a daemon that ends for an update returns within a minute. `ruimte service install` copies `ruimte.exe` to `$RUIMTE_HOME\bin`, renaming a running one aside first.
 
 - The process monitor and a session's ports (`apps/server/src/processes/windows.ts`), through `bun:ffi` as on macOS, since a process per reading is what costs on Windows. A reading takes 3 ms on the PC with 310 processes, also from a compiled executable. `NtQuerySystemInformation` gives the table and counters, a handle once per process gives the path and owner, and `GetExtendedTcpTable` the listeners. Memory is the private working set; disk counters include all of a process's I/O, as in Task Manager. Windows has no reparenting, so a parent that ended or whose pid was reused becomes pid 1, as on POSIX. An MSYS `exec` ends the Windows process it ran in, so a child that lost its parent hangs under the oldest process on its console, flat, which is the terminal's shell. Git for Windows's `bin\bash.exe` starts the real shell as its child; `childCounter` looks through that, so an idle Git Bash is no work.
 - Interrupt and terminate in the process panel end the process at once. `process.kill` on Windows has no gentler signal, so `SIGINT` and `SIGTERM` do what `SIGKILL` does (exit code 1, confirmed on the PC).
@@ -95,7 +97,6 @@ Done, unit tested with Windows paths, untried on the PC.
 
 - Code signing, the npm placeholder and turning on `WINDOWS_RELEASE`.
 - The site offers the installer once a release has one.
-- An update replaces `resources\bin\ruimte.exe`, which Windows refuses while the task runs it. The installer stops the task first, or the task runs a copy outside the install folder as `ruimte service install` does.
 - The npm launcher's refusal comes off last.
 
 ## Not on Windows
@@ -108,7 +109,15 @@ Development stays on the Mac. The Windows 11 x64 PC is reachable over SSH (`Host
 
 Confirmed on the PC, 2026-10-30, in a dev app started without elevation: `bash -l` stays in the requested folder, also with a space in its path; no console window appears for the daemon; a terminal opens in Git Bash; an agent started there reports status through the hooks; a Claude chat and a Codex chat answer. A `codex.cmd` chat keeps `100% "a&b" ^c` intact.
 
+SSH is elevated, so what must run without elevation goes through a scheduled task with `RunLevel` limited and `LogonType` interactive, for the logged-on person: `whoami /groups` there shows `S-1-16-8192` (medium). Confirmed that way, 2026-10-30: `ruimte service install`, a restart for changed flags, `status` and `uninstall`; a silent install, update and uninstall; the packaged app registering the task and starting its daemon as the service (`/health` says `service: true`); electron-updater's own `NsisUpdater` against a local feed, downloading an unsigned build and running it through `quitAndInstall(true)`, the new daemon up 29 seconds later on the re-enabled task.
+
 Open questions for the next PC session:
+
+- Packaging, in a window:
+  - Run the setup by hand: SmartScreen's "More info, Run anyway", the folder page, the shortcuts, and "Run Ruimte" at the end.
+  - With Ruimte open, run the setup or the uninstaller: the "is running" question comes first, and Cancel leaves app and daemon running.
+  - After the first start, under a terminal with a running shell, choose the update from About once a release has a feed: the question about the sessions it ends comes first.
+  - Log out and back in: the daemon is up without opening the app.
 
 - In the app: the processes panel shows each terminal and chat with live CPU and memory, and a dev server's port appears on its terminal node, in PowerShell and in Git Bash (`npm run dev`). An idle Git Bash does not count as work when quitting.
 - Copy one file, and several, from the file tree; paste each in the Explorer. They are copied, the originals stay, and pasting in a text field gives the paths. The first copy takes about a second.

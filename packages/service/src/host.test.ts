@@ -27,6 +27,20 @@ describe('Ruimte service host', () => {
         expect(commandLineServiceProgram('/Users/test/.ruimte', 'darwin')).toBe('/Users/test/.ruimte/bin/ruimte');
     });
 
+    test('a workgroup is no authority for the account of a scheduled task', () => {
+        const env = { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local', USERDOMAIN: 'WORKGROUP', USERNAME: 'test' };
+        const spec = daemonServiceSpec({
+            platform: 'win32',
+            program: 'ruimte.exe',
+            args: [],
+            home: 'C:\\Users\\test',
+            ruimteHome: 'C:\\.ruimte',
+            path: '',
+            env
+        });
+        expect(spec.user).toBe('test');
+    });
+
     test('a scheduled task for the person on Windows, with its files under the local app data', () => {
         const env = { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local', USERDOMAIN: 'DESKTOP-1', USERNAME: 'test' };
         const program = 'C:\\Users\\test\\AppData\\Local\\Programs\\Ruimte\\resources\\bin\\ruimte.exe';

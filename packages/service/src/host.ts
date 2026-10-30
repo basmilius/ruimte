@@ -30,7 +30,8 @@ export function scheduledTaskFile(home: string, env: HostEnvironment = process.e
 /* The account the scheduled task starts for at logon, as `DOMAIN\name`. */
 function serviceUser(env: HostEnvironment): string {
     const name = env.USERNAME || userInfo().username;
-    return env.USERDOMAIN ? `${env.USERDOMAIN}\\${name}` : name;
+    // OpenSSH on a machine outside a domain sets the workgroup here, which is no authority an account belongs to.
+    return env.USERDOMAIN && env.USERDOMAIN.toUpperCase() !== 'WORKGROUP' ? `${env.USERDOMAIN}\\${name}` : name;
 }
 
 export function platformServiceManager(platform: NodeJS.Platform, env: HostEnvironment = process.env): ServiceManager | null {
