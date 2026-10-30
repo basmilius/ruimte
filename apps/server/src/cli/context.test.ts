@@ -568,11 +568,12 @@ describe('chat attach', () => {
         await truncate(part, size);
         expect(await runContext(['chat', 'attach', '--file', part], env)).toBe(0);
         // Compared as a string and by a boolean: a failing deep compare of 70 MB is itself what would time out.
-        const sent = seen[0]!.argv.at(-1)!;
+        const argv = seen[0]!.argv as string[];
+        const sent = argv.at(-1)!;
         const stl = Buffer.alloc(size);
         stl.writeUInt32LE(triangles, 80);
         expect(sent === `--data=${stl.toString('base64')}`).toBe(true);
-        expect(seen[0]!.argv.slice(0, -1)).toEqual(['attach', '--name', 'part.bin']);
+        expect(argv.slice(0, -1)).toEqual(['attach', '--name', 'part.bin']);
 
         header.writeUInt32LE(triangles + 1, 80);
         const larger = await file('larger.stl', header);
