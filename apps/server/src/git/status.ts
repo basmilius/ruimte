@@ -4,7 +4,7 @@ import { parseNumstat, type Numstat } from './diff.ts';
 import { LEAVE_NOTHING_OUT, git, leavingOut, readGit, repositoryRoot, verifyRev, type LeftOut } from './run.ts';
 import { untrackedNumstat } from './untracked-lines.ts';
 
-// Every untracked file is read whole on every run, so only the first ones get real counts.
+// A cold text count reads the whole file, so only the first untracked files get real counts.
 const MAX_UNTRACKED_COUNTS = 100;
 // How many of those are open at once, so a folder of new files does not hold a descriptor each.
 const COUNT_CONCURRENCY = 8;

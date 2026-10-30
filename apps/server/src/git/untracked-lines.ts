@@ -8,6 +8,54 @@ const BINARY_SNIFF_BYTES = 8000;
 const BIG_FILE_BYTES = 512 * 1024 * 1024;
 const CHUNK_BYTES = 64 * 1024;
 const NEWLINE = 0x0a;
+const MAX_CACHED_FILES = 512;
+
+interface FileVersion {
+    key: string;
+    size: bigint;
+    dev: bigint;
+    ino: bigint;
+}
+
+interface CachedCount {
+    version: string;
+    result: Numstat;
+}
+
+const counts = new Map<string, CachedCount>();
+
+async function versionOf(absolute: string): Promise<FileVersion | null> {
+    try {
+        const stat = await lstat(absolute, { bigint: true });
+
+        if (!stat.isFile()) {
+            return null;
+        }
+
+        return {
+            key: [stat.dev, stat.ino, stat.mode, stat.size, stat.mtimeNs, stat.ctimeNs].join(':'),
+            size: stat.size,
+            dev: stat.dev,
+            ino: stat.ino
+        };
+    } catch {
+        return null;
+    }
+}
+
+function remember(absolute: string, version: string, result: Numstat): void {
+    counts.delete(absolute);
+
+    if (counts.size >= MAX_CACHED_FILES) {
+        const oldest = counts.keys().next().value;
+
+        if (oldest !== undefined) {
+            counts.delete(oldest);
+        }
+    }
+
+    counts.set(absolute, { version, result: { ...result } });
+}
 
 /*
  * What `git diff --numstat --no-index /dev/null <path>` says of an untracked file, read here instead of
@@ -15,19 +63,40 @@ const NEWLINE = 0x0a;
  */
 export async function untrackedNumstat(root: string, path: string): Promise<Numstat | null> {
     const absolute = join(root, path);
-    let size: number;
-    try {
-        const stat = await lstat(absolute);
-        if (!stat.isFile()) {
-            return null;
-        }
-        size = stat.size;
-    } catch {
+    const version = await versionOf(absolute);
+
+    if (version === null) {
+        counts.delete(absolute);
+
         return null;
     }
-    if (size > BIG_FILE_BYTES) {
+
+    const cached = counts.get(absolute);
+
+    if (cached?.version === version.key) {
+        counts.delete(absolute);
+        counts.set(absolute, cached);
+
+        return { ...cached.result, path };
+    }
+
+    counts.delete(absolute);
+
+    if (version.size > BigInt(BIG_FILE_BYTES)) {
         return { path, added: 0, deleted: 0, binary: true };
     }
+
+    const result = await countFile(absolute, path, version);
+
+    // A file that moved during its scan must not leave a remembered count.
+    if (result !== null && (await versionOf(absolute))?.key === version.key) {
+        remember(absolute, version.key, result);
+    }
+
+    return result;
+}
+
+async function countFile(absolute: string, path: string, version: FileVersion): Promise<Numstat | null> {
     let handle: FileHandle;
     try {
         handle = await open(absolute, 'r');
@@ -35,6 +104,12 @@ export async function untrackedNumstat(root: string, path: string): Promise<Nums
         return null;
     }
     try {
+        const opened = await handle.stat({ bigint: true });
+
+        if (!opened.isFile() || opened.dev !== version.dev || opened.ino !== version.ino) {
+            return null;
+        }
+
         const buffer = Buffer.allocUnsafe(CHUNK_BYTES);
         let read = 0;
         let newlines = 0;
