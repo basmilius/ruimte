@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
-import { endpointKey } from './keys';
 import { DEFAULT_CHAT_TEXT_SIZE, useChatTextSizes } from './chat-text-size';
+import { endpointKey } from './keys';
 
 const HERE = endpointKey('here', 'review');
 const THERE = endpointKey('there', 'review');

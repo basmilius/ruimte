@@ -2,7 +2,6 @@ import { useSubagentView, stepEffortFromComposer, stepTimelineMessage } from '@a
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { useEffect } from 'react';
-import { resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import {
     closeCellAction,
     closeTabAction,
@@ -28,6 +27,7 @@ import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/pr
 import { CANVAS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
 import { focusedChatComposerKey, keyboardChatKey } from '@/chat/focused-chat';
+import { resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { isApplePlatform } from '@/desktop/bridge';
 import { countCommand } from '@/desktop/usage';
 import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
@@ -35,7 +35,7 @@ import { openFocusedFind } from '@/find/hosts';
 import { runChosenLaunch, stopChosenLaunch } from '@/launches/actions';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views';
-import { toggleRoutines } from '@/routines/stage';
+import { toggleRoutines, useRoutinesStage } from '@/routines/stage';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
 import { revealNextWaiting } from '@/shell/next-waiting';
 import { focusViewRow } from '@/shell/sidebar-focus';

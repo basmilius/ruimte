@@ -37,6 +37,7 @@ import { openAttentionQueue } from '@/attention/queue';
 import { groupArrangeable } from '@/canvas/arrange-group';
 import { focusedChatId } from '@/chat/focused-chat';
 import { restartChatSession } from '@/chat/restart-session';
+import { focusedChatTextSize, resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { openNewConsole } from '@/database/console-file';
 import { refreshSqlSchemas } from '@/database/sql-bindings';
 import { useDatabasePanel } from '@/database/state';
@@ -55,7 +56,6 @@ import { afterSettleCandidates, chooseAfterSettle, chosenLaunchId, startLaunch, 
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import type { MeasureVariant } from '@/measure/scene';
-import { focusedChatTextSize, resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { openOnboarding } from '@/onboarding/open';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';

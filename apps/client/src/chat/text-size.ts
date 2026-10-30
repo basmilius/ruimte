@@ -1,11 +1,11 @@
 import { isCanvasView } from '@ruimte/contracts';
 import { shownChatOfNode } from '@/design/design-chat';
+import { focusedEditor } from '@/shell/panels/focused-editor';
 import { focusedCanvas, maximizedNodeOf } from '@/state/canvas';
 import { DEFAULT_CHAT_TEXT_SIZE, useChatTextSizes, type ChatTextSize } from '@/state/chat-text-size';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, endpointOfNode } from '@/state/keys';
 import { useUi } from '@/state/ui';
-import { focusedEditor } from '@/shell/panels/focused-editor';
 import { focusedChatComposerKey, keyboardChatKey } from './focused-chat';
 
 /* Selection alone leaves +/- with the canvas; a maximized chat is the reading surface even on its frame. */
