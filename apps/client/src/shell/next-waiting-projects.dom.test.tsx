@@ -6,11 +6,13 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { projectSwitch } from '@/project/open';
 import { startWindowTabs, useWindowTabs } from '@/project/window-tabs';
 import { useEndpoints } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
+import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
-import { startWaitingSinceWatch } from '@/state/waiting';
+import { startWaitingSinceWatch, useWaitingSince } from '@/state/waiting';
 import { dropMachine } from '@/transport/connections';
 import { chatInfoOf } from '../../testing/chat-info';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
@@ -272,5 +274,41 @@ describe("next wait across this window's project tabs", () => {
         await until(() => showing(THERE.projectId, terminal.id));
         await next();
         await until(() => showing(HERE.projectId, middle.id));
+    });
+
+    test('a background-only terminal retains the earlier live sighting through a reconnect', async () => {
+        await page.unmount();
+        const id = `reconnect-terminal-${run}`;
+        const since = infos[older.id]!.requests![0]!.createdAt;
+        const agent = (updatedAt: number) => ({
+            kind: 'claude' as const,
+            status: 'needs-you' as const,
+            live: true,
+            agentSessionId: 'cli',
+            transcriptPath: null,
+            updatedAt
+        });
+        const terminal: ProjectView = { kind: 'terminal', id, name: 'Reconnect review', node: {} };
+        const key = endpointKey(ENDPOINT, id);
+        await act(async () => {
+            machine.emit('session.status', { sessionId: id, agent: agent(since) });
+            machine.emit('session.status', { sessionId: id, agent: agent(since + 30_000) });
+        });
+        machine.answer('session.list', () => ({
+            sessions: [
+                { sessionId: id, cwd: '/work/borealis', pid: 1, cols: 80, rows: 24, createdAt: since, attached: 0, exited: false, agent: agent(since + 30_000) }
+            ]
+        }));
+        machine.answer('project.sidebar', () => ({ projects: [{ summary: THERE, views: projectSidebarViews([OTHER, terminal], []) }] }));
+        page = mount();
+        await page.renderApp();
+        await until(() => sidebarMachineSnapshot(ENDPOINT)?.state === 'ready');
+        await act(async () => useSessions.getState().clear(ENDPOINT));
+        expect(useWaitingSince.getState().byKey.get(key)).toBe(since);
+        await act(async () => machine.drop());
+        expect(useWaitingSince.getState().byKey.get(key)).toBe(since);
+        await act(async () => machine.reopen());
+        await until(() => sidebarMachineSnapshot(ENDPOINT)?.state === 'ready');
+        expect(useWaitingSince.getState().byKey.get(key)).toBe(since);
     });
 });

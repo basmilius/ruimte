@@ -288,7 +288,7 @@ function watchMachine(endpoint: Endpoint, store: StoreApi<{ snapshots: Record<st
                 .filter(([key]) => key.startsWith('terminal:'))
                 .map(([key, at]) => [endpointKey(endpoint.id, key.slice('terminal:'.length)), at])
         );
-        publishBackgroundWaitingSince(endpoint.id, snapshot.state === 'ready' ? dates : null);
+        publishBackgroundWaitingSince(endpoint.id, dates);
         store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: snapshot } }));
     };
     const off = watcher.subscribe(show);
