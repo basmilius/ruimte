@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { homedir, userInfo } from 'node:os';
 import { posix, win32, type PlatformPath } from 'node:path';
 import { diskFiles, platformServiceManager as createPlatformServiceManager, runCommand, type ServiceManager, type ServiceSpec } from '@adecore/service';
@@ -27,11 +28,34 @@ export function scheduledTaskFile(home: string, env: HostEnvironment = process.e
     return win32.join(localAppData(home, env), 'Ruimte', 'service', `${LAUNCH_AGENT_LABEL}.xml`);
 }
 
-/* The account the scheduled task starts for at logon, as `DOMAIN\name`. */
-function serviceUser(env: HostEnvironment): string {
+/*
+ * The authority of the account this process runs as, from the system. The absolute path, since Git Bash
+ * puts a `whoami` of its own first that answers without one. Null when it does not answer.
+ */
+function systemAuthority(env: HostEnvironment): string | null {
+    try {
+        const account = execFileSync(win32.join(env.SystemRoot || 'C:\\Windows', 'System32', 'whoami.exe'), {
+            encoding: 'utf8',
+            windowsHide: true,
+            timeout: 5000
+        });
+        const separator = account.indexOf('\\');
+
+        // In capitals like `USERDOMAIN`, so a definition does not read as changed between a shell and SSH.
+        return separator > 0 ? account.slice(0, separator).toUpperCase() : null;
+    } catch {
+        return null;
+    }
+}
+
+/* The account the scheduled task starts for at logon, as `DOMAIN\name`, or the bare name when the system does not say. */
+function serviceUser(env: HostEnvironment, authority: (env: HostEnvironment) => string | null): string {
     const name = env.USERNAME || userInfo().username;
-    // OpenSSH on a machine outside a domain sets the workgroup here, which is no authority an account belongs to.
-    return env.USERDOMAIN && env.USERDOMAIN.toUpperCase() !== 'WORKGROUP' ? `${env.USERDOMAIN}\\${name}` : name;
+    // Only the computer's own name is sure: OpenSSH outside a domain sets the workgroup here, whatever it is called, and no account belongs to that.
+    const local = env.USERDOMAIN && env.USERDOMAIN.toUpperCase() === env.COMPUTERNAME?.toUpperCase();
+    const domain = local ? env.USERDOMAIN : authority(env);
+
+    return domain ? `${domain}\\${name}` : name;
 }
 
 export function platformServiceManager(platform: NodeJS.Platform, env: HostEnvironment = process.env): ServiceManager | null {
@@ -79,6 +103,8 @@ export interface DaemonService {
     path: string;
     /* Where Windows names the profile's local folder and the account; the process's own when absent. */
     env?: HostEnvironment;
+    /* Who answers for the account's authority when the environment cannot; the system when absent. */
+    authority?: (env: HostEnvironment) => string | null;
 }
 
 export function daemonServiceSpec(service: DaemonService): ServiceSpec {
@@ -92,6 +118,8 @@ export function daemonServiceSpec(service: DaemonService): ServiceSpec {
         environment: { RUIMTE_HOME: service.ruimteHome, PATH: service.path, RUIMTE_SERVICE: '1' },
         workingDirectory: service.home,
         logFile: serviceLogFile(service.home, service.platform, env),
-        ...(service.platform === 'win32' ? { user: serviceUser(env), scriptDirectory: win32.dirname(scheduledTaskFile(service.home, env)) } : {})
+        ...(service.platform === 'win32'
+            ? { user: serviceUser(env, service.authority ?? systemAuthority), scriptDirectory: win32.dirname(scheduledTaskFile(service.home, env)) }
+            : {})
     };
 }

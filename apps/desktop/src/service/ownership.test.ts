@@ -25,7 +25,7 @@ describe('definitionHome', () => {
             home: 'C:\\Users\\bas',
             ruimteHome: home,
             path: 'C:\\Windows\\System32',
-            env: { USERDOMAIN: 'PC', USERNAME: 'bas' }
+            env: { COMPUTERNAME: 'PC', USERDOMAIN: 'PC', USERNAME: 'bas' }
         });
         expect(definitionHome(scheduledTask(spec))).toBe(home);
         const oldForm =

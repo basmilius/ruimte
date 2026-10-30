@@ -27,22 +27,31 @@ describe('Ruimte service host', () => {
         expect(commandLineServiceProgram('/Users/test/.ruimte', 'darwin')).toBe('/Users/test/.ruimte/bin/ruimte');
     });
 
-    test('a workgroup is no authority for the account of a scheduled task', () => {
-        const env = { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local', USERDOMAIN: 'WORKGROUP', USERNAME: 'test' };
-        const spec = daemonServiceSpec({
-            platform: 'win32',
-            program: 'ruimte.exe',
-            args: [],
-            home: 'C:\\Users\\test',
-            ruimteHome: 'C:\\.ruimte',
-            path: '',
-            env
-        });
-        expect(spec.user).toBe('test');
+    test('a workgroup of any name is no authority: the system names it, and else the name stands alone', () => {
+        const userOf = (authority: () => string | null, USERDOMAIN = 'OFFICE'): string | undefined =>
+            daemonServiceSpec({
+                platform: 'win32',
+                program: 'ruimte.exe',
+                args: [],
+                home: 'C:\\Users\\test',
+                ruimteHome: 'C:\\.ruimte',
+                path: '',
+                env: { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local', COMPUTERNAME: 'DESKTOP-1', USERDOMAIN, USERNAME: 'test' },
+                authority
+            }).user;
+
+        expect(userOf(() => 'DESKTOP-1')).toBe('DESKTOP-1\\test');
+        expect(userOf(() => 'CORP')).toBe('CORP\\test');
+        expect(userOf(() => null)).toBe('test');
+        expect(
+            userOf(() => {
+                throw new Error('the computer knows its own name');
+            }, 'desktop-1')
+        ).toBe('desktop-1\\test');
     });
 
     test('a scheduled task for the person on Windows, with its files under the local app data', () => {
-        const env = { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local', USERDOMAIN: 'DESKTOP-1', USERNAME: 'test' };
+        const env = { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local', COMPUTERNAME: 'DESKTOP-1', USERDOMAIN: 'DESKTOP-1', USERNAME: 'test' };
         const program = 'C:\\Users\\test\\AppData\\Local\\Programs\\Ruimte\\resources\\bin\\ruimte.exe';
         const spec = daemonServiceSpec({
             platform: 'win32',
