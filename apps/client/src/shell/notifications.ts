@@ -54,6 +54,9 @@ export function notifyRequested(endpointId: string, alert: EventMap['push.notifi
 /* A machine that keeps the snoozes may end one by its own clock a little before this one gets there. */
 const CLOCK_SLACK_MS = 5_000;
 
+// Concurrent approvals must settle before same-tag replacement can withdraw the first banner.
+const WAIT_SETTLE_MS = 1_000;
+
 /*
  * Notify once while a hidden node needs input, then withdraw when it resumes. A snoozed wait reads as no
  * wait, so a snooze that runs out is a new one and announces itself; one that ended before its time was
@@ -62,6 +65,7 @@ const CLOCK_SLACK_MS = 5_000;
 export function startAgentNotifications(now: () => number = Date.now): () => void {
     const shown = new Map<string, Notification>();
     const lines = new Map<string, string>();
+    const pending = new Map<string, { timer: ReturnType<typeof setTimeout>; ready: boolean; silent: boolean }>();
     let previous = new Map<string, string | undefined>();
     /* When the snooze on each node that was snoozed at the last pass runs out. */
     let asleep = new Map<string, number>();
@@ -73,6 +77,15 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
     };
     // Browsers only grant permission from a gesture; the first click anywhere is that gesture.
     window.addEventListener('pointerdown', askOnce, { once: true });
+
+    const cancelPending = (nodeId: string): void => {
+        const waiting = pending.get(nodeId);
+
+        if (waiting) {
+            clearTimeout(waiting.timer);
+            pending.delete(nodeId);
+        }
+    };
 
     const check = (): void => {
         const nodes = projectNodes();
@@ -93,6 +106,7 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
             const endedEarly = status === 'needs-you' && (asleep.get(node.id) ?? 0) - now() > CLOCK_SLACK_MS;
             current.set(node.id, status);
             if (status !== 'needs-you') {
+                cancelPending(node.id);
                 shown.get(node.id)?.close();
                 shown.delete(node.id);
                 lines.delete(node.id);
@@ -109,13 +123,45 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
                 }
                 continue;
             }
-            if (previous.get(node.id) === 'needs-you' || endedEarly || !canNotify(node.id, seen)) {
+            if (endedEarly || !canNotify(node.id, seen)) {
+                cancelPending(node.id);
                 continue;
             }
 
-            shown.set(node.id, notify(node.id, node.title, line, `ruimte-${node.id}`, !agentsTurnSound));
-            lines.set(node.id, line);
+            const waiting = pending.get(node.id);
+
+            if (waiting) {
+                if (waiting.ready) {
+                    pending.delete(node.id);
+                    shown.set(node.id, notify(node.id, node.title, line, `ruimte-${node.id}`, waiting.silent));
+                    lines.set(node.id, line);
+                }
+
+                continue;
+            }
+
+            if (previous.get(node.id) === 'needs-you') {
+                continue;
+            }
+
+            const timer = setTimeout(() => {
+                const scheduled = pending.get(node.id);
+
+                if (scheduled?.timer === timer) {
+                    scheduled.ready = true;
+                    check();
+                }
+            }, WAIT_SETTLE_MS);
+
+            pending.set(node.id, { timer, ready: false, silent: !agentsTurnSound });
         }
+
+        for (const nodeId of pending.keys()) {
+            if (!current.has(nodeId)) {
+                cancelPending(nodeId);
+            }
+        }
+
         previous = current;
         asleep = sleeping;
     };
@@ -130,5 +176,9 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
         offChats();
         offSettings();
         offSnoozes();
+
+        for (const nodeId of pending.keys()) {
+            cancelPending(nodeId);
+        }
     };
 }
