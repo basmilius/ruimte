@@ -2,22 +2,36 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useDesignChat } from '@/design/design-chat';
 import { focusedCanvas } from '@/state/canvas';
 import { useChatTextSizes } from '@/state/chat-text-size';
 import { useDocument } from '@/state/document';
+import { useEndpoints } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
+import { useUi } from '@/state/ui';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
+import { dropMachine } from '@/transport/connections';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { chatInfoOf } from '../../testing/chat-info';
-import { FakeMachine } from '../../testing/fake-machine';
+import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { claudeProvider } from '../../testing/fake-provider';
 
 const REVIEW: ProjectNode = { id: 'text-review', kind: 'chat', title: 'Review', x: 0, y: 0, w: 480, h: 520 };
 const OTHER: ProjectNode = { ...REVIEW, id: 'text-other', title: 'Other', x: 520 };
 const TERMINAL: ProjectNode = { ...REVIEW, kind: 'terminal', id: 'text-terminal', title: 'Terminal', x: 1040 };
-const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [REVIEW, OTHER, TERMINAL], texts: [], edges: [], layouts: [] };
+const DESIGN: ProjectNode = {
+    ...REVIEW,
+    id: 'text-design',
+    kind: 'design',
+    title: 'Design',
+    x: 1560,
+    path: 'review',
+    chats: [{ id: 'text-design-later', name: 'Later', node: {} }]
+};
+const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [REVIEW, OTHER, TERMINAL, DESIGN], texts: [], edges: [], layouts: [] };
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
 let page: Mounted;
@@ -41,6 +55,7 @@ async function focus(id: string): Promise<void> {
 
 beforeEach(async () => {
     useChatTextSizes.setState({ byKey: {} });
+    useDesignChat.setState({ picked: {}, pages: {} });
     machine = new FakeMachine();
     machine.answer('provider.list', () => ({ providers: [claudeProvider({ chat: true, terminal: true })] }));
     machine.answer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId), items: [] }));
@@ -109,7 +124,16 @@ describe('focused chat text', () => {
         const camera = focusedCanvas().getState().camera;
         await key('=');
         expect(reading(REVIEW.id)!.dataset.chatTextSize).toBe('1');
-        expect(focusedCanvas().getState().camera).toEqual(camera);
+        expect(focusedCanvas().getState().camera.zoom).toBe(camera.zoom + 0.1);
+        await key('-');
+        expect(focusedCanvas().getState().camera.zoom).toBe(camera.zoom);
+        await act(async () =>
+            focusedCanvas()
+                .getState()
+                .setCamera({ ...camera, zoom: 1.7 })
+        );
+        await key('0');
+        expect(focusedCanvas().getState().camera.zoom).toBe(1);
         await act(async () => {
             focusedCanvas().getState().toggleMaximizedNode(REVIEW.id);
             focusedCanvas().getState().setBodyFocus(null);
@@ -175,5 +199,91 @@ describe('focused chat text', () => {
         await act(async () => focusedCanvas().getState().deleteSelected());
         await until(() => reading(REVIEW.id) === null);
         expect(Object.keys(useChatTextSizes.getState().byKey)).toEqual([]);
+    });
+
+    test('a design changes its shown later chat and removing the design clears that preference', async () => {
+        await until(() => reading(DESIGN.id) !== null);
+        await focus(DESIGN.id);
+        await key('=');
+        expect(reading(DESIGN.id)!.dataset.chatTextSize).toBe('2');
+        expect(useChatTextSizes.getState().byKey).toEqual({ [endpointKey('fake-machine', 'text-design-later')]: 2 });
+        await act(async () => focusedCanvas().getState().deleteSelected());
+        await until(() => reading(DESIGN.id) === null);
+        expect(useChatTextSizes.getState().byKey).toEqual({});
+    });
+
+    test('a maximized remote chat uses its own machine and forgetting that machine clears only its preference', async () => {
+        const remote = 'text-machine-b';
+        const there = new FakeMachine();
+        there.answer('provider.list', () => ({ providers: [claudeProvider({ chat: true })] }));
+        there.answer('chat.attach', ({ chatId }) => ({ info: chatInfoOf(chatId), items: [] }));
+        useEndpoints.getState().add({
+            id: remote,
+            label: 'Remote',
+            httpBaseUrl: 'http://127.0.0.1:2',
+            wsBaseUrl: 'ws://127.0.0.1:2',
+            reachability: 'lan',
+            daemonId: null,
+            daemonPublicKey: null
+        });
+        const disconnect = connectFakeMachine(there, remote);
+
+        try {
+            await focus(OTHER.id);
+            await key('=');
+            let remoteId = '';
+            await act(async () => {
+                const created = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 }, { machine: remote });
+
+                if (created === null) {
+                    throw new Error('The open canvas must accept a remote chat');
+                }
+
+                remoteId = created;
+                focusedCanvas().getState().toggleMaximizedNode(remoteId);
+                focusedCanvas().getState().setBodyFocus(null);
+            });
+            await until(() => there.requests('chat.attach').some(({ chatId }) => chatId === remoteId));
+            await key('=');
+            expect(reading(remoteId)!.dataset.chatTextSize).toBe('2');
+            expect(useChatTextSizes.getState().byKey).toEqual({
+                [endpointKey('fake-machine', OTHER.id)]: 2,
+                [endpointKey(remote, remoteId)]: 2
+            });
+            await act(async () => dropMachine(remote));
+            expect(useChatTextSizes.getState().byKey).toEqual({ [endpointKey('fake-machine', OTHER.id)]: 2 });
+        } finally {
+            await act(async () => {
+                dropMachine(remote);
+                disconnect();
+                useEndpoints.getState().remove(remote);
+            });
+        }
+    });
+
+    test('the palette restores the chat target before stepping and offers one contextual reset', async () => {
+        await focus(REVIEW.id);
+        const choose = async (label: string): Promise<void> => {
+            await act(async () => useUi.getState().setPaletteOpen(true));
+            await until(() => document.querySelector('input[role="combobox"]') !== null);
+            const input = document.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+            await act(async () => {
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, label);
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: label }));
+            });
+            const rows = (): HTMLElement[] =>
+                [...document.querySelectorAll<HTMLElement>('[role="option"]')].filter(
+                    (row) => row.textContent?.includes(label) && row.querySelector('kbd') !== null
+                );
+            await until(() => rows().length > 0);
+            expect(rows().length).toBe(1);
+            await clickOn(rows()[0]!);
+            await until(() => !useUi.getState().paletteOpen);
+        };
+
+        await choose('Larger Chat Text');
+        await until(() => reading(REVIEW.id)!.dataset.chatTextSize === '2');
+        await choose('Default Chat Text Size');
+        await until(() => reading(REVIEW.id)!.dataset.chatTextSize === '1');
     });
 });

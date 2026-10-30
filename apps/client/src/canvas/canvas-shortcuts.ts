@@ -189,10 +189,6 @@ function escapeCanvas(e: KeyboardEvent, s: CanvasState): void {
 
 /* The keys about the window, its cells and its views, which answer from anywhere. Answers whether the key is spoken for. */
 function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command: Command, apple: boolean): boolean {
-    if (command === 'chat-text-larger' || command === 'chat-text-smaller') {
-        return true;
-    }
-
     if (command === 'zoom-node' && !onStandaloneView() && !isInFloatingLayer(e.target) && !useUi.getState().settings.open) {
         if (zoomNodeTargetOf(s) !== null) {
             e.preventDefault();

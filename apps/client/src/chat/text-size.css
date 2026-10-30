@@ -19,7 +19,6 @@
     --text-lg--line-height: var(--chat-type-base-line);
     --text-code: var(--chat-type-xs);
     --text-code--line-height: var(--chat-type-xs-line);
-    --leading-normal: var(--chat-type-xs-line);
 }
 
 .chat-reading-scope[data-chat-text-size='2'] > .chat-reading-content {
@@ -31,7 +30,6 @@
     --text-base--line-height: var(--chat-type-lg-line);
     --text-code: var(--chat-type-sm);
     --text-code--line-height: var(--chat-type-sm-line);
-    --leading-normal: var(--chat-type-base-line);
 }
 
 .chat-reading-scope[data-chat-text-size='3'] > .chat-reading-content {
@@ -43,5 +41,4 @@
     --text-base--line-height: var(--chat-type-lg-line);
     --text-code: var(--chat-type-base);
     --text-code--line-height: var(--chat-type-base-line);
-    --leading-normal: var(--chat-type-lg-line);
 }
