@@ -1,0 +1,34 @@
+[test]
+# The Windows job in CI, by Bas's choice: these start tens of real git processes per test, which a
+# Windows runner cannot do within Bun's five seconds, so they failed at random. They run on macOS and
+# Linux in CI, and on Windows through `bun run test:windows` on a real machine (docs/WINDOWS.md).
+pathIgnorePatterns = [
+    "**/*.integration.test.ts",
+    "**/*.dom.test.tsx",
+    "**/docs/reports/**",
+    # Reads every source file, and says the same on every platform.
+    "apps/client/src/project/view-nodes.test.ts",
+    "apps/server/src/canvas/project-verb.test.ts",
+    "apps/server/src/canvas/worktree-verb.test.ts",
+    "apps/server/src/chat/fork-worktree.test.ts",
+    "apps/server/src/chat/ui-sources.test.ts",
+    "apps/server/src/git/actions.test.ts",
+    "apps/server/src/git/blame.test.ts",
+    "apps/server/src/git/checkpoints.test.ts",
+    "apps/server/src/git/conflict.test.ts",
+    "apps/server/src/git/diff.test.ts",
+    "apps/server/src/git/ignored.test.ts",
+    "apps/server/src/git/log.test.ts",
+    "apps/server/src/git/repos.test.ts",
+    "apps/server/src/git/stage.test.ts",
+    "apps/server/src/git/status-watcher.test.ts",
+    "apps/server/src/git/status.test.ts",
+    "apps/server/src/git/tree-diff.test.ts",
+    "apps/server/src/git/worktree-diff.test.ts",
+    "apps/server/src/git/worktree-merge.test.ts",
+    "apps/server/src/git/worktrees.test.ts",
+    "apps/server/src/handlers/git.test.ts",
+    "apps/server/src/projects/scratch-project.test.ts",
+    "apps/server/src/provenance/provenance-service.test.ts",
+]
+preload = ["./apps/client/node_modules/@adecore/ui/src/testing/dedupe.ts", "./apps/client/test-preload.ts"]

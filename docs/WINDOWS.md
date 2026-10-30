@@ -43,6 +43,7 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 
 On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun run test:windows` (8 workers) takes 2 minutes with 11485 pass and 0 fail, `bun run test:dom` 626 pass and 0 fail, and `bun run test:integration` 255 pass, 178 skip and 0 fail.
 
+- `unit (Windows)` in CI leaves out the 22 unit test files that run real git (`windows-ci.bunfig.toml`): a runner is over three times slower than the PC and they failed at random, in other tests every run. Git and worktrees on Windows are therefore proven only by `bun run test:windows` on a real machine. Run it before a release.
 - `bun run test` uses a worker per core. With 16 it has timeouts in tests that run real git (`git/repos`, `canvas/worktree-verb`); with 8 it has none and the same tests pass alone, so load is the likely cause.
 - `check:generated` fails: the floats in `apps/ios/Tests/Fixtures/document-scenes.json` differ in their last digits (`37.23045369887423` here, `37.230453698874236` on the PC), so the math libraries disagree. The check stays off on Windows.
 - Skipped on Windows, and so proven only by hand or not at all:

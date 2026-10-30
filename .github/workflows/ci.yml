@@ -107,8 +107,7 @@ jobs:
       - run: bun run test
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
-  # One runner, two workers. More than that on this disk locks git and the rename of project.json,
-  # and a shard per runner spends a machine on each ninth of the suite.
+  # One runner, two workers, without the files that start git. windows-ci.bunfig.toml says which.
   windows:
     name: unit (Windows)
     if: vars.WINDOWS_RELEASE == 'true'
@@ -119,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun test --conditions=source --parallel=2 --only-failures --timings=test-timings.json
+      - run: bun --config=windows-ci.bunfig.toml test --conditions=source --parallel=2 --only-failures
 
   dom:
     name: dom

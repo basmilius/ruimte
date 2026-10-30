@@ -552,17 +552,24 @@ describe('chat attach', () => {
 
     test('reads a model by its bytes and sends it, up to 50 MiB, and refuses a zip that is no USDZ', async () => {
         const triangles = Math.floor((50 * 1024 * 1024 - 84) / 50);
-        const stl = Buffer.alloc(84 + 50 * triangles);
-        stl.writeUInt32LE(triangles, 80);
-        const part = await file('part.bin', stl);
-        expect(await runContext(['chat', 'attach', '--file', part], env)).toBe(0);
-        expect(seen.map((call) => call.argv)).toEqual([['attach', '--name', 'part.bin', `--data=${stl.toString('base64')}`]]);
-
-        // Sparse, since the refusal reads no further than the limit and a real 50 MiB write is what a slow runner stalls on.
+        const size = 84 + 50 * triangles;
+        // Sparse, since a real 50 MiB write is what a slow runner stalls on.
         const header = Buffer.alloc(84);
+        header.writeUInt32LE(triangles, 80);
+        const part = await file('part.bin', header);
+        await truncate(part, size);
+        expect(await runContext(['chat', 'attach', '--file', part], env)).toBe(0);
+        // Compared as a string and by a boolean: a failing deep compare of 70 MB is itself what would time out.
+        const argv = seen[0]!.argv as string[];
+        const sent = argv.at(-1)!;
+        const stl = Buffer.alloc(size);
+        stl.writeUInt32LE(triangles, 80);
+        expect(sent === `--data=${stl.toString('base64')}`).toBe(true);
+        expect(argv.slice(0, -1)).toEqual(['attach', '--name', 'part.bin']);
+
         header.writeUInt32LE(triangles + 1, 80);
         const larger = await file('larger.stl', header);
-        await truncate(larger, stl.length + 50);
+        await truncate(larger, size + 50);
         const zip = Buffer.alloc(64);
         zip.write('PK\x03\x04', 0, 'latin1');
         zip.writeUInt16LE(10, 26);

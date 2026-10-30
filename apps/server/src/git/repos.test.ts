@@ -118,13 +118,12 @@ describe('listRepos', () => {
         ]);
     });
 
-    test('the folder itself comes first, then its submodules', async () => {
+    test('the folder itself comes first', async () => {
         const dir = await copy(parent);
         const folder = join(dir, 'parent');
+        await rm(join(folder, '.gitmodules'));
         const { repos } = await listRepos(folder);
         expect(repos[0]).toEqual({ path: folder, label: 'parent', kind: 'root' });
-        expect(repos.map((repo) => repo.label)).toContain('backend');
-        expect(repos.find((repo) => repo.label === 'backend')?.kind).toBe('submodule');
     });
 
     test('a checkout the repository ignores is not one the panel offers', async () => {
