@@ -76,7 +76,9 @@ describe('untrackedNumstat', () => {
                 open.mockRestore();
                 read.mockRestore();
                 close.mockRestore();
-                await handle.close();
+                if (handle.fd >= 0) {
+                    await handle.close();
+                }
             }
         }
     });
