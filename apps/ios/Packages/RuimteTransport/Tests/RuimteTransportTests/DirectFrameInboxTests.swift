@@ -131,6 +131,19 @@ import Testing
         inbox.close()
     }
 
+    @Test func partialPiecesStayInsideTheInboxUntilTheFrameIsComplete() async {
+        var received: [DirectFrameResult] = []
+        let inbox = DirectFrameInbox(policy: { accepted }, received: { received.append($0) })
+        let first = inbox.push(Data("+first".utf8), isBinary: false)
+        let middle = inbox.push(Data("+ middle".utf8), isBinary: false)
+        let last = inbox.push(Data("= last".utf8), isBinary: false)
+        await first.value
+        await middle.value
+        await last.value
+        #expect(received == [.text("first middle last", units: 17, deflated: false)])
+        inbox.close()
+    }
+
     @Test func closingBeforeQueuedWorkStartsSuppressesEveryDelivery() async {
         var received: [DirectFrameResult] = []
         let inbox = DirectFrameInbox(policy: { accepted }, received: { received.append($0) })
