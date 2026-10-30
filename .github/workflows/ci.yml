@@ -123,24 +123,19 @@ jobs:
               bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-4.json" --shard=4/4
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
-  # Each shard has its own runner. Nine of them on one disk lock git and the rename of project.json.
+  # One runner, two workers. More than that on this disk locks git and the rename of project.json,
+  # and a shard per runner spends a machine on each ninth of the suite.
   windows:
-    name: unit (Windows, ${{ matrix.shard }}/9)
+    name: unit (Windows)
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
     defaults:
       run:
         shell: bash
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      # Two workers instead of one per core: the tests that run git start dozens of processes each, and
-      # four files doing that at once on this runner pushed them past Bun's five seconds.
-      - run: bun test --conditions=source --parallel=2 --only-failures --timings=test-timings.json --shard=${{ matrix.shard }}/9
+      - run: bun test --conditions=source --parallel=2 --only-failures --timings=test-timings.json
 
   dom:
     name: dom
