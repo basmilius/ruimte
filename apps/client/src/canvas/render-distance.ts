@@ -1,5 +1,5 @@
 /*
- * How far out a canvas keeps drawing its costly bodies live: a page, a file, a diagram and a device.
+ * How far out a canvas keeps drawing its costly bodies live: a page, a file, a diagram, a device, a chat and a terminal.
  * Below the line such a node shows its plate. Zooming out alone saves nothing, since Chromium still
  * draws a page at its own size under the camera's scale; only a body that stops drawing does.
  *
