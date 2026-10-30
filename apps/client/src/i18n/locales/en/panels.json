@@ -331,6 +331,13 @@
         },
         "viewer": {
             "original": "Original"
+        },
+        "changePreview": {
+            "title": "Change since last commit",
+            "revert": "Revert change",
+            "truncated": "Preview shortened. Revert restores the entire change.",
+            "author": "Written by {{chat}}",
+            "authorTurn": "Written by {{chat}} · Turn {{turn}}"
         }
     },
     "files": {

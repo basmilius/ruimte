@@ -331,6 +331,13 @@
         },
         "viewer": {
             "original": "Origineel"
+        },
+        "changePreview": {
+            "title": "Wijziging sinds de laatste commit",
+            "revert": "Wijziging terugzetten",
+            "truncated": "Preview ingekort. Terugzetten herstelt de hele wijziging.",
+            "author": "Geschreven door {{chat}}",
+            "authorTurn": "Geschreven door {{chat}} · Beurt {{turn}}"
         }
     },
     "files": {

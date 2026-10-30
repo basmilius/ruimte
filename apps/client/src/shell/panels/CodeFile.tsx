@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { isSqlPath } from '@/database/console-file';
 import { AgentEditingChip } from '@/editor-ai/AgentEditingChip';
 import { ConflictLayer } from '@/editor-ai/ConflictLayer';
-import { ProvenanceCard } from '@/editor-ai/ProvenanceCard';
 import { ReviewBar, ReviewLayer } from '@/editor-ai/ReviewLayer';
 import { useAgentChanges } from '@/editor-ai/use-agent-changes';
 import { useConflictResolution } from '@/editor-ai/use-conflict-resolution';
@@ -20,6 +19,7 @@ import type { EditBlock } from '@/shell/panels/edit-gate';
 import { EditorStatusBar } from '@/shell/panels/EditorStatusBar';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileBreadcrumb } from '@/shell/panels/FileBreadcrumb';
+import { FileChangeCard } from '@/shell/panels/FileChangeCard';
 import { FileEditor } from '@/shell/panels/FileEditor';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
@@ -315,7 +315,8 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     useEffect(() => {
         editorLanguage?.selectionChat.bindNode(nodeId);
     }, [editorLanguage, nodeId]);
-    useChangeMarks(editor, useGitBase(path, read.text));
+    const gitBase = useGitBase(path, read.text);
+    useChangeMarks(editor, gitBase);
     const agentChanges = useAgentChanges(editor, path, plain ? undefined : read.language);
     const conflict = useConflictResolution(editor, path);
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -439,11 +440,17 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
                     </LazyBoundary>
                 </ErrorBoundary>
             )}
-            {agentChanges.hover !== null && (
-                <ErrorBoundary label={t('file.edit.failed')} resetKeys={[agentChanges.hover.run.id]}>
-                    <ProvenanceCard hover={agentChanges.hover} onHold={agentChanges.holdCard} />
-                </ErrorBoundary>
-            )}
+            <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editor]}>
+                <FileChangeCard
+                    editor={editor}
+                    base={gitBase}
+                    path={path}
+                    plain={plain}
+                    readOnly={readOnlyReason}
+                    attribution={agentChanges.hover}
+                    onAttributionHold={agentChanges.holdCard}
+                />
+            </ErrorBoundary>
             {editor !== null && (conflict !== null || agentChanges.review !== null) && (
                 <ErrorBoundary label={t('file.edit.failed')} resetKeys={[editor]}>
                     {conflict !== null && <ConflictLayer conflict={conflict} editor={editor} />}
