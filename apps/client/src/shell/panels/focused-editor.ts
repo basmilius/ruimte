@@ -11,12 +11,10 @@ export const registerFocusedEditor = editors.register;
 export const focusedEditor = editors.focused;
 
 export const recentEditorIn = editors.recentIn;
+export const subscribeFocusedEditors = editors.subscribe;
 
-/*
- * The editor a menu or palette command means: the one with the keyboard, else the one the active view
- * had it last, which then gets the keyboard back, since focus left it for something else in the same view.
- */
-export function editorForCommand(): Editor | null {
+/* Menu availability must read the same target without taking the keyboard from its menu. */
+export function availableEditorForCommand(): Editor | null {
     const focused = focusedEditor();
 
     if (focused !== null) {
@@ -24,8 +22,15 @@ export function editorForCommand(): Editor | null {
     }
 
     const state = useDocument.getState();
-    const editor = state.activeViewId === null ? null : recentEditorIn(cellElement(state.activeViewId));
-    editor?.focus();
+    return state.activeViewId === null ? null : recentEditorIn(cellElement(state.activeViewId));
+}
+
+export function editorForCommand(): Editor | null {
+    const editor = availableEditorForCommand();
+
+    if (editor !== null && focusedEditor() !== editor) {
+        editor.focus();
+    }
 
     return editor;
 }

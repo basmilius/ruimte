@@ -18,6 +18,11 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
+import { usePromptStacks } from '@/canvas/prompt-stack';
+import { useSnoozes } from '@/state/snooze';
+import { subscribeCameraHistories } from '@/state/camera-history';
+import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
+import { subscribeFocusedLanguages } from '@/language/focused-language';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
 const SETTLE_MS = 100;
@@ -60,6 +65,11 @@ export function useNativeMenu(): void {
             useLaunches.subscribe(schedule),
             usePrRepos.subscribe(schedule),
             useNewChat.subscribe(schedule),
+            usePromptStacks.subscribe(schedule),
+            useSnoozes.subscribe(schedule),
+            subscribeCameraHistories(schedule),
+            subscribeFocusedEditors(schedule),
+            subscribeFocusedLanguages(schedule),
             subscribeCanvases(schedule),
             bridge.onMenuCommand?.(runMenuCommand) ?? (() => undefined)
         ];

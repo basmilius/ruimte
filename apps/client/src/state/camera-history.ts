@@ -5,6 +5,13 @@ import { emptyCameraHistory, type CameraHistory } from '@/canvas/camera-history'
  * back must outlive that. It never reaches the project files and does not survive a reload.
  */
 const histories = new Map<string, CameraHistory>();
+const listeners = new Set<() => void>();
+
+export function subscribeCameraHistories(listener: () => void): () => void {
+    listeners.add(listener);
+
+    return () => listeners.delete(listener);
+}
 
 export function historyOf(viewId: string): CameraHistory {
     return histories.get(viewId) ?? emptyCameraHistory();
@@ -12,9 +19,17 @@ export function historyOf(viewId: string): CameraHistory {
 
 export function setHistory(viewId: string, history: CameraHistory): void {
     histories.set(viewId, history);
+
+    for (const listener of [...listeners]) {
+        listener();
+    }
 }
 
 /* A project that unloads takes its views with it. */
 export function forgetCameraHistories(): void {
     histories.clear();
+
+    for (const listener of [...listeners]) {
+        listener();
+    }
 }

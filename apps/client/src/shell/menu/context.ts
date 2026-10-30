@@ -19,13 +19,13 @@ import { hasLocalMachine } from '@/state/local-machine';
 import { newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canOpenWindows } from '@/project/windows';
 import { moveTargetsOf } from '@/project/move-targets';
-import { canOpenAsView, type SessionHandoff } from '@/project/views';
+import { canOpenAsView, viewStepTarget, type SessionHandoff } from '@/project/views';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
 import { diffInFront } from '@/shell/panels/diff-caret';
-import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell } from '@/shell/split';
+import { canSplit, cellAt, cellCount, cellsRightOf, focusDirection, freeViewFor, isTabHost, maximizedCell, type SplitDirection } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, zoomNodeTargetOf } from '@/state/canvas';
 import { useChats, providersOf } from '@adecore/agents-react/state';
@@ -46,6 +46,12 @@ import { shownChatOfNode } from '@/design/design-chat';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
+import { cameraHistoryStep } from '@/state/canvas-camera-history';
+import { nodeNavigationTarget } from '@/state/canvas-navigation-slice';
+import { usePromptStacks } from '@/canvas/prompt-stack';
+import { projectWaiting } from '@/state/waiting';
+import { availableEditorForCommand } from '@/shell/panels/focused-editor';
+import { availableLanguageForCommand } from '@/language/focused-language';
 
 interface ActiveViewFacts {
     view: ProjectView;
@@ -166,6 +172,16 @@ export function menuContext(host: MenuHost): MenuContext {
     // A design acts as the chat it shows.
     const selectedChat = selected === undefined ? null : shownChatOfNode(selected);
     const onCanvas = facts?.view.kind === 'canvas';
+    const directions: SplitDirection[] = ['left', 'right', 'up', 'down'];
+    const focus = Object.fromEntries(directions.map((direction) => [direction, layout !== null && focusDirection(layout, direction) !== layout])) as Record<
+        SplitDirection,
+        boolean
+    >;
+    const nodes = Object.fromEntries(directions.map((direction) => [direction, onCanvas && nodeNavigationTarget(canvas, direction) !== null])) as Record<
+        SplitDirection,
+        boolean
+    >;
+
     return {
         host,
         apple: isApplePlatform(),
@@ -206,6 +222,16 @@ export function menuContext(host: MenuHost): MenuContext {
         panel: ui.panel.open ? ui.panel.kind : null,
         sidebar: ui.sidebarOpen,
         views: documentState.views.filter(isOpenableView).map(nameOf),
+        navigation: {
+            views: viewStepTarget(1) !== null,
+            camera: { back: onCanvas && cameraHistoryStep(canvas, -1) !== null, forward: onCanvas && cameraHistoryStep(canvas, 1) !== null },
+            focus,
+            nodes,
+            prompts: onCanvas && documentState.activeViewId !== null && usePromptStacks.getState().byView.has(documentState.activeViewId),
+            waiting: projectWaiting().length > 0,
+            editor: availableEditorForCommand() !== null,
+            language: availableLanguageForCommand() !== null
+        },
         // The same targets as the palette's "Move node to" rows: one node, not a group, another canvas.
         moveTargets:
             onCanvas && selected !== undefined && selected.kind !== 'group'

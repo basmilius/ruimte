@@ -6,7 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { focusNodeAction, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
-import { bringPromptToFront, leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFold, usePromptFront, useSnoozedList } from '@/canvas/prompt-stack';
+import {
+    bringPromptToFront,
+    leavePromptStack,
+    PROMPT_STACK_ATTRIBUTE,
+    registerPromptStack,
+    usePromptFold,
+    usePromptFront,
+    useSnoozedList
+} from '@/canvas/prompt-stack';
 import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
 import { agentName } from '@/processes/format';
@@ -235,6 +243,10 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
         disabled
     });
     const { active, waiting, index } = session;
+    const hasPrompt = active !== null;
+
+    useEffect(() => (hasPrompt ? registerPromptStack(viewId) : undefined), [hasPrompt, viewId]);
+
     const container = useRef<HTMLDivElement>(null);
     // With no card left the keyboard goes back to where Mod+Shift+P took it from, or to the canvas.
     const refocus = useFocusAfterAnswer(active?.id ?? null, container, leavePromptStack);

@@ -24,7 +24,7 @@ import {
 import { runChosenLaunch, stopChosenLaunch } from '@/launches/actions';
 import { toggleRoutines } from '@/routines/stage';
 import { machineAnswers } from '@/transport/features';
-import { showView, stepView, viewAtIndex } from '@/project/views';
+import { showView, stepView, viewAtIndex, viewStepTarget } from '@/project/views';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
@@ -49,7 +49,9 @@ import { pool, transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { useRoutinesStage } from '@/routines/stage';
-import { cellAt, cellCount, isTabHost, type SplitDirection } from '@/shell/split';
+import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/shell/split';
+import { cameraHistoryStep } from '@/state/canvas-camera-history';
+import { nodeNavigationTarget } from '@/state/canvas-navigation-slice';
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
@@ -227,8 +229,13 @@ function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
     }
     const direction = command === null ? undefined : FOCUS_DIRECTIONS[command];
     if (direction) {
-        e.preventDefault();
-        focusCellAction(direction);
+        const layout = useDocument.getState().layout;
+
+        if (layout !== null && focusDirection(layout, direction) !== layout) {
+            e.preventDefault();
+            focusCellAction(direction);
+        }
+
         return true;
     }
     /* Stepping between the tabs of the focused host, whatever the host holds: a terminal in it hands
@@ -282,7 +289,12 @@ function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
     }
     // Mod+Alt+[ and ] because Mod+[ and ] belong to a page, the editor's history and a drawing's order.
     if (command === 'camera-back' || command === 'camera-forward') {
-        if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && !onStandaloneView()) {
+        if (
+            !isInFloatingLayer(e.target) &&
+            !useUi.getState().settings.open &&
+            !onStandaloneView() &&
+            cameraHistoryStep(s, command === 'camera-forward' ? 1 : -1) !== null
+        ) {
             e.preventDefault();
             s.stepCamera(command === 'camera-forward' ? 1 : -1);
         }
@@ -321,8 +333,13 @@ function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
         }
     }
     if (command === 'view-previous' || command === 'view-next') {
-        e.preventDefault();
-        stepView(command === 'view-next' ? 1 : -1);
+        const delta = command === 'view-next' ? 1 : -1;
+
+        if (viewStepTarget(delta) !== null) {
+            e.preventDefault();
+            stepView(delta);
+        }
+
         return true;
     }
     if (command === 'view-new') {
@@ -440,8 +457,11 @@ function answerCanvasKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
     }
     const nodeDirection = command === null ? undefined : NODE_DIRECTIONS[command];
     if (nodeDirection !== undefined) {
-        e.preventDefault();
-        s.selectNeighbor(nodeDirection);
+        if (nodeNavigationTarget(s, nodeDirection) !== null) {
+            e.preventDefault();
+            s.selectNeighbor(nodeDirection);
+        }
+
         return;
     }
     const plainEnter = e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;

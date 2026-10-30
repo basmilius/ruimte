@@ -7,9 +7,10 @@ const languages = createFocusRegistry<EditorLanguage>();
 
 /* An editor's language side and the element it draws in, so a command from the palette or the menu finds the editor that has the keyboard. */
 export const registerFocusedLanguage = languages.register;
+export const subscribeFocusedLanguages = languages.subscribe;
 
-/* Same lookup as `editorForCommand`, for the language side of the editor. */
-export function languageForCommand(): EditorLanguage | null {
+/* Menu availability reads the language target without refocusing its editor. */
+export function availableLanguageForCommand(): EditorLanguage | null {
     const focused = languages.focused();
 
     if (focused !== null) {
@@ -17,8 +18,15 @@ export function languageForCommand(): EditorLanguage | null {
     }
 
     const state = useDocument.getState();
-    const language = state.activeViewId === null ? null : languages.recentIn(cellElement(state.activeViewId));
-    language?.editor.focus();
+    return state.activeViewId === null ? null : languages.recentIn(cellElement(state.activeViewId));
+}
+
+export function languageForCommand(): EditorLanguage | null {
+    const language = availableLanguageForCommand();
+
+    if (language !== null && languages.focused() !== language) {
+        language.editor.focus();
+    }
 
     return language;
 }

@@ -22,6 +22,12 @@ function quietly(action: () => void): void {
     }
 }
 
+export function cameraHistoryStep(state: CanvasState, direction: -1 | 1): ReturnType<typeof step> {
+    const { viewId, camera, nodes } = state;
+
+    return viewId === null ? null : step(historyOf(viewId), direction, camera, (id) => nodes[id] !== undefined);
+}
+
 /* The camera's jumps and bursts, recorded per view around the actions that move it. */
 export function withCameraHistory(base: Omit<CanvasState, 'stepCamera'>, set: CanvasSet, get: CanvasGet): CanvasState {
     /* Records the camera a jump left and where it landed; `target` names the node it landed on, if any. */
@@ -70,11 +76,12 @@ export function withCameraHistory(base: Omit<CanvasState, 'stepCamera'>, set: Ca
             }
         },
         stepCamera: (direction) => {
-            const { viewId, camera, nodes } = get();
+            const state = get();
+            const { viewId } = state;
             if (viewId === null) {
                 return false;
             }
-            const result = step(historyOf(viewId), direction, camera, (id) => nodes[id] !== undefined);
+            const result = cameraHistoryStep(state, direction);
             if (result === null) {
                 return false;
             }

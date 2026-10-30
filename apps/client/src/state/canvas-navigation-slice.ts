@@ -1,7 +1,30 @@
 import { cameraCenteredOn, cameraToFit, toWorld } from '@/canvas/math';
-import { cameraToReveal, neighboringNode } from '@/canvas/node-navigation';
+import { cameraToReveal, neighboringNode, type NodeDirection } from '@/canvas/node-navigation';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, zoomNodeTargetOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
+
+/* The same destination for a menu, a key and selection itself, including cards beside a node. */
+export function nodeNavigationTarget(state: CanvasState, direction: NodeDirection): string | null {
+    if (maximizedNodeOf(state) !== null || state.gesturing) {
+        return null;
+    }
+
+    const onCard = state.navigationId !== null && state.derivedCards[state.navigationId] !== undefined;
+    const from =
+        state.navigationId !== null && (onCard || state.selection.includes(state.navigationId))
+            ? state.navigationId
+            : (state.selection.find((id) => state.nodes[id] !== undefined) ?? null);
+    const cards = Object.entries(state.derivedCards)
+        .filter(([, card]) => state.nodes[card.owner] !== undefined && !state.hidden.has(card.owner))
+        .map(([id, card]) => ({ id, ...card.rect }));
+
+    return neighboringNode(
+        [...Object.values(state.nodes).filter((node) => !state.hidden.has(node.id)), ...cards],
+        from,
+        direction,
+        toWorld(state.camera, { x: state.viewport.w / 2, y: state.viewport.h / 2 })
+    );
+}
 
 /* Where the camera goes to show one node, and which node the arrow keys select next. */
 export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pick<CanvasState, 'goToNode' | 'zoomToNode' | 'selectNeighbor'> {
@@ -36,24 +59,7 @@ export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pic
         },
         selectNeighbor(direction) {
             const state = get();
-            if (maximizedNodeOf(state) !== null || state.gesturing) {
-                return;
-            }
-            const onCard = state.navigationId !== null && state.derivedCards[state.navigationId] !== undefined;
-            const from =
-                state.navigationId !== null && (onCard || state.selection.includes(state.navigationId))
-                    ? state.navigationId
-                    : (state.selection.find((id) => state.nodes[id] !== undefined) ?? null);
-            // The cards beside a node are stops too, where they stand, and never selected: nothing moves or removes one.
-            const cards = Object.entries(state.derivedCards)
-                .filter(([, card]) => state.nodes[card.owner] !== undefined && !state.hidden.has(card.owner))
-                .map(([id, card]) => ({ id, ...card.rect }));
-            const target = neighboringNode(
-                [...Object.values(state.nodes).filter((node) => !state.hidden.has(node.id)), ...cards],
-                from,
-                direction,
-                toWorld(state.camera, { x: state.viewport.w / 2, y: state.viewport.h / 2 })
-            );
+            const target = nodeNavigationTarget(state, direction);
             const rect = target === null ? undefined : (state.nodes[target] ?? state.derivedCards[target]?.rect);
             if (target === null || rect === undefined) {
                 return;

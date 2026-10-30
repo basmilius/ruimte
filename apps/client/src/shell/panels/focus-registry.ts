@@ -9,12 +9,20 @@ export interface FocusRegistry<T> {
     focused(): T | null;
     /* The value that last had the keyboard, when its surface sits in `cell`; null for a cell that never held one. */
     recentIn(cell: Element | null): T | null;
+    subscribe(listener: () => void): () => void;
 }
 
 /* Remembers which of several editor-bound values has the keyboard, so a command from the palette or the menu finds it. */
 export function createFocusRegistry<T>(): FocusRegistry<T> {
     const entries = new Set<Entry<T>>();
+    const listeners = new Set<() => void>();
     let recent: Entry<T> | null = null;
+
+    const changed = (): void => {
+        for (const listener of [...listeners]) {
+            listener();
+        }
+    };
 
     return {
         register(value, surface) {
@@ -25,6 +33,7 @@ export function createFocusRegistry<T>(): FocusRegistry<T> {
 
             entries.add(entry);
             surface.addEventListener('focusin', remember);
+            changed();
 
             return () => {
                 entries.delete(entry);
@@ -33,6 +42,8 @@ export function createFocusRegistry<T>(): FocusRegistry<T> {
                 if (recent === entry) {
                     recent = null;
                 }
+
+                changed();
             };
         },
         focused() {
@@ -54,6 +65,11 @@ export function createFocusRegistry<T>(): FocusRegistry<T> {
         },
         recentIn(cell) {
             return cell !== null && recent !== null && entries.has(recent) && cell.contains(recent.surface) ? recent.value : null;
+        },
+        subscribe(listener) {
+            listeners.add(listener);
+
+            return () => listeners.delete(listener);
         }
     };
 }

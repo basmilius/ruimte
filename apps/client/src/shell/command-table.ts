@@ -714,7 +714,7 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.previousView,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'views', order: 10 }
+        menu: { menu: 'go', group: 'views', order: 10, enabled: (context) => context.navigation.views }
     },
     'view-next': {
         key: 'nextView',
@@ -722,7 +722,7 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.nextView,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'views', order: 20 }
+        menu: { menu: 'go', group: 'views', order: 20, enabled: (context) => context.navigation.views }
     },
     'camera-back': {
         key: 'cameraBack',
@@ -730,7 +730,7 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.cameraBack,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'views', order: 30, when: onCanvas }
+        menu: { menu: 'go', group: 'views', order: 30, when: onCanvas, enabled: (context) => context.navigation.camera.back }
     },
     'camera-forward': {
         key: 'cameraForward',
@@ -738,7 +738,7 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.cameraForward,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'views', order: 40, when: onCanvas }
+        menu: { menu: 'go', group: 'views', order: 40, when: onCanvas, enabled: (context) => context.navigation.camera.forward }
     },
     'tab-previous': {
         key: 'previousTab',
@@ -762,7 +762,7 @@ const TABLE = {
         shortcut: FOCUS_SHORTCUTS.left,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'focus', order: 10, enabled: severalCells }
+        menu: { menu: 'go', group: 'focus', order: 10, enabled: (context) => context.navigation.focus.left }
     },
     'focus-right': {
         key: 'focusRight',
@@ -770,7 +770,7 @@ const TABLE = {
         shortcut: FOCUS_SHORTCUTS.right,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'focus', order: 20, enabled: severalCells }
+        menu: { menu: 'go', group: 'focus', order: 20, enabled: (context) => context.navigation.focus.right }
     },
     'focus-up': {
         key: 'focusUp',
@@ -778,7 +778,7 @@ const TABLE = {
         shortcut: FOCUS_SHORTCUTS.up,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'focus', order: 30, enabled: severalCells }
+        menu: { menu: 'go', group: 'focus', order: 30, enabled: (context) => context.navigation.focus.up }
     },
     'focus-down': {
         key: 'focusDown',
@@ -786,7 +786,7 @@ const TABLE = {
         shortcut: FOCUS_SHORTCUTS.down,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'focus', order: 40, enabled: severalCells }
+        menu: { menu: 'go', group: 'focus', order: 40, enabled: (context) => context.navigation.focus.down }
     },
     'node-left': {
         key: 'nodeLeft',
@@ -794,7 +794,7 @@ const TABLE = {
         shortcut: NODE_NAVIGATION_SHORTCUTS.left,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'nodes', order: 10, enabled: (context) => !context.nodeMaximized }
+        menu: { menu: 'go', group: 'nodes', order: 10, enabled: (context) => context.navigation.nodes.left }
     },
     'node-right': {
         key: 'nodeRight',
@@ -802,7 +802,7 @@ const TABLE = {
         shortcut: NODE_NAVIGATION_SHORTCUTS.right,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'nodes', order: 20, enabled: (context) => !context.nodeMaximized }
+        menu: { menu: 'go', group: 'nodes', order: 20, enabled: (context) => context.navigation.nodes.right }
     },
     'node-up': {
         key: 'nodeUp',
@@ -810,7 +810,7 @@ const TABLE = {
         shortcut: NODE_NAVIGATION_SHORTCUTS.up,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'nodes', order: 30, enabled: (context) => !context.nodeMaximized }
+        menu: { menu: 'go', group: 'nodes', order: 30, enabled: (context) => context.navigation.nodes.up }
     },
     'node-down': {
         key: 'nodeDown',
@@ -818,7 +818,7 @@ const TABLE = {
         shortcut: NODE_NAVIGATION_SHORTCUTS.down,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'nodes', order: 40, enabled: (context) => !context.nodeMaximized }
+        menu: { menu: 'go', group: 'nodes', order: 40, enabled: (context) => context.navigation.nodes.down }
     },
     prompts: {
         key: 'prompts',
@@ -826,7 +826,7 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.focusPrompts,
         binds: 'workspace',
         palette: false,
-        menu: { menu: 'go', group: 'prompts', order: 10 }
+        menu: { menu: 'go', group: 'prompts', order: 10, when: onCanvas, enabled: (context) => context.navigation.prompts }
     },
     // From anywhere, a terminal included, as the prompts key is.
     'needs-you-next': {
@@ -835,7 +835,7 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.nextNeedsYou,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'go', group: 'prompts', order: 20 }
+        menu: { menu: 'go', group: 'prompts', order: 20, enabled: (context) => context.navigation.waiting }
     },
     'attention-queue': {
         key: 'attentionQueue',
@@ -1172,7 +1172,12 @@ function languageCommand(id: LanguageCommandId): CommandSpec {
         icon: spec.icon,
         ...(spec.shortcut ? { shortcut: spec.shortcut } : {}),
         palette: true,
-        menu: { menu: spec.menu, group: spec.group ?? 'language', order: LANGUAGE_COMMAND_IDS.indexOf(id) }
+        menu: {
+            menu: spec.menu,
+            group: spec.group ?? 'language',
+            order: LANGUAGE_COMMAND_IDS.indexOf(id),
+            ...(spec.menu === 'go' ? { enabled: (context: MenuContext) => context.navigation.language } : {})
+        }
     };
 }
 
@@ -1197,7 +1202,7 @@ function editorMenuPlace(group: EditorCommandGroup | undefined, order: number): 
         case 'clipboard':
             return { menu: 'edit', group: 'clipboard', order };
         case 'navigate':
-            return { menu: 'go', group: 'editor-navigation', order };
+            return { menu: 'go', group: 'editor-navigation', order, enabled: (context) => context.navigation.editor };
         case 'zoom':
             return { menu: 'view', group: 'code-zoom', order };
         default:

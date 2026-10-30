@@ -285,14 +285,23 @@ export function viewAtIndex(index: number): ProjectView | undefined {
     return useDocument.getState().views.filter(isOpenableView)[index - 1];
 }
 
-export function stepView(delta: -1 | 1): void {
+export function viewStepTarget(delta: -1 | 1): ProjectView | null {
     const views = useDocument.getState().views.filter(isOpenableView);
     const { activeViewId } = useDocument.getState();
     const at = views.findIndex((view) => view.id === activeViewId);
     if (at === -1 || views.length < 2) {
-        return;
+        return null;
     }
-    showView(views[(at + delta + views.length) % views.length]!.id);
+
+    return views[(at + delta + views.length) % views.length]!;
+}
+
+export function stepView(delta: -1 | 1): void {
+    const target = viewStepTarget(delta);
+
+    if (target !== null) {
+        showView(target.id);
+    }
 }
 
 /* Which nodes can leave a canvas for a view of their own: the ones that are a session, not a frame, and an artifact. */

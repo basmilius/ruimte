@@ -51,6 +51,16 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         panel: null,
         sidebar: true,
         views: ['Main', 'Sketch'],
+        navigation: {
+            views: false,
+            camera: { back: false, forward: false },
+            focus: { left: false, right: false, up: false, down: false },
+            nodes: { left: false, right: false, up: false, down: false },
+            prompts: false,
+            waiting: false,
+            editor: false,
+            language: false
+        },
         moveTargets: [],
         layouts: ['Review'],
         agents: [{ kind: 'claude', name: 'Claude Code', chat: true, terminal: true }],
@@ -165,6 +175,68 @@ describe('the agents of the menus', () => {
 });
 
 describe('the menus', () => {
+    test('Go disables navigation that has no destination', () => {
+        const spec = menuModel(context({ views: ['Main'] }));
+
+        for (const id of [
+            'view-previous',
+            'view-next',
+            'camera-back',
+            'camera-forward',
+            'node-left',
+            'node-right',
+            'node-up',
+            'node-down',
+            'prompts',
+            'needs-you-next',
+            'go-to-definition',
+            'next-change'
+        ]) {
+            expect(offered(spec, id).enabled).toBe(false);
+        }
+    });
+
+    test('Go follows each direction and keeps canvas-only navigation out of other views', () => {
+        const navigation = {
+            views: true,
+            camera: { back: true, forward: false },
+            focus: { left: false, right: true, up: false, down: true },
+            nodes: { left: true, right: false, up: false, down: true },
+            prompts: true,
+            waiting: true,
+            editor: true,
+            language: true
+        };
+        const spec = menuModel(context({ navigation }));
+
+        for (const id of [
+            'view-next',
+            'camera-back',
+            'focus-right',
+            'focus-down',
+            'node-left',
+            'node-down',
+            'prompts',
+            'needs-you-next',
+            'go-to-definition',
+            'next-change'
+        ]) {
+            expect(offered(spec, id).enabled).toBe(true);
+        }
+
+        for (const id of ['camera-forward', 'focus-left', 'focus-up', 'node-right', 'node-up']) {
+            expect(offered(spec, id).enabled).toBe(false);
+        }
+
+        const chat = menuModel(context({ view: 'chat', navigation }));
+
+        for (const id of ['camera-back', 'camera-forward', 'node-left', 'node-right', 'node-up', 'node-down', 'prompts']) {
+            expect(find(chat, id)).toBeUndefined();
+        }
+
+        expect(offered(chat, 'needs-you-next').enabled).toBe(true);
+    });
+
     test('macOS opens on the application menu, and the view with the focus names the fifth', () => {
         expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Drawing', 'Go', 'Run', 'Window', 'Help']);

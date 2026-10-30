@@ -71,6 +71,24 @@ export const useSnoozedList = create<SnoozedListStore>((set, get) => ({
 
 export const PROMPT_STACK_ATTRIBUTE = 'data-prompt-stack';
 
+export const usePromptStacks = create<{ byView: ReadonlyMap<string, symbol> }>(() => ({ byView: new Map() }));
+
+/* The mounted stack knows about descendant cards that project status alone cannot see. */
+export function registerPromptStack(viewId: string): () => void {
+    const owner = Symbol(viewId);
+    usePromptStacks.setState((state) => ({ byView: new Map(state.byView).set(viewId, owner) }));
+
+    return () => {
+        const { byView } = usePromptStacks.getState();
+
+        if (byView.get(viewId) === owner) {
+            const next = new Map(byView);
+            next.delete(viewId);
+            usePromptStacks.setState({ byView: next });
+        }
+    };
+}
+
 /* Where the keyboard was before the shortcut took it to a card, so Escape can hand it back there. */
 let returnFocus: HTMLElement | null = null;
 

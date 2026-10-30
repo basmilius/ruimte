@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
+import type { SplitDirection } from '@/shell/split';
 import { viewShortcut } from '@/canvas/shortcuts';
 import { BROWSER_KEEPS } from '@/shell/shortcuts';
 import type { ViewOffers } from '@/shell/view-offers';
@@ -94,6 +95,16 @@ export interface MenuContext {
     sidebar: boolean;
     /* The openable views in sidebar order; the first nine have a shortcut. */
     views: string[];
+    navigation: {
+        views: boolean;
+        camera: { back: boolean; forward: boolean };
+        focus: Record<SplitDirection, boolean>;
+        nodes: Record<SplitDirection, boolean>;
+        prompts: boolean;
+        waiting: boolean;
+        editor: boolean;
+        language: boolean;
+    };
     moveTargets: { id: string; name: string }[];
     layouts: string[];
     agents: MenuAgent[];
