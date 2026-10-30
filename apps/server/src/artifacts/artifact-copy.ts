@@ -45,6 +45,15 @@ async function ensureFolders(folder: string, segments: readonly string[], made: 
 
 /* Writes a file that must not be there yet: `wx` refuses an existing name and a link in the same call that makes it. */
 async function writeNew(target: string, from: string): Promise<void> {
+    // On Windows `wx` writes through a link whose target is not there.
+    if (
+        await lstat(target).then(
+            () => true,
+            () => false
+        )
+    ) {
+        throw new ArtifactError('exists', EXISTS);
+    }
     const handle = await open(target, 'wx', 0o644).catch((e: unknown) => {
         throw isExists(e) ? new ArtifactError('exists', EXISTS) : e;
     });

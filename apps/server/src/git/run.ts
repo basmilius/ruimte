@@ -60,6 +60,19 @@ export class GitError extends CodedError<GitErrorCode> {}
 // A branch name or a subject may hold anything but a control character, so this one never appears inside a field.
 export const FIELD = '\u001f';
 
+/* Ends a process started `detached` and whatever it started. Windows has no process groups, so there taskkill walks the tree. */
+function killGroup(proc: Bun.Subprocess, signal: NodeJS.Signals): void {
+    if (process.platform === 'win32') {
+        void Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exited;
+        return;
+    }
+    try {
+        process.kill(-proc.pid, signal);
+    } catch {
+        proc.kill(signal);
+    }
+}
+
 /* `runGit` with stdout as the bytes git wrote, for content that is not known to be text. A git that
    cannot start reads as code 128, the same code git itself uses for "this is not a repository". */
 export async function runGitBytes(args: string[], cwd: string, options: GitOptions = {}): Promise<GitResult<Uint8Array>> {
@@ -78,11 +91,7 @@ export async function runGitBytes(args: string[], cwd: string, options: GitOptio
         const timer = timed
             ? setTimeout(() => {
                   timedOut = true;
-                  try {
-                      process.kill(-proc.pid, 'SIGKILL');
-                  } catch {
-                      proc.kill('SIGKILL');
-                  }
+                  killGroup(proc, 'SIGKILL');
               }, options.timeoutMs)
             : null;
         try {
@@ -212,14 +221,7 @@ export async function streamCommand(command: string, args: string[], cwd: string
         return { code: 128, stdout: '', stderr: `${command} could not be started` };
     }
     const started = proc;
-    const killGroup = (): void => {
-        try {
-            process.kill(-started.pid, 'SIGTERM');
-        } catch {
-            started.kill();
-        }
-    };
-    options.onSpawn?.(options.group === true ? killGroup : () => started.kill());
+    options.onSpawn?.(options.group === true ? () => killGroup(started, 'SIGTERM') : () => started.kill());
     const [stdout, stderr, code] = await Promise.all([pump(proc.stdout, onLine), pump(proc.stderr, onLine), proc.exited]);
     return { code, stdout, stderr };
 }

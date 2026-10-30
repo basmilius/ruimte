@@ -30,7 +30,7 @@ function nodePackage(path: string, readText: (path: string) => string | null): {
     const folder = match[1]!;
     let version: string | null = null;
     try {
-        const manifest = JSON.parse(readText(join(folder, 'package.json')) ?? 'null') as { version?: unknown } | null;
+        const manifest = JSON.parse(readText(`${folder}/package.json`) ?? 'null') as { version?: unknown } | null;
         version = typeof manifest?.version === 'string' ? manifest.version : null;
     } catch {
         version = null;
@@ -57,7 +57,9 @@ export function classifyInstall(real: string, readText: (path: string) => string
     if (found === null) {
         const script = readText(real);
         const target = script === null || script.length > 4096 ? null : /[^\s"'`]*\/node_modules\/[^\s"'`]+/.exec(script.replaceAll('\\', '/'));
-        return target === null || target[0] === path ? UNKNOWN : classifyInstall(target[0], readText);
+        // npm's `.cmd` shim on Windows names the package relative to its own folder.
+        const started = target?.[0].replace(/^%~?dp0%?\/?/, `${path.slice(0, path.lastIndexOf('/'))}/`);
+        return started === undefined || started === path ? UNKNOWN : classifyInstall(started, readText);
     }
     const base = { package: found.name, version: found.version };
     if (path.includes('/.bun/install/global/')) {
@@ -66,7 +68,8 @@ export function classifyInstall(real: string, readText: (path: string) => string
     if (/\/(\.pnpm|pnpm)\//.test(path)) {
         return { method: 'pnpm', ...base, prefix: null };
     }
-    const global = /^(.*)\/lib\/node_modules\//.exec(path);
+    // On Windows a prefix holds `node_modules` itself: `%APPDATA%\npm`, or the folder of a system Node.
+    const global = /^(.*)\/lib\/node_modules\//.exec(path) ?? /^([A-Za-z]:\/(?:.*\/)?(?:npm|nodejs))\/node_modules\//.exec(path);
     return global === null ? UNKNOWN : { method: 'npm', ...base, prefix: global[1]! };
 }
 

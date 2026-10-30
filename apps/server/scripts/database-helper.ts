@@ -32,7 +32,8 @@ async function fetchPinned(name: string, pinned: PinnedPackage, into: string): P
     }
     const archive = join(into, 'package.tgz');
     await writeFile(archive, bytes);
-    const unpack = Bun.spawnSync(['tar', '-xzf', archive, '-C', into], { stdio: ['ignore', 'inherit', 'inherit'] });
+    // A name rather than a path: Git for Windows' tar reads `C:` as a remote host.
+    const unpack = Bun.spawnSync(['tar', '-xzf', 'package.tgz'], { cwd: into, stdio: ['ignore', 'inherit', 'inherit'] });
     if (unpack.exitCode !== 0) {
         throw new Error(`Unpacking ${archive} failed`);
     }

@@ -60,6 +60,19 @@ describe('classifyInstall', () => {
         expect(classifyInstall('/Users/me/Library/pnpm/codex', readText)).toMatchObject({ method: 'pnpm', package: '@openai/codex', version: '0.163.0' });
     });
 
+    test('an npm global on Windows, through the shim npm writes', () => {
+        const files: Record<string, string> = {
+            'C:/Users/me/AppData/Roaming/npm/codex.cmd': '@ECHO off\r\nSET dp0=%~dp0\r\n"%dp0%\\node_modules\\@openai\\codex\\bin\\codex.js" %*\r\n',
+            'C:/Users/me/AppData/Roaming/npm/node_modules/@openai/codex/package.json': JSON.stringify({ version: '0.163.0' })
+        };
+        expect(classifyInstall('C:\\Users\\me\\AppData\\Roaming\\npm\\codex.cmd', (path) => files[path.replaceAll('\\', '/')] ?? null)).toEqual({
+            method: 'npm',
+            package: '@openai/codex',
+            version: '0.163.0',
+            prefix: 'C:/Users/me/AppData/Roaming/npm'
+        });
+    });
+
     test('anything else is unknown', () => {
         expect(classifyInstall('/Users/me/.local/share/claude/versions/2.1.304', readText).method).toBe('unknown');
     });

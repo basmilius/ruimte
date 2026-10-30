@@ -1,6 +1,7 @@
 import { lstat, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GitIgnoredFilesResult } from '@ruimte/contracts';
+import { nativePath } from './native-path.ts';
 import { GitError, runGit } from './run.ts';
 
 // More than a checkout keeps beside its code; a list past it is cut and says so.
@@ -59,7 +60,8 @@ export async function listIgnoredFiles(cwd: string): Promise<GitIgnoredFilesResu
     if (top.code !== 0) {
         throw new GitError('not-a-repo', `${cwd} is not in a git repository`);
     }
-    const [root = cwd, prefix = ''] = top.stdout.split('\n');
+    const [printed = cwd, prefix = ''] = top.stdout.split('\n');
+    const root = nativePath(printed);
     const listed = await runGit(LIST, root);
     if (listed.code !== 0) {
         throw new GitError('git-failed', listed.stderr.trim() || 'git ls-files failed');
