@@ -106,8 +106,8 @@ rpm:
   compression: gzip
 win:
   target: [nsis, zip]
-  # electron-builder turns the 256 px PNG `scripts/icon.ts` writes next to the icns into the .ico Windows asks for.
-  icon: build/icon/AppIcon.png
+  # The white icon in every size Windows asks for, from `scripts/windows-icon.ts`.
+  icon: build/icon/AppIcon.ico
   artifactName: ${productName}-${version}-${arch}.${ext}
   executableName: Ruimte
 # `build/installer.nsh`, which electron-builder finds by its name, stops the background task and the daemon first.

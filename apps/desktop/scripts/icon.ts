@@ -61,8 +61,13 @@ for (const name of ['Assets.car', 'AppIcon.icns']) {
     }
 }
 
-// Windows builds its .ico from a PNG, and the icns holds the macOS shape at 256 px at most, which
-// is the size an .ico needs.
+// Windows has an icon of its own; this folder was just emptied.
+const ico = spawnSync('bun', [join(root, 'scripts', 'windows-icon.ts')], { stdio: 'inherit' });
+if (ico.status !== 0) {
+    process.exit(ico.status ?? 1);
+}
+
+// Linux takes a PNG, and the icns holds the macOS shape at 256 px at most.
 const png = spawnSync('sips', ['-s', 'format', 'png', join(out, 'AppIcon.icns'), '--out', join(out, 'AppIcon.png')], { stdio: 'inherit' });
 if (png.status !== 0) {
     process.exit(png.status ?? 1);
