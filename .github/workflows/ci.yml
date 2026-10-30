@@ -96,6 +96,10 @@ jobs:
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
     steps:
+      # By Bas's choice, on this throwaway runner only, which publishes nothing: Defender scans every process
+      # git starts, and the tests that run git have five seconds here.
+      - run: Set-MpPreference -DisableRealtimeMonitoring $true
+        shell: pwsh
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
         with:
