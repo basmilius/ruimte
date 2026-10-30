@@ -491,7 +491,8 @@ export class SessionManager {
             return line;
         }
         const shell = this.personShell();
-        return `${line}; exec ${[shell, ...defaultShellArgs(shell)].map(quote).join(' ')}`;
+        // In a group of its own line, so a closing `&` or comment stays the line's, and bash reads it whole before a program can read the rest from the tty.
+        return `{ ${line}\n}; exec ${[shell, ...defaultShellArgs(shell)].map(quote).join(' ')}`;
     }
 
     /*

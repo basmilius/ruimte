@@ -383,7 +383,7 @@ describe('SessionManager on Windows', () => {
             const pty = windows.adapter.forSession('command');
             pty.emit('$ ');
             expect(pty.options.shell).toBe(bash);
-            expect(pty.options.env.RUIMTE_START_LINE).toStartWith("echo hi; exec 'powershell.exe' '-NoLogo' '-NoExit' '-EncodedCommand' ");
+            expect(pty.options.env.RUIMTE_START_LINE).toStartWith("{ echo hi\n}; exec 'powershell.exe' '-NoLogo' '-NoExit' '-EncodedCommand' ");
             expect(windows.manager.get('command')!.handedBack).toBe(true);
         } finally {
             await windows.cleanup();
