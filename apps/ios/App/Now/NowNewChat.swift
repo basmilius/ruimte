@@ -30,7 +30,7 @@ extension NewChat {
     /// A chat view at the end of a project's list. It carries no name of a person's, so the agent's title takes over.
     static func projectView(id: String, provider: String, account: String?) -> JSONValue {
         var node: [String: JSONValue] = ["provider": .string(provider)]
-        if let account, account != provider { node["account"] = .string(account) }
+        if let account { node["account"] = .string(account) }
         return .object([
             "id": .string(id), "kind": .string("chat"), "name": .string("New chat"), "node": .object(node),
         ])
@@ -45,10 +45,14 @@ final class NowNewChatModel {
             guard machineID != oldValue else { return }
             projectID = nil
             catalog = nil
+            projectDocument = nil
         }
     }
     /// The project the chat starts in; nil is the machine's Chats.
-    var projectID: String?
+    var projectID: String? {
+        didSet { if projectID != oldValue { projectDocument = nil } }
+    }
+    private(set) var projectDocument: JSONValue?
     var provider: String?
     private(set) var catalog: NewChatModel?
     private(set) var starting = false
@@ -57,15 +61,36 @@ final class NowNewChatModel {
     init(machineID: String) { self.machineID = machineID }
 
     func load(_ session: SharedMachineSession) async {
+        guard session.machine.id == machineID else { return }
         let catalog = catalog ?? NewChatModel(client: session.rpc, machineID: session.machine.id)
         self.catalog = catalog
+        let loadingMachine = machineID
         await catalog.load()
+        guard machineID == loadingMachine, self.catalog === catalog, !Task.isCancelled else { return }
         let agents = (catalog.agents ?? []).map { $0.text("kind") }
         if provider.map({ !agents.contains($0) }) ?? true { provider = agents.first }
     }
 
+    func loadProject(_ session: SharedMachineSession) async {
+        guard let id = projectID else {
+            projectDocument = nil
+            return
+        }
+        let machine = machineID
+        let workspace = MobileWorkspace(session: session, projectID: id)
+        workspace.start()
+        defer { workspace.stop() }
+        for _ in 0..<150 where !workspace.ready {
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+        }
+        guard machineID == machine, projectID == id, workspace.ready, !Task.isCancelled else { return }
+        projectDocument = workspace.document
+    }
+
     func start(_ session: SharedMachineSession) async -> ProjectViewTarget? {
-        guard !starting, let provider, let catalog else { return nil }
+        guard !starting, let provider, let catalog, catalog.machineID == session.machine.id,
+            machineID == session.machine.id
+        else { return nil }
         starting = true
         defer { starting = false }
         problem = nil
@@ -75,6 +100,7 @@ final class NowNewChatModel {
                 problem = catalog.problem
                 return nil
             }
+            guard self.machineID == machineID, self.catalog === catalog else { return nil }
             return ProjectViewTarget(
                 machineID: machineID, projectID: place.projectID, viewID: place.viewID, itemID: place.viewID)
         }
@@ -89,7 +115,13 @@ final class NowNewChatModel {
             return nil
         }
         let id = "chat-" + UUID().uuidString
-        let view = NewChat.projectView(id: id, provider: provider, account: catalog.account(for: provider))
+        let account: String?
+        do { account = try await catalog.prepare(provider: provider, project: workspace.document) } catch {
+            problem = error.localizedDescription
+            return nil
+        }
+        guard self.machineID == machineID, self.projectID == projectID, self.catalog === catalog else { return nil }
+        let view = NewChat.projectView(id: id, provider: provider, account: account)
         await workspace.edit { $0.setting("views", .array($0.list("views") + [view])) }
         if let failure = workspace.problem {
             problem = failure
@@ -153,6 +185,9 @@ struct NowNewChatSheet: View {
                                 : String(localized: "Connecting to your machine"))
                     }
                 }
+                if let provider = model.provider, let catalog = model.catalog {
+                    NewChatAccountPicker(model: catalog, provider: provider, project: model.projectDocument)
+                }
                 Section {
                     choice(
                         session.map { String(localized: "Chats on \($0.machine.name)") }
@@ -190,7 +225,12 @@ struct NowNewChatSheet: View {
                             opened(target)
                         }
                     }
-                    .disabled(model.starting || model.provider == nil || session?.connected != true)
+                    .disabled(
+                        model.starting || model.provider == nil || session?.connected != true
+                            || model.provider.flatMap {
+                                model.catalog?.refusal(provider: $0, project: model.projectDocument)
+                            } != nil
+                    )
                     .accessibilityIdentifier("now.newChat.start")
                 }
             }
@@ -200,9 +240,15 @@ struct NowNewChatSheet: View {
             guard let session else { return }
             lease = MachineNavigationLease(session)
         }
+        .task(id: "\(model.machineID):\(model.projectID ?? "")") {
+            guard let session else { return }
+            await RemotePageLifecycle.run(
+                client: session.rpc, events: ["project.changed"], load: { await model.loadProject(session) })
+        }
         .task(id: "\(model.machineID):\(session?.generation ?? 0)") {
             guard let session, session.connected else { return }
-            await model.load(session)
+            await RemotePageLifecycle.run(
+                client: session.rpc, events: ["accounts.changed"], load: { await model.load(session) })
         }
     }
 

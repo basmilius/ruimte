@@ -1,6 +1,380 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Sign in" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inloggen"
+          }
+        }
+      }
+    },
+    "Connect to this machine to manage its accounts." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect to this machine to manage its accounts."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maak verbinding met deze machine om de accounts te beheren."
+          }
+        }
+      }
+    },
+    "Update this machine to manage accounts from your phone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update this machine to manage accounts from your phone."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Werk deze machine bij om accounts vanaf je telefoon te beheren."
+          }
+        }
+      }
+    },
+    "Automatic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch"
+          }
+        }
+      }
+    },
+    "Off in this project" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off in this project"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uit in dit project"
+          }
+        }
+      }
+    },
+    "This account is no longer available. Choose another account." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account is no longer available. Choose another account."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit account is niet meer beschikbaar. Kies een ander account."
+          }
+        }
+      }
+    },
+    "No account is available for this chat." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No account is available for this chat."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er is geen account beschikbaar voor deze chat."
+          }
+        }
+      }
+    },
+    "%@ · Unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Unavailable"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Niet beschikbaar"
+          }
+        }
+      }
+    },
+    "Checked %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checked %@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gecontroleerd %@"
+          }
+        }
+      }
+    },
+    "Automatic prefers %@ for this project." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic prefers %@ for this project."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch geeft voor dit project de voorkeur aan %@."
+          }
+        }
+      }
+    },
+    "Automatic uses this machine's account defaults." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic uses this machine's account defaults."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch gebruikt de accountdefaults van deze machine."
+          }
+        }
+      }
+    },
+    "Use a name of 1 to 80 characters." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use a name of 1 to 80 characters."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruik een naam van 1 tot 80 tekens."
+          }
+        }
+      }
+    },
+    "Recheck accounts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recheck accounts"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accounts opnieuw controleren"
+          }
+        }
+      }
+    },
+    "Add account for %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add account for %@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account voor %@ toevoegen"
+          }
+        }
+      }
+    },
+    "Accounts and logins belong to this machine. Install a missing CLI on the machine itself." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accounts and logins belong to this machine. Install a missing CLI on the machine itself."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accounts en logins horen bij deze machine. Installeer een ontbrekende CLI op de machine zelf."
+          }
+        }
+      }
+    },
+    "Up to 80 characters. Clear an existing name to use the account's original name." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Up to 80 characters. Clear an existing name to use the account's original name."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maximaal 80 tekens. Maak een bestaande naam leeg om de oorspronkelijke accountnaam te gebruiken."
+          }
+        }
+      }
+    },
+    "The machine creates the account folder. Sign in from its account row after adding it." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The machine creates the account folder. Sign in from its account row after adding it."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine maakt de accountmap aan. Meld je na het toevoegen aan via de accountrij."
+          }
+        }
+      }
+    },
+    "This CLI signs in from a chat. Start a chat under the new account to sign in." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This CLI signs in from a chat. Start a chat under the new account to sign in."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze CLI meldt aan vanuit een chat. Start een chat onder het nieuwe account om aan te melden."
+          }
+        }
+      }
+    },
+    "Add account" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add account"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account toevoegen"
+          }
+        }
+      }
+    },
+    "Edit account" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit account"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account bewerken"
+          }
+        }
+      }
+    },
+    "This CLI cannot report a completed login. Tap Done when you finish, then check the account state." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This CLI cannot report a completed login. Tap Done when you finish, then check the account state."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze CLI kan een afgeronde login niet melden. Tik op Klaar als je klaar bent en controleer daarna de accountstatus."
+          }
+        }
+      }
+    },
+    "The CLI runs on the machine. A browser it opens there may need completion there; follow a printed code or link from this phone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The CLI runs on the machine. A browser it opens there may need completion there; follow a printed code or link from this phone."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De CLI draait op de machine. Een browser die daar opent kan daar afronding vragen; volg een getoonde code of link vanaf deze telefoon."
+          }
+        }
+      }
+    },
     "%@ at %@" : {
       "comment" : "Weekdays a routine runs on, such as Mon, Thu, then a time",
       "localizations" : {

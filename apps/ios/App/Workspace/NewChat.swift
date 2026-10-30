@@ -25,6 +25,11 @@ final class NewChatModel {
     /// The installed CLIs that open as a chat; nil until the machine answered.
     private(set) var agents: [JSONValue]?
     private(set) var accounts: ProviderAccountList?
+    private(set) var providers: [JSONValue]?
+    private(set) var limits: JSONValue?
+    private(set) var accountsProblem: String?
+    private(set) var choices: [String: String] = [:]
+    @ObservationIgnored private var reads = 0
     /// The CLI a chat is being made for.
     private(set) var starting: String?
     var problem: String?
@@ -37,20 +42,94 @@ final class NewChatModel {
     }
 
     func load() async {
+        reads += 1
+        let attempt = reads
         do {
             let providers = try await AgentCatalog.load(client)
+            let listed: ProviderAccountList?
+            var accountFailure: String?
+            do { listed = ProviderAccountList(try await client.request(.accountsList)) } catch {
+                listed = nil
+                accountFailure = error.localizedDescription
+            }
+            let limits =
+                (client as? MachineFeatures)?.answers(.usageLimits) == true
+                ? try? await client.request(.usageLimits) : nil
+            try Task.checkCancellation()
+            guard attempt == reads else { return }
+            self.providers = providers
             agents = AgentCatalog.installed(providers, target: "chat")
+            accounts = listed
+            accountsProblem = accountFailure
+            self.limits = limits
             problem = nil
+        } catch is CancellationError {
         } catch {
+            guard attempt == reads else { return }
             problem = error.localizedDescription
         }
-        accounts = (try? await client.request(.accountsList)).map(ProviderAccountList.init)
     }
 
-    /// The account a new chat of this CLI names, as remembered for this machine; nil leaves it to the machine.
+    func choose(_ account: String?, provider: String) {
+        choices[provider] = account
+    }
+
     func account(for provider: String) -> String? {
+        if let picked = choices[provider] { return picked }
         let ordered = (client as? MachineFeatures)?.answers(.accountsReorder) == true
         return preferences.account(machineID: machineID, provider: provider, accounts: accounts, ordered: ordered)
+    }
+
+    func unavailable(_ entry: ProviderAccountEntry, project: JSONValue? = nil) -> String? {
+        if project?["accounts"]?[entry.kind]?.list("off").contains(.string(entry.id)) == true {
+            return String(localized: "Off in this project")
+        }
+        if !entry.enabled { return String(localized: "Off", comment: "An agent account that is turned off") }
+        switch entry.state {
+        case "disabled": return String(localized: "Off", comment: "An agent account that is turned off")
+        case "signed-out": return String(localized: "Not logged in")
+        case "folder-missing": return String(localized: "Its folder is missing")
+        case "unavailable", "not-found", "failed": return entry.message ?? String(localized: "Unavailable")
+        default: return nil
+        }
+    }
+
+    func refusal(provider: String, project: JSONValue? = nil) -> String? {
+        guard let picked = choices[provider] else {
+            let entries = accounts?.accounts(of: provider) ?? []
+            return !entries.isEmpty && entries.allSatisfy { unavailable($0, project: project) != nil }
+                ? String(localized: "No account is available for this chat.") : nil
+        }
+        guard let entry = accounts?.entries.first(where: { $0.id == picked && $0.kind == provider }) else {
+            return accountsProblem ?? String(localized: "This account is no longer available. Choose another account.")
+        }
+        return unavailable(entry, project: project)
+    }
+
+    /// A named choice is checked again before a project edit, so a known refusal does not leave a new view behind.
+    func prepare(provider: String, project: JSONValue? = nil) async throws -> String? {
+        if (client as? MachineClient)?.isConnected == false { throw MachineClientError.disconnected }
+        if let picked = choices[provider] {
+            reads += 1
+            let attempt = reads
+            let listed = try await client.request(.accountsList)
+            try Task.checkCancellation()
+            guard attempt == reads, choices[provider] == picked else { throw CancellationError() }
+            accounts = ProviderAccountList(listed)
+            accountsProblem = nil
+            if let reason = refusal(provider: provider, project: project) { throw MachineClientError.invalid(reason) }
+        }
+        if let reason = refusal(provider: provider, project: project) { throw MachineClientError.invalid(reason) }
+        if choices[provider] == nil {
+            if project?["accounts"]?[provider] != nil { return nil }
+            if let remembered = account(for: provider),
+                let entry = accounts?.entries.first(where: { $0.id == remembered }),
+                unavailable(entry, project: project) != nil
+            {
+                return nil
+            }
+        }
+        return account(for: provider)
     }
 
     func start(provider: String) async -> NewChatPlace? {
@@ -59,7 +138,8 @@ final class NewChatModel {
         defer { starting = nil }
         do {
             let result = try await client.request(
-                .projectNewChat, payload: NewChat.payload(provider: provider, account: account(for: provider)))
+                .projectNewChat,
+                payload: NewChat.payload(provider: provider, account: try await prepare(provider: provider)))
             guard let projectID = result["summary"]?["projectId"]?.stringValue,
                 let viewID = result["viewId"]?.stringValue
             else { throw MachineClientError.invalid(String(localized: "The machine did not say where the chat is.")) }
@@ -76,7 +156,7 @@ final class NewChatModel {
 enum NewChat {
     static func payload(provider: String, account: String?) -> JSONValue {
         var values: [String: JSONValue] = ["provider": .string(provider)]
-        if let account, account != provider { values["account"] = .string(account) }
+        if let account { values["account"] = .string(account) }
         return .object(values)
     }
 
@@ -101,6 +181,7 @@ struct NewChatSheet: View {
     let opened: (NewChatPlace) -> Void
     @State private var model: NewChatModel
     @State private var lease: MachineNavigationLease?
+    @State private var chosenProvider: String?
     @Environment(\.dismiss) private var dismiss
 
     init(session: SharedMachineSession, opened: @escaping (NewChatPlace) -> Void) {
@@ -143,7 +224,23 @@ struct NewChatSheet: View {
         }
         .disabled(model.starting != nil)
         .task { if lease == nil { lease = MachineNavigationLease(session) } }
-        .task(id: session.generation) { if session.connected { await model.load() } }
+        .task { await RemotePageLifecycle.run(client: session.rpc, events: ["accounts.changed"], load: model.load) }
+        .mobileSheet(isPresented: $chosenProvider.isPresent()) {
+            if let kind = chosenProvider {
+                NewChatAccountSheet(
+                    model: model, provider: kind, connected: session.connected, starting: model.starting != nil,
+                    start: { start(kind) }, close: { chosenProvider = nil })
+            }
+        }
+    }
+
+    private func start(_ kind: String) {
+        Task {
+            guard let place = await model.start(provider: kind) else { return }
+            chosenProvider = nil
+            dismiss()
+            opened(place)
+        }
     }
 
     private func row(_ agent: JSONValue) -> some View {
@@ -153,10 +250,10 @@ struct NewChatSheet: View {
             model.accounts?.entries.first { $0.id == id }?.name(provider: name) ?? id
         }
         return Button {
-            Task {
-                guard let place = await model.start(provider: kind) else { return }
-                dismiss()
-                opened(place)
+            if (model.accounts?.accounts(of: kind).count ?? 0) > 1 {
+                chosenProvider = kind
+            } else {
+                start(kind)
             }
         } label: {
             HStack(spacing: 10) {
@@ -170,7 +267,7 @@ struct NewChatSheet: View {
             .modifier(MobileSidebarLabel())
         }
         .modifier(MobileSidebarRow())
-        .disabled(!session.connected)
+        .disabled(!session.connected || model.refusal(provider: kind) != nil)
         .accessibilityIdentifier("newChat.agent.\(kind)")
     }
 }

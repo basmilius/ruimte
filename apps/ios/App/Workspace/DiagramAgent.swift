@@ -55,7 +55,7 @@ final class DiagramAgentModel {
     var choice: DiagramAgentChoice?
     private(set) var sending = false
     var problem: String?
-    private let catalog: NewChatModel
+    let catalog: NewChatModel
 
     init(target: DiagramAgentTarget) {
         self.target = target
@@ -67,8 +67,13 @@ final class DiagramAgentModel {
     var loaded: Bool { catalog.agents != nil }
     var chats: [JSONValue] { DiagramAgentPrompt.chats(in: target.workspace.views) }
     var canSend: Bool {
-        !sending && choice != nil && target.workspace.session.connected
-            && !request.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !sending, let choice, target.workspace.session.connected,
+            !request.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return false }
+        if case .new(let provider) = choice {
+            return catalog.refusal(provider: provider, project: target.workspace.document) == nil
+        }
+        return true
     }
 
     func name(of choice: DiagramAgentChoice) -> String {
@@ -103,7 +108,8 @@ final class DiagramAgentModel {
             switch choice {
             case .new(let provider):
                 let id = "chat-" + UUID().uuidString
-                chat = NewChat.projectView(id: id, provider: provider, account: catalog.account(for: provider))
+                let account = try await catalog.prepare(provider: provider, project: workspace.document)
+                chat = NewChat.projectView(id: id, provider: provider, account: account)
                 let item = target.item
                 await workspace.edit { document in
                     var views = document.list("views")
@@ -195,6 +201,10 @@ struct DiagramAgentSheet: View {
                 } footer: {
                     Text("The chat changes the diagram for you.")
                 }
+                if case .new(let provider) = model.choice {
+                    NewChatAccountPicker(
+                        model: model.catalog, provider: provider, project: model.target.workspace.document)
+                }
                 if let problem = model.problem {
                     Section { Text(problem).foregroundStyle(MobileStyle.statusError) }
                 }
@@ -219,7 +229,11 @@ struct DiagramAgentSheet: View {
             }
         }
         .onAppear { focused = true }
-        .task { if !model.loaded { await model.load() } }
+        .disabled(model.sending)
+        .task {
+            await RemotePageLifecycle.run(
+                client: model.target.workspace.client, events: ["accounts.changed"], load: model.load)
+        }
     }
 }
 
@@ -227,6 +241,7 @@ struct DiagramAgentSheet: View {
 struct DiagramEmptyState: View {
     @Bindable var model: DiagramAgentModel
     let sent: (String) -> Void
+    @State private var choosingAccount = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -247,6 +262,9 @@ struct DiagramEmptyState: View {
                     .lineLimit(2...6)
                 HStack {
                     DiagramAgentPicker(model: model)
+                    if case .new = model.choice {
+                        Button("Account") { choosingAccount = true }.font(.footnote)
+                    }
                     Spacer()
                     Button {
                         Task { if let chat = await model.send(empty: true) { sent(chat) } }
@@ -268,6 +286,26 @@ struct DiagramEmptyState: View {
             .glassEffect(.regular, in: .rect(cornerRadius: 24))
             .padding(.horizontal, 12).padding(.bottom, 8)
         }
-        .task { if !model.loaded { await model.load() } }
+        .disabled(model.sending)
+        .mobileSheet(isPresented: $choosingAccount) {
+            if case .new(let provider) = model.choice {
+                NavigationStack {
+                    MobileForm {
+                        NewChatAccountPicker(
+                            model: model.catalog, provider: provider, project: model.target.workspace.document)
+                    }
+                    .navigationTitle("Account").navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { choosingAccount = false }
+                        }
+                    }
+                }
+            }
+        }
+        .task {
+            await RemotePageLifecycle.run(
+                client: model.target.workspace.client, events: ["accounts.changed"], load: model.load)
+        }
     }
 }
