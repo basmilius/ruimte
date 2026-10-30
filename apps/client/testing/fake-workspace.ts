@@ -1,4 +1,5 @@
 import type { ProjectDocument, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
+import { dropClientLocal } from '@/project/client-local';
 import { forgetCachedList } from '@/project/list';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
@@ -55,6 +56,8 @@ export async function openFakeWorkspace(
         useEndpoints.getState().add(ENDPOINT);
     }
     const disconnect = connectFakeMachine(machine, endpointId);
+    // Files share a page, and closing an earlier fixture stores its view there, which would win over `local`.
+    dropClientLocal(localStorage, endpointId, FAKE_PROJECT.projectId);
     await enterWorkspace(endpointId, { projectId: FAKE_PROJECT.projectId });
     return {
         close(): void {
