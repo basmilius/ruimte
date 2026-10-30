@@ -1,8 +1,8 @@
-import { createStore } from 'zustand';
-import { diffLines, splitLines, type Change } from '@adecore/merge';
 import type { Editor, EditorChangeMarkHover, EditorRect } from '@adecore/editor';
 import { realTimers, type Timers } from '@adecore/editor-react';
 import { replaceLines } from '@adecore/editor-react/models';
+import { diffLines, splitLines, type Change } from '@adecore/merge';
+import { createStore } from 'zustand';
 
 export interface ChangePreview {
     readonly key: number;
@@ -23,6 +23,8 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
     let inside = false;
     let hide: unknown = null;
     let disposed = false;
+    const old = splitLines(base);
+    let frame: { source: string; fresh: string[]; changes: Change[]; lineCount: number } | null = null;
     const close = (): void => {
         timers.clear(hide);
         inside = false;
@@ -47,11 +49,14 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
             return;
         }
 
-        const source = editor.getText();
-        const old = splitLines(base);
-        const fresh = splitLines(source);
-        const lineCount = editor.positionAt(source.length).line + 1;
-        const change = diffLines(old, fresh).find((candidate) =>
+        if (frame === null) {
+            const source = editor.getText();
+            const fresh = splitLines(source);
+            frame = { source, fresh, changes: diffLines(old, fresh), lineCount: editor.positionAt(source.length).line + 1 };
+        }
+
+        const { source, fresh, changes, lineCount } = frame;
+        const change = changes.find((candidate) =>
             hover.mark.kind === 'deleted'
                 ? candidate.otherStart === candidate.otherEnd && Math.max(1, Math.min(lineCount, candidate.otherStart + 1)) === hover.line
                 : candidate.otherStart < hover.line && candidate.otherEnd >= hover.line
@@ -82,7 +87,10 @@ export function createChangePreview(editor: Editor, base: string, timers: Timers
         });
     };
     const stopHover = editor.onChangeMarkHover?.(hovered);
-    const stopChange = editor.onTextChange(close);
+    const stopChange = editor.onTextChange(() => {
+        frame = null;
+        close();
+    });
 
     return {
         getState: state.getState,

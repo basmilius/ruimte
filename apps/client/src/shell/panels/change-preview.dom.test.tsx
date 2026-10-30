@@ -1,12 +1,12 @@
-import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
+import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { FakeEditorEngine, type FakeEditor } from '@adecore/editor/fake';
+import { act } from 'react';
 import type { AgentHover } from '@/editor-ai/agent-changes';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
-import { FileChangeCard } from './FileChangeCard';
+import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { FileChangeCard } from './FileChangeCard';
 
 let workspace: FakeWorkspace;
 let page: Mounted;
@@ -31,7 +31,7 @@ const attributed: AgentHover = {
     rect: { left: 60, right: 64, top: 20, bottom: 40 }
 };
 
-async function start(options: { readOnly?: boolean; text?: string; author?: AgentHover | null } = {}) {
+async function start(options: { readOnly?: boolean; text?: string; author?: AgentHover | null; kind?: 'modified' | 'deleted' } = {}) {
     machine = new FakeMachine();
     workspace = await openFakeWorkspace(machine, { views: [] }, { activeViewId: null, views: {} });
     editor = new FakeEditorEngine().mount(document.createElement('div'), {
@@ -55,7 +55,9 @@ async function start(options: { readOnly?: boolean; text?: string; author?: Agen
             </ChatScopeProvider>
         );
     await draw();
-    await act(async () => editor.hoverChangeMark({ layer: 'git', line: 1, mark: { kind: 'modified', startLine: 1, endLine: 1 }, rect: attributed.rect }));
+    await act(async () =>
+        editor.hoverChangeMark({ layer: 'git', line: 1, mark: { kind: options.kind ?? 'modified', startLine: 1, endLine: 1 }, rect: attributed.rect })
+    );
     await until(() => document.querySelector('[role="dialog"][aria-label="Change since last commit"]') !== null);
     return draw;
 }
@@ -95,6 +97,41 @@ describe('the file change card in the app', () => {
         expect(revert?.disabled).toBe(true);
         expect(document.body.textContent).toContain('Preview shortened');
         expect(editor.codeBlocks.at(-1)?.text.length).toBe(2000);
+    });
+
+    test('an author arriving after the outer hover zone is retained for the current row', async () => {
+        const draw = await start();
+        expect(document.body.textContent).not.toContain('Written by');
+        await draw(attributed);
+        expect(document.body.textContent).toContain('Written by claude · Turn 4');
+        await draw(null);
+        expect(document.body.textContent).toContain('Written by claude · Turn 4');
+    });
+
+    test('a pure removal does not credit the adjacent unchanged row', async () => {
+        await start({ text: '', kind: 'deleted', author: attributed });
+        expect(document.body.textContent).not.toContain('Written by');
+    });
+
+    test('a failed preview recovers on the next hovered row in the same file', async () => {
+        await start({ text: 'const newValue = 1;\nconst anotherValue = 2;\n' });
+        const report = spyOn(console, 'error').mockImplementation(() => undefined);
+        const render = spyOn(editor, 'renderCode').mockImplementation(() => {
+            throw new Error('Preview rendering failed');
+        });
+        try {
+            await act(async () => editor.hoverChangeMark({ layer: 'git', line: 2, mark: { kind: 'added', startLine: 2, endLine: 2 }, rect: attributed.rect }));
+            expect(document.querySelector('[role="alert"]')?.textContent).toContain('Preview rendering failed');
+            render.mockRestore();
+            await act(async () =>
+                editor.hoverChangeMark({ layer: 'git', line: 1, mark: { kind: 'modified', startLine: 1, endLine: 1 }, rect: attributed.rect })
+            );
+            expect(document.querySelector('[aria-label="Change since last commit"]')).not.toBeNull();
+            expect(document.querySelector('[role="alert"]')).toBeNull();
+        } finally {
+            render.mockRestore();
+            report.mockRestore();
+        }
     });
 
     test('one change card retains the author after the attribution hover expires, and its link opens that card', async () => {

@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import type { Editor, EditorCodeBlockOptions } from '@adecore/editor';
 import { AnchoredPopup } from '@adecore/editor-react';
-import { Button } from '@adecore/ui';
-import { ProvenanceCard } from '@/editor-ai/ProvenanceCard';
+import { Button, Tooltip } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AgentHover } from '@/editor-ai/agent-changes';
+import { ProvenanceCard } from '@/editor-ai/ProvenanceCard';
 import { useChatIdentity, useProviderName } from '@/editor-ai/use-chat-identity';
 import { useCodeTheme } from '@/state/code-theme';
 import type { ChangePreview } from './change-preview';
@@ -74,7 +75,7 @@ function AttributionLink({ hover, onOpen }: { hover: AgentHover; onOpen(): void 
         <Button size="xs" className="max-w-full truncate" onClick={onOpen}>
             {t(hover.run.turn === undefined ? 'file.changePreview.author' : 'file.changePreview.authorTurn', {
                 chat: chat.title ?? provider,
-                turn: hover.run.turn
+                turn: hover.run.turn === undefined ? undefined : formatNumber(hover.run.turn)
             })}
         </Button>
     );
@@ -99,8 +100,11 @@ export function ChangePreviewCard({
 }) {
     const { t } = useTranslation('panels');
     // Attribution outlives its own hover timer while this card is being read.
-    const [author] = useState(attribution);
+    const [author, setAuthor] = useState(attribution);
     const [showAuthor, setShowAuthor] = useState(false);
+    if (author === null && attribution !== null) {
+        setAuthor(attribution);
+    }
     if (showAuthor && author !== null) {
         return <ProvenanceCard hover={{ ...author, rect: preview.rect }} onHold={onHold} />;
     }
@@ -115,9 +119,13 @@ export function ChangePreviewCard({
             <div role="dialog" className="flex min-h-0 flex-col" aria-label={t('file.changePreview.title')}>
                 <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-2">
                     <span className="text-xs font-semibold">{t('file.changePreview.title')}</span>
-                    <Button size="xs" disabled={readOnly !== null} title={readOnly ?? undefined} onClick={onRevert}>
-                        {t('file.changePreview.revert')}
-                    </Button>
+                    <Tooltip label={readOnly} disabled={readOnly === null}>
+                        <span className="inline-flex shrink-0">
+                            <Button size="xs" disabled={readOnly !== null} onClick={onRevert}>
+                                {t('file.changePreview.revert')}
+                            </Button>
+                        </span>
+                    </Tooltip>
                 </div>
                 <div className="change-preview-code min-h-0 max-h-72 overflow-auto select-text">
                     {preview.before.length > 0 && (

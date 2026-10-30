@@ -337,7 +337,7 @@
             "revert": "Wijziging terugzetten",
             "truncated": "Preview ingekort. Terugzetten herstelt de hele wijziging.",
             "author": "Geschreven door {{chat}}",
-            "authorTurn": "Geschreven door {{chat}} · Beurt {{turn}}"
+            "authorTurn": "Geschreven door {{chat}} · Turn {{turn}}"
         }
     },
     "files": {
