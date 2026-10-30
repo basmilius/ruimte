@@ -4,6 +4,47 @@ import XCTest
 @testable import Ruimte
 
 final class ChatPresentationTests: XCTestCase {
+    @MainActor func testReplyTreesFollowBlocksReadingsAndAnswersAcrossTextUpdates() throws {
+        func block(_ fallback: String) -> ChatUiBlock {
+            ChatUiBlock(
+                id: "block", catalogVersion: 1, start: 0, end: 0, complete: false, defaults: [:], queries: [:],
+                nodes: [], diagnostics: [], fallback: fallback)
+        }
+        func reply(
+            _ text: String, fallback: String? = "card", queries: ChatUiQueryState? = nil,
+            answers: [String: ChatUiAnswer]? = nil
+        ) -> ChatItem {
+            .assistant(
+                ChatAssistantItem(
+                    id: "reply", createdAt: 0, turnId: nil, ui: fallback.map { [block($0)] }, uiAnswers: answers,
+                    uiQueries: queries, text: text, streaming: true))
+        }
+        let record = ChatItemState(reply("before"))
+        let initial = try XCTUnwrap(record.replyTrees)
+        record.update(reply("after"))
+        XCTAssertEqual(record.replyTrees?.blocks, initial.blocks)
+        let queries = ChatUiQueryState(
+            authorChatId: "chat",
+            blocks: ["block": ChatUiQueryStateBlocksValue(revision: "r", readings: [:], fallback: "reading")])
+        record.update(reply("after", queries: queries))
+        XCTAssertEqual(record.replyTrees?.frozen["block"]?["fallback"]?.stringValue, "reading")
+        let answers = [
+            "block": ChatUiAnswer(
+                itemId: "reply", blockId: "block", revision: "r", choiceId: "pick", label: "Answered", sourceAt: 0,
+                older: false, at: 1, queued: false, turnId: "turn")
+        ]
+        record.update(reply("after", queries: queries, answers: answers))
+        XCTAssertEqual(record.replyTrees?.answered["block"]?["label"]?.stringValue, "Answered")
+        record.update(reply("after", fallback: "revised", queries: queries, answers: answers))
+        XCTAssertEqual(record.replyTrees?.blocks.first?["fallback"]?.stringValue, "revised")
+        record.update(reply("without UI", fallback: nil))
+        XCTAssertNil(record.replyTrees)
+        record.update(reply("restored"))
+        XCTAssertEqual(record.replyTrees?.blocks.first?["fallback"]?.stringValue, "card")
+        XCTAssertEqual(record.replyTrees?.frozen, [:])
+        XCTAssertEqual(record.replyTrees?.answered, [:])
+    }
+
     @MainActor func testInfoAloneStartsAndEndsWorking() {
         let presentation = ChatPresentation()
         presentation.setConnected(true)

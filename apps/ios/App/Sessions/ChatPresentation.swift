@@ -7,26 +7,39 @@ import RuimtePulsar
 final class ChatItemState: Identifiable {
     let id: String
     private(set) var item: ChatItem
-    @ObservationIgnored private var trees: (reply: ChatAssistantItem, trees: UiReplyTrees)?
+    @ObservationIgnored private var trees: (key: TreeKey, trees: UiReplyTrees)?
+
+    // The tree never reads prose; keeping the whole reply would pin text from an earlier update.
+    private struct TreeKey: Equatable {
+        let ui: [ChatUiBlock]?
+        let queries: ChatUiQueryState?
+        let answers: [String: ChatUiAnswer]?
+
+        init(_ reply: ChatAssistantItem) {
+            ui = reply.ui
+            queries = reply.uiQueries
+            answers = reply.uiAnswers
+        }
+    }
 
     init(_ item: ChatItem) {
         id = item.id
         self.item = item
     }
 
-    func update(_ item: ChatItem) { self.item = item }
+    func update(_ item: ChatItem) {
+        self.item = item
+        if item.assistantItem?.ui?.isEmpty != false { trees = nil }
+    }
 
     /// A reply's blocks as the interpreter takes them, encoded again only when they change and not on every word the
     /// reply streams.
     var replyTrees: UiReplyTrees? {
         guard case .assistant(let reply) = item, reply.ui?.isEmpty == false else { return nil }
-        if let trees, trees.reply.ui == reply.ui, trees.reply.uiQueries == reply.uiQueries,
-            trees.reply.uiAnswers == reply.uiAnswers
-        {
-            return trees.trees
-        }
+        let key = TreeKey(reply)
+        if let trees, trees.key == key { return trees.trees }
         let next = UiReplyTrees(reply)
-        trees = (reply, next)
+        trees = (key, next)
         return next
     }
 }
