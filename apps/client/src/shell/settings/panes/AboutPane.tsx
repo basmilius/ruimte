@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { desktop, isDesktop, type Release, type UpdateState } from '@/desktop/bridge';
 import { formatDayWithYear, useFormatLocale } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
-import { Segmented, Switch, Button, copyText, Icon } from '@adecore/ui';
+import { Segmented, Select, Switch, Button, copyText, Icon } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { openOnboarding } from '@/onboarding/open';
 import { hasLocalMachine } from '@/state/local-machine';
@@ -186,10 +186,11 @@ export function AboutPane() {
                         label={t('about.updates.track.label')}
                         description={t('about.updates.track.description')}
                         control={
-                            <Segmented<UpdateTrack>
+                            <Select<UpdateTrack>
                                 value={track}
-                                options={UPDATE_TRACKS.map((id) => ({ id, label: t(`about.updates.track.options.${id}`) }))}
                                 label={t('about.updates.track.label')}
+                                align="end"
+                                items={UPDATE_TRACKS.map((value) => ({ value, label: t(`about.updates.track.options.${value}`) }))}
                                 onValueChange={chooseTrack}
                             />
                         }
