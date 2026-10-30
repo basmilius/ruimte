@@ -18,7 +18,7 @@ function Picker({ seed }: { seed: NonNullable<ReturnType<typeof useBranchCompare
     const [selected, setSelected] = useState(seed.cwd ?? '');
     const [from, setFrom] = useState(seed.from ?? '');
     const [to, setTo] = useState(seed.to ?? '');
-    const [mode, setMode] = useState<GitCompareMode>('merge-base');
+    const [mode, setMode] = useState<GitCompareMode>(seed.mode ?? 'merge-base');
     const [repos, setRepos] = useState<GitRepo[] | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     useEffect(() => {
@@ -78,14 +78,13 @@ function Picker({ seed }: { seed: NonNullable<ReturnType<typeof useBranchCompare
     const defaultFrom = refs?.find((ref) => ref.isDefault) ?? refs?.[0];
     const left = from || (defaultFrom === undefined ? 'HEAD' : fullRefName(defaultFrom));
     const right = to || (refs?.find((ref) => ref.current) ? fullRefName(refs.find((ref) => ref.current)!) : 'HEAD');
-    const known = new Set(referenceItems.map((item) => item.value));
     for (const value of [left, right]) {
         if (!referenceItems.some((item) => item.value === value)) {
             referenceItems.push({ value, label: refLabel(value) });
         }
     }
     const error = failure ?? (held?.cwd === cwd ? held.error : null);
-    const canCompare = cwd !== '' && refs !== null && error === null && known.has(left) && known.has(right);
+    const canCompare = cwd !== '' && refs !== null && error === null;
     return (
         <>
             <Dialog.Text>{t('git.compare.description')}</Dialog.Text>

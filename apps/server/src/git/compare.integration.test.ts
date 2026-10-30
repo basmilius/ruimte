@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { readFile, rm, symlink, writeFile, access } from 'node:fs/promises';
+import { readFile, rm, symlink, writeFile, access, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { compareBranches, compareCommits, readSnapshot } from './compare.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
@@ -30,6 +30,8 @@ beforeAll(async () => {
         await writeFile(join(at, 'binary.bin'), new Uint8Array([1, 0, 2]));
         await writeFile(join(at, 'large.txt'), 'x'.repeat(600 * 1024));
         await symlink('/outside/the/repository', join(at, 'link.txt'));
+        await mkdir(join(at, 'folder'));
+        await writeFile(join(at, 'folder/inner.txt'), 'inner file\n');
         await gitIn(at, ['add', '.']);
         const left = (await gitIn(at, ['rev-parse', 'left'])).trim();
         await gitIn(at, ['update-index', '--add', '--cacheinfo', `160000,${left},vendor`]);
@@ -66,6 +68,8 @@ describe('independent branch snapshots', () => {
         expect(await readFile(join(repo, 'tracked.txt'), 'utf8')).toBe('unsaved on disk\n');
         expect(await readFile(join(repo, 'untracked.txt'), 'utf8')).toBe('keep\n');
         await expect(access(join(repo, 'textconv-ran'))).rejects.toThrow();
+        await gitIn(repo, ['diff', 'left', 'right', '--', 'tracked.txt']);
+        expect(await readFile(join(repo, 'textconv-ran'), 'utf8')).toBe('ran');
     });
 
     test('pinned snapshots and commit pages survive a branch moving and annotated tags resolve to commits', async () => {
@@ -99,6 +103,11 @@ describe('independent branch snapshots', () => {
         expect(result.diff.files?.find((file) => file.path === 'binary.bin')?.omitted).toBe('binary');
         await expect(readSnapshot(repo, result.toCommit, '../tracked.txt')).rejects.toThrow('inside');
         await expect(readSnapshot(repo, result.toCommit, '/tracked.txt')).rejects.toThrow('inside');
+        for (const path of ['folder/', './tracked.txt', 'folder//inner.txt', 'folder/./inner.txt', '']) {
+            await expect(readSnapshot(repo, result.toCommit, path)).rejects.toThrow('inside');
+        }
+        expect((await readSnapshot(repo, result.toCommit, 'folder')).omitted).toBe('not-file');
+        expect((await readSnapshot(repo, result.toCommit, 'folder/inner.txt')).text).toBe('inner file\n');
     });
 
     test('equal refs have explicit empty files and empty unique histories, while invalid refs refuse', async () => {

@@ -14,7 +14,7 @@ import { machineAnswers } from '@/transport/features';
 import { useDocument } from '@/state/document';
 import { useSettings } from '@/state/settings';
 import { useCodeTheme } from '@/state/code-theme';
-import { type CompareTab, type SessionTab, type SnapshotTab, useFiles } from '@/state/files';
+import { type CompareTab, type SessionTab, type SnapshotTab, useFiles, isSessionTab } from '@/state/files';
 import { CommitFileTree } from './CommitFileTree';
 import { TreeSplit, COMMIT_TREE_MIN_WIDTH } from './TreeSplit';
 import { pickedFile } from './commit-tree';
@@ -152,7 +152,7 @@ function ComparedFile({ comparison, file, tabKey }: { comparison: GitCompareResu
             [comparison.baseCommit, comparison.toCommit].map((commit) =>
                 perform('git.blob', {
                     repository: comparison.cwd,
-                    commit,
+                    snapshotCommit: commit,
                     path: file.path
                 })
             )
@@ -212,7 +212,7 @@ function ComparedFile({ comparison, file, tabKey }: { comparison: GitCompareResu
 function ComparisonView({ tab }: { tab: CompareTab }) {
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
-    const [refresh, setRefresh] = useState(0);
+    const refresh = tab.refresh ?? 0;
     const [held, setHeld] = useState<{ key: string; value?: GitCompareResult; error?: string } | null>(null);
     const [selected, setSelected] = useState<string | null>(null);
     const [section, setSection] = useState<'files' | 'commits'>('files');
@@ -221,11 +221,13 @@ function ComparisonView({ tab }: { tab: CompareTab }) {
     const key = JSON.stringify([endpointId, tab.cwd, tab.from, tab.to, tab.mode, refresh]);
     useEffect(() => {
         let alive = true;
-        void perform('git.compare', { repository: tab.cwd, from: tab.from, to: tab.to, mode: tab.mode }).then(
+        const current = useFiles.getState().tabs.find((entry) => entry.key === tab.key);
+        const snapshot = current !== undefined && isSessionTab(current) && current.kind === 'compare' ? current.snapshot : undefined;
+        void perform('git.compare', { repository: tab.cwd, from: snapshot?.fromCommit ?? tab.from, to: snapshot?.toCommit ?? tab.to, mode: tab.mode }).then(
             (value) => {
                 if (alive) {
-                    setHeld({ key, value });
-                    useGit.getState().setCounts(tab.key, { added: value.diff.added, deleted: value.diff.deleted });
+                    useFiles.getState().pinComparison(tab.key, refresh, { fromCommit: value.fromCommit, toCommit: value.toCommit });
+                    setHeld({ key, value: { ...value, from: tab.from, to: tab.to } });
                 }
             },
             (error: unknown) => {
@@ -237,7 +239,7 @@ function ComparisonView({ tab }: { tab: CompareTab }) {
         return () => {
             alive = false;
         };
-    }, [key, tab.cwd, tab.from, tab.to, tab.mode, tab.key]);
+    }, [key, tab.cwd, tab.from, tab.to, tab.mode, tab.key, refresh]);
     const ready = held?.key === key ? held.value : undefined;
     const files = ready?.diff.files ?? [];
     const shown = pickedFile(files, selected ?? undefined);
@@ -257,10 +259,10 @@ function ComparisonView({ tab }: { tab: CompareTab }) {
                     ]}
                     onValueChange={(value) => useFiles.getState().setCompareMode(tab.key, value as CompareTab['mode'])}
                 />
-                <Button size="xs" onClick={() => setRefresh((value) => value + 1)}>
+                <Button size="xs" onClick={() => useFiles.getState().refreshComparison(tab.key)}>
                     {t('diff.readAgain')}
                 </Button>
-                <Button size="xs" onClick={() => showBranchCompare(tab.cwd, tab.to, tab.from)}>
+                <Button size="xs" onClick={() => showBranchCompare(tab.cwd, tab.to, tab.from, tab.mode)}>
                     {t('git.compare.choose')}
                 </Button>
                 <FileToolbarToggle
@@ -277,7 +279,7 @@ function ComparisonView({ tab }: { tab: CompareTab }) {
                 />
             </div>
             {held?.key === key && held.error !== undefined ? (
-                <Failure message={held.error} retry={() => setRefresh((value) => value + 1)} />
+                <Failure message={held.error} retry={() => useFiles.getState().refreshComparison(tab.key)} />
             ) : ready === undefined ? (
                 <EmptyState busy>{t('git.compare.reading')}</EmptyState>
             ) : (
@@ -343,7 +345,7 @@ function SnapshotView({ tab }: { tab: SnapshotTab }) {
     const key = JSON.stringify([endpointId, tab.cwd, tab.commit, tab.path, retry]);
     useEffect(() => {
         let alive = true;
-        void perform('git.blob', { repository: tab.cwd, commit: tab.commit, path: tab.path }).then(
+        void perform('git.blob', { repository: tab.cwd, snapshotCommit: tab.commit, path: tab.path }).then(
             (blob) => {
                 if (alive) {
                     setHeld({ key, blob });
@@ -386,7 +388,7 @@ function SnapshotView({ tab }: { tab: SnapshotTab }) {
             editor.revealLine(tab.line ?? 1);
             editor.focus();
         }
-    }, [active, editor, tab.line]);
+    }, [active, editor, tab.line, tab.caretRequest]);
     const current = held?.key === key ? held : null;
     const blob = current?.blob;
     const error = current?.error ?? engineError;

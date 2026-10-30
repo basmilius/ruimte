@@ -9,7 +9,7 @@ import { cellElement } from '@/shell/cell-rects';
 import { requiredShortcut } from '@/shell/editor-keymap';
 import { createFocusRegistry } from '@/shell/panels/focus-registry';
 import { useDocument } from '@/state/document';
-import { useFiles } from '@/state/files';
+import { isSessionTab, useFiles } from '@/state/files';
 
 interface DiffCaretStore {
     /* Where the caret of each diff tab stands in its file, keyed by the tab, so the tab's menu can say the line. In memory only. */
@@ -30,7 +30,7 @@ export const useDiffCarets = create<DiffCaretStore>((set, get) => ({
 }));
 
 /* A diff and the element it draws in, so the palette and the menu open the file of the diff that has the keyboard. */
-const diffs = createFocusRegistry<() => boolean>();
+const diffs = createFocusRegistry<{ key: string; open(): boolean }>();
 
 function openAt(path: string, source: DiffSource): boolean {
     const at = source.at();
@@ -44,21 +44,23 @@ function openAt(path: string, source: DiffSource): boolean {
     return true;
 }
 
-/* Whether the view in front of the focused cell is a diff, a commit or a checkout's changes: a file tab with a view. */
+/* Whether the focused cell has a diff whose caret can open its source. */
 export function diffInFront(): boolean {
     const { activeViewId } = useDocument.getState();
     const tab = activeViewId === null ? undefined : useFiles.getState().tabs.find((entry) => entry.key === activeViewId);
-    return tab !== undefined && 'view' in tab && tab.view !== undefined;
+    return tab !== undefined && ((isSessionTab(tab) && tab.kind === 'compare') || ('view' in tab && tab.view !== undefined));
 }
 
 /* Opens the file at the caret of the diff with the keyboard, else of the diff the active view had it last. */
 export function openFileAtDiffCaret(): boolean {
-    const focused = diffs.focused();
-    if (focused !== null) {
-        return focused();
-    }
     const state = useDocument.getState();
-    return (state.activeViewId === null ? null : diffs.recentIn(cellElement(state.activeViewId)))?.() ?? false;
+    const tab = useFiles.getState().tabs.find((entry) => entry.key === state.activeViewId);
+    const comparison = tab !== undefined && isSessionTab(tab) && tab.kind === 'compare';
+    const target = diffs.focused() ?? (state.activeViewId === null ? null : diffs.recentIn(cellElement(state.activeViewId)));
+    if (target === null || (comparison && target.key !== tab.key)) {
+        return false;
+    }
+    return target.open();
 }
 
 /*
@@ -92,7 +94,7 @@ export function useDiffCaret(
             useDiffCarets.getState().setCaret(tabKey, source.at());
         };
         const element = surface.current;
-        const offFocus = element === null ? undefined : diffs.register(() => last.current !== null && reveal(last.current), element);
+        const offFocus = element === null ? undefined : diffs.register({ key: tabKey, open: () => last.current !== null && reveal(last.current) }, element);
         // A pane takes over as it gets the keyboard, also before its caret first moves.
         element?.addEventListener('focusin', take);
         const offCaret = source.editor.onCaret(take);

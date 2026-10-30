@@ -324,9 +324,9 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
             const { transport, cwd } = await snapshotCheckout(repository, call);
             return { output: await refusing(transport.request('git.compareCommits', { cwd, ...input, skip: input.skip ?? 0, limit: pageSize ?? 30 })) };
         },
-        'git.blob': async ({ repository, ...input }, call) => {
+        'git.blob': async ({ repository, snapshotCommit, ...input }, call) => {
             const { transport, cwd } = await snapshotCheckout(repository, call);
-            return { output: await refusing(transport.request('git.blob', { cwd, ...input })) };
+            return { output: await refusing(transport.request('git.blob', { cwd, ...input, commit: snapshotCommit })) };
         },
         'git.diff': async ({ repository, path, scope, commit, staged, ignoreWhitespace, base }, call) => {
             const checkout = await checkoutOf(repository, call);

@@ -45,7 +45,7 @@ export async function compareCommits(cwd: string, from: string, to: string, side
 }
 
 export async function readSnapshot(cwd: string, ref: string, path: string): Promise<GitBlobResult> {
-    if (path.startsWith('/') || path.includes('\0') || path.split('/').includes('..')) {
+    if (path.startsWith('/') || path.includes('\0') || path.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')) {
         throw new GitError('git-failed', 'A snapshot path must stay inside the commit tree.');
     }
     const top = await toplevel(cwd);
@@ -58,7 +58,11 @@ export async function readSnapshot(cwd: string, ref: string, path: string): Prom
     if (listed === '') {
         return { ...answer, omitted: 'missing' };
     }
-    const [mode, type, object] = listed.slice(0, listed.indexOf('\t')).split(' ');
+    const separator = listed.indexOf('\t');
+    if (separator < 0 || listed.slice(separator + 1) !== `${path}\0`) {
+        throw new GitError('git-failed', 'The snapshot path must name one exact tree entry.');
+    }
+    const [mode, type, object] = listed.slice(0, separator).split(' ');
     if (mode === '160000') {
         return { ...answer, omitted: 'gitlink' };
     }

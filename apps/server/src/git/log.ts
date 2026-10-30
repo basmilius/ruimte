@@ -78,17 +78,7 @@ export async function readCommit(top: string, hash: string): Promise<GitCommit |
 /* A bounded page unique to one pinned tip, without involving HEAD. */
 export async function readRangeLog(top: string, excluded: string, included: string, skip = 0, limit = DEFAULT_LIMIT): Promise<GitComparePage> {
     const output = await git(
-        [
-            'log',
-            '-z',
-            '--topo-order',
-            '--decorate=full',
-            `--format=${LOG_FORMAT}`,
-            `--max-count=${limit + 1}`,
-            `--skip=${skip}`,
-            `${excluded}..${included}`,
-            '--'
-        ],
+        ['log', '-z', '--decorate=full', `--format=${LOG_FORMAT}`, `--max-count=${limit + 1}`, `--skip=${skip}`, `${excluded}..${included}`, '--'],
         top
     );
     if (output === null) {

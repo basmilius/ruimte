@@ -4,6 +4,7 @@ import {
     GitCompareCommitsPayloadSchema,
     GitComparePageSchema,
     GitBlobResultSchema,
+    GitBlobPayloadSchema,
     ARTIFACT_LIMITS,
     ArtifactFileSchema,
     ArtifactIdSchema,
@@ -3177,7 +3178,12 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'developer',
         actors: PERSON_AND_VOICE,
-        input: GitComparePayloadSchema.omit({ cwd: true }).extend({ repository }),
+        input: GitComparePayloadSchema.omit({ cwd: true }).extend({
+            repository,
+            from: GitComparePayloadSchema.shape.from.describe('The left reference or pinned commit OID'),
+            to: GitComparePayloadSchema.shape.to.describe('The right reference or pinned commit OID'),
+            mode: GitComparePayloadSchema.shape.mode.describe('merge-base compares the right branch since divergence; tips compares the two tips')
+        }),
         output: GitCompareResultSchema
     },
     'git.compareCommits': {
@@ -3186,7 +3192,14 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'developer',
         actors: PERSON_AND_VOICE,
-        input: GitCompareCommitsPayloadSchema.omit({ cwd: true, limit: true }).extend({ repository, pageSize: GitCompareCommitsPayloadSchema.shape.limit }),
+        input: GitCompareCommitsPayloadSchema.omit({ cwd: true, limit: true }).extend({
+            repository,
+            fromCommit: GitCompareCommitsPayloadSchema.shape.fromCommit.describe('The pinned fromCommit returned by git.compare'),
+            toCommit: GitCompareCommitsPayloadSchema.shape.toCommit.describe('The pinned toCommit returned by git.compare'),
+            side: GitCompareCommitsPayloadSchema.shape.side.describe('left for commits only on fromCommit; right for commits only on toCommit'),
+            skip: GitCompareCommitsPayloadSchema.shape.skip.describe('The next cursor returned by the previous comparison page'),
+            pageSize: GitCompareCommitsPayloadSchema.shape.limit.describe('Commits per comparison page; 30 without it')
+        }),
         output: GitComparePageSchema
     },
     'git.blob': {
@@ -3195,7 +3208,13 @@ export const ACTION_DEFINITIONS = {
         effect: 'read',
         domain: 'developer',
         actors: PERSON_AND_VOICE,
-        input: z.object({ repository, commit: z.string().min(1), path: z.string().min(1) }),
+        input: z.object({
+            repository,
+            snapshotCommit: GitBlobPayloadSchema.shape.commit.describe(
+                'The pinned 40- or 64-character commit OID returned by git.compare; never a branch name'
+            ),
+            path: z.string().min(1).describe('One exact file path relative to the repository root, as git.compare lists it')
+        }),
         output: GitBlobResultSchema
     },
     'git.diff': {

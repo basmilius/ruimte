@@ -61,6 +61,8 @@ export interface CompareTab {
     from: string;
     to: string;
     mode: GitCompareMode;
+    snapshot?: { fromCommit: string; toCommit: string };
+    refresh?: number;
 }
 
 export interface SnapshotTab {
@@ -72,6 +74,7 @@ export interface SnapshotTab {
     branch: string;
     path: string;
     line?: number;
+    caretRequest?: number;
 }
 
 export type SessionTab = CompareTab | SnapshotTab;
@@ -110,7 +113,14 @@ export function openSessionTab(state: TabPool, tab: Omit<CompareTab, 'key' | 'pi
         tab.kind === 'compare' ? `compare:${JSON.stringify([tab.cwd, tab.from, tab.to])}` : `snapshot:${JSON.stringify([tab.cwd, tab.commit, tab.path])}`;
     const existing = state.tabs.find((entry) => entry.key === key);
     if (existing !== undefined) {
-        return { tabs: state.tabs.map((entry) => (entry === existing ? { ...tab, key, pinned: entry.pinned } : entry)), active: key };
+        return {
+            tabs: state.tabs.map((entry) =>
+                entry === existing
+                    ? { ...entry, ...tab, key, ...(isSessionTab(entry) && entry.kind === 'snapshot' ? { caretRequest: (entry.caretRequest ?? 0) + 1 } : {}) }
+                    : entry
+            ),
+            active: key
+        };
     }
     return placeTab(state, { ...tab, key, pinned: false });
 }
@@ -394,6 +404,8 @@ interface FilesStore extends TabPool {
     setUnsubmitted(key: string, unsubmitted: boolean): void;
     setPinned(key: string, pinned: boolean): void;
     setCompareMode(key: string, mode: GitCompareMode): void;
+    pinComparison(key: string, refresh: number, snapshot: NonNullable<CompareTab['snapshot']>): void;
+    refreshComparison(key: string): void;
     setScope(key: string, scope: GitDiffScope): void;
     setStaged(key: string, staged: boolean): void;
     setConsole(key: string, binding: ConsoleBinding | null): void;
@@ -638,6 +650,24 @@ export const useFiles = create<FilesStore>((set, get) => {
         },
         setCompareMode(key, mode) {
             set({ tabs: get().tabs.map((tab) => ('kind' in tab && tab.kind === 'compare' && tab.key === key ? { ...tab, mode } : tab)) });
+        },
+        pinComparison(key, refresh, snapshot) {
+            set({
+                tabs: get().tabs.map((tab) =>
+                    isSessionTab(tab) && tab.kind === 'compare' && tab.key === key && (tab.refresh ?? 0) === refresh ? { ...tab, snapshot } : tab
+                )
+            });
+        },
+        refreshComparison(key) {
+            set({
+                tabs: get().tabs.map((tab) => {
+                    if (!isSessionTab(tab) || tab.kind !== 'compare' || tab.key !== key) {
+                        return tab;
+                    }
+                    const { snapshot: _snapshot, ...rest } = tab;
+                    return { ...rest, refresh: (tab.refresh ?? 0) + 1 };
+                })
+            });
         },
         setScope(key, scope) {
             patchFileView(key, { scope });

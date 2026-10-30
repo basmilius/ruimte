@@ -139,7 +139,7 @@ test('snapshot omissions are explicit and expose no working-file actions', async
     expect(forbiddenWrites()).toEqual([]);
 });
 
-test('mode changes and explicit refresh reread the refs, and a failed read can be retried', async () => {
+test('a failed first comparison can switch to tips and be explicitly refreshed', async () => {
     let fail = true;
     machine.answer('git.compare', ({ mode }) => {
         if (fail) {
@@ -196,4 +196,73 @@ test('text snapshots ignore native input changes and expose no work-file save or
     expect(machine.requests('fs.read').filter(({ path }) => path === `${CWD}/cart.ts`)).toEqual([]);
     expect(document.body.textContent).toContain('Read-only Git snapshot.');
     expect(document.querySelector('[data-path="/work/atlas/cart.ts"]')).toBeNull();
+});
+
+test('mode switches and reconnects keep pinned commits after a branch moves until Read again', async () => {
+    const movedTip = 'd'.repeat(40);
+    let moved = false;
+    machine.answer('git.compare', ({ from, to, mode }) => ({
+        ...comparison(),
+        from,
+        to,
+        mode,
+        toCommit: moved && to === 'refs/heads/right' ? movedTip : RIGHT,
+        baseCommit: mode === 'tips' ? LEFT : BASE
+    }));
+    await act(async () => openComparison(CWD, 'refs/heads/left', 'refs/heads/right', 'merge-base'));
+    await until(() => document.body.textContent?.includes('Common ancestor ccccccc → bbbbbbb') === true);
+    moved = true;
+    await clickOn(document.querySelector('[aria-label="Comparison"]'));
+    await until(() => [...document.querySelectorAll('[role="option"]')].some((row) => row.textContent === 'Branch tips'));
+    await clickOn([...document.querySelectorAll('[role="option"]')].find((row) => row.textContent === 'Branch tips') ?? null);
+    await until(() => document.body.textContent?.includes('Branch tip aaaaaaa → bbbbbbb') === true);
+    expect(machine.requests('git.compare')[1]).toMatchObject({ from: LEFT, to: RIGHT, mode: 'tips' });
+    await act(async () => machine.drop());
+    await until(() => document.body.textContent?.includes('Connect to this machine to read') === true);
+    await act(async () => machine.reopen());
+    await until(() => machine.requests('git.compare').length === 3);
+    expect(machine.requests('git.compare')[2]).toMatchObject({ from: LEFT, to: RIGHT, mode: 'tips' });
+    await until(() => buttonWithText('Read again') !== null);
+    await clickOn(buttonWithText('Read again'));
+    await until(() => document.body.textContent?.includes('Branch tip aaaaaaa → ddddddd') === true);
+    expect(machine.requests('git.compare')[3]).toMatchObject({ from: 'refs/heads/left', to: 'refs/heads/right' });
+    expect(forbiddenWrites()).toEqual([]);
+});
+
+test('Choose branches retains the mode and accepts a seeded branch outside the capped list', async () => {
+    await act(async () => openComparison(CWD, 'refs/heads/left', 'refs/heads/older', 'tips'));
+    await until(() => buttonWithText('Choose branches…') !== null);
+    await clickOn(buttonWithText('Choose branches…'));
+    await until(() => buttonWithText('Compare')?.disabled === false);
+    expect(document.querySelector('[aria-label="To"]')?.textContent).toContain('older');
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.querySelector('[aria-label="Comparison"]')?.textContent).toContain('Branch tips');
+});
+
+test('the comparison palette opens the pinned right snapshot and a repeated jump restores the same line', async () => {
+    await act(async () => openComparison(CWD, 'refs/heads/left', 'refs/heads/right', 'tips'));
+    await until(() => document.querySelector('.file-diff textarea') !== null);
+    const input = document.querySelector<HTMLTextAreaElement>('.file-diff textarea')!;
+    await act(async () => input.focus());
+    await act(async () => useUi.getState().setPaletteOpen(true));
+    await until(() => document.querySelector('input[role="combobox"]') !== null);
+    const search = document.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'Open file at the line');
+        search.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'Open file at the line' }));
+    });
+    await until(() => [...document.querySelectorAll('[role="option"]')].some((row) => row.textContent?.includes('Open file at the line')));
+    await clickOn([...document.querySelectorAll('[role="option"]')].find((row) => row.textContent?.includes('Open file at the line')) ?? null);
+    await until(() => document.body.textContent?.includes('Read-only Git snapshot.') === true);
+    const snapshot = useFiles.getState().tabs.find((tab) => isSessionTab(tab) && tab.kind === 'snapshot');
+    expect(snapshot).toMatchObject({ commit: RIGHT, line: 1 });
+    const snapshotInput = () => [...document.querySelectorAll<HTMLTextAreaElement>('textarea')].find((field) => field.closest('.file-diff') === null);
+    await until(() => snapshotInput() !== undefined);
+    const editor = snapshotInput()!;
+    await act(async () => editor.focus());
+    await pressKey(editor, 'ArrowDown');
+    await until(() => editor.selectionStart > 0);
+    await act(async () => openSnapshot(CWD, RIGHT, 'right', 'cart.ts', 1));
+    await until(() => editor.selectionStart === 0);
+    expect(machine.requests('fs.read').filter(({ path }) => path === `${CWD}/cart.ts`)).toEqual([]);
 });

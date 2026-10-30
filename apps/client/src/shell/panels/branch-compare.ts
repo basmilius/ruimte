@@ -12,17 +12,18 @@ interface CompareRequest {
     cwd?: string;
     from?: string;
     to?: string;
+    mode?: GitCompareMode;
 }
 
 export const useBranchCompare = create<{ request: CompareRequest | null }>(() => ({ request: null }));
 let nextRequest = 0;
 
-export function showBranchCompare(cwd?: string, to?: string, from?: string): void {
+export function showBranchCompare(cwd?: string, to?: string, from?: string, mode?: GitCompareMode): void {
     const projectId = useProject.getState().current?.projectId;
     if (projectId === undefined) {
         return;
     }
-    useBranchCompare.setState({ request: { key: ++nextRequest, endpointId: currentEndpointId(), projectId, cwd, from, to } });
+    useBranchCompare.setState({ request: { key: ++nextRequest, endpointId: currentEndpointId(), projectId, cwd, from, to, mode } });
 }
 
 export function closeBranchCompare(): void {
