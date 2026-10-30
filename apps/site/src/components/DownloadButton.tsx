@@ -60,9 +60,9 @@ export function DownloadButton() {
                         ? `Version ${release?.version}, ${detail}`
                         : failed
                           ? 'Could not check the latest builds'
-                          : platform !== null && platform !== 'windows' && release !== null
+                          : platform !== null && release !== null
                             ? 'This build is not in the latest release'
-                            : 'Available for macOS and Linux'}
+                            : 'Available for macOS, Linux and Windows'}
                 </span>
                 <span className="mx-2 text-text-faint">/</span>
                 <a href="#download" className="text-text underline decoration-border-strong underline-offset-4 hover:decoration-text">

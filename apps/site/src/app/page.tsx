@@ -156,7 +156,8 @@ export default function Home() {
                         <div>
                             <h2 className="font-display text-[40px] leading-[1.05] font-semibold tracking-[-0.035em] sm:text-[56px]">Download Ruimte</h2>
                             <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-text-muted">
-                                Every download is the latest release. The Mac app is signed and notarized, and it updates itself. Windows comes later.
+                                Every download is the latest release, and the app updates itself. The Mac app is signed and notarized. The Windows app is not
+                                signed yet, so Windows warns about it the first time.
                             </p>
                             <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-text-muted">
                                 On a server without a screen,{' '}
