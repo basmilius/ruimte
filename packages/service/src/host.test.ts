@@ -58,7 +58,8 @@ describe('Ruimte service host', () => {
         const task = scheduledTask(spec);
         expect(task).toContain('<URI>\\app.ruimte.daemon</URI>');
         expect(task).toContain('<UserId>DESKTOP-1\\test</UserId>');
-        expect(task).toContain('<WorkingDirectory>C:\\Users\\test</WorkingDirectory>');
+        expect(task).toContain('<WorkingDirectory>C:\\Users\\test\\AppData\\Local\\Ruimte\\service</WorkingDirectory>');
+        expect(task).toContain('cd /d C:\\Users\\test ||');
         expect(task).toContain('set ^"RUIMTE_SERVICE=1^"');
         expect(definitionRunsProgram(task, program)).toBe(true);
         expect(scheduledTaskFile('C:\\Users\\test', env)).toBe('C:\\Users\\test\\AppData\\Local\\Ruimte\\service\\app.ruimte.daemon.xml');

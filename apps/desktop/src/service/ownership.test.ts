@@ -17,7 +17,7 @@ describe('definitionHome', () => {
     });
 
     test('reads the home of a scheduled task, through the escapes of its cmd.exe line', () => {
-        const home = 'C:\\Users\\bas\\My "100%" Ruimte ^ & <home> && (x)';
+        const home = 'C:\\Users\\Jé\\My "100%" Ruimte ^ & <home> && (x)';
         const spec = daemonServiceSpec({
             platform: 'win32',
             program: 'C:\\Program Files\\Ruimte\\resources\\bin\\ruimte.exe',
@@ -28,6 +28,9 @@ describe('definitionHome', () => {
             env: { USERDOMAIN: 'PC', USERNAME: 'bas' }
         });
         expect(definitionHome(scheduledTask(spec))).toBe(home);
+        const oldForm =
+            '<Task><Actions><Exec><Arguments>/d /s /c "title x &amp;&amp; set ^"RUIMTE_HOME=C:\\Users\\bas\\100%^ home^" &amp;&amp; ruimte.exe &gt;&gt;log 2&gt;&amp;1"</Arguments></Exec></Actions></Task>';
+        expect(definitionHome(oldForm)).toBe('C:\\Users\\bas\\100% home');
         expect(definitionHome('<Task><Actions><Exec><Command>cmd.exe</Command></Exec></Actions></Task>')).toBeNull();
     });
 

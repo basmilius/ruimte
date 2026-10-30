@@ -11,7 +11,11 @@ export interface ServiceIdentity {
 const HOME_VARIABLE = 'RUIMTE_HOME';
 
 function unescapeXml(text: string): string {
-    return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    return text
+        .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
 }
 
 function plistHome(definition: string): string | null {
@@ -54,8 +58,13 @@ function unitHome(definition: string): string | null {
     return home;
 }
 
-/* The task's cmd.exe line sets each variable as `set ^"NAME=value^"`, every character cmd reads as syntax behind a caret; the last one wins. */
+/* The task's script sets each variable as `set ^"NAME=value^"`, every character cmd reads as syntax behind a caret and a percent doubled; the last one wins. */
 function scheduledTaskHome(definition: string): string | null {
+    const script = /<Documentation>([^<]*)<\/Documentation>/.exec(definition)?.[1];
+    if (script !== undefined) {
+        return taskHomeOf(unescapeXml(script).split('\r\n'), (value) => value.replace(/%%/g, '%'));
+    }
+    // A task from before the script holds the same on its one line, with a percent as it is.
     const exec = definition.match(/<Exec>[\s\S]*?<\/Exec>/g);
     if (exec?.length !== 1) {
         return null;
@@ -65,9 +74,13 @@ function scheduledTaskHome(definition: string): string | null {
     if (line === undefined) {
         return null;
     }
+    return taskHomeOf(line.split(' && '), (value) => value);
+}
+
+function taskHomeOf(steps: string[], percents: (value: string) => string): string | null {
     let home: string | null = null;
-    for (const step of line.split(' && ')) {
-        const assignment = /^set "(.*)"$/.exec(step.replace(/\^(.)/g, '$1'))?.[1];
+    for (const step of steps) {
+        const assignment = /^set "(.*)"$/.exec(percents(step.replace(/\^(.)/g, '$1')))?.[1];
         if (assignment?.startsWith(`${HOME_VARIABLE}=`)) {
             home = assignment.slice(HOME_VARIABLE.length + 1);
         }

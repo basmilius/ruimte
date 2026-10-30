@@ -92,6 +92,6 @@ export function daemonServiceSpec(service: DaemonService): ServiceSpec {
         environment: { RUIMTE_HOME: service.ruimteHome, PATH: service.path, RUIMTE_SERVICE: '1' },
         workingDirectory: service.home,
         logFile: serviceLogFile(service.home, service.platform, env),
-        ...(service.platform === 'win32' ? { user: serviceUser(env) } : {})
+        ...(service.platform === 'win32' ? { user: serviceUser(env), scriptDirectory: win32.dirname(scheduledTaskFile(service.home, env)) } : {})
     };
 }

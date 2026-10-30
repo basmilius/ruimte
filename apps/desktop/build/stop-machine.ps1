@@ -34,8 +34,9 @@ function Get-OwnTask {
     if (-not $task) {
         return $null
     }
-    # The task's cmd.exe line carries a caret before everything cmd.exe reads as syntax, spaces among them.
-    $line = "$($task.Actions[0].Arguments)".Replace('^', '')
+    # The script a task carries in `Documentation`, or a task's line from before it had one, has a caret
+    # before everything cmd.exe reads as syntax, spaces among them, and a script doubles a percent.
+    $line = "$($task.Documentation) $($task.Actions[0].Arguments)".Replace('^', '').Replace('%%', '%')
     if ($line.IndexOf($daemonPath, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
         return $null
     }
@@ -69,6 +70,7 @@ if ($Action -eq 'remove') {
     if (Get-OwnTask) {
         schtasks.exe /Delete /TN $taskName /F | Out-Null
         Remove-Item -Force (Join-Path $env:LOCALAPPDATA "Ruimte\service\$taskName.xml")
+        Remove-Item -Force (Join-Path $env:LOCALAPPDATA "Ruimte\service\$taskName.cmd")
     }
     exit 0
 }
