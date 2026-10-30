@@ -61,9 +61,28 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run check:types
       - run: bun run lint
       - run: bun run format:check
+
+  typecheck:
+    name: typecheck (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [client, server, scripts, workspaces]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/install
+      - name: Check types
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          case "$GROUP" in
+            client|server) bun run --cwd "apps/$GROUP" typecheck ;;
+            scripts) bun x tsc -p tsconfig.scripts.json ;;
+            workspaces) bun run --filter '*' --filter '!@ruimte/client' --filter '!@ruimte/server' typecheck ;;
+          esac
 
   build:
     runs-on: macos-latest
@@ -72,44 +91,50 @@ jobs:
       - uses: ./.github/actions/install
       - uses: ./.github/actions/cache-react-compiler
       - run: bun run check:generated
-      # verify owns client tsc -b; public builds still typecheck before bundling.
+      # typecheck owns client tsc -b; public builds still typecheck before bundling.
       - run: bun run --cwd apps/client build:bundle
       - run: bun run --cwd apps/desktop build
       # The unit shards run on Linux; a case-insensitive volume is what only a Mac has under these tests.
       - run: bun test --conditions=source apps/server/src/fs
 
   unit:
-    name: unit (${{ matrix.shard }}/2)
+    name: unit
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run test --shard=${{ matrix.shard }}/2
+      # One process. The test script passes --parallel. Shards on this machine pushed scans past five seconds.
+      - run: bun run test
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
+  # One runner, two workers, without the files that start git or a test daemon. windows-ci.bunfig.toml says which.
   windows:
     name: unit (Windows)
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run check:types
-      - run: bun run lint
-      # Two workers instead of one per core, and without the test files that run git: windows-ci.bunfig.toml says why.
       - run: bun --config=windows-ci.bunfig.toml test --conditions=source --parallel=2 --only-failures
 
   dom:
+    name: dom
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
       - uses: ./.github/actions/cache-react-compiler
-      - run: bun run test:dom
+      # Three processes in this one job. One bun --parallel shares the page React read at load, and the menu never arrives.
+      - parallel:
+          - name: dom 1/3
+            run: bun run test:dom --shard=1/3
+          - name: dom 2/3
+            run: bun run test:dom --shard=2/3
+          - name: dom 3/3
+            run: bun run test:dom --shard=3/3
 
   integration:
     name: integration (macOS)
@@ -224,7 +249,25 @@ jobs:
   checks:
     name: CI checks
     if: ${{ always() }}
-    needs: [changes, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux, rust, swift-pulsar, swift-transport, computer-use, foundation-models]
+    needs:
+      [
+        changes,
+        verify,
+        typecheck,
+        build,
+        unit,
+        windows,
+        dom,
+        integration,
+        packaged,
+        integration-linux,
+        packaged-linux,
+        rust,
+        swift-pulsar,
+        swift-transport,
+        computer-use,
+        foundation-models
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results

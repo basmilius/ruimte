@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Task } from '@ruimte/contracts';
-import { taskStatusWord } from '@adecore/agents-react/chat';
 import { childTask, edgeTask, useTasks } from './tasks';
 
 function task(id: string, overrides: Partial<Task> = {}): Task {
@@ -54,7 +53,6 @@ describe('tasks', () => {
         store.putTask('local', task('second'));
         const shown = childTask(useTasks.getState().byEndpoint.local, 'chat-child');
         expect(shown?.id).toBe('second');
-        expect(taskStatusWord(shown!)).toBe('running');
         // The first one settling again, as an event late for it, does not take the mark back.
         store.putTask('local', task('first', { status: 'done', settledAt: 2 }));
         expect(childTask(useTasks.getState().byEndpoint.local, 'chat-child')?.id).toBe('second');

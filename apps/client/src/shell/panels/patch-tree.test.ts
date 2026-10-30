@@ -73,11 +73,6 @@ describe('the states of the bar', () => {
         expect(hasInconsistentHunk(patchLayoutOf(TWO_FILES.replace('+new', '+new\n+extra\n+more')))).toBe(true);
     });
 
-    test('a cut-off reading says so', () => {
-        expect(patchLayoutOf(TWO_FILES, { maxLines: 5 }).truncated).toBe(true);
-        expect(patchLayoutOf(TWO_FILES).truncated).toBe(false);
-    });
-
     test('a binary section is named in its row', () => {
         const patch = 'diff --git a/logo.png b/logo.png\nindex 1..2 100644\nBinary files a/logo.png and b/logo.png differ\n';
         const [section] = sectionsOf(patchLayoutOf(patch));

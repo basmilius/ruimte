@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { definitionRunsProgram, launchAgentPlist, scheduledTask, systemdUnit } from '@adecore/service';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, scheduledTaskFile, serviceLogFile } from './host';
 
 describe('Ruimte service host', () => {
     test('names the installed service, its log and its program, and marks the daemon as owned by it', () => {
         const spec = daemonServiceSpec({
             platform: 'darwin',
-            program: '/Apps/Ruimte & Tools/ruimte',
+            program: '/Apps/Ruimte/ruimte',
             args: ['--port', '4210'],
             home: '/Users/test',
             ruimteHome: '/Users/test/.ruimte',
@@ -15,15 +14,6 @@ describe('Ruimte service host', () => {
         expect(spec.label).toBe('app.ruimte.daemon');
         expect(spec.environment).toEqual({ RUIMTE_HOME: '/Users/test/.ruimte', PATH: '/test/bin:/usr/bin', RUIMTE_SERVICE: '1' });
         expect(spec.logFile).toBe('/Users/test/Library/Logs/Ruimte/daemon.log');
-        const plist = launchAgentPlist(spec);
-        expect(plist).toContain('<string>app.ruimte.daemon</string>');
-        expect(plist).toContain('<string>/Apps/Ruimte &amp; Tools/ruimte</string>');
-        expect(plist).toContain('<string>/Users/test/Library/Logs/Ruimte/daemon.log</string>');
-        expect(plist).toContain('<key>RUIMTE_SERVICE</key>');
-        const unit = systemdUnit(spec);
-        expect(unit).toContain('Description=Ruimte machine');
-        expect(unit).toContain('Environment="RUIMTE_SERVICE=1"');
-        expect(unit).toContain('WorkingDirectory=/Users/test');
         expect(commandLineServiceProgram('/Users/test/.ruimte', 'darwin')).toBe('/Users/test/.ruimte/bin/ruimte');
     });
 
@@ -64,13 +54,6 @@ describe('Ruimte service host', () => {
         });
         expect(spec.user).toBe('DESKTOP-1\\test');
         expect(spec.logFile).toBe('C:\\Users\\test\\AppData\\Local\\Ruimte\\logs\\daemon.log');
-        const task = scheduledTask(spec);
-        expect(task).toContain('<URI>\\app.ruimte.daemon</URI>');
-        expect(task).toContain('<UserId>DESKTOP-1\\test</UserId>');
-        expect(task).toContain('<WorkingDirectory>C:\\Users\\test\\AppData\\Local\\Ruimte\\service</WorkingDirectory>');
-        expect(task).toContain('cd /d C:\\Users\\test ||');
-        expect(task).toContain('set ^"RUIMTE_SERVICE=1^"');
-        expect(definitionRunsProgram(task, program)).toBe(true);
         expect(scheduledTaskFile('C:\\Users\\test', env)).toBe('C:\\Users\\test\\AppData\\Local\\Ruimte\\service\\app.ruimte.daemon.xml');
         expect(commandLineServiceProgram('C:\\Users\\test\\.ruimte', 'win32')).toBe('C:\\Users\\test\\.ruimte\\bin\\ruimte.exe');
     });

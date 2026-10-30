@@ -126,8 +126,10 @@ for (const kind of ['drawing', 'diagram'] as const) {
             });
             await watch.settle();
             await Promise.all(peers.map((peer) => peer.request('server.hello', {})));
-            expect(writer.frames.filter((frame) => 'type' in frame)).toEqual([]);
-            expect(reader.frames.filter((frame) => 'type' in frame)).toHaveLength(1);
+            /* `project.summary` is published on its own promise, so it may land after this check. */
+            const echoes = (peer: Peer) => peer.frames.filter((frame) => 'type' in frame && frame.event === `${kind}.changed`);
+            expect(echoes(writer)).toEqual([]);
+            expect(echoes(reader)).toHaveLength(1);
         } finally {
             peers.forEach((peer) => peer.socket.close());
             try {
