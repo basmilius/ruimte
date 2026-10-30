@@ -64,8 +64,23 @@ export async function readSearchable(root: SearchRoot, path: string, afterOpen?:
         if (there.dev !== opened.dev || there.ino !== opened.ino || !isInside(root.realCwd, real) || isMachineStatePath(root.policy, real)) {
             return null;
         }
+        const prefix = Buffer.alloc(Math.min(1024, Number(opened.size)));
+        let offset = 0;
+        while (offset < prefix.byteLength) {
+            const { bytesRead } = await handle.read({ buffer: prefix, offset, length: prefix.byteLength - offset, position: offset });
+            if (bytesRead === 0) {
+                break;
+            }
+
+            if (prefix.subarray(offset, offset + bytesRead).includes(0)) {
+                return null;
+            }
+
+            offset += bytesRead;
+        }
+
         const content = await handle.readFile('utf8');
-        // A NUL in the first block is what every other tool calls binary, and it reads as one.
+        // Preserve decoded-prefix rejection for Unicode and for content changed after the probe.
         return content.slice(0, 1024).includes('\0') ? null : content;
     } catch {
         return null;
