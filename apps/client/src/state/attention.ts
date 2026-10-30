@@ -189,27 +189,42 @@ export function useWaitingCount(viewId?: string): number {
 }
 
 /* Compact rows only know the project machine's statuses. Remote nodes stay out rather than opening a link for a badge. */
+export function sidebarWaitingNodes(
+    views: readonly ProjectSidebarView[],
+    statuses: Readonly<Record<string, AgentStatus>>,
+    endpointId: string,
+    snoozes: Snoozes
+): { id: string; title: string; kind: 'chat' | 'terminal' }[] {
+    const waiting = new Map<string, { id: string; title: string; kind: 'chat' | 'terminal' }>();
+
+    for (const row of views) {
+        for (const node of [...row.nodes, ...(row.self === null ? [] : [row.self])]) {
+            if (node.kind !== 'chat' && node.kind !== 'terminal') {
+                continue;
+            }
+
+            const ids = node.kind === 'chat' ? [node.id, ...(node.chats ?? [])] : [node.id];
+
+            for (const id of ids) {
+                if (statuses[`${node.kind}:${id}`] === 'needs-you' && snoozeOf(snoozes, endpointId, id) === null) {
+                    if (!waiting.has(id)) {
+                        waiting.set(id, { id, title: node.title, kind: node.kind });
+                    }
+                }
+            }
+        }
+    }
+
+    return [...waiting.values()];
+}
+
 export function sidebarWaitingCount(
     views: readonly ProjectSidebarView[],
     statuses: Readonly<Record<string, AgentStatus>>,
     endpointId: string,
     snoozes: Snoozes
 ): number {
-    const waiting = new Set<string>();
-
-    for (const row of views) {
-        for (const node of [...row.nodes, ...(row.self === null ? [] : [row.self])]) {
-            const ids = node.kind === 'chat' ? [node.id, ...(node.chats ?? [])] : [node.id];
-
-            for (const id of ids) {
-                if (statuses[`${node.kind}:${id}`] === 'needs-you' && snoozeOf(snoozes, endpointId, id) === null) {
-                    waiting.add(id);
-                }
-            }
-        }
-    }
-
-    return waiting.size;
+    return sidebarWaitingNodes(views, statuses, endpointId, snoozes).length;
 }
 
 interface AttentionStore {

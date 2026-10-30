@@ -56,6 +56,55 @@ afterEach(() => {
 });
 
 describe('background sidebar updates', () => {
+    test('dates a wait from its oldest request and keeps a requestless terminal at its first known date', async () => {
+        const transport = new FakeTransport();
+        let updatedAt = 100;
+        transport.answer = (type) =>
+            type === 'session.list'
+                ? { sessions: [{ sessionId: 'terminal', exited: false, agent: { live: true, status: 'needs-you', updatedAt } }] }
+                : type === 'chat.list'
+                  ? { chats: [{ chatId: 'chat', status: 'needs-you', requests: [{ createdAt: 80 }, { createdAt: 40 }] }] }
+                  : { projects: [] };
+        const watcher = watch(transport);
+        await settle();
+        expect(watcher.getSnapshot().waitingSince).toEqual({ 'terminal:terminal': 100, 'chat:chat': 40 });
+        updatedAt = 200;
+        watcher.refresh();
+        await settle();
+        expect(watcher.getSnapshot().waitingSince['terminal:terminal']).toBe(100);
+        transport.emit('session.status', { sessionId: 'terminal', agent: { status: 'needs-you', updatedAt: 300, requests: [{ createdAt: 50 }] } });
+        expect(watcher.getSnapshot().waitingSince['terminal:terminal']).toBe(50);
+        transport.emit('session.status', { sessionId: 'terminal', agent: { status: 'running', updatedAt: 400 } });
+        expect(watcher.getSnapshot().waitingSince['terminal:terminal']).toBeUndefined();
+        transport.emit('session.status', { sessionId: 'terminal', agent: { status: 'needs-you', updatedAt: 500 } });
+        expect(watcher.getSnapshot().waitingSince['terminal:terminal']).toBe(500);
+    });
+
+    test.each([
+        { status: 'needs-you', expected: 30 },
+        { status: 'running', expected: undefined }
+    ])('a newer $status event wins over a pending list for the date as well as status', async ({ status, expected }) => {
+        const transport = new FakeTransport();
+        const watcher = watch(transport);
+        await settle();
+        transport.emit('chat.status', { chatId: 'chat', info: { status: 'needs-you', requests: [{ createdAt: 10 }] } });
+        let reply: (value: unknown) => void = () => {};
+        transport.answer = (type) =>
+            type === 'chat.list'
+                ? new Promise((resolve) => {
+                      reply = resolve;
+                  })
+                : type === 'project.sidebar'
+                  ? { projects: [] }
+                  : { sessions: [] };
+        watcher.refresh();
+        transport.emit('chat.status', { chatId: 'chat', info: { status, requests: [{ createdAt: 30 }] } });
+        reply({ chats: [{ chatId: 'chat', status: 'needs-you', requests: [{ createdAt: 20 }] }] });
+        await settle();
+        expect(watcher.getSnapshot().statuses['chat:chat']).toBe(status);
+        expect<number | undefined>(watcher.getSnapshot().waitingSince['chat:chat']).toBe(expected);
+    });
+
     test('loads statuses without opening projects or attaching sessions', async () => {
         const transport = new FakeTransport();
         transport.answer = (type) =>

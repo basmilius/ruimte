@@ -4,6 +4,7 @@ import type { Transport } from '@/transport/transport';
 export interface SidebarMachineSnapshot {
     projects: ProjectSidebarResult['projects'];
     statuses: Record<string, AgentStatus>;
+    waitingSince: Record<string, number>;
     state: 'loading' | 'ready' | 'offline' | 'error';
 }
 
@@ -26,12 +27,22 @@ function statusKeyOf(part: Part): string | null {
     return part === 'sessions' ? 'terminal:' : part === 'chats' ? 'chat:' : null;
 }
 
-function sameStatuses(left: SidebarMachineSnapshot['statuses'], right: SidebarMachineSnapshot['statuses']): boolean {
+function sameValues<Value>(left: Readonly<Record<string, Value>>, right: Readonly<Record<string, Value>>): boolean {
     if (left === right) {
         return true;
     }
     const keys = Object.keys(left);
     return keys.length === Object.keys(right).length && keys.every((key) => left[key] === right[key]);
+}
+
+function waitingAt(status: AgentStatus, requests: readonly { createdAt: number }[] = [], previous?: number, fallback?: number): number | null {
+    if (status !== 'needs-you') {
+        return null;
+    }
+
+    const dates = requests.map((request) => request.createdAt).filter((at) => Number.isFinite(at) && at > 0);
+
+    return dates.length > 0 ? Math.min(...dates) : (previous ?? (fallback !== undefined && fallback > 0 ? fallback : Infinity));
 }
 
 function sameProjects(left: SidebarMachineSnapshot['projects'], right: SidebarMachineSnapshot['projects']): boolean {
@@ -42,7 +53,7 @@ function sameProjects(left: SidebarMachineSnapshot['projects'], right: SidebarMa
 }
 
 export class SidebarWatch {
-    private snapshot: SidebarMachineSnapshot = { projects: [], statuses: {}, state: 'loading' };
+    private snapshot: SidebarMachineSnapshot = { projects: [], statuses: {}, waitingSince: {}, state: 'loading' };
     private readonly listeners = new Set<() => void>();
     private readonly off: (() => void)[];
     private readonly interval: ReturnType<typeof setInterval>;
@@ -71,9 +82,11 @@ export class SidebarWatch {
             transport.on('project.changed', (event) => this.changed(event)),
             transport.on('project.summary', (event) => this.summary(event)),
             transport.on('session.list-changed', () => this.queue(['sessions'])),
-            transport.on('session.status', ({ sessionId, agent }) => this.status(`terminal:${sessionId}`, agent?.status ?? 'running')),
+            transport.on('session.status', ({ sessionId, agent }) =>
+                this.status(`terminal:${sessionId}`, agent?.status ?? 'running', agent?.requests, agent?.updatedAt)
+            ),
             transport.on('session.exit', ({ sessionId }) => this.status(`terminal:${sessionId}`, 'exited')),
-            transport.on('chat.status', ({ chatId, info }) => this.status(`chat:${chatId}`, info.status))
+            transport.on('chat.status', ({ chatId, info }) => this.status(`chat:${chatId}`, info.status, info.requests))
         ];
         // A project no client has open has no watcher on the machine, so an edit from outside reaches no event.
         this.interval = setInterval(() => {
@@ -102,12 +115,23 @@ export class SidebarWatch {
         this.queue(ALL_PARTS);
     };
 
-    private status(key: string, status: AgentStatus): void {
+    private status(key: string, status: AgentStatus, requests?: readonly { createdAt: number }[], fallback?: number): void {
         this.touched.add(key);
-        if (this.snapshot.statuses[key] === status) {
+        const at = waitingAt(status, requests, this.snapshot.waitingSince[key], fallback);
+
+        if (this.snapshot.statuses[key] === status && this.snapshot.waitingSince[key] === (at ?? undefined)) {
             return;
         }
-        this.set({ ...this.snapshot, statuses: { ...this.snapshot.statuses, [key]: status } });
+
+        const waitingSince = { ...this.snapshot.waitingSince };
+
+        if (at === null) {
+            delete waitingSince[key];
+        } else {
+            waitingSince[key] = at;
+        }
+
+        this.set({ ...this.snapshot, statuses: { ...this.snapshot.statuses, [key]: status }, waitingSince });
     }
 
     /* The document comes along to a client that holds the project, so its rows come from it without asking. */
@@ -144,7 +168,8 @@ export class SidebarWatch {
         if (
             this.disposed ||
             (snapshot.state === this.snapshot.state &&
-                sameStatuses(snapshot.statuses, this.snapshot.statuses) &&
+                sameValues(snapshot.statuses, this.snapshot.statuses) &&
+                sameValues(snapshot.waitingSince, this.snapshot.waitingSince) &&
                 sameProjects(snapshot.projects, this.snapshot.projects))
         ) {
             return;
@@ -192,21 +217,45 @@ export class SidebarWatch {
                     return;
                 }
                 const fetched: Record<string, AgentStatus> = {};
+                const waitingSince: Record<string, number> = {};
+
+                const remember = (key: string, status: AgentStatus, requests?: readonly { createdAt: number }[], fallback?: number): void => {
+                    if (this.touched.has(key)) {
+                        return;
+                    }
+
+                    fetched[key] = status;
+                    const at = waitingAt(status, requests, this.snapshot.waitingSince[key], fallback);
+
+                    if (at !== null) {
+                        waitingSince[key] = at;
+                    }
+                };
+
                 for (const session of sessions?.sessions ?? []) {
-                    fetched[`terminal:${session.sessionId}`] =
-                        session.agent?.live || session.agent?.status === 'exited' ? session.agent.status : session.exited ? 'error' : 'running';
+                    remember(
+                        `terminal:${session.sessionId}`,
+                        session.agent?.live || session.agent?.status === 'exited' ? session.agent.status : session.exited ? 'error' : 'running',
+                        session.agent?.requests,
+                        session.agent?.updatedAt
+                    );
                 }
                 for (const chat of chats?.chats ?? []) {
-                    fetched[`chat:${chat.chatId}`] = chat.status;
+                    remember(`chat:${chat.chatId}`, chat.status, chat.requests);
                 }
                 const replaced = parts.map(statusKeyOf).filter((prefix): prefix is string => prefix !== null);
                 // A list replaces every status of its kind, except one an event set while the list was out.
                 const kept = Object.entries(this.snapshot.statuses).filter(
                     ([key]) => this.touched.has(key) || !replaced.some((prefix) => key.startsWith(prefix))
                 );
+                const keptDates = Object.entries(this.snapshot.waitingSince).filter(
+                    ([key]) => this.touched.has(key) || !replaced.some((prefix) => key.startsWith(prefix))
+                );
+
                 this.set({
                     projects: overview?.projects ?? this.snapshot.projects,
                     statuses: { ...fetched, ...Object.fromEntries(kept) },
+                    waitingSince: { ...waitingSince, ...Object.fromEntries(keptDates) },
                     state: 'ready'
                 });
             })

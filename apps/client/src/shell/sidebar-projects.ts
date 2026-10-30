@@ -257,6 +257,11 @@ export function useSidebarMachines(enabled: boolean, endpointIds: readonly strin
 
 const machineWatches = new Map<string, { watcher: SidebarWatch; release: (() => void) | null; readers: number; holders: number }>();
 
+/* Reading what the tabs already observe starts neither a watcher nor a machine link. */
+export function sidebarMachineSnapshot(endpointId: string): SidebarMachineSnapshot | null {
+    return machineWatches.get(endpointId)?.watcher.getSnapshot() ?? null;
+}
+
 /* Tab badges only observe an existing link; the all-project sidebar keeps its existing hold. Both read one watcher. */
 function watchMachine(endpoint: Endpoint, store: StoreApi<{ snapshots: Record<string, SidebarMachineSnapshot> }>, holdsLink: boolean): () => void {
     let shared = machineWatches.get(endpoint.id);

@@ -142,7 +142,7 @@ export function projectWaiting(): Waiting[] {
  * The wait after the one visited last, so pressing again walks on. Once that one is answered and left the
  * list, the walk goes on from where it stood rather than back to the start.
  */
-export function nextWaiting(order: readonly Waiting[], last: Waiting | null): Waiting | null {
+export function nextWaiting<T extends Waiting>(order: readonly T[], last: Waiting | null): T | null {
     if (order.length === 0) {
         return null;
     }

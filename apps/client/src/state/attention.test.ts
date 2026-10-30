@@ -9,6 +9,7 @@ import {
     seenNodes,
     settledSince,
     sidebarWaitingCount,
+    sidebarWaitingNodes,
     visibleNodes,
     type AttentionPass
 } from '@/state/attention';
@@ -263,5 +264,8 @@ test('a background design counts later chats under their own status and snooze i
 
     expect(sidebarWaitingCount(views, statuses, 'local', {})).toBe(2);
     expect(sidebarWaitingCount(views, statuses, 'local', { 'local:review': 2_000 })).toBe(1);
+    expect(sidebarWaitingNodes([...views, ...views], statuses, 'local', { 'local:review': 2_000 })).toEqual([
+        { id: 'copy', kind: 'chat', title: 'Onboarding' }
+    ]);
     expect(sidebarWaitingCount(views, { 'chat:design': 'needs-you' }, 'local', {})).toBe(1);
 });
