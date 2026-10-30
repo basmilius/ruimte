@@ -1,15 +1,17 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
+import type { Worktree } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { checkpointIndexFile, Checkpoints } from './checkpoints.ts';
 import { forgetBase } from './status.ts';
-import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from './test-repo.ts';
+import { gitIn, initRepo, repoSnapshots, type RepoSnapshots, NO_WORKTREE_AGENTS } from './test-repo.ts';
 import { countStatus, Worktrees } from './worktrees.ts';
 import * as runner from './run.ts';
 
-let template: RepoTemplate;
+let snapshots: RepoSnapshots;
+let madeLexer: Worktree;
 let root: string;
 let repo: string;
 let home: string;
@@ -37,24 +39,31 @@ function writeBeforeRemoval(path: string): { spy: ReturnType<typeof spyOn>; reac
     return { spy, reached: () => reached };
 }
 
+/* The worktree most tests are about, as `worktrees.add(repo, 'lexer')` made it once for the file. */
+async function lexer(): Promise<Worktree> {
+    await snapshots.restore('lexer');
+    return madeLexer;
+}
+
 beforeAll(async () => {
-    template = await repoTemplate('ruimte-git', (dir) => initRepo(join(dir, 'repo'), { 'README.md': 'hi', '.gitignore': 'build/\n' }));
+    snapshots = await repoSnapshots('ruimte-git');
+    root = snapshots.root;
+    repo = join(root, 'repo');
+    home = join(root, 'home');
+    await initRepo(repo, { 'README.md': 'hi', '.gitignore': 'build/\n' });
+    await snapshots.take('main');
+    madeLexer = (await new Worktrees(home, NO_WORKTREE_AGENTS, () => 1789999999).add(repo, 'lexer')).worktree;
+    await snapshots.take('lexer');
 });
 
 afterAll(async () => {
-    await template.dispose();
+    await snapshots.dispose();
 });
 
 beforeEach(async () => {
     forgetBase();
-    root = await template.copy();
-    repo = join(root, 'repo');
-    home = join(root, 'home');
+    await snapshots.restore('main');
     worktrees = new Worktrees(home, NO_WORKTREE_AGENTS, () => 1789999999);
-});
-
-afterEach(async () => {
-    await rm(root, { recursive: true, force: true });
 });
 
 describe('Worktrees', () => {
@@ -107,16 +116,16 @@ describe('Worktrees', () => {
             () => 1789999999,
             () => elsewhere
         );
-        const old = await worktrees.add(repo, 'old');
+        const old = await lexer();
         elsewhere = join(root, 'wt');
         const fresh = await worktrees.add(repo, 'fresh');
 
-        expect(old.worktree.path.startsWith(join(home, 'worktrees'))).toBe(true);
+        expect(old.path.startsWith(join(home, 'worktrees'))).toBe(true);
         expect(fresh.worktree.path.startsWith(join(await realpath(root), 'wt'))).toBe(true);
-        expect((await worktrees.list(repo)).map((entry) => entry.branch).sort()).toEqual(['fresh', 'old']);
-        expect(await worktrees.registeredPaths(repo)).toEqual(expect.arrayContaining([old.worktree.path, fresh.worktree.path]));
+        expect((await worktrees.list(repo)).map((entry) => entry.branch).sort()).toEqual(['fresh', 'lexer']);
+        expect(await worktrees.registeredPaths(repo)).toEqual(expect.arrayContaining([old.path, fresh.worktree.path]));
 
-        await worktrees.remove(repo, old.worktree.path);
+        await worktrees.remove(repo, old.path);
         await worktrees.remove(repo, fresh.worktree.path);
         expect(await worktrees.list(repo)).toEqual([]);
     });
@@ -206,7 +215,7 @@ describe('Worktrees', () => {
     });
 
     test('inspecting counts changed files, untracked files one by one without the ignored ones, and commits the from branch lacks', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await mkdir(join(worktree.path, 'src', 'deep'), { recursive: true });
         await writeFile(join(worktree.path, 'src', 'a.ts'), 'a');
         await writeFile(join(worktree.path, 'src', 'deep', 'b.ts'), 'b');
@@ -220,7 +229,7 @@ describe('Worktrees', () => {
     });
 
     test('removing without force refuses an untracked file with the counts and leaves the folder', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await writeFile(join(worktree.path, 'notes.md'), 'draft');
 
         const refused = worktrees.remove(repo, worktree.path);
@@ -231,7 +240,7 @@ describe('Worktrees', () => {
     });
 
     test('a file written after the count but before the removal is refused by git itself, with the fresh numbers', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         const late = writeBeforeRemoval(worktree.path);
         try {
             const refused = worktrees.remove(repo, worktree.path);
@@ -245,7 +254,7 @@ describe('Worktrees', () => {
     });
 
     test('force still removes a worktree that gained a file in that gap', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         const late = writeBeforeRemoval(worktree.path);
         try {
             await worktrees.remove(repo, worktree.path, { force: true });
@@ -270,7 +279,7 @@ describe('Worktrees', () => {
             },
             () => 1789999999
         );
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
 
         await expect(worktrees.remove(repo, worktree.path)).rejects.toMatchObject({ code: 'agent-working' });
         expect(stopped).toEqual([]);
@@ -281,7 +290,7 @@ describe('Worktrees', () => {
     });
 
     test('with force the folder, the branch, the register entry and the checkpoint index all go, and the answer says where the branch was', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await writeFile(join(worktree.path, 'work.md'), 'work');
         await gitIn(worktree.path, ['add', '.']);
         await gitIn(worktree.path, ['commit', '--quiet', '--message', 'work']);
@@ -301,7 +310,7 @@ describe('Worktrees', () => {
     });
 
     test('a branch whose commits are merged into the from branch goes without force', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await gitIn(worktree.path, ['commit', '--quiet', '--allow-empty', '--message', 'done']);
         await git(['merge', '--quiet', '--no-edit', '--no-ff', 'lexer']);
 
@@ -312,7 +321,7 @@ describe('Worktrees', () => {
     });
 
     test('a worktree whose folder was deleted by hand is missing, and removing it prunes it', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await rm(worktree.path, { recursive: true, force: true });
 
         expect(await git(['worktree', 'list', '--porcelain'])).toContain('prunable');
@@ -325,7 +334,7 @@ describe('Worktrees', () => {
     });
 
     test('a branch left behind by a worktree removed with git itself is listed as missing and only goes with force when it holds commits', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await gitIn(worktree.path, ['commit', '--quiet', '--allow-empty', '--message', 'kept']);
         await git(['worktree', 'remove', worktree.path]);
 
@@ -337,7 +346,7 @@ describe('Worktrees', () => {
     });
 
     test('a locked worktree is refused without force and removed with it', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await git(['worktree', 'lock', worktree.path]);
 
         expect((await worktrees.list(repo))[0]).toMatchObject({ locked: true });
@@ -347,7 +356,7 @@ describe('Worktrees', () => {
     });
 
     test('a worktree whose agent switched to another branch keeps both branches', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await gitIn(worktree.path, ['checkout', '--quiet', '-b', 'other']);
 
         expect(await worktrees.remove(repo, worktree.path)).toEqual({ branchDeleted: false });
@@ -355,7 +364,7 @@ describe('Worktrees', () => {
     });
 
     test('a merge that stopped on a conflict is work', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         await writeFile(join(worktree.path, 'README.md'), 'lexer');
         await gitIn(worktree.path, ['commit', '--quiet', '--all', '--message', 'lexer']);
         await writeFile(join(repo, 'README.md'), 'main');
@@ -381,7 +390,7 @@ describe('Worktrees', () => {
     });
 
     test('two removals of the same worktree run one after the other, and whichever comes second finds it gone', async () => {
-        const { worktree } = await worktrees.add(repo, 'lexer');
+        const worktree = await lexer();
         const results = await Promise.allSettled([worktrees.remove(repo, worktree.path), worktrees.remove(repo, worktree.path)]);
         // Each call reads the repository before it queues, so which of the two queues first is not fixed; that one removes it.
         expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);

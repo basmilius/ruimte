@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
 import type { WorktreeMergePayload } from '@ruimte/contracts';
@@ -7,12 +7,12 @@ import { documentPathInFolder } from '../projects/project-files.ts';
 import { UsageCounter } from '../stats/usage-counter.ts';
 import { installUsageCounter } from '../stats/usage-stats.ts';
 import { forgetBase } from './status.ts';
-import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from './test-repo.ts';
+import { gitIn, initRepo, repoSnapshots, type RepoSnapshots, NO_WORKTREE_AGENTS } from './test-repo.ts';
 import { WorktreeMerge, type WorktreeAgent, type WorktreeAgents } from './worktree-merge.ts';
 import { Worktrees } from './worktrees.ts';
 
-let template: RepoTemplate;
-let root: string;
+let snapshots: RepoSnapshots;
+let lexerPath: string;
 let repo: string;
 let worktrees: Worktrees;
 let agents: FakeAgents;
@@ -55,8 +55,8 @@ async function count(range: string, ...flags: string[]): Promise<number> {
     return Number.parseInt((await gitIn(repo, ['rev-list', '--count', ...flags, range])).trim(), 10);
 }
 
-/* A worktree off main with a commit of its own. */
-async function lexer(file = 'lexer.txt', body = 'lexer\n'): Promise<string> {
+/* A worktree off main with a commit of its own, made now, on whatever the test did to the repository. */
+async function madeLexer(file: string, body: string): Promise<string> {
     const { worktree } = await worktrees.add(repo, 'lexer', { madeBy: 'verb', nodeId: 'chat-lexer' });
     await writeFile(join(worktree.path, file), body);
     await gitIn(worktree.path, ['add', '.']);
@@ -64,26 +64,33 @@ async function lexer(file = 'lexer.txt', body = 'lexer\n'): Promise<string> {
     return worktree.path;
 }
 
+/* The same worktree with lexer.txt, as made once for the file; so only at the start of a test. */
+async function lexer(): Promise<string> {
+    await snapshots.restore('lexer');
+    return lexerPath;
+}
+
 beforeAll(async () => {
+    snapshots = await repoSnapshots('ruimte-merge');
+    repo = join(snapshots.root, 'repo');
     // The daemon commits with whatever identity the repository has; the fixture's own is enough.
-    template = await repoTemplate('ruimte-merge', (dir) => initRepo(join(dir, 'repo'), { 'README.md': 'hi\n', 'shared.txt': 'one\n' }));
+    await initRepo(repo, { 'README.md': 'hi\n', 'shared.txt': 'one\n' });
+    await snapshots.take('main');
+    worktrees = new Worktrees(join(snapshots.root, 'home'), NO_WORKTREE_AGENTS, () => 1);
+    lexerPath = await madeLexer('lexer.txt', 'lexer\n');
+    await snapshots.take('lexer');
 });
 
 afterAll(async () => {
-    await template.dispose();
+    await snapshots.dispose();
 });
 
 beforeEach(async () => {
     forgetBase();
-    root = await template.copy();
-    repo = join(root, 'repo');
-    worktrees = new Worktrees(join(root, 'home'), NO_WORKTREE_AGENTS, () => 1);
+    await snapshots.restore('main');
+    worktrees = new Worktrees(join(snapshots.root, 'home'), NO_WORKTREE_AGENTS, () => 1);
     agents = new FakeAgents();
     merges = new WorktreeMerge(worktrees, agents);
-});
-
-afterEach(async () => {
-    await rm(root, { recursive: true, force: true, maxRetries: 5 });
 });
 
 describe('WorktreeMerge', () => {
@@ -166,7 +173,7 @@ describe('WorktreeMerge', () => {
     });
 
     test('a conflict in a merge stays in the target with its files, and abort makes the checkout clean again', async () => {
-        const path = await lexer('shared.txt', 'from lexer\n');
+        const path = await madeLexer('shared.txt', 'from lexer\n');
         await writeFile(join(repo, 'shared.txt'), 'from main\n');
         await gitIn(repo, ['commit', '--quiet', '--all', '--message', 'main edit']);
 
@@ -183,7 +190,7 @@ describe('WorktreeMerge', () => {
     });
 
     test('a conflict in a squash is taken back by abort, and the person’s unrelated change stays', async () => {
-        const path = await lexer('shared.txt', 'from lexer\n');
+        const path = await madeLexer('shared.txt', 'from lexer\n');
         await writeFile(join(repo, 'shared.txt'), 'from main\n');
         await gitIn(repo, ['commit', '--quiet', '--all', '--message', 'main edit']);
         await writeFile(join(repo, 'README.md'), 'my own edit\n');
@@ -198,7 +205,7 @@ describe('WorktreeMerge', () => {
     });
 
     test('a conflict in a rebase leaves the worktree as it was', async () => {
-        const path = await lexer('shared.txt', 'from lexer\n');
+        const path = await madeLexer('shared.txt', 'from lexer\n');
         const tip = (await gitIn(path, ['rev-parse', 'HEAD'])).trim();
         await writeFile(join(repo, 'shared.txt'), 'from main\n');
         await gitIn(repo, ['commit', '--quiet', '--all', '--message', 'main edit']);
@@ -221,7 +228,7 @@ describe('WorktreeMerge', () => {
     });
 
     test('a changed file in the target that the merge touches is refused in git’s words and nothing moves', async () => {
-        const path = await lexer('shared.txt', 'from lexer\n');
+        const path = await madeLexer('shared.txt', 'from lexer\n');
         await writeFile(join(repo, 'shared.txt'), 'uncommitted by the person\n');
         const head = (await gitIn(repo, ['rev-parse', 'HEAD'])).trim();
 
@@ -240,11 +247,11 @@ describe('WorktreeMerge', () => {
 
         // What a person moving a node leaves behind all day, and what a merge is never about.
         await writeFile(documentPathInFolder(repo), '{ "version": 2, "rev": 2 }\n');
-        await merges.merge(payload(await lexer(), {}), () => undefined, { cleanTarget: true });
+        await merges.merge(payload(await madeLexer('lexer.txt', 'lexer\n'), {}), () => undefined, { cleanTarget: true });
         expect(await readFile(join(repo, 'lexer.txt'), 'utf8')).toBe('lexer\n');
 
         await writeFile(join(repo, 'note.txt'), 'two\n');
-        await expect(merges.merge(payload(await lexer('other.txt'), {}), () => undefined, { cleanTarget: true })).rejects.toMatchObject({
+        await expect(merges.merge(payload(await madeLexer('other.txt', 'lexer\n'), {}), () => undefined, { cleanTarget: true })).rejects.toMatchObject({
             code: 'target-dirty'
         });
     });
