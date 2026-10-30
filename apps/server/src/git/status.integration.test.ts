@@ -40,12 +40,15 @@ describe('readStatus', () => {
     test('an unrelated tracked edit preserves untracked counts without reading their content again', async () => {
         await write('cached-untracked.txt', 'one\ntwo\n');
         const absolute = join(repo, 'cached-untracked.txt');
+        const metadata = await fs.lstat(absolute, { bigint: true });
+        const changedAt = metadata.mtimeNs > metadata.ctimeNs ? metadata.mtimeNs : metadata.ctimeNs;
+        const now = Number(changedAt / 1_000_000n) + 5000;
         const opens = spyOn(fs, 'open');
 
         try {
-            const before = await readStatus(repo);
+            const before = await readStatus(repo, now);
             await write('tracked.txt', 'changed\n');
-            const after = await readStatus(repo);
+            const after = await readStatus(repo, now);
             const untracked = { path: 'cached-untracked.txt', state: 'untracked' as const, status: '?', added: 2, deleted: 0, binary: false };
             expect(before.files).toContainEqual(untracked);
             expect(after.files).toContainEqual(untracked);

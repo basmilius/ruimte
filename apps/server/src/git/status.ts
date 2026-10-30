@@ -122,10 +122,10 @@ function byPath(output: string | null): Map<string, Numstat> {
 }
 
 /* What an untracked file would add: it has no history, so it is the whole file against `/dev/null`. */
-async function untrackedCounts(root: string, paths: string[]): Promise<Map<string, Numstat>> {
+async function untrackedCounts(root: string, paths: string[], now: number): Promise<Map<string, Numstat>> {
     const counts = new Map<string, Numstat>();
     for (let i = 0; i < paths.length; i += COUNT_CONCURRENCY) {
-        const results = await Promise.all(paths.slice(i, i + COUNT_CONCURRENCY).map((path) => untrackedNumstat(root, path)));
+        const results = await Promise.all(paths.slice(i, i + COUNT_CONCURRENCY).map((path) => untrackedNumstat(root, path, now)));
         for (const stat of results) {
             if (stat !== null) {
                 counts.set(stat.path, stat);
@@ -210,9 +210,9 @@ function fileOf(entry: PorcelainEntry, state: GitFile['state'], status: string, 
  * again since is in two groups, with the counts of that side in each, which is what makes staging
  * one half of a file's changes readable. Renames keep the path they came from.
  */
-export async function readStatus(cwd: string): Promise<GitStatus> {
+export async function readStatus(cwd: string, now: number = Date.now()): Promise<GitStatus> {
     const root = await repositoryRoot(cwd);
-    return root === null ? noRepository() : await readStatusAt(root);
+    return root === null ? noRepository() : await readStatusAt(root, LEAVE_NOTHING_OUT, now);
 }
 
 // Read from here by a caller outside this folder.
@@ -224,7 +224,7 @@ export function noRepository(): GitStatus {
 }
 
 /* `readStatus` for a root `repositoryRoot` already found. */
-export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT): Promise<GitStatus> {
+export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHING_OUT, now: number = Date.now()): Promise<GitStatus> {
     const porcelain = await readGit(['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', ...leavingOut(await leftOut(root))], root);
     if (porcelain === null) {
         return noRepository();
@@ -234,14 +234,14 @@ export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHIN
     const [staged, unstaged, base, operation] = await Promise.all([
         readGit(['diff', '--cached', '--numstat', '-z'], root).then(byPath),
         readGit(['diff', '--numstat', '-z'], root).then(byPath),
-        resolveBase(root),
+        resolveBase(root, now),
         operationOf(root)
     ]);
     const untrackedPaths = entries
         .filter((entry) => entry.untracked)
         .slice(0, MAX_UNTRACKED_COUNTS)
         .map((entry) => entry.path);
-    const [untracked, mergeBase] = await Promise.all([untrackedCounts(root, untrackedPaths), mergeBaseAgainst(root, base)]);
+    const [untracked, mergeBase] = await Promise.all([untrackedCounts(root, untrackedPaths, now), mergeBaseAgainst(root, base)]);
     const files: GitFile[] = [];
     for (const entry of entries) {
         if (entry.untracked) {

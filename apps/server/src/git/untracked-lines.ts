@@ -9,12 +9,15 @@ const BIG_FILE_BYTES = 512 * 1024 * 1024;
 const CHUNK_BYTES = 64 * 1024;
 const NEWLINE = 0x0a;
 const MAX_CACHED_FILES = 512;
+// Fast writes can share a filesystem tick even when stat exposes nanosecond fields.
+const RACY_WINDOW_MS = 2000;
 
 interface FileVersion {
     key: string;
     size: bigint;
     dev: bigint;
     ino: bigint;
+    changedAtNs: bigint;
 }
 
 interface CachedCount {
@@ -36,7 +39,8 @@ async function versionOf(absolute: string): Promise<FileVersion | null> {
             key: [stat.dev, stat.ino, stat.mode, stat.size, stat.mtimeNs, stat.ctimeNs].join(':'),
             size: stat.size,
             dev: stat.dev,
-            ino: stat.ino
+            ino: stat.ino,
+            changedAtNs: stat.mtimeNs > stat.ctimeNs ? stat.mtimeNs : stat.ctimeNs
         };
     } catch {
         return null;
@@ -61,7 +65,7 @@ function remember(absolute: string, version: string, result: Numstat): void {
  * What `git diff --numstat --no-index /dev/null <path>` says of an untracked file, read here instead of
  * in a process of its own: every line added, or binary. Anything but a regular file is null.
  */
-export async function untrackedNumstat(root: string, path: string): Promise<Numstat | null> {
+export async function untrackedNumstat(root: string, path: string, now: number = Date.now()): Promise<Numstat | null> {
     const absolute = join(root, path);
     const version = await versionOf(absolute);
 
@@ -72,8 +76,9 @@ export async function untrackedNumstat(root: string, path: string): Promise<Nums
     }
 
     const cached = counts.get(absolute);
+    const reusable = version.changedAtNs > 0n && version.changedAtNs < BigInt(Math.floor(now - RACY_WINDOW_MS)) * 1_000_000n;
 
-    if (cached?.version === version.key) {
+    if (reusable && cached?.version === version.key) {
         counts.delete(absolute);
         counts.set(absolute, cached);
 
@@ -88,8 +93,7 @@ export async function untrackedNumstat(root: string, path: string): Promise<Nums
 
     const result = await countFile(absolute, path, version);
 
-    // A file that moved during its scan must not leave a remembered count.
-    if (result !== null && (await versionOf(absolute))?.key === version.key) {
+    if (reusable && result !== null) {
         remember(absolute, version.key, result);
     }
 
