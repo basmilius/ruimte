@@ -96,11 +96,10 @@ Done, unit tested with Windows paths, untried on the PC.
 
 ### 6. Packaging and the service
 
-- Code signing, the npm placeholder and turning on `WINDOWS_RELEASE`.
+- Code signing. The npm placeholder is published with Trusted Publishing, `WINDOWS_RELEASE` is on, `unit (Windows)` counts in the final check and the launcher takes Windows.
 - `ruimte-context.exe` has no version information (company, copyright). The Rust launcher would need a build script and a resource compiler on both build routes; `ruimte.exe`, `Ruimte.exe` and the setup have it.
 - The firewall's question comes at the first start, since the LAN door listens on every interface. A client learns the door over a connection it already has (`endpoint.info`), so the door could open later, but a machine on no account also lets a client in on a statement, so "once on an account" is not enough. Not decided: open it when the machine joins an account or first lets a client in.
 - The site offers the installer once a release has one.
-- The npm launcher's refusal comes off last.
 
 ## Not on Windows
 

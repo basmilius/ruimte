@@ -90,14 +90,11 @@ jobs:
       - uses: ./.github/actions/install
       - run: bun run test --shard=${{ matrix.shard }}/2
 
-  # Skipped until Windows ships, on the same switch as the Windows release (WINDOWS_RELEASE); the worktree
-  # tests still flake there (docs/WINDOWS.md). Out of the final check, and continue-on-error for
-  # release.yml, whose verify fails on any job.
+  # On the same switch as the Windows release (WINDOWS_RELEASE).
   windows:
     name: unit (Windows)
     if: vars.WINDOWS_RELEASE == 'true'
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
@@ -234,7 +231,7 @@ jobs:
   checks:
     name: CI checks
     if: ${{ always() }}
-    needs: [changes, verify, build, unit, dom, integration, packaged, integration-linux, packaged-linux, rust, swift-pulsar, swift-transport, computer-use, foundation-models]
+    needs: [changes, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux, rust, swift-pulsar, swift-transport, computer-use, foundation-models]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
