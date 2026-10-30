@@ -13,6 +13,7 @@ Do not reverse one without asking Bas.
 - Status hooks keep the sh line from `agents/install.ts`, since Claude Code runs hooks in Git Bash. No `ruimte hook` subcommand until a CLI runs hooks outside a POSIX shell.
 - An interrupt is Ctrl+C (`\x03` through ConPTY). Every other stop ends the tree with `taskkill /PID <pid> /T /F` (`apps/server/src/pty/bun-pty.ts`); chats do the same (`killProcessTree`, `@adecore/agents`).
 - The background service is a per-user scheduled task, created without admin, that starts at logon and restarts after a crash, in the person's session (files, Credential Manager, CLI logins). Running with nobody logged on is a later opt-in. A Windows service was rejected: as LocalSystem every agent runs as SYSTEM, as the user it needs their password. A packaged app and `ruimte service install` register the task; the dev app runs the daemon as its child.
+- A window has the system's title bar and no menu bar. The logo at the top of the sidebar opens the application menu, as in the web client (2026-10-30). macOS and Linux keep their windows.
 
 ## Done
 
@@ -55,14 +56,17 @@ Done, to confirm on the PC:
 
 - A session that types a line starts in `gitBash()` whatever shell was asked, and is refused with `git-bash-missing` without Git for Windows. A plain terminal keeps the PowerShell and cmd fallback; the app does not say so yet.
 - The cwd tracker reads `/c/Users/x` as `C:\Users\x` (`windowsPathOfMsys`, `packages/contracts/src/terminal-cwd.ts`); `/usr` and `/tmp` stay unknown. Git Bash emits OSC 7 through `PROMPT_COMMAND` (`sessions/shell-integration.ts`), set before the person's startup files; a file that replaces `PROMPT_COMMAND` leaves the cwd unknown.
-- `apps/client/src/terminal/drop-path.ts` types `C:\x\y` as `/c/x/y` in single quotes, assuming Git Bash.
+- `apps/client/src/terminal/drop-path.ts` types `'C:\x\y'` in single quotes, literal in PowerShell and Git Bash alike. cmd reads them as part of the path. Untried on the PC: a drop from the Explorer.
 - `processes/foreground.ts` answers unknown on Windows without spawning `ps`.
+- A new terminal opens in `personShell` (`pty/pty.ts`), set under Settings, Terminal, with PowerShell as default. Confirmed on the PC for PowerShell, Git Bash and cmd; WSL is untried. PowerShell reports its cwd through an encoded command that wraps the prompt, which an execution policy does not block.
+- A line typed in Git Bash ends in `exec <person's shell>` (`handingBack`, `sessions/manager.ts`), except for WSL. Confirmed on the PC: an agent's `/exit` lands in PowerShell or cmd, and a resume after the shell ended works.
+- A resume typed into a running PowerShell or cmd lets Git Bash run the line from a file (`typedResume`). The form was tried by hand in PowerShell; the app's route was not, nor the cmd form.
 
 Open:
 
+- The logo menu leaves out the rows only the shell can run (cut, copy, paste, full screen, quit, DevTools), which stay on their keys, and the start screen has no logo menu.
 - Prepare in terminal needs the zsh editor channel ([TERMINAL-PREPARE.md](TERMINAL-PREPARE.md)), so no Windows terminal qualifies.
-- MSYS rewrites a native program's argument that starts with `/`, so a first prompt `/init` reaches the CLI as `C:/Program Files/Git/init`. `MSYS_NO_PATHCONV=1` would also reach the agent's own Bash tool, where conversion is wanted. Undecided.
-- `session.resume` types a POSIX line into whatever shell the session has, PowerShell or cmd included.
+- MSYS rewrites a native program's argument that starts with `/`, so the daemon types a first prompt `/init` as `//init` (`startLine`), which arrives as `/init`. A prompt holding another `/` keeps both slashes, such as `//review src/foo.ts`, and reaches the CLI as a message instead of a command. `MSYS_NO_PATHCONV=1` would solve it but also reach the agent's own Bash tool, where conversion is wanted.
 
 ### 4. Agents
 
