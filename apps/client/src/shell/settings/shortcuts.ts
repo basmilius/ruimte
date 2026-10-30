@@ -141,6 +141,9 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
                 { keys: PROMPT_SHORTCUTS.nextPrompt, label: say('prompts.next') },
                 { keys: KEY_SHORTCUTS.escape, label: say('prompts.escape') },
                 { keys: CANVAS_SHORTCUTS.dictation, label: say('chat.dictation') },
+                { keys: CANVAS_SHORTCUTS.chatTextLarger, label: say('chat.textLarger') },
+                { keys: CANVAS_SHORTCUTS.chatTextSmaller, label: say('chat.textSmaller') },
+                { keys: CANVAS_SHORTCUTS.zoomReset, label: say('chat.textReset') },
                 { keys: CANVAS_SHORTCUTS.previousMessage, label: say('chat.previousMessage') },
                 { keys: CANVAS_SHORTCUTS.nextMessage, label: say('chat.nextMessage') },
                 { keys: SEND_AND_NEW_SHORTCUT, label: say('chat.sendAndNewChat') }

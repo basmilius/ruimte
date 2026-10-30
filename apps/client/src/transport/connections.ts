@@ -26,6 +26,7 @@ import { useProjectList } from '@/state/project-list';
 import { watchPushAttention } from '@/state/push-attention';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
 import { watchSnoozes } from '@/state/snooze';
+import { useChatTextSizes } from '@/state/chat-text-size';
 import { workspaceOf, useWindow, windowWorkspace } from '@/state/window';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { workspaceOpening } from '@/telemetry/workspace-load';
@@ -512,6 +513,7 @@ function prune(): void {
 
 /* Everything one machine held, for a row that is forgotten or a session that was revoked. */
 export function dropMachine(endpointId: string): void {
+    useChatTextSizes.getState().forgetMachine(endpointId);
     const machine = machines.get(endpointId);
     machines.delete(endpointId);
     machine?.dispose();

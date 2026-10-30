@@ -7,6 +7,7 @@
 @import '@adecore/editor-react/editor-react.css';
 @import './shell/panel-layout.css';
 @import './ui/empty-scenes.css';
+@import './chat/text-size.css';
 
 /* The components of @adecore/ui and the chat of @adecore/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */

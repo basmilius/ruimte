@@ -2,12 +2,14 @@ import type { CanvasNodeKind, ProjectView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { sessionNodesOf } from '@/project/project-sessions';
 import { endpointKey } from '@/state/keys';
+import { useChatTextSizes } from '@/state/chat-text-size';
 import { watchNodes, type NodeExit } from '@/terminal/lifecycle-watch';
 import { forgetScreen } from '@/terminal/registry';
 import { browserClientFor, chatClientFor, sessionClientFor } from '@/transport/connections';
 
 /* The node names the machine it ran on, so a node that leaves is ended there and not on the machine that is active now. */
 function end(endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExit): void {
+    useChatTextSizes.getState().reset(endpointKey(endpointId, id));
     if (kind === 'terminal') {
         forgetScreen(endpointId, id);
     } else if (kind === 'browser') {

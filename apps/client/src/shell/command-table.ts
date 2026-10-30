@@ -1,5 +1,5 @@
 import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
-import { matchesShortcut, type KeyLike, type Shortcut } from '@adecore/ui';
+import { matchesShortcut, shortcut, type KeyLike, type Shortcut } from '@adecore/ui';
 import {
     Activity,
     AppWindow,
@@ -105,6 +105,8 @@ import {
     Users,
     Workflow,
     X,
+    ZoomIn,
+    ZoomOut,
     type LucideIcon
 } from 'lucide-react';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/canvas/shortcuts';
@@ -168,6 +170,7 @@ interface CommandSpec {
     readonly key: string;
     readonly icon: LucideIcon;
     readonly shortcut?: Shortcut;
+    readonly aliases?: readonly Shortcut[];
     /*
      * The listener that binds the shortcut, once on `window`: `shell/app-shortcuts.ts` for the window, which
      * the start screen has too, or `canvas/canvas-shortcuts.ts` for the workspace. Without it the row only
@@ -690,7 +693,42 @@ const TABLE = {
         shortcut: CANVAS_SHORTCUTS.zoomReset,
         binds: 'workspace',
         palette: true,
-        menu: { menu: 'view', group: 'zoom', order: 40, enabled: zoomable }
+        menu: {
+            menu: 'view',
+            group: 'zoom',
+            order: 40,
+            enabled: (context) => zoomable(context) || context.chatTextSize !== null,
+            words: (context) => ({ key: context.chatTextSize === null ? 'zoomReset' : 'chatTextReset' })
+        }
+    },
+    'chat-text-larger': {
+        key: 'chatTextLarger',
+        icon: ZoomIn,
+        shortcut: CANVAS_SHORTCUTS.chatTextLarger,
+        aliases: [shortcut('Mod+='), shortcut('Mod+Shift++')],
+        binds: 'workspace',
+        palette: true,
+        menu: {
+            menu: 'view',
+            group: 'zoom',
+            order: 50,
+            when: (context) => context.chatTextSize !== null,
+            enabled: (context) => context.chatTextSize !== null && context.chatTextSize < 3
+        }
+    },
+    'chat-text-smaller': {
+        key: 'chatTextSmaller',
+        icon: ZoomOut,
+        shortcut: CANVAS_SHORTCUTS.chatTextSmaller,
+        binds: 'workspace',
+        palette: true,
+        menu: {
+            menu: 'view',
+            group: 'zoom',
+            order: 60,
+            when: (context) => context.chatTextSize !== null,
+            enabled: (context) => context.chatTextSize !== null && context.chatTextSize > 0
+        }
     },
     theme: { key: 'toggleTheme', icon: SunMoon, palette: true, menu: { menu: 'view', group: 'theme', order: 10 } },
     // The desktop app has the shell's own full screen; only the web client asks the page.
@@ -1248,8 +1286,8 @@ export function boundCommands(listener: 'workspace'): [WorkspaceCommandId, Short
 export function boundCommands(listener: 'window' | 'workspace'): [CommandId, Shortcut][];
 export function boundCommands(listener: 'window' | 'workspace'): [CommandId, Shortcut][] {
     return COMMAND_IDS.flatMap((id): [CommandId, Shortcut][] => {
-        const { binds, shortcut } = COMMANDS[id];
-        return binds === listener && shortcut !== undefined ? [[id, shortcut]] : [];
+        const { binds, shortcut, aliases } = COMMANDS[id];
+        return binds === listener && shortcut !== undefined ? [shortcut, ...(aliases ?? [])].map((key) => [id, key]) : [];
     });
 }
 

@@ -889,7 +889,10 @@
             "settings": "Instellingen",
             "launchesEdit": "Launches bewerken…",
             "launchesAfterSettleOff": "Niets uitvoeren als een worktree-chat klaar is",
-            "attentionQueue": "Open aandachtswachtrij"
+            "attentionQueue": "Open aandachtswachtrij",
+            "chatTextLarger": "Grotere chattekst",
+            "chatTextSmaller": "Kleinere chattekst",
+            "chatTextReset": "Standaard chattekstgrootte"
         },
         "sections": {
             "recent": "Recent",
@@ -1240,7 +1243,10 @@
         "drawingSavePng": "Opslaan als PNG…",
         "drawingSaveSvg": "Opslaan als SVG…",
         "drawingOnCanvas": "Op het canvas tonen",
-        "attentionQueue": "Aandachtswachtrij"
+        "attentionQueue": "Aandachtswachtrij",
+        "chatTextLarger": "Grotere chattekst",
+        "chatTextSmaller": "Kleinere chattekst",
+        "chatTextReset": "Standaard chattekstgrootte"
     },
     "addToMachine": {
         "title": "Toevoegen aan een andere machine",

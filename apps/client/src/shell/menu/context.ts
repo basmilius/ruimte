@@ -48,6 +48,7 @@ import { useProjectList } from '@/state/project-list';
 import { proposalsOf } from '@/state/proposals';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { focusedChatTextSize } from '@/chat/text-size';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
 import { terminalHasFind, terminalHasKeyboard } from '@/terminal/xterm';
@@ -193,6 +194,7 @@ export function menuContext(host: MenuHost): MenuContext {
         prWatch: onCanvas && selectedChat !== null && hasPrWatch(endpointId, selectedChat),
         routines: windowWorkspace() !== null && machineAnswers(pool.statusOf(endpointId), 'routine.list'),
         chat: windowWorkspace() !== null && focusedChatId() !== null,
+        chatTextSize: windowWorkspace() !== null ? focusedChatTextSize() : null,
         terminalKeys: terminalHasKeyboard(),
         terminalFind: terminalHasFind(),
         diff: diffInFront(),

@@ -29,6 +29,7 @@ import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/node
 import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { OutputChatContext } from '@/output/chat-scope';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
+import { DEFAULT_CHAT_TEXT_SIZE, useChatTextSizes } from '@/state/chat-text-size';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { chatClientFor } from '@/transport/connections';
@@ -60,6 +61,7 @@ export function ChatBody({
     useSuggestedTitle(id, info?.suggestedTitle);
     const status = useTransportStatus();
     const endpointId = useEndpointId();
+    const textSize = useChatTextSizes((state) => state.byKey[endpointKey(endpointId, id)] ?? DEFAULT_CHAT_TEXT_SIZE);
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
     const switched = useRef<Promise<void>>(Promise.resolve());
@@ -152,54 +154,56 @@ export function ChatBody({
     );
 
     return (
-        <div className="relative flex h-full flex-col bg-surface" data-surface="chat">
-            <ConnectionNotice status={status} />
-            {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} chatId={id} />}
-            {failure && (
-                <NodeNotice
-                    tone="error"
-                    onRetry={() => {
-                        setFailure(null);
-                        setGeneration((g) => g + 1);
-                    }}
-                >
-                    {failure}
-                </NodeNotice>
-            )}
-            <SlotRow
-                place="threadHeader"
-                context={{ chat: { id }, node: nodeInfoOf(id) }}
-                words
-                wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
-            />
-            <OutputChatContext value={id}>
-                <LazyBoundary fallback={<div className="grow" />}>
-                    <Timeline
-                        chatId={id}
-                        composer={
-                            composer && (
-                                <div className="relative">
-                                    {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
-                                    <SlotRow
-                                        place="composer"
-                                        words
-                                        context={{ chat: { id }, node: nodeInfoOf(id) }}
-                                        wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
-                                    />
-                                    <ChatOnCanvasContext value={onCanvas}>{composer}</ChatOnCanvasContext>
-                                </div>
-                            )
-                        }
-                        overlay={
-                            shown && (
-                                <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
-                                    <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
-                                </ErrorBoundary>
-                            )
-                        }
-                    />
-                </LazyBoundary>
-            </OutputChatContext>
+        <div className="chat-reading-scope h-full min-h-0" data-chat-text-size={textSize}>
+            <div className="chat-reading-content relative flex h-full flex-col bg-surface" data-surface="chat">
+                <ConnectionNotice status={status} />
+                {status === 'open' && !failure && <MissingProviderNote endpointId={endpointId} kind={info?.provider ?? nodeHost?.provider} chatId={id} />}
+                {failure && (
+                    <NodeNotice
+                        tone="error"
+                        onRetry={() => {
+                            setFailure(null);
+                            setGeneration((g) => g + 1);
+                        }}
+                    >
+                        {failure}
+                    </NodeNotice>
+                )}
+                <SlotRow
+                    place="threadHeader"
+                    context={{ chat: { id }, node: nodeInfoOf(id) }}
+                    words
+                    wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
+                />
+                <OutputChatContext value={id}>
+                    <LazyBoundary fallback={<div className="grow" />}>
+                        <Timeline
+                            chatId={id}
+                            composer={
+                                composer && (
+                                    <div className="relative">
+                                        {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
+                                        <SlotRow
+                                            place="composer"
+                                            words
+                                            context={{ chat: { id }, node: nodeInfoOf(id) }}
+                                            wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
+                                        />
+                                        <ChatOnCanvasContext value={onCanvas}>{composer}</ChatOnCanvasContext>
+                                    </div>
+                                )
+                            }
+                            overlay={
+                                shown && (
+                                    <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
+                                        <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
+                                    </ErrorBoundary>
+                                )
+                            }
+                        />
+                    </LazyBoundary>
+                </OutputChatContext>
+            </div>
         </div>
     );
 }
