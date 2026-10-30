@@ -63,6 +63,11 @@ const args = [
     '--minify-syntax',
     ...entries
 ];
+// Windows names a program by these wherever it asks a person about it, in the firewall's question among them; Bun writes them only on Windows.
+if (values.os === 'win' && process.platform === 'win32') {
+    const version = (process.env.RUIMTE_VERSION ?? '0.0.0').split(/[-+]/)[0];
+    args.push('--windows-title=Ruimte', '--windows-publisher=Bas Milius', '--windows-description=Ruimte', `--windows-version=${version}.0`);
+}
 // A release believes the pinned statement keys and nothing else, whatever its environment holds.
 args.push('--define', 'process.env.RUIMTE_PULSAR_TEST_STATEMENT_KEY=""');
 if (process.env.RUIMTE_VERSION) {
