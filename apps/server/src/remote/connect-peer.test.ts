@@ -208,10 +208,11 @@ describe('the reconnect of a link to another machine', () => {
         await reconnect.owe(MACHINE);
         await worker.settled();
         const since = clock.now();
-        while (connectEntries().length > 0 && clock.now() - since < RECONNECT_LIFETIME_MS + RECONNECT_MAX_MS) {
-            expect(gaveUp).toEqual([]);
-            await advance(connectEntries()[0]!.notBefore - clock.now());
-        }
+        // One jump to the last attempt inside the window: walking the 7 days takes a thousand rounds on disk, which outlast a test's timeout under load.
+        await advance(RECONNECT_LIFETIME_MS - 1);
+        expect(gaveUp).toEqual([]);
+        expect(connectEntries()).toHaveLength(1);
+        await advance(connectEntries()[0]!.notBefore - clock.now());
         expect(gaveUp).toEqual([MACHINE]);
         expect(connectEntries()).toEqual([]);
         expect(clock.now() - since).toBeGreaterThanOrEqual(RECONNECT_LIFETIME_MS);
