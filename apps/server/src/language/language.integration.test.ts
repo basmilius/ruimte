@@ -43,9 +43,7 @@ const FILES: Record<string, string> = {
         '}',
         '</script>',
         ''
-    ].join('\n'),
-    'main.php':
-        "<?php\ndeclare(strict_types=1);\n\nfunction greet(string $name): string\n{\n    return 'Hello, ' . $name;\n}\n\n$message = greet('Ada');\necho $message;\n"
+    ].join('\n')
 };
 
 /* Files for the servers of the other languages, in the project that has Vue. */
@@ -159,9 +157,6 @@ beforeAll(async () => {
         expect(Bun.spawnSync(['codesign', '--sign', '-', '--force', stub], { stdio: ['ignore', 'ignore', 'inherit'] }).exitCode).toBe(0);
     }
     runtime = { command: stub, args: [], env: { BUN_BE_BUN: '1' } };
-    // PHP goes to the server of Ruimte by default; these tests run Intelephense, which the machine can pick instead.
-    await mkdir(join(base, 'home', 'language-servers'), { recursive: true });
-    await writeFile(join(base, 'home', 'language-servers', 'choices.json'), JSON.stringify({ picks: { php: 'php' } }));
     host = new LanguageHost({
         root: join(base, 'home', 'language-servers'),
         folderOf: (projectId) => ({ p1: project, p2: plain, p3: tailwindProject })[projectId] ?? null,
@@ -487,64 +482,6 @@ describe('Vue', () => {
     }, 120_000);
 });
 
-describe('PHP', () => {
-    test('installs, answers features and reports diagnostics', async () => {
-        await install('php');
-        const text = FILES['main.php'];
-        await host.open('c1', { projectId: 'p1', path: 'main.php', languageId: 'php', text });
-        await waitReady('php');
-        const hover = await eventually(
-            'a hover',
-            () => ask('main.php', 'textDocument/hover', { position: positionOf(text, "greet('Ada')", 2) }),
-            (reply) => reply.result !== null
-        );
-        expect(JSON.stringify(hover.result)).toContain('greet');
-        const completion = await ask('main.php', 'textDocument/completion', { position: positionOf(text, "greet('Ada')", 3) });
-        expect(JSON.stringify(completion.result)).toContain('greet');
-        const end = { line: 10, character: 0 };
-        await host.change({
-            projectId: 'p1',
-            path: 'main.php',
-            baseVersion: 1,
-            changes: [{ range: { start: end, end }, text: 'unknown_function_for_smoke();\n' }]
-        });
-        await eventually(
-            'an undefined function',
-            () => diagnosticsOf('main.php'),
-            (list) => list.some((item) => /unknown_function_for_smoke/.test(item.message) || item.severity === 1)
-        );
-    }, 180_000);
-
-    // Open on Windows: the watcher hears the file and names it, and Intelephense still does not list the class (docs/WINDOWS.md).
-    test.skipIf(process.platform === 'win32')(
-        'learns of a class created on disk after it started, in workspace symbols and in completion',
-        async () => {
-            await install('php');
-            const text = '<?php\nnew Gener;\n';
-            await writeFile(join(project, 'watched.php'), text);
-            await host.open('c1', { projectId: 'p1', path: 'watched.php', languageId: 'php', text });
-            await waitReady('php');
-            // Intelephense registers for file changes once it has indexed, and the daemon watches from then on, so a file made earlier is never reported. Each try makes a file and looks once after a pause.
-            let created = 0;
-            const symbols = await eventually(
-                'the new class in workspace symbols',
-                async () => {
-                    await writeFile(join(project, `Generated${++created}.php`), `<?php\n\nclass Generated${created}\n{\n}\n`);
-                    await Bun.sleep(2000);
-                    return ask('watched.php', 'workspace/symbol', { query: 'Generated' });
-                },
-                (reply) => JSON.stringify(reply.result).includes('Generated'),
-                60_000
-            );
-            expect(JSON.stringify(symbols.result)).toContain('Generated');
-            // Intelephense keeps the answer to the first completion at a position, so this is the only one asked.
-            const completion = await ask('watched.php', 'textDocument/completion', { position: positionOf(text, 'Gener;', 5) });
-            expect(JSON.stringify(completion.result)).toContain('Generated');
-        },
-        180_000
-    );
-});
-
 async function openAndWait(path: string, languageId: string, kind: LanguageServerKind, text: string): Promise<void> {
     await install(kind);
     const opened = await host.open('c1', { projectId: 'p1', path, languageId, text });
@@ -850,7 +787,7 @@ describe('the project closing', () => {
         expect(results.length).toBeGreaterThanOrEqual(4);
         for (const projectId of ['p1', 'p2', 'p3']) {
             for (const status of await host.status(projectId)) {
-                // The catalog also reports alternatives this fixture never installed.
+                // The catalog also reports kinds this fixture never installed.
                 expect(['stopped', 'not-installed']).toContain(status.state);
                 expect(status.documents).toBe(0);
             }

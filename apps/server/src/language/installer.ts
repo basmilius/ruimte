@@ -23,7 +23,7 @@ import {
     type NativePlan
 } from './native.ts';
 import { PackageStore } from './package-store.ts';
-import { KIND_PROFILES } from './profiles.ts';
+import { CATALOG_KINDS, KIND_PROFILES, type CatalogKind } from './profiles.ts';
 import { runCommand, type LanguageRuntime, type RunCommand } from './runtime.ts';
 import {
     isToolchainKind,
@@ -64,9 +64,9 @@ export interface LanguageInstallerOptions {
     native?: NativePolicy;
     download?: Download;
     /* A kind changed state: an install began or ended. */
-    onChange: (kind: LanguageServerKind) => void;
+    onChange: (kind: CatalogKind) => void;
     /* A kind runs another install now: an update, a rebuild or a step back, so what runs it has to start again. */
-    onSwitched?: (kind: LanguageServerKind) => void;
+    onSwitched?: (kind: CatalogKind) => void;
     checkoutRevision?: CheckoutRevision;
     /* Where a toolchain's program may be; the PATH and rustup's own folder by default. */
     findProgram?: (program: string) => string[];
@@ -147,13 +147,13 @@ const gitRevision: CheckoutRevision = async (folder) => {
 export class LanguageInstaller {
     private readonly options: LanguageInstallerOptions;
     private readonly run: RunCommand;
-    private readonly installing = new Map<LanguageServerKind, Promise<void>>();
-    private readonly failures = new Map<LanguageServerKind, string>();
-    private readonly logs = new Map<LanguageServerKind, LanguageLog>();
+    private readonly installing = new Map<CatalogKind, Promise<void>>();
+    private readonly failures = new Map<CatalogKind, string>();
+    private readonly logs = new Map<CatalogKind, LanguageLog>();
     private readonly native: NativePolicy;
     private readonly store: PackageStore;
     /* What each kind has installed, as last read, for the answers that cannot wait for the disk. */
-    private readonly known = new Map<LanguageServerKind, Installs>();
+    private readonly known = new Map<CatalogKind, Installs>();
     /* The revision of the checkout a native kind builds from, as last read. */
     private readonly revisions = new Map<NativeKind, string | null>();
     /* The program of a toolchain kind this machine has, as last looked for; null when it has none. */
@@ -174,11 +174,11 @@ export class LanguageInstaller {
     async load(): Promise<void> {
         await this.store.recover();
         await this.adoptInstalls();
-        await Promise.all(LanguageServerKindSchema.options.map((kind) => (isToolchainKind(kind) ? this.detect(kind) : this.refresh(kind))));
+        await Promise.all(CATALOG_KINDS.map((kind) => (isToolchainKind(kind) ? this.detect(kind) : this.refresh(kind))));
     }
 
     /* The version a kind runs, or for one not installed the version an install brings; empty for a native kind this build cannot install. */
-    versionOf(kind: LanguageServerKind): string {
+    versionOf(kind: CatalogKind): string {
         if (isToolchainKind(kind)) {
             return this.toolchains.get(kind)?.version ?? '';
         }
@@ -187,7 +187,7 @@ export class LanguageInstaller {
     }
 
     /* The version an install brings now; nothing for a toolchain kind, whose version is the toolchain's. */
-    pinnedVersionOf(kind: LanguageServerKind): string {
+    pinnedVersionOf(kind: CatalogKind): string {
         if (isToolchainKind(kind)) {
             return '';
         }
@@ -195,12 +195,12 @@ export class LanguageInstaller {
     }
 
     /* A native kind this build has no way to install: no checkout to build from and no release pinned. */
-    isUnavailable(kind: LanguageServerKind): boolean {
+    isUnavailable(kind: CatalogKind): boolean {
         return isNativeKind(kind) && this.pinnedPlanOf(kind) === null;
     }
 
     /* What a native kind runs: the program of the install in use and the stubs beside it. Null for any other kind and for one not installed. */
-    launchOf(kind: LanguageServerKind): { executable: string; stubsCommit?: string } | null {
+    launchOf(kind: CatalogKind): { executable: string; stubsCommit?: string } | null {
         if (isToolchainKind(kind)) {
             const found = this.toolchains.get(kind);
             return found ? { executable: found.executable } : null;
@@ -226,7 +226,7 @@ export class LanguageInstaller {
     }
 
     /* The folder the kind runs from: its install's for the packages of an npm kind, its own for a native kind, whose storage every install shares. */
-    installDirectoryOf(kind: LanguageServerKind): string {
+    installDirectoryOf(kind: CatalogKind): string {
         if (isNativeKind(kind)) {
             return this.directoryOf(kind);
         }
@@ -234,7 +234,7 @@ export class LanguageInstaller {
     }
 
     /* What an install would bring over the one the kind runs: a newer pin, or a checkout that changed. Null when it runs what it would get, or runs nothing. */
-    updateOf(kind: LanguageServerKind): InstallUpdate | null {
+    updateOf(kind: CatalogKind): InstallUpdate | null {
         const current = this.known.get(kind)?.current;
         if (!current || isToolchainKind(kind)) {
             return null;
@@ -255,14 +255,14 @@ export class LanguageInstaller {
     }
 
     /* The stubs commits the current and the previous install of a kind read, which pruning keeps. */
-    keptStubsOf(kind: LanguageServerKind): string[] {
+    keptStubsOf(kind: CatalogKind): string[] {
         const known = this.known.get(kind);
 
         return [known?.current?.marker.stubs, known?.previous?.marker.stubs].filter((commit) => commit !== undefined);
     }
 
     /* The version a step back goes to, or null when there is none. */
-    previousOf(kind: LanguageServerKind): string | null {
+    previousOf(kind: CatalogKind): string | null {
         const previous = this.known.get(kind)?.previous;
         return previous ? (previous.marker.version ?? this.legacyVersionOf(kind, previous.marker)) : null;
     }
@@ -277,7 +277,7 @@ export class LanguageInstaller {
         }
     }
 
-    logOf(kind: LanguageServerKind): LanguageLog {
+    logOf(kind: CatalogKind): LanguageLog {
         let log = this.logs.get(kind);
         if (!log) {
             log = new LanguageLog(this.options.now);
@@ -287,7 +287,7 @@ export class LanguageInstaller {
     }
 
     /* Why the last install of the kind failed, until the next one starts; for a toolchain kind this machine lacks, how to get it. */
-    failureOf(kind: LanguageServerKind): string | null {
+    failureOf(kind: CatalogKind): string | null {
         const failure = this.failures.get(kind) ?? null;
         if (failure === null && isToolchainKind(kind) && this.toolchains.has(kind) && this.toolchains.get(kind) === null) {
             return toolchainMissingOf(kind);
@@ -295,7 +295,7 @@ export class LanguageInstaller {
         return failure;
     }
 
-    async state(kind: LanguageServerKind): Promise<InstallState> {
+    async state(kind: CatalogKind): Promise<InstallState> {
         if (this.installing.has(kind)) {
             return 'installing';
         }
@@ -303,7 +303,7 @@ export class LanguageInstaller {
     }
 
     /* Whether the install the kind runs is whole, whichever version it is; for a toolchain kind, whether its program was found. */
-    async isInstalled(kind: LanguageServerKind): Promise<boolean> {
+    async isInstalled(kind: CatalogKind): Promise<boolean> {
         if (isToolchainKind(kind)) {
             const found = this.toolchains.has(kind) ? this.toolchains.get(kind) : await this.detect(kind);
             return found !== null && found !== undefined;
@@ -313,7 +313,7 @@ export class LanguageInstaller {
     }
 
     /* Starts the install, or joins the one that runs. The answer settles when it ends; a failure is `failureOf` and the log, never a throw. */
-    install(kind: LanguageServerKind): Promise<void> {
+    install(kind: CatalogKind): Promise<void> {
         const running = this.installing.get(kind);
         if (running) {
             return running;
@@ -328,7 +328,7 @@ export class LanguageInstaller {
     }
 
     /* Goes back to the install before the one in use, which becomes the one to go back to in turn. */
-    async rollback(kind: LanguageServerKind): Promise<void> {
+    async rollback(kind: CatalogKind): Promise<void> {
         if (isToolchainKind(kind)) {
             throw new Error("The version of this server is the toolchain's, so there is no earlier one here to go back to");
         }
@@ -360,12 +360,12 @@ export class LanguageInstaller {
     }
 
     /* The folder of an install, which for the legacy one is the kind's own. */
-    private folderOf(kind: LanguageServerKind, id: string): string {
+    private folderOf(kind: CatalogKind, id: string): string {
         return id === LEGACY ? this.directoryOf(kind) : join(this.directoryOf(kind), VERSIONS, id);
     }
 
     /* The id an install of the pins takes: a hash of the packages, the version of a release, or the one install of a checkout. */
-    private pinnedIdOf(kind: LanguageServerKind): string | null {
+    private pinnedIdOf(kind: CatalogKind): string | null {
         if (isToolchainKind(kind)) {
             return null;
         }
@@ -377,7 +377,7 @@ export class LanguageInstaller {
         return `${versionOf(kind)}-${sha256(JSON.stringify(pins)).slice(0, 8)}`;
     }
 
-    private async readSelection(kind: LanguageServerKind): Promise<Selection | null> {
+    private async readSelection(kind: CatalogKind): Promise<Selection | null> {
         try {
             const selection = JSON.parse(await readFile(join(this.directoryOf(kind), SELECTION), 'utf8')) as Selection;
             return typeof selection.current === 'string' ? selection : null;
@@ -395,7 +395,7 @@ export class LanguageInstaller {
         }
     }
 
-    private async readInstall(kind: LanguageServerKind, id: string | undefined): Promise<Install | null> {
+    private async readInstall(kind: CatalogKind, id: string | undefined): Promise<Install | null> {
         if (id === undefined) {
             return null;
         }
@@ -405,7 +405,7 @@ export class LanguageInstaller {
     }
 
     /* Reads what a kind has installed; the install before the one in use only changes with a switch, so a start asks for the current one alone. */
-    private async refresh(kind: LanguageServerKind, withPrevious = true): Promise<Installs> {
+    private async refresh(kind: CatalogKind, withPrevious = true): Promise<Installs> {
         const selection = await this.readSelection(kind);
         const current = await this.readInstall(kind, selection?.current);
         const previous = withPrevious ? await this.readInstall(kind, selection?.previous) : (this.known.get(kind)?.previous ?? null);
@@ -415,7 +415,7 @@ export class LanguageInstaller {
     }
 
     /* A legacy marker names its packages and not a version to read; the main package is that version. */
-    private legacyVersionOf(kind: LanguageServerKind, marker: Marker): string {
+    private legacyVersionOf(kind: CatalogKind, marker: Marker): string {
         if (isToolchainKind(kind)) {
             return '';
         }
@@ -438,7 +438,7 @@ export class LanguageInstaller {
         return join(install.directory, 'bin', nativeProgramFile(kind, process.platform));
     }
 
-    private matchesPins(kind: LanguageServerKind, marker: Marker): boolean {
+    private matchesPins(kind: CatalogKind, marker: Marker): boolean {
         if (isToolchainKind(kind)) {
             return true;
         }
@@ -451,7 +451,7 @@ export class LanguageInstaller {
         return Object.entries(pinnedVersionsOf(kind)).every(([name, version]) => marker.versions?.[name] === version);
     }
 
-    private async isWhole(kind: LanguageServerKind, install: Install): Promise<boolean> {
+    private async isWhole(kind: CatalogKind, install: Install): Promise<boolean> {
         if (isNativeKind(kind)) {
             const executable = this.executableOf(kind, install);
             if (executable === null || !(await fileExists(executable))) {
@@ -515,7 +515,7 @@ export class LanguageInstaller {
         return found;
     }
 
-    private async perform(kind: LanguageServerKind): Promise<void> {
+    private async perform(kind: CatalogKind): Promise<void> {
         const log = this.logOf(kind);
         const started = this.now();
         this.failures.delete(kind);
@@ -628,10 +628,10 @@ export class LanguageInstaller {
         }
 
         const started = this.now();
-        let first: LanguageServerKind | null = null;
+        let first: CatalogKind | null = null;
         let adopted = 0;
 
-        for (const kind of LanguageServerKindSchema.options) {
+        for (const kind of CATALOG_KINDS) {
             if (isNativeKind(kind) || isToolchainKind(kind)) {
                 continue;
             }
@@ -680,6 +680,7 @@ export class LanguageInstaller {
         const used = new Set<string>();
 
         try {
+            // Every kind of the wire, not of the catalog: an install of a retired kind stays on disk until a person removes it, and it must keep the set it links to.
             for (const kind of LanguageServerKindSchema.options) {
                 if (isNativeKind(kind) || isToolchainKind(kind)) {
                     continue;
@@ -759,7 +760,7 @@ export class LanguageInstaller {
     }
 
     /* The new install becomes the one in use and the one it replaces the one to go back to; anything older goes. */
-    private async switchTo(kind: LanguageServerKind, id: string): Promise<void> {
+    private async switchTo(kind: CatalogKind, id: string): Promise<void> {
         const selection = await this.readSelection(kind);
         const before = (await this.refresh(kind)).current;
         // A build of a checkout runs the checkout's own program, so an earlier build of it is nothing to go back to.
@@ -770,7 +771,7 @@ export class LanguageInstaller {
         await this.store.collect(() => this.referencedSets());
     }
 
-    private async select(kind: LanguageServerKind, selection: Selection): Promise<void> {
+    private async select(kind: CatalogKind, selection: Selection): Promise<void> {
         const file = join(this.directoryOf(kind), SELECTION);
         const partial = `${file}.partial`;
         await writeFile(partial, `${JSON.stringify(selection)}\n`);
@@ -779,7 +780,7 @@ export class LanguageInstaller {
     }
 
     /* Removes the installs other than the one in use and the one to go back to, and the stubs neither of them reads. */
-    private async prune(kind: LanguageServerKind): Promise<void> {
+    private async prune(kind: CatalogKind): Promise<void> {
         const { current, previous } = this.known.get(kind) ?? { current: null, previous: null };
         const kept = new Set([current?.id, previous?.id]);
         const versions = join(this.directoryOf(kind), VERSIONS);

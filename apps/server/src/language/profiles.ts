@@ -86,7 +86,7 @@ export interface KindProfile {
     kind: LanguageServerId;
     /* In the order they start, since the second may need the first. */
     components: readonly ComponentProfile[];
-    /* Kinds with the same choice are alternatives to each other, named by the language id they serve; the machine uses one of them at a time. */
+    /* Kinds with the same choice are alternatives to each other, named by the language id they serve; the machine uses one of them at a time. No kind has one since Intelephense left. */
     choice?: string;
     /* Set for a kind that serves beside the kind of the language, in the projects that call for it, rather than instead of it. */
     activation?: Activation;
@@ -268,7 +268,13 @@ const TAILWIND_SETTINGS = {
 /* How many folders below the project a crate is looked for: `apps/<name>/Cargo.toml` and one more. */
 export const CARGO_DEPTH = 3;
 
-export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
+/*
+ * A kind this daemon can run. `php` (Intelephense) stays on the wire for older machines, so a request can
+ * still name it, and it is refused or answered like a server that does not exist.
+ */
+export type CatalogKind = Exclude<LanguageServerKind, 'php'>;
+
+export const KIND_PROFILES: Record<CatalogKind, KindProfile> = {
     typescript: { kind: 'typescript', components: [nativeTypescriptComponent(), typescriptActionsComponent()] },
     vue: {
         kind: 'vue',
@@ -284,10 +290,8 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
             }
         ]
     },
-    // The default for PHP, ahead of Intelephense, which stays an alternative the machine can pick.
     'php-native': {
         kind: 'php-native',
-        choice: 'php',
         components: [
             {
                 name: 'php-native',
@@ -328,23 +332,6 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
                     sqlLanguageServer: path !== undefined && context.sql?.unbound.includes(path) ? UNBOUND_SQL : (context.sql?.sql ?? {})
                 }),
                 pullDiagnostics: true
-            }
-        ]
-    },
-    php: {
-        kind: 'php',
-        choice: 'php',
-        components: [
-            {
-                name: 'php',
-                languages: ['php'],
-                entry: 'intelephense/lib/intelephense.js',
-                args: () => ['--stdio'],
-                initializationOptions: (context) => ({
-                    storagePath: join(context.installDirectory, 'storage'),
-                    globalStoragePath: join(context.installDirectory, 'storage')
-                }),
-                env: { INTELEPHENSE_TELEMETRY_ENABLED: 'false' }
             }
         ]
     },
@@ -549,8 +536,10 @@ export function componentServes(component: ComponentProfile, languageId: string,
     return component.languages.includes(lspLanguageId(languageId)) || servesPath(component, storedPath) || servesAlongside(component, storedPath);
 }
 
-function catalog(): [LanguageServerKind, KindProfile][] {
-    return Object.entries(KIND_PROFILES) as [LanguageServerKind, KindProfile][];
+export const CATALOG_KINDS = Object.keys(KIND_PROFILES) as CatalogKind[];
+
+function catalog(): [CatalogKind, KindProfile][] {
+    return Object.entries(KIND_PROFILES) as [CatalogKind, KindProfile][];
 }
 
 function serves(profile: KindProfile, languageId: string): boolean {
@@ -558,9 +547,9 @@ function serves(profile: KindProfile, languageId: string): boolean {
 }
 
 /* The server a machine picked for each choice (`KindProfile.choice`). */
-export type LanguagePreferences = Readonly<Record<string, LanguageServerKind | undefined>>;
+export type LanguagePreferences = Readonly<Record<string, CatalogKind | undefined>>;
 
-function primaryKinds(languageId: string): LanguageServerKind[] {
+function primaryKinds(languageId: string): CatalogKind[] {
     return catalog()
         .filter(([, profile]) => profile.activation === undefined && serves(profile, languageId))
         .map(([kind]) => kind);
@@ -571,7 +560,7 @@ function primaryKinds(languageId: string): LanguageServerKind[] {
  * to each other the machine's pick serves, else the first of the catalog. A file whose language nothing
  * serves still goes to the kind that names its path, such as a `.phtml` template.
  */
-export function kindForLanguage(languageId: string, preferred: LanguagePreferences = {}, storedPath?: string): LanguageServerKind | null {
+export function kindForLanguage(languageId: string, preferred: LanguagePreferences = {}, storedPath?: string): CatalogKind | null {
     const kinds = primaryKinds(languageId);
     if (kinds.length === 0 && storedPath !== undefined) {
         const named = catalog().find(
@@ -595,20 +584,20 @@ function servesAlongside(component: ComponentProfile, storedPath: string): boole
 }
 
 /* The kinds that serve what this one does, instead of it: the machine uses one of them at a time. Empty for a kind with no alternative. */
-export function alternativesOf(kind: LanguageServerKind): LanguageServerKind[] {
+export function alternativesOf(kind: CatalogKind): CatalogKind[] {
     const { choice } = KIND_PROFILES[kind];
     return choice === undefined ? [] : catalog().flatMap(([other, profile]) => (other !== kind && profile.choice === choice ? [other] : []));
 }
 
 /* The kinds that serve a language beside its own, in a project that calls for them, in the order of the catalog. */
-export function additionKindsForLanguage(languageId: string): LanguageServerKind[] {
+export function additionKindsForLanguage(languageId: string): CatalogKind[] {
     return catalog()
         .filter(([, profile]) => profile.activation !== undefined && serves(profile, languageId))
         .map(([kind]) => kind);
 }
 
 /* The kinds that serve a file by its path beside the kind of its language, with what a project has to hold for each, in the order of the catalog. */
-export function alongsideKindsForPath(storedPath: string): Array<[LanguageServerKind, { activation: Activation }]> {
+export function alongsideKindsForPath(storedPath: string): Array<[CatalogKind, { activation: Activation }]> {
     return catalog().flatMap(([kind, profile]) =>
         profile.components.flatMap((component) =>
             component.alongside !== undefined && servesAlongside(component, storedPath) ? [[kind, component.alongside] as const] : []

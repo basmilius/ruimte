@@ -75,11 +75,13 @@ import {
     additionKindsForLanguage,
     alongsideKindsForPath,
     alternativesOf,
+    CATALOG_KINDS,
     componentServes,
     documentLanguageId,
     KIND_PROFILES,
     kindForLanguage,
     usesVue,
+    type CatalogKind,
     type ComponentProfile,
     type KindProfile,
     type ProjectFacts,
@@ -120,10 +122,17 @@ export interface AgentDocument {
     diagnostics(): Promise<Array<{ server: string; diagnostics: Diagnostic[] }>>;
 }
 
-const KINDS = Object.keys(KIND_PROFILES) as LanguageServerKind[];
-
-function isCatalogKind(id: LanguageServerId): id is LanguageServerKind {
+function isCatalogKind(id: LanguageServerId): id is CatalogKind {
     return id in KIND_PROFILES;
+}
+
+/* The wire still names a retired kind (`CatalogKind`), which has nothing to install, go back to or prefer. */
+function catalogKindOf(kind: LanguageServerKind): CatalogKind {
+    if (!isCatalogKind(kind)) {
+        throw new LanguageError(LANGUAGE_ERROR_CODES.invalidServer, `No language server ${kind}`);
+    }
+
+    return kind;
 }
 
 const HELD_MESSAGE = 'Its command was changed outside Ruimte. Open it and save it again to start it.';
@@ -390,13 +399,14 @@ export class LanguageHost {
         const project = this.projects.get(projectId) ?? null;
         const folder = project?.folder ?? this.options.folderOf(projectId);
         const own = folder === null ? [] : this.custom.list().filter((server) => runsFor(server, folder));
-        return Promise.all([...KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id)));
+        return Promise.all([...CATALOG_KINDS, ...own.map((server) => server.id as LanguageServerId)].map((id) => this.statusOf(project, id)));
     }
 
     /* Starts installing a kind, or updating it beside what it runs, and answers while it runs; the end comes as a `language.status` event. */
     async install(kind: LanguageServerKind): Promise<LanguageServerStatus> {
-        void this.installer.install(kind);
-        return this.statusOf(null, kind);
+        const known = catalogKindOf(kind);
+        void this.installer.install(known);
+        return this.statusOf(null, known);
     }
 
     /* What a pass over the PHP server's index caches needs: where they are, what it must leave alone and the gate that keeps a start out meanwhile. */
@@ -424,18 +434,19 @@ export class LanguageHost {
     }
 
     /* The program a native kind runs on this machine, or null while it is not installed. */
-    programOf(kind: LanguageServerKind): string | null {
+    programOf(kind: CatalogKind): string | null {
         return this.installer.launchOf(kind)?.executable ?? null;
     }
 
     /* Goes back to the version a kind ran before, which a person asks for when an update does not work for them. */
     async rollback(kind: LanguageServerKind): Promise<LanguageServerStatus> {
+        const known = catalogKindOf(kind);
         try {
-            await this.installer.rollback(kind);
+            await this.installer.rollback(known);
         } catch (error) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.failed, errorText(error));
         }
-        const status = await this.statusOf(null, kind);
+        const status = await this.statusOf(null, known);
         this.sinks.emit({ event: 'language.status', payload: { projectId: null, status } });
         return status;
     }
@@ -444,7 +455,8 @@ export class LanguageHost {
      * The machine uses this server for what it and its alternative both serve. Open documents move to it
      * at once, and the alternative ends when it has none left; clients hear of both through the machine's status.
      */
-    async prefer(kind: LanguageServerKind): Promise<LanguageServerStatus> {
+    async prefer(requested: LanguageServerKind): Promise<LanguageServerStatus> {
+        const kind = catalogKindOf(requested);
         const alternatives = alternativesOf(kind);
         if (alternatives.length === 0) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.invalidServer, `${kind} has no alternative to choose it over`);
@@ -889,7 +901,7 @@ export class LanguageHost {
      * one TypeScript server loads Vue's plugin, so a `.ts` file importing a `.vue` one is typed and only one
      * tsserver runs. A `.vue` file opening in a project that did not say so makes it one.
      */
-    private async primaryKindFor(project: ProjectLanguage, kind: LanguageServerKind | null): Promise<LanguageServerKind | null> {
+    private async primaryKindFor(project: ProjectLanguage, kind: CatalogKind | null): Promise<CatalogKind | null> {
         if (kind === 'vue') {
             await this.markVue(project);
             return 'vue';
@@ -1597,7 +1609,7 @@ export class LanguageHost {
         if (!isCatalogKind(id)) {
             return this.customStatus(project, id);
         }
-        const kind: LanguageServerKind = id;
+        const kind: CatalogKind = id;
         const install = await this.installer.state(kind);
         const base = this.identityOf(kind);
         if (install === 'installing') {
@@ -1632,7 +1644,7 @@ export class LanguageHost {
     }
 
     /* What an install would bring over the version a kind runs, the one before it, and why the last update did not come. */
-    private versionsOf(kind: LanguageServerKind): Pick<LanguageServerStatus, 'update' | 'previous' | 'message'> {
+    private versionsOf(kind: CatalogKind): Pick<LanguageServerStatus, 'update' | 'previous' | 'message'> {
         const update = this.installer.updateOf(kind);
         const previous = this.installer.previousOf(kind);
         const failure = update === null ? null : this.installer.failureOf(kind);
@@ -1644,7 +1656,7 @@ export class LanguageHost {
     }
 
     /* Whether the machine uses the kind, for a kind that has an alternative; nothing for one that has none. */
-    private choiceOf(kind: LanguageServerKind): { chosen?: boolean } {
+    private choiceOf(kind: CatalogKind): { chosen?: boolean } {
         const { choice } = KIND_PROFILES[kind];
         return choice === undefined || alternativesOf(kind).length === 0 ? {} : { chosen: kindForLanguage(choice, this.choices.get()) === kind };
     }
@@ -1713,7 +1725,7 @@ export class LanguageHost {
     }
 
     /* An install began or ended. Every client hears of it, since it is the machine's; a project with documents waiting then starts. */
-    private installChanged(kind: LanguageServerKind): void {
+    private installChanged(kind: CatalogKind): void {
         void (async () => {
             this.sinks.emit({ event: 'language.status', payload: { projectId: null, status: await this.statusOf(null, kind) } });
             if ((await this.installer.state(kind)) !== 'installed') {
@@ -1729,7 +1741,7 @@ export class LanguageHost {
     }
 
     /* A kind runs another install now, so every server of it that ran starts again on it. */
-    private installSwitched(kind: LanguageServerKind): void {
+    private installSwitched(kind: CatalogKind): void {
         for (const project of this.projects.values()) {
             const server = project.servers.get(kind);
             if (server && server.state !== 'stopped') {

@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import type { LanguageServerKind } from '@ruimte/contracts';
 import { LanguageInstaller } from './installer.ts';
 import { PackageStore } from './package-store.ts';
 import { NativePolicy, nativeProgramFile, nativeStubsOf, type Download, type NativeRelease } from './native.ts';
-import { KIND_PROFILES } from './profiles.ts';
+import { KIND_PROFILES, type CatalogKind } from './profiles.ts';
 import type { LanguageProcessSpec, RunCommand } from './runtime.ts';
 import { sha256, tarGz } from './test-archives.ts';
 import { pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
@@ -22,13 +21,13 @@ beforeEach(async () => {
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 
 /* The folder of the install a kind runs, as its `current.json` names it. */
-async function currentFolder(kind: LanguageServerKind): Promise<string> {
+async function currentFolder(kind: CatalogKind): Promise<string> {
     const { current } = JSON.parse(await readFile(join(root, kind, 'current.json'), 'utf8')) as { current: string };
     return current === 'legacy' ? join(root, kind) : join(root, kind, 'versions', current);
 }
 
 /* Plays `bun install`: leaves every entry script of the kind where the packages would be. */
-function installing(kind: LanguageServerKind, calls: { cwd: string; args: string[]; env: Record<string, string> }[] = []): RunCommand {
+function installing(kind: CatalogKind, calls: { cwd: string; args: string[]; env: Record<string, string> }[] = []): RunCommand {
     return async (spec, onLine) => {
         calls.push({ cwd: spec.cwd, args: spec.args, env: spec.env });
         onLine('bun install v1');
@@ -48,7 +47,7 @@ async function setOf(folder: string): Promise<string> {
 }
 
 /* Plays `bun install` for a set that serves several kinds: leaves the entries of all of them. */
-function installingAll(kinds: LanguageServerKind[], calls: string[] = []): RunCommand {
+function installingAll(kinds: CatalogKind[], calls: string[] = []): RunCommand {
     return async (spec, onLine) => {
         calls.push(spec.cwd);
         onLine('bun install v1');
@@ -61,7 +60,7 @@ function installingAll(kinds: LanguageServerKind[], calls: string[] = []): RunCo
     };
 }
 
-function logTexts(installer: LanguageInstaller, kind: LanguageServerKind): string[] {
+function logTexts(installer: LanguageInstaller, kind: CatalogKind): string[] {
     return installer
         .logOf(kind)
         .tail()
@@ -71,10 +70,10 @@ function logTexts(installer: LanguageInstaller, kind: LanguageServerKind): strin
 describe('language installer', () => {
     it.skipIf(process.platform !== 'win32')('on Windows an install holds its own packages, without a shared set', async () => {
         const calls: { cwd: string; args: string[]; env: Record<string, string> }[] = [];
-        const installer = new LanguageInstaller({ root, runtime, run: installing('php', calls), now: () => 0, onChange: () => undefined });
-        await installer.install('php');
-        expect(await installer.state('php')).toBe('installed');
-        const folder = await currentFolder('php');
+        const installer = new LanguageInstaller({ root, runtime, run: installing('yaml', calls), now: () => 0, onChange: () => undefined });
+        await installer.install('yaml');
+        expect(await installer.state('yaml')).toBe('installed');
+        const folder = await currentFolder('yaml');
         expect(calls).toEqual([{ cwd: folder, args: ['install', '--ignore-scripts'], env: { BUN_BE_BUN: '1' } }]);
         expect((await lstat(join(folder, 'node_modules'))).isSymbolicLink()).toBe(false);
     });
@@ -82,13 +81,13 @@ describe('language installer', () => {
     it.skipIf(process.platform === 'win32')('installs the pinned packages with the daemon as bun, scripts off, and then counts as installed', async () => {
         const calls: { cwd: string; args: string[]; env: Record<string, string> }[] = [];
         const changes: string[] = [];
-        const installer = new LanguageInstaller({ root, runtime, run: installing('php', calls), now: () => 0, onChange: (kind) => changes.push(kind) });
-        expect(await installer.state('php')).toBe('missing');
-        await installer.install('php');
-        expect(await installer.state('php')).toBe('installed');
-        const folder = await currentFolder('php');
-        expect(folder).toStartWith(join(root, 'php', 'versions', '1.18.5-'));
-        expect(installer.installDirectoryOf('php')).toBe(folder);
+        const installer = new LanguageInstaller({ root, runtime, run: installing('yaml', calls), now: () => 0, onChange: (kind) => changes.push(kind) });
+        expect(await installer.state('yaml')).toBe('missing');
+        await installer.install('yaml');
+        expect(await installer.state('yaml')).toBe('installed');
+        const folder = await currentFolder('yaml');
+        expect(folder).toStartWith(join(root, 'yaml', 'versions', '1.24.0-'));
+        expect(installer.installDirectoryOf('yaml')).toBe(folder);
         // The packages are installed once into a staging folder of the store and the install links to the set.
         expect(calls).toEqual([
             { cwd: expect.stringContaining(join(root, 'packages', '.staging')), args: ['install', '--ignore-scripts'], env: { BUN_BE_BUN: '1' } }
@@ -97,23 +96,23 @@ describe('language installer', () => {
         expect(await readlink(join(folder, 'node_modules'))).toBe(join('..', '..', '..', 'packages', setId, 'node_modules'));
         expect(JSON.parse(await readFile(join(folder, 'installed.json'), 'utf8'))).toMatchObject({ packages: setId });
         expect(JSON.parse(await readFile(join(folder, 'package.json'), 'utf8'))).toEqual({
-            name: 'ruimte-language-server-php',
+            name: 'ruimte-language-server-yaml',
             private: true,
-            dependencies: { intelephense: '1.18.5' }
+            dependencies: { 'yaml-language-server': '1.24.0' }
         });
-        expect(changes).toEqual(['php', 'php']);
-        expect(logTexts(installer, 'php')).toEqual(['Installing intelephense@1.18.5', 'bun install v1', 'Installed in 0.0 s']);
+        expect(changes).toEqual(['yaml', 'yaml']);
+        expect(logTexts(installer, 'yaml')).toEqual(['Installing yaml-language-server@1.24.0', 'bun install v1', 'Installed in 0.0 s']);
     });
 
     it('shares the install that is running and does nothing for one that is done', async () => {
         const calls: unknown[] = [];
-        const installer = new LanguageInstaller({ root, runtime, run: installing('php', calls as never), onChange: () => undefined });
-        const first = installer.install('php');
-        expect(await installer.state('php')).toBe('installing');
-        const second = installer.install('php');
+        const installer = new LanguageInstaller({ root, runtime, run: installing('yaml', calls as never), onChange: () => undefined });
+        const first = installer.install('yaml');
+        expect(await installer.state('yaml')).toBe('installing');
+        const second = installer.install('yaml');
         expect(second).toBe(first);
         await first;
-        await installer.install('php');
+        await installer.install('yaml');
         expect(calls).toHaveLength(1);
     });
 
@@ -143,9 +142,9 @@ describe('language installer', () => {
             native: new NativePolicy({ checkouts: {}, releases: {} }),
             onChange: () => undefined
         });
-        await installer.install('php');
-        expect(installer.failureOf('php')).toContain('did not leave');
-        expect(await installer.state('php')).toBe('missing');
+        await installer.install('yaml');
+        expect(installer.failureOf('yaml')).toContain('did not leave');
+        expect(await installer.state('yaml')).toBe('missing');
     });
 
     it('runs a native server once after the install and counts the kind as installed when it reports the pinned version', async () => {
@@ -202,37 +201,37 @@ describe('language installer', () => {
     });
 
     it('keeps an install of other versions in use, from before installs had a folder each, and offers the pinned one', async () => {
-        const entry = join(root, 'php', 'node_modules', KIND_PROFILES.php.components[0]!.entry);
+        const entry = join(root, 'yaml', 'node_modules', KIND_PROFILES.yaml.components[0]!.entry);
         await mkdir(dirname(entry), { recursive: true });
         await writeFile(entry, '');
-        await writeFile(join(root, 'php', 'installed.json'), JSON.stringify({ versions: { intelephense: '1.0.0' } }));
+        await writeFile(join(root, 'yaml', 'installed.json'), JSON.stringify({ versions: { 'yaml-language-server': '1.0.0' } }));
         const switched: string[] = [];
         const installer = new LanguageInstaller({
             root,
             runtime,
-            run: installing('php'),
+            run: installing('yaml'),
             onChange: () => undefined,
             onSwitched: (kind) => switched.push(kind)
         });
-        expect(await installer.state('php')).toBe('installed');
-        expect(installer.versionOf('php')).toBe('1.0.0');
-        expect(installer.updateOf('php')).toEqual({ version: '1.18.5' });
-        expect(installer.installDirectoryOf('php')).toBe(join(root, 'php'));
-        await installer.install('php');
-        expect(switched).toEqual(['php']);
-        expect(installer.versionOf('php')).toBe('1.18.5');
-        expect(installer.updateOf('php')).toBeNull();
-        expect(installer.previousOf('php')).toBe('1.0.0');
+        expect(await installer.state('yaml')).toBe('installed');
+        expect(installer.versionOf('yaml')).toBe('1.0.0');
+        expect(installer.updateOf('yaml')).toEqual({ version: '1.24.0' });
+        expect(installer.installDirectoryOf('yaml')).toBe(join(root, 'yaml'));
+        await installer.install('yaml');
+        expect(switched).toEqual(['yaml']);
+        expect(installer.versionOf('yaml')).toBe('1.24.0');
+        expect(installer.updateOf('yaml')).toBeNull();
+        expect(installer.previousOf('yaml')).toBe('1.0.0');
         // The step back stays whole until the next update.
         expect(await readFile(entry, 'utf8')).toBe('');
     });
 
     it('offers nothing over a kind that is not installed, nor a step back', async () => {
-        const installer = new LanguageInstaller({ root, runtime, run: installing('php'), onChange: () => undefined });
-        expect(await installer.state('php')).toBe('missing');
-        expect(installer.updateOf('php')).toBeNull();
-        expect(installer.previousOf('php')).toBeNull();
-        expect(installer.versionOf('php')).toBe('1.18.5');
+        const installer = new LanguageInstaller({ root, runtime, run: installing('yaml'), onChange: () => undefined });
+        expect(await installer.state('yaml')).toBe('missing');
+        expect(installer.updateOf('yaml')).toBeNull();
+        expect(installer.previousOf('yaml')).toBeNull();
+        expect(installer.versionOf('yaml')).toBe('1.24.0');
     });
 });
 
@@ -589,7 +588,7 @@ describe('native install', () => {
             onChange: () => undefined
         });
         expect(installer.isUnavailable('php-native')).toBe(true);
-        expect(installer.isUnavailable('php')).toBe(false);
+        expect(installer.isUnavailable('yaml')).toBe(false);
         expect(installer.versionOf('php-native')).toBe('');
         await installer.install('php-native');
         expect(installer.failureOf('php-native')).toBe('No release of this server is available yet');
@@ -720,7 +719,7 @@ describe('the SQL server install', () => {
 });
 
 describe.skipIf(process.platform === 'win32')('shared package sets', () => {
-    const SHARED: LanguageServerKind[] = ['css', 'html', 'json'];
+    const SHARED: CatalogKind[] = ['css', 'html', 'json'];
 
     function sharing(calls: string[] = []): LanguageInstaller {
         return new LanguageInstaller({ root, runtime, run: installingAll(SHARED, calls), onChange: () => undefined });
@@ -835,7 +834,7 @@ describe.skipIf(process.platform === 'win32')('shared package sets', () => {
 
 describe.skipIf(process.platform === 'win32')('adopting installs that hold their own packages', () => {
     /* An install from before package sets: a real node_modules, its manifest, lockfile and marker, selected as current. */
-    async function standalone(kind: LanguageServerKind, id: string, content = ''): Promise<string> {
+    async function standalone(kind: CatalogKind, id: string, content = ''): Promise<string> {
         const folder = join(root, kind, 'versions', id);
         const dependencies = pinnedVersionsOf(kind as NpmKind);
 
@@ -845,7 +844,7 @@ describe.skipIf(process.platform === 'win32')('adopting installs that hold their
         await writeFile(join(folder, 'installed.json'), JSON.stringify({ versions: dependencies, version: versionOf(kind as NpmKind) }));
 
         // These kinds pin the same package, so a real install of any of them holds the programs of all.
-        for (const component of ['css', 'html', 'json'].flatMap((name) => KIND_PROFILES[name as LanguageServerKind].components)) {
+        for (const component of ['css', 'html', 'json'].flatMap((name) => KIND_PROFILES[name as CatalogKind].components)) {
             const entry = join(folder, 'node_modules', component.entry);
 
             await mkdir(dirname(entry), { recursive: true });
@@ -900,6 +899,25 @@ describe.skipIf(process.platform === 'win32')('adopting installs that hold their
         expect(await isLink(json)).toBe(false);
         expect(await readdir(join(html))).not.toContain('node_modules.adopting');
         expect(await readFile(join(json, 'node_modules', KIND_PROFILES.json.components[0]!.entry), 'utf8')).toBe('changed');
+    });
+
+    it('leaves an install of the retired kind `php` as it is, with the set it links to', async () => {
+        const folder = join(root, 'php', 'versions', 'old');
+        const setId = 'intelephense-set';
+
+        await mkdir(join(root, 'packages', setId, 'node_modules'), { recursive: true });
+        await mkdir(folder, { recursive: true });
+        await symlink(join('..', '..', '..', 'packages', setId, 'node_modules'), join(folder, 'node_modules'));
+        await writeFile(join(root, 'php', 'current.json'), JSON.stringify({ current: 'old' }));
+
+        const installer = new LanguageInstaller({ root, runtime, run: installing('yaml'), onChange: () => undefined });
+
+        await installer.load();
+        await installer.install('yaml');
+
+        expect(await isLink(folder)).toBe(true);
+        expect(await sets()).toContain(setId);
+        expect(await readFile(join(root, 'php', 'current.json'), 'utf8')).toBe(JSON.stringify({ current: 'old' }));
     });
 
     it('costs nothing on a later start', async () => {

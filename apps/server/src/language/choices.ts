@@ -1,8 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { LanguageServerKind } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '@adecore/agents';
-import { KIND_PROFILES, type LanguagePreferences } from './profiles.ts';
+import { KIND_PROFILES, type CatalogKind, type LanguagePreferences } from './profiles.ts';
 
 /*
  * Which of two kinds that serve the same thing the machine uses (`KindProfile.choice`), in one file
@@ -11,7 +10,7 @@ import { KIND_PROFILES, type LanguagePreferences } from './profiles.ts';
  */
 export class LanguageChoices {
     private readonly path: string;
-    private picks: Record<string, LanguageServerKind> = {};
+    private picks: Record<string, CatalogKind> = {};
 
     constructor(options: { path: string }) {
         this.path = options.path;
@@ -28,8 +27,8 @@ export class LanguageChoices {
             return;
         }
         for (const [choice, kind] of Object.entries(parsed.picks ?? {})) {
-            if (typeof kind === 'string' && kind in KIND_PROFILES && KIND_PROFILES[kind as LanguageServerKind].choice === choice) {
-                this.picks[choice] = kind as LanguageServerKind;
+            if (typeof kind === 'string' && kind in KIND_PROFILES && KIND_PROFILES[kind as CatalogKind].choice === choice) {
+                this.picks[choice] = kind as CatalogKind;
             }
         }
     }
@@ -38,7 +37,7 @@ export class LanguageChoices {
         return this.picks;
     }
 
-    async set(kind: LanguageServerKind): Promise<void> {
+    async set(kind: CatalogKind): Promise<void> {
         const choice = KIND_PROFILES[kind].choice;
         if (choice === undefined) {
             return;

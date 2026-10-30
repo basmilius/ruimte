@@ -4,8 +4,8 @@ import type { LanguageLogLine, LanguageServerKind, LanguageServerState, Language
 const SERVER_NAMES: Record<LanguageServerKind, { name: string; package: string }> = {
     typescript: { name: 'TypeScript', package: 'typescript' },
     vue: { name: 'Vue', package: '@vue/language-server' },
-    // Ruimte's own PHP server is the default and takes the plain name; Intelephense is the alternative.
     'php-native': { name: 'PHP', package: 'php-language-server' },
+    // No machine of this version runs Intelephense, but an older one still reports it and offers it beside its own server.
     php: { name: 'Intelephense', package: 'intelephense' },
     css: { name: 'CSS', package: 'vscode-langservers-extracted' },
     html: { name: 'HTML', package: 'vscode-langservers-extracted' },

@@ -233,7 +233,7 @@ $RUIMTE_HOME/
       installed.json               the verified version and how it starts, written last
       <version>/                   the unpacked server and its helper
   language-servers/
-    choices.json                   which PHP server this machine uses
+    choices.json                   which server this machine uses where kinds are alternatives (none are today)
     custom.json                    a person's own language servers
     <kind>/                        one folder per installed kind (see "Language servers")
     packages/<setId>/              shared, immutable npm package sets the installs link to
@@ -450,7 +450,6 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `typescript` | `typescript` 7 (native server), with a TypeScript 6 sidecar for code actions | TypeScript, JavaScript, JSX and TSX |
 | `vue` | `@vue/language-server` with a TypeScript 6 tsserver that loads `@vue/typescript-plugin` | Vue, and the scripts of a project that uses it |
 | `php-native` | the native server from `basmilius/language-server-php`, shown as PHP | PHP, `.phtml`, Blade, Twig |
-| `php` | intelephense, shown as Intelephense | PHP |
 | `css`, `html`, `json` | `vscode-langservers-extracted`, one install each | CSS, SCSS and Less; HTML; JSON and JSONC |
 | `yaml` | yaml-language-server | YAML |
 | `python` | pyright | Python |
@@ -460,6 +459,8 @@ The daemon looks up no addresses, holds no map ticket and never contacts the map
 | `tailwind` | `@tailwindcss/language-server` | HTML, CSS, scripts, Vue and PHP, in a project that uses Tailwind |
 | `sql-native` | the native server from `basmilius/language-server-sql`, shown as SQL | `.sql` files, against the project's schema snapshots |
 | `rust` | rust-analyzer from the Rust toolchain, never installed by Ruimte | Rust, in a project with a `Cargo.toml` in its folder or up to three folders down |
+
+Intelephense (kind `php`) was removed, and nothing removes a `language-servers/php` install left on disk.
 
 Pinned npm versions are in `src/language/versions.ts`. A kind installs only on a person's Install (`language.install`). Each install has its own folder, `$RUIMTE_HOME/language-servers/<kind>/versions/<id>`, and `<kind>/current.json` names the current and previous one; a kind keeps at most two. An npm kind runs `bun install --ignore-scripts` with exact versions, through the daemon's own executable (`BUN_BE_BUN=1` in a compiled daemon), so no Node is needed. A moved pin offers Update; `language.rollback` switches back.
 
@@ -475,7 +476,7 @@ Native servers (`src/language/native.ts`, `installer.ts`):
 
 The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that answers `--version` (`src/language/toolchain.ts`), with `~/.cargo/bin` on its `PATH`. Without one it says to run `rustup component add rust-analyzer`; Install only looks again. It is told every `Cargo.toml` no other one holds (`linkedProjects`, `src/language/manifests.ts`).
 
-`language-servers/choices.json` holds the PHP kind in use (`php-native` by default), set with `language.prefer`. `language-servers/custom.json` holds a person's own servers (`src/language/custom.ts`): command, arguments, environment, initialization options, languages, patterns and folders. `language.custom.save`, `remove` and `check` are local secret only; an entry edited by hand so it no longer matches its saved hash never starts until saved again.
+`language-servers/choices.json` holds the kind in use where kinds are alternatives, set with `language.prefer`; none are today, so a pick an older Ruimte stored is ignored. `language-servers/custom.json` holds a person's own servers (`src/language/custom.ts`): command, arguments, environment, initialization options, languages, patterns and folders. `language.custom.save`, `remove` and `check` are local secret only; an entry edited by hand so it no longer matches its saved hash never starts until saved again.
 
 One server runs per project per kind, from the first document that needs it until the project closes or the daemon stops. A server that ends by itself after a minute of being ready restarts once; any other end leaves it `crashed` until `language.restart`. `language.log` returns the last 500 lines of install and server, each with `source` (`stderr`, `log`, `message`, `trace`) and `level` (`error`, `warning`, `info`, `log`, `debug`). `language.trace` sets `$/setTrace` (`off`, `messages`, `verbose`) per server, in memory.
 

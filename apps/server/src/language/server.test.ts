@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { normalize } from 'node:path';
 import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type LanguageServerOptions, type SharedDocument } from './server.ts';
-import { KIND_PROFILES, type ProjectSqlSettings } from './profiles.ts';
+import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
 import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
-import type { LanguageServerKind } from '@ruimte/contracts';
 import {
     TextMirror,
     type Diagnostic,
@@ -44,7 +43,7 @@ interface Rig {
     time: { now: number };
 }
 
-function rig(kind: LanguageServerKind, spawner = fakeSpawner(), overrides: Partial<LanguageServerOptions> = {}): Rig {
+function rig(kind: CatalogKind, spawner = fakeSpawner(), overrides: Partial<LanguageServerOptions> = {}): Rig {
     const clock = new ManualClock();
     const states: string[] = [];
     const diagnostics: Rig['diagnostics'] = [];
@@ -172,9 +171,9 @@ describe('a language server of one kind in one project', () => {
     });
 
     it('starts nothing while the kind is not installed, and starts once it is', async () => {
-        const { server, spawner, install, states } = rig('php');
+        const { server, spawner, install, states } = rig('python');
         install.installed = false;
-        server.attach(document('/work/a.php', 'php', '<?php'));
+        server.attach(document('/work/a.py', 'python', 'import os'));
         await settle();
         expect(spawner.processes).toHaveLength(0);
         expect(server.state).toBe('stopped');
@@ -211,9 +210,9 @@ describe('a language server of one kind in one project', () => {
     });
 
     it('refuses a request while it is not up', async () => {
-        const { server, install } = rig('php');
+        const { server, install } = rig('python');
         install.installed = false;
-        const main = document('/work/a.php', 'php', '');
+        const main = document('/work/a.py', 'python', '');
         server.attach(main);
         await settle();
         await expect(server.request(main, 'textDocument/hover', {})).rejects.toMatchObject({ code: -32002 });

@@ -13,6 +13,7 @@ import { ProjectIdSchema } from './project.ts';
 export const LanguageServerKindSchema = z.enum([
     'typescript',
     'vue',
+    // Retired: Intelephense. Older machines still report it, and a client that refused the value would refuse those machines.
     'php',
     'php-native',
     'css',

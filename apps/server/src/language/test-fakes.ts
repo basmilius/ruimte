@@ -4,6 +4,22 @@ import type { LanguageChild, LanguageExit, LanguageProcessSpec, SpawnLanguagePro
 import { KIND_PROFILES } from './profiles.ts';
 import type { LanguageClock } from './server.ts';
 
+/*
+ * No two kinds of the catalog are alternatives today, so a test of the choice between them makes `css`
+ * and `yaml` two that are, both serving CSS. The answer puts them back.
+ */
+export function makeAlternatives(): () => void {
+    const { css, yaml } = KIND_PROFILES;
+
+    KIND_PROFILES.css = { ...css, choice: 'css' };
+    KIND_PROFILES.yaml = { ...yaml, choice: 'css', components: yaml.components.map((component) => ({ ...component, languages: ['css'] })) };
+
+    return () => {
+        KIND_PROFILES.css = css;
+        KIND_PROFILES.yaml = yaml;
+    };
+}
+
 export const FULL_CAPABILITIES: ServerCapabilities = {
     textDocumentSync: 2,
     hoverProvider: true,

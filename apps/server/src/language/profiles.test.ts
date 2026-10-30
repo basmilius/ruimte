@@ -31,8 +31,6 @@ describe('server profiles', () => {
         expect(kindForLanguage('javascriptreact')).toBe('typescript');
         expect(kindForLanguage('vue')).toBe('vue');
         expect(kindForLanguage('php')).toBe('php-native');
-        expect(kindForLanguage('php', { php: 'php' })).toBe('php');
-        expect(kindForLanguage('php', { php: 'php-native' })).toBe('php-native');
         expect(kindForLanguage('scss')).toBe('css');
         expect(kindForLanguage('less')).toBe('css');
         expect(kindForLanguage('html')).toBe('html');
@@ -44,8 +42,8 @@ describe('server profiles', () => {
         expect(kindForLanguage('rust')).toBeNull();
         expect(kindForLanguage('plaintext', {}, 'views/page.phtml')).toBe('php-native');
         expect(kindForLanguage('plaintext', {}, 'notes/readme.txt')).toBeNull();
-        expect(kindForLanguage('twig', { php: 'php' })).toBe('php-native');
-        expect(kindForLanguage('blade', { php: 'php' })).toBe('php-native');
+        expect(kindForLanguage('twig')).toBe('php-native');
+        expect(kindForLanguage('blade')).toBe('php-native');
         expect(kindForLanguage('plaintext', {}, 'templates/base.html.twig')).toBe('php-native');
         expect(lspLanguageId('tsx')).toBe('typescriptreact');
         expect(lspLanguageId('php')).toBe('php');
@@ -202,15 +200,6 @@ describe('server profiles', () => {
         expect(usesVue(null)).toBe(false);
     });
 
-    it('keeps the PHP index in the install and its telemetry off', () => {
-        const [php] = KIND_PROFILES.php.components;
-        expect(php.initializationOptions(context)).toEqual({
-            storagePath: normalize('/home/.ruimte/language-servers/vue/storage'),
-            globalStoragePath: normalize('/home/.ruimte/language-servers/vue/storage')
-        });
-        expect(php.env).toEqual({ INTELEPHENSE_TELEMETRY_ENABLED: 'false' });
-    });
-
     it('runs the PHP server of Ruimte as the program it was installed as, and keeps it from downloading the stubs itself', () => {
         const [php] = KIND_PROFILES['php-native'].components;
         const native = { executable: '/repo/target/release/php-language-server', stubsCommit: 'abc' };
@@ -301,7 +290,7 @@ describe('pinned versions', () => {
                 expect(LANGUAGE_PACKAGE_VERSIONS[name]).toMatch(/^\d+\.\d+\.\d+$/);
             }
         }
-        expect(pinnedVersionsOf('php')).toEqual({ intelephense: '1.18.5' });
+        expect(pinnedVersionsOf('yaml')).toEqual({ 'yaml-language-server': '1.24.0' });
         expect(Object.keys(pinnedVersionsOf('vue'))).toEqual(['typescript-language-server', 'typescript', '@vue/language-server', '@vue/typescript-plugin']);
         expect(pinnedVersionsOf('vue').typescript).toBe('6.0.3');
         expect(pinnedVersionsOf('typescript')).toEqual({

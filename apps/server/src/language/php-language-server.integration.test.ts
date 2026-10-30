@@ -130,8 +130,31 @@ describe.skipIf(!hasCargo || checkout === null)('the standalone PHP server in Ru
         const status = (await host.status('p1')).find((candidate) => candidate.server === 'php-native');
         const log = (await host.log('p1', 'php-native')).map((line) => line.text).join('\n');
         expect({ state: status?.state, message: status?.message, log }).toMatchObject({ state: 'stopped' });
-        expect(status).toMatchObject({ version: checkout!.version, chosen: true });
+        expect(status).toMatchObject({ version: checkout!.version });
     }, 600_000);
+
+    test('learns of a class created on disk after it started, in workspace symbols', async () => {
+        const text = '<?php\nnew Gener;\n';
+        await writeFile(join(project, 'watched.php'), text);
+        await host.open('c1', { projectId: 'p1', path: 'watched.php', languageId: 'php', text });
+        await eventually(
+            'the server ready',
+            async () => (await host.status('p1')).find((status) => status.server === 'php-native')?.state,
+            (state) => state === 'ready'
+        );
+        let created = 0;
+        const symbols = await eventually(
+            'the new class in workspace symbols',
+            async () => {
+                await writeFile(join(project, `Generated${++created}.php`), `<?php\n\nclass Generated${created}\n{\n}\n`);
+                await Bun.sleep(2000);
+                return ask('watched.php', 'workspace/symbol', { query: 'Generated' });
+            },
+            (reply) => JSON.stringify(reply.result).includes('Generated'),
+            60_000
+        );
+        expect(JSON.stringify(symbols.result)).toContain('Generated');
+    }, 180_000);
 
     test('answers hover, completion and diagnostics on a project of its own', async () => {
         const text = FILES['main.php']!;

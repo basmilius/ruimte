@@ -1,9 +1,9 @@
-import type { LanguageServerKind } from '@ruimte/contracts';
 import type { NativeKind } from './native.ts';
+import type { CatalogKind } from './profiles.ts';
 import type { ToolchainKind } from './toolchain.ts';
 
 /* A kind installed as npm packages, which is every kind but the native ones and the ones a toolchain brings. */
-export type NpmKind = Exclude<LanguageServerKind, NativeKind | ToolchainKind>;
+export type NpmKind = Exclude<CatalogKind, NativeKind | ToolchainKind>;
 
 /*
  * What a server install pins, exactly. The `typescript` kind runs the native server of TypeScript 7.
@@ -20,7 +20,6 @@ export const LANGUAGE_PACKAGE_VERSIONS = {
     'typescript-native': '7.0.2',
     '@vue/language-server': '3.3.12',
     '@vue/typescript-plugin': '3.3.12',
-    intelephense: '1.18.5',
     // One package holds the CSS, HTML, JSON and ESLint servers, each installed under its own kind.
     'vscode-langservers-extracted': '4.10.0',
     '@tailwindcss/language-server': '0.16.0',
@@ -43,7 +42,6 @@ export const LANGUAGE_KIND_PACKAGES: Record<NpmKind, readonly LanguagePackage[]>
     // TypeScript 7 serves the document, and TypeScript 6 behind typescript-language-server answers the code actions 7 lacks.
     typescript: ['typescript-native', 'typescript-language-server', 'typescript-sdk-6'],
     vue: ['typescript-language-server', 'typescript', '@vue/language-server', '@vue/typescript-plugin'],
-    php: ['intelephense'],
     css: ['vscode-langservers-extracted'],
     html: ['vscode-langservers-extracted'],
     json: ['vscode-langservers-extracted'],
@@ -59,7 +57,6 @@ export const LANGUAGE_KIND_PACKAGES: Record<NpmKind, readonly LanguagePackage[]>
 const LANGUAGE_KIND_MAIN_PACKAGE: Record<NpmKind, LanguagePackage> = {
     typescript: 'typescript-native',
     vue: '@vue/language-server',
-    php: 'intelephense',
     css: 'vscode-langservers-extracted',
     html: 'vscode-langservers-extracted',
     json: 'vscode-langservers-extracted',
