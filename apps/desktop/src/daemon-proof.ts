@@ -20,6 +20,9 @@ export interface DaemonPort {
 
 const JSON_HEADERS = { 'content-type': 'application/json' };
 
+// A health request that times out costs this many tries, so a hung daemon ends a stop within seconds.
+const HUNG_TRY_COST = 10;
+
 function ask(daemon: DaemonPort, path: string, init: RequestInit = {}): Promise<Response> {
     return daemon.fetch(`http://127.0.0.1:${daemon.port}${path}`, { ...init, signal: AbortSignal.timeout(2000) });
 }
@@ -74,11 +77,16 @@ export async function stopDaemonGently(daemon: DaemonPort, wait: () => Promise<v
     if (asked !== true) {
         return false;
     }
-    for (let i = 0; i < tries; i++) {
+    let left = tries;
+    while (left > 0) {
         try {
-            await daemon.fetch(`http://127.0.0.1:${daemon.port}${MACHINE_HEALTH_PATH}`, {});
-        } catch {
-            return true;
+            await ask(daemon, MACHINE_HEALTH_PATH);
+            left -= 1;
+        } catch (e) {
+            if (!(e instanceof DOMException && e.name === 'TimeoutError')) {
+                return true;
+            }
+            left -= HUNG_TRY_COST;
         }
         await wait();
     }

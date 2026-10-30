@@ -103,6 +103,17 @@ describe('stopDaemonGently', () => {
         const busy = provenPort(() => new Response(null, { status: 202 }));
         expect(await stopDaemonGently(busy.daemon, async () => undefined, 3)).toBe(false);
     });
+
+    test('leaves a daemon that accepted the stop and then hangs to the hard stop within a few tries', async () => {
+        const { daemon, asked } = provenPort((path) => {
+            if (path === MACHINE_HEALTH_PATH) {
+                throw new DOMException('timed out', 'TimeoutError');
+            }
+            return new Response(null, { status: 202 });
+        });
+        expect(await stopDaemonGently(daemon, async () => undefined)).toBe(false);
+        expect(asked.filter((line) => line === `GET ${MACHINE_HEALTH_PATH}`)).toHaveLength(5);
+    });
 });
 
 describe('askDaemonWork', () => {
