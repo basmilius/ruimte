@@ -566,14 +566,17 @@ describe('chat attach', () => {
         expect(await runContext(['chat', 'attach', '--file', part], env)).toBe(0);
         expect(seen.map((call) => call.argv)).toEqual([['attach', '--name', 'part.bin', `--data=${stl.toString('base64')}`]]);
 
-        const larger = Buffer.alloc(stl.length + 50);
-        larger.writeUInt32LE(triangles + 1, 80);
+        // Sparse, since the refusal reads no further than the limit and a real 50 MiB write is what a slow runner stalls on.
+        const header = Buffer.alloc(84);
+        header.writeUInt32LE(triangles + 1, 80);
+        const larger = await file('larger.stl', header);
+        await truncate(larger, stl.length + 50);
         const zip = Buffer.alloc(64);
         zip.write('PK\x03\x04', 0, 'latin1');
         zip.writeUInt16LE(10, 26);
         zip.write('readme.txt', 30);
         const codes: string[] = [];
-        for (const path of [await file('larger.stl', larger), await file('scene.usdz', zip)]) {
+        for (const path of [larger, await file('scene.usdz', zip)]) {
             stderr = '';
             expect(await runContext(['chat', 'attach', '--file', path], env)).toBe(3);
             codes.push(stderr.split('\t')[1]!);

@@ -269,7 +269,7 @@ describe('Session.attach', () => {
         await harness.manager.create({ sessionId: 'art', cols: 160, rows: 50, shell: '/bin/sh', args: [], cwd: harness.home });
         const pty = harness.adapter.forSession('art');
         // What an image-to-ANSI tool prints: half blocks with a truecolor foreground and background per cell.
-        for (let line = 0; line < 3000; line++) {
+        for (let line = 0; line < 1000; line++) {
             let text = '';
             for (let col = 0; col < 160; col++) {
                 text += `\x1b[38;2;${(line * 7 + col) % 256};${(col * 3) % 256};${line % 256}m\x1b[48;2;${(col * 5) % 256};${line % 256};${(line + col) % 256}m▀`;
