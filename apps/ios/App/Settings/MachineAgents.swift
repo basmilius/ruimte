@@ -3,9 +3,7 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// One machine's agents as the desktop's agents settings show them: the CLIs it has with their accounts, the defaults
-/// a chat starts with and Computer Use. Installing a CLI, adding an account and turning Computer Use on happen on the
-/// machine itself; signing a signed-out account in runs the CLI's own login in a terminal there.
+/// The accounts and defaults of the installed CLIs on one machine. Login stays with the CLI itself.
 @MainActor @Observable final class MachineAgentsModel {
     struct Agent: Identifiable, Equatable {
         let kind: String
@@ -37,6 +35,16 @@ import SwiftUI
     /// Whether the machine keeps an order of accounts that a person can change from here.
     private(set) var reorders = false
     private var providers: [JSONValue] = []
+    private(set) var rawAccounts: JSONValue?
+    private(set) var chatLogins: Set<String> = []
+    private(set) var silentLogins: Set<String> = []
+    private var mutations = 0
+
+    func answers(_ request: WireRequest) -> Bool { (client as? MachineFeatures)?.answers(request) == true }
+    func canAdd(_ kind: String) -> Bool {
+        answers(.accountsCreate) && (loginCommands[kind] != nil || chatLogins.contains(kind))
+    }
+
     /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer here.
     private(set) var loginCommands: [String: String] = [:]
     private(set) var endpoint: JSONValue?
@@ -48,12 +56,15 @@ import SwiftUI
     }
 
     func load() async {
+        guard !state.busy else { return }
+        let mutation = mutations
         await state.read(loaded: !agents.isEmpty) { stillTheLatest in
             let providers = try await AgentCatalog.load(client)
             let accounts = try? await client.request(.accountsList)
             let endpoint = try? await client.request("endpoint.info")
             let computer = try? await client.request("computer.status")
             try stillTheLatest()
+            guard mutation == mutations else { throw CancellationError() }
             self.providers = providers
             reorders = (client as? MachineFeatures)?.answers(.accountsReorder) == true
             apply(accounts: accounts)
@@ -62,12 +73,14 @@ import SwiftUI
         }
     }
 
-    /// Moves accounts of one CLI at once and has the machine keep that order, taking its answer as the new list. A
-    /// refusal reads the accounts again, so the list never shows an order the machine does not keep.
+    /// Uses the returned order, so a refused reorder leaves the previous list in place.
     func move(_ agent: Agent, from source: IndexSet, to destination: Int) async {
         guard !state.busy, let index = agents.firstIndex(where: { $0.kind == agent.kind }) else { return }
-        agents[index].accounts.move(fromOffsets: source, toOffset: destination)
-        let payload = Self.reorderPayload(kind: agent.kind, ids: agents[index].accounts.map(\.id))
+        guard answers(.accountsReorder) else { return }
+        var ordered = agents[index].accounts
+        ordered.move(fromOffsets: source, toOffset: destination)
+        let payload = Self.reorderPayload(kind: agent.kind, ids: ordered.map(\.id))
+        mutations += 1
         await state.perform {
             do {
                 apply(accounts: try await client.request(.accountsReorder, payload: payload))
@@ -83,8 +96,64 @@ import SwiftUI
     }
 
     private func apply(accounts: JSONValue?) {
+        mutations += 1
+        rawAccounts = accounts
+        chatLogins = Set(accounts?.list("chatLogins").compactMap(\.stringValue) ?? [])
+        silentLogins = Set(accounts?.list("silentLogins").compactMap(\.stringValue) ?? [])
         agents = Self.agents(providers: providers, accounts: accounts)
         loginCommands = (accounts?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+    }
+
+    static func label(_ text: String, required: Bool) throws -> String {
+        let label = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !required || !label.isEmpty, label.utf16.count <= 80 else {
+            throw MachineClientError.invalid(String(localized: "Use a name of 1 to 80 characters."))
+        }
+        return label
+    }
+
+    func create(kind: String, label: String) async -> Bool {
+        guard !state.busy, canAdd(kind) else { return false }
+        mutations += 1
+        var saved = false
+        await state.perform {
+            let label = try Self.label(label, required: true)
+            let value = try await client.request(
+                .accountsCreate, payload: .object(["kind": .string(kind), "label": .string(label)]))
+            apply(accounts: value)
+            saved = true
+        }
+        return saved
+    }
+
+    func save(id: String, kind: String, label: String?, enabled: Bool?) async -> Bool {
+        guard !state.busy, answers(.accountsSave) else { return false }
+        if label == nil && enabled == nil { return true }
+        mutations += 1
+        var saved = false
+        await state.perform {
+            let label = try label.map { try Self.label($0, required: false) }
+            let latest = try await client.request(.accountsList)
+            guard var accounts = latest["accounts"]?.objectValue,
+                var entry = accounts[id]?.objectValue, entry["kind"] == .string(kind)
+            else {
+                throw MachineClientError.invalid(
+                    String(localized: "This account is no longer available. Choose another account."))
+            }
+            if let label { entry["label"] = label.isEmpty ? nil : .string(label) }
+            if let enabled { entry["enabled"] = .bool(enabled) }
+            accounts[id] = .object(entry)
+            guard answers(.accountsSave) else { throw MachineClientError.disconnected }
+            apply(accounts: try await client.request(.accountsSave, payload: .object(["accounts": .object(accounts)])))
+            saved = true
+        }
+        return saved
+    }
+
+    func refresh() async {
+        guard !state.busy, answers(.accountsRefresh) else { return }
+        mutations += 1
+        await state.perform { apply(accounts: try await client.request(.accountsRefresh)) }
     }
 
     /// Turns a switch the machine keeps in `endpoint.json`, leaving its name and icon as they stand.
@@ -149,6 +218,7 @@ struct MachineAgentsPage: View {
     let session: SharedMachineSession
     @State private var model: MachineAgentsModel
     @State private var login: AgentLogin?
+    @State private var editor: ProviderAccountEditorTarget?
     @State private var editMode: EditMode = .inactive
     private let preferences = ChatPreferences.shared
 
@@ -177,22 +247,48 @@ struct MachineAgentsPage: View {
             if canOrder {
                 ToolbarItem(placement: .topBarTrailing) { EditButton() }
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(String(localized: "Recheck accounts"), lucideIcon: "refresh-cw") {
+                    Task { await model.refresh() }
+                }
+                .disabled(!session.connected || model.state.busy || !model.answers(.accountsRefresh))
+            }
         }
         .environment(\.editMode, $editMode)
         .task {
             await RemotePageLifecycle.run(
                 client: session.rpc, events: ["endpoint.changed", "accounts.changed"], load: model.load)
         }
+        .mobileSheet(item: $editor) { target in
+            ProviderAccountEditor(model: model, target: target, connected: session.connected)
+        }
         .mobileSheet(item: $login) { login in
             AccountLoginSheet(
-                client: session.rpc, kind: login.kind, accountID: login.accountID, name: login.name)
+                client: session.rpc, kind: login.kind, accountID: login.accountID, name: login.name,
+                silent: model.silentLogins.contains(login.kind))
         }
+    }
+
+    private func edit(_ agent: MachineAgentsModel.Agent, _ account: MachineAgentsModel.Account) {
+        editor = ProviderAccountEditorTarget(
+            kind: agent.kind, accountID: account.id,
+            label: model.rawAccounts?["accounts"]?[account.id]?["label"]?.stringValue ?? "",
+            enabled: account.state != "disabled")
+        model.state.problem = nil
     }
 
     @ViewBuilder private var installed: some View {
         Section {
             ForEach(model.agents) { agent in
                 agentRow(agent)
+                if model.canAdd(agent.kind) {
+                    Button(String(localized: "Add account for \(agent.name)"), lucideIcon: "plus") {
+                        model.state.problem = nil
+                        editor = ProviderAccountEditorTarget(kind: agent.kind)
+                    }
+                    .disabled(model.state.busy || !session.connected)
+                    .accessibilityIdentifier("accounts.add.\(agent.kind)")
+                }
             }
             if model.agents.isEmpty {
                 Text("No agent CLI on this machine.").foregroundStyle(MobileStyle.muted)
@@ -200,7 +296,14 @@ struct MachineAgentsPage: View {
         } header: {
             Text("Installed")
         } footer: {
-            Text("Install a CLI or add an account in Ruimte on the machine itself, under Agents.")
+            Text("Accounts and logins belong to this machine. Install a missing CLI on the machine itself.")
+            if !session.connected {
+                Text("Connect to this machine to manage its accounts.")
+            } else if !model.answers(.accountsSave) || !model.answers(.accountsCreate)
+                || !model.answers(.accountsRefresh)
+            {
+                Text("Update this machine to manage accounts from your phone.")
+            }
         }
     }
 
@@ -217,13 +320,15 @@ struct MachineAgentsPage: View {
                         .truncationMode(.middle)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if agent.accounts.count == 1, let account = agent.accounts.first { loginButton(agent, account) }
+                if agent.accounts.count == 1, let account = agent.accounts.first {
+                    accountActions(agent, account)
+                }
             }
             if agent.accounts.count > 1 {
                 ForEach(agent.accounts) { account in
                     HStack(spacing: 10) {
                         accountLabel(agent, account)
-                        loginButton(agent, account)
+                        accountActions(agent, account)
                     }
                     .padding(.leading, MobileMetrics.statusColumn + MobileSpacing.medium)
                 }
@@ -255,7 +360,7 @@ struct MachineAgentsPage: View {
         ForEach(model.agents.filter { $0.accounts.count > 1 }) { agent in
             Section {
                 ForEach(agent.accounts) { account in
-                    accountLabel(agent, account).moveDisabled(model.state.busy)
+                    accountLabel(agent, account).moveDisabled(model.state.busy || !session.connected)
                 }
                 .onMove { source, destination in
                     Task { await model.move(agent, from: source, to: destination) }
@@ -275,11 +380,26 @@ struct MachineAgentsPage: View {
         return parts.joined(separator: " · ")
     }
 
+    private func accountActions(_ agent: MachineAgentsModel.Agent, _ account: MachineAgentsModel.Account) -> some View {
+        HStack(spacing: 8) {
+            loginButton(agent, account)
+            if model.answers(.accountsSave) {
+                Button("Edit") { edit(agent, account) }
+                    .buttonStyle(.mobileCapsuleSmall)
+                    .accessibilityLabel("Edit \(account.name)")
+                    .accessibilityIdentifier("accounts.edit.\(account.id)")
+            }
+        }
+        .disabled(!session.connected || model.state.busy)
+    }
+
     @ViewBuilder private func loginButton(_ agent: MachineAgentsModel.Agent, _ account: MachineAgentsModel.Account)
         -> some View
     {
-        if account.signedOut && model.loginCommands[agent.kind] != nil {
-            Button("Sign in again") {
+        if ["signed-out", "checking"].contains(account.state ?? "checking") && model.loginCommands[agent.kind] != nil
+            && model.answers(.sessionLogin)
+        {
+            Button(account.signedOut ? String(localized: "Sign in again") : String(localized: "Sign in")) {
                 login = AgentLogin(kind: agent.kind, accountID: account.id, name: account.name)
             }
             .buttonStyle(.mobileCapsuleSmall)

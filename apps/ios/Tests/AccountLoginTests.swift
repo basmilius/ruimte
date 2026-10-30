@@ -63,6 +63,18 @@ import XCTest
         XCTAssertFalse(machine.sent.contains { $0.0 == "session.kill" })
     }
 
+    func testASilentLoginNeedsAnExplicitFinishAndRechecksWithoutClaimingSuccess() async {
+        let machine = LoginMachine()
+        let model = AccountLoginModel(client: machine, kind: "claude", accountID: "work", name: "Work", silent: true)
+        await model.begin()
+        XCTAssertFalse(machine.sent.contains { $0.0 == "accounts.watchLogin" })
+        machine.emit("accounts.changed", .object(["statuses": .array([status("ready", email: "me@example.com")])]))
+        XCTAssertEqual(model.phase, .running)
+        await model.finish()
+        XCTAssertEqual(machine.sent.last?.0, "accounts.refresh")
+        XCTAssertTrue(machine.sent.contains { $0.0 == "session.kill" && $0.1["sessionId"] == .string(model.sessionID) })
+    }
+
     func testTheNativeOfferSendsTheV2AccessStatement() async throws {
         let key = DeviceKey()
         let machineKey = DeviceKey().publicKey
@@ -147,7 +159,9 @@ import XCTest
     }
 }
 
-@MainActor private final class LoginMachine: MachineRequesting {
+@MainActor private final class LoginMachine: MachineRequesting, MachineFeatures {
+    func answers(_ type: WireRequest) -> Bool { type == .accountsRefresh }
+
     var sent: [(String, JSONValue)] = []
     var refusal: String?
     var handlers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]

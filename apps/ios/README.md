@@ -50,6 +50,9 @@ The iPad keeps the iPhone's pages without tabs (`PadHome`, `PadRouter`): a sideb
 
 Onboarding (`App/Onboarding`) is Welcome, Add a machine and notifications. A machine puts itself on the account, so Add a machine only explains. The notification step follows only a sign-in from the welcome and is remembered as `ruimte.ios.onboarding.notifications`.
 
+- A new chat can name an account before it starts. Automatic follows the existing project and machine defaults. The account list marks project restrictions and known unavailable accounts; a named original CLI account remains explicit after reordering.
+- A machine's Agents page adds, renames, turns accounts on/off and rechecks sign-in status when the machine announces those requests. Saves read the complete account map again and change only edited fields. The whole-map protocol has no conditional revision, so concurrent saves still follow the last writer. Custom folders and environment variables stay on the desktop.
+- Adding an account starts no login. The CLI's own login opens only on a person's tap; a browser it opens on the machine may require completion there. A CLI that cannot report completion has an explicit Done action that rechecks account status without claiming success.
 - Machine switches under Agents go through `endpoint.setIdentity`, which sends an unchosen name as null. Computer Use only shows its state.
 - Delete account follows App Store guideline 5.1.1(v). The person types the account's name from `GET /v1/account` (`DELETE` without one), compared as `confirmsAccountDeletion` in `packages/pulsar` does. An account with an Apple identity gets a fresh Sign in with Apple authorization right before `DELETE /v1/account`, sent as `appleAuthorizationCode` so the address book revokes first. A refusal deletes nothing.
 
