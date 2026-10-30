@@ -1,21 +1,37 @@
 import { create } from 'zustand';
 import { chatWaitAsk, terminalWaitAsk, type WaitAsk } from '@ruimte/contracts';
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
-import { projectNodes } from '@/project/view-nodes';
+import { projectNodes, subscribeViewNodes } from '@/project/view-nodes';
 import { groupAttention, useAttention } from '@/state/attention';
 import { currentEndpointId, endpointKey, endpointOfNode } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { sessionStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
+import { waitDate } from './waiting-date';
 
 /*
  * When each waiting terminal was first seen waiting, by session key. Its agent moves `updatedAt`
  * forward on every later hook of the same prompt, so only the first sighting dates the wait.
  */
-export function nextWaitingSince(sessions: SessionsByKey, before: ReadonlyMap<string, number>): ReadonlyMap<string, number> {
-    const next = new Map<string, number>();
+export function nextWaitingSince(
+    sessions: SessionsByKey,
+    before: ReadonlyMap<string, number>,
+    background: ReadonlyMap<string, number> = new Map(),
+    retained: ReadonlySet<string> = new Set()
+): ReadonlyMap<string, number> {
+    const next = new Map([...background].map(([key, at]) => [key, Math.min(waitDate([], before.get(key)), waitDate([], at))]));
+
+    for (const key of retained) {
+        if (before.has(key) && sessions[key] === undefined) {
+            next.set(key, Math.min(waitDate([], before.get(key)), next.get(key) ?? Infinity));
+        }
+    }
+
     for (const [key, session] of Object.entries(sessions)) {
         if (sessionStatus(session) === 'needs-you') {
-            next.set(key, before.get(key) ?? session.agent?.updatedAt ?? 0);
+            next.set(key, waitDate([], Math.min(waitDate([], before.get(key)), next.get(key) ?? Infinity), session.agent?.updatedAt));
+        } else {
+            next.delete(key);
         }
     }
     const same = next.size === before.size && [...next].every(([key, at]) => before.get(key) === at);
@@ -28,17 +44,52 @@ interface WaitingSinceStore {
 
 export const useWaitingSince = create<WaitingSinceStore>(() => ({ byKey: new Map() }));
 
+const backgroundWaitingSince = new Map<string, ReadonlyMap<string, number>>();
+
+function updateWaitingSince(): void {
+    const before = useWaitingSince.getState().byKey;
+    const background = new Map([...backgroundWaitingSince.values()].flatMap((dates) => [...dates]));
+    const endpointId = currentEndpointId();
+    // A tab's reader can leave before its new live session list arrives; the current document keeps that observed date through the handoff.
+    const retained = new Set(
+        useProject.getState().current === null
+            ? []
+            : projectNodes()
+                  .filter((node) => node.kind === 'terminal')
+                  .map((node) => endpointKey(endpointOfNode(node, endpointId), node.id))
+    );
+    const next = nextWaitingSince(useSessions.getState().byKey, before, background, retained);
+
+    if (next !== before) {
+        useWaitingSince.setState({ byKey: next });
+    }
+}
+
+/* Only existing background readers contribute dates; their last reader removes them. Live rows keep the same first sighting across a project switch. */
+export function publishBackgroundWaitingSince(endpointId: string, dates: ReadonlyMap<string, number> | null): void {
+    if (dates === null) {
+        backgroundWaitingSince.delete(endpointId);
+    } else {
+        backgroundWaitingSince.set(endpointId, dates);
+    }
+
+    updateWaitingSince();
+}
+
 /* Before any canvas mounts, so a stack that reads the dates on a session change reads them already moved. */
 export function startWaitingSinceWatch(): () => void {
-    const pass = (): void => {
-        const before = useWaitingSince.getState().byKey;
-        const next = nextWaitingSince(useSessions.getState().byKey, before);
-        if (next !== before) {
-            useWaitingSince.setState({ byKey: next });
-        }
-    };
-    pass();
-    return useSessions.subscribe(pass);
+    updateWaitingSince();
+    const stops = [
+        useSessions.subscribe(updateWaitingSince),
+        subscribeViewNodes(updateWaitingSince),
+        useProject.subscribe((state, before) => {
+            if (state.currentEndpointId !== before.currentEndpointId || state.current?.projectId !== before.current?.projectId) {
+                updateWaitingSince();
+            }
+        })
+    ];
+
+    return () => stops.forEach((stop) => stop());
 }
 
 export interface Waiting {
@@ -89,22 +140,17 @@ export function compareWaits(before?: Pick<WaitDetails, 'kind' | 'since'>, next?
     return priority || (earlier === later ? 0 : earlier < later ? -1 : 1);
 }
 
-function earliest(times: readonly number[]): number {
-    return times.length === 0 ? Infinity : Math.min(...times);
-}
-
 /* When a node started waiting on a person: its oldest open request, else when a terminal was first seen waiting. */
 function waitedSince(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, since: ReadonlyMap<string, number>, endpointId: string): number {
     const key = endpointKey(endpointOfNode(node, endpointId), node.id);
     if (node.kind === 'chat' || node.kind === 'design') {
-        return earliest((chats[key]?.info.requests ?? []).map((request) => request.createdAt));
+        return waitDate(chats[key]?.info.requests);
     }
     if (node.kind !== 'terminal') {
         return Infinity;
     }
     const agent = sessions[key]?.agent;
-    const requests = agent?.requests ?? [];
-    return requests.length > 0 ? earliest(requests.map((request) => request.createdAt)) : (since.get(key) ?? agent?.updatedAt ?? Infinity);
+    return waitDate(agent?.requests, since.get(key), agent?.updatedAt);
 }
 
 /* The nodes that wait on a person, the one that waited longest first; a wait nothing dates comes last, in project order. */

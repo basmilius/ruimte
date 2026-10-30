@@ -9,7 +9,7 @@ import { currentEndpointId, endpointKey, splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
-import { nextWaiting, projectWaiting, type Waiting } from '@/state/waiting';
+import { nextWaiting, projectWaiting, useWaitingSince, type Waiting } from '@/state/waiting';
 import { showSidebarProject } from './sidebar-navigation';
 import { sidebarMachineSnapshot } from './sidebar-projects';
 
@@ -69,7 +69,10 @@ function openProjectWaits(): ProjectWait[] {
                 endpointId: project.endpointId,
                 projectId: project.id,
                 nodeId: node.id,
-                since: snapshot.waitingSince[`${node.kind}:${node.id}`] ?? Infinity,
+                since:
+                    (node.kind === 'terminal' ? useWaitingSince.getState().byKey.get(endpointKey(project.endpointId, node.id)) : undefined) ??
+                    snapshot.waitingSince[`${node.kind}:${node.id}`] ??
+                    Infinity,
                 title: `${background.summary.name} / ${node.title}`
             });
         }
@@ -101,14 +104,13 @@ export function revealNextWaiting(): boolean {
     }
 
     navigating = true;
+    visited = target;
 
     void showSidebarProject(target.endpointId, target.projectId)
         .then((shown) => {
             if (!shown) {
                 return;
             }
-
-            visited = target;
 
             if (projectWaiting().some((entry) => entry.id === target.nodeId)) {
                 revealNode(target.nodeId);
@@ -124,5 +126,5 @@ export function revealNextWaiting(): boolean {
 
 /* The next destination for the palette; background entries include their project name. */
 export function nextWaitingTitle(): string | null {
-    return nextWaiting(openProjectWaits(), visited)?.title ?? null;
+    return navigating ? null : (nextWaiting(openProjectWaits(), visited)?.title ?? null);
 }

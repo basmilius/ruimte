@@ -38,6 +38,15 @@ describe('when a terminal started waiting', () => {
         expect(running.has(key('api'))).toBe(false);
         expect(nextWaitingSince({ [key('api')]: { attached: true, agent: agent('needs-you', 300) } }, running).get(key('api'))).toBe(300);
     });
+
+    test('a known terminal in the newly opened view keeps its date until live statuses arrive, then releases it when neither source retains it', () => {
+        const background = nextWaitingSince({}, new Map(), new Map([[key('api'), 100]]));
+        const opening = nextWaitingSince({}, background, new Map(), new Set([key('api')]));
+        expect(opening.get(key('api'))).toBe(100);
+        const loaded = nextWaitingSince({ [key('api')]: { attached: true, agent: agent('needs-you', 250) } }, opening);
+        expect(loaded.get(key('api'))).toBe(100);
+        expect(nextWaitingSince({}, loaded).has(key('api'))).toBe(false);
+    });
 });
 
 describe('what waits on a person, oldest first', () => {
@@ -61,6 +70,13 @@ describe('what waits on a person, oldest first', () => {
             { id: 'docs', since: 300 },
             { id: 'old', since: Infinity }
         ]);
+    });
+
+    test('invalid request dates stay unknown, including zero timestamps from older metadata', () => {
+        expect(oldestWaitingFirst([{ id: 'docs', kind: 'chat' }], {}, { [key('docs')]: chat([0, -1, Infinity]) }, new Map(), ENDPOINT)).toEqual([
+            { id: 'docs', since: Infinity }
+        ]);
+        expect(nextWaitingSince({ [key('api')]: { attached: false, agent: agent('needs-you', 0) } }, new Map()).get(key('api'))).toBe(Infinity);
     });
 });
 

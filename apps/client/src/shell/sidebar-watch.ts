@@ -1,5 +1,6 @@
 import { projectSidebarViews, type AgentStatus, type ProjectChangedEvent, type ProjectSidebarResult, type ProjectSummaryEvent } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
+import { waitDate } from '@/state/waiting-date';
 
 export interface SidebarMachineSnapshot {
     projects: ProjectSidebarResult['projects'];
@@ -40,9 +41,7 @@ function waitingAt(status: AgentStatus, requests: readonly { createdAt: number }
         return null;
     }
 
-    const dates = requests.map((request) => request.createdAt).filter((at) => Number.isFinite(at) && at > 0);
-
-    return dates.length > 0 ? Math.min(...dates) : (previous ?? (fallback !== undefined && fallback > 0 ? fallback : Infinity));
+    return waitDate(requests, previous, fallback);
 }
 
 function sameProjects(left: SidebarMachineSnapshot['projects'], right: SidebarMachineSnapshot['projects']): boolean {

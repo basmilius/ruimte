@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { create, createStore, useStore, type StoreApi } from 'zustand';
 import { z } from 'zod';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
 import { listedEndpoints } from '@/state/local-machine';
 import { followOtherWindows } from '@/state/other-windows';
 import { storedJson } from '@/state/stored-json';
+import { publishBackgroundWaitingSince } from '@/state/waiting';
 import { machineTransport, pool } from '@/transport';
 import { SidebarWatch, type SidebarMachineSnapshot } from './sidebar-watch';
 
@@ -279,7 +281,16 @@ function watchMachine(endpoint: Endpoint, store: StoreApi<{ snapshots: Record<st
         held.release = pool.hold(endpoint);
     }
 
-    const show = (): void => store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: watcher.getSnapshot() } }));
+    const show = (): void => {
+        const snapshot = watcher.getSnapshot();
+        const dates = new Map(
+            Object.entries(snapshot.waitingSince)
+                .filter(([key]) => key.startsWith('terminal:'))
+                .map(([key, at]) => [endpointKey(endpoint.id, key.slice('terminal:'.length)), at])
+        );
+        publishBackgroundWaitingSince(endpoint.id, snapshot.state === 'ready' ? dates : null);
+        store.setState((before) => ({ snapshots: { ...before.snapshots, [endpoint.id]: snapshot } }));
+    };
     const off = watcher.subscribe(show);
     show();
 
@@ -295,6 +306,7 @@ function watchMachine(endpoint: Endpoint, store: StoreApi<{ snapshots: Record<st
         if (held.readers === 0) {
             watcher.dispose();
             machineWatches.delete(endpoint.id);
+            publishBackgroundWaitingSince(endpoint.id, null);
         }
     };
 }

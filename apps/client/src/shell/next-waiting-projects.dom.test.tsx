@@ -10,6 +10,7 @@ import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
+import { startWaitingSinceWatch } from '@/state/waiting';
 import { dropMachine } from '@/transport/connections';
 import { chatInfoOf } from '../../testing/chat-info';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
@@ -38,6 +39,7 @@ let stopTabs: () => void;
 let infos: Record<string, ChatInfo>;
 let run = 0;
 let disconnectRemote: (() => void) | null;
+let stopWaiting: () => void;
 
 function response(summary: ProjectSummary, views: ProjectView[]) {
     return {
@@ -71,6 +73,7 @@ beforeEach(async () => {
     disconnectRemote = null;
     localStorage.clear();
     setSystemTime(NOW);
+    stopWaiting = startWaitingSinceWatch();
     const since = NOW - 60 * 60_000 + ++run * 60_000;
     newer = { kind: 'chat', id: `tab-newer-${run}`, name: 'Current review', node: {} };
     older = { kind: 'chat', id: `tab-older-${run}`, name: 'Background review', node: {} };
@@ -101,6 +104,7 @@ afterEach(async () => {
     await page.unmount();
     stopTabs();
     workspace.close();
+    stopWaiting();
     dropMachine(REMOTE);
     disconnectRemote?.();
     useEndpoints.getState().remove(REMOTE);
@@ -192,6 +196,7 @@ describe("next wait across this window's project tabs", () => {
         const opens = machine.requests('project.open').length;
         await next();
         await until(() => finish !== undefined);
+        const pendingTitle = nextWaitingTitle();
         await next();
         expect(machine.requests('project.open')).toHaveLength(opens + 1);
         infos[older.id] = chatInfoOf(older.id);
@@ -202,6 +207,7 @@ describe("next wait across this window's project tabs", () => {
         await until(() => useProject.getState().current?.projectId === THERE.projectId && projectSwitch.state.kind === 'idle');
         expect(usePromptFront.getState().request).toBeNull();
         expect(page.host.querySelector(`[data-split-cell][data-view-id="${older.id}"]`) === null).toBe(true);
+        expect(pendingTitle).toBeNull();
     });
 
     test('a failed project open reveals no prompt and keeps the normal route back', async () => {
@@ -213,5 +219,58 @@ describe("next wait across this window's project tabs", () => {
         await act(async () => projectSwitch.back());
         await until(() => projectSwitch.state.kind === 'idle');
         expect(useProject.getState().current?.projectId).toBe(HERE.projectId);
+        const opens = machine.requests('project.open').length;
+        await next();
+        await until(() => showing(HERE.projectId, newer.id));
+        expect(machine.requests('project.open')).toHaveLength(opens);
+    });
+
+    test('a requestless terminal keeps its place between two chat waits after opening its project', async () => {
+        const terminal: ProjectView = { kind: 'terminal', id: `bare-terminal-${run}`, name: 'Terminal review', node: {} };
+        const middle: ProjectView = { kind: 'chat', id: `middle-chat-${run}`, name: 'Middle review', node: {} };
+        const since = infos[older.id]!.requests![0]!.createdAt;
+        const agent = (updatedAt: number) => ({
+            kind: 'claude' as const,
+            status: 'needs-you' as const,
+            live: true,
+            agentSessionId: 'terminal-agent',
+            transcriptPath: null,
+            updatedAt
+        });
+        infos[newer.id] = waiting(newer.id, since);
+        infos[middle.id] = waiting(middle.id, since + 20_000);
+        infos[older.id] = chatInfoOf(older.id);
+        const here = () => response(HERE, [MAIN, newer, middle]);
+        const there = () => response(THERE, [OTHER, terminal]);
+        machine.answer('project.open', ({ projectId }) => (projectId === HERE.projectId ? here() : there()));
+        await act(async () => {
+            machine.emit('project.changed', { projectId: HERE.projectId, document: here().document });
+            machine.emit('project.summary', { summary: THERE, views: projectSidebarViews([OTHER, terminal], []) });
+            machine.emit('chat.status', { chatId: newer.id, info: infos[newer.id]! });
+            machine.emit('chat.status', { chatId: middle.id, info: infos[middle.id]! });
+            machine.emit('chat.status', { chatId: older.id, info: infos[older.id]! });
+            machine.emit('session.status', { sessionId: terminal.id, agent: agent(since + 10_000) });
+            machine.emit('session.status', { sessionId: terminal.id, agent: agent(since + 30_000) });
+        });
+        const session = {
+            sessionId: terminal.id,
+            cwd: '/work/borealis',
+            pid: 1,
+            cols: 80,
+            rows: 24,
+            createdAt: since,
+            attached: 0,
+            exited: false,
+            agent: agent(since + 30_000)
+        };
+        machine.answer('session.list', () => ({ sessions: [session] }));
+        machine.answer('session.create', () => session);
+        machine.answer('session.attach', () => ({ screen: '', cols: 80, rows: 24, exited: false }));
+        await next();
+        await until(() => showing(HERE.projectId, newer.id));
+        await next();
+        await until(() => showing(THERE.projectId, terminal.id));
+        await next();
+        await until(() => showing(HERE.projectId, middle.id));
     });
 });
