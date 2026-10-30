@@ -7,7 +7,9 @@ Windows 11 x64 runs but is not supported. Rick's [#64](https://github.com/basmil
 Do not reverse one without asking Bas.
 
 - Git for Windows is required (2026-10-20, replacing PowerShell as default). The daemon finds `bash.exe` beside `git` on the PATH, then under Program Files and LocalAppData (`apps/server/src/pty/pty.ts`). Without it the app says so and names where to get it.
-- Every line the daemon types runs in Git Bash: an agent's start, a resume with `||`, a long line through `eval`, a launch, an `exec` session. The daemon never quotes for a second dialect. A plain terminal that starts nothing may use `pwsh` or cmd.
+- Every line the daemon types runs in Git Bash: an agent's start, a resume with `||`, a long line through `eval`, a launch, an `exec` session. The daemon never quotes for a second dialect. Routines and launches stay in it too, since a team shares them across platforms (2026-10-30).
+- What a person sees defaults to PowerShell, with a setting to override it (2026-10-30, not built yet). Windows ships 5.1, which has no `&&` or `||`, so nothing the daemon types relies on it.
+- WSL: a terminal profile (`wsl.exe`) is fine. A project on `\\wsl$\` under a Windows daemon is not supported. Whoever works in WSL runs a Linux daemon there, as another machine, after the Windows version (2026-10-30).
 - Status hooks keep the sh line from `agents/install.ts`, since Claude Code runs hooks in Git Bash. No `ruimte hook` subcommand until a CLI runs hooks outside a POSIX shell.
 - An interrupt is Ctrl+C (`\x03` through ConPTY). Every other stop ends the tree with `taskkill /PID <pid> /T /F` (`apps/server/src/pty/bun-pty.ts`); chats do the same (`killProcessTree`, `@adecore/agents`).
 - The background service is a per-user scheduled task, created without admin, that starts at logon and restarts after a crash, in the person's session (files, Credential Manager, CLI logins). Running with nobody logged on is a later opt-in. A Windows service was rejected: as LocalSystem every agent runs as SYSTEM, as the user it needs their password. A packaged app and `ruimte service install` register the task; the dev app runs the daemon as its child.
@@ -30,9 +32,16 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 
 ### 1. Repository and checks
 
-- `.gitattributes` must hold text at LF and `.cmd`/`.bat` at CRLF; with `core.autocrlf` on, fixtures read CRLF and tests fail.
+Baseline on the PC, 2026-10-30, at `03d394c2f`: `check:types`, `lint` and `format:check` pass. `bun test` takes 2 minutes with 8 workers: 11431 pass, 9 skip, 54 fail in 14 files. The DOM and integration suites have not run yet.
+
+- `check:generated` fails: the floats in `apps/ios/Tests/Fixtures/document-scenes.json` differ in their last digits (`37.23045369887423` here, `37.230453698874236` on the PC), so the math libraries disagree.
+- `memory-artifact-fs.ts` fails on a Windows path (31 failures, all `ENOENT`): `artifact-store`, `artifacts`, `artifact-import`, `artifact-verb` and `peer-artifacts`.
+- Tests that expect the wrong path form: `git/ignored`, `canvas/project-verb` (git's `C:/` against `C:\`), `projects/project-index` (`C:\repo` against `/repo`).
+- Tests that expect mode bits: `fs/create`, `templates/template-store`.
+- `language/installer` (10), `language/package-store` (`EPERM` on a rename), `providers/cli-versions` (4) and `providers/registry-agents` are not looked at yet; these may be product bugs.
 - Integration tests assume `/bin/sh` and POSIX paths.
-- `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` still time out at times and leave a folder Windows holds (`EBUSY`).
+- `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
+- On build 26300 an elevated process refuses a junction a non-elevated process made ("untrusted mount point"); a non-elevated process reads it fine, and a junction an elevated process made works for both. So run `bun install` on the PC over SSH: one from a person's PowerShell crashed every test in the elevated SSH session. Whether this reaches an elevated Ruimte, or other Windows builds, is not known.
 
 ### 2. Daemon start and stop
 
@@ -57,8 +66,8 @@ Open:
 
 ### 4. Agents
 
-- `@adecore/agents` (`chat/chat-process.ts`, `providers/launch.ts`) spawns `claude` and `codex` by bare name. npm's `codex.cmd` needs a shell, so a Codex chat cannot start; in a terminal it works.
-- `agents/integrations.ts` expands `~` with `env.HOME ?? ''`, relative on Windows.
+- `@adecore/agents` (`windows-command.ts`, since v0.29.2) resolves a bare name through PATHEXT and wraps `.cmd` in `cmd.exe`. Such a line holds no line break and stops near 8 KB, so a Claude chat's system prompt goes through a file on Windows (`chat/claude-system-prompt.ts`, unreleased).
+- `agents/integrations.ts` expands `~` with `HOME`, then `USERPROFILE`; with both empty the path is still relative.
 
 ### 5. Paths from git and in the client
 
@@ -81,12 +90,12 @@ iOS devices and simulators, computer use, the Apple model and Speech to Text sta
 
 ## Testing
 
-Development stays on the Mac. The Windows 11 x64 PC is reachable over SSH (`Host winpc`, key `~/.ssh/winpc`, PowerShell 7). An agent runs `bun install`, `bun run check` and the tests there. SSH has no desktop, so a person at the PC tests anything with a window.
+Development stays on the Mac. The Windows 11 x64 PC is reachable over SSH (`Host winpc`, key `~/.ssh/winpc`, Git Bash, an elevated session), with Ruimte in `C:\dev\ruimte` and ADE CORE in `C:\dev\adecore`. An agent runs `bun install`, `bun run check` and the tests there. Its Bun is 1.4.4 against the pinned 1.4.2. SSH has no desktop, so a person at the PC tests anything with a window for now.
+
+Confirmed on the PC, 2026-10-30, in a dev app started without elevation: `bash -l` stays in the requested folder, also with a space in its path; no console window appears for the daemon; a terminal opens in Git Bash; an agent started there reports status through the hooks; a Claude chat and a Codex chat answer. A `codex.cmd` chat keeps `100% "a&b" ^c` intact.
 
 Open questions for the next PC session:
 
-- Does `bash -l` start in the requested folder, or does Git Bash's profile move it to `$HOME`?
-- Does a console window appear when the desktop app starts the daemon (it spawns with `windowsHide: true`)?
 - Deleting from the file tree. In each case the file stays unless it is in the Recycle Bin.
   - A file and a folder land in the bin and Restore puts them back. Time the first delete (it compiles the helper) and later ones. A `node_modules` folder finishes within 30 seconds.
   - A file open in another program (Excel) is refused within seconds with "Another program has the file open", without a dialog.
@@ -97,5 +106,5 @@ Open questions for the next PC session:
   - An online-only OneDrive file lands in the bin.
   - The same from the daemon the scheduled task started.
   - Does the shell ever still ask to delete for good (`FOF_WANTNUKEWARNING`)? For what?
-- Does an agent started from a terminal report status through the hooks?
+- What does a Codex chat do on a PC where Codex's sandbox setup never ran? The CLI asks for it in its TUI, which a chat does not have.
 - Does the packaged app register the task without admin, start at logon and after a crash, and do "Stop the machine" and a restart onto a new build end the whole tree?

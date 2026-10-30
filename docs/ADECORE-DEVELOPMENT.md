@@ -5,6 +5,8 @@ Ruimte uses the npm versions pinned in its manifests and `bun.lock`. To work on 
 ```sh
 # Once in ../adecore, and again when its dependencies change.
 bun install --cwd ../adecore
+# Once on a fresh clone, too: the client's `vite.config.ts` loads a package's `dist`.
+bun run --cwd ../adecore build
 
 # From Ruimte.
 bun run adecore:link
