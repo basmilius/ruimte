@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import * as fs from 'node:fs/promises';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -37,6 +38,47 @@ describe('untrackedNumstat', () => {
         late[8500] = 0;
         late[8999] = 0x0a;
         expect(await counted('late.txt', late)).toMatchObject({ added: 1, binary: false });
+    });
+
+    test('a file growing during a count stops at the size limit while an exact-size file remains text', async () => {
+        const limit = 512 * 1024 * 1024;
+        const path = join(root, 'growing.txt');
+        await writeFile(path, 'x');
+        const originalOpen = fs.open;
+
+        for (const size of [limit, limit + 5 * 64 * 1024]) {
+            const handle = await originalOpen(path, 'r');
+            let bytes = 0;
+
+            const read = spyOn(handle, 'read').mockImplementation((async (buffer: Buffer, offset: number, length: number) => {
+                const bytesRead = Math.min(length, size - bytes);
+                buffer.fill(0x78, offset, offset + bytesRead);
+                bytes += bytesRead;
+
+                return { bytesRead, buffer };
+            }) as typeof handle.read);
+
+            const close = spyOn(handle, 'close');
+            const open = spyOn(fs, 'open').mockImplementation((...args) =>
+                args[0] === path ? Promise.resolve(handle) : Reflect.apply(originalOpen, fs, args)
+            );
+
+            try {
+                expect(await untrackedNumstat(root, 'growing.txt')).toEqual({
+                    path: 'growing.txt',
+                    added: size === limit ? 1 : 0,
+                    deleted: 0,
+                    binary: size > limit
+                });
+                expect(bytes).toBe(Math.min(size, limit + 1));
+                expect(close).toHaveBeenCalledTimes(1);
+            } finally {
+                open.mockRestore();
+                read.mockRestore();
+                close.mockRestore();
+                await handle.close();
+            }
+        }
     });
 
     test('a directory or a path that is gone counts nothing', async () => {

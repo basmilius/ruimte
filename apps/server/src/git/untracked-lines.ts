@@ -40,9 +40,14 @@ export async function untrackedNumstat(root: string, path: string): Promise<Nums
         let newlines = 0;
         let last = NEWLINE;
         for (;;) {
-            const { bytesRead } = await handle.read(buffer, 0, CHUNK_BYTES, null);
+            // The file can grow after lstat; one overflow byte distinguishes the exact-size limit.
+            const length = Math.min(CHUNK_BYTES, BIG_FILE_BYTES - read + 1);
+            const { bytesRead } = await handle.read(buffer, 0, length, null);
             if (bytesRead === 0) {
                 break;
+            }
+            if (bytesRead > BIG_FILE_BYTES - read) {
+                return { path, added: 0, deleted: 0, binary: true };
             }
             const chunk = buffer.subarray(0, bytesRead);
             if (read < BINARY_SNIFF_BYTES && chunk.subarray(0, BINARY_SNIFF_BYTES - read).includes(0)) {
