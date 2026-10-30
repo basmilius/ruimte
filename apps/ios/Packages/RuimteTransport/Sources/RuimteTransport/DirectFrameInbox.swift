@@ -98,6 +98,7 @@ actor DirectFrameDecoder {
             guard !Task.isCancelled else { return }
             let result = await decoder.push(data, isBinary: isBinary, policy: policy)
             guard !Task.isCancelled else { return }
+            if case .partial = result { return }
             await self?.deliver(result)
         }
         incoming = task
