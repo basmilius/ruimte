@@ -97,7 +97,7 @@ struct ChatStreamingMessage: View {
                 let now = Date.now
                 reveal?.advance(elapsed: now.timeIntervalSince(previous), finished: !live)
                 previous = now
-                if !live && shown == source { return }
+                if !live, let reveal, reveal.shownCount == reveal.characters.count { return }
                 do { try await Task.sleep(for: .milliseconds(33)) } catch { return }
             }
         }
