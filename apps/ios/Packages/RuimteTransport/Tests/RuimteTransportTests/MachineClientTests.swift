@@ -37,6 +37,74 @@ import Testing
         #expect(received == [large, "delta", "new connection"])
     }
 
+    @Test func orderedValidationRejectsAnEventBeforeDeliveringTheFollowingEvent() async {
+        let client = MachineClient(send: { _ in }, connected: true, now: { 0 })
+        var delivered: [String] = []
+        let stop = client.subscribe("session.output") { payload in
+            MainActor.preconditionIsolated()
+            #expect(payload["data"] == .string("next"))
+            delivered.append("valid")
+        }
+        let stopRejected = client.subscribeRejected("session.output") { payload in
+            MainActor.preconditionIsolated()
+            #expect(payload == .object(["sessionId": .string("s"), "data": .number(1)]))
+            delivered.append("rejected")
+        }
+        defer {
+            stop()
+            stopRejected()
+        }
+        client.receiveInOrder(#"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":1}}"#)
+        await client.receiveInOrder(
+            #"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"next"}}"#
+        ).value
+        #expect(delivered == ["rejected", "valid"])
+        #expect(client.isConnected)
+    }
+
+    @Test(arguments: ["success", "server", "invalid"])
+    func orderedRepliesValidateResultsAndKeepServerErrors(scenario: String) async throws {
+        let clock = FakeScheduler()
+        var client: MachineClient!
+        var callbacks: [JSONValue] = []
+        client = MachineClient(
+            send: { text in
+                let id = try #require(JSONValue.decode(Data(text.utf8))["id"])
+                let frame: JSONValue
+                if scenario == "server" {
+                    frame = .object([
+                        "id": id, "ok": .bool(false),
+                        "error": .object(["code": .string("refused"), "message": .string("Try again")]),
+                    ])
+                } else {
+                    frame = .object([
+                        "id": id, "ok": .bool(true),
+                        "result": .object(["time": scenario == "success" ? .number(42) : .string("wrong")]),
+                    ])
+                }
+                client.receiveInOrder(String(decoding: try frame.encoded(), as: UTF8.self))
+            }, scheduler: clock, connected: true, now: { 0 })
+        do {
+            let value = try await client.request("server.ping", payload: .object([:])) { payload in
+                MainActor.preconditionIsolated()
+                callbacks.append(payload)
+            }
+            #expect(scenario == "success")
+            #expect(value == .object(["time": .number(42)]))
+            #expect(callbacks == [value])
+        } catch {
+            if scenario == "server" {
+                #expect(error as? MachineClientError == .server(code: "refused", message: "Try again"))
+            } else {
+                #expect(scenario == "invalid")
+                #expect(error is WireValidationError)
+            }
+            #expect(callbacks.isEmpty)
+        }
+        #expect(client.pendingRequestCount == 0)
+        #expect(clock.pending.isEmpty)
+    }
+
     @Test func framesBetweenTheLinkOpeningAndTheClientConnectingWaitForIt() async throws {
         let client = MachineClient(send: { _ in })
         var received: [String] = []

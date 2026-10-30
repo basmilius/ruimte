@@ -128,6 +128,40 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     }
 }
 
+private enum ReceivedFrame: Sendable {
+    enum Reply: Sendable {
+        case value(JSONValue)
+        case serverError(code: String, message: String)
+    }
+
+    case reply(id: String, type: WireRequest, result: Result<Reply, Error>)
+    case event(name: String, input: JSONValue, result: Result<JSONValue, Error>)
+
+    static func validate(_ frame: JSONValue, replyType: WireRequest?) -> Self? {
+        if let id = frame["id"]?.stringValue {
+            guard let replyType else { return nil }
+            return .reply(
+                id: id, type: replyType,
+                result: Result {
+                    let reply = try WireSchema.validate("ReplySchema", frame)
+                    if reply["ok"] == .bool(true), let value = reply["result"] {
+                        return .value(try replyType.validateResult(value))
+                    }
+                    if let code = reply["error"]?["code"]?.stringValue,
+                        let message = reply["error"]?["message"]?.stringValue
+                    {
+                        return .serverError(code: code, message: message)
+                    }
+                    throw MachineClientError.invalid(TransportWords.unreadableReply)
+                })
+        }
+        guard frame["type"] == .string("event"), let name = frame["event"]?.stringValue,
+            let event = WireEvent(rawValue: name), let input = frame["payload"]
+        else { return nil }
+        return .event(name: name, input: input, result: Result { try event.validatePayload(input) })
+    }
+}
+
 @MainActor public final class MachineClient: MachineRequesting {
     /// Only requests that read may time out. A mutation may still be running on the machine, such as a push behind a
     /// slow hook, and a timeout would invite a second press that runs it twice. It ends when the link closes, as on
@@ -449,7 +483,12 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                     await self?.unreadable(text, generation: generation)
                     return
                 }
-                await self?.receive(decoded, generation: generation)
+                var replyType: WireRequest?
+                if let id = decoded["id"]?.stringValue {
+                    replyType = await self?.pendingType(id, generation: generation)
+                }
+                guard let prepared = ReceivedFrame.validate(decoded, replyType: replyType) else { return }
+                await self?.receive(prepared, generation: generation)
             case .binary(let data):
                 guard let reply = BytesReply(data) else { return }
                 await self?.receive(reply, generation: generation)
@@ -488,48 +527,48 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         } catch { finish(reply.id, result: .failure(error)) }
     }
 
-    private func receive(_ frame: JSONValue, generation: Int) {
-        guard generation == connectionGeneration else { return }
-        receive(frame)
+    private func pendingType(_ id: String, generation: Int) -> WireRequest? {
+        guard generation == connectionGeneration, isConnected, let request = pending[id] else { return nil }
+        measure(request)
+        return request.type
     }
 
     private func receive(_ frame: JSONValue) {
         guard isConnected else { return }
+        var replyType: WireRequest?
         if let id = frame["id"]?.stringValue {
-            guard let request = pending[id] else { return }
-            measure(request)
-            do {
-                let reply = try WireSchema.validate("ReplySchema", frame)
-                if reply["ok"] == .bool(true), let value = reply["result"] {
-                    finish(id, result: .success(try request.type.validateResult(value)))
-                } else if let code = reply["error"]?["code"]?.stringValue,
-                    let message = reply["error"]?["message"]?.stringValue
-                {
-                    finish(id, result: .failure(MachineClientError.server(code: code, message: message)))
-                } else {
-                    throw MachineClientError.invalid(TransportWords.unreadableReply)
-                }
-            } catch {
-                let type = request.type.rawValue
+            replyType = pendingType(id, generation: connectionGeneration)
+        }
+        guard let prepared = ReceivedFrame.validate(frame, replyType: replyType) else { return }
+        receive(prepared, generation: connectionGeneration)
+    }
+
+    private func receive(_ frame: ReceivedFrame, generation: Int) {
+        guard generation == connectionGeneration, isConnected else { return }
+        switch frame {
+        case .reply(let id, let type, let result):
+            guard pending[id]?.type == type else { return }
+            switch result {
+            case .success(.value(let value)):
+                finish(id, result: .success(value))
+            case .success(.serverError(let code, let message)):
+                finish(id, result: .failure(MachineClientError.server(code: code, message: message)))
+            case .failure(let error):
+                let type = type.rawValue
                 let reason = error.localizedDescription
                 Self.log.error("Rejected a reply to \(type, privacy: .public): \(reason, privacy: .public)")
                 finish(id, result: .failure(error))
             }
-            return
+        case .event(let name, let input, let result):
+            switch result {
+            case .success(let payload):
+                for handler in Array(subscribers[name]?.values ?? [:].values) { handler(payload) }
+            case .failure(let error):
+                let reason = String(describing: error)
+                Self.log.error("Dropped an invalid \(name, privacy: .public) event: \(reason, privacy: .public)")
+                for handler in Array(rejectedSubscribers[name]?.values ?? [:].values) { handler(input) }
+            }
         }
-        guard frame["type"] == .string("event"), let name = frame["event"]?.stringValue,
-            let event = WireEvent(rawValue: name), let input = frame["payload"]
-        else { return }
-        let payload: JSONValue
-        do {
-            payload = try event.validatePayload(input)
-        } catch {
-            let reason = String(describing: error)
-            Self.log.error("Dropped an invalid \(name, privacy: .public) event: \(reason, privacy: .public)")
-            for handler in Array(rejectedSubscribers[name]?.values ?? [:].values) { handler(input) }
-            return
-        }
-        for handler in Array(subscribers[name]?.values ?? [:].values) { handler(payload) }
     }
 
     /// Only a reply comes here; a request that timed out or lost its link is never measured. Only a read says how
