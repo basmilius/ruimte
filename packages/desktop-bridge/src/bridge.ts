@@ -7,7 +7,7 @@ import type { MicrophoneBridge } from './microphone.ts';
 import type { KeepAwakeRequest, SystemIdleState } from './power.ts';
 import type { BackgroundServiceState } from './service.ts';
 import type { SpeechBridge } from './speech.ts';
-import type { AgentActivity, ReleaseNotesState, UpdateState } from './update.ts';
+import type { AgentActivity, ReleaseNotesState, UpdateState, UpdateTrack } from './update.ts';
 import type { OpenAiLivePreferences } from './voice.ts';
 
 /* A point on the screen, where the top left corner of a window that opens goes. */
@@ -226,6 +226,8 @@ export interface DesktopBridge {
     onUpdateState?(listener: (state: UpdateState) => void): () => void;
     /* Sent before the first check, so nothing downloads behind the back of someone who said no. */
     configureUpdates?(autoDownload: boolean): Promise<void>;
+    /* Also sent before the first check, since a build otherwise follows only what its own version is. */
+    configureUpdateTrack?(track: UpdateTrack): Promise<void>;
     checkForUpdate?(): Promise<void>;
     downloadUpdate?(): Promise<void>;
     /* `confirmed` skips the shell's question about what a quit ends, for a person who already answered

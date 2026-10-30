@@ -2,6 +2,7 @@ import { bundledThemesInfo } from 'shiki/themes';
 import { create } from 'zustand';
 import { z } from 'zod';
 import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
+import type { UpdateTrack } from '@ruimte/desktop-bridge';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
@@ -268,6 +269,8 @@ export interface Settings {
     voiceConfirmDestructiveActions: boolean;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
+    /* The releases the updater offers. Null until a person chooses, which follows the running build. */
+    updatesTrack: UpdateTrack | null;
     /* Whether a view an agent asks for takes the place of the one you work in. Off, the request waits
        in the banner: moving someone's eyes is the one thing an agent asks rather than does. */
     agentsShowViews: boolean;
@@ -396,6 +399,7 @@ const DEFAULT_SETTINGS: Settings = {
     voiceInputDeviceId: 'default',
     voiceConfirmDestructiveActions: true,
     updatesAutoDownload: true,
+    updatesTrack: null,
     agentsShowViews: false,
     chatMapTiles: true,
     keepAwake: 'off',

@@ -11,9 +11,9 @@ function text(value: unknown): string {
 }
 
 /*
- * The releases a person can install, newest first. A draft is not out yet and a prerelease belongs to
- * a channel the updater does not follow; once there is a beta channel this has to follow
- * `allowPrerelease`. A tag that is not semver is not a version the updater would ever offer.
+ * The finished releases, newest first. A draft is not out yet. A prerelease stays out on either update
+ * track, since `compareVersions` orders plain versions only; its notes are on GitHub, which the notes
+ * dialog links to for a version it cannot find. A tag that is not semver is not a version the updater would ever offer.
  */
 export function releasesFrom(json: unknown): Release[] {
     if (!Array.isArray(json)) {

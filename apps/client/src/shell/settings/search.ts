@@ -330,6 +330,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         available: () => hasLocalMachine() && desktop()?.machine !== undefined
     },
     row('about.updates.auto'),
+    row('about.updates.track'),
     { id: 'about.onboarding', section: 'about', label: 'onboarding:about.label', description: 'onboarding:about.description', available: hasLocalMachine }
 ];
 

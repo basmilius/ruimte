@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import { formatPercent } from '@adecore/ui/format';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
-import { compareVersions, isVersion } from '@ruimte/desktop-bridge';
+import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
 import { startMachineUpdate } from '@/state/machine-update';
 import { browserStorage } from '@/state/stored-json';
 import { openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
@@ -71,6 +71,18 @@ export async function setAutoDownload(autoDownload: boolean): Promise<void> {
     await desktop()?.configureUpdates?.(autoDownload);
 }
 
+/* What a person chose, or else what the running build is: someone who installed a beta wants the next one. */
+export function updateTrackOf(chosen: UpdateTrack | null, currentVersion: string): UpdateTrack {
+    return chosen ?? (currentVersion.includes('-') ? 'prerelease' : 'stable');
+}
+
+/* Checks right away, so a person sees what the track they just chose offers. */
+export async function setUpdateTrack(track: UpdateTrack): Promise<void> {
+    const bridge = desktop();
+    await bridge?.configureUpdateTrack?.(track);
+    await bridge?.checkForUpdate?.();
+}
+
 // Not a setting. The settings store travels with everything that reads and writes preferences.
 const SEEN_VERSION_KEY = 'ruimte.seenVersion';
 
@@ -130,7 +142,7 @@ export function noteVersionChange(current: string, storage: Pick<Storage, 'getIt
  * someone who turned it off. This computer's machine hears every step, so another client sees the
  * update and can ask for it. Returns the unsubscribe, or null where there is no shell to talk to.
  */
-export function startUpdates(autoDownload: boolean): (() => void) | null {
+export function startUpdates(autoDownload: boolean, track: UpdateTrack | null): (() => void) | null {
     const bridge = desktop();
     if (!bridge?.updateState || !bridge.onUpdateState) {
         return null;
@@ -156,6 +168,7 @@ export function startUpdates(autoDownload: boolean): (() => void) | null {
         }
         noteVersionChange(state.currentVersion);
         await setAutoDownload(autoDownload);
+        await bridge.configureUpdateTrack?.(updateTrackOf(track, state.currentVersion));
         await bridge.checkForUpdate?.();
     });
     return stop;

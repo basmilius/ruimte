@@ -155,7 +155,7 @@ export function App() {
     }, [name]);
 
     // Once, with the preference as it stands. The shell reads it again from About.
-    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
+    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload, useSettings.getState().updatesTrack) ?? undefined, []);
 
     // Every embedded page steps aside while a drag lasts, so it never swallows a drop meant for the cell under it.
     useEffect(() => watchDrags(), []);

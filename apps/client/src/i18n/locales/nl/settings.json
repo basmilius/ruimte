@@ -1166,6 +1166,14 @@
                 "label": "Updates automatisch downloaden",
                 "description": "Als dit uit staat, start je elke download zelf."
             },
+            "track": {
+                "label": "Updatekanaal",
+                "description": "Pre-release biedt ook bèta's aan, die eerder komen en problemen kunnen hebben. Ga je terug naar Stabiel, dan blijf je op deze versie tot er een nieuwere stabiele versie is.",
+                "options": {
+                    "stable": "Stabiel",
+                    "prerelease": "Pre-release"
+                }
+            },
             "check": "Controleren op updates",
             "checking": "Bezig met controleren…",
             "download": "Downloaden",

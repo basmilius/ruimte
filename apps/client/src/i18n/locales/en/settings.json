@@ -1166,6 +1166,14 @@
                 "label": "Download updates automatically",
                 "description": "When off, you start each download yourself."
             },
+            "track": {
+                "label": "Update track",
+                "description": "Pre-release also offers betas, which come earlier and may have problems. Going back to Stable keeps this version until a newer stable release is out.",
+                "options": {
+                    "stable": "Stable",
+                    "prerelease": "Pre-release"
+                }
+            },
             "check": "Check for updates",
             "checking": "Checking…",
             "download": "Download",

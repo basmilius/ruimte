@@ -18,7 +18,8 @@ import type {
     SavePathRequest,
     SpeechEvent,
     SpeechState,
-    UpdateState
+    UpdateState,
+    UpdateTrack
 } from '@ruimte/desktop-bridge';
 import { modeFromArgv } from './machine-argument';
 
@@ -127,6 +128,7 @@ const bridge = {
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('update:state'),
     onUpdateState: subscribe<[state: UpdateState]>('update:state'),
     configureUpdates: (autoDownload: boolean): Promise<void> => ipcRenderer.invoke('update:configure', autoDownload),
+    configureUpdateTrack: (track: UpdateTrack): Promise<void> => ipcRenderer.invoke('update:track', track),
     checkForUpdate: (): Promise<void> => ipcRenderer.invoke('update:check'),
     downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
     installUpdate: (confirmed?: boolean): void => ipcRenderer.send('update:install', confirmed === true),

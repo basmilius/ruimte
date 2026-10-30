@@ -766,11 +766,13 @@ ipc.on('window:state', (event, state: unknown) => {
 
 ipc.on('window:theme', (_event, state: ThemeState) => theme.apply(state));
 
+const loadAutoUpdater = () => (require('electron-updater') as typeof import('electron-updater')).autoUpdater;
+
 // A state machine the client watches, not a dialog that interrupts.
 const updater = createUpdater({
     currentVersion: app.getVersion(),
     packaged: app.isPackaged,
-    load: () => (require('electron-updater') as typeof import('electron-updater')).autoUpdater,
+    load: loadAutoUpdater,
     publish: (state) => windows.send('update:state', state),
     onQuit: windows.quitForUpdate,
     // Refreshed with the check, so the notes of a version it finds are on disk before anyone asks.
@@ -780,6 +782,13 @@ const updater = createUpdater({
 ipc.handle('update:state', () => updater.state());
 
 ipc.handle('update:configure', (_event, autoDownload: unknown) => updater.configure(autoDownload));
+
+// Not through `channel`, which would also allow a downgrade: a beta on Stable keeps running until a newer release.
+ipc.handle('update:track', (_event, track: unknown) => {
+    if (app.isPackaged) {
+        loadAutoUpdater().allowPrerelease = track === 'prerelease';
+    }
+});
 
 ipc.handle('update:check', () => updater.check());
 

@@ -13,7 +13,8 @@ import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, SPONSOR_PAGE, useReleaseNotes } from '@/state/release-notes';
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
-import { describeUpdate, setAutoDownload, useUpdates } from '@/state/updates';
+import { describeUpdate, setAutoDownload, setUpdateTrack, updateTrackOf, useUpdates } from '@/state/updates';
+import type { UpdateTrack } from '@ruimte/desktop-bridge';
 import { useFocusedMachine } from '@/transport/connections';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse, type EclipseOrbit } from '@/ui/Eclipse';
@@ -127,6 +128,8 @@ export function AboutHero() {
     );
 }
 
+const UPDATE_TRACKS: readonly UpdateTrack[] = ['stable', 'prerelease'];
+
 /* Who Ruimte is, which versions this window runs, and the one update button there is. */
 export function AboutPane() {
     const { t } = useTranslation('settings');
@@ -134,6 +137,10 @@ export function AboutPane() {
     const server = useServers((s) => s.byEndpoint[endpointId]);
     const updates = useUpdates();
     const autoDownload = useSettings((s) => s.updatesAutoDownload);
+    const track = updateTrackOf(
+        useSettings((s) => s.updatesTrack),
+        updates.currentVersion
+    );
     const update = useSettings((s) => s.update);
     const details = detailsOf(server);
     const version = useShownVersion();
@@ -153,6 +160,11 @@ export function AboutPane() {
         void setAutoDownload(checked);
     };
 
+    const chooseTrack = (chosen: UpdateTrack): void => {
+        update({ updatesTrack: chosen });
+        void setUpdateTrack(chosen);
+    };
+
     const copyDetails = (): void => {
         const lines = [`Ruimte ${version ?? t('about.unknownVersion')}`, ...details.map((row) => `${row.label}: ${row.value}`)];
         copyText(lines.join('\n'));
@@ -168,6 +180,19 @@ export function AboutPane() {
                         label={t('about.updates.auto.label')}
                         description={t('about.updates.auto.description')}
                         control={<Switch checked={autoDownload} onCheckedChange={setAuto} label={t('about.updates.auto.label')} />}
+                    />
+                    <SettingsRow
+                        searchId="about.updates.track"
+                        label={t('about.updates.track.label')}
+                        description={t('about.updates.track.description')}
+                        control={
+                            <Segmented<UpdateTrack>
+                                value={track}
+                                options={UPDATE_TRACKS.map((id) => ({ id, label: t(`about.updates.track.options.${id}`) }))}
+                                label={t('about.updates.track.label')}
+                                onValueChange={chooseTrack}
+                            />
+                        }
                     />
                 </SettingsSection>
             )}

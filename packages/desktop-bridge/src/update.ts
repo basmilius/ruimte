@@ -1,5 +1,8 @@
 export type { UpdateState } from '@adecore/shell/bridge';
 
+/* Which releases the updater offers: finished ones only, or betas as well. */
+export type UpdateTrack = 'stable' | 'prerelease';
+
 /* What the agents of one window add up to. The client counts it; the shell badges the dock and asks before quitting. */
 export interface AgentActivity {
     /* Agents in the middle of a turn. What the quit dialog names, and never an attached shell. */
