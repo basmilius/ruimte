@@ -8,7 +8,7 @@ import { serviceDefinition as definitionFor, type ServiceManager } from '@adecor
 import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import type { BackgroundServiceState, MachineMode, MachineStopPreview, ServiceSupport } from '@ruimte/desktop-bridge';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceLogFile } from '@ruimte/service/host';
-import { askDaemonWork, proveDaemon, type DaemonPort } from '../daemon-proof';
+import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '../daemon-proof';
 import { openDaemonLog, type DaemonLog } from '../daemon-log';
 import { askLoginShellPath, fileLoginPathCache, loadLoginPath } from '../login-path';
 import { removeOwnDefinition, secretFor, tildeHome } from '../machine-mode';
@@ -48,6 +48,8 @@ export interface Machine {
     /* "Stop the machine", which is a quit that takes the service down with it. */
     stopAndQuit(): void;
     stopsOnQuit(): boolean;
+    /* On Windows, where ending a process writes nothing: what a daemon this quit ends still has to save. */
+    settleBeforeQuit(): Promise<void>;
     /* A quit that was turned down stops nothing at the next one. */
     keepOnQuit(): void;
     /* Whether the next quit takes the machine down, set without quitting. */
@@ -189,6 +191,10 @@ export function createMachine(options: MachineOptions): Machine {
         }
     };
 
+    const stopGently = async (): Promise<void> => {
+        await stopDaemonGently(daemonPort, () => new Promise((resolve) => setTimeout(resolve, 200)));
+    };
+
     const daemonPort: DaemonPort = {
         port,
         readSecret: readLocalSecret,
@@ -241,6 +247,7 @@ export function createMachine(options: MachineOptions): Machine {
         waitForHealth: waitForDaemon,
         spawnDaemon,
         killDaemon: () => daemon?.kill('SIGTERM'),
+        settleDaemon: () => (process.platform === 'win32' ? stopGently() : Promise.resolve()),
         now: () => Date.now(),
         after: (ms, run) => void setTimeout(run, ms),
         publish: (state) => void publish(state),
@@ -344,6 +351,11 @@ export function createMachine(options: MachineOptions): Machine {
             return { work: await askDaemonWork(daemonPort), home, commandLine: controller.state().commandLineService === true };
         },
         stopsOnQuit: () => stopMachineOnQuit,
+        async settleBeforeQuit() {
+            if (process.platform === 'win32' && !controller.survivesQuit(stopMachineOnQuit)) {
+                await stopGently();
+            }
+        },
         keepOnQuit() {
             stopMachineOnQuit = false;
         }

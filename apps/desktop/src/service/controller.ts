@@ -32,6 +32,8 @@ export interface ServiceControllerDeps {
     /* Starts the app's own daemon; `onExit` runs once it ended, whoever ended it. */
     spawnDaemon(onExit: () => void): void;
     killDaemon(): void;
+    /* Before a restart ends a daemon: where ending a process writes nothing, it saves first. */
+    settleDaemon?(): Promise<void>;
     now(): number;
     after(ms: number, run: () => void): void;
     /* Every window hears what changed without being asked, such as the app's own daemon ending. */
@@ -208,6 +210,9 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
         try {
             if (!service.isInstalled()) {
                 service.install(deps.definition());
+            }
+            if (what === 'restart') {
+                await deps.settleDaemon?.();
             }
             await step();
             await deps.waitForHealth((health) => sameBuild(health, deps.expected));

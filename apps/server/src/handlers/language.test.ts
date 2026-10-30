@@ -115,15 +115,10 @@ describe('language handlers', () => {
         );
     });
 
-    test('the machine chooses between two servers of a language, and a kind with no alternative is refused', async () => {
-        expect(await call('language.prefer', { server: 'php' })).toMatchObject({ ok: true, result: { status: { server: 'php', chosen: true } } });
-        const statuses = ((await call('language.status', { projectId: 'p1' })) as { result: { servers: { server: string; chosen?: boolean }[] } }).result
-            .servers;
-        expect(statuses.filter((status) => status.chosen !== undefined).map((status) => [status.server, status.chosen])).toEqual([
-            ['php-native', false],
-            ['php', true]
-        ]);
+    test('a kind with no alternative is refused, and so is a retired one a client can still name', async () => {
         expect(await call('language.prefer', { server: 'css' })).toMatchObject({ ok: false, error: { code: 'invalid-server' } });
+        expect(await call('language.prefer', { server: 'php' })).toMatchObject({ ok: false, error: { code: 'invalid-server' } });
+        expect(await call('language.install', { server: 'php' })).toMatchObject({ ok: false, error: { code: 'invalid-server' } });
     });
 
     test('a step back needs an earlier version to go back to', async () => {

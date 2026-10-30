@@ -851,6 +851,7 @@ if (!app.requestSingleInstanceLock()) {
                 machine.keepOnQuit();
                 return false;
             }
+            await machine.settleBeforeQuit();
             machine.controller.quit(machine.stopsOnQuit());
             return true;
         }

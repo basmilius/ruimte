@@ -82,6 +82,9 @@ export function isIdle(work: MachineWork): boolean {
  */
 export const MACHINE_STATUS_PATH = '/machine/status';
 
+/* Asks the daemon, on the local secret, to stop as a signal would: Windows has no signal a process can answer. */
+export const MACHINE_SHUTDOWN_PATH = '/machine/shutdown';
+
 // `GET /machine/status?check=1` checks whether other devices reach the machine before it answers.
 export const MACHINE_STATUS_CHECK_QUERY = 'check';
 

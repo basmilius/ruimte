@@ -33,27 +33,26 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 
 ### 1. Repository and checks
 
-On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun test --parallel=8` takes 2 minutes with 11481 pass and 0 fail, `bun run test:dom` 626 pass and 0 fail, and all 53 integration files pass when each runs in a process of its own, four at a time.
+On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun run test:windows` (8 workers) takes 2 minutes with 11485 pass and 0 fail, `bun run test:dom` 626 pass and 0 fail, and `bun run test:integration` 255 pass, 178 skip and 0 fail.
 
-- With the default 16 workers the unit suite has timeouts in tests that run real git (`git/repos`, `canvas/worktree-verb`); with 8 it has none. The same tests pass alone, so load is the likely cause.
-- `bun run test:integration`, all files in one process, has not run through since the fix to `git/run.ts`. It hung on a git hook that outlived its cancel.
+- `bun run test` uses a worker per core. With 16 it has timeouts in tests that run real git (`git/repos`, `canvas/worktree-verb`); with 8 it has none and the same tests pass alone, so load is the likely cause.
 - `check:generated` fails: the floats in `apps/ios/Tests/Fixtures/document-scenes.json` differ in their last digits (`37.23045369887423` here, `37.230453698874236` on the PC), so the math libraries disagree. The check stays off on Windows.
 - Skipped on Windows, and so proven only by hand or not at all:
-  - PHP: a class created on disk does not reach Intelephense's workspace symbols. The watcher hears the file and names it, so the cause sits between the notification and the server. Not solved.
+  - PHP: Intelephense was removed. The own server finds a class created on disk on Windows, once it is built on `language-server-core` with the fix to `crates/server/src/paths.rs` (not yet released).
   - `sessions/terminal-stream`: ConPTY draws a screen, so a burst does not arrive whole.
-  - `pty/bun-pty`, the resize: Git Bash's `stty` reads no size from a ConPTY. Resizing itself has not been checked.
+  - `pty/bun-pty`, the resize in Git Bash: its `stty` reads no size from a ConPTY. A test of its own holds the resize in PowerShell.
   - `git/run`, the timeout that ends a background job, and `git/identity`, a fake `git` script. The hook tests in `git/actions` and `git/worktree-merge` do hold the process tree.
   - `sessions/shell-editor`, `shell-editor-review`, `background-cwd`, `shell-integration` and `prepare-terminal`: POSIX shells, with zsh among them.
   - `peering/one-shot-place`, `providers/acp-providers` (a fake CLI as a shell script) and `devices/helper-source` (Bun answers `EMFILE`). Apple's model and the launcher, which refuses Windows until the release.
   - Bun's watcher hears no edit through a junction, so a daemon on a linked ADE CORE may not restart for a source edit.
-- `providers/registry-agents.ts` unpacks a `.tar.bz2` or `.tar.xz` with the `tar` on `PATH`. Git for Windows' reads `C:` as a host, as `apps/server/scripts/database-helper.ts` did before it passed a name.
+- `remote/connect-peer.test.ts` ("fails what is owed once the 7 days are over") failed once under load on the PC and once in 4 parallel runs on the Mac. It passes alone. The cause is not known.
 - `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
 - On build 26300 an elevated process refuses a junction a non-elevated process made ("untrusted mount point"); a non-elevated process reads it fine, and a junction an elevated process made works for both. So run `bun install` on the PC over SSH: one from a person's PowerShell crashed every test in the elevated SSH session. Whether this reaches an elevated Ruimte, or other Windows builds, is not known.
 
 ### 2. Daemon start and stop
 
 - Require Git for Windows at start with a clear message; `pty.ts` still falls back to `pwsh`, `powershell` and cmd.
-- `apps/server/src/daemon.ts` shuts down on SIGINT or SIGTERM, which Windows never sends, and `killDaemon` in `apps/desktop/src/main/service.ts` is a hard stop that flushes nothing. Needed: a shutdown request over the loopback API, then a hard stop after a timeout.
+- `POST /machine/shutdown` on the local secret stops a daemon the way a signal does. The shell asks for it on Windows before a quit or a restart ends a daemon, waits up to 10 seconds, and then ends it the hard way. Proven against a real daemon on the PC; the quit in the app and the scheduled task without elevation are not checked yet.
 - Secrets (`auth/local-secret.ts`, `auth/auth-store.ts`, `secrets/secret-store.ts`, `endpoint-id.ts`, `agents/integrations.ts`) rely on mode bits Windows ignores. The profile ACL covers them; an explicit ACL is hardening, not a blocker.
 
 ### 3. Terminals

@@ -42,7 +42,16 @@ describe('BunPtyAdapter under a SessionManager', () => {
         await waitFor(() => recorder.output.includes('hello'), 'hello in the stream');
     });
 
-    // Git Bash's stty reads no size from a ConPTY.
+    test.skipIf(process.platform !== 'win32')('a resize reaches PowerShell through the ConPTY', async () => {
+        await manager.create({ sessionId: 'size', cols: 80, rows: 24, shell: 'powershell.exe', args: ['-NoLogo', '-NoProfile'], cwd: home });
+        await manager.attach('size', 'c1', 80, 24);
+        await waitFor(() => recorder.output.includes('PS '), 'the prompt');
+        manager.resize('size', 100, 30);
+        manager.write('size', "'width' + $Host.UI.RawUI.WindowSize.Width + 'x'\r");
+        await waitFor(() => recorder.output.includes('width100x'), 'the width after a resize');
+    });
+
+    // Git Bash's stty reads no size from a ConPTY, so Windows has its own test above.
     test.skipIf(process.platform === 'win32')('a resize reaches the shell', async () => {
         await start('size');
         // A loaded runner may still be starting the shell, so the grid changes once it prompts.

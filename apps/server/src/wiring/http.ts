@@ -4,6 +4,7 @@ import {
     MACHINE_NOTIFY_PATH,
     MACHINE_PROOF_PATH,
     MACHINE_STATUS_CHECK_QUERY,
+    MACHINE_SHUTDOWN_PATH,
     MACHINE_STATUS_PATH,
     MACHINE_VOICE_KEY_PATH,
     MACHINE_WORK_PATH,
@@ -68,6 +69,7 @@ const MAX_VERB_BODY_BYTES = 72 * 1024 * 1024;
 export type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
 interface HttpInput {
+    requestStop: () => void;
     runtime: DaemonRuntime;
     machine: MachineBundle;
     stores: AgentStores;
@@ -153,6 +155,17 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
             }
         },
         { exact: [MACHINE_NOTIFY_PATH], handle: ({ request, remote }) => handleMachineNotify(request, remote, access, canvasHost.messages) },
+        {
+            exact: [MACHINE_SHUTDOWN_PATH],
+            handle: async ({ request, remote }) => {
+                const refused = await refuseUnlessOwner(request, remote, 'POST');
+                if (refused) {
+                    return refused;
+                }
+                input.requestStop();
+                return new Response(null, { status: 202 });
+            }
+        },
         {
             exact: [MACHINE_STATUS_PATH],
             // `ruimte status` on the local secret; a client sees the same through `endpoint.info`.

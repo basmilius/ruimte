@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { localProofOf, MACHINE_PROOF_PATH, MachineProofRequestSchema, MACHINE_VOICE_KEY_PATH, MACHINE_WORK_PATH } from '@ruimte/contracts';
-import { askDaemonWork, handVoiceKey, proveDaemon, type DaemonPort } from './daemon-proof';
+import {
+    localProofOf,
+    MACHINE_HEALTH_PATH,
+    MACHINE_SHUTDOWN_PATH,
+    MACHINE_PROOF_PATH,
+    MachineProofRequestSchema,
+    MACHINE_VOICE_KEY_PATH,
+    MACHINE_WORK_PATH
+} from '@ruimte/contracts';
+import { askDaemonWork, handVoiceKey, proveDaemon, stopDaemonGently, type DaemonPort } from './daemon-proof';
 
 const SECRET = 'the-local-secret';
 
@@ -52,6 +60,48 @@ describe('proveDaemon', () => {
 
     test('a daemon of the same home on another port cannot answer for this one', async () => {
         expect(await proveDaemon(holder((nonce) => localProofOf(SECRET, 4300, nonce)).daemon)).toBe(false);
+    });
+});
+
+describe('stopDaemonGently', () => {
+    const provenPort = (answer: (path: string) => Response): { daemon: DaemonPort; asked: string[] } => {
+        const asked: string[] = [];
+        const daemon: DaemonPort = {
+            port: 4210,
+            readSecret: async () => SECRET,
+            nonce: () => 'a-fresh-nonce-for-every-ask',
+            fetch: async (url, init) => {
+                const path = new URL(url).pathname;
+                if (path === MACHINE_PROOF_PATH) {
+                    const { nonce } = MachineProofRequestSchema.parse(JSON.parse(String(init.body)));
+                    return Response.json({ proof: await localProofOf(SECRET, 4210, nonce) });
+                }
+                asked.push(`${init.method ?? 'GET'} ${path}`);
+                return answer(path);
+            }
+        };
+        return { daemon, asked };
+    };
+
+    test('asks once and waits until the port stops answering', async () => {
+        let healthy = 2;
+        const { daemon, asked } = provenPort((path) => {
+            if (path === MACHINE_HEALTH_PATH && healthy-- === 0) {
+                throw new Error('refused');
+            }
+            return new Response(null, { status: path === MACHINE_SHUTDOWN_PATH ? 202 : 200 });
+        });
+        expect(await stopDaemonGently(daemon, async () => undefined)).toBe(true);
+        expect(asked.filter((line) => line === `POST ${MACHINE_SHUTDOWN_PATH}`)).toHaveLength(1);
+        expect(asked.filter((line) => line === `GET ${MACHINE_HEALTH_PATH}`)).toHaveLength(3);
+    });
+
+    test('leaves a daemon without the request, and one that stays up, to the hard stop', async () => {
+        const unknown = provenPort(() => new Response('Not found', { status: 404 }));
+        expect(await stopDaemonGently(unknown.daemon, async () => undefined)).toBe(false);
+        expect(unknown.asked).toEqual([`POST ${MACHINE_SHUTDOWN_PATH}`]);
+        const busy = provenPort(() => new Response(null, { status: 202 }));
+        expect(await stopDaemonGently(busy.daemon, async () => undefined, 3)).toBe(false);
     });
 });
 

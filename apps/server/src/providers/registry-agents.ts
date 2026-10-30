@@ -290,7 +290,8 @@ export class RegistryAgents {
                 await extractEntries(readArchive(await readFile(archive), 'tar.gz'), unpacked);
             } else if (packing === 'tar') {
                 // Node reads no bzip2 or xz; the system's tar does, and refuses a path that climbs out.
-                await this.runOrThrow(['tar', '-xf', archive, '-C', unpacked], partial);
+                // Names rather than paths: Git for Windows' tar reads `C:` as a remote host.
+                await this.runOrThrow(['tar', '-xf', basename(archive), '-C', basename(unpacked)], partial);
             } else {
                 await rename(archive, join(unpacked, command));
             }

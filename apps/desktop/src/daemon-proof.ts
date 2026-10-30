@@ -1,4 +1,13 @@
-import { isLocalProof, MACHINE_PROOF_PATH, MACHINE_VOICE_KEY_PATH, MACHINE_WORK_PATH, machineWorkOf, type MachineWork } from '@ruimte/contracts';
+import {
+    isLocalProof,
+    MACHINE_HEALTH_PATH,
+    MACHINE_PROOF_PATH,
+    MACHINE_SHUTDOWN_PATH,
+    MACHINE_VOICE_KEY_PATH,
+    MACHINE_WORK_PATH,
+    machineWorkOf,
+    type MachineWork
+} from '@ruimte/contracts';
 
 /* The port the app's daemon is on, and what the shell needs to ask it. */
 export interface DaemonPort {
@@ -54,6 +63,26 @@ export async function proveDaemon(daemon: DaemonPort): Promise<boolean> {
 /* What a restart would end; null for a daemon that cannot prove the secret, one from before the route, or one that does not answer. */
 export function askDaemonWork(daemon: DaemonPort): Promise<MachineWork | null> {
     return askWithSecret(daemon, MACHINE_WORK_PATH, {}, async (response) => (response.ok ? machineWorkOf(await response.json()) : null));
+}
+
+/*
+ * Asks the daemon to stop and waits until the port stops answering, so it wrote what it holds before anything
+ * ends it the hard way. A daemon that does not know the request, or is still busy past the tries, is left to that.
+ */
+export async function stopDaemonGently(daemon: DaemonPort, wait: () => Promise<void>, tries = 50): Promise<boolean> {
+    const asked = await askWithSecret(daemon, MACHINE_SHUTDOWN_PATH, { method: 'POST' }, async (response) => response.ok);
+    if (asked !== true) {
+        return false;
+    }
+    for (let i = 0; i < tries; i++) {
+        try {
+            await daemon.fetch(`http://127.0.0.1:${daemon.port}${MACHINE_HEALTH_PATH}`, {});
+        } catch {
+            return true;
+        }
+        await wait();
+    }
+    return false;
 }
 
 /* False when the daemon proved nothing or refused the key; the key then stays the shell's alone. */
