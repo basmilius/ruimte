@@ -21,10 +21,7 @@ describe('what the start screen preloads', () => {
             'assets/menu.js': chunk({ [`${APP}/shell/menu/actions.ts`]: 50 }, ['assets/commands.js']),
             'assets/commands.js': chunk({ [`${APP}/shell/commands.ts`]: 80, [`${NPM}/editor/src/index.ts`]: 10 })
         };
-        expect(preloadedWorkspaceModules(bundle)).toEqual([
-            `assets/commands.js: ${APP}/shell/commands.ts`,
-            `assets/commands.js: ${NPM}/editor/src/index.ts`
-        ]);
+        expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/commands.js: ${APP}/shell/commands.ts`, `assets/commands.js: ${NPM}/editor/src/index.ts`]);
     });
 
     test('a workspace module behind a dynamic import is not preloaded', () => {
@@ -34,6 +31,12 @@ describe('what the start screen preloads', () => {
             'assets/style.css': { type: 'asset' as const }
         };
         expect(preloadedWorkspaceModules(bundle)).toEqual([]);
+    });
+
+    test('the shared wasm module is still a workspace dependency when externalized', () => {
+        const wasm = '/assets/shiki-4.5.0/wasm.mjs';
+        const bundle = { 'assets/index.js': chunk({ [`${APP}/main.tsx`]: 100 }, [wasm], true) };
+        expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/index.js: ${wasm}`]);
     });
 
     test('the editor key table and view state, and what tree shaking dropped, are allowed', () => {

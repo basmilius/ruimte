@@ -10,6 +10,7 @@ const ADECORE = String.raw`(?:@adecore|adecore/packages)`;
  */
 export const WORKSPACE_MODULES: readonly RegExp[] = [
     /\/src\/shell\/(?:WorkspaceShell\.tsx|commands\.ts)$/,
+    /\/assets\/shiki-[^/]+\/wasm\.mjs$/,
     new RegExp(`${ADECORE}/(?:editor-core|lsp|merge|database)/`),
     new RegExp(`${ADECORE}/editor/src/(?!keymap-table\\.ts$)`),
     new RegExp(`${ADECORE}/editor-react/src/(?!view-state\\.ts$)`),
@@ -42,6 +43,13 @@ export function preloadedWorkspaceModules(bundle: Record<string, BundleFile>): s
         }
         seen.add(name);
         queue.push(...file.imports);
+
+        for (const imported of file.imports) {
+            if (WORKSPACE_MODULES.some((pattern) => pattern.test(imported))) {
+                found.push(`${name}: ${imported}`);
+            }
+        }
+
         for (const [id, module] of Object.entries(file.modules)) {
             if (module.renderedLength > 0 && WORKSPACE_MODULES.some((pattern) => pattern.test(id))) {
                 found.push(`${name}: ${id}`);

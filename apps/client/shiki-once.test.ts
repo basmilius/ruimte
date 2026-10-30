@@ -8,6 +8,7 @@ describe('shiki once', () => {
         expect(shippedPath('@shikijs/langs/php', '4.4.3')).toBe('assets/shiki-4.4.3/langs/php.mjs');
         expect(shippedPath('@shikijs/langs/objective-c', '4.4.3')).toBe('assets/shiki-4.4.3/langs/objective-c.mjs');
         expect(shippedPath('@shikijs/themes/github-dark', '4.4.3')).toBe('assets/shiki-4.4.3/themes/github-dark.mjs');
+        expect(shippedPath('@shikijs/engine-oniguruma/wasm-inlined', '4.4.3')).toBe('assets/shiki-4.4.3/wasm.mjs');
         expect(shippedPath('@shikijs/langs', '4.4.3')).toBeNull();
         expect(shippedPath('@shikijs/core', '4.4.3')).toBeNull();
         expect(shippedPath('shiki/bundle/web', '4.4.3')).toBeNull();
@@ -18,9 +19,11 @@ describe('shiki once', () => {
     });
 
     test('the folders are the ones the installed shiki imports from', () => {
-        const { folders, version } = shikiModules();
+        const { folders, version, wasm } = shikiModules();
         expect(version).toMatch(/^\d+\.\d+\.\d+/);
         expect(existsSync(join(folders.langs, 'php.mjs'))).toBe(true);
         expect(existsSync(join(folders.themes, 'nord.mjs'))).toBe(true);
+        expect(typeof wasm).toBe('string');
+        expect(existsSync(wasm)).toBe(true);
     });
 });
