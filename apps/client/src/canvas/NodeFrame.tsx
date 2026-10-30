@@ -369,6 +369,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const inViewport = useNodeInViewport(id);
     const live = useHeldWhileVisible(inViewport || maximized);
     const renderBody = useRenderZoom() || maximized;
+    const sessionNode = node?.kind === 'chat' || node?.kind === 'terminal';
+    const sessionLive = useHeldWhileVisible(!sessionNode || (inViewport && renderBody) || maximized || active);
     const [renaming, setRenaming] = useState(false);
     // Where a right-click landed on a group, in the canvas's own coordinates, for what its menu adds there.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
@@ -650,8 +652,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                 />
                             ) : (
                                 <>
-                                    {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
-                                    {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas workflowsBeside />}
+                                    {node.kind === 'terminal' && (sessionLive ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
+                                    {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas workflowsBeside visible={sessionLive} />}
                                     {node.kind === 'browser' && <BrowserBody id={id} focused={active} />}
                                     {node.kind === 'device' && (live && renderBody ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
                                     {node.kind === 'note' && <NoteNode id={id} focused={active} />}
