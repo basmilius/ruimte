@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 struct CanvasPage: View {
+    @Environment(\.scenePhase) private var scenePhase
     let workspace: MobileWorkspace
     let viewID: String
     @State private var selectedID: String?
@@ -80,6 +81,10 @@ struct CanvasPage: View {
             } else {
                 MobileStyle.canvas.ignoresSafeArea()
             }
+        }
+        .onDisappear { workspace.flushCameras() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { workspace.flushCameras() }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             CanvasDock(

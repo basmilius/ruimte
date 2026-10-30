@@ -25,6 +25,8 @@ final class MobileWorkspace {
     private var pendingSave = false
     private var openTask: Task<Void, Never>?
     private var localTask: Task<Void, Never>?
+    @ObservationIgnored private var cameraTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingCameras: [String: JSONValue] = [:]
     var views: [JSONValue] { document.list("views") }
     /// A view by id; an empty object when it is gone, so a page that outlives its view reads nothing.
     func view(_ id: String) -> JSONValue { views.first { $0.stableID == id } ?? .object([:]) }
@@ -87,11 +89,12 @@ final class MobileWorkspace {
     }
 
     func stop() {
+        flushCameras()
         guard !stopped else { return }
         stopped = true
         openTask?.cancel()
         localTask?.cancel()
-        subscriptions.forEach { $0() }
+        for unsubscribe in subscriptions { unsubscribe() }
         subscriptions.removeAll()
         session.tasks.unwatch(projectID)
         Task { [projectID, session] in
@@ -217,9 +220,19 @@ final class MobileWorkspace {
         persistLocal()
     }
 
-    func camera(for id: String) -> JSONValue? { local["views"]?[id]?["camera"] }
+    func camera(for id: String) -> JSONValue? { pendingCameras[id] ?? local["views"]?[id]?["camera"] }
     func setCamera(_ camera: JSONValue, viewID: String) {
-        updateLocalView(viewID) { $0.setting("camera", camera) }
+        guard self.camera(for: viewID) != camera else { return }
+        pendingCameras[viewID] = camera
+        guard cameraTask == nil else { return }
+        cameraTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+            self?.flushCameras()
+        }
+    }
+    func flushCameras() {
+        guard !pendingCameras.isEmpty else { return }
+        persistLocal()
     }
     func locks(for id: String) -> CanvasLocks { CanvasLocks(local["views"]?[id]?["locks"]) }
     func setLocks(_ locks: CanvasLocks, viewID: String) {
@@ -227,12 +240,23 @@ final class MobileWorkspace {
     }
     private func updateLocalView(_ id: String, change: (JSONValue) -> JSONValue) {
         var views = local["views"]?.objectValue ?? [:]
-        let current = views[id] ?? .object(["camera": .null, "focusedNodeId": .null])
-        views[id] = change(current.setting("focusedNodeId", current["focusedNodeId"] ?? .null))
+        views[id] = change(localView(id))
         local = local.setting("views", .object(views))
         persistLocal()
     }
+    private func localView(_ id: String) -> JSONValue {
+        let current = local["views"]?[id] ?? .object(["camera": .null, "focusedNodeId": .null])
+        return current.setting("focusedNodeId", current["focusedNodeId"] ?? .null)
+    }
     private func persistLocal() {
+        cameraTask?.cancel()
+        cameraTask = nil
+        if !pendingCameras.isEmpty {
+            var views = local["views"]?.objectValue ?? [:]
+            for (id, camera) in pendingCameras { views[id] = localView(id).setting("camera", camera) }
+            pendingCameras.removeAll(keepingCapacity: true)
+            local = local.setting("views", .object(views))
+        }
         if let data = try? local.encoded() { UserDefaults.standard.set(data, forKey: storageKey) }
         localTask?.cancel()
         localTask = Task { [weak self] in

@@ -1,5 +1,7 @@
+import Observation
 import RuimtePulsar
 import RuimteTransport
+import Synchronization
 import XCTest
 
 @testable import Ruimte
@@ -119,6 +121,104 @@ final class SessionWorkspaceTests: XCTestCase {
         XCTAssertFalse(workspace.ready)
         XCTAssertEqual(workspace.title, "Chats")
         XCTAssertTrue(workspace.isScratch)
+    }
+
+    @MainActor func testCameraBurstKeepsLatestPositionWithoutPublishingOrWritingEveryTick() throws {
+        let fixture = CameraWorkspaceFixture()
+        let workspace = fixture.workspace
+        let before = workspace.local
+        let publications = Mutex(0)
+        withObservationTracking {
+            _ = workspace.camera(for: "canvas")
+        } onChange: {
+            publications.withLock { $0 += 1 }
+        }
+        for offset in 0..<100 {
+            workspace.setCamera(.object(["zoom": .number(Double(offset + 1))]), viewID: "canvas")
+        }
+        let latest = JSONValue.object(["zoom": .number(100)])
+        XCTAssertEqual(workspace.camera(for: "canvas"), latest)
+        XCTAssertEqual(workspace.local, before)
+        XCTAssertEqual(publications.withLock { $0 }, 0)
+        XCTAssertNil(UserDefaults.standard.data(forKey: workspace.storageKey))
+
+        workspace.stop()
+        let stored = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
+        XCTAssertEqual(stored["views"]?["canvas"]?["camera"], latest)
+        XCTAssertEqual(publications.withLock { $0 }, 1)
+    }
+
+    @MainActor func testLocalSavesIncludePendingCamerasAndPreserveSelectionAndLocks() throws {
+        let fixture = CameraWorkspaceFixture()
+        let workspace = fixture.workspace
+        workspace.select("first")
+        let locks = CanvasLocks(pan: true, zoom: false, move: true, resize: true)
+        workspace.setLocks(locks, viewID: "first")
+        workspace.setCamera(.object(["zoom": .number(2)]), viewID: "first")
+        workspace.setCamera(.object(["zoom": .number(3)]), viewID: "second")
+        workspace.setLocks(locks, viewID: "second")
+        workspace.setCamera(.object(["zoom": .number(4)]), viewID: "first")
+        workspace.select("second")
+
+        let selected = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
+        XCTAssertEqual(selected["activeViewId"], .string("second"))
+        XCTAssertEqual(selected["views"]?["first"]?["camera"], .object(["zoom": .number(4)]))
+        XCTAssertEqual(selected["views"]?["second"]?["camera"], .object(["zoom": .number(3)]))
+        for id in ["first", "second"] {
+            XCTAssertEqual(selected["views"]?[id]?["locks"], locks.json)
+            XCTAssertEqual(selected["views"]?[id]?["focusedNodeId"], .null)
+        }
+
+        workspace.setCamera(.object(["zoom": .number(5)]), viewID: "second")
+        workspace.flushCameras()
+        let flushed = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
+        XCTAssertEqual(flushed["views"]?["second"]?["camera"], .object(["zoom": .number(5)]))
+        XCTAssertEqual(flushed["views"]?["first"], selected["views"]?["first"])
+        XCTAssertEqual(flushed["activeViewId"], .string("second"))
+    }
+
+    @MainActor func testCameraProgressIsCheckpointedWhileUpdatesContinue() async throws {
+        let fixture = CameraWorkspaceFixture()
+        let workspace = fixture.workspace
+        let checkpoint = expectation(description: "An ongoing pan checkpoints its camera")
+        withObservationTracking {
+            _ = workspace.local
+        } onChange: {
+            checkpoint.fulfill()
+        }
+        let movement = Task {
+            for zoom in 1...100 {
+                workspace.setCamera(.object(["zoom": .number(Double(zoom))]), viewID: "canvas")
+                do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+            }
+        }
+        await fulfillment(of: [checkpoint], timeout: 3)
+        movement.cancel()
+        await movement.value
+
+        let stored = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
+        let zoom = stored["views"]?["canvas"]?["camera"]?.number("zoom") ?? 0
+        XCTAssertGreaterThan(zoom, 0)
+        XCTAssertLessThan(zoom, 100)
+        XCTAssertEqual(stored, workspace.local)
+    }
+}
+
+@MainActor private final class CameraWorkspaceFixture {
+    let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+    let workspace: MobileWorkspace
+
+    init() {
+        let machine = Machine(
+            id: "camera-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
+            brokerUrl: nil, lastSeenAt: nil)
+        workspace = MobileWorkspace(session: runtime.session(for: machine), projectID: "project")
+    }
+
+    isolated deinit {
+        workspace.stop()
+        runtime.connections.shutdown()
+        UserDefaults.standard.removeObject(forKey: workspace.storageKey)
     }
 }
 
