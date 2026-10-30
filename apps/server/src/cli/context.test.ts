@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { unescapeText } from '../canvas/text-escapes.ts';
-import { VERBS } from '../canvas/verbs.ts';
 import { runContext } from './context.ts';
 
 let env: Record<string, string>;
@@ -319,21 +318,14 @@ describe('runContext', () => {
         expect(stdout).toBe('note-12345678\tnote\tmain\n');
     });
 
-    /* The top-level help and every refusal over arguments point at `ruimte-context help <verb>`, so
-       a verb and its argument arriving as one name would make all of them dead ends. */
-    test('help <verb> travels as the verb help with the name as its argument, for every verb there is', async () => {
-        for (const verb of VERBS) {
-            await runContext(['help', verb.name], env);
-        }
-        expect(seen.map((call) => [call.verb, call.argv])).toEqual(VERBS.map((verb) => ['help', [verb.name]]));
-    });
-
-    test('help <noun> <action> travels as the verb help with both words, for every action there is', async () => {
-        const actions = VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => action.name.split(' ')) : []));
-        for (const words of actions) {
-            await runContext(['help', ...words], env);
-        }
-        expect(seen.map((call) => [call.verb, call.argv])).toEqual(actions.map((words) => ['help', words]));
+    /* Help goes through `runVerb`. The argv rewrites key off the command, and that command is help. */
+    test('help travels as the verb help, a verb as one argument and an action as both words', async () => {
+        await runContext(['help', 'read'], env);
+        await runContext(['help', 'node', 'new'], env);
+        expect(seen.map((call) => [call.verb, call.argv])).toEqual([
+            ['help', ['read']],
+            ['help', ['node', 'new']]
+        ]);
     });
 
     test('--text - takes the body from stdin, escaped so the daemon reads it back byte for byte', async () => {

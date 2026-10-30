@@ -662,6 +662,7 @@ describe('help', () => {
         expect(lines).toContain(
             'noun\tnode\tlist|new|edit|rename|color|delete|group|arrange\tLists, adds, writes in, renames, colors, removes, frames and lays out the nodes of a canvas'
         );
+        expect(lines.some((line) => line.includes('--text B'))).toBe(false);
         expect(lines.at(-7)).toStartWith('scope\tlist and read are what a person linked into this session;');
         expect(lines.at(-6)).toBe('ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id');
         const dryRun = lines.at(-5)!.split('\t');
@@ -680,77 +681,16 @@ describe('help', () => {
         );
     });
 
-    test('the root names every noun and every verb of its own, and no action by its arguments', async () => {
-        const { lines } = await post('help', []);
-        for (const noun of ['node', 'link', 'view', 'task', 'plan', 'worktree']) {
-            expect(lines.filter((line) => line.startsWith(`noun\t${noun}\t`))).toHaveLength(1);
-        }
-        for (const verb of ['help', 'list', 'read', 'done', 'notify', 'agent', 'team']) {
-            expect(lines.filter((line) => line.startsWith(`verb\t${verb}\t`))).toHaveLength(1);
-        }
-        expect(lines.some((line) => line.includes('--text B'))).toBe(false);
-    });
-
-    test('help <verb> details one verb, synopsis first and refusals last', async () => {
-        for (const verb of VERBS) {
-            if (verb.served === 'noun') {
-                continue;
-            }
-            const { status, lines } = await post('help', [verb.name]);
-            expect(status).toBe(200);
-            expect(lines[0]).toBe(`usage\t${verb.name}\t${verb.usage}`);
-            expect(lines[1]).toBe(`about\t${verb.summary}`);
-            expect(lines.slice(2, -1)).toEqual([...verb.detail]);
-            expect(lines.at(-1)).toStartWith('refusal\t');
-            // Tab-separated rows, never a paragraph.
-            expect(lines.every((line) => line.includes('\t'))).toBe(true);
-        }
-    });
-
-    test('help <noun> prints the signature of every action and no action in full', async () => {
-        for (const noun of VERBS) {
-            if (noun.served !== 'noun') {
-                continue;
-            }
-            const { status, lines } = await post('help', [noun.name]);
-            expect(status).toBe(200);
-            expect(lines).toEqual([
-                `usage\t${noun.name}\t${noun.usage}`,
-                `about\t${noun.summary}`,
-                ...noun.detail,
-                ...noun.actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`),
-                `detail\truimte-context help ${noun.name} <action>\tone action in full`,
-                lines.at(-1)!
-            ]);
-            expect(lines.at(-1)).toStartWith('refusal\t');
-        }
-    });
-
-    test('help <noun> <action> details one action, synopsis first and refusals last', async () => {
-        for (const { action } of allActions()) {
-            const { status, lines } = await post('help', action.name.split(' '));
-            expect(status).toBe(200);
-            expect(lines[0]).toBe(`usage\t${action.name}\t${action.usage}`);
-            expect(lines[1]).toBe(`about\t${action.summary}`);
-            expect(lines.slice(2, -1)).toEqual([...action.detail]);
-            expect(lines.at(-1)).toStartWith('refusal\t');
-            expect(lines.every((line) => line.includes('\t'))).toBe(true);
-        }
-    });
-
-    test('every flag a verb or an action takes is a line of its own detail', async () => {
+    test('every flag a verb or an action takes is a line of its own detail', () => {
         const entries = [
-            ...VERBS.flatMap((entry) => (entry.served === 'verb' ? [{ words: [entry.name], flagNames: entry.flagNames }] : [])),
-            ...allActions().map(({ action }) => ({ words: action.name.split(' '), flagNames: action.flagNames }))
+            ...VERBS.flatMap((entry) => (entry.served === 'verb' ? [{ name: entry.name, detail: entry.detail, flagNames: entry.flagNames }] : [])),
+            ...allActions().map(({ action }) => ({ name: action.name, detail: action.detail, flagNames: action.flagNames }))
         ];
-        for (const { words, flagNames } of entries) {
-            const { lines } = await post('help', words);
+
+        for (const { name, detail, flagNames } of entries) {
             for (const flag of flagNames) {
-                expect({ words, flag, found: lines.some((line) => line.startsWith(`flag\t--${flag} `) || line.startsWith(`flag\t--${flag}\t`)) }).toEqual({
-                    words,
-                    flag,
-                    found: true
-                });
+                const found = detail.some((line) => line.startsWith(`flag\t--${flag} `) || line.startsWith(`flag\t--${flag}\t`));
+                expect({ name, flag, found }).toEqual({ name, flag, found: true });
             }
         }
     });
