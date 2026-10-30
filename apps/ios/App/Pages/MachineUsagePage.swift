@@ -500,26 +500,31 @@ struct UsageLimitProvenance: View {
     let entry: JSONValue
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            let age = UsageLimitSection.age(entry, now: context.date.timeIntervalSince1970 * 1000)
-            VStack(alignment: .leading, spacing: 3) {
-                if entry["unavailable"]?["reason"] == .string("failed"), !entry.list("windows").isEmpty {
-                    Text("Last known numbers")
-                }
-                if let age {
-                    let when = age < 60_000 ? String(localized: "just now") : Format.ago(milliseconds: age)
-                    if entry["source"] == .string("event") {
-                        Text("Last update from a turn · \(when)")
-                    } else {
-                        Text("Last update · \(when)")
+        if !entry.list("windows").isEmpty,
+            entry["unavailable"] == nil || entry["unavailable"] == .null
+                || entry["unavailable"]?["reason"] == .string("failed")
+        {
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let age = UsageLimitSection.age(entry, now: context.date.timeIntervalSince1970 * 1000)
+                VStack(alignment: .leading, spacing: 3) {
+                    if entry["unavailable"]?["reason"] == .string("failed") {
+                        Text("Last known numbers")
                     }
-                    if age >= 600_000 { Text("May be out of date") }
-                } else {
-                    Text("Update time unknown")
+                    if let age {
+                        let when = age < 60_000 ? String(localized: "just now") : Format.ago(milliseconds: age)
+                        if entry["source"] == .string("event") {
+                            Text("Last updated · From a turn · \(when)")
+                        } else {
+                            Text("Last updated · \(when)")
+                        }
+                        if age >= 600_000 { Text("May be out of date") }
+                    } else {
+                        Text("Update time unknown")
+                    }
                 }
+                .font(.caption)
+                .foregroundStyle((age ?? 0) >= 600_000 ? MobileStyle.statusNeedsYou : MobileStyle.muted)
             }
-            .font(.caption)
-            .foregroundStyle((age ?? 0) >= 600_000 ? MobileStyle.statusNeedsYou : MobileStyle.muted)
         }
     }
 }

@@ -11,6 +11,8 @@ import RuimteTransport
     private(set) var connected = false
     private(set) var problem: String?
     @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var limitReads = 0
+    @ObservationIgnored private var accountReads = 0
     @ObservationIgnored private var cancelConnection: (() -> Void)?
 
     init(client: any MachineRequesting) {
@@ -38,35 +40,49 @@ import RuimteTransport
     }
 
     func load() async {
-        guard connected, !reading else { return }
-        generation += 1
-        let attempt = generation
+        guard connected else { return }
+        accountReads += 1
+        let accountAttempt = accountReads
+        let generation = generation
         let client = client
-        let snapshot = try? await client.request(.usageLimits)
-        guard attempt == generation, self.client === client, !Task.isCancelled else { return }
+        if !reading {
+            limitReads += 1
+            let attempt = limitReads
+            let snapshot = try? await client.request(.usageLimits)
+            guard generation == self.generation, self.client === client, !Task.isCancelled else { return }
+            if attempt == limitReads, let snapshot {
+                limits = snapshot
+                problem = nil
+            }
+        }
         let accounts = try? await client.request(.accountsList)
-        guard attempt == generation, self.client === client, !Task.isCancelled else { return }
-        if let snapshot { limits = snapshot }
-        self.accounts = accounts.map(ProviderAccountList.init)
-        loginCommands = (accounts?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+        guard generation == self.generation, accountAttempt == accountReads, self.client === client, !Task.isCancelled
+        else { return }
+        if let accounts {
+            self.accounts = ProviderAccountList(accounts)
+            loginCommands = (accounts["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+        }
     }
 
     func refresh() async {
         guard connected, !reading else { return }
-        generation += 1
-        let attempt = generation
+        limitReads += 1
+        let attempt = limitReads
+        let generation = generation
         let client = client
         reading = true
         problem = nil
-        defer { if attempt == generation { reading = false } }
+        defer { if generation == self.generation { reading = false } }
         do {
             let snapshot = try await client.request(.usageRefreshLimits)
-            guard attempt == generation, self.client === client, !Task.isCancelled else { return }
+            guard generation == self.generation, attempt == limitReads, self.client === client, !Task.isCancelled else {
+                return
+            }
             limits = snapshot
         } catch is CancellationError {
         } catch {
-            guard attempt == generation, self.client === client else { return }
-            problem = error.localizedDescription
+            guard generation == self.generation, attempt == limitReads, self.client === client else { return }
+            problem = String(localized: "Could not read limits. Try again.")
         }
     }
 }

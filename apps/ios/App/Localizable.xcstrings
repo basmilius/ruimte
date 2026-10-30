@@ -1,6 +1,23 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Could not read limits. Try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not read limits. Try again."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limieten lezen mislukt. Probeer opnieuw."
+          }
+        }
+      }
+    },
     "Read limits again" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -69,30 +86,30 @@
         }
       }
     },
-    "Last update from a turn · %@" : {
+    "Last updated · From a turn · %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last update from a turn · %@"
+            "value" : "Last updated · From a turn · %@"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Laatst bijgewerkt vanuit een turn · %@"
+            "value" : "Laatst bijgewerkt · Uit een turn · %@"
           }
         }
       }
     },
-    "Last update · %@" : {
+    "Last updated · %@" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last update · %@"
+            "value" : "Last updated · %@"
           }
         },
         "nl" : {

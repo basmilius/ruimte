@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { act } from 'react';
-import { UsageLimits, LimitsList, AccountLimitsList } from '@adecore/agents-react/usage';
 import { useUsageStore } from '@adecore/agents-react/state';
+import { UsageLimits, LimitsList, AccountLimitsList } from '@adecore/agents-react/usage';
 import type { UsageLimitsSnapshot } from '@ruimte/contracts';
+import { act } from 'react';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
@@ -60,21 +60,65 @@ describe('reading account limits from the usage section', () => {
         expect(machine.requests('usage.refreshLimits')).toHaveLength(1);
         expect(button.disabled).toBe(true);
         await act(async () => pending.reject(new Error('Temporary read failure')));
-        await until(() => page.host.textContent?.includes('Temporary read failure') === true);
+        await until(() => page.host.textContent?.includes('Could not read limits. Try again.') === true);
+        expect(page.host.querySelector('[role="alert"]')?.textContent).toBe('Could not read limits. Try again.');
         expect(page.host.querySelectorAll('[role="progressbar"]')).toHaveLength(1);
         machine.answer('usage.refreshLimits', () => ({ providers: [{ ...known.providers[0]!, checkedAt: NOW, unavailable: null }] }));
         await clickOn(readButton()!);
         await until(() => !page.host.textContent?.includes('Last known numbers'));
         expect(machine.requests('usage.refreshLimits')).toHaveLength(2);
-        expect(page.host.textContent).toContain('Last update · now');
+        expect(page.host.textContent).toContain('Last updated · now');
+    });
+
+    test('rows without visible windows never claim fresh or stale numbers', async () => {
+        const scope = chatScopeOf(LOCAL_ENDPOINT_ID).id;
+        for (const reason of ['failed', 'no-subscription', 'not-installed'] as const) {
+            await act(async () =>
+                useUsageStore.getState().setLimits(scope, {
+                    providers: [{ ...known.providers[0]!, checkedAt: NOW - 600_000, windows: [], unavailable: { reason, message: 'No reading' } }]
+                })
+            );
+            expect(page.host.querySelectorAll('[role="progressbar"]')).toHaveLength(0);
+            expect(page.host.textContent).not.toContain('Last updated');
+            expect(page.host.textContent).not.toContain('May be out of date');
+        }
+    });
+
+    test('a later snapshot clears an earlier request failure', async () => {
+        machine.answer('usage.refreshLimits', () => {
+            throw new Error('Technical read failure');
+        });
+        await clickOn(readButton()!);
+        await until(() => page.host.querySelector('[role="alert"]') !== null);
+        await act(async () => machine.emit('usage.limitsChanged', { providers: [{ ...known.providers[0]!, checkedAt: NOW, unavailable: null }] }));
+        await until(() => page.host.querySelector('[role="alert"]') === null);
+        expect(page.host.textContent).not.toContain('Last known numbers');
+    });
+
+    test('a missing initial snapshot offers an honest manual read instead of permanent loading', async () => {
+        await page.unmount();
+        useUsageStore.getState().forget(chatScopeOf(LOCAL_ENDPOINT_ID).id);
+        const previous = machine.requests('usage.limits').length;
+        machine.answer('usage.limits', () => {
+            throw new Error('Snapshot unavailable');
+        });
+        machine.answer('usage.refreshLimits', () => ({ providers: [{ ...known.providers[0]!, unavailable: null, checkedAt: NOW }] }));
+        page = mount();
+        await page.render(<UsageLimits />);
+        await until(() => machine.requests('usage.limits').length > previous);
+        expect(page.host.textContent).toContain('No plan limits have been read.');
+        expect(page.host.textContent).not.toContain('Loading limits');
+        await clickOn(readButton()!);
+        await until(() => page.host.querySelectorAll('[role="progressbar"]').length === 1);
+        expect(page.host.textContent).not.toContain('No plan limits have been read.');
     });
 
     test('warns at ten minutes and tolerates small machine clock skew', async () => {
         const scope = chatScopeOf(LOCAL_ENDPOINT_ID).id;
         for (const [checkedAt, old, text] of [
-            [NOW - 599_000, false, 'Last update'],
-            [NOW - 600_000, true, 'Last update'],
-            [NOW + 30_000, false, 'Last update · now'],
+            [NOW - 599_000, false, 'Last updated'],
+            [NOW - 600_000, true, 'Last updated'],
+            [NOW + 30_000, false, 'Last updated · now'],
             [NOW + 300_000, false, 'Update time unknown']
         ] as const) {
             await act(async () => useUsageStore.getState().setLimits(scope, { providers: [{ ...known.providers[0]!, checkedAt, unavailable: null }] }));
@@ -121,6 +165,8 @@ describe('reading account limits from the usage section', () => {
                         }
                     ]}
                     now={NOW}
+                    folded={new Set()}
+                    onFoldedChange={() => undefined}
                 />
             </>
         );

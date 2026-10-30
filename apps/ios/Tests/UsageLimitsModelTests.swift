@@ -23,7 +23,7 @@ import XCTest
         machine.release()
         await pending.value
         XCTAssertEqual(model.limits, before)
-        XCTAssertEqual(model.problem, "CLI unavailable")
+        XCTAssertEqual(model.problem, "Could not read limits. Try again.")
         XCTAssertFalse(model.reading)
         machine.refuse = false
         await model.refresh()
@@ -80,6 +80,33 @@ import XCTest
         add(attachment)
     }
 
+    func testRefreshingDuringTheFirstLoadKeepsAccountNamesAndLoginCommands() async {
+        let machine = LimitsMachine()
+        machine.holdSnapshot = true
+        let entered = expectation(description: "Initial snapshot held")
+        machine.entered = { entered.fulfill() }
+        let model = UsageLimitsModel(client: machine)
+        let loading = Task { await model.load() }
+        await fulfillment(of: [entered], timeout: 1)
+        machine.snapshot = .object(["providers": .array([])])
+        await model.refresh()
+        machine.release()
+        await loading.value
+        XCTAssertEqual(model.limits, machine.snapshot)
+        XCTAssertEqual(model.accounts?.entries.map(\.id), ["work"])
+        XCTAssertEqual(model.loginCommands["claude"], "claude auth login")
+    }
+
+    func testASuccessfulSnapshotClearsAnEarlierRefreshError() async {
+        let machine = LimitsMachine()
+        let model = UsageLimitsModel(client: machine)
+        machine.refuse = true
+        await model.refresh()
+        XCTAssertNotNil(model.problem)
+        await model.load()
+        XCTAssertNil(model.problem)
+    }
+
     func testAnOldMachinesReplyOrErrorCannotReplaceTheNewMachinesPage() async {
         for refused in [false, true] {
             let old = LimitsMachine()
@@ -117,6 +144,7 @@ import XCTest
     var requests: [String] = []
     var refreshes = 0
     var hold = false
+    var holdSnapshot = false
     var refuse = false
     var entered: (() -> Void)?
     var connection: (@MainActor @Sendable (Bool) -> Void)?
@@ -137,6 +165,14 @@ import XCTest
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         requests.append(type)
+        let captured = snapshot
+        if type == "usage.limits", holdSnapshot {
+            holdSnapshot = false
+            await withCheckedContinuation { continuation in
+                self.continuation = continuation
+                entered?()
+            }
+        }
         if type == "usage.refreshLimits" {
             refreshes += 1
             if hold {
@@ -154,7 +190,13 @@ import XCTest
                 "buckets": .array([]),
             ])
         }
-        return type == "accounts.list" ? .object(["accounts": .object([:])]) : snapshot
+        if type == "accounts.list" {
+            return .object([
+                "accounts": .object(["work": .object(["kind": .string("claude"), "label": .string("Work")])]),
+                "loginCommands": .object(["claude": .string("claude auth login")]),
+            ])
+        }
+        return type == "usage.limits" ? captured : snapshot
     }
 
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
