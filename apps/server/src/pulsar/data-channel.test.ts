@@ -8,7 +8,7 @@ import {
     DIRECT_PIECE_CHARS,
     FrameAssembler
 } from '@ruimte/contracts';
-import { LOW_WATER_MARK, SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
+import { HIGH_WATER_MARK, LOW_WATER_MARK, OutputGate, SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
 import { AUTHENTICATED_FRAME_CHARS, BINARY_LANE_BYTES, directChannel, TEXT_LANE_BYTES, type RawDataChannel } from './data-channel.ts';
 
 class FakeRawChannel implements RawDataChannel {
@@ -457,6 +457,110 @@ describe('directChannel', () => {
         expect(channel.bufferedAmount()).toBeGreaterThan(0);
         expect(channel.bufferedAmount()).toBeLessThan(LOW_WATER_MARK);
         expect(drains).toBe(1);
+    });
+
+    test('a drain listener can enqueue compression and postpone later listeners until pressure falls again', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        const notifications: string[] = [];
+        const next = 'y'.repeat(LOW_WATER_MARK + 1);
+        let reentered = false;
+        channel.onDrain(() => {
+            notifications.push('first');
+            if (!reentered) {
+                reentered = true;
+                channel.send(next);
+            }
+        });
+        channel.onDrain(() => notifications.push('second'));
+        channel.deflate();
+        channel.send('x'.repeat(DIRECT_DEFLATE_MIN_BYTES));
+
+        await io.complete(0);
+        expect(notifications).toEqual(['first']);
+        expect(io.requests.map(({ data }) => data)).toEqual(['x'.repeat(DIRECT_DEFLATE_MIN_BYTES), next]);
+        expect(raw.sent).toHaveLength(1);
+
+        await io.complete(1);
+        expect(notifications).toEqual(['first', 'first', 'second']);
+        expect(raw.sent).toHaveLength(2);
+        const result = new DeflatedFrameAssembler().push(raw.sent[1] as Uint8Array, Number.MAX_SAFE_INTEGER);
+        expect(result.kind).toBe('frame');
+        if (result.kind === 'frame') {
+            expect(inflateRawSync(result.frame).toString()).toBe(next);
+        }
+    });
+
+    test('a transport send failure during completion closes and discards following frames', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        let closes = 0;
+        let drains = 0;
+        channel.onClose(() => {
+            closes += 1;
+        });
+        channel.onDrain(() => {
+            drains += 1;
+        });
+        channel.deflate();
+        channel.send('x'.repeat(DIRECT_DEFLATE_MIN_BYTES));
+        channel.send('after');
+        channel.send(Uint8Array.of(1, 2, 3));
+        raw.throwOnSend = true;
+        const warn = console.warn;
+        console.warn = () => undefined;
+        try {
+            await io.complete(0);
+        } finally {
+            console.warn = warn;
+        }
+
+        expect(raw.sent).toEqual([]);
+        expect(raw.closeCalls).toBe(1);
+        expect(closes).toBe(1);
+        expect(drains).toBe(0);
+        expect(channel.bufferedAmount()).toBe(0);
+        expect(channel.send('late')).toBe(0);
+    });
+
+    test('pending compression can pause the output gate and a completion drain repairs the terminal', async () => {
+        const raw = new FakeRawChannel();
+        const io = new ControlledDeflater();
+        const channel = directChannel(raw, SOCKET_BACKPRESSURE_LIMIT, (data) => io.deflate(data));
+        const screens: string[] = [];
+        const gate = new OutputGate({
+            socket: { send: (data) => channel.send(data), getBufferedAmount: () => channel.bufferedAmount() },
+            share: channel.outputShare,
+            screenOf: (sessionId, deliver) => {
+                screens.push(sessionId);
+                deliver('latest screen');
+
+                return true;
+            }
+        });
+        channel.onDrain(() => gate.onDrain());
+        channel.deflate();
+        gate.send({ id: 'history', ok: true, result: { text: 'x'.repeat(HIGH_WATER_MARK + 1) } });
+        gate.send({ type: 'event', event: 'session.output', payload: { sessionId: 'terminal', data: 'new output' } });
+        expect(gate.staleSessions()).toEqual(['terminal']);
+        expect(raw.sent).toEqual([]);
+        expect(screens).toEqual([]);
+
+        await io.complete(0);
+        expect(screens).toEqual(['terminal']);
+        expect(gate.staleSessions()).toEqual([]);
+        expect(raw.sent).toHaveLength(2);
+        const result = new FrameAssembler().push(raw.sent[1] as string, 1_024);
+        expect(result.kind).toBe('frame');
+        if (result.kind === 'frame') {
+            expect(JSON.parse(result.frame)).toEqual({
+                type: 'event',
+                event: 'session.resync',
+                payload: { sessionId: 'terminal', screen: 'latest screen' }
+            });
+        }
     });
 
     test.each(['failure', 'larger output', 'synchronous throw'] as const)('%s sends the original text before later frames', async (outcome) => {

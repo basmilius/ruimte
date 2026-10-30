@@ -112,8 +112,9 @@ const DIRECT_OUTPUT_SHARE: OutputShare = {
  * The rest is shaped after Bun's socket, because the output gate reads it that way: `send` answers
  * the bytes of the whole frame once accepted for preparation or delivery and 0 when refused,
  * `bufferedAmount` counts the DataChannel, the lanes and pending input, and a drain comes once they
- * are under the gate's low-water mark. A frame that would take that past the socket's backpressure limit closes
- * the channel, as Bun closes a socket there.
+ * are under the gate's low-water mark. Pending input can pause shared output or make the gate drop
+ * replaceable output and repair it with a screen after compression, even when the compressed bytes fit.
+ * A frame past the socket's backpressure limit closes the channel, as Bun closes a socket there.
  */
 export function directChannel(
     raw: RawDataChannel,
