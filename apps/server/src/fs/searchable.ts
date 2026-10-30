@@ -9,6 +9,7 @@ import { realOrNull, realOrSelf } from './real-path.ts';
 // Windows has neither flag; there the check on the opened file below is all the guard.
 const OPEN_FLAGS = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
 const BINARY_PREFIX = 1024;
+const READ_CHUNK_BYTES = 64 * 1024;
 
 /* Where a search runs: the folder as asked for and as it really is, and the home it stays out of. */
 export interface SearchRoot {
@@ -65,23 +66,33 @@ export async function readSearchable(root: SearchRoot, path: string, afterOpen?:
         if (there.dev !== opened.dev || there.ino !== opened.ino || !isInside(root.realCwd, real) || isMachineStatePath(root.policy, real)) {
             return null;
         }
-        const prefix = Buffer.alloc(Math.min(BINARY_PREFIX, Number(opened.size)));
-        let offset = 0;
-        while (offset < prefix.byteLength) {
-            const { bytesRead } = await handle.read({ buffer: prefix, offset, length: prefix.byteLength - offset, position: offset });
+        const chunks: Buffer[] = [];
+        let total = 0;
+
+        while (true) {
+            // The first reads stop at the binary prefix, so a binary file costs at most that much.
+            const wanted = total < BINARY_PREFIX ? BINARY_PREFIX - total : READ_CHUNK_BYTES;
+            // The extra byte distinguishes EOF at the limit from a file growing past it.
+            const chunk = Buffer.allocUnsafe(Math.min(wanted, MAX_FILE_BYTES - total + 1));
+            const { bytesRead } = await handle.read({ buffer: chunk, offset: 0, length: chunk.byteLength, position: total });
             if (bytesRead === 0) {
                 break;
             }
 
-            if (prefix.subarray(offset, offset + bytesRead).includes(0)) {
+            if (total < BINARY_PREFIX && chunk.subarray(0, bytesRead).includes(0)) {
                 return null;
             }
 
-            offset += bytesRead;
+            total += bytesRead;
+            if (total > MAX_FILE_BYTES) {
+                return null;
+            }
+
+            chunks.push(bytesRead === chunk.byteLength ? chunk : Buffer.from(chunk.subarray(0, bytesRead)));
         }
 
-        const content = await handle.readFile('utf8');
-        // A NUL near the start marks binary. Decoded text catches Unicode and changes after the byte probe.
+        const content = Buffer.concat(chunks, total).toString('utf8');
+        // A NUL near the start marks binary. Decoded text also catches one that Unicode pushed past the byte prefix.
         return content.slice(0, BINARY_PREFIX).includes('\0') ? null : content;
     } catch {
         return null;
