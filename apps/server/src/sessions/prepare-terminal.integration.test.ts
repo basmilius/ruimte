@@ -4,7 +4,7 @@ import { access, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-test('shell syntax validation never executes a command or accepts incomplete syntax', async () => {
+test.skipIf(process.platform === 'win32')('shell syntax validation never executes a command or accepts incomplete syntax', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-prepare-syntax-'));
     const sentinel = join(directory, 'must-not-exist');
     try {

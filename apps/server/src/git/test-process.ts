@@ -11,7 +11,7 @@ export async function installHangingHook(repo: string, pidFile: string, ready: s
     const fifo = `${pidFile}.fifo`;
     expect(await Bun.spawn(['mkfifo', fifo]).exited).toBe(0);
     const hook = join(repo, '.git', 'hooks', 'pre-commit');
-    await writeFile(hook, `#!/bin/sh\necho $$ > '${pidFile}'\necho ${ready}\nread line < '${fifo}'\n`);
+    await writeFile(hook, `#!/bin/sh\n{ cat /proc/$$/winpid 2>/dev/null || echo $$; } > '${pidFile}'\necho ${ready}\nread line < '${fifo}'\n`);
     await chmod(hook, 0o755);
 }
 

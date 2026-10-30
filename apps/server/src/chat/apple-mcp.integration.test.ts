@@ -66,7 +66,7 @@ function exists(name: string): Promise<boolean> {
     return Bun.file(join(cwd, name)).exists();
 }
 
-describe('Apple MCP real stdio connection', () => {
+describe.skipIf(process.platform === 'win32')('Apple MCP real stdio connection', () => {
     test('initializes, lists, calls, isolates account variables, and closes descendants', async () => {
         const connection = await connectAppleMcp(
             server({ EXPLICIT_TOKEN: '${ACCOUNT_TOKEN}' }),
@@ -146,7 +146,7 @@ describe('Apple MCP real stdio connection', () => {
     });
 });
 
-describe('Apple MCP configured HTTP connection', () => {
+describe.skipIf(process.platform === 'win32')('Apple MCP configured HTTP connection', () => {
     test('negotiates, calls the configured local server with headers, and cancels a pending request', async () => {
         const requests: Array<{ method: string; authorization: string | null }> = [];
         let finishHang: (() => void) | undefined;

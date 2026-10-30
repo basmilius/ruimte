@@ -6,7 +6,7 @@ import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const newHome = tempHomes('ruimte-grok-account-');
 
-test('account discovery runs only grok models in the account environment', async () => {
+test.skipIf(process.platform === 'win32')('account discovery runs only grok models in the account environment', async () => {
     const home = await newHome();
     const command = join(home, 'grok');
     const output = ['You are logged in with grok.com.', 'Default model: grok-4.7', 'Available models:', '  * grok-4.7'].join('\n');

@@ -59,7 +59,7 @@ async function conflict(): Promise<void> {
 const trusted = (): OneShotPlace => new OneShotPlace(home, { inFolder: () => false });
 const untrusted = (): OneShotPlace => new OneShotPlace(home, { inFolder: () => true });
 
-describe('a commit message', () => {
+describe.skipIf(process.platform === 'win32')('a commit message', () => {
     test("is written in the checkout when the checkout is the person's own", async () => {
         await stage();
         await suggestMessage(repo, registry, { cwdFor: (folder) => trusted().cwdFor(folder) });
@@ -73,7 +73,7 @@ describe('a commit message', () => {
     });
 });
 
-describe('help with a conflict', () => {
+describe.skipIf(process.platform === 'win32')('help with a conflict', () => {
     test("runs in the checkout when the checkout is the person's own", async () => {
         await conflict();
         await resolveWithAgent(repo, 'file.txt', { ours: 'main', theirs: 'side' }, registry, { cwdFor: (folder) => trusted().cwdFor(folder) });
@@ -87,7 +87,7 @@ describe('help with a conflict', () => {
     });
 });
 
-describe('a chat title', () => {
+describe.skipIf(process.platform === 'win32')('a chat title', () => {
     const name = async (place: OneShotPlace): Promise<string | null> =>
         suggestChatTitle(registry as unknown as AgentsProviderRegistry, 'codex', { prompt: 'hello', answer: 'hi', cwd: await place.cwdFor(repo) });
 

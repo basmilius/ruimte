@@ -7,7 +7,7 @@ import { waitFor, waitForAsync } from './test-helpers.ts';
 
 for (const startup of ['.zshenv', '.zshrc']) {
     for (const options of ['nounset', 'errexit', 'nounset errexit']) {
-        test(`strict ${startup} ${options} preserves startup, options, status and subsequent editor input`, async () => {
+        test.skipIf(process.platform === 'win32')(`strict ${startup} ${options} preserves startup, options, status and subsequent editor input`, async () => {
             const rc = `PS1='strict [%?]> '\n${startup === '.zshrc' ? `setopt ${options}\n` : ''}`;
             const env = startup === '.zshenv' ? `setopt ${options}\n` : '';
             const fixture = await realShell(() => rc, { zshenv: env });
@@ -41,7 +41,7 @@ for (const startup of ['.zshenv', '.zshrc']) {
     }
 }
 
-test('an unavailable editor socket cannot terminate a strict interactive shell', async () => {
+test.skipIf(process.platform === 'win32')('an unavailable editor socket cannot terminate a strict interactive shell', async () => {
     const fixture = await realShell((home) => `PS1='offline> '\nsetopt nounset errexit\n_ruimte_editor_path='${home}/missing.sock'\n`);
     try {
         await waitFor(() => fixture.output().includes('offline>'), 'ordinary prompt');
@@ -57,7 +57,7 @@ test('an unavailable editor socket cannot terminate a strict interactive shell',
 });
 
 for (const change of ['partial-key', 'type-and-clear', 'decoder-only'] as const) {
-    test(`a delayed prepare cannot insert after ${change} beyond dispatch`, async () => {
+    test.skipIf(process.platform === 'win32')(`a delayed prepare cannot insert after ${change} beyond dispatch`, async () => {
         const fixture = await relayedShell();
         try {
             await fixture.ready();
@@ -97,7 +97,7 @@ for (const change of ['partial-key', 'type-and-clear', 'decoder-only'] as const)
 }
 
 for (const loss of ['timeout', 'disconnect']) {
-    test(`a real filled editor with a lost acknowledgement (${loss}) is unconfirmed and never retried`, async () => {
+    test.skipIf(process.platform === 'win32')(`a real filled editor with a lost acknowledgement (${loss}) is unconfirmed and never retried`, async () => {
         const fixture = await realShell(
             () =>
                 `PS1='ack> '\nprint() { if [[ "$*" == *$'\\tprepared' ]]; then ${loss === 'disconnect' ? '_ruimte_editor_close; ' : ''}return 0; fi; builtin print "$@"; }\n`
@@ -118,7 +118,7 @@ for (const loss of ['timeout', 'disconnect']) {
     });
 }
 
-test('initial hook installation preserves the previous startup status', async () => {
+test.skipIf(process.platform === 'win32')('initial hook installation preserves the previous startup status', async () => {
     const fixture = await realShell(() => "PS1='startup [%?]> '\nfalse\n");
     try {
         await fixture.ready();
@@ -128,7 +128,7 @@ test('initial hook installation preserves the previous startup status', async ()
     }
 });
 
-test('an older shell integration without cancellation support stays ineligible', async () => {
+test.skipIf(process.platform === 'win32')('an older shell integration without cancellation support stays ineligible', async () => {
     const fixture = await realShell(
         () =>
             `PS1='legacy> '\n_ruimte_editor_open() { emulate -L zsh; zsocket "$_ruimte_editor_path" || return 0; typeset -g _ruimte_editor_fd=$REPLY; print -r -u "$_ruimte_editor_fd" -- $'hello\\t'"$_ruimte_editor_secret"$'\\t'"$$"; zle -F -w "$_ruimte_editor_fd" _ruimte_editor_read; }\n`

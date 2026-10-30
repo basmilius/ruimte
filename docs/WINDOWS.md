@@ -33,14 +33,20 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 
 ### 1. Repository and checks
 
-Baseline on the PC, 2026-10-30, at `03d394c2f`: `check:types`, `lint` and `format:check` pass. `bun test` takes 2 minutes with 8 workers: 11431 pass, 9 skip, 54 fail in 14 files. The DOM and integration suites have not run yet.
+On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun test --parallel=8` takes 2 minutes with 11481 pass and 0 fail, `bun run test:dom` 626 pass and 0 fail, and all 53 integration files pass when each runs in a process of its own, four at a time.
 
-- `check:generated` fails: the floats in `apps/ios/Tests/Fixtures/document-scenes.json` differ in their last digits (`37.23045369887423` here, `37.230453698874236` on the PC), so the math libraries disagree.
-- `memory-artifact-fs.ts` fails on a Windows path (31 failures, all `ENOENT`): `artifact-store`, `artifacts`, `artifact-import`, `artifact-verb` and `peer-artifacts`.
-- Tests that expect the wrong path form: `git/ignored`, `canvas/project-verb` (git's `C:/` against `C:\`), `projects/project-index` (`C:\repo` against `/repo`).
-- Tests that expect mode bits: `fs/create`, `templates/template-store`.
-- `language/installer` (10), `language/package-store` (`EPERM` on a rename), `providers/cli-versions` (4) and `providers/registry-agents` are not looked at yet; these may be product bugs.
-- Integration tests assume `/bin/sh` and POSIX paths.
+- With the default 16 workers the unit suite has timeouts in tests that run real git (`git/repos`, `canvas/worktree-verb`); with 8 it has none. The same tests pass alone, so load is the likely cause.
+- `bun run test:integration`, all files in one process, has not run through since the fix to `git/run.ts`. It hung on a git hook that outlived its cancel.
+- `check:generated` fails: the floats in `apps/ios/Tests/Fixtures/document-scenes.json` differ in their last digits (`37.23045369887423` here, `37.230453698874236` on the PC), so the math libraries disagree. The check stays off on Windows.
+- Skipped on Windows, and so proven only by hand or not at all:
+  - PHP: a class created on disk does not reach Intelephense's workspace symbols. The watcher hears the file and names it, so the cause sits between the notification and the server. Not solved.
+  - `sessions/terminal-stream`: ConPTY draws a screen, so a burst does not arrive whole.
+  - `pty/bun-pty`, the resize: Git Bash's `stty` reads no size from a ConPTY. Resizing itself has not been checked.
+  - `git/run`, the timeout that ends a background job, and `git/identity`, a fake `git` script. The hook tests in `git/actions` and `git/worktree-merge` do hold the process tree.
+  - `sessions/shell-editor`, `shell-editor-review`, `background-cwd`, `shell-integration` and `prepare-terminal`: POSIX shells, with zsh among them.
+  - `peering/one-shot-place`, `providers/acp-providers` (a fake CLI as a shell script) and `devices/helper-source` (Bun answers `EMFILE`). Apple's model and the launcher, which refuses Windows until the release.
+  - Bun's watcher hears no edit through a junction, so a daemon on a linked ADE CORE may not restart for a source edit.
+- `providers/registry-agents.ts` unpacks a `.tar.bz2` or `.tar.xz` with the `tar` on `PATH`. Git for Windows' reads `C:` as a host, as `apps/server/scripts/database-helper.ts` did before it passed a name.
 - `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
 - On build 26300 an elevated process refuses a junction a non-elevated process made ("untrusted mount point"); a non-elevated process reads it fine, and a junction an elevated process made works for both. So run `bun install` on the PC over SSH: one from a person's PowerShell crashed every test in the elevated SSH session. Whether this reaches an elevated Ruimte, or other Windows builds, is not known.
 

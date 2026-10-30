@@ -54,7 +54,7 @@ describe('ArtifactStore', () => {
             { name: 'report.md', mime: 'text/markdown', size: 10, sha256: new Bun.CryptoHasher('sha256').update('# Findings').digest('hex') }
         ]);
         const file = store.file(result.artifactId, result.versionId, 0)!;
-        expect(new TextDecoder().decode(fs.files.get(file.path))).toBe('# Findings');
+        expect(new TextDecoder().decode(fs.files.get(file.path.replaceAll('\\', '/')))).toBe('# Findings');
         expect(store.file(result.artifactId, result.versionId, 1)).toBeNull();
         expect(stagingLeft(fs)).toEqual([]);
     });

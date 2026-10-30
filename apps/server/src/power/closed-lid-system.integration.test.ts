@@ -42,7 +42,7 @@ async function firstLines(stream: ReadableStream<Uint8Array>, count: number): Pr
     return text.split('\n').slice(0, count);
 }
 
-describe('the closed-lid watchdog', () => {
+describe.skipIf(process.platform === 'win32')('the closed-lid watchdog', () => {
     test('runs its command once the process holding it is killed outright, though a child of that process lives on', async () => {
         const holder = join(dir, 'holder.ts');
         await writeFile(

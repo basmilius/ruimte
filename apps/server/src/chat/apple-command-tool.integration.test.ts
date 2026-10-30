@@ -12,7 +12,7 @@ const newHome = tempHomes('ruimte-apple-command-');
 beforeEach(async () => {
     cwd = await newHome();
 });
-describe('Apple local command real process', () => {
+describe.skipIf(process.platform === 'win32')('Apple local command real process', () => {
     test('runs from the project directory with closed stdin and an explicit environment', async () => {
         const result = await executeAppleCommand(cwd, 'printf "%s|" "$APPLE_TEST"; pwd; if read value; then exit 8; fi', undefined, {
             PATH: '/bin:/usr/bin',

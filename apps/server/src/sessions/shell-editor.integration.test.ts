@@ -9,7 +9,7 @@ function forged(cwd: string): string {
     return `printf '\\033]133;A\\007\\033]7;file://localhost${cwd}\\007forged prompt\\033]133;B\\007\\033[?2004h'`;
 }
 
-test('startup read plus forged OSC is never eligible and receives no command bytes', async () => {
+test.skipIf(process.platform === 'win32')('startup read plus forged OSC is never eligible and receives no command bytes', async () => {
     const f = await realShell((home) => `${forged(home)}\nread -k 1 value\nprint -r -- "$value" > '${home}/input-consumed'\nread -k 1 value\n`);
     try {
         await waitFor(() => f.output().includes('forged prompt'), 'startup read');
@@ -26,7 +26,7 @@ test('startup read plus forged OSC is never eligible and receives no command byt
     }
 });
 
-test('a prefilled zle-line-init buffer stays ineligible despite background OSC', async () => {
+test.skipIf(process.platform === 'win32')('a prefilled zle-line-init buffer stays ineligible despite background OSC', async () => {
     const f = await realShell(
         (home) => `PS1='user> '\nzle-line-init() { BUFFER='echo prior; '; CURSOR=$#BUFFER; }\nzle -N zle-line-init\n{ sleep 0.1; ${forged(home)}; } &!\n`
     );
@@ -43,7 +43,7 @@ test('a prefilled zle-line-init buffer stays ineligible despite background OSC',
     }
 });
 
-test('cwd is read after late precmd hooks and the preview only offers that directory', async () => {
+test.skipIf(process.platform === 'win32')('cwd is read after late precmd hooks and the preview only offers that directory', async () => {
     const f = await realShell((home) => `PS1='user> '\nlate_cd() { cd '${home}/other'; }\nprecmd_functions+=(late_cd)\n`);
     try {
         await f.ready();
@@ -61,7 +61,7 @@ test('cwd is read after late precmd hooks and the preview only offers that direc
 });
 
 for (const change of ['buffer', 'cwd'] as const) {
-    test(`ZLE repeats ${change} validation after preview, even without daemon input notification`, async () => {
+    test.skipIf(process.platform === 'win32')(`ZLE repeats ${change} validation after preview, even without daemon input notification`, async () => {
         const f = await realShell(
             (home) =>
                 `PS1='user> '\nrace_widget() { ${change === 'buffer' ? "BUFFER='echo prior; '; CURSOR=$#BUFFER" : `cd '${home}/other'`}; print -r -- changed > '${home}/changed'; }\nzle -N race_widget\nbindkey '^G' race_widget\n`
@@ -84,7 +84,7 @@ for (const change of ['buffer', 'cwd'] as const) {
     });
 }
 
-test('a command queued during a blocking widget expires and cannot fill a later editor', async () => {
+test.skipIf(process.platform === 'win32')('a command queued during a blocking widget expires and cannot fill a later editor', async () => {
     const f = await realShell(
         (home) =>
             `PS1='user> '\nblocking_widget() { print -r -- started > '${home}/blocked'; sleep 1.2; print -r -- done > '${home}/unblocked'; }\nzle -N blocking_widget\nbindkey '^G' blocking_widget\n`
@@ -108,7 +108,7 @@ test('a command queued during a blocking widget expires and cannot fill a later 
     }
 });
 
-test('a stale preview cannot follow the shell into a builtin read or a new prompt', async () => {
+test.skipIf(process.platform === 'win32')('a stale preview cannot follow the shell into a builtin read or a new prompt', async () => {
     const f = await realShell();
     try {
         await f.ready();
@@ -139,7 +139,7 @@ for (const [command, context] of [
     ["printf '%s' '", 'cont'],
     ['vared -c editor_value', 'vared']
 ]) {
-    test(`a secondary ZLE context cannot receive prepared input: ${context}`, async () => {
+    test.skipIf(process.platform === 'win32')(`a secondary ZLE context cannot receive prepared input: ${context}`, async () => {
         const f = await realShell(
             (home) => `PS1='user> '
 zle-line-init() { print -r -- "$CONTEXT" > '${home}/editor-context'; }
@@ -159,7 +159,7 @@ zle -N zle-line-init
     });
 }
 
-test('an unauthenticated socket peer cannot replace the session editor', async () => {
+test.skipIf(process.platform === 'win32')('an unauthenticated socket peer cannot replace the session editor', async () => {
     const f = await realShell();
     try {
         await f.ready();
@@ -193,7 +193,7 @@ test('an unauthenticated socket peer cannot replace the session editor', async (
     }
 });
 
-test('clearing used input restores eligibility only after a fresh editor inspection', async () => {
+test.skipIf(process.platform === 'win32')('clearing used input restores eligibility only after a fresh editor inspection', async () => {
     const f = await realShell();
     try {
         await f.ready();

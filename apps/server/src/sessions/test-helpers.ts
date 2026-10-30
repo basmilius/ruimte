@@ -11,6 +11,10 @@ const DEFAULT_TIMEOUT_MS = 5000;
 
 // Polls instead of sleeping: a shell answers in milliseconds on a quiet machine and in
 // hundreds under CI load, and a fixed sleep is wrong on one of them.
+// For a real shell in a test: Git Bash on Windows, which has no `/bin/sh`, and the PATH that finds its tools.
+export const testShell = process.platform === 'win32' ? (Bun.which('bash') ?? 'bash') : '/bin/sh';
+export const testPath = process.platform === 'win32' ? (process.env.PATH ?? '') : '/usr/bin:/bin';
+
 export async function waitForAsync(check: () => Promise<boolean>, what: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (!(await check())) {

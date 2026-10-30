@@ -26,7 +26,8 @@ async function run(command: string[], env: Record<string, string>): Promise<{ co
 describe.skipIf(powershell === null)('the Recycle Bin helper', () => {
     test('compiles as C# 5 without a warning, which Windows PowerShell 5.1 counts as an error', async () => {
         const script =
-            "$ErrorActionPreference = 'Stop'; Add-Type -TypeDefinition $env:RUIMTE_TEST_SOURCE -CompilerOptions '/langversion:5', '/warnaserror'; 'compiled'";
+            // Windows PowerShell has no -CompilerOptions, and is the C# 5 compiler itself.
+            "$ErrorActionPreference = 'Stop'; if ($PSVersionTable.PSVersion.Major -ge 6) { Add-Type -TypeDefinition $env:RUIMTE_TEST_SOURCE -CompilerOptions '/langversion:5', '/warnaserror' } else { Add-Type -TypeDefinition $env:RUIMTE_TEST_SOURCE }; 'compiled'";
 
         const result = await run([powershell ?? '', '-NoProfile', '-NonInteractive', '-Command', script], { RUIMTE_TEST_SOURCE: RECYCLE_BIN_SOURCE });
 

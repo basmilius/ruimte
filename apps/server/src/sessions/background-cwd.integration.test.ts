@@ -5,7 +5,7 @@ import { realShell } from './shell-editor-test-helpers.ts';
 import { waitForAsync } from './test-helpers.ts';
 
 for (const tostop of [true, false]) {
-    test(`redirected background cwd output completes with tostop=${tostop}`, async () => {
+    test.skipIf(process.platform === 'win32')(`redirected background cwd output completes with tostop=${tostop}`, async () => {
         const shell = await realShell();
         try {
             await mkdir(join(shell.home, 'nested'));
@@ -42,7 +42,7 @@ for (const tostop of [true, false]) {
     });
 }
 
-test('ordinary background tty output still stops after the cwd hook returns', async () => {
+test.skipIf(process.platform === 'win32')('ordinary background tty output still stops after the cwd hook returns', async () => {
     const shell = await realShell();
     try {
         await mkdir(join(shell.home, 'nested'));
@@ -63,7 +63,7 @@ test('ordinary background tty output still stops after the cwd hook returns', as
 });
 
 for (const trap of ['default', 'ignored', 'list', 'function'] as const) {
-    test(`foreground subshell cwd metadata restores the person's ${trap} TTOU disposition and options`, async () => {
+    test.skipIf(process.platform === 'win32')(`foreground subshell cwd metadata restores the person's ${trap} TTOU disposition and options`, async () => {
         const shell = await realShell();
         try {
             await mkdir(join(shell.home, 'nested'));

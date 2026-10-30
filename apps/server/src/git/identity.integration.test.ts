@@ -111,7 +111,7 @@ test('the root commits are kept while HEAD moves on, and the heads are not', asy
     expect(after!.heads).not.toEqual(before!.heads);
 });
 
-test('a git that takes too long is ended and says so', async () => {
+test.skipIf(process.platform === 'win32')('a git that takes too long is ended and says so', async () => {
     // The script becomes the sleep itself, so ending it closes the pipes. A git alias would leave a child holding them until it is done.
     const bin = join(root, 'stuck-bin');
     await mkdir(bin);
@@ -120,7 +120,7 @@ test('a git that takes too long is ended and says so', async () => {
     expect(result.timedOut).toBe(true);
 });
 
-test('a git that left a child holding its pipes is ended with the child, and says so', async () => {
+test.skipIf(process.platform === 'win32')('a git that left a child holding its pipes is ended with the child, and says so', async () => {
     // Like a credential helper or an alias: git itself is gone at the end, the child keeps stdout and stderr open.
     const bin = join(root, 'stuck-child-bin');
     const pidFile = join(root, 'child.pid');

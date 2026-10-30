@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { SessionManager } from '../sessions/manager.ts';
-import { Recorder, waitFor } from '../sessions/test-helpers.ts';
+import { Recorder, testPath, testShell, waitFor } from '../sessions/test-helpers.ts';
 import { BunPtyAdapter } from './bun-pty.ts';
 
 /*
@@ -18,7 +18,7 @@ let recorder: Recorder;
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-pty-'));
     // No login flag and a minimal environment, so the user's profile cannot leak into the screen.
-    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: '/usr/bin:/bin', HOME: home, PS1: '$ ' } });
+    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home, PS1: '$ ' } });
     recorder = new Recorder();
     manager.subscribe('c1', recorder.sink());
 });
@@ -30,7 +30,7 @@ afterEach(async () => {
 });
 
 async function start(sessionId: string): Promise<void> {
-    await manager.create({ sessionId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: home });
+    await manager.create({ sessionId, cols: 80, rows: 24, shell: testShell, args: [], cwd: home });
     await manager.attach(sessionId, 'c1', 80, 24);
 }
 
@@ -42,7 +42,8 @@ describe('BunPtyAdapter under a SessionManager', () => {
         await waitFor(() => recorder.output.includes('hello'), 'hello in the stream');
     });
 
-    test('a resize reaches the shell', async () => {
+    // Git Bash's stty reads no size from a ConPTY.
+    test.skipIf(process.platform === 'win32')('a resize reaches the shell', async () => {
         await start('size');
         // A loaded runner may still be starting the shell, so the grid changes once it prompts.
         await waitFor(() => recorder.output.includes('$ '), 'the prompt');

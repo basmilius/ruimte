@@ -5,6 +5,11 @@ function coded(code: string): Error {
     return Object.assign(new Error(code), { code });
 }
 
+// The store joins with the platform's separator; this disk keeps one form, so a test reads the same everywhere.
+function slashed(path: string): string {
+    return path.replaceAll('\\', '/');
+}
+
 /*
  * A disk in memory for the store's tests: what a stop between two steps leaves is what `fail` makes
  * the step throw, and a full disk is a `volume` with no room or a write that throws ENOSPC.
@@ -17,16 +22,19 @@ export class MemoryArtifactFs implements ArtifactFs {
     fail: (step: keyof ArtifactFs, path: string) => Error | null = () => null;
 
     put(path: string, content: string | Uint8Array): void {
+        path = slashed(path);
         this.mkdirNow(dirname(path));
         this.files.set(path, typeof content === 'string' ? new TextEncoder().encode(content) : content);
     }
 
     async mkdir(path: string): Promise<void> {
+        path = slashed(path);
         this.check('mkdir', path);
         this.mkdirNow(path);
     }
 
     async list(path: string): Promise<string[]> {
+        path = slashed(path);
         this.check('list', path);
         const prefix = path.endsWith('/') ? path : `${path}/`;
         const names = new Set<string>();
@@ -39,18 +47,21 @@ export class MemoryArtifactFs implements ArtifactFs {
     }
 
     async readText(path: string): Promise<string | null> {
+        path = slashed(path);
         this.check('readText', path);
         const bytes = this.files.get(path);
         return bytes === undefined ? null : new TextDecoder().decode(bytes);
     }
 
     async writeDurable(path: string, text: string): Promise<void> {
+        path = slashed(path);
         this.check('writeDurable', path);
         this.requireFolder(dirname(path));
         this.files.set(path, new TextEncoder().encode(text));
     }
 
     async append(path: string, bytes: Uint8Array): Promise<void> {
+        path = slashed(path);
         this.check('append', path);
         this.requireFolder(dirname(path));
         const before = this.files.get(path) ?? new Uint8Array();
@@ -61,11 +72,14 @@ export class MemoryArtifactFs implements ArtifactFs {
     }
 
     async sizeOf(path: string): Promise<number | null> {
+        path = slashed(path);
         this.check('sizeOf', path);
         return this.files.get(path)?.byteLength ?? null;
     }
 
     async copyIn(from: string, to: string): Promise<FileDigest> {
+        from = slashed(from);
+        to = slashed(to);
         this.check('copyIn', to);
         const bytes = this.files.get(from);
         if (bytes === undefined) {
@@ -80,6 +94,7 @@ export class MemoryArtifactFs implements ArtifactFs {
     }
 
     async digest(path: string): Promise<FileDigest> {
+        path = slashed(path);
         this.check('digest', path);
         const bytes = this.files.get(path);
         if (bytes === undefined) {
@@ -89,24 +104,30 @@ export class MemoryArtifactFs implements ArtifactFs {
     }
 
     async readHead(path: string, length: number): Promise<Uint8Array> {
+        path = slashed(path);
         this.check('readHead', path);
         return (this.files.get(path) ?? new Uint8Array()).slice(0, length);
     }
 
     async readRange(path: string, offset: number, length: number): Promise<Uint8Array> {
+        path = slashed(path);
         this.check('readRange', path);
         return (this.files.get(path) ?? new Uint8Array()).slice(offset, offset + length);
     }
 
     async syncFile(path: string): Promise<void> {
+        path = slashed(path);
         this.check('syncFile', path);
     }
 
     async syncDir(path: string): Promise<void> {
+        path = slashed(path);
         this.check('syncDir', path);
     }
 
     async rename(from: string, to: string): Promise<void> {
+        from = slashed(from);
+        to = slashed(to);
         this.check('rename', from);
         if (this.files.has(to) || this.folders.has(to)) {
             throw coded('EEXIST');
@@ -138,6 +159,7 @@ export class MemoryArtifactFs implements ArtifactFs {
     }
 
     async remove(path: string): Promise<void> {
+        path = slashed(path);
         this.check('remove', path);
         for (const folder of [...this.folders]) {
             if (folder === path || folder.startsWith(`${path}/`)) {

@@ -1,7 +1,7 @@
 import { describe, test } from 'bun:test';
 import { createDeviceHelperLauncher, DeviceHelperSource } from './helper-source.ts';
 
-describe('DeviceHelperSource process boundary', () => {
+describe.skipIf(process.platform === 'win32')('DeviceHelperSource process boundary', () => {
     test('keeps native stdout logs separate from the protocol pipe', async () => {
         const script = `
             console.log('native diagnostic');

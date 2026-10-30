@@ -32,6 +32,9 @@ afterAll(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
+// Windows keeps only whether a file is read-only.
+const modeOf = (bits: number): number => (process.platform === 'win32' ? 0o666 : bits);
+
 describe('the ignored files of a checkout', () => {
     test('lists the files git ignores, leaves out folders ignored whole and untracked files, and marks links', async () => {
         const listed = await listIgnoredFiles(root);
@@ -39,10 +42,10 @@ describe('the ignored files of a checkout', () => {
         expect(listed.prefix).toBe('');
         expect(listed.truncated).toBe(false);
         expect(listed.files.sort((left, right) => left.path.localeCompare(right.path))).toEqual([
-            { path: '.env', size: 6, link: false, mode: 0o600 },
-            { path: '.env.local', size: 6, link: false, mode: 0o644 },
-            { path: 'app/config/deeper/keys.local.json', size: 2, link: false, mode: 0o644 },
-            { path: 'app/config/dev.local.json', size: 2, link: false, mode: 0o644 },
+            { path: '.env', size: 6, link: false, mode: modeOf(0o600) },
+            { path: '.env.local', size: 6, link: false, mode: modeOf(0o644) },
+            { path: 'app/config/deeper/keys.local.json', size: 2, link: false, mode: modeOf(0o644) },
+            { path: 'app/config/dev.local.json', size: 2, link: false, mode: modeOf(0o644) },
             { path: 'link', size: expect.any(Number), link: true }
         ]);
     });

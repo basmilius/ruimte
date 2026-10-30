@@ -144,7 +144,7 @@ describe('fs.create', () => {
         expect(result.size).toBe(11);
     });
 
-    test('makes a file with the permission bits it was given, also over a file that others could read', async () => {
+    test.skipIf(process.platform === 'win32')('makes a file with the permission bits it was given, also over a file that others could read', async () => {
         const fresh = join(project, '.env');
         await createEntry({ path: fresh, kind: 'file', text: 'KEY=1\n', mode: 0o600 }, boundary());
         expect((await stat(fresh)).mode & 0o777).toBe(0o600);

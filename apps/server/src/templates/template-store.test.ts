@@ -158,7 +158,10 @@ describe('writing', () => {
         expect(saved.template.id.length).toBeGreaterThan(0);
         expect(saved.revision).toBeGreaterThan(personal.revision);
         expect((await readJson(personalPath())).live).toEqual([{ id: saved.template.id, key: 'log', body: 'console.log($0);', languages: ['javascript'] }]);
-        expect((await stat(personalPath())).mode & 0o777).toBe(0o600);
+        // Windows keeps no owner-only bits in a file's mode.
+        if (process.platform !== 'win32') {
+            expect((await stat(personalPath())).mode & 0o777).toBe(0o600);
+        }
     });
 
     test('keys of a later release survive a write, in the place they were read', async () => {

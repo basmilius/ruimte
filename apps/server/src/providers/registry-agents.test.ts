@@ -114,7 +114,10 @@ describe('RegistryAgents', () => {
         expect(provider.command).toEqual([program, 'acp']);
         expect(provider.capabilities.chat).toBe(true);
         expect(provider.capabilities.terminal).toBe(false);
-        expect(((await stat(program)).mode & 0o111) !== 0).toBe(true);
+        // Windows has no execute bit to set.
+        if (process.platform !== 'win32') {
+            expect(((await stat(program)).mode & 0o111) !== 0).toBe(true);
+        }
         expect(await provider.detect(program, {})).toEqual({ installed: true, version: '2.0.0' });
         expect(isMachineStatePath({ homes: [home] }, program)).toBe(true);
     });

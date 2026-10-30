@@ -9,7 +9,7 @@ import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
 import { SessionManager } from '../sessions/manager.ts';
 import { freePort } from '../free-port-test-helpers.ts';
-import { waitFor } from '../sessions/test-helpers.ts';
+import { testPath, waitFor } from '../sessions/test-helpers.ts';
 import { LaunchRunner } from './runner.ts';
 import { managerSessions } from './sessions.ts';
 import { LaunchStore } from './store.ts';
@@ -38,7 +38,7 @@ beforeEach(async () => {
         approvals
     });
     // A home of its own, so the profile a login shell reads is empty.
-    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: '/usr/bin:/bin', HOME: root, SHELL: '/bin/bash' } });
+    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: root, SHELL: '/bin/bash' } });
     runner = new LaunchRunner({
         store,
         sessions: managerSessions(manager, foregroundGroup),

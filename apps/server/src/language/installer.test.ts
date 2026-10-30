@@ -69,7 +69,17 @@ function logTexts(installer: LanguageInstaller, kind: LanguageServerKind): strin
 }
 
 describe('language installer', () => {
-    it('installs the pinned packages with the daemon as bun, scripts off, and then counts as installed', async () => {
+    it.skipIf(process.platform !== 'win32')('on Windows an install holds its own packages, without a shared set', async () => {
+        const calls: { cwd: string; args: string[]; env: Record<string, string> }[] = [];
+        const installer = new LanguageInstaller({ root, runtime, run: installing('php', calls), now: () => 0, onChange: () => undefined });
+        await installer.install('php');
+        expect(await installer.state('php')).toBe('installed');
+        const folder = await currentFolder('php');
+        expect(calls).toEqual([{ cwd: folder, args: ['install', '--ignore-scripts'], env: { BUN_BE_BUN: '1' } }]);
+        expect((await lstat(join(folder, 'node_modules'))).isSymbolicLink()).toBe(false);
+    });
+
+    it.skipIf(process.platform === 'win32')('installs the pinned packages with the daemon as bun, scripts off, and then counts as installed', async () => {
         const calls: { cwd: string; args: string[]; env: Record<string, string> }[] = [];
         const changes: string[] = [];
         const installer = new LanguageInstaller({ root, runtime, run: installing('php', calls), now: () => 0, onChange: (kind) => changes.push(kind) });
@@ -709,7 +719,7 @@ describe('the SQL server install', () => {
     });
 });
 
-describe('shared package sets', () => {
+describe.skipIf(process.platform === 'win32')('shared package sets', () => {
     const SHARED: LanguageServerKind[] = ['css', 'html', 'json'];
 
     function sharing(calls: string[] = []): LanguageInstaller {
@@ -823,7 +833,7 @@ describe('shared package sets', () => {
     });
 });
 
-describe('adopting installs that hold their own packages', () => {
+describe.skipIf(process.platform === 'win32')('adopting installs that hold their own packages', () => {
     /* An install from before package sets: a real node_modules, its manifest, lockfile and marker, selected as current. */
     async function standalone(kind: LanguageServerKind, id: string, content = ''): Promise<string> {
         const folder = join(root, kind, 'versions', id);

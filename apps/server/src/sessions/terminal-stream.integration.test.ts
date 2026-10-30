@@ -13,7 +13,7 @@ import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { SessionManager } from './manager.ts';
-import { waitFor } from './test-helpers.ts';
+import { testPath, testShell, waitFor } from './test-helpers.ts';
 
 /*
  * What a person sees in a terminal, proven end to end: a real shell in a real PTY, the session
@@ -425,7 +425,7 @@ const noSource = { subscribe: () => () => undefined, detachAll: () => undefined 
 
 beforeAll(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-stream-'));
-    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: '/usr/bin:/bin', HOME: home } });
+    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home } });
     const dispatcher = new Dispatcher();
     registerSessionHandlers(dispatcher, manager);
     const services: ConnectionServices = {
@@ -523,7 +523,7 @@ async function connectPausableClient(name: string): Promise<{ client: WireClient
 /* The client that makes the session and types the burst into it, attached from before its first line. */
 async function openSession(sessionId: string, name = ''): Promise<WireClient> {
     const writer = await connectClient(name);
-    await writer.request('session.create', { sessionId, cols: COLS, rows: ROWS, shell: '/bin/sh', cwd: home });
+    await writer.request('session.create', { sessionId, cols: COLS, rows: ROWS, shell: testShell, cwd: home });
     await writer.attach(sessionId);
     return writer;
 }
@@ -546,7 +546,8 @@ function untilEnd(client: WireClient, sessionId: string): Promise<void> {
     return client.until(() => client.shows(sessionId, END) || client.closed);
 }
 
-describe('terminal output over a real socket', () => {
+// ConPTY draws a screen rather than passing the bytes on, so a burst does not arrive whole on Windows.
+describe.skipIf(process.platform === 'win32')('terminal output over a real socket', () => {
     test(
         'a client attaching during a burst gets a screen the stream continues without a gap or a repeat',
         async () => {
