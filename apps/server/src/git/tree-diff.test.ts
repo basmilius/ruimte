@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { diffTrees } from './diff.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
-const NAMES = ['a.txt', 'b.txt', 'tab\tname.txt', 'line\nname.txt', 'café.txt'];
+// Windows allows no tab or line break in a file name.
+const NAMES = ['a.txt', 'b.txt', ...(process.platform === 'win32' ? [] : ['tab\tname.txt', 'line\nname.txt']), 'café.txt'];
 
 let template: RepoTemplate;
 let root: string;
@@ -102,7 +103,7 @@ test('long path lists use bounded argument batches and share one total patch bud
                 !command.includes('--numstat') &&
                 !command.includes('--name-status')
         );
-        expect(patches).toHaveLength(2);
+        expect(patches).toHaveLength(process.platform === 'win32' ? 3 : 2);
     } finally {
         spawned.mockRestore();
     }

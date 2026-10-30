@@ -26,8 +26,8 @@ const MAX_SIDE_BYTES = 512 * 1024;
 
 const PATCH_ARGS = ['--no-color', '--no-ext-diff'];
 const TREE_ARGS = ['--no-renames', '--no-ext-diff', '--no-textconv', '--submodule=short'];
-// Leave room for the environment and git's other arguments on platforms with small argv limits.
-const PATCH_ARG_BYTES = 64 * 1024;
+// Leave room for the environment and git's other arguments on platforms with small argv limits. A Windows command line stops at 32 KB.
+const PATCH_ARG_BYTES = (process.platform === 'win32' ? 24 : 64) * 1024;
 
 export interface Numstat {
     path: string;
