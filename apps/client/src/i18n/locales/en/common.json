@@ -24,6 +24,7 @@
         "undo": "Undo"
     },
     "state": {
+        "actionLoadFailed": "The action could not be loaded. Reload Ruimte and try again.",
         "loading": "Loading",
         "empty": "Nothing here yet",
         "error": "Something went wrong",
