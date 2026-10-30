@@ -11,9 +11,9 @@ function text(value: unknown): string {
 }
 
 /*
- * The finished releases, newest first. A draft is not out yet. A prerelease stays out on either update
- * track, since `compareVersions` orders plain versions only; its notes are on GitHub, which the notes
- * dialog links to for a version it cannot find. A tag that is not semver is not a version the updater would ever offer.
+ * The releases, newest first. A draft is not out yet. Prereleases stay in, since the page chooses by
+ * the update track and a change of track then asks GitHub nothing. A tag that is not semver is not a
+ * version the updater would ever offer.
  */
 export function releasesFrom(json: unknown): Release[] {
     if (!Array.isArray(json)) {
@@ -27,7 +27,7 @@ export function releasesFrom(json: unknown): Release[] {
         const record = entry as Record<string, unknown>;
         // The tag carries a `v` the version does not; everything after this point reads a bare version.
         const version = text(record.tag_name).replace(/^v/, '');
-        if (record.draft === true || record.prerelease === true || !isVersion(version)) {
+        if (record.draft === true || !isVersion(version)) {
             continue;
         }
         // GitHub writes CRLF into a body edited in the browser.

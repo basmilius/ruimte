@@ -11,7 +11,7 @@ import { openOnboarding } from '@/onboarding/open';
 import { hasLocalMachine } from '@/state/local-machine';
 import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
-import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, SPONSOR_PAGE, useReleaseNotes } from '@/state/release-notes';
+import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, releasesOnTrack, SPONSOR_PAGE, useReleaseNotes } from '@/state/release-notes';
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
 import { describeUpdate, setAutoDownload, setUpdateTrack, updateTrackOf, useUpdates } from '@/state/updates';
 import type { UpdateTrack } from '@ruimte/desktop-bridge';
@@ -144,7 +144,8 @@ export function AboutPane() {
     const update = useSettings((s) => s.update);
     const details = detailsOf(server);
     const version = useShownVersion();
-    const releases = useReleaseNotes((s) => s.notes?.releases);
+    const allReleases = useReleaseNotes((s) => s.notes?.releases);
+    const releases = allReleases && releasesOnTrack(allReleases, track, updates.currentVersion);
     const previousSeen = useReleaseNotes((s) => s.previousSeen);
     const withNotes = updates.supported && canShowReleaseNotes();
     const notesLink = withNotes ? notesView(releases ?? [], updates.currentVersion, updates, previousSeen).link : null;

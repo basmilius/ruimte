@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { compareVersions, isVersion } from '@ruimte/desktop-bridge';
+import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
 import { create } from 'zustand';
 import { messageOf } from '@adecore/ui';
 import { desktop, type Release, type ReleaseNotesState, type UpdateState } from '@/desktop/bridge';
@@ -119,6 +119,11 @@ function updateBadge(status: UpdateState['status']): string | null {
         default:
             return null;
     }
+}
+
+/* Stable shows finished releases, and the prerelease a person still runs so its own notes stay readable. */
+export function releasesOnTrack(releases: Release[], track: UpdateTrack, currentVersion: string): Release[] {
+    return track === 'prerelease' ? releases : releases.filter((release) => !release.version.includes('-') || release.version === currentVersion);
 }
 
 export function notesView(releases: Release[], currentVersion: string, updateState: UpdateState, previousSeen: string | null): NotesView {

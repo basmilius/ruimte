@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge, Release, ReleaseNotesState, UpdateState } from '@/desktop/bridge';
-import { ensureReleaseNotes, missingNotesNotice, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
+import type { UpdateTrack } from '@ruimte/desktop-bridge';
+import { ensureReleaseNotes, missingNotesNotice, notesView, openReleaseNotes, releasesOnTrack, useReleaseNotes } from '@/state/release-notes';
 
 function release(version: string, body = '- Something changed.'): Release {
     return {
@@ -17,6 +18,20 @@ const LIST = [release('0.0.9'), release('0.0.8'), release('0.0.7'), release('0.0
 function updates(patch: Partial<UpdateState>): UpdateState {
     return { status: 'current', currentVersion: '0.0.8', ...patch };
 }
+
+describe('releasesOnTrack', () => {
+    const versions = (track: UpdateTrack, current: string): string[] =>
+        releasesOnTrack([release('0.2.0-beta.2'), release('0.2.0-beta.1'), release('0.1.0')], track, current).map((entry) => entry.version);
+
+    test('Pre-release shows every release', () => {
+        expect(versions('prerelease', '0.1.0')).toEqual(['0.2.0-beta.2', '0.2.0-beta.1', '0.1.0']);
+    });
+
+    test('Stable shows finished releases and the prerelease that is still running', () => {
+        expect(versions('stable', '0.1.0')).toEqual(['0.1.0']);
+        expect(versions('stable', '0.2.0-beta.1')).toEqual(['0.2.0-beta.1', '0.1.0']);
+    });
+});
 
 describe('notesView', () => {
     test('with no update, the installed version is the one the link is about', () => {

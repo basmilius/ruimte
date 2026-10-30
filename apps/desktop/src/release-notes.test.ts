@@ -70,16 +70,16 @@ describe('releasesFrom', () => {
         expect(entry?.compareUrl).toBe('https://example.com/compare');
     });
 
-    test('leaves out drafts, prereleases and tags that are not versions', () => {
+    test('leaves out drafts and tags that are not versions, and sorts a prerelease before its own release', () => {
         const releases = releasesFrom([
             release('v0.0.9', { draft: true }),
             release('v0.1.0-beta.1', { prerelease: true }),
-            release('v0.1.0', { prerelease: true }),
+            release('v0.1.0'),
             release('nightly'),
             release('v0.0.8'),
             'not a release'
         ]);
-        expect(releases.map((entry) => entry.version)).toEqual(['0.0.8']);
+        expect(releases.map((entry) => entry.version)).toEqual(['0.1.0', '0.1.0-beta.1', '0.0.8']);
     });
 
     test('sorts by version rather than by the order GitHub answers in', () => {

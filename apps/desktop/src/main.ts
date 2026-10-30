@@ -816,7 +816,8 @@ ipc.on('update:install', (_event, confirmed: unknown) => void installUpdate(conf
    and tags whose release is still a draft. */
 const releaseNotes = createReleaseNotes({
     fetch: (url, init) => net.fetch(url, init),
-    cacheFile: join(app.getPath('userData'), 'release-notes.json')
+    // A new name, or GitHub's 304 would keep the list from before it held prereleases.
+    cacheFile: join(app.getPath('userData'), 'release-notes-with-prereleases.json')
 });
 
 ipc.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));

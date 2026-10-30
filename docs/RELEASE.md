@@ -12,7 +12,7 @@ Tag with `git tag -a v<version> -F <notes-file> --cleanup=verbatim`. Without tha
 
 - The app shows the notes in About and the update toast. Empty notes read "No notes for this version." until filled in.
 - A draft's tag already appears in `releases.atom`.
-- A person's update track (Settings, About) sets `allowPrerelease`: Stable reads the Latest release, Pre-release the newest entry of any kind. Until they choose, a build with a `-` in its version follows Pre-release. The notes list holds finished releases only, so the notes of a beta are read on GitHub.
+- A person's update track (Settings, About) sets `allowPrerelease`: Stable reads the Latest release, Pre-release the newest entry of any kind. Until they choose, a build with a `-` in its version follows Pre-release. The notes follow the same choice, and Stable also keeps the notes of a beta that is still running.
 - electron-updater reads `https://github.com/basmilius/ruimte/releases.atom`, which GitHub caches for a few minutes. Wait before suspecting the updater.
 
 When a published release fails to start, run `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port, wait for `/health`, open a socket with `?protocol=N&token=<local.key>` and check that `endpoint.info` carries `protocol`. A client refuses a machine without it.

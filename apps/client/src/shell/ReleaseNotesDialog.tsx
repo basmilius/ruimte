@@ -5,8 +5,18 @@ import { Markdown } from '@adecore/agents-react/chat/ui';
 import { formatDay, formatDayWithYear } from '@adecore/ui/format';
 import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog } from '@adecore/ui';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
-import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, SPONSOR_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
-import { useUpdates } from '@/state/updates';
+import {
+    closeReleaseNotes,
+    missingNotesNotice,
+    notesView,
+    releasesOnTrack,
+    RELEASES_PAGE,
+    SPONSOR_PAGE,
+    useReleaseNotes,
+    type NoteEntry
+} from '@/state/release-notes';
+import { useSettings } from '@/state/settings';
+import { updateTrackOf, useUpdates } from '@/state/updates';
 
 function dateOf(iso: string): string {
     const date = new Date(iso);
@@ -56,10 +66,12 @@ export function ReleaseNotesDialog() {
     const loading = useReleaseNotes((s) => s.loading);
     const previousSeen = useReleaseNotes((s) => s.previousSeen);
     const updates = useUpdates();
+    const chosenTrack = useSettings((s) => s.updatesTrack);
     const listRef = useRef<HTMLDivElement>(null);
     const scrolledFor = useRef<string | null>(null);
 
-    const releases = notes?.releases ?? [];
+    const track = updateTrackOf(chosenTrack, updates.currentVersion);
+    const releases = releasesOnTrack(notes?.releases ?? [], track, updates.currentVersion);
     const view = notesView(releases, updates.currentVersion, updates, previousSeen);
     const missing = missingNotesNotice(releases, version, loading);
     const listed = version !== null && releases.some((release) => release.version === version);
