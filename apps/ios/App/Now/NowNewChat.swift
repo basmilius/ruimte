@@ -45,14 +45,15 @@ final class NowNewChatModel {
             guard machineID != oldValue else { return }
             projectID = nil
             catalog = nil
-            projectDocument = nil
+            projectWorkspace = nil
         }
     }
     /// The project the chat starts in; nil is the machine's Chats.
     var projectID: String? {
-        didSet { if projectID != oldValue { projectDocument = nil } }
+        didSet { if projectID != oldValue { projectWorkspace = nil } }
     }
-    private(set) var projectDocument: JSONValue?
+    private var projectWorkspace: MobileWorkspace?
+    var projectDocument: JSONValue? { projectWorkspace?.ready == true ? projectWorkspace?.document : nil }
     var provider: String?
     private(set) var catalog: NewChatModel?
     private(set) var starting = false
@@ -71,20 +72,13 @@ final class NowNewChatModel {
         if provider.map({ !agents.contains($0) }) ?? true { provider = agents.first }
     }
 
-    func loadProject(_ session: SharedMachineSession) async {
-        guard let id = projectID else {
-            projectDocument = nil
-            return
-        }
-        let machine = machineID
+    func watchProject(_ session: SharedMachineSession) async {
+        guard session.machine.id == machineID, let id = projectID else { return }
         let workspace = MobileWorkspace(session: session, projectID: id)
+        projectWorkspace = workspace
         workspace.start()
-        defer { workspace.stop() }
-        for _ in 0..<150 where !workspace.ready {
-            do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
-        }
-        guard machineID == machine, projectID == id, workspace.ready, !Task.isCancelled else { return }
-        projectDocument = workspace.document
+        defer { if projectWorkspace === workspace { projectWorkspace = nil } }
+        await RemotePageLifecycle.run(client: session.rpc, stop: { workspace.stop() }, load: {})
     }
 
     func start(_ session: SharedMachineSession) async -> ProjectViewTarget? {
@@ -242,8 +236,7 @@ struct NowNewChatSheet: View {
         }
         .task(id: "\(model.machineID):\(model.projectID ?? "")") {
             guard let session else { return }
-            await RemotePageLifecycle.run(
-                client: session.rpc, events: ["project.changed"], load: { await model.loadProject(session) })
+            await model.watchProject(session)
         }
         .task(id: "\(model.machineID):\(session?.generation ?? 0)") {
             guard let session, session.connected else { return }

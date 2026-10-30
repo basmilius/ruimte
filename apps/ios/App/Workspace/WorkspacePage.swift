@@ -917,6 +917,7 @@ struct AddProjectItem: View {
                 }
                 if let problem = catalog.problem ?? workspace.problem {
                     Text(problem).foregroundStyle(MobileStyle.statusError)
+                    if catalog.agents == nil { Button("Try again") { Task { await loadAgents() } } }
                 }
             }.navigationTitle(canvasID == nil ? "Add view" : "Add node")
                 .toolbar {
@@ -936,12 +937,14 @@ struct AddProjectItem: View {
         .task {
             await RemotePageLifecycle.run(
                 client: workspace.client, events: ["accounts.changed"],
-                load: {
-                    await catalog.load()
-                    if !provider.isEmpty && !chatAgents.contains(where: { $0.kind == provider }) {
-                        provider = chatAgents.first?.kind ?? ""
-                    }
-                })
+                load: loadAgents)
+        }
+    }
+
+    private func loadAgents() async {
+        await catalog.load()
+        if !provider.isEmpty && !chatAgents.contains(where: { $0.kind == provider }) {
+            provider = chatAgents.first?.kind ?? ""
         }
     }
 
