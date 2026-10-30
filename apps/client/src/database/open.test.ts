@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { loadClientActionRegistry } from '@/actions/client-action-loader';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useFiles, type DatabaseTab } from '@/state/files';
@@ -8,6 +9,11 @@ import { useDatabasePanel } from './state.ts';
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 
 describe('a database view as a loose view', () => {
+    // The workspace loads its registry before drawing these controls.
+    beforeAll(async () => {
+        await loadClientActionRegistry();
+    });
+
     beforeEach(() => {
         useFiles.getState().load(null, { tabs: [], expandedDirs: [] });
         useFiles.setState({ focusRequest: null, recent: [], unsubmitted: {}, discarding: null });

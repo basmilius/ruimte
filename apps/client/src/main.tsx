@@ -1,6 +1,7 @@
 import { ChatHostProvider, onLazyOpenError as onChatLazyOpenError } from '@adecore/agents-react';
 import { onLazyOpenError, prefetcher, syncAnimations } from '@adecore/ui';
 import { createRoot } from 'react-dom/client';
+import { onClientActionLoadError } from '@/actions/client-action-loader';
 import { App } from '@/App';
 import { startPageHolds } from '@/browser/page-hold';
 import { refuseStrayDrops } from '@/canvas/drop';
@@ -81,7 +82,7 @@ if (!desktop()) {
         build: import.meta.url,
         prefetching: () => prefetcher.busy,
         // The chat's surfaces load through `agents-react`'s own `lazyNamed`, so it reports apart.
-        failedOpens: [onLazyOpenError, onChatLazyOpenError]
+        failedOpens: [onLazyOpenError, onChatLazyOpenError, onClientActionLoadError]
     });
 }
 /* First, so a window that opens beside another follows what that one changes from the start. */
