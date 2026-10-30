@@ -103,24 +103,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      # package.json's test script always writes test-timings.json, so each step copies that file.
-      - parallel:
-          - name: unit 1/4
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-1.json"
-              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-1.json" --shard=1/4
-          - name: unit 2/4
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-2.json"
-              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-2.json" --shard=2/4
-          - name: unit 3/4
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-3.json"
-              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-3.json" --shard=3/4
-          - name: unit 4/4
-            run: |
-              cp test-timings.json "$RUNNER_TEMP/unit-4.json"
-              bun test --conditions=source --parallel --only-failures --timings="$RUNNER_TEMP/unit-4.json" --shard=4/4
+      # One process. Four shards on this machine pushed the nodesOfView scan past Bun's five seconds.
+      - run: bun run test
 
   # On the same switch as the Windows release (WINDOWS_RELEASE).
   # One runner, two workers. More than that on this disk locks git and the rename of project.json,
