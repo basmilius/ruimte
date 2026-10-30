@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { nodeChats, resolveStoredPath } from '@ruimte/contracts';
+import { nodeChats, resolveStoredPath, type Worktree } from '@ruimte/contracts';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
@@ -55,7 +55,6 @@ export function deleteSelectionAsking(
         if (transport === null || folder === null || sessions.length === 0) {
             return undefined;
         }
-        const { worktrees } = await transport.request('git.worktree-list', { repo: folder, inspect: true });
         const staying = [
             ...Object.values(nodes).filter((node) => !goingIds.has(node.id)),
             ...useDocument
@@ -63,14 +62,15 @@ export function deleteSelectionAsking(
                 .views.flatMap(nodesOfView)
                 .filter((node) => nodes[node.id] === undefined)
         ];
-        return {
-            folder,
-            worktrees: worktreesLeftBy(
-                worktrees,
-                worktreeSessionsOf(going.map((id) => nodes[id]).filter((node) => node !== undefined)),
-                worktreeSessionsOf(staying)
-            )
-        };
+        const leftBy = (worktrees: readonly Worktree[]): Worktree[] =>
+            worktreesLeftBy(worktrees, worktreeSessionsOf(going.map((id) => nodes[id]).filter((node) => node !== undefined)), worktreeSessionsOf(staying));
+        // Counting the work runs git status in every worktree, seconds in a repository with dozens, so it waits until one is left behind.
+        const listed = await transport.request('git.worktree-list', { repo: folder });
+        if (leftBy(listed.worktrees).length === 0) {
+            return { folder, worktrees: [] };
+        }
+        const { worktrees } = await transport.request('git.worktree-list', { repo: folder, inspect: true });
+        return { folder, worktrees: leftBy(worktrees) };
     };
     const files = going.flatMap((id) => {
         const node = nodes[id];

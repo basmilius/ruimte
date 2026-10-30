@@ -70,6 +70,23 @@ test('a node that opened nothing goes at once', async () => {
     expect(store.getState().nodes.shell).toBeUndefined();
 });
 
+test('a node outside every worktree goes without counting the work in them', async () => {
+    const store = canvasWith({ ...node('lead', 'chat', 0), cwd: '/project' });
+    store.getState().select(['lead']);
+    const asked: unknown[] = [];
+    const transport = {
+        request: async (type: string, payload: unknown) => {
+            asked.push(payload);
+            return type === 'agent.children' ? { nodeIds: [] } : { worktrees: [{ path: '/wt/other', branch: 'other' }] };
+        }
+    } as never;
+
+    await deleteSelectionAsking(store, transport, '/project');
+
+    expect(store.getState().nodes.lead).toBeUndefined();
+    expect(asked).not.toContainEqual(expect.objectContaining({ inspect: true }));
+});
+
 test('a node that works in a worktree asks even when it opened nothing, and offers the worktrees nothing that stays works in', async () => {
     const lexer = { ...node('lexer', 'chat', 0), cwd: '/wt/lexer' };
     const parser = { ...node('parser', 'terminal', 300), cwd: '/wt/parser' };
