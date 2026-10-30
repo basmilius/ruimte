@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { listRepos, MAX_REPOS, parseSubmodulePaths, repoLabel } from './repos.ts';
@@ -28,9 +28,10 @@ afterEach(async () => {
 beforeAll(async () => {
     workspace = await repoTemplate('ruimte-repos-workspace', async (dir) => {
         const folder = join(dir, 'workspace');
+        // Copies, since what is listed is that a checkout is there, and every git process costs on Windows.
         await initRepo(join(folder, 'alpha'), { 'a.txt': 'a\n' });
-        await initRepo(join(folder, 'beta'), { 'b.txt': 'b\n' });
-        await initRepo(join(folder, 'node_modules', 'dep'), { 'd.txt': 'd\n' });
+        await cp(join(folder, 'alpha'), join(folder, 'beta'), { recursive: true });
+        await cp(join(folder, 'alpha'), join(folder, 'node_modules', 'dep'), { recursive: true });
         await mkdir(join(folder, 'notes'), { recursive: true });
         await writeFile(join(folder, 'notes', 'todo.md'), 'todo\n');
     });
@@ -38,7 +39,7 @@ beforeAll(async () => {
         await initRepo(join(dir, 'origin'), { 'o.txt': 'o\n' });
         const repo = join(dir, 'parent');
         await initRepo(repo, { 'p.txt': 'p\n', '.gitignore': 'tools/\n' });
-        await initRepo(join(repo, 'tools'), { 't.txt': 't\n' });
+        await cp(join(dir, 'origin'), join(repo, 'tools'), { recursive: true });
         await gitIn(repo, ['-c', 'protocol.file.allow=always', 'submodule', '--quiet', 'add', join(dir, 'origin'), 'backend']);
         await gitIn(repo, ['commit', '--quiet', '--message', 'add backend']);
     });
