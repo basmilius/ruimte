@@ -204,14 +204,14 @@ test('a menu read finds the active cell editor without stealing keyboard focus',
     }
 });
 
-test('navigation keys without a target stay free, while a valid node target still acts', async () => {
+test('empty view, focus and camera keys stay free while node keys prevent browser history navigation', async () => {
     const surface = canvas.page.host.querySelector<HTMLElement>('[data-canvas-surface]')!;
     const mod = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 
     for (const init of [
         { key: '[', code: 'BracketLeft', shiftKey: true, ...mod },
         { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true, ...mod },
-        { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true }
+        { key: '[', code: 'BracketLeft', altKey: true, ...mod }
     ]) {
         const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
         await act(async () => {
@@ -219,6 +219,13 @@ test('navigation keys without a target stay free, while a valid node target stil
         });
         expect(event.defaultPrevented).toBe(false);
     }
+
+    const noTarget = new KeyboardEvent('keydown', { key: 'ArrowLeft', code: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true });
+    await act(async () => {
+        surface.dispatchEvent(noTarget);
+    });
+    expect(noTarget.defaultPrevented).toBe(true);
+    expect(focusedCanvas().getState().selection).toEqual([]);
 
     await act(async () =>
         focusedCanvas()
@@ -232,4 +239,13 @@ test('navigation keys without a target stay free, while a valid node target stil
     });
     expect(event.defaultPrevented).toBe(true);
     await until(() => focusedCanvas().getState().selection[0] === 'right');
+
+    const targetCamera = { x: 777, y: 200, zoom: 1 };
+    setHistory('main', { back: [{ camera: targetCamera, nodeId: null }], forward: [], at: null, burst: null });
+    const back = new KeyboardEvent('keydown', { key: '[', code: 'BracketLeft', altKey: true, ...mod, bubbles: true, cancelable: true });
+    await act(async () => {
+        surface.dispatchEvent(back);
+    });
+    expect(back.defaultPrevented).toBe(true);
+    expect(focusedCanvas().getState().camera).toEqual(targetCamera);
 });

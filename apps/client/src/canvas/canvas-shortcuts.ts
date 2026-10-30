@@ -51,7 +51,6 @@ import { useUi } from '@/state/ui';
 import { useRoutinesStage } from '@/routines/stage';
 import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/shell/split';
 import { cameraHistoryStep } from '@/state/canvas-camera-history';
-import { nodeNavigationTarget } from '@/state/canvas-navigation-slice';
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
@@ -457,11 +456,9 @@ function answerCanvasKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
     }
     const nodeDirection = command === null ? undefined : NODE_DIRECTIONS[command];
     if (nodeDirection !== undefined) {
-        if (nodeNavigationTarget(s, nodeDirection) !== null) {
-            e.preventDefault();
-            s.selectNeighbor(nodeDirection);
-        }
-
+        // Alt+Left is browser Back on Windows and Linux, even at the edge of the canvas.
+        e.preventDefault();
+        s.selectNeighbor(nodeDirection);
         return;
     }
     const plainEnter = e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;
