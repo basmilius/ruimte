@@ -4,6 +4,7 @@ import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
     KeepAwakeModeSchema,
+    TextModelChoiceSchema,
     ProjectIconChoiceSchema,
     knownNodeSizes,
     nodeSizeOf,
@@ -14,7 +15,8 @@ import {
     type KeepAwakeMode,
     type AgentIntegrationsSummary,
     type LanDoor,
-    type ProjectIconChoice
+    type ProjectIconChoice,
+    type TextModelChoice
 } from '@ruimte/contracts';
 import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
@@ -51,6 +53,7 @@ const FileSchema = z.object({
     /* Whether an agent in an AI chat may show a page above its reply. Absent is on. */
     visualReplies: z.boolean().optional().catch(undefined),
     appleFoundationEnabled: z.boolean().optional().catch(undefined),
+    textModel: TextModelChoiceSchema.optional().catch(undefined),
     /* The daemon holds the sleep block, so a phone can set it. Absent is off, on the adapter only and
        without the display. */
     keepAwake: KeepAwakeModeSchema.optional().catch(undefined),
@@ -87,6 +90,7 @@ interface IdentityOptions {
     resumeAtReset: boolean;
     visualReplies: boolean;
     appleFoundationEnabled: boolean;
+    textModel: TextModelChoice | null;
     keepAwake: KeepAwakeSetting;
     broker: BrokerSetting;
     lanDoor: boolean;
@@ -132,6 +136,7 @@ export interface IdentityFlags {
     resumeAtReset?: boolean;
     visualReplies?: boolean;
     appleFoundationEnabled?: boolean;
+    textModel?: TextModelChoice | null;
     keepAwake?: KeepAwakeMode;
     keepAwakeOnBattery?: boolean;
     keepAwakeDisplay?: boolean;
@@ -163,6 +168,7 @@ export class EndpointIdentity {
     private resumeLimited: boolean;
     private visuals: boolean;
     private appleEnabled: boolean;
+    private chosenTextModel: TextModelChoice | null;
     private awake: KeepAwakeSetting;
     private brokerSetting: BrokerSetting;
     private readonly brokerSwitch = new Binding<IdentityBroker>('The broker switch of the machine identity');
@@ -188,6 +194,7 @@ export class EndpointIdentity {
         this.resumeLimited = options.resumeAtReset;
         this.visuals = options.visualReplies;
         this.appleEnabled = options.appleFoundationEnabled;
+        this.chosenTextModel = options.textModel;
         this.awake = options.keepAwake;
         this.brokerSetting = options.broker;
         this.lanDoorOpen = options.lanDoor;
@@ -234,6 +241,10 @@ export class EndpointIdentity {
 
     get appleFoundationEnabled(): boolean {
         return this.appleEnabled;
+    }
+
+    get textModel(): TextModelChoice | null {
+        return this.chosenTextModel;
     }
 
     get keepAwake(): KeepAwakeSetting {
@@ -328,6 +339,9 @@ export class EndpointIdentity {
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
         this.visuals = flags.visualReplies ?? this.visuals;
         this.appleEnabled = flags.appleFoundationEnabled ?? this.appleEnabled;
+        if (flags.textModel !== undefined) {
+            this.chosenTextModel = flags.textModel;
+        }
         this.awake = {
             mode: flags.keepAwake ?? this.awake.mode,
             onBattery: flags.keepAwakeOnBattery ?? this.awake.onBattery,
@@ -369,6 +383,7 @@ export class EndpointIdentity {
                 resumeAtReset: this.resumeLimited,
                 visualReplies: this.visuals,
                 appleFoundationEnabled: this.appleEnabled,
+                textModel: this.chosenTextModel,
                 ...this.keepAwakeFields(),
                 ...this.closedLid.get().describe(),
                 ...this.integrations.get().describe(),
@@ -397,6 +412,7 @@ export class EndpointIdentity {
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
             ...(this.visuals ? {} : { visualReplies: false }),
             ...(this.appleEnabled ? { appleFoundationEnabled: true } : {}),
+            ...(this.chosenTextModel === null ? {} : { textModel: this.chosenTextModel }),
             ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
             ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
             ...(this.awake.display ? { keepAwakeDisplay: true } : {}),
@@ -464,6 +480,7 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         resumeAtReset: file?.resumeAtReset ?? false,
         visualReplies: file?.visualReplies ?? true,
         appleFoundationEnabled: file?.appleFoundationEnabled ?? false,
+        textModel: file?.textModel ?? null,
         keepAwake: {
             mode: file?.keepAwake ?? 'off',
             onBattery: file?.keepAwakeOnBattery ?? false,

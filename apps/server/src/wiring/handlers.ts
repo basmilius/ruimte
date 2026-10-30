@@ -328,6 +328,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
             }
         },
         usageStatsChanged: (on) => stats.changed(on),
+        validateTextModel: (choice) => agents.textModels.validate(choice),
         appleFoundationChanged: async (on) => {
             providers.providers.invalidate('apple');
             if (!on) {
@@ -392,6 +393,7 @@ export function registerEditorHandlers(dispatcher: Dispatcher, input: EditorHand
     registerAgentServerHandlers(dispatcher, providers.servers);
     registerAgentRegistryHandlers(dispatcher, providers.registryAgents, providers.versions);
     registerProviderDetectHandler(dispatcher, providers.providers, providers.accounts);
+    dispatcher.register('provider.textModels', async (choice) => ({ models: await agents.textModels.modelsFor(choice) }));
     registerOnDeviceHandlers(dispatcher, language.onDevice);
     registerProvenanceHandlers(dispatcher, language.provenance, machine.machineHome);
     registerDatabaseHandlers(dispatcher, databases.service, databases.connections, databases.agents, databases.sqlAnalysis);
@@ -439,6 +441,7 @@ export function registerEditorHandlers(dispatcher: Dispatcher, input: EditorHand
             untrusted: (path) => agents.untrusted.inFolder(path),
             untrustFolder: (path, branch) => store.peers.untrustFolder(path, branch)
         },
-        agents.oneShot
+        agents.oneShot,
+        agents.textModels
     );
 }

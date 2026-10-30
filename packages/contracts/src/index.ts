@@ -4,6 +4,7 @@ import {
     TerminalPreparePayloadSchema,
     TerminalPrepareResultSchema
 } from './terminal-prepare.ts';
+import { TextModelModelsPayloadSchema, TextModelModelsResultSchema } from './text-model.ts';
 import { AgentIntegrationSetPayloadSchema, AgentIntegrationSetResultSchema, AgentIntegrationsResultSchema } from './agent-integrations.ts';
 import {
     ArtifactChangedEventSchema,
@@ -492,6 +493,7 @@ export * from './agent-server.ts';
 export * from './apple-foundation.ts';
 export * from './archive.ts';
 export * from './auth.ts';
+export { TEXT_MODEL_PROVIDERS, TextModelChoiceSchema, TextModelModelsPayloadSchema, TextModelModelsResultSchema, type TextModelChoice } from './text-model.ts';
 export * from './browser.ts';
 export * from './bytes.ts';
 export * from './chat.ts';
@@ -890,6 +892,7 @@ export const REQUEST_SCHEMAS = {
     'voice.preferences': { payload: EmptySchema, result: VoicePreferencesStateSchema },
     'voice.setPreferences': { payload: VoicePreferencesSchema, result: VoicePreferencesStateSchema },
     'endpoint.info': { payload: EndpointInfoPayloadSchema, result: EndpointInfoSchema },
+    'provider.textModels': { payload: TextModelModelsPayloadSchema, result: TextModelModelsResultSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.settings': { payload: EndpointSettingsSchema, result: EndpointInfoSchema },
     'endpoint.setNodeSize': { payload: EndpointSetNodeSizePayloadSchema, result: EndpointInfoSchema },

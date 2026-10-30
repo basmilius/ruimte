@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bu
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
+import { PROTOCOL_VERSION, type ServerFrame, type TextModelChoice } from '@ruimte/contracts';
 import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
 import { admitClient } from '../auth/test-admit.ts';
 import { machineRegistrationMessage, peerAccessRequestMessage } from '@ruimte/pulsar';
 import { PeerKey } from '../remote/peer-key.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair } from '../auth/keys.ts';
-import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { Dispatcher, RequestError, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { LENT_NOTHING, lendNothing } from '../endpoint-id-test-helpers.ts';
 import { MachineUpdates } from '../power/machine-update.ts';
@@ -25,6 +25,8 @@ let lanDoorOpen: boolean;
 let disconnected: string[];
 let streamingChanges: boolean[];
 let appleChanges: boolean[];
+let validatedTextModels: TextModelChoice[];
+let refuseTextModel: boolean;
 let keepAwakeChanges: number;
 let lidRule: boolean;
 let lidCancels: boolean;
@@ -66,6 +68,8 @@ async function ask(access: ClientAccess | undefined, type: string, payload: unkn
 const NOW = Date.UTC(2026, 9, 1);
 
 beforeEach(async () => {
+    validatedTextModels = [];
+    refuseTextModel = false;
     setSystemTime(NOW);
     home = await mkdtemp(join(tmpdir(), 'ruimte-auth-handlers-'));
     store = new AuthStore(home);
@@ -98,6 +102,13 @@ beforeEach(async () => {
         broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
         lanDoor: () => ({ lan: lanDoorOpen ? { port: 4220, addresses: ['192.168.1.20'] } : null, lanDoorFixed: false }),
         streamingChanged: (allowed) => streamingChanges.push(allowed),
+        validateTextModel: async (choice) => {
+            validatedTextModels.push(choice);
+
+            if (refuseTextModel) {
+                throw new RequestError('git-failed', 'Text model unavailable');
+            }
+        },
         appleFoundationChanged: async (on) => {
             appleChanges.push(on);
         },
@@ -366,6 +377,7 @@ describe('auth handlers', () => {
                     resumeAtReset: false,
                     visualReplies: true,
                     appleFoundationEnabled: false,
+                    textModel: null,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,
@@ -756,4 +768,18 @@ describe('auth handlers', () => {
             error: { code: 'unknown-provider' }
         });
     });
+});
+
+test('text model settings validate before saving and Automatic never needs a writer', async () => {
+    const choice = { provider: 'codex' as const, model: null, account: 'work' };
+    const access: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+    refuseTextModel = true;
+    expect(await ask(access, 'endpoint.settings', { textModel: choice })).toMatchObject({ ok: false, error: { message: 'Text model unavailable' } });
+    expect(identity.textModel).toBeNull();
+    refuseTextModel = false;
+    expect(await ask(access, 'endpoint.settings', { textModel: choice })).toMatchObject({ ok: true, result: { textModel: choice } });
+    expect(validatedTextModels).toEqual([choice, choice]);
+    refuseTextModel = true;
+    expect(await ask(access, 'endpoint.setIdentity', { name: null, icon: null, textModel: null })).toMatchObject({ ok: true, result: { textModel: null } });
+    expect(validatedTextModels).toHaveLength(2);
 });

@@ -137,6 +137,7 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         description: 'agent-providers:cli.defaults.usesCliDefault'
     },
     { id: 'agents.defaults.permissions', section: 'agents', label: 'settings:agents.defaults.permissions' },
+    row('agents.textModel', hasOpenedMachine),
     { id: 'agents.defaults.terminalMode', section: 'agents', label: 'settings:agents.defaults.terminalMode' },
     {
         id: 'chats.streaming',

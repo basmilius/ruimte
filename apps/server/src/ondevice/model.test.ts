@@ -39,6 +39,29 @@ function harness(options: { available?: boolean; answer?: (request: Extract<Appl
 }
 
 describe('on-device model', () => {
+    test('background naming never queues behind the editor and uses an internal spec after it finishes', async () => {
+        let hold = true;
+        const rig = harness({
+            answer: (request, out) => {
+                if (!hold) {
+                    out({ type: 'done', id: request.id, state: 'done', text: 'A title' });
+                }
+            }
+        });
+        const editor = rig.model.generate({ purpose: 'explain', prompt: 'code' });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        const spec = { prompt: 'Name this', instructions: 'Return JSON', maxTokens: 128, temperature: 0.2, background: true };
+        await expect(rig.model.complete(spec)).rejects.toThrow('busy');
+        expect(rig.requests.filter((request) => request.type === 'generate')).toHaveLength(1);
+        const first = rig.requests.find((request) => request.type === 'generate')!;
+        rig.out({ type: 'done', id: first.id, state: 'done', text: 'Explanation' });
+        await editor;
+        hold = false;
+        expect(await rig.model.complete(spec)).toEqual({ state: 'done', text: 'A title' });
+        expect(rig.requests.at(-1)).toMatchObject({ type: 'generate', instructions: 'Return JSON', maxTokens: 128 });
+        await rig.model.dispose();
+    });
+
     test('runs a generation in a helper started with --oneshot and answers the whole text', async () => {
         const rig = harness({
             answer: (request, out) => {

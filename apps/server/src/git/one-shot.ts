@@ -1,6 +1,7 @@
 import type { AgentKind } from '@ruimte/contracts';
 import type { ChatProvider } from '@adecore/agents/providers';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import type { TextWriter } from '../short-text/model.ts';
 import { GitError, streamWithTimeout, type GitResult } from './run.ts';
 
 /*
@@ -9,6 +10,7 @@ import { GitError, streamWithTimeout, type GitResult } from './run.ts';
  */
 export interface OneShotOptions {
     provider?: AgentKind;
+    writer?: TextWriter;
     /* The process, so `git.cancel` can end a CLI that is taking its time. */
     onSpawn?(kill: () => void): void;
     /* Where the CLI runs for a checkout; the checkout itself unless it is not to be trusted with the CLI's configuration. */
@@ -17,6 +19,10 @@ export interface OneShotOptions {
 
 /* The CLI that answers, or a refusal that says no CLI here can `task`. */
 export async function oneShotProvider(registry: ProviderRegistry, options: OneShotOptions, task: string): Promise<ChatProvider> {
+    if (options.writer !== undefined) {
+        return options.writer.provider;
+    }
+
     const provider = await registry.oneShotProvider(options.provider);
     if (provider === null) {
         throw new GitError('git-failed', `No agent CLI on this machine can ${task}.`);
@@ -25,15 +31,25 @@ export async function oneShotProvider(registry: ProviderRegistry, options: OneSh
 }
 
 /* How a one-shot CLI gets its prompt: on stdin where it reads it there, since an argument is capped and shows in the process list. */
-export function oneShotRun(provider: ChatProvider, prompt: string): { args: string[]; stdin?: string } | null {
+export function oneShotRun(provider: ChatProvider, prompt: string, model: string | null = null): { args: string[]; stdin?: string } | null {
+    const modelArgs = model === null || model === 'default' ? [] : ['--model', model];
+
     if (provider.oneShotStdinArgs) {
-        return { args: [...provider.oneShotStdinArgs], stdin: prompt };
+        const args = [...provider.oneShotStdinArgs];
+        const position = provider.kind === 'codex' && args.at(-1) === '-' ? args.length - 1 : args.length;
+        args.splice(position, 0, ...modelArgs);
+
+        return { args, stdin: prompt };
     }
     const args = provider.oneShotArgs?.(prompt) ?? null;
-    return args === null ? null : { args };
+    return args === null ? null : { args: [...args, ...modelArgs] };
 }
 
 export async function runOneShot(provider: ChatProvider, top: string, prompt: string, timeoutMs: number, options: OneShotOptions): Promise<GitResult> {
+    if (options.writer !== undefined) {
+        return options.writer.run(top, prompt, timeoutMs, options.onSpawn);
+    }
+
     const run = oneShotRun(provider, prompt);
     if (run === null) {
         throw new GitError('git-failed', `${provider.name} cannot answer a single prompt.`);

@@ -27,6 +27,31 @@ async function readWritten(): Promise<Record<string, unknown>> {
 }
 
 describe('readOrCreateEndpointIdentity', () => {
+    test('a text model survives restart, is announced to other clients and resets explicitly to Automatic', async () => {
+        const identity = await readOrCreateEndpointIdentity(home);
+        const choice = { provider: 'codex' as const, model: 'small', account: 'work' };
+        const changes: unknown[] = [];
+        identity.subscribe('other-client', (event) => changes.push(event));
+        expect(identity.textModel).toBeNull();
+        await identity.setSwitches({ textModel: choice });
+        expect((await readOrCreateEndpointIdentity(home)).textModel).toEqual(choice);
+        expect(changes.at(-1)).toMatchObject({ event: 'endpoint.changed', payload: { textModel: choice } });
+        await identity.setSwitches({ visualReplies: false });
+        expect(identity.textModel).toEqual(choice);
+        await identity.setSwitches({ textModel: null });
+        expect((await readOrCreateEndpointIdentity(home)).textModel).toBeNull();
+        expect(changes.at(-1)).toMatchObject({ payload: { textModel: null } });
+    });
+
+    test('an unreadable stored text choice falls back to Automatic without losing the machine identity', async () => {
+        const identity = await readOrCreateEndpointIdentity(home);
+        await writeFile(join(home, 'endpoint.json'), JSON.stringify({ ...(await readWritten()), textModel: { provider: 'unknown-future-writer', model: 42 } }));
+        const after = await readOrCreateEndpointIdentity(home);
+        expect(after.id).toBe(identity.id);
+        expect(after.publicKey).toBe(identity.publicKey);
+        expect(after.textModel).toBeNull();
+    });
+
     test('mints an id and a key pair once and answers with the same ones after that', async () => {
         const first = await readOrCreateEndpointIdentity(home);
         expect(first.id.length).toBeGreaterThan(8);
@@ -142,6 +167,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     resumeAtReset: false,
                     visualReplies: true,
                     appleFoundationEnabled: false,
+                    textModel: null,
                     keepAwake: 'off',
                     keepAwakeOnBattery: false,
                     keepAwakeDisplay: false,

@@ -8,6 +8,22 @@ import { streamCommand } from './run.ts';
 const blocks = splitBlocks(splitLines('one\ntwo\nthree\nfour\n'), splitLines('one\nour two\nthree\nfour\n'), splitLines('one\ntheir two\nthree\nfour\n'));
 
 describe('buildResolvePrompt', () => {
+    test('an on-device input budget skips an oversized stretch and still includes a small one', () => {
+        const split = splitBlocks(['base', 'middle', 'end'], ['x'.repeat(3000), 'middle', 'ours'], ['y'.repeat(3000), 'middle', 'theirs']);
+        const conflicts = split.flatMap((entry, index) => (entry.kind === 'conflict' ? [index] : []));
+        const built = buildResolvePrompt('file.ts', split, 'main', 'feature', {
+            promptBytes: 6000,
+            conflictBytes: 1800,
+            patchBytes: 3000,
+            nameStatusBytes: 512
+        });
+        expect(built.skipped).toEqual([conflicts[0]!]);
+        expect(built.asked).toEqual([conflicts[1]!]);
+        expect(Buffer.byteLength(built.prompt)).toBeLessThanOrEqual(6000);
+        expect(built.prompt).toContain('theirs');
+        expect(built.prompt).not.toContain('x'.repeat(3000));
+    });
+
     test('leaves a conflict that would not fit out of the prompt, and still asks about the ones that do', () => {
         // About 200 KB over its three versions, under the line distance past which the whole file is one conflict.
         const huge = Array.from(

@@ -27,8 +27,18 @@ export interface OnDeviceRequest {
     readonly onText?: (text: string) => void;
 }
 
+export interface OnDeviceCompletion {
+    readonly prompt: string;
+    readonly instructions: string;
+    readonly maxTokens: number;
+    readonly temperature: number;
+    readonly onText?: (text: string) => void;
+    /* Background naming never queues behind another generation, leaving room for editor requests. */
+    readonly background?: boolean;
+}
+
 interface Pending {
-    readonly request: OnDeviceRequest;
+    readonly request: Pick<OnDeviceCompletion, 'onText'>;
     readonly settle: (result: OnDeviceGenerateResult) => void;
     readonly fail: (error: Error) => void;
 }
@@ -75,11 +85,16 @@ export class OnDeviceModel {
 
     /* The whole text once the model is done; `abort` ends it early, which answers `aborted`. */
     async generate(request: OnDeviceRequest, signal?: AbortSignal): Promise<OnDeviceGenerateResult> {
+        return this.complete({ ...request, ...PURPOSES[request.purpose] }, signal);
+    }
+
+    /* Internal callers choose their spec; the wire handler still accepts only the fixed editor purposes. */
+    async complete(request: OnDeviceCompletion, signal?: AbortSignal): Promise<OnDeviceGenerateResult> {
         if (signal?.aborted) {
             return { state: 'aborted', text: '' };
         }
         // Taken before the first await, so requests that all arrive while the helper starts count too.
-        if (this.outstanding >= MAX_PENDING) {
+        if (this.outstanding >= MAX_PENDING || (request.background === true && this.outstanding > 0)) {
             throw new CodedError('busy', 'The on-device model is busy with other requests.');
         }
         this.outstanding += 1;
@@ -89,7 +104,6 @@ export class OnDeviceModel {
                 return { state: 'aborted', text: '' };
             }
             const id = `g${++this.sequence}`;
-            const spec = PURPOSES[request.purpose];
             const outcome = new Promise<OnDeviceGenerateResult>((settle, fail) => {
                 this.pending.set(id, { request, settle, fail });
             });
@@ -97,10 +111,10 @@ export class OnDeviceModel {
             this.write({
                 type: 'generate',
                 id,
-                instructions: spec.instructions,
+                instructions: request.instructions,
                 prompt: request.prompt,
-                maxTokens: spec.maxTokens,
-                temperature: spec.temperature
+                maxTokens: request.maxTokens,
+                temperature: request.temperature
             });
             return await outcome;
         } finally {

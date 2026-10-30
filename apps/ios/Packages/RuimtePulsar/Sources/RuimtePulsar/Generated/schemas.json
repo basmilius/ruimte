@@ -6403,6 +6403,50 @@
           "appleFoundationEnabled": {
             "type": "boolean"
           },
+          "textModel": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "claude",
+                      "codex",
+                      "grok",
+                      "copilot",
+                      "antigravity",
+                      "apple"
+                    ]
+                  },
+                  "model": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "account": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "provider",
+                  "model"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "keepAwake": {
             "type": "string",
             "enum": [
@@ -61972,6 +62016,50 @@
       "appleFoundationEnabled": {
         "type": "boolean"
       },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -62266,6 +62354,58 @@
       "authenticated"
     ]
   },
+  "request.provider.textModels.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "provider": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "grok",
+          "copilot",
+          "antigravity",
+          "apple"
+        ]
+      },
+      "account": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "required": [
+      "provider"
+    ]
+  },
+  "request.provider.textModels.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "models": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "slug",
+            "name"
+          ]
+        }
+      }
+    },
+    "required": [
+      "models"
+    ]
+  },
   "request.endpoint.setIdentity.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -62496,6 +62636,50 @@
       },
       "appleFoundationEnabled": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -62806,6 +62990,50 @@
       },
       "appleFoundationEnabled": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -63123,6 +63351,50 @@
       "appleFoundationEnabled": {
         "type": "boolean"
       },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -63428,6 +63700,50 @@
       },
       "appleFoundationEnabled": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -64008,6 +64324,50 @@
       },
       "appleFoundationEnabled": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -64785,6 +65145,50 @@
       },
       "appleFoundationEnabled": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",
@@ -79281,6 +79685,50 @@
       },
       "appleFoundationEnabled": {
         "type": "boolean"
+      },
+      "textModel": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "copilot",
+                  "antigravity",
+                  "apple"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "keepAwake": {
         "type": "string",

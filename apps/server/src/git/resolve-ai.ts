@@ -4,6 +4,7 @@ import type { ProviderRegistry } from '../providers/registry.ts';
 import { readConflict } from './conflict.ts';
 import { jsonObjectIn, oneShotProvider, runOneShot, type OneShotOptions } from './one-shot.ts';
 import { toplevel, GitError } from './run.ts';
+import type { TextInputBudget } from '../short-text/model.ts';
 
 // Lines of the file kept around a conflict, so a model reads what the stretch sits in.
 const CONTEXT_LINES = 6;
@@ -30,7 +31,7 @@ interface ResolvePrompt {
  * sees. JSON, because a model left to write freely opens with a sentence about what it is about to
  * do, and that sentence would end up in the code.
  */
-export function buildResolvePrompt(path: string, blocks: readonly MergeBlock[], ours: string, theirs: string): ResolvePrompt {
+export function buildResolvePrompt(path: string, blocks: readonly MergeBlock[], ours: string, theirs: string, budget?: TextInputBudget): ResolvePrompt {
     const parts: string[] = [
         `Resolve the merge conflicts in ${path}.`,
         '',
@@ -71,7 +72,7 @@ export function buildResolvePrompt(path: string, blocks: readonly MergeBlock[], 
         ];
         // Measured before it goes in, so one side that reformatted a whole file never takes the prompt past the cap.
         const size = Buffer.byteLength(`\n${part.join('\n')}`);
-        if (bytes + size > MAX_PROMPT_BYTES) {
+        if (bytes + size > (budget?.promptBytes ?? MAX_PROMPT_BYTES) || size > (budget?.conflictBytes ?? Infinity)) {
             skipped.push(index);
             continue;
         }
@@ -128,8 +129,13 @@ export async function resolveWithAgent(
         return { blocks: [] };
     }
     const provider = await oneShotProvider(registry, options, 'resolve a conflict');
-    const built = buildResolvePrompt(path, blocks, sides.ours, sides.theirs);
-    const tooLarge = built.skipped.length === 0 ? '' : `${built.skipped.length} of ${open.length} conflicts are too large to hand to ${provider.name}. `;
+    const built = buildResolvePrompt(path, blocks, sides.ours, sides.theirs, options.writer?.budget);
+    const tooLarge =
+        built.skipped.length === 0
+            ? ''
+            : provider.kind === 'apple'
+              ? `${built.skipped.length} of ${open.length} conflicts are too large for the on-device model. `
+              : `${built.skipped.length} of ${open.length} conflicts are too large to hand to ${provider.name}. `;
     if (built.asked.length === 0) {
         return { blocks: [], note: `${tooLarge}They are left for you.` };
     }

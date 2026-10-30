@@ -77,6 +77,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         computer,
         codexProbe,
         later: {
+            language: () => language,
             projects: () => projects,
             git: () => git,
             devices: () => devices,

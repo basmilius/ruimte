@@ -375,6 +375,7 @@
     "voice.preferences",
     "voice.setPreferences",
     "endpoint.info",
+    "provider.textModels",
     "endpoint.setIdentity",
     "endpoint.settings",
     "endpoint.setNodeSize",

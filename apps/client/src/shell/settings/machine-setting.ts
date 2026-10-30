@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import i18next from 'i18next';
 import type { BrokerSetting } from '@ruimte/pulsar';
+import type { TextModelChoice } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
 import { perform } from '@/actions/client-actions';
 import type { MachineSwitch } from '@/shell/settings/machine-switches';
@@ -14,6 +15,7 @@ export interface MachineSettingPatch extends Partial<Record<MachineSwitch, boole
     readonly streamingAllowed?: boolean;
     readonly worktreeRoot?: string;
     readonly usageStats?: boolean;
+    readonly textModel?: TextModelChoice | null;
 }
 
 function folderRefusal(e: unknown): string | null {

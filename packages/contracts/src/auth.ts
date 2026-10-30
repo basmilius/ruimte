@@ -17,6 +17,7 @@ import { LanDoorSchema } from './lan-door.ts';
 import { ProtocolVersionSchema } from './protocol.ts';
 import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { AgentIntegrationsSummarySchema } from './agent-integrations.ts';
+import { TextModelChoiceSchema } from './text-model.ts';
 
 // How a client reaches a daemon; the loopback one is what the app starts with.
 export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']);
@@ -50,6 +51,8 @@ const MACHINE_SWITCHES = {
     // `ruimte-context visual`. Off only when a person turned it off; absent reads as on.
     visualReplies: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
+    // Null follows the existing writer choice; absence means the machine predates this setting.
+    textModel: TextModelChoiceSchema.nullable().optional(),
     // The daemon holds the block, so it holds without a window and for a phone. Absent reads as off.
     keepAwake: KeepAwakeModeSchema.optional(),
     // Hold the block on battery as well; off, it holds on the power adapter only.

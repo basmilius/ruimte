@@ -29,6 +29,7 @@ import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { OneShotPlace } from '../peering/one-shot-place.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import type { ShortTextModels, TextWriter } from '../short-text/model.ts';
 
 /* What writing and taking in a bundle needs from the rest of the daemon. */
 interface BundleHost {
@@ -43,6 +44,7 @@ interface BundleHost {
 
 interface AgentRunOptions {
     provider?: AgentKind;
+    writer?: TextWriter;
     onSpawn(kill: () => void): void;
     cwdFor?(folder: string): Promise<string>;
 }
@@ -64,7 +66,8 @@ export function registerGitHandlers(
     placeOf?: (id: string) => { projectId: string } | null,
     machineHome?: Pick<MachineHome, 'refuse'>,
     bundleHost?: BundleHost,
-    oneShotPlace?: Pick<OneShotPlace, 'cwdFor'>
+    oneShotPlace?: Pick<OneShotPlace, 'cwdFor'>,
+    textModels?: ShortTextModels
 ): void {
     const actions = new GitActions();
     const identities = new IdentityReader();
@@ -225,7 +228,7 @@ export function registerGitHandlers(
 
     dispatcher.register('git.authors', async (payload) => ({ authors: await authorPictures.authorsOf(payload.cwd) }));
 
-    dispatcher.register('git.capabilities', () => readCapabilities(providers));
+    dispatcher.register('git.capabilities', () => readCapabilities(providers, Date.now(), textModels?.choice()?.provider));
 
     /* Progress streams while the git runs; the reply lands after. */
     dispatcher.register('git.action', (payload, client) => actions.run(payload, progressTo(client, payload.cwd, payload.actionId)));
@@ -284,8 +287,11 @@ export function registerGitHandlers(
     const runAgent = async <T>(actionId: string, provider: AgentKind | undefined, run: (options: AgentRunOptions) => Promise<T>): Promise<T> => {
         const job = actions.claim(actionId);
         try {
+            const writer = await textModels?.prepare(provider);
+
             return await run({
                 ...(provider ? { provider } : {}),
+                ...(writer ? { writer } : {}),
                 ...(oneShotPlace ? { cwdFor: (folder: string) => oneShotPlace.cwdFor(folder) } : {}),
                 onSpawn: (kill) => job.hold(kill)
             });

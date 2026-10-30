@@ -6,7 +6,8 @@ import {
     type LanDoor,
     type MachineUpdate,
     type MachineUpdateReport,
-    type MachineWork
+    type MachineWork,
+    type TextModelChoice
 } from '@ruimte/contracts';
 import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import { isOwner } from '../auth/access.ts';
@@ -40,6 +41,7 @@ interface EndpointHost {
     // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
     resumeChanged?(on: boolean): void;
     appleFoundationChanged?(on: boolean): Promise<void>;
+    validateTextModel?(choice: TextModelChoice): Promise<void>;
     // Off drops the days not sent yet, so nothing counted before goes out later.
     usageStatsChanged?(on: boolean): Promise<void>;
     // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
@@ -82,6 +84,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         resumeAtReset: identity.resumeAtReset,
         visualReplies: identity.visualReplies,
         appleFoundationEnabled: identity.appleFoundationEnabled,
+        textModel: identity.textModel,
         ...identity.keepAwakeFields(),
         keepAwakeAvailable: host.keepAwake?.available === true,
         keepAwakeLidAvailable: host.closedLid?.available === true,
@@ -165,6 +168,10 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         if (settings.usageStats !== undefined && !isOwner(access)) {
             throw new RequestError('owner-only', 'Only a person on this machine can turn its usage statistics on or off');
         }
+        if (settings.textModel != null) {
+            await host.validateTextModel?.(settings.textModel);
+        }
+
         await write({
             worktreeRoot,
             usageStats: settings.usageStats,
@@ -174,6 +181,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
             resumeAtReset: settings.resumeAtReset,
             visualReplies: settings.visualReplies,
             appleFoundationEnabled: settings.appleFoundationEnabled,
+            textModel: settings.textModel,
             keepAwake: settings.keepAwake,
             keepAwakeOnBattery: settings.keepAwakeOnBattery,
             keepAwakeDisplay: settings.keepAwakeDisplay,

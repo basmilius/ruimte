@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import type { AgentIntegrationsSummary, EndpointNameSource, KeepAwakeMode, MachineUpdate, NodeSizes, ProjectIconChoice, Reachability } from '@ruimte/contracts';
+import type {
+    AgentIntegrationsSummary,
+    EndpointNameSource,
+    KeepAwakeMode,
+    MachineUpdate,
+    NodeSizes,
+    ProjectIconChoice,
+    Reachability,
+    TextModelChoice
+} from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { useEndpointId } from '@/state/keys';
 
@@ -28,6 +37,7 @@ export interface ServerInfo {
     /* Whether an agent may show a page above its reply. */
     visualReplies: boolean;
     appleFoundationEnabled: boolean;
+    textModel?: TextModelChoice | null;
     /* When the machine keeps itself awake. */
     keepAwake: KeepAwakeMode;
     keepAwakeOnBattery: boolean;
@@ -121,6 +131,7 @@ interface ServersStore {
             | 'resumeAtReset'
             | 'visualReplies'
             | 'appleFoundationEnabled'
+            | 'textModel'
             | 'keepAwake'
             | 'keepAwakeOnBattery'
             | 'keepAwakeDisplay'
@@ -159,6 +170,7 @@ interface ServersStore {
                     | 'resumeAtReset'
                     | 'visualReplies'
                     | 'appleFoundationEnabled'
+                    | 'textModel'
                     | 'keepAwake'
                     | 'keepAwakeOnBattery'
                     | 'keepAwakeDisplay'

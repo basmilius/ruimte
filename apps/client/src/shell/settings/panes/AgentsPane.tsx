@@ -20,6 +20,7 @@ import { formatPercent } from '@adecore/ui/format';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useUi } from '@/state/ui';
+import { TextModelSection } from '@/shell/settings/TextModelSection';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
    pane draws, so the words are the ones the interface is in right now. */
@@ -34,6 +35,7 @@ export function AgentsPane() {
     return (
         <>
             <AgentDefaultsSection />
+            <TextModelSection />
             <MachineSwitchSection title={t('agents.machine.title')} settings={['agentsDeleteAnyView', 'reachOpenProjects', 'resumeAtReset']} />
             <SettingsSection title={t('agents.notifications.title')}>
                 <SettingSwitchRow id="agents.working.sound" setting="agentsTurnSound" />

@@ -1085,6 +1085,25 @@
                 "refused": "Niet aangepast: Ruimte kan dit bestand niet lezen",
                 "failed": "Mislukt: {{message}}"
             }
+        },
+        "textModel": {
+            "title": "Korte teksten",
+            "label": "Tekstmodel",
+            "description": "Schrijft nieuwe chattitels, commitberichten en conflictvoorstellen op deze machine. Editor AI heeft eigen keuzes.",
+            "automatic": "Automatisch",
+            "cliDefault": "CLI-standaard",
+            "systemDefault": "Systeemmodel",
+            "defaultAccount": "Eerste ingeschakelde account",
+            "model": "Model voor korte teksten",
+            "account": "Account voor korte teksten",
+            "reasoning": "Gebruikt de standaardreasoning van de CLI.",
+            "local": "Draait op deze machine. Grotere wijzigingen kunnen een CLI nodig hebben.",
+            "loading": "Modellen op deze machine laden…",
+            "update": "Werk deze machine bij om een tekstmodel te kiezen.",
+            "unavailable": "Dit tekstmodel of account is onbeschikbaar. Kies een ander of Automatisch.",
+            "failed": "Instellingen voor het tekstmodel konden niet worden getoond.",
+            "catalogFailed": "Kon de CLI-modellen niet laden. Je kunt nog steeds CLI-standaard kiezen.",
+            "retry": "Opnieuw proberen"
         }
     },
     "chats": {

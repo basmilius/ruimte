@@ -10,6 +10,7 @@ import { CommitSuggestion } from './commit-suggestion';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useProviders } from '@adecore/agents-react/state';
 
 interface CommitBoxProps {
     /* Where the message being typed is kept: the project and not a repository, since one message
@@ -32,6 +33,8 @@ interface CommitBoxProps {
  */
 export function CommitBox({ messageKey, checkouts, named, capabilities, busy, onCommit }: CommitBoxProps) {
     const { t } = useTranslation('panels');
+    const providers = useProviders((state) => state.providers);
+    const writerName = providers.find((provider) => provider.kind === capabilities?.messageProvider)?.name ?? capabilities?.messageProvider;
     const message = useGit((s) => s.messages[messageKey] ?? '');
     const version = useGit((s) => s.messageVersions[messageKey] ?? 0);
     const [offered, setOffered] = useState<{ key: string; source: string; message: string } | null>(null);
@@ -195,7 +198,7 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
                                     ? t('git.commit.stopWriting')
                                     : writeFrom === null
                                       ? t('git.commit.writeOneRepo')
-                                      : t('git.commit.letWrite', { provider: capabilities.messageProvider })
+                                      : t('git.commit.letWrite', { provider: writerName })
                             }
                             disabled={!changed || (writeFrom === null && !writing)}
                             onClick={write}

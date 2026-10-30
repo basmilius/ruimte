@@ -1085,6 +1085,25 @@
                 "refused": "Left alone: Ruimte cannot read this file",
                 "failed": "Failed: {{message}}"
             }
+        },
+        "textModel": {
+            "title": "Short texts",
+            "label": "Text model",
+            "description": "Writes new chat titles, commit messages and conflict proposals on this machine. Editor AI has its own choices.",
+            "automatic": "Automatic",
+            "cliDefault": "CLI default",
+            "systemDefault": "System model",
+            "defaultAccount": "First enabled account",
+            "model": "Model for short texts",
+            "account": "Account for short texts",
+            "reasoning": "Uses the CLI's default reasoning.",
+            "local": "Runs on this machine. Larger changes may need a CLI.",
+            "loading": "Loading the models on this machine…",
+            "update": "Update this machine to choose a text model.",
+            "unavailable": "This text model or account is unavailable. Choose another or Automatic.",
+            "failed": "Could not show text model settings.",
+            "catalogFailed": "Could not load the CLI models. You can still choose CLI default.",
+            "retry": "Try again"
         }
     },
     "chats": {

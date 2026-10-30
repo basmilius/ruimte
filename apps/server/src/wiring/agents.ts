@@ -1,5 +1,14 @@
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
-import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore, suggestChatTitle } from '@adecore/agents/chat';
+import {
+    AttachmentStore,
+    BookmarkStore,
+    ChatStore,
+    ClaudeTitleReader,
+    VisualStore,
+    buildTitlePrompt,
+    parseTitle,
+    suggestChatTitle
+} from '@adecore/agents/chat';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
@@ -8,6 +17,7 @@ import { ChatManager } from '../chat/chat-manager.ts';
 import { ruimteUiSources } from '../chat/ui-sources.ts';
 import { restartConnectPeers } from '../remote/connect-peer.ts';
 import { OneShotPlace } from '../peering/one-shot-place.ts';
+import { ShortTextModels } from '../short-text/model.ts';
 import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { ProjectProposals } from '../projects/project-proposals.ts';
 import { UntrustedFolders } from '../peering/untrusted.ts';
@@ -46,6 +56,7 @@ import type { ProjectsBundle } from './projects.ts';
 import type { ProvidersBundle } from './providers.ts';
 import type { DaemonRuntime } from './runtime.ts';
 import type { UsageBundle } from './usage.ts';
+import type { LanguageBundle } from './language.ts';
 
 const CHAT_UNLOAD_AFTER_MS = 10 * 60_000;
 
@@ -99,6 +110,7 @@ export async function loadAgentStores(home: string): Promise<AgentStores> {
 
 /* What the agents reach that is wired after them, asked only once a session or a chat runs. */
 interface AgentsLater {
+    language(): LanguageBundle;
     projects(): ProjectsBundle;
     git(): GitBundle;
     devices(): DevicesBundle;
@@ -139,6 +151,7 @@ export interface AgentsBundle {
     proposals: ProjectProposals;
     /* Where a one-shot CLI run works, so a folder from another machine never lends it its configuration. */
     oneShot: OneShotPlace;
+    textModels: ShortTextModels;
     /* Refuses a directory an agent node may not start in, at every start. */
     startCwd(nodeId: string, cwd: string): Promise<void>;
     /* A bearer token speaks for a terminal session or a chat, for reading context and for agent commands alike. */
@@ -170,6 +183,14 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         cwdOf: (nodeId) => chats.get(nodeId)?.info.cwd ?? sessions.get(nodeId)?.cwd ?? null
     });
     const oneShot = new OneShotPlace(config.home, untrusted);
+    const textModels = new ShortTextModels({
+        choice: () => identity.textModel,
+        appleEnabled: () => identity.appleFoundationEnabled,
+        apple: () => later.language().onDevice,
+        providers: providers.providers,
+        accounts: providers.accounts,
+        cwdFor: (folder) => oneShot.cwdFor(folder)
+    });
     const proposals = new ProjectProposals({
         chats: { hold: (chatId, key) => void chats.holdForPerson(chatId, key), release: (chatId, key) => chats.releaseHold(chatId, key) }
     });
@@ -324,8 +345,18 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => later.usage().limits.applyLive(update),
         claudeTitles,
-        // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
-        nameChat: async (provider, input) => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) }),
+        titlePolicy: () => (identity.textModel === null ? 'native' : 'generated'),
+        nameChat: async (provider, input) => {
+            const writer = await textModels.prepare(undefined, 'title');
+
+            if (writer === null) {
+                return suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) });
+            }
+
+            const result = await writer.run(input.cwd, buildTitlePrompt(input.prompt, input.answer), 45_000);
+
+            return result.code === 0 ? parseTitle(result.stdout) : null;
+        },
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
@@ -356,6 +387,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         visuals,
         untrusted,
         oneShot,
+        textModels,
         proposals,
         startCwd,
         targetForToken,

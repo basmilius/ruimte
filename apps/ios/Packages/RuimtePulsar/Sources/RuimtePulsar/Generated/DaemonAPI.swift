@@ -283,6 +283,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `voicePreferences` = "voice.preferences"
     case `voiceSetPreferences` = "voice.setPreferences"
     case `endpointInfo` = "endpoint.info"
+    case `providerTextModels` = "provider.textModels"
     case `endpointSetIdentity` = "endpoint.setIdentity"
     case `endpointSettings` = "endpoint.settings"
     case `endpointSetNodeSize` = "endpoint.setNodeSize"

@@ -30,6 +30,7 @@ import { useGit } from '@/state/git';
 import { assumeStaged, useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/state/git-repos';
 import { gitPlace, gitTarget, gitTargets, type GitPick, type GitTarget } from '@/state/git-target';
 import { endpointKey, useEndpointId } from '@/state/keys';
+import { useServers } from '@/state/server';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
@@ -74,6 +75,7 @@ export function GitPanel() {
     const hiddenRepos = useGit((s) => s.hiddenRepos);
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const endpointId = useEndpointId();
+    const textModel = useServers((state) => state.byEndpoint[endpointId]?.textModel);
     const transport = useTransport();
     const worktrees = useWorktrees(transport, endpointId, folder, true);
     const derived = useMemo(() => gitTarget(nodes, selection, folder, worktrees), [nodes, selection, folder, worktrees]);
@@ -185,7 +187,7 @@ export function GitPanel() {
             .request('git.capabilities', { cwd: probe })
             .then(setCapabilities)
             .catch(() => setCapabilities(null));
-    }, [transport, probe]);
+    }, [transport, probe, textModel]);
 
     /* One action on one checkout: it runs, it says how it went, and that checkout is read again after. */
     const actOn = async (

@@ -2,6 +2,7 @@ import type { GitSuggestMessageResult } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { jsonObjectIn, oneShotProvider, runOneShot, type OneShotOptions } from './one-shot.ts';
 import { git, toplevel, GitError } from './run.ts';
+import type { TextInputBudget } from '../short-text/model.ts';
 
 // Enough of the change for a subject line; a patch past this says nothing the first pages did not.
 const MAX_PATCH_BYTES = 24 * 1024;
@@ -48,21 +49,41 @@ export function parseSuggestion(output: string): GitSuggestMessageResult | null 
 }
 
 /* What a commit message is written from: the staged patch, or the working tree when nothing is staged. */
-async function stagedInput(top: string): Promise<{ nameStatus: string; patch: string } | null> {
+async function stagedInput(top: string, budget?: TextInputBudget): Promise<{ nameStatus: string; patch: string } | null> {
     for (const scope of [['--cached'], []]) {
         const nameStatus = (await git(['diff', ...scope, '--name-status'], top)) ?? '';
         if (nameStatus.trim() !== '') {
             const patch = (await git(['diff', ...scope, '--no-color', '--no-ext-diff', '--unified=1'], top)) ?? '';
-            return { nameStatus: nameStatus.slice(0, MAX_NAME_STATUS_BYTES), patch: patch.slice(0, MAX_PATCH_BYTES) };
+            return {
+                nameStatus: bytePrefix(nameStatus, budget?.nameStatusBytes ?? MAX_NAME_STATUS_BYTES),
+                patch: bytePrefix(patch, budget?.patchBytes ?? MAX_PATCH_BYTES)
+            };
         }
     }
     return null;
 }
 
+function bytePrefix(text: string, limit: number): string {
+    let bytes = 0;
+    let end = 0;
+
+    for (const character of text) {
+        bytes += Buffer.byteLength(character);
+
+        if (bytes > limit) {
+            break;
+        }
+
+        end += character.length;
+    }
+
+    return text.slice(0, end);
+}
+
 /* A commit message for what is staged, written by the machine's own agent CLI. */
 export async function suggestMessage(cwd: string, registry: ProviderRegistry, options: OneShotOptions = {}): Promise<GitSuggestMessageResult> {
     const top = await toplevel(cwd);
-    const input = await stagedInput(top);
+    const input = await stagedInput(top, options.writer?.budget);
     if (input === null) {
         throw new GitError('git-failed', 'There are no staged changes to describe.');
     }
