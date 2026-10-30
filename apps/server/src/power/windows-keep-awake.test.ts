@@ -92,4 +92,16 @@ describe('ExecutionStateHold', () => {
         const hold = new ExecutionStateHold({ ...fake.power, setExecutionState: () => 0 });
         expect(() => hold.hold({ onBattery: true, display: false })).toThrow('refused');
     });
+
+    test('a power source it cannot follow releases the state before it throws', () => {
+        const fake = fakePower();
+        const hold = new ExecutionStateHold({
+            ...fake.power,
+            watchPowerSource: () => {
+                throw new Error('no notifications');
+            }
+        });
+        expect(() => hold.hold({ onBattery: false, display: false })).toThrow('no notifications');
+        expect(fake.states).toEqual([SYSTEM, RELEASED]);
+    });
 });

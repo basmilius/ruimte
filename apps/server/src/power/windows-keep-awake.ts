@@ -44,7 +44,14 @@ export class ExecutionStateHold {
     hold(block: KeepAwakeBlock): HeldProcess {
         this.apply(block);
         this.current = block;
-        this.watch();
+        try {
+            this.watch();
+        } catch (e) {
+            // The caller then holds nothing, so nothing would ever release this.
+            this.current = null;
+            this.apply(null);
+            throw e;
+        }
         let end = (): void => undefined;
         const exited = new Promise<void>((resolve) => {
             end = resolve;
