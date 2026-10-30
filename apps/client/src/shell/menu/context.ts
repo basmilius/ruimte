@@ -49,7 +49,7 @@ import { windowWorkspace } from '@/state/window';
 import { cameraHistoryStep } from '@/state/canvas-camera-history';
 import { nodeNavigationTarget } from '@/state/canvas-navigation-slice';
 import { usePromptStacks } from '@/canvas/prompt-stack';
-import { projectWaiting } from '@/state/waiting';
+import { nextWaitingTitle } from '@/shell/next-waiting';
 import { availableEditorForCommand } from '@/shell/panels/focused-editor';
 import { availableLanguageForCommand } from '@/language/focused-language';
 
@@ -228,7 +228,7 @@ export function menuContext(host: MenuHost): MenuContext {
             focus,
             nodes,
             prompts: onCanvas && documentState.activeViewId !== null && usePromptStacks.getState().byView.has(documentState.activeViewId),
-            waiting: projectWaiting().length > 0,
+            waiting: nextWaitingTitle() !== null,
             editor: availableEditorForCommand() !== null,
             language: availableLanguageForCommand() !== null
         },

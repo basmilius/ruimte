@@ -19,6 +19,7 @@ import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas, projectSummary } from '../../testing/project-fixtures';
+import { menuContext } from './menu/context';
 import { nextWaitingTitle } from './next-waiting';
 import { sidebarMachineSnapshot } from './sidebar-projects';
 
@@ -129,6 +130,12 @@ describe("next wait across this window's project tabs", () => {
         await until(() => showing(THERE.projectId, older.id));
         expect(machine.requests('project.sidebar')).toHaveLength(reads);
         expect(machine.requests('chat.send')).toEqual([]);
+    });
+
+    test('the Go menu offers a wait that only a background tab holds', async () => {
+        await act(async () => useSnoozes.getState().receive(ENDPOINT, [{ nodeId: newer.id, until: NOW + 60_000 }]));
+        expect(nextWaitingTitle()).toBe('Borealis / Background review');
+        expect(menuContext('station').navigation.waiting).toBe(true);
     });
 
     test('a snoozed background wait is skipped without opening its project', async () => {
