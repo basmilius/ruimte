@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { copyablePaths, fileClipboard, osClipboardFormat } from './file-clipboard';
+import { copyablePaths, fileClipboard, osClipboardFormat, windowsCopyCommand, windowsCopyInput } from './file-clipboard';
 
 describe('file clipboard', () => {
     test('only a list of absolute paths is copied', () => {
@@ -32,6 +32,20 @@ describe('file clipboard', () => {
 
     test('a platform without a format copies nothing', () => {
         expect(fileClipboard('win32', ['C:\\repo\\a.ts'])).toBeNull();
+    });
+
+    test('Windows reads the paths from stdin as UTF-8, one per zero byte, with backslashes', () => {
+        const input = windowsCopyInput(['C:\\repo\\é b.ts', 'C:/repo/src']);
+        expect(input.equals(Buffer.from('C:\\repo\\é b.ts\0C:\\repo\\src', 'utf8'))).toBe(true);
+    });
+
+    test('the Windows script stays out of the command line quoting and writes a copy, not a move', () => {
+        const command = windowsCopyCommand();
+        expect(command.slice(0, 5)).toEqual(['powershell.exe', '-NoProfile', '-NonInteractive', '-Sta', '-EncodedCommand']);
+        const script = Buffer.from(command[5] ?? '', 'base64').toString('utf16le');
+        expect(script).toContain('SetFileDropList');
+        expect(script).toContain("'Preferred DropEffect'");
+        expect(script).toContain('[byte[]](1, 0, 0, 0)');
     });
 
     test('a raw format is named the way Electron takes it', () => {

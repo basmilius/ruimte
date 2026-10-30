@@ -29,6 +29,11 @@ Unit tested. "Unverified" means nobody tried it on a PC.
 - `check:types`, `lint` and `format:check` pass.
 - The background service, unverified: `taskSchedulerManager` (`@adecore/service`), wired in `packages/service/src/host.ts` as task `app.ruimte.daemon`, with `service\app.ruimte.daemon.xml` and `logs\daemon.log` under `%LOCALAPPDATA%\Ruimte`. The desktop app recognizes its own task by its `RUIMTE_HOME` (`apps/desktop/src/service/ownership.ts`). The task reruns every minute, so a daemon that ends for an update returns within a minute. `ruimte service install` copies `ruimte.exe` to `$RUIMTE_HOME\bin`, renaming a running one aside first.
 
+- The process monitor and a session's ports (`apps/server/src/processes/windows.ts`), through `bun:ffi` as on macOS, since a process per reading is what costs on Windows. A reading takes 3 ms on the PC with 310 processes, also from a compiled executable. `NtQuerySystemInformation` gives the table and counters, a handle once per process gives the path and owner, and `GetExtendedTcpTable` the listeners. Memory is the private working set; disk counters include all of a process's I/O, as in Task Manager. Windows has no reparenting, so a parent that ended or whose pid was reused becomes pid 1, as on POSIX. An MSYS `exec` ends the Windows process it ran in, so a child that lost its parent hangs under the oldest process on its console, flat, which is the terminal's shell. Git for Windows's `bin\bash.exe` starts the real shell as its child; `childCounter` looks through that, so an idle Git Bash is no work.
+- Interrupt and terminate in the process panel end the process at once. `process.kill` on Windows has no gentler signal, so `SIGINT` and `SIGTERM` do what `SIGKILL` does (exit code 1, confirmed on the PC).
+- Keep awake (`apps/server/src/power/windows-keep-awake.ts`): `SetThreadExecutionState` on the daemon's own thread, so no process per agent turn and a killed daemon lets go by itself (confirmed with `powercfg /requests`). Windows has no adapter-only flag, so "Also on battery" off follows `GUID_ACDC_POWER_SOURCE` through `PowerSettingRegisterNotification`, never a clock. The closed-lid rule stays macOS only. It does not stop a sleep a person asks for: closing a lid with its action set to sleep, the power button or Start, Sleep.
+- Copying files to the clipboard (`apps/desktop/src/file-clipboard.ts`), through a short-lived PowerShell (`Windows.Forms`). Electron writes named formats only: "CF_HDROP" becomes a stranger of that name, and `FileNameW` makes Windows derive a drop list for a single path. Tried on the PC in Electron 45. Copying several files needs the real format.
+
 ## Open, in blocking order
 
 ### 1. Repository and checks
@@ -104,6 +109,11 @@ Development stays on the Mac. The Windows 11 x64 PC is reachable over SSH (`Host
 Confirmed on the PC, 2026-10-30, in a dev app started without elevation: `bash -l` stays in the requested folder, also with a space in its path; no console window appears for the daemon; a terminal opens in Git Bash; an agent started there reports status through the hooks; a Claude chat and a Codex chat answer. A `codex.cmd` chat keeps `100% "a&b" ^c` intact.
 
 Open questions for the next PC session:
+
+- In the app: the processes panel shows each terminal and chat with live CPU and memory, and a dev server's port appears on its terminal node, in PowerShell and in Git Bash (`npm run dev`). An idle Git Bash does not count as work when quitting.
+- Copy one file, and several, from the file tree; paste each in the Explorer. They are copied, the originals stay, and pasting in a text field gives the paths. The first copy takes about a second.
+- Keep awake "Always" with "Also on battery" and "Keep display on": `powercfg /requests` in an elevated prompt lists `bun.exe` or `ruimte.exe` under both SYSTEM and DISPLAY (an SSH session is in session 0, where Windows drops the display flag). The settings show no closed-lid row.
+- On a laptop, with "Also on battery" off: under SYSTEM while plugged in, gone within seconds of unplugging, back when plugged in again. The PC has no battery, so only the first report of the source was seen.
 
 - Deleting from the file tree. In each case the file stays unless it is in the Recycle Bin.
   - A file and a folder land in the bin and Restore puts them back. Time the first delete (it compiles the helper) and later ones. A `node_modules` folder finishes within 30 seconds.

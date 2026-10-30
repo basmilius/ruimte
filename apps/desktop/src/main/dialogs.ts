@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { allFilesLabel, openDialogPlan, parseOpenPathRequest, parseSavePathRequest } from '../database-bridge';
-import { copyablePaths, fileClipboard, osClipboardFormat } from '../file-clipboard';
+import { copyablePaths, copyFilesOnWindows, fileClipboard, osClipboardFormat } from '../file-clipboard';
 import { openImageCopy } from '../open-image';
 import { SaveStreams } from '../save-streams';
 import { isSystemSettingsPane, isWebLink } from '../web-guards';
@@ -114,6 +114,9 @@ export function installDialogs(ipc: AppIpc, language: () => string | undefined):
     // One path that is relative or gone refuses the whole copy.
     ipc.handle('clipboard:copy-files', async (_event, requested: unknown) => {
         const paths = copyablePaths(requested);
+        if (process.platform === 'win32') {
+            return paths !== null && paths.every((path) => existsSync(path)) && copyFilesOnWindows(paths);
+        }
         const contents = paths === null ? null : fileClipboard(process.platform, paths);
         if (paths === null || contents === null || !paths.every((path) => existsSync(path))) {
             return false;

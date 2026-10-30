@@ -1,7 +1,7 @@
 import { CLOSED_LID_BATTERY_FLOOR } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
-import { keepAwakeAvailable, keepAwakeWanted, type KeepAwakeSetting } from './keep-awake.ts';
+import { keepAwakeWanted, type KeepAwakeSetting } from './keep-awake.ts';
 
 /*
  * Keep awake with the lid closed. The block keep awake holds does not cover a lid: macOS sleeps on a
@@ -30,7 +30,9 @@ export interface PowerState {
 }
 
 /* Only a Mac turns sleep off this way. */
-const closedLidAvailable = keepAwakeAvailable;
+function closedLidAvailable(platform: NodeJS.Platform): boolean {
+    return platform === 'darwin';
+}
 
 function sleepCommand(disabled: boolean): string[] {
     return [PMSET, '-a', 'disablesleep', disabled ? '1' : '0'];

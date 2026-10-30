@@ -190,7 +190,7 @@ export function diskSpace(home: string): Pick<MachineCounters, 'diskFree' | 'dis
     }
 }
 
-/* The sampler of this platform, or null where there is none (Windows); the panel explains that instead. */
+/* The sampler of this platform, or null where there is none; the panel explains that instead. */
 export async function createSampler(platform: string = process.platform, home: string = process.env.HOME ?? '/'): Promise<ProcessSampler | null> {
     try {
         if (platform === 'darwin') {
@@ -200,6 +200,10 @@ export async function createSampler(platform: string = process.platform, home: s
         if (platform === 'linux') {
             const { LinuxSampler } = await import('./linux.ts');
             return new LinuxSampler(home);
+        }
+        if (platform === 'win32') {
+            const { WindowsSampler } = await import('./windows.ts');
+            return new WindowsSampler(home);
         }
     } catch (e) {
         console.error('The process sampler could not start:', errorText(e));

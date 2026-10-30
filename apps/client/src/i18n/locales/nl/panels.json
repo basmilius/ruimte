@@ -1075,8 +1075,7 @@
             "memory": "Sorteren op geheugen"
         },
         "theProcess": "Het proces",
-        "unsupported": "Processen bekijken kan nog niet op dit platform.",
-        "unsupportedWindows": "Processen bekijken kan nog niet op Windows."
+        "unsupported": "Processen bekijken kan nog niet op dit platform."
     },
     "statusBar": {
         "position": "Rg {{line}}, Kol {{column}}",

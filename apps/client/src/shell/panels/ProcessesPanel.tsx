@@ -42,7 +42,6 @@ import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useProjectList } from '@/state/project-list';
 import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/processes';
-import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
@@ -178,7 +177,6 @@ export function ProcessesPanel() {
     useProcessesFeed();
     const endpointId = useEndpointId();
     const connection = useEndpointConnection(endpointId);
-    const platform = useServer((s) => s.platform);
     const machineName = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId)?.label ?? null);
     const scope = useProcesses((s) => s.scope);
     const sort = useProcesses((s) => s.sort);
@@ -201,10 +199,10 @@ export function ProcessesPanel() {
         </PanelHeaderSlot>
     );
 
-    if (platform === 'win32' || row.supported === false) {
+    if (row.supported === false) {
         return (
             <PanelEmpty header={header} icon={Activity}>
-                {platform === 'win32' ? t('processes.unsupportedWindows') : t('processes.unsupported')}
+                {t('processes.unsupported')}
             </PanelEmpty>
         );
     }

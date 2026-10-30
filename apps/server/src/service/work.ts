@@ -35,10 +35,19 @@ export function workOf(facts: WorkFacts): MachineWork {
 }
 
 /* A child count over one reading of the process table. */
-export function childCounter(processes: readonly { pid: number; ppid: number }[]): (pid: number) => number {
+export function childCounter(processes: readonly { pid: number; ppid: number; path?: string | null }[]): (pid: number) => number {
+    const byPid = new Map(processes.map((entry) => [entry.pid, entry]));
+    // Git for Windows's `bin\bash.exe` only starts `usr\bin\bash.exe`, the real shell, so that one is not work and what it runs counts for the launcher.
+    const isGitBashShell = (entry: { ppid: number; path?: string | null }): boolean =>
+        /\\usr\\bin\\bash\.exe$/i.test(entry.path ?? '') && /\\bin\\bash\.exe$/i.test(byPid.get(entry.ppid)?.path ?? '');
     const counts = new Map<number, number>();
     for (const entry of processes) {
-        counts.set(entry.ppid, (counts.get(entry.ppid) ?? 0) + 1);
+        if (isGitBashShell(entry)) {
+            continue;
+        }
+        const parent = byPid.get(entry.ppid);
+        const owner = parent !== undefined && isGitBashShell(parent) ? parent.ppid : entry.ppid;
+        counts.set(owner, (counts.get(owner) ?? 0) + 1);
     }
     return (pid) => counts.get(pid) ?? 0;
 }

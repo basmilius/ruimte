@@ -23,9 +23,14 @@ export function agentsWorking(work: KeepAwakeWork): boolean {
     );
 }
 
-/* Where the daemon can hold a block. Only macOS ships a tool that holds one for as long as a process lives. */
+export interface KeepAwakeBlock {
+    onBattery: boolean;
+    display: boolean;
+}
+
+/* Where the daemon can hold a block: `caffeinate` on macOS and `SetThreadExecutionState` on Windows. */
 export function keepAwakeAvailable(platform: NodeJS.Platform): boolean {
-    return platform === 'darwin';
+    return platform === 'darwin' || platform === 'win32';
 }
 
 /* Whether the setting asks for a block right now, before the power source has a say. */
@@ -34,17 +39,20 @@ export function keepAwakeWanted(setting: KeepAwakeSetting, working: boolean, pla
 }
 
 /*
- * The command that holds the block, or null for none. `-w` ties it to the daemon, so a daemon that is
- * killed never leaves the Mac awake. `-s` holds on the power adapter only and `-i` on any source. The
- * display is held only with `-i`: caffeinate has no display assertion that lets go on battery, and
- * `-d` there would keep a laptop on battery awake that a person said should sleep.
+ * The block the setting comes down to, or null for none. The display is held only for a block that may
+ * hold on battery: caffeinate has no display assertion that lets go there, and the setting reads the same
+ * on every platform.
  */
-export function keepAwakeCommand(setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform, pid: number): string[] | null {
+export function keepAwakeBlock(setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform): KeepAwakeBlock | null {
     if (!keepAwakeWanted(setting, working, platform)) {
         return null;
     }
-    const display = setting.mode === 'always' && setting.display && setting.onBattery;
-    return ['caffeinate', '-w', String(pid), setting.onBattery ? '-i' : '-s', ...(display ? ['-d'] : [])];
+    return { onBattery: setting.onBattery, display: setting.mode === 'always' && setting.display && setting.onBattery };
+}
+
+/* `-w` ties it to the daemon, so a daemon that is killed never leaves the Mac awake. `-s` holds on the power adapter only and `-i` on any source. */
+export function caffeinateCommand(block: KeepAwakeBlock, pid: number): string[] {
+    return ['caffeinate', '-w', String(pid), block.onBattery ? '-i' : '-s', ...(block.display ? ['-d'] : [])];
 }
 
 export interface HeldProcess {
@@ -52,15 +60,12 @@ export interface HeldProcess {
     readonly exited: Promise<unknown>;
 }
 
-/* Starts a process that holds the block; a test hands in a fake, so no test runs a real one. */
-type KeepAwakeSpawn = (command: string[]) => HeldProcess;
-
 interface KeepAwakeOptions {
     platform: NodeJS.Platform;
-    pid: number;
     setting(): KeepAwakeSetting;
     work(): KeepAwakeWork;
-    spawn: KeepAwakeSpawn;
+    /* Starts holding the block; a test hands in a fake, so no test holds a real one. */
+    hold(block: KeepAwakeBlock): HeldProcess;
     log(line: string): void;
 }
 
@@ -89,13 +94,13 @@ export class KeepAwake {
         if (this.stopped) {
             return;
         }
-        const command = keepAwakeCommand(this.options.setting(), agentsWorking(this.options.work()), this.options.platform, this.options.pid);
-        const key = command?.join(' ') ?? null;
+        const block = keepAwakeBlock(this.options.setting(), agentsWorking(this.options.work()), this.options.platform);
+        const key = block === null ? null : JSON.stringify(block);
         if ((this.held?.key ?? null) === key) {
             return;
         }
         const previous = this.held;
-        this.held = command === null || key === null ? null : this.start(command, key);
+        this.held = block === null || key === null ? null : this.start(block, key);
         // The new block is up before the old one goes, so the machine is never without one in between.
         previous?.process.kill();
     }
@@ -106,10 +111,10 @@ export class KeepAwake {
         this.held = null;
     }
 
-    private start(command: string[], key: string): { key: string; process: HeldProcess } | null {
+    private start(block: KeepAwakeBlock, key: string): { key: string; process: HeldProcess } | null {
         let process: HeldProcess;
         try {
-            process = this.options.spawn(command);
+            process = this.options.hold(block);
         } catch (e) {
             this.options.log(`Keeping this machine awake failed: ${e instanceof Error ? e.message : String(e)}`);
             return null;

@@ -1075,8 +1075,7 @@
             "memory": "Sort by memory"
         },
         "theProcess": "The process",
-        "unsupported": "Process monitoring is not available on this platform yet.",
-        "unsupportedWindows": "Process monitoring is not available on Windows yet."
+        "unsupported": "Process monitoring is not available on this platform yet."
     },
     "statusBar": {
         "position": "Ln {{line}}, Col {{column}}",

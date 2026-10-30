@@ -5,6 +5,7 @@ import { holdsForeground } from '../processes/foreground.ts';
 import { DarwinListenerProbe } from '../processes/listeners.ts';
 import { ProcessMonitor } from '../processes/monitor.ts';
 import { createSampler } from '../processes/sampler.ts';
+import { WindowsListenerProbe } from '../processes/windows.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { SelfUpdater, buildFileOf, readBuildFile } from '../service/self-update.ts';
 import { childCounter, workOf } from '../service/work.ts';
@@ -40,7 +41,7 @@ export async function wireProcesses({ config, machineId, agents, work, launches,
     const sessionPorts = new SessionPorts({
         machineId,
         sampler,
-        probe: process.platform === 'darwin' ? new DarwinListenerProbe() : null,
+        probe: process.platform === 'darwin' ? new DarwinListenerProbe() : process.platform === 'win32' ? new WindowsListenerProbe() : null,
         sessions: () => sessions.list().flatMap(({ sessionId }) => sessions.live(sessionId) ?? []),
         current: (id) => sessions.live(id),
         uid: process.getuid?.() ?? -1

@@ -1,4 +1,5 @@
-import { isAbsolute } from 'node:path';
+import { execFile } from 'node:child_process';
+import { isAbsolute, win32 } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 /* What the clipboard holds for files a person copied: the paths as text, and per raw format of the platform its bytes as text. */
@@ -47,4 +48,40 @@ export function fileClipboard(platform: NodeJS.Platform, paths: readonly string[
         };
     }
     return null;
+}
+
+/*
+ * Windows gets its list from a short-lived PowerShell. Explorer pastes `CF_HDROP`, a numbered format,
+ * and Electron writes only named ones: it registers "CF_HDROP" as a stranger, and `FileNameW` holds a
+ * single path. The paths go over stdin, since a command line is capped and PowerShell would re-read them.
+ */
+const WINDOWS_COPY_SCRIPT = `$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Windows.Forms
+$memory = New-Object IO.MemoryStream
+[Console]::OpenStandardInput().CopyTo($memory)
+$paths = [Text.Encoding]::UTF8.GetString($memory.ToArray()).Split([char]0)
+$files = New-Object Collections.Specialized.StringCollection
+$files.AddRange($paths)
+$data = New-Object Windows.Forms.DataObject
+$data.SetFileDropList($files)
+$data.SetText($paths -join "\`r\`n")
+$data.SetData('Preferred DropEffect', (New-Object IO.MemoryStream(,[byte[]](1, 0, 0, 0))))
+[Windows.Forms.Clipboard]::SetDataObject($data, $true)`;
+
+export function windowsCopyCommand(): string[] {
+    return ['powershell.exe', '-NoProfile', '-NonInteractive', '-Sta', '-EncodedCommand', Buffer.from(WINDOWS_COPY_SCRIPT, 'utf16le').toString('base64')];
+}
+
+/* A `/` in a path leaves Explorer with nothing to paste. */
+export function windowsCopyInput(paths: readonly string[]): Buffer {
+    return Buffer.from(paths.map((path) => win32.normalize(path)).join('\0'), 'utf8');
+}
+
+/* Resolves whether the clipboard took the files. */
+export function copyFilesOnWindows(paths: readonly string[]): Promise<boolean> {
+    const [program, ...args] = windowsCopyCommand();
+    return new Promise((resolve) => {
+        const child = execFile(program!, args, { windowsHide: true, timeout: 15_000 }, (error) => resolve(error === null));
+        child.stdin?.end(windowsCopyInput(paths));
+    });
 }

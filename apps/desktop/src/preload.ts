@@ -119,9 +119,9 @@ const bridge = {
     openImage: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<void> => ipcRenderer.invoke('image:open', suggestedName, bytes, mime),
     chooseSavePath: (request: SavePathRequest): Promise<string | null> => ipcRenderer.invoke('dialog:choose-save-path', request),
     chooseOpenPath: (request: OpenPathRequest): Promise<string | null> => ipcRenderer.invoke('dialog:choose-open-path', request),
-    /* Only where the shell knows the file manager's clipboard formats (`file-clipboard.ts`), so elsewhere the client offers no copy. */
+    /* Only where the shell knows how to reach the file manager's clipboard (`file-clipboard.ts`), so elsewhere the client offers no copy. */
     copyFiles:
-        process.platform === 'darwin' || process.platform === 'linux'
+        process.platform === 'darwin' || process.platform === 'linux' || process.platform === 'win32'
             ? (paths: string[]): Promise<boolean> => ipcRenderer.invoke('clipboard:copy-files', paths)
             : undefined,
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('update:state'),

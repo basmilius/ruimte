@@ -133,7 +133,7 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `usageStats` | Sends the daily usage counts of a release build. On by default; written only as `false`. Local secret only. |
 | `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no verb changes it. |
 
-Keep awake is the daemon's own (`src/power/keep-awake.ts`), so it holds with no window open. On macOS it is a `caffeinate -w <daemon pid>` child, so a dead daemon never leaves the Mac awake. Elsewhere `keepAwakeAvailable` is false.
+Keep awake is the daemon's own (`src/power/keep-awake.ts`), so it holds with no window open. On macOS it is a `caffeinate -w <daemon pid>` child, so a dead daemon never leaves the Mac awake. On Windows the daemon's own thread holds `SetThreadExecutionState`, which ends with it (`src/power/windows-keep-awake.ts`). Elsewhere `keepAwakeAvailable` is false.
 
 `endpoint.json` stays at `version: 1` and gains only optional fields, since a bump would make an older daemon mint a new id. A field that will not read is dropped and the id and key pair survive. A file that will not read at all becomes `endpoint.json.corrupt-<time>` before a new id is minted, so the old key pair can be put back by hand.
 

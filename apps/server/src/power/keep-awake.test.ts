@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo } from '@ruimte/contracts';
-import { KeepAwake, agentsWorking, keepAwakeCommand, type HeldProcess, type KeepAwakeSetting, type KeepAwakeWork } from './keep-awake.ts';
+import {
+    KeepAwake,
+    agentsWorking,
+    caffeinateCommand,
+    keepAwakeBlock,
+    type HeldProcess,
+    type KeepAwakeBlock,
+    type KeepAwakeSetting,
+    type KeepAwakeWork
+} from './keep-awake.ts';
 
 function setting(patch: Partial<KeepAwakeSetting> = {}): KeepAwakeSetting {
     return { mode: 'always', onBattery: false, display: false, ...patch };
@@ -28,7 +37,12 @@ describe('agentsWorking', () => {
     });
 });
 
-describe('keepAwakeCommand', () => {
+function keepAwakeCommand(value: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform, pid: number): string[] | null {
+    const block = keepAwakeBlock(value, working, platform);
+    return block === null ? null : caffeinateCommand(block, pid);
+}
+
+describe('keepAwakeBlock', () => {
     test('holds on the adapter only unless battery is allowed, tied to the daemon', () => {
         expect(keepAwakeCommand(setting(), false, 'darwin', 42)).toEqual(['caffeinate', '-w', '42', '-s']);
         expect(keepAwakeCommand(setting({ onBattery: true }), false, 'darwin', 42)).toEqual(['caffeinate', '-w', '42', '-i']);
@@ -45,9 +59,15 @@ describe('keepAwakeCommand', () => {
         expect(keepAwakeCommand(setting({ mode: 'working', display: true, onBattery: true }), true, 'darwin', 1)).toEqual(['caffeinate', '-w', '1', '-i']);
     });
 
-    test('off, and anywhere but macOS, holds nothing', () => {
+    test('off, and where there is no way to hold a block, holds nothing', () => {
         expect(keepAwakeCommand(setting({ mode: 'off' }), true, 'darwin', 1)).toBeNull();
         expect(keepAwakeCommand(setting(), true, 'linux', 1)).toBeNull();
+    });
+
+    test('Windows comes down to the same block as macOS', () => {
+        expect(keepAwakeBlock(setting({ display: true }), false, 'win32')).toEqual({ onBattery: false, display: false });
+        expect(keepAwakeBlock(setting({ display: true, onBattery: true }), false, 'win32')).toEqual({ onBattery: true, display: true });
+        expect(keepAwakeBlock(setting({ mode: 'working' }), false, 'win32')).toBeNull();
     });
 });
 
@@ -55,7 +75,8 @@ describe('keepAwakeCommand', () => {
 function fakeSpawner() {
     const started: { command: string[]; killed: boolean; end(): void }[] = [];
     const events: string[] = [];
-    const spawn = (command: string[]): HeldProcess => {
+    const spawn = (block: KeepAwakeBlock): HeldProcess => {
+        const command = caffeinateCommand(block, 7);
         let end = (): void => undefined;
         const exited = new Promise<void>((resolve) => {
             end = resolve;
@@ -76,8 +97,8 @@ function fakeSpawner() {
 }
 
 describe('KeepAwake', () => {
-    const holder = (state: { setting: KeepAwakeSetting; work: KeepAwakeWork }, spawn: (command: string[]) => HeldProcess) =>
-        new KeepAwake({ platform: 'darwin', pid: 7, setting: () => state.setting, work: () => state.work, spawn, log: () => undefined });
+    const holder = (state: { setting: KeepAwakeSetting; work: KeepAwakeWork }, hold: (block: KeepAwakeBlock) => HeldProcess) =>
+        new KeepAwake({ platform: 'darwin', setting: () => state.setting, work: () => state.work, hold, log: () => undefined });
 
     test('starts once, follows the work and lets go when it ends', () => {
         const fake = fakeSpawner();

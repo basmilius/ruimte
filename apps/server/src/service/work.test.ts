@@ -34,6 +34,13 @@ describe('workOf', () => {
         expect(workOf({ sessions: [shell(10), shell(20)], chats: [], children })).toEqual({ terminals: 1, agents: 0 });
     });
 
+    test("Git for Windows's launcher and the shell it starts are one terminal", () => {
+        const launcher = { pid: 10, ppid: 5, path: 'C:\\Program Files\\Git\\bin\\bash.exe' };
+        const shellProcess = { pid: 11, ppid: 10, path: 'C:\\Program Files\\Git\\usr\\bin\\bash.exe' };
+        expect(childCounter([launcher, shellProcess])(10)).toBe(0);
+        expect(childCounter([launcher, shellProcess, { pid: 12, ppid: 11, path: 'C:\\x\\node.exe' }])(10)).toBe(1);
+    });
+
     test('a launch is a running terminal, even when its shell became the server it runs', () => {
         const work = workOf({ sessions: [{ ...shell(10), launch: true }], chats: [], children: () => 0 });
         expect(work).toEqual({ terminals: 1, agents: 0 });
