@@ -3,7 +3,7 @@
     "productName": "Ruimte",
     "private": true,
     "version": "0.0.0",
-    "description": "Terminals, agents and browsers on one infinite canvas",
+    "description": "Ruimte",
     "author": "Bas Milius",
     "homepage": "https://ruimte.app",
     "type": "module",

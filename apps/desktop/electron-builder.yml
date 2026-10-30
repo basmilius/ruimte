@@ -78,6 +78,8 @@ dmg:
       type: link
       path: /Applications
 linux:
+  # The package's description is what Windows shows as the installer's name, so the sentence lives here.
+  description: Terminals, agents and browsers on one infinite canvas
   category: Development
   maintainer: Bas Milius <basmilius@hotmail.com>
   target: [AppImage, deb, rpm]
