@@ -5,9 +5,7 @@
 
 !define MACHINE_TASK "app.ruimte.daemon"
 
-!ifndef BUILD_UNINSTALLER
-  Var machineTaskDisabled
-!endif
+Var machineTaskDisabled
 
 ; Replaces electron-builder's check, which force-stops the daemon but leaves the task to start it again.
 !macro customCheckAppRunning
@@ -28,15 +26,20 @@
   DetailPrint "$(appClosing)"
   nsExec::Exec `"$PowerShellPath" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\stop-machine.ps1" -InstallDir "$INSTDIR" -Action stop`
   Pop $R0
+  ; Remembered here, since a retry finds the task already off and cannot tell who turned it off.
+  ${if} $R0 == 3
+  ${orIf} $R0 == 4
+    StrCpy $machineTaskDisabled "1"
+  ${endIf}
   ${if} $R0 == 2
+  ${orIf} $R0 == 4
     MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(appCannotBeClosed)" /SD IDCANCEL IDRETRY retryStopMachine
+    ${if} $machineTaskDisabled == "1"
+      nsExec::Exec `"$SYSDIR\schtasks.exe" /Change /TN "${MACHINE_TASK}" /ENABLE`
+      Pop $R0
+    ${endIf}
     Quit
   ${endIf}
-  !ifndef BUILD_UNINSTALLER
-    ${if} $R0 == 3
-      StrCpy $machineTaskDisabled "1"
-    ${endIf}
-  !endif
 !macroend
 
 ; What this install stopped comes back, also when nobody opens the app. A task the person had off stays off.

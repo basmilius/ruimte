@@ -3,7 +3,7 @@
 # `ruimte service install` or a checkout holds none of its files.
 #
 #   check    exit 0 when something runs from the installation, otherwise 1
-#   stop     exit 0 when nothing runs anymore, 3 likewise and the task was disabled here, 2 when something still runs
+#   stop     exit 0 when nothing runs anymore, 2 when something still runs, 3 and 4 the same when this run disabled the task
 #   remove   deletes the installation's task and the copy of its definition
 param(
     [Parameter(Mandatory = $true)][string]$InstallDir,
@@ -103,6 +103,9 @@ foreach ($left in Get-Installed) {
     taskkill.exe /PID $left.ProcessId /T /F | Out-Null
 }
 
-if (Test-Running) { exit 2 }
+if (Test-Running) {
+    if ($disabled) { exit 4 }
+    exit 2
+}
 if ($disabled) { exit 3 }
 exit 0
