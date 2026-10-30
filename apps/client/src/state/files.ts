@@ -1,5 +1,5 @@
 import type { TableKind } from '@adecore/database/protocol';
-import { isPathBelow, type FileLocation, type GitDiffScope, type ProjectConsoleBinding, type ProjectFileTabView } from '@ruimte/contracts';
+import { isPathBelow, type FileLocation, type GitDiffScope, type GitCompareMode, type ProjectConsoleBinding, type ProjectFileTabView } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { canDropAsTab, canSplit, cellAt, cellViewIds, locateView, viewIdsIn, type CellAt, type SplitZone } from '@/shell/split';
@@ -53,8 +53,31 @@ export interface ArtifactTab {
     title: string;
 }
 
+export interface CompareTab {
+    key: string;
+    kind: 'compare';
+    pinned: boolean;
+    cwd: string;
+    from: string;
+    to: string;
+    mode: GitCompareMode;
+}
+
+export interface SnapshotTab {
+    key: string;
+    kind: 'snapshot';
+    pinned: boolean;
+    cwd: string;
+    commit: string;
+    branch: string;
+    path: string;
+    line?: number;
+}
+
+export type SessionTab = CompareTab | SnapshotTab;
+
 /* One loose view: a tab of a tab host that has no row in the sidebar. */
-export type Tab = FileTab | DatabaseTab | ArtifactTab;
+export type Tab = FileTab | DatabaseTab | ArtifactTab | SessionTab;
 
 /* The content of the loose views, in the order they were opened. Where they stand is the layout's. */
 export interface TabPool {
@@ -67,7 +90,7 @@ export interface TabState extends TabPool {
 }
 
 export function isDatabaseTab(tab: Tab): tab is DatabaseTab {
-    return 'kind' in tab && tab.kind !== 'artifact';
+    return 'kind' in tab && (tab.kind === 'table' || tab.kind === 'structure' || tab.kind === 'designer');
 }
 
 export function isArtifactTab(tab: Tab): tab is ArtifactTab {
@@ -76,6 +99,20 @@ export function isArtifactTab(tab: Tab): tab is ArtifactTab {
 
 export function isFileTab(tab: Tab): tab is FileTab {
     return !('kind' in tab);
+}
+
+export function isSessionTab(tab: Tab): tab is SessionTab {
+    return 'kind' in tab && (tab.kind === 'compare' || tab.kind === 'snapshot');
+}
+
+export function openSessionTab(state: TabPool, tab: Omit<CompareTab, 'key' | 'pinned'> | Omit<SnapshotTab, 'key' | 'pinned'>): TabState {
+    const key =
+        tab.kind === 'compare' ? `compare:${JSON.stringify([tab.cwd, tab.from, tab.to])}` : `snapshot:${JSON.stringify([tab.cwd, tab.commit, tab.path])}`;
+    const existing = state.tabs.find((entry) => entry.key === key);
+    if (existing !== undefined) {
+        return { tabs: state.tabs.map((entry) => (entry === existing ? { ...tab, key, pinned: entry.pinned } : entry)), active: key };
+    }
+    return placeTab(state, { ...tab, key, pinned: false });
 }
 
 const ARTIFACT_TAB_PREFIX = 'artifact:';
@@ -92,7 +129,7 @@ export function fileTabOf(state: TabPool, key: string | null): FileTab | undefin
 
 /* A tab that can become a row of the sidebar: a file and a table, not a diff, a commit, an artifact or the designer of a table that is not there yet. */
 export function isPromotableTab(tab: Tab | undefined): boolean {
-    if (tab === undefined || isArtifactTab(tab)) {
+    if (tab === undefined || isArtifactTab(tab) || isSessionTab(tab)) {
         return false;
     }
     return isDatabaseTab(tab) ? tab.kind !== 'designer' : tab.view === undefined;
@@ -278,7 +315,13 @@ function sameTarget(left: ClosedTab, right: ClosedTab): boolean {
  * the designer of a table nobody made yet has nothing to go back to either.
  */
 export function rememberClosed(recent: readonly ClosedTab[], tab: Tab | undefined): ClosedTab[] {
-    if (tab === undefined || isArtifactTab(tab) || (isFileTab(tab) && tab.view !== undefined) || (isDatabaseTab(tab) && tab.table === undefined)) {
+    if (
+        tab === undefined ||
+        isArtifactTab(tab) ||
+        isSessionTab(tab) ||
+        (isFileTab(tab) && tab.view !== undefined) ||
+        (isDatabaseTab(tab) && tab.table === undefined)
+    ) {
         return [...recent];
     }
     const closed: ClosedTab = isDatabaseTab(tab) ? { ...tab, pinned: false } : { kind: 'file', path: tab.path };
@@ -350,6 +393,7 @@ interface FilesStore extends TabPool {
     cancelDiscard(): void;
     setUnsubmitted(key: string, unsubmitted: boolean): void;
     setPinned(key: string, pinned: boolean): void;
+    setCompareMode(key: string, mode: GitCompareMode): void;
     setScope(key: string, scope: GitDiffScope): void;
     setStaged(key: string, staged: boolean): void;
     setConsole(key: string, binding: ConsoleBinding | null): void;
@@ -591,6 +635,9 @@ export const useFiles = create<FilesStore>((set, get) => {
         },
         setPinned(key, pinned) {
             set(pinTab(get(), key, pinned));
+        },
+        setCompareMode(key, mode) {
+            set({ tabs: get().tabs.map((tab) => ('kind' in tab && tab.kind === 'compare' && tab.key === key ? { ...tab, mode } : tab)) });
         },
         setScope(key, scope) {
             patchFileView(key, { scope });

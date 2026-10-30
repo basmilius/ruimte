@@ -80,12 +80,20 @@ function kindsByPath(output: string): Map<string, ChatCheckpointFile['kind']> {
  * the caps of where it shows up. Both the turn's checkpoint diff and the git panel read their file
  * lists through this, so a diff is shaped the same way wherever it shows up.
  */
-export async function diffTrees(top: string, from: string, to: string, prefix = '', caps = CHAT_CAPS): Promise<ChatCheckpointDiff | null> {
+export async function diffTrees(
+    top: string,
+    from: string,
+    to: string,
+    prefix = '',
+    caps = CHAT_CAPS,
+    options?: { noTextconv: boolean }
+): Promise<ChatCheckpointDiff | null> {
     // A folder inside the repository narrows the lists to what lies under it; the patches follow the list.
     const under = prefix === '' ? [] : ['--', `:(literal)${prefix}`];
+    const safe = options?.noTextconv ? ['--no-ext-diff', '--no-textconv'] : [];
     const [numstat, status] = await Promise.all([
-        git(['diff', '--numstat', '-z', '--no-renames', from, to, ...under], top),
-        git(['diff', '--name-status', '-z', '--no-renames', from, to, ...under], top)
+        git(['diff', '--numstat', '-z', '--no-renames', ...safe, from, to, ...under], top),
+        git(['diff', '--name-status', '-z', '--no-renames', ...safe, from, to, ...under], top)
     ]);
     if (numstat === null || status === null) {
         return null;
@@ -107,7 +115,7 @@ export async function diffTrees(top: string, from: string, to: string, prefix = 
         } else if (count.added + count.deleted > caps.fileLines) {
             file.omitted = 'too-large';
         } else {
-            const body = await git(['diff', ...PATCH_ARGS, from, to, '--', `:(literal)${count.path}`], top);
+            const body = await git(['diff', ...PATCH_ARGS, ...safe, from, to, '--', `:(literal)${count.path}`], top);
             if (body === null || body.length > caps.fileBytes || body.length > budget) {
                 file.omitted = 'too-large';
             } else {
@@ -323,6 +331,15 @@ export async function diffCommit(cwd: string, commit: string): Promise<GitDiffRe
     }
     const [diff, meta] = await Promise.all([parentOf(top, hash).then((parent) => diffTrees(top, parent, hash, '', PANEL_CAPS)), readCommit(top, hash)]);
     return { ...filesResult(diff), ...(meta ? { commit: meta } : {}) };
+}
+
+/* Immutable commit trees only; the comparison never stages or snapshots the working tree. */
+export async function diffPinnedTrees(top: string, from: string, to: string): Promise<GitDiffResult> {
+    const diff = await diffTrees(top, from, to, '', PANEL_CAPS, { noTextconv: true });
+    if (diff === null) {
+        throw new GitError('git-failed', 'The branch comparison could not be read.');
+    }
+    return filesResult(diff);
 }
 
 /* A tree diff as the answer for many files at once, the counts summed over its files. */

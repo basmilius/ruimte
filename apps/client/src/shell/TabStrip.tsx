@@ -20,7 +20,7 @@ import { useCellView } from '@/shell/use-cell-view';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { isSameCell, type CellAt } from '@/shell/split';
 import { useDocument } from '@/state/document';
-import { isArtifactTab, isCheckoutDiff, isDatabaseTab, useFiles, type ArtifactTab, type DatabaseTab, type FileTab } from '@/state/files';
+import { isArtifactTab, isSessionTab, isCheckoutDiff, isDatabaseTab, useFiles, type ArtifactTab, type DatabaseTab, type FileTab } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useChats } from '@adecore/agents-react/state';
 import { sessionStatus, useSessionRow } from '@/state/sessions';
@@ -171,6 +171,18 @@ function ArtifactTabItem({ tab, label }: { tab: ArtifactTab; label: string }) {
 function LooseTabItem({ view }: { view: LooseCellView }) {
     if (isArtifactTab(view.tab)) {
         return <ArtifactTabItem tab={view.tab} label={view.name} />;
+    }
+    if (isSessionTab(view.tab)) {
+        return (
+            <TabShell
+                id={view.id}
+                label={view.name}
+                hint={view.name}
+                glyph={<LooseGlyph tab={view.tab} />}
+                {...looseControls(view.id, view.tab.pinned)}
+                menu={null}
+            />
+        );
     }
     return isDatabaseTab(view.tab) ? <DatabaseTabItem tab={view.tab} /> : <FileTabItem tab={view.tab} tabKey={view.id} label={view.name} />;
 }

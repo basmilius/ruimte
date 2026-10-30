@@ -11,6 +11,7 @@ import { blameFile } from '../git/blame.ts';
 import { readCapabilities } from '../git/capabilities.ts';
 import { readConflict, readConflicts, resolveConflict, runOperation } from '../git/conflict.ts';
 import { resolveWithAgent } from '../git/resolve-ai.ts';
+import { compareBranches, compareCommits, readSnapshot } from '../git/compare.ts';
 import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { IdentityReader } from '../git/identity.ts';
 import { readLog } from '../git/log.ts';
@@ -110,6 +111,19 @@ export function registerGitHandlers(
     dispatcher.register('git.unwatch', (payload, client) => {
         statuses.unwatch(client.id, payload.cwd);
         return {};
+    });
+
+    dispatcher.register('git.compare', async (payload) => {
+        await machineHome?.refuse(payload.cwd);
+        return compareBranches(payload.cwd, payload.from, payload.to, payload.mode);
+    });
+    dispatcher.register('git.compareCommits', async (payload) => {
+        await machineHome?.refuse(payload.cwd);
+        return compareCommits(payload.cwd, payload.fromCommit, payload.toCommit, payload.side, payload.skip, payload.limit);
+    });
+    dispatcher.register('git.blob', async (payload) => {
+        await machineHome?.refuse(payload.cwd);
+        return readSnapshot(payload.cwd, payload.commit, payload.path);
     });
 
     dispatcher.register('git.diff', async (payload) => {

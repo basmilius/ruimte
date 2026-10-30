@@ -138,3 +138,11 @@ describe('refs', () => {
         expect(refs[0]?.isDefault).toBe(true);
     });
 });
+
+test('refs retain full names when short names collide across namespaces', () => {
+    const suffix = `${FIELD}1700000000${FIELD}*${FIELD}abc${FIELD}`;
+    const local = parseRefs(`heads/origin/main${suffix}refs/heads/origin/main`, 'local', new Map(), 'main');
+    const remote = parseRefs(`remotes/origin/main${suffix}refs/remotes/origin/main`, 'remote', new Map(), 'main');
+    expect(local[0]?.fullName).toBe('refs/heads/origin/main');
+    expect(remote[0]?.fullName).toBe('refs/remotes/origin/main');
+});

@@ -1,3 +1,4 @@
+import { fullRefName, showBranchCompare } from './branch-compare';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -515,6 +516,7 @@ export function GitPanel() {
                         renderActions: repoActions,
                         onOpen: loadRefs,
                         onCheckout: checkout,
+                        onCompare: (path, ref) => showBranchCompare(path, ref === undefined ? undefined : fullRefName(ref)),
                         onCreate: (path) => setDialog({ kind: 'create-branch', cwd: path })
                     }}
                     onOpenMenu={openBranchMenu}

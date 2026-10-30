@@ -3,7 +3,7 @@ import { faviconsOfProject, useBrowser } from '@/browser/registry';
 import { useDatabasePanel } from '@/database/state';
 import { shownViewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
-import { useFiles, type Tab } from '@/state/files';
+import { useFiles, isSessionTab, type Tab } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
@@ -90,6 +90,15 @@ export class PanelsPort {
             this.applying = false;
             this.snapshot = this.stringify();
         }
+    }
+
+    sessionIds(): ReadonlySet<string> {
+        return new Set(
+            useFiles
+                .getState()
+                .tabs.filter(isSessionTab)
+                .map((tab) => tab.key)
+        );
     }
 
     export(): ProjectPanels {

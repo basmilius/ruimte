@@ -322,6 +322,7 @@ export const GitDiscardResultSchema = z.object({
 export type GitDiscardResult = z.infer<typeof GitDiscardResultSchema>;
 
 export const GitRefSchema = z.object({
+    fullName: z.string().optional(),
     // `main` for a local branch, `origin/main` for a remote one, as git itself shortens them.
     name: z.string(),
     kind: z.enum(['local', 'remote']),

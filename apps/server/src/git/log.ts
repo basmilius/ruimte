@@ -1,5 +1,5 @@
-import type { GitCommit, GitLogResult } from '@ruimte/contracts';
-import { FIELD, git, toplevel } from './run.ts';
+import type { GitCommit, GitLogResult, GitComparePage } from '@ruimte/contracts';
+import { FIELD, GitError, git, toplevel } from './run.ts';
 
 export const DEFAULT_LIMIT = 30;
 
@@ -73,4 +73,28 @@ export async function readLog(cwd: string, limit: number = DEFAULT_LIMIT, cursor
 export async function readCommit(top: string, hash: string): Promise<GitCommit | null> {
     const output = await git(['log', '-z', '--decorate=full', `--format=${LOG_FORMAT}`, '--max-count=1', hash], top);
     return output === null ? null : (parseLog(output)[0] ?? null);
+}
+
+/* A bounded page unique to one pinned tip, without involving HEAD. */
+export async function readRangeLog(top: string, excluded: string, included: string, skip = 0, limit = DEFAULT_LIMIT): Promise<GitComparePage> {
+    const output = await git(
+        [
+            'log',
+            '-z',
+            '--topo-order',
+            '--decorate=full',
+            `--format=${LOG_FORMAT}`,
+            `--max-count=${limit + 1}`,
+            `--skip=${skip}`,
+            `${excluded}..${included}`,
+            '--'
+        ],
+        top
+    );
+    if (output === null) {
+        throw new GitError('git-failed', 'The comparison commits could not be read.');
+    }
+    const commits = parseLog(output);
+    const page = commits.slice(0, limit);
+    return { commits: page, next: commits.length > page.length ? skip + page.length : null };
 }

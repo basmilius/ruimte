@@ -6,6 +6,9 @@ import {
     correctTableKind,
     fileTabOf,
     isFileTab,
+    isDatabaseTab,
+    isPromotableTab,
+    openSessionTab,
     moveTabs,
     openTab,
     pinTab,
@@ -584,5 +587,24 @@ describe('moveTabs', () => {
         const next = moveTabs(before, '/p', '/q');
         expect(next.tabs[0]).toBe(ORDERS);
         expect(paths(next)).toEqual([ORDERS.key, '/q/a.ts']);
+    });
+});
+
+describe('session-only Git tabs', () => {
+    test('reopening a comparison keeps its identity, while snapshots name the immutable commit', () => {
+        const first = openSessionTab(pool(['/repo/a.ts']), { kind: 'compare', cwd: '/repo', from: 'main', to: 'topic', mode: 'merge-base' });
+        const reopened = openSessionTab(first, { kind: 'compare', cwd: '/repo', from: 'main', to: 'topic', mode: 'tips' });
+        expect(reopened.tabs).toHaveLength(2);
+        expect(reopened.active).toBe(first.active);
+        expect(reopened.tabs[1]).toMatchObject({ mode: 'tips' });
+        const one = openSessionTab(reopened, { kind: 'snapshot', cwd: '/repo', commit: 'a'.repeat(40), branch: 'topic', path: 'a.ts' });
+        const two = openSessionTab(one, { kind: 'snapshot', cwd: '/repo', commit: 'b'.repeat(40), branch: 'topic', path: 'a.ts' });
+        expect(two.tabs).toHaveLength(4);
+        for (const entry of two.tabs.slice(1)) {
+            expect(isFileTab(entry)).toBe(false);
+            expect(isDatabaseTab(entry)).toBe(false);
+            expect(isPromotableTab(entry)).toBe(false);
+            expect(rememberClosed([], entry)).toEqual([]);
+        }
     });
 });

@@ -880,7 +880,8 @@
             "measureCopy": "Meten: resultaten als JSON kopiëren",
             "settings": "Instellingen",
             "launchesEdit": "Launches bewerken…",
-            "launchesAfterSettleOff": "Niets uitvoeren als een worktree-chat klaar is"
+            "launchesAfterSettleOff": "Niets uitvoeren als een worktree-chat klaar is",
+            "compareBranches": "Branches vergelijken…"
         },
         "sections": {
             "recent": "Recent",
@@ -1228,7 +1229,8 @@
         "drawingCopySvg": "Kopiëren als SVG",
         "drawingSavePng": "Opslaan als PNG…",
         "drawingSaveSvg": "Opslaan als SVG…",
-        "drawingOnCanvas": "Op het canvas tonen"
+        "drawingOnCanvas": "Op het canvas tonen",
+        "compareBranches": "Branches vergelijken…"
     },
     "addToMachine": {
         "title": "Toevoegen aan een andere machine",

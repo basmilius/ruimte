@@ -242,3 +242,27 @@ describe('the git panel over a folder of two repositories', () => {
         await until(() => document.body.textContent?.includes('feat: web work') === true);
     });
 });
+
+test('a branch occupied in another worktree still offers comparison in its context menu', async () => {
+    machine.answer('git.refs', () => ({
+        current: 'main',
+        stashes: [],
+        refs: [
+            { name: 'main', kind: 'local' as const, current: true, isDefault: true, at: 0 },
+            { name: 'occupied', fullName: 'refs/heads/occupied', kind: 'local' as const, current: false, isDefault: false, at: 0, worktree: '/work/other' }
+        ]
+    }));
+    await clickOn(chip('2 repos'));
+    await openSubmenu('api');
+    await until(() => menuItem('occupied', 'menuitemradio') !== null);
+    const row = menuItem('occupied', 'menuitemradio')!;
+    expect(row.getAttribute('aria-disabled')).toBe('true');
+    await act(async () => row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40, button: 2 })));
+    await until(() => menuItem('Compare with…') !== null);
+    await clickOn(menuItem('Compare with…'));
+    await until(() => buttonWithText('Compare')?.disabled === false);
+    expect(machine.requests('git.action')).toEqual([]);
+    const to = document.querySelector('[aria-label="To"]');
+    expect(to?.textContent).toContain('occupied');
+    await clickOn(buttonWithText('Cancel'));
+});

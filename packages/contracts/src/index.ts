@@ -1,4 +1,12 @@
 import {
+    GitComparePayloadSchema,
+    GitCompareResultSchema,
+    GitCompareCommitsPayloadSchema,
+    GitComparePageSchema,
+    GitBlobPayloadSchema,
+    GitBlobResultSchema
+} from './git-compare.ts';
+import {
     TerminalPreparePreviewPayloadSchema,
     TerminalPreparePreviewResultSchema,
     TerminalPreparePayloadSchema,
@@ -822,6 +830,9 @@ export const REQUEST_SCHEMAS = {
     'git.status': { payload: GitCwdPayloadSchema, result: GitStatusSchema },
     'git.watch': { payload: GitWatchPayloadSchema, result: GitWatchResultSchema },
     'git.unwatch': { payload: GitCwdPayloadSchema, result: EmptySchema },
+    'git.compare': { payload: GitComparePayloadSchema, result: GitCompareResultSchema },
+    'git.compareCommits': { payload: GitCompareCommitsPayloadSchema, result: GitComparePageSchema },
+    'git.blob': { payload: GitBlobPayloadSchema, result: GitBlobResultSchema },
     'git.diff': { payload: GitDiffPayloadSchema, result: GitDiffResultSchema },
     'git.blame': { payload: GitBlamePayloadSchema, result: GitBlameResultSchema },
     'git.identity': { payload: GitIdentityPayloadSchema, result: GitIdentityResultSchema },
@@ -1072,3 +1083,17 @@ export function isRequestType(type: string): type is RequestType {
 export function isEventType(event: string): event is EventType {
     return Object.hasOwn(EVENT_SCHEMAS, event);
 }
+
+export {
+    GitComparePayloadSchema,
+    GitCompareResultSchema,
+    GitCompareCommitsPayloadSchema,
+    GitComparePageSchema,
+    GitBlobPayloadSchema,
+    GitBlobResultSchema,
+    GitCompareModeSchema,
+    type GitCompareMode,
+    type GitCompareResult,
+    type GitComparePage,
+    type GitBlobResult
+} from './git-compare.ts';

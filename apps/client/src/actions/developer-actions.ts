@@ -194,6 +194,16 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
         );
     };
 
+    const snapshotCheckout = async (repository: string, call: Call): Promise<{ transport: Requester; cwd: string }> => {
+        const transport = connected();
+        const projectId = machine.projectId();
+        const checkout = await checkoutOf(repository, call);
+        if (machine.transport() !== transport || machine.projectId() !== projectId) {
+            throw new ActionRefusal('project-changed', 'The project changed while its repository was being read.');
+        }
+        return { transport, cwd: checkout.path };
+    };
+
     /* One checkout, or every one the panel shows for null. */
     const checkoutsOf = async (repository: string | null | undefined, call: Call): Promise<Checkout[]> =>
         repository == null ? await shownRepos() : [await checkoutOf(repository, call)];
@@ -305,6 +315,18 @@ export function developerActions(document: StoreApi<DocumentState>, overrides: P
                 })
             );
             return { output: { repositories } };
+        },
+        'git.compare': async ({ repository, ...input }, call) => {
+            const { transport, cwd } = await snapshotCheckout(repository, call);
+            return { output: await refusing(transport.request('git.compare', { cwd, ...input, mode: input.mode ?? 'merge-base' })) };
+        },
+        'git.compareCommits': async ({ repository, pageSize, ...input }, call) => {
+            const { transport, cwd } = await snapshotCheckout(repository, call);
+            return { output: await refusing(transport.request('git.compareCommits', { cwd, ...input, skip: input.skip ?? 0, limit: pageSize ?? 30 })) };
+        },
+        'git.blob': async ({ repository, ...input }, call) => {
+            const { transport, cwd } = await snapshotCheckout(repository, call);
+            return { output: await refusing(transport.request('git.blob', { cwd, ...input })) };
         },
         'git.diff': async ({ repository, path, scope, commit, staged, ignoreWhitespace, base }, call) => {
             const checkout = await checkoutOf(repository, call);

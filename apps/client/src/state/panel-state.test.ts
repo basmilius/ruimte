@@ -207,3 +207,17 @@ describe('stripOf', () => {
         expect(stripOf(undefined)).toEqual({ keys: [], active: null });
     });
 });
+
+test('session comparisons and snapshots leave neither tabs nor active keys in the local file', () => {
+    const transient = [
+        { key: 'compare:one', kind: 'compare' as const, cwd: '/repo', from: 'main', to: 'topic', mode: 'tips' as const, pinned: true },
+        { key: 'snapshot:one', kind: 'snapshot' as const, cwd: '/repo', commit: 'a'.repeat(40), branch: 'topic', path: 'readme.md', pinned: false }
+    ];
+    const stored = serializePanels({ ...defaults, tabs: [...transient, full.tabs[0]!], active: transient[0]!.key });
+    expect(stored.tabs).toEqual([{ path: '/repo/readme.md', pinned: true }]);
+    expect(stored.strip).toHaveLength(1);
+    expect(stored.activeTab).toBe('/repo/readme.md');
+    expect(JSON.stringify(stored)).not.toContain('compare:');
+    expect(JSON.stringify(stored)).not.toContain('snapshot:');
+    expect(serializePanels({ ...defaults, tabs: transient, active: transient[1]!.key })).toMatchObject({ tabs: [], strip: [], activeTab: null });
+});

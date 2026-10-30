@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { create } from 'zustand';
 import type { DiffSource } from '@adecore/editor-react';
 import type { DiffSourceLine } from '@adecore/merge';
@@ -66,8 +66,17 @@ export function openFileAtDiffCaret(): boolean {
  * Jump to Source and keep the caret's place under `tabKey`. The key is the diff's own, bound on its editors
  * and not on `window`, since a file's editor gives the same key to Text End or Method Down.
  */
-export function useDiffCaret(path: string, tabKey: string): { surface: RefObject<HTMLDivElement | null>; onSource(source: DiffSource): () => void } {
+export function useDiffCaret(
+    path: string,
+    tabKey: string,
+    open?: (source: DiffSource) => boolean
+): { surface: RefObject<HTMLDivElement | null>; onSource(source: DiffSource): () => void } {
     const surface = useRef<HTMLDivElement>(null);
+    const currentOpen = useRef(open);
+    useLayoutEffect(() => {
+        currentOpen.current = open;
+    }, [open]);
+    const reveal = (source: DiffSource): boolean => (currentOpen.current === undefined ? openAt(path, source) : currentOpen.current(source));
     // The pane that had the keyboard last, which is the one a split diff means.
     const last = useRef<DiffSource | null>(null);
 
@@ -83,7 +92,7 @@ export function useDiffCaret(path: string, tabKey: string): { surface: RefObject
             useDiffCarets.getState().setCaret(tabKey, source.at());
         };
         const element = surface.current;
-        const offFocus = element === null ? undefined : diffs.register(() => last.current !== null && openAt(path, last.current), element);
+        const offFocus = element === null ? undefined : diffs.register(() => last.current !== null && reveal(last.current), element);
         // A pane takes over as it gets the keyboard, also before its caret first moves.
         element?.addEventListener('focusin', take);
         const offCaret = source.editor.onCaret(take);
@@ -91,7 +100,7 @@ export function useDiffCaret(path: string, tabKey: string): { surface: RefObject
             if (!matchesShortcut(requiredShortcut('jumpToSource'), event, apple)) {
                 return false;
             }
-            return openAt(path, source);
+            return reveal(source);
         });
         return () => {
             offFocus?.();

@@ -1,3 +1,4 @@
+import { showBranchCompare } from './panels/branch-compare';
 import i18next from 'i18next';
 import {
     isCanvasView,
@@ -591,6 +592,10 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
                             row('panel-files', () => useUi.getState().togglePanel('files')),
                             row('panel-databases', () => useUi.getState().togglePanel('databases')),
                             row('panel-git', () => useUi.getState().togglePanel('git')),
+                            row(
+                                'git-compare-branches',
+                                afterPaletteCloses(() => showBranchCompare())
+                            ),
                             row('database-console-new', () => void openNewConsole()),
                             row('database-connections', () => useDatabasePanel.getState().openConnections()),
                             row('database-schemas-refresh', () => void refreshSqlSchemas()),

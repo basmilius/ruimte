@@ -14,6 +14,8 @@ import type { StoreApi } from 'zustand';
 import { messageOf } from '@adecore/ui';
 import type { LooseStrip } from '@/shell/legacy-files-cell';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { openableViewIds } from '@/shell/split';
+import { withoutSessionLayout } from './session-local';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
@@ -637,7 +639,9 @@ export class ProjectClient {
 
     /* What this client would remember about the project right now: the panels, and every view's camera. */
     private localOfScreen(): ProjectLocal {
-        return { ...this.documents.getState().exportLocal(), panels: this.panels.export() };
+        const documents = this.documents.getState();
+        const local = { ...documents.exportLocal(), panels: this.panels.export() };
+        return withoutSessionLayout(local, this.panels.sessionIds(), openableViewIds(documents.views));
     }
 
     private keepDraft(): void {

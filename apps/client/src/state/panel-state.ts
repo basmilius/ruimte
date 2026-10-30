@@ -8,7 +8,18 @@ import {
 } from '@ruimte/contracts';
 import { databaseTabId, databaseTabKey } from '@/database/tabs';
 import type { LooseStrip } from '@/shell/legacy-files-cell';
-import { artifactTabKey, isArtifactTab, isDatabaseTab, isFileTab, tabKey, type DatabaseTab, type FileTab, type Tab } from '@/state/files';
+import {
+    artifactTabKey,
+    isSessionTab,
+    isArtifactTab,
+    isDatabaseTab,
+    isFileTab,
+    tabKey,
+    type DatabaseTab,
+    type FileTab,
+    type SessionTab,
+    type Tab
+} from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
 import type { PanelDefaults, PanelKind } from '@/state/ui';
 
@@ -117,7 +128,7 @@ function storedDatabaseTab(tab: DatabaseTab): ProjectStripTab {
     }
 }
 
-function storedTab(tab: Tab): ProjectStripTab {
+function storedTab(tab: Exclude<Tab, SessionTab>): ProjectStripTab {
     if (isArtifactTab(tab)) {
         return {
             kind: 'artifact',
@@ -167,6 +178,8 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
 
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
 export function serializePanels(state: PanelsState): ProjectPanels {
+    const tabs = state.tabs.filter((tab): tab is Exclude<Tab, SessionTab> => !isSessionTab(tab));
+    const active = tabs.some((tab) => tab.key === state.active) ? state.active : (tabs[0]?.key ?? null);
     return {
         // A client from before launches, databases or output reads the files panel in its place.
         panel:
@@ -182,9 +195,9 @@ export function serializePanels(state: PanelsState): ProjectPanels {
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
         ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
         // A client from before the strip reads the file tabs alone.
-        tabs: state.tabs.filter(isFileTab).map(storedFileTab),
-        activeTab: state.active,
-        strip: state.tabs.map(storedTab),
+        tabs: tabs.filter(isFileTab).map(storedFileTab),
+        activeTab: active,
+        strip: tabs.map(storedTab),
         expandedDirs: state.expandedDirs,
         git: {
             scope: state.gitScope,

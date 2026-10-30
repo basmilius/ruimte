@@ -14,7 +14,7 @@ import type {
 } from '@ruimte/contracts';
 import { focusedCanvas, type CanvasState } from '../state/canvas';
 import { useDocument } from '../state/document';
-import { useFiles } from '../state/files';
+import { useFiles, openSessionTab } from '../state/files';
 import { useUi } from '../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
 import type { WorkspaceStores } from '../state/workspace-stores';
@@ -826,6 +826,24 @@ describe('ProjectClient', () => {
         expect(defaultWorkspaceStores.document.getState().layout?.columns[0]?.cells[0]).toMatchObject({ viewId: '/repo/readme.md', tabs: ['/repo/readme.md'] });
         expect(useFiles.getState().expandedDirs).toEqual(['src/']);
         expect(transport.of('project.save-local')).toHaveLength(0);
+        dispose();
+    });
+
+    test('project.save-local removes session tabs and their layout keys while preserving normal loose views', async () => {
+        const { transport, dispose } = setup();
+        await tick();
+        useFiles.getState().open('/repo/readme.md', 8);
+        const files = useFiles.getState();
+        const opened = openSessionTab(files, { kind: 'compare', cwd: '/repo', from: 'main', to: 'topic', mode: 'tips' });
+        files.show(opened, 8);
+        await tick(10);
+        const saved = lastLocal(transport).local;
+        expect(JSON.stringify(saved)).not.toContain(opened.active);
+        expect(JSON.stringify(saved.layout)).toContain('/repo/readme.md');
+        expect(saved.activeViewId).not.toBe(opened.active);
+        expect(saved.panels?.activeTab).toBe('/repo/readme.md');
+        expect(saved.panels?.strip).toHaveLength(1);
+        expect(useFiles.getState().tabs.some((tab) => tab.key === opened.active)).toBe(true);
         dispose();
     });
 

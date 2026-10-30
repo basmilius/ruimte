@@ -65,6 +65,7 @@ export const USAGE_DESKTOP_COMMANDS = [
     'panelOutput',
     'panelDatabases',
     'panelGit',
+    'gitCompareBranches',
     'panelDevices',
     'routines',
     'routineNew',

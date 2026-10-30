@@ -48,7 +48,7 @@ function worktree(branch: string, extra: Partial<Worktree> = {}): Worktree {
     };
 }
 
-function fake(answers: Answers, options: { hidden?: string[] } = {}): Fake {
+function fake(answers: Answers, options: { hidden?: string[]; projectId?(): string } = {}): Fake {
     const asked: Fake['asked'] = [];
     const defaults: Answers = {
         'git.repos': () => ({
@@ -77,7 +77,7 @@ function fake(answers: Answers, options: { hidden?: string[] } = {}): Fake {
         developerActions(useDocument, {
             transport: () => transport,
             folder: () => FOLDER,
-            projectId: () => 'atlas',
+            projectId: () => options.projectId?.() ?? 'atlas',
             hiddenRepos: () => options.hidden ?? [],
             runId: () => `run-${++runs}`
         })
@@ -458,4 +458,18 @@ describe('worktree actions for Voice', () => {
             expect(of('git.cancel')).toEqual([{ actionId: 'panel-7' }]);
         });
     });
+});
+
+test('a comparison resolved by repository label refuses after switching projects', async () => {
+    let projectId = 'atlas';
+    let release!: (value: RequestMap['git.repos']['result']) => void;
+    const listed = new Promise<RequestMap['git.repos']['result']>((resolve) => {
+        release = resolve;
+    });
+    const { registry, of } = fake({ 'git.repos': () => listed }, { projectId: () => projectId });
+    const pending = registry.execute('git.compare', { repository: 'atlas', from: 'main', to: 'topic', mode: 'tips' }, VOICE_ACTION_CALL);
+    projectId = 'other-project';
+    release({ repos: [{ path: FOLDER, label: 'atlas', kind: 'root' }], truncated: false });
+    expect(await pending).toMatchObject({ status: 'failed', error: { code: 'project-changed' } });
+    expect(of('git.compare')).toEqual([]);
 });

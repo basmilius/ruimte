@@ -880,7 +880,8 @@
             "measureCopy": "Measure: copy results as JSON",
             "settings": "Settings",
             "launchesEdit": "Edit launches…",
-            "launchesAfterSettleOff": "Run nothing after a worktree chat finishes"
+            "launchesAfterSettleOff": "Run nothing after a worktree chat finishes",
+            "compareBranches": "Compare branches…"
         },
         "sections": {
             "recent": "Recent",
@@ -1228,7 +1229,8 @@
         "drawingCopySvg": "Copy as SVG",
         "drawingSavePng": "Save as PNG…",
         "drawingSaveSvg": "Save as SVG…",
-        "drawingOnCanvas": "Show on Canvas"
+        "drawingOnCanvas": "Show on Canvas",
+        "compareBranches": "Compare branches…"
     },
     "addToMachine": {
         "title": "Add to another machine",

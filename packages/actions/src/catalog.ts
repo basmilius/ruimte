@@ -1,4 +1,9 @@
 import {
+    GitComparePayloadSchema,
+    GitCompareResultSchema,
+    GitCompareCommitsPayloadSchema,
+    GitComparePageSchema,
+    GitBlobResultSchema,
     ARTIFACT_LIMITS,
     ArtifactFileSchema,
     ArtifactIdSchema,
@@ -3165,6 +3170,33 @@ export const ACTION_DEFINITIONS = {
                 })
             )
         })
+    },
+    'git.compare': {
+        title: 'Compare branches',
+        description: 'Reads two branch snapshots without checkout or fetching.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: GitComparePayloadSchema.omit({ cwd: true }).extend({ repository }),
+        output: GitCompareResultSchema
+    },
+    'git.compareCommits': {
+        title: 'Read comparison commits',
+        description: 'Reads a page unique to one pinned side of a branch comparison.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: GitCompareCommitsPayloadSchema.omit({ cwd: true, limit: true }).extend({ repository, pageSize: GitCompareCommitsPayloadSchema.shape.limit }),
+        output: GitComparePageSchema
+    },
+    'git.blob': {
+        title: 'Read a committed file',
+        description: 'Reads a bounded file snapshot from a pinned commit without following symlinks.',
+        effect: 'read',
+        domain: 'developer',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ repository, commit: z.string().min(1), path: z.string().min(1) }),
+        output: GitBlobResultSchema
     },
     'git.diff': {
         title: 'Read a git diff',

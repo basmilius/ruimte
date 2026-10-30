@@ -21,6 +21,7 @@ import { startUpdates } from '@/state/updates';
 import { useWindow } from '@/state/window';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
 import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher, LazyBoundary } from '@adecore/ui';
+import { useBranchCompare } from '@/shell/panels/branch-compare';
 import { formatSource } from '@/format/source';
 
 const WorkspaceShell = lazyNamed(() => import('@/shell/WorkspaceShell'), 'WorkspaceShell');
@@ -48,6 +49,12 @@ const ModelsDialog = lazyDialog(
     'ModelsDialog',
     useUi,
     (s) => s.modelsOpen
+);
+const BranchCompareDialog = lazyDialog(
+    () => import('@/shell/panels/BranchCompareDialog'),
+    'BranchCompareDialog',
+    useBranchCompare,
+    (state) => state.request !== null
 );
 const LoginDialog = lazyDialog(
     () => import('@/chat/LoginDialog'),
@@ -185,6 +192,7 @@ export function App() {
                     </Floating>
                     <UsageDialog />
                     <ModelsDialog />
+                    <BranchCompareDialog />
                     <Floating surface="toasts">
                         <Toasts />
                     </Floating>
