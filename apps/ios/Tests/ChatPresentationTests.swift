@@ -75,6 +75,56 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(ChatReveal.boundary("👩🏽‍💻 done", position: 1, finished: false), "👩🏽‍💻")
     }
 
+    func testWordRevealSegmentsEveryGrowingUnicodePrefixLikeTheWholeString() {
+        let inputs = [
+            "Cafe\u{301} next", "Line\r\nnext", "👩🏽‍💻 done", "🇦🇧🇨🇩🇪 next", "각 next",
+            "क्‍ष next", "\u{0600}A next", "a\u{301}\u{308} done",
+        ]
+        for input in inputs {
+            var reveal = ChatWordReveal("")
+            var text = ""
+            for scalar in input.unicodeScalars {
+                text.unicodeScalars.append(scalar)
+                reveal.update(text)
+                XCTAssertEqual(reveal.source, text)
+                XCTAssertEqual(reveal.characters, Array(text))
+            }
+            reveal.advance(elapsed: 100, finished: true)
+            for _ in 0..<100 { reveal.advance(elapsed: 0.1, finished: true) }
+            XCTAssertEqual(reveal.shown, input)
+        }
+    }
+
+    func testWordRevealRepairsAnAlreadyVisibleFinalGraphemeAndKeepsTheNextWordHidden() {
+        for (before, tail) in [("Cafe", "\u{301}"), ("👩", "🏽‍💻"), ("🇦", "🇧"), ("Line\r", "\n")] {
+            var reveal = ChatWordReveal(before)
+            reveal.update(before + tail + " next")
+            XCTAssertEqual(reveal.shown, before + tail)
+            XCTAssertEqual(reveal.shownCount, Array(before).count)
+            XCTAssertEqual(reveal.characters, Array(before + tail + " next"))
+        }
+    }
+
+    func testWordRevealReplacesAndTruncatesWithoutKeepingAStalePrefix() {
+        var reveal = ChatWordReveal("Old text")
+        reveal.update("Old text grows")
+        XCTAssertEqual(reveal.shown, "Old text")
+        reveal.update("Replacement")
+        XCTAssertEqual(reveal.shown, "Replacement")
+        reveal.update("Re")
+        XCTAssertEqual(reveal.shown, "Re")
+        XCTAssertEqual(reveal.characters, Array("Re"))
+        reveal.update("")
+        XCTAssertEqual(reveal.shown, "")
+        XCTAssertEqual(reveal.position, 0)
+        reveal.update("e\u{301}")
+        reveal.advance(elapsed: 0.1, finished: true)
+        XCTAssertEqual(reveal.shown, "e\u{301}")
+        reveal.update("é next")
+        XCTAssertEqual(Array(reveal.shown.utf8), Array("é next".utf8))
+        XCTAssertEqual(reveal.characters, Array("é next"))
+    }
+
     @MainActor func testSettledTurnKeepsAnswerAndWarningVisible() {
         let presentation = ChatPresentation()
         let turn = item("turn", "turn").setting("turnId", .string("turn")).setting("state", .string("done"))
@@ -448,7 +498,8 @@ final class ChatToolPresentationTests: XCTestCase {
             return XCTFail("Expected a note")
         }
         XCTAssertEqual(decoded.said, true)
-        XCTAssertEqual(ChatRuimteSaid.words(decoded.text), "First line\nstill first.\n\nSecond.\n\nThird, Ruimte: kept.")
+        XCTAssertEqual(
+            ChatRuimteSaid.words(decoded.text), "First line\nstill first.\n\nSecond.\n\nThird, Ruimte: kept.")
         XCTAssertEqual(ChatRuimteSaid.words("Ruimte:no space"), "Ruimte:no space")
     }
 

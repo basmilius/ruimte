@@ -45,11 +45,8 @@ struct ChatStreamingMessage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var source: String
-    @State private var characters: [Character]
-    @State private var shownCount: Int
+    @State private var reveal: ChatWordReveal?
     @State private var live: Bool
-    @State private var shown: String
-    @State private var position: Double
     @State private var sawWriting: Bool
     @State private var initialBlocks: Int
 
@@ -57,14 +54,12 @@ struct ChatStreamingMessage: View {
         self.text = text
         self.streaming = streaming
         _source = State(initialValue: text)
-        _characters = State(initialValue: Array(text))
-        _shownCount = State(initialValue: text.count)
         _live = State(initialValue: streaming)
         _sawWriting = State(initialValue: streaming)
         _initialBlocks = State(initialValue: MarkdownSegments.settled(text).count)
-        _shown = State(initialValue: text)
-        _position = State(initialValue: Double(text.count))
     }
+
+    private var shown: String { reveal?.shown ?? source }
 
     var body: some View {
         Group {
@@ -94,19 +89,15 @@ struct ChatStreamingMessage: View {
                 showWhole()
                 return
             }
+            if !live && shown == source { return }
+            if reveal == nil { reveal = ChatWordReveal(source) }
             var previous = Date.now
             while !Task.isCancelled {
                 if scenePhase != .active { return }
                 let now = Date.now
-                position = ChatReveal.advance(
-                    position, target: characters.count, elapsed: now.timeIntervalSince(previous), finished: !live)
+                reveal?.advance(elapsed: now.timeIntervalSince(previous), finished: !live)
                 previous = now
-                let next = ChatReveal.boundaryCount(characters, position: Int(position), finished: !live)
-                if next > shownCount {
-                    shown += String(characters[shownCount..<next])
-                    shownCount = next
-                }
-                if !live && shownCount == characters.count { return }
+                if !live && shown == source { return }
                 do { try await Task.sleep(for: .milliseconds(33)) } catch { return }
             }
         }
@@ -114,10 +105,15 @@ struct ChatStreamingMessage: View {
             live = value
             if value { sawWriting = true }
         }
-        .onChange(of: text) { old, new in
+        .onChange(of: text) { _, new in
+            if reduceMotion || mode != .words {
+                source = new
+                showWhole()
+                return
+            }
+            if reveal == nil { reveal = ChatWordReveal(source) }
+            reveal?.update(new)
             source = new
-            characters = Array(new)
-            if reduceMotion || !new.hasPrefix(old) { showWhole() }
         }
         .onChange(of: reduceMotion) { _, reduced in
             if reduced { showWhole() }
@@ -125,9 +121,7 @@ struct ChatStreamingMessage: View {
     }
 
     private func showWhole() {
-        shown = source
-        shownCount = characters.count
-        position = Double(characters.count)
+        reveal = nil
     }
 }
 
