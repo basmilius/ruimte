@@ -53,7 +53,8 @@ import XCTest
             machine.status = state
             await model.load()
             model.choose("work", provider: "claude")
-            XCTAssertEqual(model.refusal(provider: "claude") == nil, ["checking", "ready"].contains(state), state)
+            XCTAssertEqual(
+                model.refusal(provider: "claude") == nil, ["checking", "ready", "failed"].contains(state), state)
         }
         machine.status = nil
         await model.load()
@@ -63,6 +64,85 @@ import XCTest
         XCTAssertNil(place)
         XCTAssertEqual(model.choices["claude"], "work")
         XCTAssertFalse(machine.sent.contains { $0.0 == "project.newChat" })
+    }
+
+    func testAFailedGrokProbeStillAllowsAutomaticAndNamedChats() async {
+        let machine = AccountFlowMachine()
+        machine.providerKind = "grok"
+        machine.accounts = ["work": .object(["kind": .string("grok"), "label": .string("Work")])]
+        machine.status = "failed"
+        let model = NewChatModel(client: machine, machineID: "mac")
+        await model.load()
+        let automatic = await model.start(provider: "grok")
+        XCTAssertNotNil(automatic)
+        model.choose("work", provider: "grok")
+        let named = await model.start(provider: "grok")
+        XCTAssertNotNil(named)
+        XCTAssertEqual(machine.sent.last?.1["account"], .string("work"))
+    }
+
+    func testAnAccountUpdateDuringPreflightDoesNotCancelTheStart() async {
+        let machine = AccountFlowMachine()
+        let model = NewChatModel(client: machine, machineID: "mac")
+        await model.load()
+        model.choose("work", provider: "claude")
+        let held = expectation(description: "Start preflight held")
+        machine.holdList = true
+        machine.listHeld = { held.fulfill() }
+        let starting = Task { await model.start(provider: "claude") }
+        await fulfillment(of: [held], timeout: 1)
+        await model.load()
+        machine.releaseList()
+        let place = await starting.value
+        XCTAssertNotNil(place)
+        XCTAssertNil(model.problem)
+        XCTAssertEqual(machine.sent.last?.1["account"], .string("work"))
+    }
+
+    func testAccountChoicesSkipOffAccountsAndLetAnUnavailablePickBeChanged() async {
+        let machine = AccountFlowMachine()
+        let model = NewChatModel(client: machine, machineID: "mac")
+        await model.load()
+        XCTAssertTrue(model.needsAccountChoice(provider: "claude"))
+        let project = JSONValue.object(["accounts": .object(["claude": .object(["off": .array([.string("work")])])])])
+        XCTAssertFalse(model.needsAccountChoice(provider: "claude", project: project))
+        model.choose("work", provider: "claude")
+        machine.accounts["work"] = nil
+        await model.load()
+        XCTAssertNotNil(model.refusal(provider: "claude"))
+        XCTAssertTrue(model.needsAccountChoice(provider: "claude"))
+        model.choose(nil, provider: "claude")
+        XCTAssertNil(model.refusal(provider: "claude"))
+        XCTAssertFalse(model.needsAccountChoice(provider: "claude"))
+    }
+
+    func testOnlyNewAccountsOfferLoginWhileTheMachineIsChecking() async {
+        let machine = AccountFlowMachine()
+        let model = MachineAgentsModel(client: machine)
+        for status: String? in ["checking", nil] {
+            machine.status = status
+            await model.load()
+            let account = model.agents[0].accounts.first { $0.id == "work" }!
+            XCTAssertFalse(model.canLogin(account, kind: "claude"))
+        }
+        let created = await model.create(kind: "claude", label: "New")
+        XCTAssertTrue(created)
+        let account = model.agents[0].accounts.first { $0.id == "new-account" }!
+        XCTAssertTrue(model.canLogin(account, kind: "claude"))
+        machine.statusID = "new-account"
+        machine.status = "ready"
+        await model.refresh()
+        XCTAssertFalse(model.canLogin(model.agents[0].accounts.first { $0.id == "new-account" }!, kind: "claude"))
+        machine.statusID = "work"
+        machine.status = "signed-out"
+        await model.refresh()
+        XCTAssertTrue(model.canLogin(model.agents[0].accounts.first { $0.id == "work" }!, kind: "claude"))
+        machine.status = "failed"
+        machine.silentLogins = ["claude"]
+        await model.refresh()
+        XCTAssertTrue(model.canLogin(model.agents[0].accounts.first { $0.id == "work" }!, kind: "claude"))
+        machine.features.remove("session.login")
+        XCTAssertFalse(model.canLogin(account, kind: "claude"))
     }
 
     func testANewerAccountReadWinsWhenAnOlderReplyArrivesLast() async {
@@ -235,6 +315,9 @@ import XCTest
     var features = supported
     var sent: [(String, JSONValue)] = []
     var status: String? = "ready"
+    var providerKind = "claude"
+    var statusID = "work"
+    var silentLogins: [String] = []
     var refuseSave = false
     var holdList = false
     var listHeld: (() -> Void)?
@@ -262,7 +345,8 @@ import XCTest
     private var snapshot: JSONValue {
         .object([
             "accounts": .object(accounts), "loginCommands": .object(["claude": .string("claude auth login")]),
-            "statuses": .array(status.map { [.object(["id": .string("work"), "state": .string($0)])] } ?? []),
+            "statuses": .array(status.map { [.object(["id": .string(statusID), "state": .string($0)])] } ?? []),
+            "silentLogins": .array(silentLogins.map(JSONValue.string)),
         ])
     }
 
@@ -273,7 +357,7 @@ import XCTest
             return .object([
                 "providers": .array([
                     .object([
-                        "kind": .string("claude"), "name": .string("Claude Code"), "installed": .bool(true),
+                        "kind": .string(providerKind), "name": .string("Agent"), "installed": .bool(true),
                         "capabilities": .object(["chat": .bool(true)]),
                     ])
                 ])

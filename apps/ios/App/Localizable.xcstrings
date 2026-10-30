@@ -183,7 +183,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Automatisch gebruikt de accountdefaults van deze machine."
+            "value" : "Automatisch gebruikt de standaardaccounts van deze machine."
           }
         }
       }
@@ -285,7 +285,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De machine maakt de accountmap aan. Meld je na het toevoegen aan via de accountrij."
+            "value" : "De machine maakt de accountmap aan. Log na het toevoegen in via de accountrij."
           }
         }
       }
@@ -302,7 +302,7 @@
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze CLI meldt aan vanuit een chat. Start een chat onder het nieuwe account om aan te melden."
+            "value" : "Bij deze CLI log je in vanuit een chat. Start een chat onder het nieuwe account om in te loggen."
           }
         }
       }

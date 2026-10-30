@@ -39,8 +39,16 @@ import SwiftUI
     private(set) var chatLogins: Set<String> = []
     private(set) var silentLogins: Set<String> = []
     private var mutations = 0
+    private var createdAccounts: Set<String> = []
 
     func answers(_ request: WireRequest) -> Bool { (client as? MachineFeatures)?.answers(request) == true }
+    func canLogin(_ account: Account, kind: String) -> Bool {
+        guard answers(.sessionLogin), loginCommands[kind] != nil else { return false }
+        if account.signedOut { return true }
+        if silentLogins.contains(kind), account.state == "failed" { return true }
+        return createdAccounts.contains(account.id) && [nil, "checking", "failed"].contains(account.state)
+    }
+
     func canAdd(_ kind: String) -> Bool {
         answers(.accountsCreate) && (loginCommands[kind] != nil || chatLogins.contains(kind))
     }
@@ -121,6 +129,7 @@ import SwiftUI
             let value = try await client.request(
                 .accountsCreate, payload: .object(["kind": .string(kind), "label": .string(label)]))
             apply(accounts: value)
+            if let id = value["id"]?.stringValue { createdAccounts.insert(id) }
             saved = true
         }
         return saved
@@ -273,7 +282,7 @@ struct MachineAgentsPage: View {
         editor = ProviderAccountEditorTarget(
             kind: agent.kind, accountID: account.id,
             label: model.rawAccounts?["accounts"]?[account.id]?["label"]?.stringValue ?? "",
-            enabled: account.state != "disabled")
+            enabled: model.rawAccounts?["accounts"]?[account.id]?["enabled"]?.boolValue ?? true)
         model.state.problem = nil
     }
 
@@ -396,9 +405,7 @@ struct MachineAgentsPage: View {
     @ViewBuilder private func loginButton(_ agent: MachineAgentsModel.Agent, _ account: MachineAgentsModel.Account)
         -> some View
     {
-        if ["signed-out", "checking"].contains(account.state ?? "checking") && model.loginCommands[agent.kind] != nil
-            && model.answers(.sessionLogin)
-        {
+        if model.canLogin(account, kind: agent.kind) {
             Button(account.signedOut ? String(localized: "Sign in again") : String(localized: "Sign in")) {
                 login = AgentLogin(kind: agent.kind, accountID: account.id, name: account.name)
             }

@@ -89,9 +89,14 @@ final class NewChatModel {
         case "disabled": return String(localized: "Off", comment: "An agent account that is turned off")
         case "signed-out": return String(localized: "Not logged in")
         case "folder-missing": return String(localized: "Its folder is missing")
-        case "unavailable", "not-found", "failed": return entry.message ?? String(localized: "Unavailable")
+        case "unavailable", "not-found": return entry.message ?? String(localized: "Unavailable")
         default: return nil
         }
+    }
+
+    func needsAccountChoice(provider: String, project: JSONValue? = nil) -> Bool {
+        if choices[provider] != nil && refusal(provider: provider, project: project) != nil { return true }
+        return (accounts?.accounts(of: provider).filter { unavailable($0, project: project) == nil }.count ?? 0) > 1
     }
 
     func refusal(provider: String, project: JSONValue? = nil) -> String? {
@@ -114,10 +119,18 @@ final class NewChatModel {
             let attempt = reads
             let listed = try await client.request(.accountsList)
             try Task.checkCancellation()
-            guard attempt == reads, choices[provider] == picked else { throw CancellationError() }
-            accounts = ProviderAccountList(listed)
-            accountsProblem = nil
-            if let reason = refusal(provider: provider, project: project) { throw MachineClientError.invalid(reason) }
+            guard choices[provider] == picked else { throw CancellationError() }
+            let snapshot = ProviderAccountList(listed)
+            if attempt == reads {
+                accounts = snapshot
+                accountsProblem = nil
+            }
+            guard let entry = snapshot.entries.first(where: { $0.id == picked && $0.kind == provider }) else {
+                throw MachineClientError.invalid(
+                    String(localized: "This account is no longer available. Choose another account."))
+            }
+            if let reason = unavailable(entry, project: project) { throw MachineClientError.invalid(reason) }
+            return picked
         }
         if let reason = refusal(provider: provider, project: project) { throw MachineClientError.invalid(reason) }
         if choices[provider] == nil {
@@ -250,7 +263,7 @@ struct NewChatSheet: View {
             model.accounts?.entries.first { $0.id == id }?.name(provider: name) ?? id
         }
         return Button {
-            if (model.accounts?.accounts(of: kind).count ?? 0) > 1 {
+            if model.needsAccountChoice(provider: kind) {
                 chosenProvider = kind
             } else {
                 start(kind)
@@ -267,7 +280,9 @@ struct NewChatSheet: View {
             .modifier(MobileSidebarLabel())
         }
         .modifier(MobileSidebarRow())
-        .disabled(!session.connected || model.refusal(provider: kind) != nil)
+        .disabled(
+            !session.connected || (model.refusal(provider: kind) != nil && !model.needsAccountChoice(provider: kind))
+        )
         .accessibilityIdentifier("newChat.agent.\(kind)")
     }
 }

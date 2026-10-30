@@ -126,7 +126,8 @@ struct CanvasStartGrid: View {
                         provider.text("name", fallback: provider.text("kind")),
                         detail: chat ? String(localized: "Chat") : String(localized: "Terminal"), icon: "bot"
                     ) {
-                        if chat && (catalog.accounts?.accounts(of: provider.agentKind).count ?? 0) > 1 {
+                        if chat && catalog.needsAccountChoice(provider: provider.agentKind, project: workspace.document)
+                        {
                             chatProvider = provider.agentKind
                         } else if chat {
                             insertChat(provider.agentKind)

@@ -37,6 +37,9 @@ struct NewChatAccountPicker: View {
             if let picked = model.choices[provider], let entry = entries.first(where: { $0.id == picked }) {
                 if let reason = model.unavailable(entry, project: project) {
                     Text(reason).font(.caption).foregroundStyle(MobileStyle.statusError)
+                } else if entry.state == "failed" {
+                    Text(entry.message ?? String(localized: "Unavailable"))
+                        .font(.caption).foregroundStyle(MobileStyle.muted)
                 } else if let reading = ProviderAccountList.limitsEntry(model.limits, account: picked),
                     let checked = reading["checkedAt"]?.numberValue, checked > 0,
                     reading["unavailable"] == nil || reading["unavailable"] == .null,
