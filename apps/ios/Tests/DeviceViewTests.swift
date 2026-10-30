@@ -8,12 +8,13 @@ import UIKit
 @testable import Ruimte
 
 @Suite @MainActor struct DeviceViewTests {
-    private static let reference: JSONValue = .object([
+    fileprivate static let reference: JSONValue = .object([
         "platform": .string("ios"), "kind": .string("simulator"), "name": .string("iPhone 17 Pro"),
         "runtime": .string("iOS 26.1"),
     ])
 
-    private static func device(state: String = "booted", stream: Bool = true, buttons: [String]? = nil) -> JSONValue {
+    fileprivate static func device(state: String = "booted", stream: Bool = true, buttons: [String]? = nil) -> JSONValue
+    {
         var capabilities: [String: JSONValue] = [
             "boot": .bool(true), "shutdown": .bool(true), "stream": .bool(stream), "input": .bool(true),
             "screenshot": .bool(true),
@@ -124,33 +125,17 @@ import UIKit
         let preview = MachineDevicePreview(client: machine, device: try #require(MachineDevice(Self.device())))
         await preview.start()
         defer { preview.stop() }
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let jpeg = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 3), format: format).jpegData(
-            withCompressionQuality: 0.8
-        ) { context in
-            UIColor.red.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 2, height: 3))
-        }
         machine.emit(
             .object([
                 "deviceId": .string("UDID-1"), "backendId": .string("ios-simulator"), "format": .string("jpeg"),
-                "data": .string(jpeg.base64EncodedString()), "sequence": .number(1),
+                "data": .string(Self.jpeg().base64EncodedString()), "sequence": .number(1),
             ]))
 
         #expect(preview.image == nil)
     }
 
     @Test func theDefaultDecoderReadsJPEGAndRejectsInvalidBytes() async {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let jpeg = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 3), format: format).jpegData(
-            withCompressionQuality: 0.8
-        ) { context in
-            UIColor.red.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 2, height: 3))
-        }
-        let image = await DeviceFrameDecoder.image(jpeg.base64EncodedString())
+        let image = await DeviceFrameDecoder.image(Self.jpeg().base64EncodedString())
         #expect(image?.size == CGSize(width: 2, height: 3))
         #expect(await DeviceFrameDecoder.image("not base64") == nil)
         #expect(await DeviceFrameDecoder.image(Data("not an image".utf8).base64EncodedString()) == nil)
@@ -201,7 +186,7 @@ import UIKit
         #expect(probe.images.count == 1 && probe.images.first === fresh)
     }
 
-    @Test func previewsThrottleAndFilterFramesAndRejectAStoppedStreamsResult() async throws {
+    @Test func previewsFilterAndCoalesceFramesAndRejectAStoppedStreamsResult() async throws {
         let machine = DeviceMachine(devices: [Self.device()])
         let probe = FrameProbe()
         var instant: TimeInterval = 0
@@ -214,9 +199,6 @@ import UIKit
         machine.emit(Self.frame("video").setting("format", .string("h264")))
         machine.emit(Self.frame("first"))
         await probe.waitForRequests(1)
-        machine.emit(Self.frame("too-soon"))
-        instant = 0.249
-        machine.emit(Self.frame("still-too-soon"))
         instant = 0.25
         machine.emit(Self.frame("superseded"))
         instant = 0.5
@@ -255,7 +237,6 @@ import UIKit
         machine.emit(Self.frame("video").setting("format", .string("h264")))
         machine.emit(Self.frame("first", sequence: 1))
         await probe.waitForRequests(1)
-        machine.emit(Self.frame("duplicate", sequence: 1))
         machine.emit(Self.frame("superseded", sequence: 2))
         machine.emit(Self.frame("last", sequence: 3))
         let first = UIImage()
@@ -281,11 +262,90 @@ import UIKit
         probe.complete(3, image: nil)
     }
 
-    private static func frame(_ data: String, sequence: Int = 0) -> JSONValue {
+    private static func jpeg() -> Data {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: 2, height: 3), format: format).jpegData(
+            withCompressionQuality: 0.8
+        ) { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 2, height: 3))
+        }
+    }
+
+    fileprivate static func frame(_ data: String, sequence: Int = 0) -> JSONValue {
         .object([
             "deviceId": .string("UDID-1"), "backendId": .string("ios-simulator"), "format": .string("jpeg"),
             "data": .string(data), "sequence": .number(Double(sequence)),
         ])
+    }
+}
+
+@Suite @MainActor struct DeviceFrameAdmissionTests {
+    @Test func anIdlePreviewAdmitsAt250msAndAnInvalidFrameConsumesItsAttempt() async throws {
+        let machine = DeviceMachine(devices: [DeviceViewTests.device()])
+        let frames = ImmediateFrames()
+        var instant: TimeInterval = 0
+        let preview = MachineDevicePreview(
+            client: machine, device: try #require(MachineDevice(DeviceViewTests.device())), now: { instant },
+            decode: { await frames.decode($0) })
+        await preview.start()
+        defer { preview.stop() }
+
+        await machine.emitAndFinish(DeviceViewTests.frame("first"))
+        #expect(frames.inputs == ["first"])
+        #expect(preview.image === frames.picture)
+        instant = 0.249
+        await machine.emitAndFinish(DeviceViewTests.frame("too-soon"))
+        #expect(frames.inputs == ["first"])
+        instant = 0.25
+        await machine.emitAndFinish(DeviceViewTests.frame("on-time"))
+        #expect(frames.inputs == ["first", "on-time"])
+
+        instant = 0.5
+        await machine.emitAndFinish(DeviceViewTests.frame("invalid"))
+        #expect(frames.inputs == ["first", "on-time", "invalid"])
+        #expect(preview.image === frames.picture)
+        instant = 0.749
+        await machine.emitAndFinish(DeviceViewTests.frame("too-soon-after-invalid"))
+        #expect(frames.inputs == ["first", "on-time", "invalid"])
+        instant = 0.75
+        await machine.emitAndFinish(DeviceViewTests.frame("after-invalid"))
+        #expect(frames.inputs == ["first", "on-time", "invalid", "after-invalid"])
+        #expect(preview.image === frames.picture)
+    }
+
+    @Test func anIdleDeviceViewRejectsDuplicateSequencesIncludingAfterAFailedDecode() async {
+        let machine = DeviceMachine(devices: [DeviceViewTests.device()])
+        let frames = ImmediateFrames()
+        let model = DeviceViewModel(
+            client: machine, reference: DeviceViewTests.reference, decode: { await frames.decode($0) })
+        model.start()
+        defer { model.stop() }
+        await model.refresh()
+
+        await machine.emitAndFinish(DeviceViewTests.frame("first", sequence: 1))
+        #expect(frames.inputs == ["first"])
+        await machine.emitAndFinish(DeviceViewTests.frame("duplicate", sequence: 1))
+        #expect(frames.inputs == ["first"])
+        await machine.emitAndFinish(DeviceViewTests.frame("invalid", sequence: 2))
+        #expect(frames.inputs == ["first", "invalid"])
+        #expect(model.frame === frames.picture)
+        await machine.emitAndFinish(DeviceViewTests.frame("retry-same-sequence", sequence: 2))
+        #expect(frames.inputs == ["first", "invalid"])
+        await machine.emitAndFinish(DeviceViewTests.frame("third", sequence: 3))
+        #expect(frames.inputs == ["first", "invalid", "third"])
+        #expect(model.frame === frames.picture)
+    }
+}
+
+@MainActor private final class ImmediateFrames {
+    private(set) var inputs: [String] = []
+    let picture = UIImage()
+
+    func decode(_ encoded: String) async -> UIImage? {
+        inputs.append(encoded)
+        return encoded == "invalid" ? nil : picture
     }
 }
 
@@ -363,6 +423,11 @@ import UIKit
 
     func emit(_ payload: JSONValue) {
         for handler in handlers.values { handler(payload) }
+    }
+
+    func emitAndFinish(_ payload: JSONValue) async {
+        let completion = NativeTaskDrain { emit(payload) }
+        await completion.finish()
     }
 
     func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void { {} }
