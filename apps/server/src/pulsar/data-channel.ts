@@ -1,4 +1,5 @@
-import { deflateRawSync } from 'node:zlib';
+import { promisify } from 'node:util';
+import { deflateRaw } from 'node:zlib';
 import {
     DIRECT_BINARY_PIECE_BYTES,
     DIRECT_DEFLATE_MIN_BYTES,
@@ -87,6 +88,8 @@ export const BINARY_LANE_BYTES = DIRECT_BINARY_PIECE_BYTES;
  */
 export const TEXT_LANE_BYTES = 256 * 1024;
 
+const compress = promisify(deflateRaw);
+
 /*
  * A direct channel carries less than a terminal prints (`scripts/measure-latency.ts`), so terminal output
  * waits in the output gate per session and a quiet terminal's echo waits behind one slice of a busy one,
@@ -107,12 +110,16 @@ const DIRECT_OUTPUT_SHARE: OutputShare = {
  * of a reply or terminal output. Every peer joins each kind with an assembler of its own, so they may interleave.
  *
  * The rest is shaped after Bun's socket, because the output gate reads it that way: `send` answers
- * the bytes of the whole frame once every piece is queued and 0 when the frame did not go out,
- * `bufferedAmount` counts the DataChannel and the lanes, and a drain comes once both are under the
- * gate's low-water mark. A frame that would take that past the socket's backpressure limit closes
+ * the bytes of the whole frame once accepted for preparation or delivery and 0 when refused,
+ * `bufferedAmount` counts the DataChannel, the lanes and pending input, and a drain comes once they
+ * are under the gate's low-water mark. A frame that would take that past the socket's backpressure limit closes
  * the channel, as Bun closes a socket there.
  */
-export function directChannel(raw: RawDataChannel, backpressureLimit: number = SOCKET_BACKPRESSURE_LIMIT): DirectChannel {
+export function directChannel(
+    raw: RawDataChannel,
+    backpressureLimit: number = SOCKET_BACKPRESSURE_LIMIT,
+    deflate: (data: string) => Promise<Uint8Array> = compress
+): DirectChannel {
     const closeListeners: Array<() => void> = [];
     const drainListeners: Array<() => void> = [];
     const assembler = new FrameAssembler();
@@ -123,8 +130,12 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
     let deflating = false;
     const textLane: Array<{ piece: string | Uint8Array; bytes: number }> = [];
     const lane: Uint8Array[] = [];
-    // Both lanes together.
+    const pendingText: Array<{ data: string; bytes: number; compress: boolean }> = [];
+    let preparing = false;
+    let pendingBytes = 0;
     let laneBytes = 0;
+
+    const bufferedAmount = (): number => raw.bufferedAmount + laneBytes + pendingBytes;
 
     raw.bufferedAmountLowThreshold = BINARY_LANE_BYTES;
 
@@ -134,15 +145,18 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
         }
         closed = true;
         reader = null;
+        waiting.length = 0;
+        pendingText.length = 0;
+        textLane.length = 0;
+        lane.length = 0;
+        pendingBytes = 0;
+        laneBytes = 0;
         for (const listener of closeListeners.splice(0)) {
             listener();
         }
     };
 
     const close = (): void => {
-        textLane.length = 0;
-        lane.length = 0;
-        laneBytes = 0;
         if (raw.readyState !== 'closed') {
             raw.close();
         }
@@ -162,13 +176,81 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
                 laneBytes -= bytes;
                 raw.send(piece);
             }
-            while (!closed && textLane.length === 0 && lane.length > 0 && raw.bufferedAmount <= BINARY_LANE_BYTES) {
+            while (!closed && textLane.length === 0 && !preparing && pendingText.length === 0 && lane.length > 0 && raw.bufferedAmount <= BINARY_LANE_BYTES) {
                 const piece = lane.shift()!;
                 laneBytes -= piece.byteLength;
                 raw.send(piece);
             }
         } catch (e) {
             refused(e);
+        }
+    };
+
+    const drained = (): void => {
+        if (closed || bufferedAmount() > LOW_WATER_MARK) {
+            return;
+        }
+
+        for (const listener of drainListeners) {
+            if (closed || bufferedAmount() > LOW_WATER_MARK) {
+                return;
+            }
+
+            listener();
+        }
+    };
+
+    const queueText = (data: string, bytes: number, deflated: Uint8Array | null): void => {
+        if (deflated !== null && deflated.byteLength < bytes) {
+            for (const piece of splitDeflatedFrame(deflated)) {
+                textLane.push({ piece, bytes: piece.byteLength });
+                laneBytes += piece.byteLength;
+            }
+        } else {
+            for (const piece of splitFrame(data)) {
+                const pieceBytes = Buffer.byteLength(piece);
+                textLane.push({ piece, bytes: pieceBytes });
+                laneBytes += pieceBytes;
+            }
+        }
+    };
+
+    const prepareText = (): void => {
+        if (closed || preparing) {
+            return;
+        }
+
+        while (pendingText.length > 0) {
+            const frame = pendingText.shift()!;
+            if (frame.compress) {
+                preparing = true;
+                void (async () => {
+                    let deflated: Uint8Array | null = null;
+                    try {
+                        deflated = await deflate(frame.data);
+                    } catch {
+                        // Plain text is safe before any piece goes out; yield even if the compressor threw synchronously.
+                        await Promise.resolve();
+                    }
+
+                    if (closed) {
+                        return;
+                    }
+
+                    pendingBytes -= Math.max(1, frame.bytes);
+                    queueText(frame.data, frame.bytes, deflated);
+                    preparing = false;
+                    prepareText();
+                    pump();
+                    // Input can shrink below the low mark without the raw channel ever crossing its drain threshold.
+                    drained();
+                })().catch(refused);
+
+                break;
+            }
+
+            pendingBytes -= Math.max(1, frame.bytes);
+            queueText(frame.data, frame.bytes, null);
         }
     };
 
@@ -181,13 +263,9 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
         if (closed) {
             return;
         }
+
         pump();
-        if (closed || raw.bufferedAmount + laneBytes > LOW_WATER_MARK) {
-            return;
-        }
-        for (const listener of drainListeners) {
-            listener();
-        }
+        drained();
     });
     raw.onMessage((data) => {
         if (closed) {
@@ -237,8 +315,8 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
                 return 0;
             }
             const bytes = typeof data === 'string' ? Buffer.byteLength(data) : data.byteLength;
-            const queued = raw.bufferedAmount + laneBytes;
-            if (queued + bytes > backpressureLimit) {
+            const queued = bufferedAmount();
+            if (queued + Math.max(1, bytes) > backpressureLimit) {
                 console.warn(`A direct channel closed with ${queued} bytes still queued for a client that does not keep up.`);
                 close();
                 return 0;
@@ -251,20 +329,10 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
                 pump();
                 return closed ? 0 : bytes;
             }
-            // Deflated pieces share the text lane, so a reply never lands after the events that follow it.
-            const deflated = deflating && bytes >= DIRECT_DEFLATE_MIN_BYTES ? deflateRawSync(data) : null;
-            if (deflated !== null && deflated.byteLength < bytes) {
-                for (const piece of splitDeflatedFrame(deflated)) {
-                    textLane.push({ piece, bytes: piece.byteLength });
-                    laneBytes += piece.byteLength;
-                }
-            } else {
-                for (const piece of splitFrame(data)) {
-                    const pieceBytes = Buffer.byteLength(piece);
-                    textLane.push({ piece, bytes: pieceBytes });
-                    laneBytes += pieceBytes;
-                }
-            }
+            pendingText.push({ data, bytes, compress: deflating && bytes >= DIRECT_DEFLATE_MIN_BYTES });
+            // Even an empty frame retains a queue entry and eventually emits a framing byte.
+            pendingBytes += Math.max(1, bytes);
+            prepareText();
             // A throw here means half a frame may be out and the stream after it would not parse, so the channel goes.
             pump();
             return closed ? 0 : bytes;
@@ -272,7 +340,7 @@ export function directChannel(raw: RawDataChannel, backpressureLimit: number = S
         deflate() {
             deflating = true;
         },
-        bufferedAmount: () => raw.bufferedAmount + laneBytes,
+        bufferedAmount,
         // A DataChannel has no close code or reason on the wire; the peer only sees the channel end.
         close: () => close(),
         onClose(listener) {
