@@ -56,6 +56,14 @@ public struct UsageLimitSection: Sendable, Equatable, Identifiable {
         }
     }
 
+    /// Row-update age in milliseconds, tolerating one minute of clock skew between machine and viewer.
+    public static func age(_ entry: JSONValue, now: Double) -> Double? {
+        guard let checked = entry["checkedAt"]?.numberValue, checked.isFinite, checked > 0,
+            checked <= now + 60_000
+        else { return nil }
+        return max(0, now - checked)
+    }
+
     private static func quiet(entry: JSONValue?, account: ProviderAccountEntry?) -> Quiet? {
         let signedOut = account?.state == "signed-out"
         guard let entry else { return signedOut ? .signedOut : .notRead(message: account?.message) }

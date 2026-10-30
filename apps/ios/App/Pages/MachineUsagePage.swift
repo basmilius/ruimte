@@ -17,10 +17,10 @@ struct MachineUsagePage: View {
     @State private var machineName: String?
     let machines: [UsageMachine]
     @State private var state = RemotePageState()
-    @State private var limits: JSONValue?
-    @State private var accounts: ProviderAccountList?
-    /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer.
-    @State private var loginCommands: [String: String] = [:]
+    @State private var limitReads: UsageLimitsModel
+    private var limits: JSONValue? { limitReads.limits }
+    private var accounts: ProviderAccountList? { limitReads.accounts }
+    private var loginCommands: [String: String] { limitReads.loginCommands }
     @State private var login: UsageLogin?
     @State private var breakdown = UsageBreakdown.models
     @State private var selected: Date?
@@ -31,6 +31,7 @@ struct MachineUsagePage: View {
 
     init(client: any MachineRequesting, machineName: String? = nil, machines: [UsageMachine] = []) {
         _client = State(initialValue: client)
+        _limitReads = State(initialValue: UsageLimitsModel(client: client))
         _machineName = State(initialValue: machineName)
         self.machines = machines
     }
@@ -80,7 +81,7 @@ struct MachineUsagePage: View {
         .mobileSheet(item: $login) { login in
             AccountLoginSheet(client: client, kind: login.kind, accountID: login.accountID, name: login.name)
         }
-        .task(id: "\(period.rawValue) \(machineName ?? "")") {
+        .task(id: "\(period.rawValue) \(ObjectIdentifier(client))") {
             let client = client
             await RemotePageLifecycle.run(
                 client: client, events: ["usage.changed", "usage.limitsChanged", "accounts.changed"],
@@ -93,12 +94,11 @@ struct MachineUsagePage: View {
     }
 
     private func switchTo(_ machine: UsageMachine) {
-        guard machine.name != machineName else { return }
+        guard machine.client !== client else { return }
         client = machine.client
         machineName = machine.name
         state = RemotePageState()
-        limits = nil
-        accounts = nil
+        limitReads.use(machine.client)
         selected = nil
     }
 
@@ -154,7 +154,8 @@ struct MachineUsagePage: View {
                 }
             }
             .chartForegroundStyleScale(
-                domain: report.stacked.map(usageProviderName), range: report.stacked.map(Self.color))
+                domain: report.stacked.map(usageProviderName), range: report.stacked.map(Self.color)
+            )
             .chartLegend(.hidden)
             .chartXSelection(value: $selected)
             .chartYAxis {
@@ -166,7 +167,8 @@ struct MachineUsagePage: View {
                 }
             }
             .frame(height: 170)
-            .accessibilityLabel(metric == .tokens ? (unit == .hour ? "Tokens per hour" : "Tokens per day") : "Cost per day")
+            .accessibilityLabel(
+                metric == .tokens ? (unit == .hour ? "Tokens per hour" : "Tokens per day") : "Cost per day")
             HStack(spacing: 16) {
                 ForEach(report.providers) { provider in
                     HStack(spacing: 6) {
@@ -250,9 +252,12 @@ struct MachineUsagePage: View {
     }
 
     private func breakdownRow(_ row: UsageReport.Row, report: UsageReport, top: Double) -> some View {
-        let amount = metric == .tokens ? Format.tokens(row.tokens) : row.costUsd.map { money.string(usd: $0) } ?? String(localized: "No price")
+        let amount =
+            metric == .tokens
+            ? Format.tokens(row.tokens) : row.costUsd.map { money.string(usd: $0) } ?? String(localized: "No price")
         let share = report.share(row, metric: metric)
-        let title = breakdown == .day ? (UsageReport.date(row.title).map { Format.weekdayDay($0) } ?? row.title) : row.title
+        let title =
+            breakdown == .day ? (UsageReport.date(row.title).map { Format.weekdayDay($0) } ?? row.title) : row.title
         var detail = breakdown == .projects ? row.detail : String(localized: "\(Format.number(row.calls)) calls")
         if let share { detail += " · \(Format.percent((share * 100).rounded()))" }
         return VStack(alignment: .leading, spacing: 5) {
@@ -265,27 +270,49 @@ struct MachineUsagePage: View {
                 Text(amount).font(.callout).monospacedDigit()
             }
             Text(detail).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.middle)
-            ShareBar(fraction: top > 0 ? row.value(metric) / top : 0, color: row.provider.map(Self.color) ?? MobileStyle.accent)
+            ShareBar(
+                fraction: top > 0 ? row.value(metric) / top : 0,
+                color: row.provider.map(Self.color) ?? MobileStyle.accent)
         }
         .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var limitCards: some View {
         let sections = UsageLimitSection.sections(limits: limits, accounts: accounts)
-        if !sections.isEmpty {
-            Text("Limits").font(.subheadline.weight(.semibold)).padding(.top, MobileSpacing.small)
+        HStack {
+            Text("Limits").font(.subheadline.weight(.semibold))
+            Spacer()
+            Button(
+                limitReads.reading ? String(localized: "Reading limits") : String(localized: "Read limits again"),
+                lucideIcon: "list-restart"
+            ) {
+                Task { await limitReads.refresh() }
+            }
+            .font(.footnote)
+            .disabled(limitReads.reading || !limitReads.connected)
+        }
+        .padding(.top, MobileSpacing.small)
+        if !limitReads.connected {
+            Text("Connect to this machine to read limits.").font(.caption).foregroundStyle(MobileStyle.muted)
+        }
+        if let problem = limitReads.problem {
+            Text(problem).font(.caption).foregroundStyle(MobileStyle.statusError)
         }
         ForEach(sections) { section in
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     if section.named { AccountDot(color: section.color) }
-                    Text(section.named ? "\(usageProviderName(section.kind)) · \(section.name)" : usageProviderName(section.kind))
-                        .font(.callout.weight(.semibold))
+                    Text(
+                        section.named
+                            ? "\(usageProviderName(section.kind)) · \(section.name)" : usageProviderName(section.kind)
+                    )
+                    .font(.callout.weight(.semibold))
                     Spacer()
                     if let plan = section.entry?["plan"]?.stringValue {
                         Text(plan.capitalized).font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
+                if let entry = section.entry { UsageLimitProvenance(entry: entry) }
                 limitRows(section)
             }
             .modifier(UsageCard())
@@ -328,17 +355,21 @@ struct MachineUsagePage: View {
             let scan = summary["scan"]
             let scanned = Date(timeIntervalSince1970: (scan?.number("at") ?? 0) / 1000)
             let files = Int(scan?.number("files") ?? 0)
-            let prices = summary["pricing"]?["fetchedAt"]?.numberValue.map {
-                String(localized: "Prices of \(Format.day(Date(timeIntervalSince1970: $0 / 1000)))")
-            } ?? String(localized: "Bundled prices")
+            let prices =
+                summary["pricing"]?["fetchedAt"]?.numberValue.map {
+                    String(localized: "Prices of \(Format.day(Date(timeIntervalSince1970: $0 / 1000)))")
+                } ?? String(localized: "Bundled prices")
             let rate =
                 money.currencyCode == "EUR"
                 ? money.rateDate.flatMap { UsageReport.date($0) }.map {
-                    String(localized: " · EUR at the ECB rate of \(Format.day($0))", comment: "Appended to the usage provenance line; %@ is a date")
+                    String(
+                        localized: " · EUR at the ECB rate of \(Format.day($0))",
+                        comment: "Appended to the usage provenance line; %@ is a date")
                 } ?? "" : ""
             VStack(spacing: 6) {
                 if scan?["failed"]?.boolValue == true {
-                    Text("The latest scan failed. These are the last totals.").foregroundStyle(MobileStyle.statusNeedsYou)
+                    Text("The latest scan failed. These are the last totals.").foregroundStyle(
+                        MobileStyle.statusNeedsYou)
                 }
                 if metric == .euro, let explanation = money.explanation, money.currencyCode == "USD" {
                     Text(explanation)
@@ -371,10 +402,8 @@ struct MachineUsagePage: View {
         let period = period
         await state.load {
             let result = try await client.request(.usageSummary, payload: period.payload())
-            limits = try? await client.request(.usageLimits)
-            let list = try? await client.request(.accountsList)
-            accounts = list.map(ProviderAccountList.init)
-            loginCommands = (list?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
+            guard self.client === client, !Task.isCancelled else { throw CancellationError() }
+            await limitReads.load()
             return result
         }
     }
@@ -465,4 +494,32 @@ private struct UsageLogin: Identifiable {
     let name: String
 
     var id: String { accountID }
+}
+
+struct UsageLimitProvenance: View {
+    let entry: JSONValue
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let age = UsageLimitSection.age(entry, now: context.date.timeIntervalSince1970 * 1000)
+            VStack(alignment: .leading, spacing: 3) {
+                if entry["unavailable"]?["reason"] == .string("failed"), !entry.list("windows").isEmpty {
+                    Text("Last known numbers")
+                }
+                if let age {
+                    let when = age < 60_000 ? String(localized: "just now") : Format.ago(milliseconds: age)
+                    if entry["source"] == .string("event") {
+                        Text("Last update from a turn · \(when)")
+                    } else {
+                        Text("Last update · \(when)")
+                    }
+                    if age >= 600_000 { Text("May be out of date") }
+                } else {
+                    Text("Update time unknown")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle((age ?? 0) >= 600_000 ? MobileStyle.statusNeedsYou : MobileStyle.muted)
+        }
+    }
 }
