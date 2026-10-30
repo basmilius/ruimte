@@ -85,9 +85,9 @@ describe('the count of what needs you in the dock', () => {
             button.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
         });
         await until(() => document.querySelector('[role="tooltip"]') !== null);
-        expect([...document.querySelectorAll('[role="tooltip"] .block')].map((line) => line.textContent)).toEqual([
-            'Later: Asks: Ship it today?',
-            'Asking: Asks: Which database?'
-        ]);
+        const text = document.querySelector('[role="tooltip"]')!.textContent!;
+        expect(text).toContain('Later: Asks: Ship it today?');
+        expect(text).toContain('Asking: Asks: Which database?');
+        expect(text.indexOf('Later:')).toBeLessThan(text.indexOf('Asking:'));
     });
 });

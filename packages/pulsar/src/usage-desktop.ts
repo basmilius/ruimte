@@ -103,6 +103,7 @@ export const USAGE_DESKTOP_COMMANDS = [
     'nodeDown',
     'prompts',
     'needsYouNext',
+    'attentionQueue',
     'launchRun',
     'launchStop',
     'launchesStopAll',

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleCheck } from 'lucide-react';
+import { CircleCheck, ListChecks } from 'lucide-react';
 import { useProjectNodes, type ProjectNodeRef } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
@@ -8,12 +8,14 @@ import { shownChatOfNode } from '@/design/design-chat';
 import { useCanvasStore } from '@/state/canvas';
 import { useChats } from '@adecore/agents-react/state';
 import { useEndpointId } from '@/state/keys';
-import { nodeWaitAsk, useSessions } from '@/state/sessions';
+import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
-import { oldestWaitingFirst, useWaitingSince } from '@/state/waiting';
+import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/waiting';
+import { WaitLabel } from '@/attention/WaitLabel';
+import { openAttentionQueue } from '@/attention/queue';
 import { waitAskLine } from './wait-ask';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { Button, Icon, Separator, Tooltip } from '@adecore/ui';
+import { Button, Icon, IconButton, Separator, Tooltip } from '@adecore/ui';
 
 /* A count that walks through the nodes behind it, across views, one per click. */
 function Walker({ label, detail, count, ids, children }: { label: string; detail?: ReactNode; count: number; ids: string[]; children: ReactNode }) {
@@ -54,6 +56,7 @@ function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: r
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.statusByKey);
+    const since = useWaitingSince((state) => state.byKey);
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const lines = ids.slice(0, WAITING_LINES).flatMap((id) => {
         const node = byId.get(id);
@@ -61,17 +64,19 @@ function WaitingLines({ nodes, ids }: { nodes: readonly ProjectNodeRef[]; ids: r
             return [];
         }
 
-        const ask = nodeWaitAsk(node, sessions, chats, endpointId);
+        const detail = waitDetailsOf(node, sessions, chats, since, endpointId);
+        const ask = detail.ask;
 
-        return [{ id, line: t('status.waitingLine', { title: node.title, ask: ask ? waitAskLine(ask) : t('notifications.needsYou') }) }];
+        return [{ id, detail, line: t('status.waitingLine', { title: node.title, ask: ask ? waitAskLine(ask) : t('notifications.needsYou') }) }];
     });
     const rest = ids.length - lines.length;
 
     return (
         <>
-            {lines.map(({ id, line }) => (
-                <span key={id} className="block truncate text-text-muted">
-                    {line}
+            {lines.map(({ id, detail, line }) => (
+                <span key={id} className="flex items-center gap-2 text-text-muted">
+                    <span className="min-w-0 truncate">{line}</span>
+                    <WaitLabel detail={detail} />
                 </span>
             ))}
             {rest > 0 && <span className="block text-text-muted">{t('status.moreWaiting', { count: rest })}</span>}
@@ -110,6 +115,7 @@ export function StatusSummary() {
     return (
         <>
             <div className="flex items-center gap-1">
+                <IconButton icon={ListChecks} label={t('attention.openQueue')} onClick={openAttentionQueue} />
                 {groups.needsYou.length > 0 && (
                     <Walker
                         label={t('status.nextNeedsYou')}

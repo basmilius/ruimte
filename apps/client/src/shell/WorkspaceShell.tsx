@@ -50,6 +50,7 @@ import { useRoutinesStage } from '@/routines/stage';
 import { ChatHostProvider } from '@adecore/agents-react';
 import { stopVoice } from '@/voice/controller';
 import { VoiceOverlay } from '@/voice/VoiceOverlay';
+import { useAttentionQueue } from '@/attention/queue';
 
 startBytesWorker();
 startLaunchWatch();
@@ -147,6 +148,13 @@ const ConflictOverlay = lazyDialog(
     (s) => s.conflicts !== null
 );
 
+const AttentionQueue = lazyDialog(
+    () => import('@/attention/AttentionQueue'),
+    'AttentionQueue',
+    useAttentionQueue,
+    (state) => state.projectKey !== null
+);
+
 /* In the order they mount, each in a boundary of its own; the fork dialog brings its own. */
 const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType])[] = [
     ['dialog', LayoutDialog],
@@ -172,7 +180,8 @@ const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType
     ['dialog', PullRequestDialog],
     ['dialog', FileChoiceDialog],
     ['dialog', RoutineFormDialog],
-    ['dialog', ImageSaveHost]
+    ['dialog', ImageSaveHost],
+    ['dialog', AttentionQueue]
 ];
 
 /*

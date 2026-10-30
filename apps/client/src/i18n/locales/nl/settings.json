@@ -845,7 +845,8 @@
             "primary": "Toestaan, Volgende of Antwoorden",
             "previous": "Vorige prompt",
             "next": "Volgende prompt",
-            "escape": "Terug naar waar je was"
+            "escape": "Terug naar waar je was",
+            "attentionQueue": "Open aandachtswachtrij"
         },
         "chat": {
             "previousMessage": "Vorig bericht dat je stuurde",

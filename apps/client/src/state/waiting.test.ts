@@ -3,7 +3,7 @@ import type { AgentInfo, AgentRequest, ChatInfo } from '@ruimte/contracts';
 import type { ChatStatuses } from '@adecore/agents-react/state';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey, StatusOf } from '@/state/sessions';
-import { nextWaiting, nextWaitingSince, oldestWaitingFirst, type Waiting } from './waiting';
+import { compareWaits, nextWaiting, nextWaitingSince, oldestWaitingFirst, waitDetailsOf, type Waiting } from './waiting';
 
 const ENDPOINT = 'local';
 
@@ -61,6 +61,43 @@ describe('what waits on a person, oldest first', () => {
             { id: 'docs', since: 300 },
             { id: 'old', since: Infinity }
         ]);
+    });
+});
+
+describe('what a wait asks first', () => {
+    test('prefers an approval to an older question and keeps the original wait date', () => {
+        const session = { attached: true, agent: agent('needs-you', 900, [{ ...request(100), kind: 'question' }, request(400), request(200)]) };
+        const detail = waitDetailsOf({ id: 'api', kind: 'terminal' }, { [key('api')]: session }, {}, new Map(), ENDPOINT);
+
+        expect(detail.kind).toBe('approval');
+        expect(detail.since).toBe(100);
+        expect(detail.ask).toEqual({ kind: 'command', tool: 'Bash', detail: 'bun test', more: 2 });
+    });
+
+    test('uses the first terminal sighting when no request is available and leaves an undated chat unknown', () => {
+        const detail = waitDetailsOf(
+            { id: 'api', kind: 'terminal' },
+            { [key('api')]: { attached: true, agent: agent('needs-you', 900) } },
+            {},
+            new Map([[key('api'), 100]]),
+            ENDPOINT
+        );
+
+        expect(detail).toEqual({ kind: 'waiting', since: 100, ask: null });
+        expect(waitDetailsOf({ id: 'docs', kind: 'chat' }, {}, {}, new Map(), ENDPOINT)).toEqual({ kind: 'waiting', since: Infinity, ask: null });
+    });
+
+    test('orders approval before question before an unspecified wait, with oldest-first ties and unknown dates last', () => {
+        const input = [
+            { id: 'unknown', kind: 'waiting' as const, since: Infinity },
+            { id: 'question', kind: 'question' as const, since: 50 },
+            { id: 'later', kind: 'approval' as const, since: 200 },
+            { id: 'earlier', kind: 'approval' as const, since: 100 },
+            { id: 'undated-approval', kind: 'approval' as const, since: Infinity }
+        ];
+
+        expect(input.sort(compareWaits).map((entry) => entry.id)).toEqual(['earlier', 'later', 'undated-approval', 'question', 'unknown']);
+        expect(compareWaits(undefined, undefined)).toBe(0);
     });
 });
 

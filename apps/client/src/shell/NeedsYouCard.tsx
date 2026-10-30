@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
-import { ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
-import { answerPrompt, type ChatPromptClients, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
+import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
+import { answerPrompt, promptCreatedAt, type ChatPromptClients, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
 import { ChatScopeContext, useChatHost } from '@adecore/agents-react';
 import { useChats, type ChatState, useProviders } from '@adecore/agents-react/state';
 import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
@@ -19,6 +19,7 @@ import { chatScopeOf } from '@/transport/chat-scope';
 import { chatClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import type { SidebarNode } from './sidebar-rows';
+import { WaitAge } from '@/attention/WaitLabel';
 
 const NO_APPROVALS: readonly ComputerApproval[] = [];
 const NO_SECRETS: readonly SecretRequest[] = [];
@@ -59,7 +60,26 @@ interface WaitingPrompts {
     /* Null until the chat was read. */
     prompts: CanvasPrompt[] | null;
     failed: boolean;
+    lastLine: string | null;
     reread(): void;
+}
+
+/* Existing words only: the queue adds no model turn to summarize a finished turn. */
+function lastLineOf(chat: ChatState | undefined): string | null {
+    for (const id of [...(chat?.order ?? [])].reverse()) {
+        const item = chat?.items[id];
+        const text = item?.kind === 'assistant' && !item.parentToolUseId ? item.text : item?.kind === 'note' && item.level === 'error' ? item.text : '';
+        const line = text
+            .split('\n')
+            .map((part) => part.trim())
+            .find(Boolean);
+
+        if (line) {
+            return line.length > 280 ? `${line.slice(0, 279).trimEnd()}…` : line;
+        }
+    }
+
+    return null;
 }
 
 /*
@@ -137,13 +157,27 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
         }).prompts;
     }, [inspects, read, chat, session, since, computer, secrets, proposals, endpointId, key, node.id, node.kind, node.title, node.provider]);
 
-    return { prompts, failed: read?.failed ?? false, reread: () => setRevision((before) => before + 1) };
+    return { prompts, failed: read?.failed ?? false, lastLine: lastLineOf(chat), reread: () => setRevision((before) => before + 1) };
 }
 
-function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; node: SidebarNode; onOpen(): void; onEmpty(): void }) {
+export function WaitingPrompt({
+    endpointId,
+    node,
+    onOpen,
+    onEmpty,
+    summary = false,
+    completed = false
+}: {
+    endpointId: string;
+    node: SidebarNode;
+    onOpen?(): void;
+    onEmpty?(): void;
+    summary?: boolean;
+    completed?: boolean;
+}) {
     const { t } = useTranslation(['shell', 'canvas']);
     const local = useEndpointId() === endpointId;
-    const { prompts, failed, reread } = useWaitingPrompts(endpointId, node);
+    const { prompts, failed, lastLine, reread } = useWaitingPrompts(endpointId, node);
     const disabled = useEndpointConnection(endpointId).status !== 'open';
     const chatHost = useChatHost();
     const providers = useProviders((row) => row.providers);
@@ -152,12 +186,31 @@ function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; n
 
     useEffect(() => {
         if (prompts !== null && waiting.length === 0) {
-            onEmpty();
+            onEmpty?.();
         }
     }, [prompts, waiting.length, onEmpty]);
 
     if (active === null) {
-        return <p className="px-3 py-2 text-sm text-text-muted">{failed ? t('sidebar.promptFailed') : t('sidebar.promptLoading')}</p>;
+        if (completed && prompts !== null) {
+            return (
+                <div className="space-y-3 p-3">
+                    <p className="text-xs text-text-muted">{t('attention.lastMessage')}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm text-text">
+                        {lastLine ?? t(node.kind === 'terminal' ? 'attention.terminalFinished' : failed ? 'sidebar.promptFailed' : 'attention.noExcerpt')}
+                    </p>
+                    {failed && <Button onClick={reread}>{t('common:action.retry')}</Button>}
+                    {onOpen && <Button onClick={onOpen}>{t('attention.openSession')}</Button>}
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-3 p-3">
+                <p className="text-sm text-text-muted">{failed ? t('sidebar.promptFailed') : t('sidebar.promptLoading')}</p>
+                {failed && <Button onClick={reread}>{t('common:action.retry')}</Button>}
+                {onOpen && <Button onClick={onOpen}>{t('attention.openSession')}</Button>}
+            </div>
+        );
     }
 
     const denyReason = active.subject.kind === 'chat' && providers.find((provider) => provider.kind === active.provider)?.capabilities.denyReason === true;
@@ -170,57 +223,65 @@ function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; n
     };
 
     return (
-        <ErrorBoundary label={t('canvas:promptStack.failed')} resetKeys={[active.id]} className="relative p-3">
-            <PromptView
-                key={active.id}
-                subject={active.subject}
-                draft={session.draftOf(active.id)}
-                onDraft={(draft) => session.setDraft(active.id, draft)}
-                onAction={(action) => {
-                    void session
-                        .act(active, () => answerPrompt(active.subject, action, clients, chatHost))
-                        .then((result) => {
-                            if (result === 'sent') {
-                                reread();
-                            }
-                        });
-                }}
-                onReveal={onOpen}
-                more={0}
-                hasDraft={false}
-                denyReason={denyReason}
-                disabled={disabled}
-                sending={session.sending}
-                error={session.errorOf(active.id)}
-                top={
-                    <div className="flex h-[39px] min-w-0 shrink-0 items-center gap-2 border-b border-dashed border-border pl-2.5 pr-1 text-xs text-text-muted">
-                        <button type="button" className="min-w-0 truncate font-medium text-text hover:underline" onClick={onOpen}>
-                            {node.title}
-                        </button>
-                        <span className="grow" />
-                        {waiting.length > 1 && (
-                            <ButtonGroup render={<span />} className="shrink-0">
-                                <IconButton
-                                    icon={ChevronLeft}
-                                    size="sm"
-                                    label={t('canvas:promptStack.previous')}
-                                    disabled={index === 0}
-                                    onClick={() => step(-1)}
-                                />
-                                <span className="px-1 tabular-nums">{t('canvas:promptStack.position', { index: index + 1, count: waiting.length })}</span>
-                                <IconButton
-                                    icon={ChevronRight}
-                                    size="sm"
-                                    label={t('canvas:promptStack.next')}
-                                    disabled={index === waiting.length - 1}
-                                    onClick={() => step(1)}
-                                />
-                            </ButtonGroup>
-                        )}
-                    </div>
-                }
-            />
-        </ErrorBoundary>
+        <>
+            {summary && lastLine && <p className="break-words px-3 py-2 text-sm text-text-muted">{lastLine}</p>}
+            <ErrorBoundary label={t('canvas:promptStack.failed')} resetKeys={[active.id]} className="relative p-3">
+                <PromptView
+                    key={active.id}
+                    subject={active.subject}
+                    draft={session.draftOf(active.id)}
+                    onDraft={(draft) => session.setDraft(active.id, draft)}
+                    onAction={(action) => {
+                        void session
+                            .act(active, () => answerPrompt(active.subject, action, clients, chatHost))
+                            .then((result) => {
+                                if (result === 'sent') {
+                                    reread();
+                                }
+                            });
+                    }}
+                    onReveal={onOpen}
+                    more={0}
+                    hasDraft={false}
+                    denyReason={denyReason}
+                    disabled={disabled}
+                    sending={session.sending}
+                    error={session.errorOf(active.id)}
+                    top={
+                        <div className="flex h-[39px] min-w-0 shrink-0 items-center gap-2 border-b border-dashed border-border pl-2.5 pr-1 text-xs text-text-muted">
+                            {onOpen ? (
+                                <button type="button" className="min-w-0 truncate font-medium text-text hover:underline" onClick={onOpen}>
+                                    {node.title}
+                                </button>
+                            ) : (
+                                <span className="min-w-0 truncate font-medium text-text">{node.title}</span>
+                            )}
+                            <span className="grow" />
+                            <WaitAge since={promptCreatedAt(active.subject)} />
+                            {waiting.length > 1 && (
+                                <ButtonGroup render={<span />} className="shrink-0">
+                                    <IconButton
+                                        icon={ChevronLeft}
+                                        size="sm"
+                                        label={t('canvas:promptStack.previous')}
+                                        disabled={index === 0}
+                                        onClick={() => step(-1)}
+                                    />
+                                    <span className="px-1 tabular-nums">{t('canvas:promptStack.position', { index: index + 1, count: waiting.length })}</span>
+                                    <IconButton
+                                        icon={ChevronRight}
+                                        size="sm"
+                                        label={t('canvas:promptStack.next')}
+                                        disabled={index === waiting.length - 1}
+                                        onClick={() => step(1)}
+                                    />
+                                </ButtonGroup>
+                            )}
+                        </div>
+                    }
+                />
+            </ErrorBoundary>
+        </>
     );
 }
 
@@ -240,7 +301,7 @@ export function NeedsYouCard({ endpointId, node, onOpen, children }: { endpointI
             </PreviewCard.Trigger>
             <PreviewCard.Popup variant="plain" side="right" align="start" sideOffset={12} className={`${PROMPT_SURFACE} w-96`}>
                 <ChatScopeContext.Provider value={chatScopeOf(endpointId)}>
-                    <CardBody endpointId={endpointId} node={node} onOpen={onOpen} onEmpty={close} />
+                    <WaitingPrompt endpointId={endpointId} node={node} onOpen={onOpen} onEmpty={close} />
                 </ChatScopeContext.Provider>
             </PreviewCard.Popup>
         </PreviewCard.Root>

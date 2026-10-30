@@ -880,7 +880,8 @@
             "measureCopy": "Measure: copy results as JSON",
             "settings": "Settings",
             "launchesEdit": "Edit launches…",
-            "launchesAfterSettleOff": "Run nothing after a worktree chat finishes"
+            "launchesAfterSettleOff": "Run nothing after a worktree chat finishes",
+            "attentionQueue": "Open attention queue"
         },
         "sections": {
             "recent": "Recent",
@@ -1228,7 +1229,8 @@
         "drawingCopySvg": "Copy as SVG",
         "drawingSavePng": "Save as PNG…",
         "drawingSaveSvg": "Save as SVG…",
-        "drawingOnCanvas": "Show on Canvas"
+        "drawingOnCanvas": "Show on Canvas",
+        "attentionQueue": "Attention Queue"
     },
     "addToMachine": {
         "title": "Add to another machine",
@@ -1339,5 +1341,27 @@
         "inlineEdit": "Inline edit",
         "selectionToChat": "Add selection to chat",
         "askAgent": "Ask agent"
+    },
+    "attention": {
+        "title": "Attention queue",
+        "project": "Waiting and unseen turns in {{project}}",
+        "openQueue": "Open attention queue",
+        "empty": "Nothing is waiting or finished unseen.",
+        "waiting": "Waiting on you",
+        "finishedUnseen": "Finished unseen",
+        "finished": "Finished",
+        "error": "Error",
+        "lastMessage": "Last agent message",
+        "terminalFinished": "Open the terminal to read its result.",
+        "noExcerpt": "No agent message is available in this preview.",
+        "openSession": "Open session",
+        "waitAge": "Waiting for {{age}}",
+        "longWait": "Waiting for {{age}}, at least ten minutes",
+        "kind": {
+            "approval": "Approval",
+            "question": "Question",
+            "waiting": "Waiting"
+        },
+        "backToList": "Back to list"
     }
 }

@@ -880,7 +880,8 @@
             "measureCopy": "Meten: resultaten als JSON kopiëren",
             "settings": "Instellingen",
             "launchesEdit": "Launches bewerken…",
-            "launchesAfterSettleOff": "Niets uitvoeren als een worktree-chat klaar is"
+            "launchesAfterSettleOff": "Niets uitvoeren als een worktree-chat klaar is",
+            "attentionQueue": "Open aandachtswachtrij"
         },
         "sections": {
             "recent": "Recent",
@@ -1228,7 +1229,8 @@
         "drawingCopySvg": "Kopiëren als SVG",
         "drawingSavePng": "Opslaan als PNG…",
         "drawingSaveSvg": "Opslaan als SVG…",
-        "drawingOnCanvas": "Op het canvas tonen"
+        "drawingOnCanvas": "Op het canvas tonen",
+        "attentionQueue": "Aandachtswachtrij"
     },
     "addToMachine": {
         "title": "Toevoegen aan een andere machine",
@@ -1339,5 +1341,27 @@
         "inlineEdit": "Inline wijzigen",
         "selectionToChat": "Selectie aan chat toevoegen",
         "askAgent": "Agent vragen"
+    },
+    "attention": {
+        "title": "Aandachtswachtrij",
+        "project": "Wachtenden en ongeziene beurten in {{project}}",
+        "openQueue": "Open aandachtswachtrij",
+        "empty": "Er wacht niets en er zijn geen ongeziene afgeronde beurten.",
+        "waiting": "Wacht op jou",
+        "finishedUnseen": "Afgerond en ongezien",
+        "finished": "Afgerond",
+        "error": "Fout",
+        "lastMessage": "Laatste agentbericht",
+        "terminalFinished": "Open de terminal om het resultaat te lezen.",
+        "noExcerpt": "Er is geen agentbericht beschikbaar in deze voorvertoning.",
+        "openSession": "Open sessie",
+        "waitAge": "Wacht al {{age}}",
+        "longWait": "Wacht al {{age}}, minstens tien minuten",
+        "kind": {
+            "approval": "Goedkeuring",
+            "question": "Vraag",
+            "waiting": "Wacht"
+        },
+        "backToList": "Terug naar lijst"
     }
 }

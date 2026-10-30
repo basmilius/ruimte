@@ -244,6 +244,7 @@ describe('what a terminal hands back', () => {
         CANVAS_SHORTCUTS.nextView,
         CANVAS_SHORTCUTS.togglePanel,
         CANVAS_SHORTCUTS.focusPrompts,
+        CANVAS_SHORTCUTS.attentionQueue,
         ...Object.values(FOCUS_SHORTCUTS)
     ];
 

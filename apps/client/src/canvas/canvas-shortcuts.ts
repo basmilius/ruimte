@@ -42,6 +42,7 @@ import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
 import { isScratchProject, useProject } from '@/state/project';
 import { commandForKey, type WorkspaceCommandId } from '@/shell/command-table';
 import { revealNextWaiting } from '@/shell/next-waiting';
+import { openAttentionQueue } from '@/attention/queue';
 import { focusViewRow } from '@/shell/sidebar-focus';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { pool, transportFor } from '@/transport';
@@ -334,6 +335,11 @@ function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command:
         if (focusPromptStack()) {
             e.preventDefault();
         }
+        return true;
+    }
+    if (command === 'attention-queue') {
+        e.preventDefault();
+        openAttentionQueue();
         return true;
     }
     if (command === 'needs-you-next') {

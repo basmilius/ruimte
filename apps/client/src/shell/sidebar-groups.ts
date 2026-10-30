@@ -3,6 +3,9 @@ import { useEndpoints } from '@/state/endpoints';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { useProject } from '@/state/project';
 import { sidebarWaitingCount, useWaitingCount } from '@/state/attention';
+import { useChats } from '@adecore/agents-react/state';
+import { useSessions } from '@/state/sessions';
+import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { useProjectList } from '@/state/project-list';
 import { listedEndpoints } from '@/state/local-machine';
 import { sidebarSelection } from './sidebar-selection';
@@ -26,6 +29,9 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
     const separators = useSidebarProjects((state) => state.separators);
     const snoozes = useSnoozes((state) => state.byKey);
     const activeWaiting = useWaitingCount();
+    const sessions = useSessions((state) => state.byKey);
+    const chats = useChats((state) => state.statusByKey);
+    const waitingSince = useWaitingSince((state) => state.byKey);
     const result = useMemo(() => {
         if (!enabled) {
             return { groups: [], incomplete: [], order: [], separators: { before: {}, trailing: [] } as SeparatorPlaces };
@@ -58,7 +64,8 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                     ...value,
                     draft: false,
                     status: state === 'ready' ? (snapshot?.statuses[`${value.kind}:${value.id}`] ?? value.status ?? null) : null,
-                    snoozedUntil: snoozeOf(snoozes, endpoint.id, value.id)
+                    snoozedUntil: snoozeOf(snoozes, endpoint.id, value.id),
+                    wait: waitDetailsOf(value, sessions, chats, waitingSince, endpoint.id)
                 });
                 if (state === 'error' && snapshot?.state === 'ready') {
                     incomplete.push({ label: `${summary.name} · ${endpoint.label}`, state });
@@ -132,7 +139,10 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
         activeWaiting,
         order,
         separators,
-        snoozes
+        snoozes,
+        sessions,
+        chats,
+        waitingSince
     ]);
     useEffect(() => {
         if (!enabled) {

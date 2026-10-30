@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import type { SidebarTarget } from './sidebar-target';
 import type { AgentWork } from '@/state/agent-work';
+import { compareWaits, type WaitDetails } from '@/state/waiting';
 import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectSummary, ProjectViewKind, Task } from '@ruimte/contracts';
 
 export interface SidebarNode {
@@ -11,6 +12,7 @@ export interface SidebarNode {
     /* The CLI behind a chat or an agent terminal, whose mark the row wears instead of the kind's. */
     provider: AgentKind | null;
     status: AgentStatus | null;
+    wait?: WaitDetails;
     /* What its agent works on, which `running` alone does not say of a terminal. Unknown for another project's rows. */
     work?: AgentWork | null;
     /* A chat with something typed and never sent. */
@@ -171,6 +173,7 @@ export function buildSidebar({ project, expandedIds }: SidebarInput): SidebarSec
         }
     }
     if (waiting.length > 0) {
+        waiting.sort((before, next) => (before.type === 'node' && next.type === 'node' ? compareWaits(before.node.wait, next.node.wait) : 0));
         sections.push(needsYou([{ key: 'current', label: null, rows: waiting }]));
     }
 

@@ -56,6 +56,7 @@ import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { activeViewOf, useDocument } from '@/state/document';
 import { nextWaitingTitle, revealNextWaiting } from '@/shell/next-waiting';
+import { openAttentionQueue } from '@/attention/queue';
 import { hasPrWatch, stopPrWatch } from '@/shell/pr-watch-actions';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
@@ -429,6 +430,7 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
         ...(inWorkspace
             ? [
                   row('view-new', () => void createViewAction('canvas')),
+                  row('attention-queue', afterPaletteCloses(openAttentionQueue)),
                   row(
                       'needs-you-next',
                       afterPaletteCloses(() => void revealNextWaiting()),

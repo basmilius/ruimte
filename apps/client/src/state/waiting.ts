@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { chatWaitAsk, terminalWaitAsk, type WaitAsk } from '@ruimte/contracts';
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { projectNodes } from '@/project/view-nodes';
 import { groupAttention, useAttention } from '@/state/attention';
@@ -44,6 +45,48 @@ export interface Waiting {
     id: string;
     /* On the machine's clock; `Infinity` when nothing dates the wait. */
     since: number;
+}
+
+export interface WaitDetails {
+    kind: 'approval' | 'question' | 'waiting';
+    since: number;
+    ask: WaitAsk | null;
+}
+
+const WAIT_PRIORITY = { approval: 0, question: 1, waiting: 2 } as const;
+
+function requestsByPriority<Request extends { kind: 'approval' | 'question'; createdAt: number }>(requests: readonly Request[]): Request[] {
+    return [...requests].sort((before, next) => WAIT_PRIORITY[before.kind] - WAIT_PRIORITY[next.kind] || before.createdAt - next.createdAt);
+}
+
+/* The request that blocks progress comes before a question, while the session's age still dates its earliest wait. */
+export function waitDetailsOf(
+    node: StatusOf,
+    sessions: SessionsByKey,
+    chats: ChatStatuses,
+    since: ReadonlyMap<string, number>,
+    endpointId: string
+): WaitDetails {
+    const key = endpointKey(endpointOfNode(node, endpointId), node.id);
+    const at = waitedSince(node, sessions, chats, since, endpointId);
+
+    if (node.kind === 'chat' || node.kind === 'design') {
+        const requests = requestsByPriority(chats[key]?.info.requests ?? []);
+
+        return { kind: requests[0]?.kind ?? 'waiting', since: at, ask: chatWaitAsk(requests) };
+    }
+
+    const requests = requestsByPriority(sessions[key]?.agent?.requests ?? []);
+
+    return { kind: requests[0]?.kind ?? 'waiting', since: at, ask: terminalWaitAsk(requests) };
+}
+
+export function compareWaits(before?: Pick<WaitDetails, 'kind' | 'since'>, next?: Pick<WaitDetails, 'kind' | 'since'>): number {
+    const priority = WAIT_PRIORITY[before?.kind ?? 'waiting'] - WAIT_PRIORITY[next?.kind ?? 'waiting'];
+    const earlier = before?.since ?? Infinity;
+    const later = next?.since ?? Infinity;
+
+    return priority || (earlier === later ? 0 : earlier < later ? -1 : 1);
 }
 
 function earliest(times: readonly number[]): number {

@@ -22,6 +22,7 @@ import { useUi } from '@/state/ui';
 import { useEndpointId, endpointOfNodeIn } from '@/state/keys';
 import { useEndpoints } from '@/state/endpoints';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
+import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import {
     buildCombinedSidebar,
     buildSidebar,
@@ -133,6 +134,7 @@ export function Sidebar() {
     const unseen = useAttention((s) => s.unseen);
     const tasks = useTasks((s) => s.byEndpoint);
     const snoozes = useSnoozes((s) => s.byKey);
+    const waitingSince = useWaitingSince((state) => state.byKey);
     const open = useUi((s) => s.sidebarOpen);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
@@ -164,6 +166,7 @@ export function Sidebar() {
                     kind: node.kind,
                     provider: nodeProvider(node, chats, endpointId) ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
+                    wait: waitDetailsOf(node, sessions, chats, waitingSince, endpointId),
                     work: nodeWork(node, sessions, chats, endpointId),
                     draft: (node.kind === 'chat' || node.kind === 'design') && drafts.includes(node.id),
                     alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),

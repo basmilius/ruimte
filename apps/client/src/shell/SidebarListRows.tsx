@@ -16,6 +16,7 @@ import { useEndpointId } from '@/state/keys';
 import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
 import { heaviestWork, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
 import { WaitingCount } from '@/attention/WaitingCount';
+import { WaitLabel } from '@/attention/WaitLabel';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { WorkingMark } from '@/attention/WorkingMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -219,7 +220,7 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {node.finished && <UnseenMark />}
                     {node.alert && <ProcessWarningMark />}
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
-                    <RowStatus status={node.status} work={node.work} />
+                    {snoozable && node.status === 'needs-you' ? <WaitLabel detail={node.wait} /> : <RowStatus status={node.status} work={node.work} />}
                 </span>
             </ContextMenu.Trigger>
             <CellViewContext.Provider value={row.viewId}>

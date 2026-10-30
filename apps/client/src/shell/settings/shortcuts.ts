@@ -135,6 +135,7 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
             shortcuts: [
                 { keys: CANVAS_SHORTCUTS.focusPrompts, label: say('prompts.answerFront') },
                 { keys: CANVAS_SHORTCUTS.nextNeedsYou, label: say('prompts.nextNeedsYou') },
+                { keys: CANVAS_SHORTCUTS.attentionQueue, label: say('prompts.attentionQueue') },
                 { keys: PROMPT_SHORTCUTS.primary, label: say('prompts.primary') },
                 { keys: PROMPT_SHORTCUTS.previousPrompt, label: say('prompts.previous') },
                 { keys: PROMPT_SHORTCUTS.nextPrompt, label: say('prompts.next') },

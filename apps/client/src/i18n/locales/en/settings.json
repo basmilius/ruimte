@@ -845,7 +845,8 @@
             "primary": "Allow, Next or Answer",
             "previous": "Previous prompt",
             "next": "Next prompt",
-            "escape": "Back to where you were"
+            "escape": "Back to where you were",
+            "attentionQueue": "Open attention queue"
         },
         "chat": {
             "previousMessage": "Previous message you sent",
