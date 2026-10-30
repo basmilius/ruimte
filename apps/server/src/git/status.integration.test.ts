@@ -1,4 +1,5 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import * as fs from 'node:fs/promises';
 import { readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { diffCommit, diffFile } from './diff.ts';
@@ -36,6 +37,25 @@ afterEach(async () => {
 });
 
 describe('readStatus', () => {
+    test('an unrelated tracked edit preserves untracked counts without reading their content again', async () => {
+        await write('cached-untracked.txt', 'one\ntwo\n');
+        const absolute = join(repo, 'cached-untracked.txt');
+        const opens = spyOn(fs, 'open');
+
+        try {
+            const before = await readStatus(repo);
+            await write('tracked.txt', 'changed\n');
+            const after = await readStatus(repo);
+            const untracked = { path: 'cached-untracked.txt', state: 'untracked' as const, status: '?', added: 2, deleted: 0, binary: false };
+            expect(before.files).toContainEqual(untracked);
+            expect(after.files).toContainEqual(untracked);
+            expect(after.files).toContainEqual({ path: 'tracked.txt', state: 'unstaged', status: 'M', added: 1, deleted: 3, binary: false });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(1);
+        } finally {
+            opens.mockRestore();
+        }
+    });
+
     test('reading leaves the index alone, so a commit beside it never meets its lock', async () => {
         await write('tracked.txt', 'one\ntwo\nthree\nfour\n');
         const touched = new Date((await stat(join(repo, 'tracked.txt'))).mtimeMs + 2_000);
