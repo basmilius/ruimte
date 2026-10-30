@@ -100,9 +100,8 @@ jobs:
       - uses: ./.github/actions/install
       - run: bun run check:types
       - run: bun run lint
-      # Two workers instead of one per core: the tests that run git start dozens of processes each, and
-      # four files doing that at once on this runner pushed them past Bun's five seconds.
-      - run: bun test --conditions=source --parallel=2 --only-failures
+      # Two workers instead of one per core, and without the test files that run git: windows-ci.bunfig.toml says why.
+      - run: bun --config=windows-ci.bunfig.toml test --conditions=source --parallel=2 --only-failures
 
   dom:
     runs-on: ubuntu-latest
