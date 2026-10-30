@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownToLine, Search } from 'lucide-react';
-import { hasOverlayControls } from '@/desktop/bridge';
+import { hasLogoMenu, hasOverlayControls } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { LaunchChip } from '@/launches/LaunchChip';
 import { PanelControls } from '@/shell/PanelControls';
@@ -53,7 +53,7 @@ export function Toolbar() {
                 </div>
             )}
             {/* The web client's menu goes where the wordmark went, so it stays one press away. */}
-            {!sidebarOpen && IS_STATION && <StationMenu variant="symbol" />}
+            {!sidebarOpen && (IS_STATION || hasLogoMenu()) && <StationMenu variant="symbol" />}
             {!sidebarOpen && <SidebarToggle />}
             <div className="flex min-w-0 grow items-center gap-2">
                 {tabs ? (

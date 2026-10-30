@@ -79,8 +79,13 @@ export function isApplePlatform(): boolean {
     return bridge ? bridge.platform === 'darwin' : isApplePlatformFromNavigator();
 }
 
-/* Windows and Linux draw the window controls over the top right of the window. */
+/* Windows hides its menu bar, so the logo at the top of the sidebar opens the application menu. */
+export function hasLogoMenu(): boolean {
+    return desktop()?.platform === 'win32';
+}
+
+/* Linux draws the window controls over the top right of the window; Windows has its own title bar. */
 export function hasOverlayControls(): boolean {
     const bridge = desktop();
-    return bridge !== null && bridge.platform !== 'darwin';
+    return bridge !== null && bridge.platform === 'linux';
 }

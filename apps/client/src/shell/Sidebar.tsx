@@ -42,6 +42,7 @@ import { childTask, useTasks } from '@/state/tasks';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Brand } from '@/ui/Brand';
 import { Icon, IconButton, Menu, SectionLabel } from '@adecore/ui';
+import { hasLogoMenu } from '@/desktop/bridge';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
@@ -413,7 +414,7 @@ export function Sidebar() {
                     className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
                     style={{ paddingLeft: inset === undefined ? BRAND_PADDING_PX : inset + 8 }}
                 >
-                    {IS_STATION ? <StationMenu variant="wordmark" /> : <Brand className="pointer-events-none" />}
+                    {IS_STATION || hasLogoMenu() ? <StationMenu variant="wordmark" /> : <Brand className="pointer-events-none" />}
                     <SidebarToggle />
                 </div>
 

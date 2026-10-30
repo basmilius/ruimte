@@ -110,7 +110,7 @@ const ipc = createAppIpc(ipcMain, fromAppWindow, (contents) => windows.fromPage(
 
 const machine = createMachine({ ipc, port, ruimteHome, repoRoot, devUrl, mode: machineMode, publish: (state) => windows.send('service:state', state) });
 
-// The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Windows and Linux.
+// The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Linux.
 const TITLEBAR_HEIGHT = 48;
 const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
 
@@ -123,7 +123,9 @@ const theme = createTheme({
     nativeTheme,
     windows: () => windows.all(),
     background: '#131316',
-    overlay: { height: TITLEBAR_HEIGHT, colors: OVERLAY_COLORS }
+    overlay: { height: TITLEBAR_HEIGHT, colors: OVERLAY_COLORS },
+    // Controls over the page cover the side panels' own buttons there, so Windows gets its title bar and menu bar.
+    nativeFrame: process.platform === 'win32'
 });
 
 let browserRoutes: ReturnType<typeof installBrowserRoutes>;
@@ -823,6 +825,10 @@ async function runSmokeWindow(): Promise<void> {
 if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
+    // The menu stays set, so its keys keep working; the logo in the sidebar shows it (`hasLogoMenu`).
+    if (process.platform === 'win32') {
+        app.on('browser-window-created', (_event, window) => window.setMenuBarVisibility(false));
+    }
     app.on('web-contents-created', (_event, contents) => {
         /* Every webview says when it takes the focus: a press inside one never reaches the
            client's page, and the grid has to know which cell the keyboard went to. */

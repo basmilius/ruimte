@@ -6,6 +6,7 @@ import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
+import { IS_STATION } from '@/station';
 import { Brand } from '@/ui/Brand';
 import { Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
 import { AgentIcon } from '@adecore/agents-react/providers';
@@ -55,14 +56,14 @@ function MenuRows({ items }: { items: MenuNode[] }) {
                     </Menu.Item>
                 );
             default:
-                // Roles and shell actions are the desktop shell's; the model never hands one to the web client.
+                // Roles and shell actions are the desktop shell's, which keeps them on their keys under a hidden menu bar on Windows.
                 return null;
         }
     });
 }
 
 /*
- * The application menu of the web client, which has no menu bar of its own: the wordmark at the top of
+ * The application menu where no menu bar shows, in the web client and on Windows: the wordmark at the top of
  * the sidebar opens it, and the same menu glyph beside the sidebar toggle once the sidebar is closed.
  * Built when it opens, so it says what has the focus at that moment.
  */
@@ -70,7 +71,7 @@ export function StationMenu({ variant }: { variant: 'wordmark' | 'symbol' }) {
     const { t } = useTranslation('shell');
     const [spec, setSpec] = useState<MenuSpec | null>(null);
     return (
-        <Menu.Root onOpenChange={(open) => open && setSpec(menuModel(menuContext('station')))}>
+        <Menu.Root onOpenChange={(open) => open && setSpec(menuModel(menuContext(IS_STATION ? 'station' : 'desktop')))}>
             {variant === 'wordmark' ? (
                 <Tooltip label={t('menu.open')}>
                     <Menu.Trigger
