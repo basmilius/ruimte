@@ -95,8 +95,8 @@ final class MachineDevicePreview {
 
     nonisolated static func image(_ encoded: String) async -> UIImage? {
         await Task.detached(priority: .userInitiated) {
-            guard let data = Data(base64Encoded: encoded) else { return nil }
-            return UIImage(data: data)?.preparingForDisplay()
+            guard let data = Data(base64Encoded: encoded), let image = UIImage(data: data) else { return nil }
+            return image.preparingForDisplay() ?? image
         }.value
     }
 
