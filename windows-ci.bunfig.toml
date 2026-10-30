@@ -6,6 +6,8 @@ pathIgnorePatterns = [
     "**/*.integration.test.ts",
     "**/*.dom.test.tsx",
     "**/docs/reports/**",
+    # Reads every source file, and says the same on every platform.
+    "apps/client/src/project/view-nodes.test.ts",
     "apps/server/src/canvas/project-verb.test.ts",
     "apps/server/src/canvas/worktree-verb.test.ts",
     "apps/server/src/chat/fork-worktree.test.ts",
