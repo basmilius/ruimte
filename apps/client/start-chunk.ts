@@ -10,12 +10,12 @@ const ADECORE = String.raw`(?:@adecore|adecore/packages)`;
  */
 export const WORKSPACE_MODULES: readonly RegExp[] = [
     /\/src\/shell\/(?:WorkspaceShell\.tsx|commands\.ts)$/,
-    /\/assets\/shiki-[^/]+\/wasm\.mjs$/,
     new RegExp(`${ADECORE}/(?:editor-core|lsp|merge|database)/`),
     new RegExp(`${ADECORE}/editor/src/(?!keymap-table\\.ts$)`),
     new RegExp(`${ADECORE}/editor-react/src/(?!view-state\\.ts$)`),
     new RegExp(`${ADECORE}/(?:drawing|diagram)/src/svg\\.ts$`),
     /\/node_modules\/(?:roughjs|perfect-freehand|@shikijs\/(?:langs|themes|engine-oniguruma))\//,
+    /\/assets\/shiki-[^/]+\//,
     /\/src\/(?:drawing\/(?:export|paint)|diagram\/export|database\/(?:console-file|sql-bindings))\.ts$/
 ];
 

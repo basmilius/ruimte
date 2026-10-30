@@ -33,11 +33,14 @@ describe('what the start screen preloads', () => {
         expect(preloadedWorkspaceModules(bundle)).toEqual([]);
     });
 
-    test('the shared wasm module is still a workspace dependency when externalized', () => {
-        const wasm = '/assets/shiki-4.5.0/wasm.mjs';
-        const bundle = { 'assets/index.js': chunk({ [`${APP}/main.tsx`]: 100 }, [wasm], true) };
-        expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/index.js: ${wasm}`]);
-    });
+    test.each(['wasm.mjs', 'langs/php.mjs', 'themes/nord.mjs'])(
+        'the shared Shiki module %s is still a workspace dependency when externalized',
+        (modulePath) => {
+            const external = `/assets/shiki-4.5.0/${modulePath}`;
+            const bundle = { 'assets/index.js': chunk({ [`${APP}/main.tsx`]: 100 }, [external], true) };
+            expect(preloadedWorkspaceModules(bundle)).toEqual([`assets/index.js: ${external}`]);
+        }
+    );
 
     test('the editor key table and view state, and what tree shaking dropped, are allowed', () => {
         const bundle = {
