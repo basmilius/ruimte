@@ -1362,6 +1362,8 @@
             "question": "Vraag",
             "waiting": "Wacht"
         },
-        "backToList": "Terug naar lijst"
+        "backToList": "Terug naar lijst",
+        "underMinute": "< {{minute}} min",
+        "openToAnswer": "Open de sessie om te antwoorden."
     }
 }

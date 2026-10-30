@@ -13,7 +13,7 @@ import { useProposals } from '@/state/proposals';
 import { useSecrets } from '@/state/secrets';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
-import { useWaitingSince } from '@/state/waiting';
+import { useWaitingSince, type WaitDetails } from '@/state/waiting';
 import { machineTransport } from '@/transport';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { chatClientFor } from '@/transport/connections';
@@ -29,7 +29,15 @@ function idOf(prompt: CanvasPrompt): string {
     return prompt.id;
 }
 
-function pick(waiting: readonly CanvasPrompt[], activeId: string | null, activeIndex: number): CanvasPrompt | null {
+function pick(waiting: readonly CanvasPrompt[], activeId: string | null, activeIndex: number, preferredKind?: WaitDetails['kind']): CanvasPrompt | null {
+    if (!waiting.some((prompt) => prompt.id === activeId)) {
+        const preferred = waiting.find((prompt) => (prompt.subject.kind === 'chat' ? prompt.subject.item.kind : prompt.subject.prompt.asks) === preferredKind);
+
+        if (preferred !== undefined) {
+            return preferred;
+        }
+    }
+
     const id = stackFront(waiting.map(idOf), activeId, activeIndex);
     return waiting.find((prompt) => prompt.id === id) ?? null;
 }
@@ -165,15 +173,19 @@ export function WaitingPrompt({
     node,
     onOpen,
     onEmpty,
+    onAnswered,
     summary = false,
-    completed = false
+    completed = false,
+    preferredKind
 }: {
     endpointId: string;
     node: SidebarNode;
     onOpen?(): void;
     onEmpty?(): void;
+    onAnswered?(): void;
     summary?: boolean;
     completed?: boolean;
+    preferredKind?: WaitDetails['kind'];
 }) {
     const { t } = useTranslation(['shell', 'canvas']);
     const local = useEndpointId() === endpointId;
@@ -181,7 +193,12 @@ export function WaitingPrompt({
     const disabled = useEndpointConnection(endpointId).status !== 'open';
     const chatHost = useChatHost();
     const providers = useProviders((row) => row.providers);
-    const session = usePromptSession({ prompts: prompts ?? [], idOf, pick, disabled });
+    const session = usePromptSession({
+        prompts: prompts ?? [],
+        idOf,
+        pick: (waiting, activeId, activeIndex) => pick(waiting, activeId, activeIndex, preferredKind),
+        disabled
+    });
     const { active, waiting, index, setActive } = session;
 
     useEffect(() => {
@@ -206,7 +223,9 @@ export function WaitingPrompt({
 
         return (
             <div className="space-y-3 p-3">
-                <p className="text-sm text-text-muted">{failed ? t('sidebar.promptFailed') : t('sidebar.promptLoading')}</p>
+                <p className="text-sm text-text-muted">
+                    {failed ? t('sidebar.promptFailed') : prompts === null ? t('sidebar.promptLoading') : t('attention.openToAnswer')}
+                </p>
                 {failed && <Button onClick={reread}>{t('common:action.retry')}</Button>}
                 {onOpen && <Button onClick={onOpen}>{t('attention.openSession')}</Button>}
             </div>
@@ -236,6 +255,7 @@ export function WaitingPrompt({
                             .act(active, () => answerPrompt(active.subject, action, clients, chatHost))
                             .then((result) => {
                                 if (result === 'sent') {
+                                    onAnswered?.();
                                     reread();
                                 }
                             });
@@ -301,7 +321,7 @@ export function NeedsYouCard({ endpointId, node, onOpen, children }: { endpointI
             </PreviewCard.Trigger>
             <PreviewCard.Popup variant="plain" side="right" align="start" sideOffset={12} className={`${PROMPT_SURFACE} w-96`}>
                 <ChatScopeContext.Provider value={chatScopeOf(endpointId)}>
-                    <WaitingPrompt endpointId={endpointId} node={node} onOpen={onOpen} onEmpty={close} />
+                    <WaitingPrompt endpointId={endpointId} node={node} onOpen={onOpen} onEmpty={close} preferredKind={node.wait?.kind} />
                 </ChatScopeContext.Provider>
             </PreviewCard.Popup>
         </PreviewCard.Root>

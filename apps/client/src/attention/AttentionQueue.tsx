@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChatScopeContext } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
@@ -22,7 +22,16 @@ import { chatScopeOf } from '@/transport/chat-scope';
 import { closeAttentionQueue, useAttentionQueue } from './queue';
 import { WaitLabel } from './WaitLabel';
 
-function QueueBody({ initialFocus }: { initialFocus: RefObject<HTMLButtonElement | null> }) {
+const WIDE_QUEUE = '(min-width: 768px)';
+
+function subscribeQueueWidth(changed: () => void): () => void {
+    const query = window.matchMedia(WIDE_QUEUE);
+    query.addEventListener('change', changed);
+
+    return () => query.removeEventListener('change', changed);
+}
+
+function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HTMLButtonElement | null>; fallbackFocus: RefObject<HTMLButtonElement | null> }) {
     const { t } = useTranslation('shell');
     const endpointId = useEndpointId();
     const nodes = useProjectNodes();
@@ -33,6 +42,17 @@ function QueueBody({ initialFocus }: { initialFocus: RefObject<HTMLButtonElement
     const since = useWaitingSince((state) => state.byKey);
     const [selected, setSelected] = useState<string | null>(null);
     const views = useDocument((state) => state.views);
+    const wide = useSyncExternalStore(
+        subscribeQueueWidth,
+        () => window.matchMedia(WIDE_QUEUE).matches,
+        () => true
+    );
+    const rows = useRef(new Map<string, HTMLButtonElement>());
+    const back = useRef<HTMLButtonElement | null>(null);
+    const detailRequested = useRef(false);
+    const restoreRow = useRef<string | null>(null);
+    const [answered, setAnswered] = useState(0);
+    const previous = useRef<{ id: string | null; wide: boolean; answered: number }>({ id: null, wide, answered: 0 });
 
     const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
     const waiting = new Set(groups.needsYou);
@@ -61,6 +81,25 @@ function QueueBody({ initialFocus }: { initialFocus: RefObject<HTMLButtonElement
                   draft: false
               };
 
+    useLayoutEffect(() => {
+        const before = previous.current;
+        const removed = before.id !== null && !rows.current.has(before.id);
+        const layoutChanged = before.wide !== wide;
+        const didAnswer = before.answered !== answered;
+
+        if (restoreRow.current !== null) {
+            rows.current.get(restoreRow.current)?.focus();
+            restoreRow.current = null;
+        } else if (!wide && selected !== null && (detailRequested.current || layoutChanged || removed || didAnswer)) {
+            (active === null ? fallbackFocus.current : back.current)?.focus();
+        } else if (removed || didAnswer || (wide && layoutChanged && selected !== null)) {
+            (active === null ? fallbackFocus.current : rows.current.get(active.id))?.focus();
+        }
+
+        detailRequested.current = false;
+        previous.current = { id: active?.id ?? null, wide, answered };
+    }, [active, answered, fallbackFocus, selected, wide]);
+
     const openSession = (): void => {
         if (active !== null && projectNodes().some((node) => node.id === active.id)) {
             closeAttentionQueue();
@@ -76,10 +115,23 @@ function QueueBody({ initialFocus }: { initialFocus: RefObject<HTMLButtonElement
         return (
             <Button
                 key={node.id}
-                ref={active?.id === node.id ? initialFocus : undefined}
+                ref={(element) => {
+                    if (element === null) {
+                        rows.current.delete(node.id);
+                    } else {
+                        rows.current.set(node.id, element);
+                    }
+
+                    if (active?.id === node.id) {
+                        initialFocus.current = element;
+                    }
+                }}
                 className={`h-auto w-full flex-col items-stretch gap-1 px-3 py-2 text-left ${active?.id === node.id ? 'bg-surface-hover text-text' : ''}`}
                 aria-pressed={active?.id === node.id}
-                onClick={() => setSelected(node.id)}
+                onClick={() => {
+                    detailRequested.current = true;
+                    setSelected(node.id);
+                }}
             >
                 <span className="flex min-w-0 items-center gap-2">
                     <span className="min-w-0 grow truncate">{node.title}</span>
@@ -117,7 +169,14 @@ function QueueBody({ initialFocus }: { initialFocus: RefObject<HTMLButtonElement
                 )}
             </div>
             <div className={`min-w-0 max-h-96 overflow-auto rounded-md border border-border ${selected === null ? 'hidden md:block' : ''}`}>
-                <Button className="m-2 md:hidden" onClick={() => setSelected(null)}>
+                <Button
+                    ref={back}
+                    className="m-2 md:hidden"
+                    onClick={() => {
+                        restoreRow.current = active?.id ?? null;
+                        setSelected(null);
+                    }}
+                >
                     {t('attention.backToList')}
                 </Button>
                 {preview && (
@@ -127,8 +186,14 @@ function QueueBody({ initialFocus }: { initialFocus: RefObject<HTMLButtonElement
                             endpointId={machine}
                             node={preview}
                             onOpen={hidden ? undefined : openSession}
+                            onAnswered={() => {
+                                if (rows.current.size > 0) {
+                                    setAnswered((before) => before + 1);
+                                }
+                            }}
                             summary
                             completed={!waiting.has(preview.id)}
+                            preferredKind={details.get(preview.id)?.kind}
                         />
                     </ChatScopeContext.Provider>
                 )}
@@ -143,6 +208,7 @@ export function AttentionQueue() {
     const project = useProject((state) => state.current);
     const endpointId = useEndpointId();
     const initialFocus = useRef<HTMLButtonElement | null>(null);
+    const closeButton = useRef<HTMLButtonElement | null>(null);
     const currentKey = project === null ? null : endpointKey(endpointId, project.projectId);
     const open = projectKey !== null && projectKey === currentKey;
 
@@ -162,10 +228,10 @@ export function AttentionQueue() {
                     <Dialog.Title size="lg" className="grow">
                         {t('attention.title')}
                     </Dialog.Title>
-                    <IconButton icon={X} label={t('common:action.close')} onClick={closeAttentionQueue} />
+                    <IconButton ref={closeButton} icon={X} label={t('common:action.close')} onClick={closeAttentionQueue} />
                 </div>
                 <Dialog.Description>{t('attention.project', { project: project?.name ?? '' })}</Dialog.Description>
-                {open && <QueueBody initialFocus={initialFocus} />}
+                {open && <QueueBody initialFocus={initialFocus} fallbackFocus={closeButton} />}
             </Dialog.Popup>
         </Dialog.Root>
     );

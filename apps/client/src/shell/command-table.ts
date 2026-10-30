@@ -829,14 +829,6 @@ const TABLE = {
         menu: { menu: 'go', group: 'prompts', order: 10 }
     },
     // From anywhere, a terminal included, as the prompts key is.
-    'attention-queue': {
-        key: 'attentionQueue',
-        icon: Inbox,
-        shortcut: CANVAS_SHORTCUTS.attentionQueue,
-        binds: 'workspace',
-        palette: true,
-        menu: { menu: 'go', group: 'prompts', order: 30 }
-    },
     'needs-you-next': {
         key: 'nextNeedsYou',
         icon: Hourglass,
@@ -844,6 +836,14 @@ const TABLE = {
         binds: 'workspace',
         palette: true,
         menu: { menu: 'go', group: 'prompts', order: 20 }
+    },
+    'attention-queue': {
+        key: 'attentionQueue',
+        icon: ListChecks,
+        shortcut: CANVAS_SHORTCUTS.attentionQueue,
+        binds: 'workspace',
+        palette: true,
+        menu: { menu: 'go', group: 'prompts', order: 30 }
     },
     'launch-run': {
         key: 'launch',

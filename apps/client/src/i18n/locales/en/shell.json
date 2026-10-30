@@ -1362,6 +1362,8 @@
             "question": "Question",
             "waiting": "Waiting"
         },
-        "backToList": "Back to list"
+        "backToList": "Back to list",
+        "underMinute": "< {{minute}} min",
+        "openToAnswer": "Open the session to answer."
     }
 }

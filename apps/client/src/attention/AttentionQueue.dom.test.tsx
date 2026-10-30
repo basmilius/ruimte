@@ -7,15 +7,20 @@ import { useAttention } from '@/state/attention';
 import { endpointKey } from '@/state/keys';
 import { useSnoozes } from '@/state/snooze';
 import { useProject } from '@/state/project';
+import { useDocument } from '@/state/document';
+import { useChats } from '@adecore/agents-react/state';
+import { useEndpoints } from '@/state/endpoints';
 import { enterWorkspace } from '@/transport/connections';
 import { closeAttentionQueue } from './queue';
 import { chatInfoOf } from '../../testing/chat-info';
-import { FakeMachine } from '../../testing/fake-machine';
+import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const NOW = Date.UTC(2026, 9, 30, 10);
+const REMOTE = 'queue-remote-machine';
+const matchMedia = window.matchMedia;
 const MAIN = emptyCanvas();
 const APPROVAL: ProjectView = { kind: 'chat', id: 'build', name: 'Build checks', node: {} };
 const QUESTION: ProjectView = { kind: 'chat', id: 'database', name: 'Database choice', node: {} };
@@ -47,6 +52,7 @@ let workspace: FakeWorkspace;
 let page: Mounted;
 let infos: Record<string, ChatInfo>;
 let previousUnseen: Record<string, true>;
+let disconnectRemote: (() => void) | null;
 
 function dialog(): HTMLElement | null {
     return [...document.querySelectorAll<HTMLElement>('[role="dialog"]')].find((element) => element.textContent?.includes('Attention queue')) ?? null;
@@ -63,6 +69,7 @@ function button(text: string): HTMLElement | null {
 }
 
 beforeEach(async () => {
+    disconnectRemote = null;
     previousUnseen = useAttention.getState().unseen;
     setSystemTime(NOW);
     machine = new FakeMachine();
@@ -111,6 +118,9 @@ afterEach(async () => {
     });
     await page.unmount();
     workspace.close();
+    disconnectRemote?.();
+    useEndpoints.getState().remove(REMOTE);
+    window.matchMedia = matchMedia;
     setSystemTime();
 });
 
@@ -130,6 +140,7 @@ describe('the attention queue', () => {
         await until(() => dialog()!.querySelectorAll('[aria-pressed]').length === 1);
         expect(machine.requests('chat.approve')[0]).toMatchObject({ chatId: APPROVAL.id, requestId: WRITE.requestId, decision: 'allow' });
         expect(dialog()!.querySelector('[aria-pressed="true"]')!.textContent).toContain('Database choice');
+        await until(() => document.activeElement === dialog()!.querySelector('[aria-pressed="true"]'));
         expect(page.host.querySelector('[data-split-cell][data-view-id="main"]')).not.toBeNull();
     });
 
@@ -174,6 +185,15 @@ describe('the attention queue', () => {
                     live: true,
                     updatedAt: NOW - 60_000,
                     requests: [
+                        {
+                            id: 'terminal-question',
+                            source: 'hook',
+                            kind: 'question',
+                            toolName: 'AskUserQuestion',
+                            title: null,
+                            text: 'Which database?',
+                            createdAt: NOW - 2 * 60_000
+                        },
                         { id: 'terminal-request', source: 'hook', kind: 'approval', toolName: 'Bash', title: null, text: 'bun test', createdAt: NOW - 60_000 }
                     ]
                 }
@@ -181,6 +201,7 @@ describe('the attention queue', () => {
         });
         await openQueue();
         await until(() => button('Go to terminal') !== null);
+        expect(dialog()!.textContent).not.toContain('Which database?');
         await clickOn(button('Go to terminal'));
         await until(() => dialog() === null);
         expect(page.host.querySelector(`[data-split-cell][data-view-id="${TERMINAL.id}"]`)).not.toBeNull();
@@ -231,5 +252,110 @@ describe('the attention queue', () => {
         await act(async () => enterWorkspace('fake-machine', { projectId: original.projectId }));
         await until(() => page.host.querySelector('[data-split-cell][data-view-id="main"]') !== null);
         expect(dialog()).toBeNull();
+    });
+
+    test('one chat opens the approval its row names before an older blocking question', async () => {
+        infos[APPROVAL.id] = { ...infos[APPROVAL.id]!, requests: [infos[QUESTION.id]!.requests![0]!, infos[APPROVAL.id]!.requests![0]!] };
+        machine.answer('chat.attach', ({ chatId }) => ({ info: infos[chatId] ?? chatInfoOf(chatId), items: chatId === APPROVAL.id ? [ASK, WRITE] : [ASK] }));
+        await act(async () => machine.emit('chat.status', { chatId: APPROVAL.id, info: infos[APPROVAL.id]! }));
+
+        await openQueue();
+        await until(() => button('Allow') !== null);
+        expect(button('Answer')).toBeNull();
+    });
+
+    test('a waiting session without a preview card offers a route to the session rather than loading forever', async () => {
+        infos[APPROVAL.id] = chatInfoOf(APPROVAL.id, { status: 'needs-you' });
+        machine.answer('chat.attach', ({ chatId }) => ({ info: infos[chatId] ?? chatInfoOf(chatId), items: [] }));
+        await act(async () => {
+            machine.emit('chat.status', { chatId: APPROVAL.id, info: infos[APPROVAL.id]! });
+            machine.emit('chat.status', { chatId: QUESTION.id, info: chatInfoOf(QUESTION.id) });
+        });
+
+        await openQueue();
+        await until(() => dialog()!.textContent?.includes('Open the session to answer.') === true);
+        expect(button('Open session')).not.toBeNull();
+        expect(dialog()!.textContent).not.toContain('Loading');
+    });
+
+    test('a narrow queue moves focus into the detail and restores the selected row on Back', async () => {
+        window.matchMedia = (query) => {
+            const list = matchMedia.call(window, query);
+
+            if (query === '(min-width: 768px)') {
+                Object.defineProperty(list, 'matches', { value: false });
+            }
+
+            return list;
+        };
+        await openQueue();
+        const row = dialog()!.querySelector<HTMLElement>('[aria-pressed="true"]')!;
+
+        await clickOn(row);
+        await until(() => document.activeElement === button('Back to list'));
+        await clickOn(button('Back to list'));
+        await until(() => document.activeElement === row);
+    });
+
+    test('a hidden inline chat can be answered without offering an invalid open-view link', async () => {
+        const hidden: ProjectView = { kind: 'chat', id: 'inline', name: 'Inline change', node: {}, hidden: true };
+        const info = chatInfoOf(hidden.id, { status: 'needs-you', requests: infos[APPROVAL.id]!.requests });
+        machine.answer('chat.attach', () => ({ info, items: [WRITE] }));
+        await act(async () => {
+            useDocument.setState((state) => ({ views: [...state.views, hidden] }));
+            machine.emit('chat.status', { chatId: APPROVAL.id, info: chatInfoOf(APPROVAL.id) });
+            machine.emit('chat.status', { chatId: QUESTION.id, info: chatInfoOf(QUESTION.id) });
+            machine.emit('chat.status', { chatId: hidden.id, info });
+        });
+
+        await openQueue();
+        await until(() => button('Allow') !== null);
+        expect(button('Open session')).toBeNull();
+        expect(button('Inline change')).toBeNull();
+        await clickOn(button('Allow'));
+        await until(() => machine.requests('chat.approve').length === 1);
+        expect(machine.requests('chat.approve')[0]).toMatchObject({ chatId: hidden.id, requestId: WRITE.requestId });
+        expect(page.host.querySelector('[data-split-cell][data-view-id="main"]')).not.toBeNull();
+    });
+
+    test('an approval from another machine goes only to that machine', async () => {
+        await page.unmount();
+        workspace.close();
+        const there = new FakeMachine();
+        const info = chatInfoOf('remote-review', { status: 'needs-you', requests: infos[APPROVAL.id]!.requests });
+        there.answer('chat.list', () => ({ chats: [info] }));
+        there.answer('chat.attach', () => ({ info, items: [WRITE] }));
+        machine.answer('remote.list', () => ({
+            links: [{ machineId: REMOTE, remoteProjectId: 'remote-project', label: 'Review machine', rootCommit: 'abc' }]
+        }));
+        infos[APPROVAL.id] = chatInfoOf(APPROVAL.id);
+        infos[QUESTION.id] = chatInfoOf(QUESTION.id);
+        useEndpoints.getState().add({
+            id: REMOTE,
+            label: 'Review machine',
+            httpBaseUrl: 'http://127.0.0.1:2',
+            wsBaseUrl: 'ws://127.0.0.1:2',
+            reachability: 'lan',
+            daemonId: null,
+            daemonPublicKey: null
+        });
+        disconnectRemote = connectFakeMachine(there, REMOTE);
+        const remoteView = {
+            ...emptyCanvas('remote-view', 'Review'),
+            nodes: [
+                { id: info.chatId, kind: 'chat' as const, title: 'Remote review', provider: 'claude' as const, machine: REMOTE, x: 0, y: 0, w: 480, h: 520 }
+            ]
+        };
+        workspace = await openFakeWorkspace(machine, { views: [MAIN, remoteView] }, { activeViewId: remoteView.id, views: {} });
+        page = mount();
+        await page.renderApp();
+        await until(() => useChats.getState().statusByKey[endpointKey(REMOTE, info.chatId)]?.info.status === 'needs-you');
+
+        await openQueue();
+        await until(() => button('Allow') !== null);
+        await clickOn(button('Allow'));
+        await until(() => there.requests('chat.approve').length === 1);
+        expect(there.requests('chat.approve')[0]).toMatchObject({ chatId: info.chatId, requestId: WRITE.requestId, decision: 'allow' });
+        expect(machine.requests('chat.approve')).toEqual([]);
     });
 });

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useNow } from '@adecore/ui';
-import { formatDuration, useFormatLocale } from '@adecore/ui/format';
+import { formatDuration, formatNumber, useFormatLocale } from '@adecore/ui/format';
 import type { WaitDetails } from '@/state/waiting';
 
 const LONG_WAIT_MS = 10 * 60_000;
@@ -13,12 +13,13 @@ export function WaitAge({ since }: { since: number }) {
 
     const date = new Date(since);
 
-    if (!Number.isFinite(date.getTime())) {
+    if (since <= 0 || !Number.isFinite(date.getTime())) {
         return null;
     }
 
-    const long = now - since >= LONG_WAIT_MS;
-    const age = formatDuration(Math.max(0, now - since));
+    const elapsed = Math.max(0, now - since);
+    const long = elapsed >= LONG_WAIT_MS;
+    const age = elapsed < 60_000 ? t('attention.underMinute', { minute: formatNumber(1) }) : formatDuration(elapsed);
 
     return (
         <time
