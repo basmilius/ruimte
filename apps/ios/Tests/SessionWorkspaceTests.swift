@@ -180,45 +180,152 @@ final class SessionWorkspaceTests: XCTestCase {
     @MainActor func testCameraProgressIsCheckpointedWhileUpdatesContinue() async throws {
         let fixture = CameraWorkspaceFixture()
         let workspace = fixture.workspace
-        let checkpoint = expectation(description: "An ongoing pan checkpoints its camera")
-        withObservationTracking {
-            _ = workspace.local
-        } onChange: {
-            checkpoint.fulfill()
+        for zoom in 1...100 {
+            workspace.setCamera(.object(["zoom": .number(Double(zoom))]), viewID: "canvas")
         }
-        let movement = Task {
-            for zoom in 1...100 {
-                workspace.setCamera(.object(["zoom": .number(Double(zoom))]), viewID: "canvas")
-                do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
-            }
-        }
-        await fulfillment(of: [checkpoint], timeout: 3)
-        movement.cancel()
-        await movement.value
+        XCTAssertEqual(fixture.scheduler.delays, [.milliseconds(400)])
+        await fixture.scheduler.advance(0)
 
         let stored = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
-        let zoom = stored["views"]?["canvas"]?["camera"]?.number("zoom") ?? 0
-        XCTAssertGreaterThan(zoom, 0)
-        XCTAssertLessThan(zoom, 100)
+        XCTAssertEqual(stored["views"]?["canvas"]?["camera"], .object(["zoom": .number(100)]))
         XCTAssertEqual(stored, workspace.local)
+        workspace.setCamera(.object(["zoom": .number(101)]), viewID: "canvas")
+        XCTAssertEqual(fixture.scheduler.delays, Array(repeating: .milliseconds(400), count: 3))
+        await fixture.scheduler.advance(2)
+        XCTAssertEqual(workspace.local["views"]?["canvas"]?["camera"], .object(["zoom": .number(101)]))
+    }
+
+    @MainActor func testAnEqualCameraSchedulesNothingAndLeavesLocalStateAlone() {
+        let fixture = CameraWorkspaceFixture()
+        let workspace = fixture.workspace
+        let camera = JSONValue.object(["zoom": .number(2)])
+        workspace.setCamera(camera, viewID: "canvas")
+        workspace.flushCameras()
+        let before = workspace.local
+        let stored = UserDefaults.standard.data(forKey: workspace.storageKey)
+        let delays = fixture.scheduler.delays
+
+        for _ in 0..<100 { workspace.setCamera(camera, viewID: "canvas") }
+        workspace.flushCameras()
+
+        XCTAssertEqual(fixture.scheduler.delays, delays)
+        XCTAssertEqual(workspace.local, before)
+        XCTAssertEqual(UserDefaults.standard.data(forKey: workspace.storageKey), stored)
+    }
+
+    @MainActor func testCameraCheckpointsReachTheDaemonButStopAndLateUpdatesStayLocal() async throws {
+        let fixture = CameraWorkspaceFixture()
+        let workspace = fixture.workspace
+        workspace.start()
+        await workspace.open()
+        XCTAssertTrue(workspace.ready, workspace.problem ?? "The project did not open")
+
+        let first = JSONValue.object([
+            "center": .object(["x": .number(120), "y": .number(-50)]), "zoom": .number(2),
+        ])
+        workspace.setCamera(first, viewID: "canvas")
+        await fixture.scheduler.advance(0)
+        XCTAssertTrue(fixture.wire.localSaves.isEmpty)
+        await fixture.scheduler.advance(1)
+        XCTAssertEqual(fixture.wire.localSaves.count, 1)
+        XCTAssertEqual(
+            fixture.wire.localSaves.last?["local"]?["views"]?["canvas"]?["camera"], first)
+
+        let final = first.setting("zoom", .number(3))
+        workspace.setCamera(final, viewID: "canvas")
+        workspace.stop()
+        await fixture.scheduler.finishAll()
+        let stopped = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
+        XCTAssertEqual(stopped["views"]?["canvas"]?["camera"], final)
+        XCTAssertEqual(fixture.wire.localSaves.count, 1)
+
+        let afterStop = first.setting("zoom", .number(4))
+        workspace.setCamera(afterStop, viewID: "canvas")
+        await fixture.scheduler.finishAll()
+        let late = try JSONValue.decode(XCTUnwrap(UserDefaults.standard.data(forKey: workspace.storageKey)))
+        XCTAssertEqual(late["views"]?["canvas"]?["camera"], afterStop)
+        XCTAssertEqual(fixture.wire.localSaves.count, 1)
     }
 }
 
 @MainActor private final class CameraWorkspaceFixture {
     let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+    let scheduler = WorkspaceScheduler()
+    let wire = ConflictWire()
     let workspace: MobileWorkspace
 
     init() {
         let machine = Machine(
             id: "camera-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
             brokerUrl: nil, lastSeenAt: nil)
-        workspace = MobileWorkspace(session: runtime.session(for: machine), projectID: "project")
+        let session = runtime.session(for: machine)
+        session.rpc = wire.client
+        wire.remote = wire.remote.setting(
+            "views",
+            .array([
+                .object([
+                    "id": .string("canvas"), "kind": .string("canvas"), "name": .string("Canvas"), "nodes": .array([]),
+                    "edges": .array([]), "texts": .array([]), "layouts": .array([]),
+                ])
+            ]))
+        workspace = MobileWorkspace(session: session, projectID: "project", schedule: scheduler.schedule)
     }
 
     isolated deinit {
         workspace.stop()
+        scheduler.releaseAll()
+        wire.client.shutdown()
         runtime.connections.shutdown()
         UserDefaults.standard.removeObject(forKey: workspace.storageKey)
+    }
+}
+
+@MainActor private final class WorkspaceScheduler {
+    @MainActor private final class Gate {
+        private var released = false
+        private var continuation: CheckedContinuation<Void, Never>?
+
+        func wait() async {
+            guard !released else { return }
+            await withCheckedContinuation { continuation = $0 }
+        }
+
+        func release() {
+            released = true
+            continuation?.resume()
+            continuation = nil
+        }
+    }
+
+    private var entries: [(delay: Duration, gate: Gate, task: Task<Void, Never>)] = []
+    var delays: [Duration] { entries.map(\.delay) }
+
+    func schedule(_ delay: Duration, action: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        let gate = Gate()
+        let task = Task {
+            await gate.wait()
+            guard !Task.isCancelled else { return }
+            await action()
+        }
+        entries.append((delay, gate, task))
+        return task
+    }
+
+    func advance(_ index: Int) async {
+        entries[index].gate.release()
+        await entries[index].task.value
+    }
+
+    func finishAll() async {
+        var index = 0
+        while index < entries.count {
+            await advance(index)
+            index += 1
+        }
+    }
+
+    func releaseAll() {
+        for entry in entries { entry.gate.release() }
     }
 }
 
@@ -230,6 +337,7 @@ final class SessionWorkspaceTests: XCTestCase {
     ])
     var conflicts = 0
     private(set) var saves: [JSONValue] = []
+    private(set) var localSaves: [JSONValue] = []
     lazy var client = MachineClient(send: { [weak self] text in try self?.receive(text) }, connected: true)
 
     private func receive(_ text: String) throws {
@@ -257,6 +365,9 @@ final class SessionWorkspaceTests: XCTestCase {
             let rev = remote.number("rev") + 1
             remote = (frame["payload"]?["content"] ?? remote).setting("rev", .number(rev))
             reply = .object(["id": id, "ok": .bool(true), "result": .object(["rev": .number(rev)])])
+        case "project.save-local":
+            localSaves.append(frame["payload"] ?? .null)
+            reply = .object(["id": id, "ok": .bool(true), "result": .object([:])])
         default:
             reply = .object(["id": id, "ok": .bool(true), "result": .object([:])])
         }

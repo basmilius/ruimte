@@ -5,8 +5,11 @@ import RuimteTransport
 
 @MainActor @Observable
 final class MobileWorkspace {
+    typealias Schedule = @MainActor (Duration, @escaping @MainActor () async -> Void) -> Task<Void, Never>
+
     let session: SharedMachineSession
     let projectID: String
+    private let schedule: Schedule
     private(set) var document = JSONValue.object([:])
     private(set) var summary = JSONValue.object([:])
     private(set) var local = JSONValue.object(["activeViewId": .null, "views": .object([:])])
@@ -49,10 +52,20 @@ final class MobileWorkspace {
     var storageKey: String { "ruimte.ios.workspace.\(session.machine.id).\(projectID)" }
 
     /// `summary` is the project's row where it was picked, so its page has its title and kind before it opens.
-    init(session: SharedMachineSession, projectID: String, summary: JSONValue = .object([:])) {
+    init(
+        session: SharedMachineSession, projectID: String, summary: JSONValue = .object([:]),
+        schedule: @escaping Schedule = { delay, action in
+            Task {
+                do { try await Task.sleep(for: delay) } catch { return }
+                guard !Task.isCancelled else { return }
+                await action()
+            }
+        }
+    ) {
         self.session = session
         self.projectID = projectID
         self.summary = summary
+        self.schedule = schedule
     }
 
     isolated deinit { stop() }
@@ -225,8 +238,7 @@ final class MobileWorkspace {
         guard self.camera(for: viewID) != camera else { return }
         pendingCameras[viewID] = camera
         guard cameraTask == nil else { return }
-        cameraTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+        cameraTask = schedule(.milliseconds(400)) { [weak self] in
             self?.flushCameras()
         }
     }
@@ -259,8 +271,7 @@ final class MobileWorkspace {
         }
         if let data = try? local.encoded() { UserDefaults.standard.set(data, forKey: storageKey) }
         localTask?.cancel()
-        localTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+        localTask = schedule(.milliseconds(400)) { [weak self] in
             guard let self, !stopped else { return }
             _ = try? await client.request(
                 .projectSaveLocal, payload: .object(["projectId": .string(projectID), "local": local]))
