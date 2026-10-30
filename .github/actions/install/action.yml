@@ -1,10 +1,5 @@
 name: Install
-description: Set up the Bun of package.json and install the workspace from a cached package store
-
-inputs:
-  save-cache:
-    description: Save the installed store from the elected CI writer for this runner OS and architecture
-    default: 'false'
+description: Set up the Bun of package.json and install the workspace
 
 runs:
   using: composite
@@ -12,24 +7,7 @@ runs:
     - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
         bun-version-file: package.json
-    # Electron's postinstall downloads its zip into the second or third folder, one per runner OS.
-    - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      id: cache
-      with:
-        path: |
-          ~/.bun/install/cache
-          ~/.cache/electron
-          ~/Library/Caches/electron
-        key: bun-install-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-        restore-keys: bun-install-v1-${{ runner.os }}-${{ runner.arch }}-
+    # No package cache: restoring one takes longer here than a fresh install.
     - name: Install
       shell: bash
-      run: BUN_INSTALL_CACHE_DIR="$HOME/.bun/install/cache" bun install --frozen-lockfile
-    - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      if: inputs.save-cache == 'true' && steps.cache.outputs.cache-hit != 'true'
-      with:
-        path: |
-          ~/.bun/install/cache
-          ~/.cache/electron
-          ~/Library/Caches/electron
-        key: ${{ steps.cache.outputs.cache-primary-key }}
+      run: bun install --frozen-lockfile

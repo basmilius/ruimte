@@ -102,8 +102,6 @@ jobs:
         shell: pwsh
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-        with:
-          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !inputs.full }}
       - run: bun run check:types
       - run: bun run lint
       # Two workers instead of one per core: the tests that run git start dozens of processes each, and
@@ -134,8 +132,6 @@ jobs:
       # Release tags can restore main's cache, but cannot restore another tag's cache.
       - uses: ./.github/actions/cache-native-builds
       - uses: ./.github/actions/install
-        with:
-          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !inputs.full }}
       - run: bun run test:package
 
   integration-linux:
@@ -157,8 +153,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-        with:
-          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !inputs.full }}
       - run: bun run test:package
 
   rust:
