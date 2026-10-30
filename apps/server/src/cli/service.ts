@@ -100,7 +100,7 @@ export interface ServiceDeps {
     manager: ServiceManager;
     files: ServiceFiles;
     copyBinaries(from: string, to: string): void;
-    removeBinaries(dir: string): void;
+    removeBinaries(dir: string): string[];
     health(port: number): Promise<BuildIdentity | null>;
     /* The build id beside the binary in a folder, null when there is none. */
     readBuild(dir: string): string | null;
@@ -177,8 +177,11 @@ function uninstall(plan: ServicePlan, deps: ServiceDeps): number {
     }
     deps.manager.stop();
     deps.manager.uninstall();
-    deps.removeBinaries(plan.binDir);
+    const left = deps.removeBinaries(plan.binDir);
     deps.out('Stopped and removed the background service. Your projects and the devices you let in stay where they were.');
+    if (left.length > 0) {
+        deps.out(`A program still running keeps ${left.join(', ')} in ${plan.binDir}. A later install or uninstall removes it, or delete it once it ended.`);
+    }
     return 0;
 }
 
@@ -267,12 +270,23 @@ function removeLeftovers(dir: string): void {
     }
 }
 
-export function removeServiceBinaries(dir: string, platform: NodeJS.Platform = process.platform): void {
+/* Removes the copy, and answers with what must stay: on Windows the executable this very command runs from, moved aside. */
+export function removeServiceBinaries(dir: string, platform: NodeJS.Platform = process.platform): string[] {
     for (const name of binaryFiles(platform)) {
-        rmSync(join(dir, name), { force: true });
+        const target = join(dir, name);
+        try {
+            rmSync(target, { force: true });
+        } catch (e) {
+            if (platform !== 'win32' || !name.endsWith('.exe')) {
+                throw e;
+            }
+            renameSync(target, `${tempNameFor(target)}${RETIRED_SUFFIX}`);
+        }
     }
     rmSync(join(dir, NATIVE_DIR), { recursive: true, force: true });
     removeLeftovers(dir);
+
+    return existsSync(dir) ? readdirSync(dir).filter((entry) => entry.endsWith(RETIRED_SUFFIX)) : [];
 }
 
 async function health(port: number): Promise<BuildIdentity | null> {

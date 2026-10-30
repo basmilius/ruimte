@@ -27,7 +27,7 @@ const WINDOWS: ServiceFacts = {
     path: 'C:\\Users\\bas\\AppData\\Local\\npm-cache\\_npx\\1a2b\\node_modules\\.bin;C:\\Program Files\\Git\\cmd;C:\\Windows\\System32',
     port: 4210,
     flags: [],
-    env: { LOCALAPPDATA: 'C:\\Users\\bas\\AppData\\Local', USERDOMAIN: 'PC', USERNAME: 'bas' }
+    env: { LOCALAPPDATA: 'C:\\Users\\bas\\AppData\\Local', COMPUTERNAME: 'PC', USERDOMAIN: 'PC', USERNAME: 'bas' }
 };
 
 const LINUX: ServiceFacts = {
@@ -74,7 +74,7 @@ function fakeManager(files: ServiceFiles, linger?: boolean): ServiceManager & { 
     };
 }
 
-function setup(options: { existing?: string; linger?: boolean; health?: BuildIdentity | null; build?: string | null } = {}) {
+function setup(options: { existing?: string; linger?: boolean; health?: BuildIdentity | null; build?: string | null; left?: string[] } = {}) {
     const disk = new Map<string, string>();
     const files: ServiceFiles = {
         read: (path) => disk.get(path) ?? null,
@@ -94,7 +94,11 @@ function setup(options: { existing?: string; linger?: boolean; health?: BuildIde
         manager,
         files,
         copyBinaries: (from, to) => void copies.push(`${from} -> ${to}`),
-        removeBinaries: (dir) => void removed.push(dir),
+        removeBinaries: (dir) => {
+            removed.push(dir);
+
+            return options.left ?? [];
+        },
         health: async () => options.health ?? null,
         readBuild: () => options.build ?? null,
         user: 'bas',
@@ -311,6 +315,24 @@ describe('the copy the service runs', () => {
 
         removeServiceBinaries(binDir, 'win32');
         expect(readdirSync(binDir)).toEqual([]);
+    });
+
+    test('on Windows an executable that cannot be removed moves aside, and an uninstall says so', () => {
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', [], ['ruimte.exe', 'ruimte-context', 'ruimte-context.exe']), binDir, 'win32');
+        // A folder under the name refuses a plain remove as a running executable does.
+        rmSync(join(binDir, 'ruimte.exe'));
+        mkdirSync(join(binDir, 'ruimte.exe', 'held'), { recursive: true });
+
+        const left = removeServiceBinaries(binDir, 'win32');
+        expect(left).toEqual(readdirSync(binDir));
+        expect(left).toEqual([expect.stringMatching(/ruimte\.exe.*\.retired$/)]);
+    });
+
+    test('an uninstall that leaves a running executable behind says where', async () => {
+        const plan = planOf(MAC);
+        const { deps, out } = setup({ existing: plan.definition, left: ['ruimte.exe.1.retired'] });
+        expect(await runServiceAction('uninstall', MAC, deps)).toBe(0);
+        expect(out.at(-1)).toContain('ruimte.exe.1.retired');
     });
 
     test('on Windows the ruimte-context.cmd of an earlier release goes, so cmd and PowerShell find the executable', () => {
