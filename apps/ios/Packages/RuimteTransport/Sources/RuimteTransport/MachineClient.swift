@@ -547,6 +547,7 @@ private enum ReceivedFrame: Sendable {
         guard generation == connectionGeneration, isConnected else { return }
         switch frame {
         case .reply(let id, let type, let result):
+            // A timeout can finish this request while its reply validates off the actor.
             guard pending[id]?.type == type else { return }
             switch result {
             case .success(.value(let value)):
@@ -571,8 +572,8 @@ private enum ReceivedFrame: Sendable {
         }
     }
 
-    /// Only a reply comes here; a request that timed out or lost its link is never measured. Only a read says how
-    /// quick the link is: a mutation may wait on a hook, and `bytes.read` comes as pieces, dozens a second for a video.
+    /// Records reply arrival while its request is pending, before validation. A later timeout or disconnect does
+    /// not undo that arrival. Only reads measure link speed; mutations can wait on hooks and `bytes.read` is chunked.
     private func measure(_ request: Pending) {
         guard Self.timedRequests.contains(request.type), request.type != .bytesRead else { return }
         LinkMeasures.record(.answered(path: LinkPath(route), milliseconds: max(0, now() - request.sentAt)))

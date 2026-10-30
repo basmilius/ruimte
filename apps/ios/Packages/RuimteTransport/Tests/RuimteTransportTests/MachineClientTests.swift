@@ -30,9 +30,11 @@ import Testing
         await client.receiveInOrder(try frame("delta")).value
         #expect(received == [large, "delta"])
         let stale = client.receiveInOrder(try frame("old connection"))
+        let cancelled = client.receiveInOrder(try frame("last frame of old connection"))
         client.disconnected()
         client.connected()
         await stale.value
+        await cancelled.value
         await client.receiveInOrder(try frame("new connection")).value
         #expect(received == [large, "delta", "new connection"])
     }
