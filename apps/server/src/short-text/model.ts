@@ -68,6 +68,10 @@ export class ShortTextModels {
     }
 
     async modelsFor(choice: Pick<TextModelChoice, 'provider' | 'account'>): Promise<{ slug: string; name: string }[]> {
+        if (!TEXT_MODEL_PROVIDERS.some((kind) => kind === choice.provider)) {
+            throw new GitError('git-failed', 'This provider cannot write short texts on this machine.');
+        }
+
         const provider = this.host.providers.get(choice.provider);
 
         if (choice.provider !== 'antigravity') {

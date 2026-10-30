@@ -156,6 +156,8 @@ describe('the machine choice of short-text writer', () => {
     test('a future wire provider is refused before any model or account process starts', async () => {
         const run = harness({ provider: 'future-cli', model: null });
         await expect(run.models.prepare()).rejects.toThrow('not enabled');
+        await expect(run.models.modelsFor({ provider: 'future-cli' })).rejects.toThrow('cannot write short texts');
+        await expect(run.models.modelsFor({ provider: 'nanogpt' })).rejects.toThrow('cannot write short texts');
         expect(run.envAccounts).toEqual([]);
         expect(run.calls).toEqual([]);
     });
