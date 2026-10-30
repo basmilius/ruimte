@@ -60,6 +60,15 @@ function sizeOf(session: Session): { cols: number; rows: number } {
     return { cols: session.cols, rows: session.rows };
 }
 
+/*
+ * Git Bash reads a native program's `/init` as a path under its own root. This assignment keeps one prompt
+ * from that. It reaches the agent, whose own commands need the conversion, so it names the start of this
+ * prompt and never `*`: the value is a list of prefixes, split on `;`, so only the first piece goes in.
+ */
+function keepingFromPathConversion(prompt: string): string {
+    return `MSYS2_ARG_CONV_EXCL=${quote((prompt.split(/[;\n]/)[0] ?? prompt).slice(0, 64))}`;
+}
+
 /* Whether two agent records say the same thing; `updatedAt` moves on every hook and says nothing by itself. */
 function sameAgent(current: AgentInfo | null, next: AgentInfo | null): boolean {
     if (current === null || next === null) {
@@ -841,8 +850,9 @@ export class SessionManager {
         }
         // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
         const prompt = (await this.firstPrompt(sessionId)) ?? undefined;
-        // Git Bash reads a native program's `/init` as a path under its own root, and hands `//init` on as `/init`.
-        return terminalCommand(launch, this.platform === 'win32' && prompt?.startsWith('/') ? `/${prompt}` : prompt, note);
+        const line = terminalCommand(launch, prompt, note);
+
+        return this.platform === 'win32' && prompt?.startsWith('/') ? `${keepingFromPathConversion(prompt)} ${line}` : line;
     }
 
     /*

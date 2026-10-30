@@ -391,12 +391,20 @@ describe('SessionManager on Windows', () => {
     });
 
     test('a first prompt that starts with a slash survives the path conversion of Git Bash', async () => {
-        const windows = await makeHarness({ platform: 'win32', findGitBash: () => bash, personShell: () => bash, firstPrompt: () => Promise.resolve('/init') });
+        const windows = await makeHarness({
+            platform: 'win32',
+            findGitBash: () => bash,
+            personShell: () => bash,
+            firstPrompt: () => Promise.resolve('/review src/foo.ts; then /c/x')
+        });
         try {
             await windows.manager.create({ cols: 80, rows: 24, cwd: windows.home, sessionId: 'agent', agent: { kind: 'claude' } });
             const pty = windows.adapter.forSession('agent');
             pty.emit('$ ');
-            expect(`${pty.options.env.RUIMTE_START_LINE ?? ''}${pty.typed}`).toContain("'//init'");
+            const line = `${pty.options.env.RUIMTE_START_LINE ?? ''}${pty.typed}`;
+            // The value reaches the agent's own commands, so it names this prompt and never `*`.
+            expect(line).toContain("MSYS2_ARG_CONV_EXCL='/review src/foo.ts' ");
+            expect(line).toContain("'/review src/foo.ts; then /c/x'");
         } finally {
             await windows.cleanup();
         }
