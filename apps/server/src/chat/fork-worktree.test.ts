@@ -127,8 +127,11 @@ test('a fork after turn 1 in a worktree holds the files after turn 1, with the i
     expect(existsSync(join(daemon.chats.claudeProjectsDir, claudeProjectSlug(path), `${info.agentSessionId}.jsonl`))).toBe(true);
     const register = await new Worktrees(home, NO_WORKTREE_AGENTS).registerOf(folder).read();
     expect(register.get(path)).toMatchObject({ madeBy: 'fork', nodeId, projectId, branch: 'lexer-fork' });
+});
 
-    // The fork's own turn diff is its worktree alone.
+test("a fork's own turn diff is its worktree alone", async () => {
+    const turns = await twoTurns();
+    const { nodeId } = await fork({ turnId: turns[0]!.id, worktree: {}, filesAfterTurn: true });
     await daemon.chats.create({ chatId: nodeId });
     await say(nodeId, 'hello');
     await say(nodeId, 'write: third.txt from the fork');

@@ -32,7 +32,9 @@ export async function gitIn(cwd: string, args: string[]): Promise<string> {
 /* A repository on `main` with these files in one commit. */
 export async function initRepo(repo: string, files: Record<string, string>): Promise<void> {
     await mkdir(repo, { recursive: true });
-    await gitIn(repo, ['init', '--quiet', '--initial-branch=main']);
+    // No template: its sample hooks are most of the files each test then copies, which costs on Windows.
+    await gitIn(repo, ['init', '--quiet', '--initial-branch=main', '--template=']);
+    await mkdir(join(repo, '.git', 'hooks'));
     // Application Git calls do not use gitIn's environment, so copied worktrees need these too, and the
     // line endings stay as written whatever the runner's autocrlf. One write, since every process counts.
     await appendFile(
@@ -44,6 +46,40 @@ export async function initRepo(repo: string, files: Record<string, string>): Pro
     }
     await gitIn(repo, ['add', '.']);
     await gitIn(repo, ['commit', '--quiet', '--message', 'init']);
+}
+
+export interface RepoSnapshots {
+    /* The one folder every test of the file works in, for the tests of a file run one after the other. */
+    readonly root: string;
+    /* Remembers what the root holds now under this name. */
+    take(name: string): Promise<void>;
+    /* Puts the root back to what it held at `take`. */
+    restore(name: string): Promise<void>;
+    dispose(): Promise<void>;
+}
+
+/*
+ * For a fixture that holds a linked worktree, which `repoTemplate` cannot copy: its links and the
+ * register's keys name absolute paths. The same root each time keeps them true, so the git calls that
+ * made the worktree run once per file and not once per test.
+ */
+export async function repoSnapshots(prefix: string): Promise<RepoSnapshots> {
+    const root = await realpath(await mkdtemp(join(tmpdir(), `${prefix}-`)));
+    const saved = await mkdtemp(join(tmpdir(), `${prefix}-saved-`));
+    return {
+        root,
+        async take(name) {
+            await cp(root, join(saved, name), { recursive: true });
+        },
+        async restore(name) {
+            await rm(root, { recursive: true, force: true, maxRetries: 5 });
+            await cp(join(saved, name), root, { recursive: true });
+        },
+        async dispose() {
+            await rm(root, { recursive: true, force: true, maxRetries: 5 });
+            await rm(saved, { recursive: true, force: true, maxRetries: 5 });
+        }
+    };
 }
 
 export interface RepoTemplate {

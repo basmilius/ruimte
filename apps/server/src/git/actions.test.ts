@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { rm, writeFile } from 'node:fs/promises';
+import { appendFile, cp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GitActionPayload, GitActionPhase } from '@ruimte/contracts';
 import { GitActions, isDirty } from './actions.ts';
@@ -52,7 +52,10 @@ beforeEach(async () => {
     remote = join(root, 'remote.git');
     repo = join(root, 'repo');
     // Added per copy rather than in the template, so every test pushes to a bare repository of its own.
-    await run(['remote', 'add', 'origin', remote]);
+    await appendFile(
+        join(repo, '.git', 'config'),
+        `[remote "origin"]\n\turl = ${remote.replaceAll('\\', '/')}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+    );
     actions = new GitActions();
     forgetBase();
 });
@@ -227,7 +230,7 @@ describe('the remote', () => {
 
         // A second checkout of the same remote is what a commit from elsewhere looks like.
         const other = join(root, 'other');
-        await run(['clone', '--quiet', remote, other], root);
+        await cp(repo, other, { recursive: true });
         await writeFile(join(other, 'three.txt'), 'three\n');
         await run(['add', '.'], other);
         await run(['commit', '--quiet', '--message', 'from elsewhere'], other);
@@ -254,7 +257,7 @@ describe('the remote', () => {
     test('a branch that moved on both sides asks how it comes together, and merges when told', async () => {
         await act({ kind: 'publish' });
         const other = join(root, 'other');
-        await run(['clone', '--quiet', remote, other], root);
+        await cp(repo, other, { recursive: true });
         await writeFile(join(other, 'one.txt'), 'from elsewhere\n');
         await run(['commit', '--quiet', '--all', '--message', 'from elsewhere'], other);
         await run(['push', '--quiet'], other);

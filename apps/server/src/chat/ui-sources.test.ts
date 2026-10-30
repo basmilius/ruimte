@@ -1,11 +1,13 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from 'bun:test';
+import { cp, mkdir, mkdtemp, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, GitStatus } from '@ruimte/contracts';
 import { gitIn, initRepo } from '../git/test-repo.ts';
 import { ruimteUiSources, type UiSourceHosts } from './ui-sources.ts';
 
+let template: string;
+let repository: string;
 let root: string;
 let folder: string;
 let reads: string[];
@@ -30,6 +32,16 @@ function statusOf(overrides: Partial<GitStatus> = {}): GitStatus {
         ...overrides
     };
 }
+
+beforeAll(async () => {
+    template = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-ui-sources-template-')));
+    repository = join(template, 'repo');
+    await initRepo(repository, { 'a.md': 'initial' });
+});
+
+afterAll(async () => {
+    await rm(template, { recursive: true, force: true, maxRetries: 5 });
+});
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-ui-sources-')));
@@ -160,7 +172,7 @@ test('a file removed after its initial validation is refused at open time', asyn
 });
 
 test("commit links resolve only a real commit of the agent's repository", async () => {
-    await initRepo(folder, { 'a.md': 'initial' });
+    await cp(repository, folder, { recursive: true });
     const sha = (await gitIn(folder, ['rev-parse', 'HEAD'])).trim();
     const host = ruimteUiSources(hosts);
     const access = await host.capture(info());
@@ -174,7 +186,7 @@ test("commit links resolve only a real commit of the agent's repository", async 
 });
 
 test('diff links retain a deleted file and select the staged side', async () => {
-    await initRepo(folder, { 'a.md': 'initial' });
+    await cp(repository, folder, { recursive: true });
     await unlink(join(folder, 'a.md'));
     hosts.gitStatus = async () =>
         statusOf({ repo: true, root: folder, branch: 'main', files: [{ path: 'a.md', state: 'staged', status: 'D', added: 0, deleted: 1, binary: false }] });
@@ -194,9 +206,12 @@ test('diff links retain a deleted file and select the staged side', async () => 
 });
 
 test("commit and diff links resolve in a repository beside the agent's own", async () => {
-    await gitIn(folder, ['init', '--quiet']);
+    await cp(repository, folder, { recursive: true });
     const nested = join(folder, 'lib');
-    await initRepo(nested, { 'b.md': 'initial' });
+    await cp(repository, nested, { recursive: true });
+    await writeFile(join(nested, 'b.md'), 'initial');
+    await gitIn(nested, ['add', 'b.md']);
+    await gitIn(nested, ['commit', '--quiet', '--amend', '--no-edit']);
     const sha = (await gitIn(nested, ['rev-parse', 'HEAD'])).trim();
     await writeFile(join(nested, 'b.md'), 'changed');
     hosts.gitStatus = async (cwd) =>
