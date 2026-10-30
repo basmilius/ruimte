@@ -440,17 +440,15 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
                     </LazyBoundary>
                 </ErrorBoundary>
             )}
-            <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editor]}>
-                <FileChangeCard
-                    editor={editor}
-                    base={gitBase}
-                    path={path}
-                    plain={plain}
-                    readOnly={readOnlyReason}
-                    attribution={agentChanges.hover}
-                    onAttributionHold={agentChanges.holdCard}
-                />
-            </ErrorBoundary>
+            <FileChangeCard
+                editor={editor}
+                base={gitBase}
+                path={path}
+                plain={plain}
+                readOnly={readOnlyReason}
+                attribution={agentChanges.hover}
+                onAttributionHold={agentChanges.holdCard}
+            />
             {editor !== null && (conflict !== null || agentChanges.review !== null) && (
                 <ErrorBoundary label={t('file.edit.failed')} resetKeys={[editor]}>
                     {conflict !== null && <ConflictLayer conflict={conflict} editor={editor} />}

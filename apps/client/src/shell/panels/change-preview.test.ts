@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'bun:test';
-import { FakeEditorEngine } from '@adecore/editor/fake';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { ManualTimers } from '@adecore/editor-react/testing';
+import { FakeEditorEngine } from '@adecore/editor/fake';
 import { createChangePreview } from './change-preview';
 
 function setup(base: string, text: string) {
@@ -44,6 +44,42 @@ describe('a change preview against the commit', () => {
             run.preview.dispose();
         });
     }
+
+    test('deletions sharing a clamped EOF anchor are restored in order', () => {
+        const run = setup('a\nX\nb\nc', 'a\nb');
+        run.hover(2, 'deleted');
+        expect(run.preview.getState().preview?.before).toEqual(['X']);
+        expect(run.preview.revert()).toBe(true);
+        expect(run.editor.getText()).toBe('a\nX\nb');
+        run.hover(3, 'deleted');
+        expect(run.preview.getState().preview?.before).toEqual(['c']);
+        expect(run.preview.revert()).toBe(true);
+        expect(run.editor.getText()).toBe('a\nX\nb\nc');
+        run.preview.dispose();
+    });
+
+    test('geometry-only hovers reuse the document read until a text change invalidates it', () => {
+        const run = setup('old\n', 'new\n');
+        const read = spyOn(run.editor, 'getText');
+        try {
+            run.hover(1);
+            run.editor.hoverChangeMark({
+                layer: 'git',
+                line: 1,
+                mark: { kind: 'modified', startLine: 1, endLine: 1 },
+                rect: { left: 60, right: 64, top: 40, bottom: 60 }
+            });
+            expect(read).toHaveBeenCalledTimes(1);
+            expect(run.preview.getState().preview?.rect.top).toBe(40);
+            run.editor.setText('newer\n');
+            run.hover(1);
+            expect(read).toHaveBeenCalledTimes(2);
+            expect(run.preview.getState().preview?.after).toEqual(['newer']);
+        } finally {
+            read.mockRestore();
+            run.preview.dispose();
+        }
+    });
 
     test('a held card survives leaving the gutter, but edits, another layer and disposal invalidate it', () => {
         const run = setup('old\n', 'new\n');
