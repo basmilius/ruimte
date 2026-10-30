@@ -53,7 +53,6 @@ On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun run t
   - `sessions/shell-editor`, `shell-editor-review`, `background-cwd`, `shell-integration` and `prepare-terminal`: POSIX shells, with zsh among them.
   - `peering/one-shot-place`, `providers/acp-providers` (a fake CLI as a shell script) and `devices/helper-source` (Bun answers `EMFILE`). Apple's model and the launcher, which refuses Windows until the release.
   - Bun's watcher hears no edit through a junction, so a daemon on a linked ADE CORE may not restart for a source edit.
-- `remote/connect-peer.test.ts` ("fails what is owed once the 7 days are over") failed once under load on the PC and once in 4 parallel runs on the Mac. It passes alone. The cause is not known.
 - `unit (Windows)` in `ci.yml` runs on two workers and only with `WINDOWS_RELEASE` set to `true`, outside the final check, and may fail without failing the run. It stays off until everything works on the PC. `canvas/worktree-verb.test.ts` and `git/worktree-merge.test.ts` passed in the baseline, but did time out on the runner, leaving a folder Windows holds (`EBUSY`).
 - On build 26300 an elevated process refuses a junction a non-elevated process made ("untrusted mount point"); a non-elevated process reads it fine, and a junction an elevated process made works for both. So run `bun install` on the PC over SSH: one from a person's PowerShell crashed every test in the elevated SSH session. Whether this reaches an elevated Ruimte, or other Windows builds, is not known.
 
@@ -67,11 +66,12 @@ On the PC, 2026-10-30: `check:types`, `lint` and `format:check` pass. `bun run t
 
 Done, to confirm on the PC:
 
-- A session that types a line starts in `gitBash()` whatever shell was asked, and is refused with `git-bash-missing` without Git for Windows. A plain terminal keeps the PowerShell and cmd fallback; the app does not say so yet.
+- A session that types a line starts in `gitBash()` whatever shell was asked, and is refused with `git-bash-missing` without Git for Windows. A plain terminal keeps the PowerShell and cmd fallback, and Settings, Terminal says so (`gitBashMissing` on `endpoint.info`). The refusal itself is the daemon's words, in English.
 - The cwd tracker reads `/c/Users/x` as `C:\Users\x` (`windowsPathOfMsys`, `packages/contracts/src/terminal-cwd.ts`); `/usr` and `/tmp` stay unknown. Git Bash emits OSC 7 through `PROMPT_COMMAND` (`sessions/shell-integration.ts`), set before the person's startup files; a file that replaces `PROMPT_COMMAND` leaves the cwd unknown.
 - `apps/client/src/terminal/drop-path.ts` types `'C:\x\y'` in single quotes, literal in PowerShell and Git Bash alike. cmd reads them as part of the path. Untried on the PC: a drop from the Explorer.
 - `processes/foreground.ts` answers unknown on Windows without spawning `ps`.
 - A new terminal opens in `personShell` (`pty/pty.ts`), set under Settings, Terminal, with PowerShell as default. Confirmed on the PC for PowerShell, Git Bash and cmd; WSL is untried. PowerShell reports its cwd through an encoded command that wraps the prompt, which an execution policy does not block.
+- A first prompt starting with `/` is typed behind `MSYS2_ARG_CONV_EXCL=<its start>` (`startLine`), so MSYS leaves it intact. The variable reaches the agent's own commands, so it names that prompt's prefix and never `*`, which would stop the conversion they need. Confirmed on the PC with a native program for `/init`, `/review src/foo.ts` and a path argument; `/c/Users/x` in a child stays converted.
 - A line typed in Git Bash ends in `exec <person's shell>` (`handingBack`, `sessions/manager.ts`), except for WSL. Confirmed on the PC: an agent's `/exit` lands in PowerShell or cmd, and a resume after the shell ended works.
 - A resume typed into a running PowerShell or cmd lets Git Bash run the line from a file (`typedResume`). The form was tried by hand in PowerShell; the app's route was not, nor the cmd form.
 
@@ -79,11 +79,11 @@ Open:
 
 - The logo menu leaves out the rows only the shell can run (cut, copy, paste, full screen, quit, DevTools), which stay on their keys, and the start screen has no logo menu.
 - Prepare in terminal needs the zsh editor channel ([TERMINAL-PREPARE.md](TERMINAL-PREPARE.md)), so no Windows terminal qualifies.
-- MSYS rewrites a native program's argument that starts with `/`, so the daemon types a first prompt `/init` as `//init` (`startLine`), which arrives as `/init`. A prompt holding another `/` keeps both slashes, such as `//review src/foo.ts`, and reaches the CLI as a message instead of a command. `MSYS_NO_PATHCONV=1` would solve it but also reach the agent's own Bash tool, where conversion is wanted.
 
 ### 4. Agents
 
 - `@adecore/agents` (`windows-command.ts`, since v0.29.2) resolves a bare name through PATHEXT and wraps `.cmd` in `cmd.exe`. Such a line holds no line break and stops near 8 KB, so a Claude chat's system prompt goes through a file on Windows (`chat/claude-system-prompt.ts`, unreleased).
+- A Codex chat on a PC where Codex's sandbox setup never ran (`windowsSandbox/readiness` says `notConfigured`) does not hang. The app-server turns `workspace-write` into `readOnly` without an error, and each command comes as an approval a chat answers; after an accept it ran and could write. The chat says so in a note (`threadReady`, `@adecore/agents`). `full-access` asks for no sandbox. Measured on 0.166 with a temporary `CODEX_HOME` and a mock model. With `[windows] sandbox = "unelevated"` readiness is `ready`, but under SSH the command died with `0xC0000142`, so the sandbox itself is untried in a person's session.
 - `agents/integrations.ts` expands `~` with `HOME`, then `USERPROFILE`; with both empty the path is still relative.
 
 ### 5. Paths from git and in the client
@@ -97,6 +97,8 @@ Done, unit tested with Windows paths, untried on the PC.
 ### 6. Packaging and the service
 
 - Code signing, the npm placeholder and turning on `WINDOWS_RELEASE`.
+- `ruimte-context.exe` has no version information (company, copyright). The Rust launcher would need a build script and a resource compiler on both build routes; `ruimte.exe`, `Ruimte.exe` and the setup have it.
+- The firewall's question comes at the first start, since the LAN door listens on every interface. A client learns the door over a connection it already has (`endpoint.info`), so the door could open later, but a machine on no account also lets a client in on a statement, so "once on an account" is not enough. See the decision for Bas: open it when the machine joins an account or first lets a client in.
 - The site offers the installer once a release has one.
 - The npm launcher's refusal comes off last.
 
@@ -135,5 +137,4 @@ Open questions for the next PC session:
   - An online-only OneDrive file lands in the bin.
   - The same from the daemon the scheduled task started.
   - Does the shell ever still ask to delete for good (`FOF_WANTNUKEWARNING`)? For what?
-- What does a Codex chat do on a PC where Codex's sandbox setup never ran? The CLI asks for it in its TUI, which a chat does not have.
 - Does the packaged app register the task without admin, start at logon and after a crash, and do "Stop the machine" and a restart onto a new build end the whole tree?
