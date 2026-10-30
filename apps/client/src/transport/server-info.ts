@@ -65,6 +65,7 @@ export function adoptEndpointInfo(endpointId: string, info: EndpointInfo): void 
         accountId: info.accountId,
         worktreeRoot: info.worktreeRoot,
         terminalShell: info.terminalShell,
+        gitBashMissing: info.gitBashMissing === true,
         nodeSizes: knownNodeSizes(info.nodeSizes),
         usageStats: info.usageStats,
         viewReferences: info.viewReferences === true

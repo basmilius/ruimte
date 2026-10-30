@@ -114,6 +114,8 @@ export const EndpointInfoSchema = z.object({
     worktreeRoot: z.string().nullable().optional(),
     // The same client only: the shell of a new terminal on Windows. Absent is PowerShell.
     terminalShell: TerminalShellSchema.optional(),
+    // The same client only: this Windows machine has no Git for Windows, so agents cannot start and a terminal cannot open in Git Bash.
+    gitBashMissing: z.boolean().optional(),
     // Kept in `endpoint.json`; empty while nobody set one.
     nodeSizes: EndpointNodeSizesSchema.optional(),
     // Anonymous daily usage counts sent from a release build. Absent reads as on, from a machine that has the switch.

@@ -1428,6 +1428,7 @@
         "terminalShell": {
             "label": "Terminal shell",
             "description": "The shell a new terminal opens in. Agents and launches always run in Git Bash.",
+            "gitBashMissing": "Git for Windows is not installed, so a terminal cannot open in Git Bash and opens in PowerShell or Command Prompt instead, and agents and launches cannot start. Get it at gitforwindows.org.",
             "options": {
                 "powershell": "PowerShell",
                 "git-bash": "Git Bash",

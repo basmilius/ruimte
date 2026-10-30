@@ -20,6 +20,7 @@ import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 import type { InstallVerdict } from '../power/machine-update.ts';
 import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
+import { gitBash } from '../pty/pty.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
 
 interface EndpointHost {
@@ -105,7 +106,8 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
             ? {
                   accountId: (await store.accountBinding())?.id ?? null,
                   worktreeRoot: identity.worktreeRoot,
-                  ...(identity.terminalShell === null ? {} : { terminalShell: identity.terminalShell })
+                  ...(identity.terminalShell === null ? {} : { terminalShell: identity.terminalShell }),
+                  ...(process.platform === 'win32' && gitBash() === null ? { gitBashMissing: true } : {})
               }
             : {})
     });

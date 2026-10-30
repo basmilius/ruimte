@@ -645,12 +645,13 @@ export function MachineLinks({ endpoint }: { endpoint: Endpoint }) {
 export function TerminalShellRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
     const { t } = useTranslation('settings');
     const chosen = useServers((s) => s.byEndpoint[endpoint.id]?.terminalShell) ?? 'powershell';
+    const gitBashMissing = useServers((s) => s.byEndpoint[endpoint.id]?.gitBashMissing) === true;
     const [problem, setProblem] = useState<string | null>(null);
     return (
         <SettingsRow
             searchId="terminal.shell"
             label={t('machine.terminalShell.label')}
-            description={t('machine.terminalShell.description')}
+            description={t(gitBashMissing ? 'machine.terminalShell.gitBashMissing' : 'machine.terminalShell.description')}
             control={
                 <WithReason reason={reason}>
                     <Select<TerminalShell>

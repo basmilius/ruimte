@@ -70,6 +70,7 @@ export interface ServerInfo {
     /* The folder new worktrees are made in, null for the data folder. Only the app on the machine is told; undefined for any other. */
     worktreeRoot: string | null | undefined;
     terminalShell: TerminalShell | undefined;
+    gitBashMissing: boolean;
     /* The sizes a person gave new nodes of a kind on the machine, only the kinds they changed. */
     nodeSizes: NodeSizes;
     /* Whether the machine sends its anonymous usage counts; undefined from a machine without the switch. */
@@ -111,6 +112,7 @@ const UNKNOWN: ServerInfo = {
     accountId: undefined,
     worktreeRoot: undefined,
     terminalShell: undefined,
+    gitBashMissing: false,
     nodeSizes: {},
     usageStats: undefined,
     viewReferences: false
@@ -150,6 +152,7 @@ interface ServersStore {
             | 'accountId'
             | 'worktreeRoot'
             | 'terminalShell'
+            | 'gitBashMissing'
             | 'nodeSizes'
             | 'usageStats'
             | 'viewReferences'
