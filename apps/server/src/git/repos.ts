@@ -116,6 +116,10 @@ async function scan(folder: string, dir: string, depth: number, found: Set<strin
 async function addSubmodules(folder: string, checkouts: readonly string[], add: (path: string, kind: GitRepo['kind']) => void): Promise<void> {
     const lists = await Promise.all(
         checkouts.map(async (checkout) => {
+            // `git submodule` is a shell script, hundreds of milliseconds on Windows, once for every checkout in the folder.
+            if (!(await fileExists(join(checkout, '.gitmodules')))) {
+                return [];
+            }
             const output = await git(['submodule', 'status', '--recursive'], checkout);
             return parseSubmodulePaths(output ?? '').map((path) => join(checkout, path));
         })

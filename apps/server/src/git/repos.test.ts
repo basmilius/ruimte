@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { listRepos, MAX_REPOS, parseSubmodulePaths, repoLabel } from './repos.ts';
@@ -40,7 +40,12 @@ beforeAll(async () => {
         const repo = join(dir, 'parent');
         await initRepo(repo, { 'p.txt': 'p\n', '.gitignore': 'tools/\n' });
         await cp(join(dir, 'origin'), join(repo, 'tools'), { recursive: true });
-        await gitIn(repo, ['-c', 'protocol.file.allow=always', 'submodule', '--quiet', 'add', join(dir, 'origin'), 'backend']);
+        // What `git submodule add` leaves behind, without the shell script and the clone it takes on Windows.
+        await cp(join(dir, 'origin'), join(repo, 'backend'), { recursive: true });
+        await writeFile(join(repo, '.gitmodules'), '[submodule "backend"]\n\tpath = backend\n\turl = ../origin\n');
+        const commit = (await gitIn(repo, ['-C', 'backend', 'rev-parse', 'HEAD'])).trim();
+        await gitIn(repo, ['update-index', '--add', '--cacheinfo', `160000,${commit},backend`, '.gitmodules']);
+        await appendFile(join(repo, '.git', 'config'), '[submodule "backend"]\n\tactive = true\n\turl = ../origin\n');
         await gitIn(repo, ['commit', '--quiet', '--message', 'add backend']);
     });
 });
