@@ -44,7 +44,8 @@ const args = process.argv.slice(2);
 
 // Node 22.15 and later replace this process with the binary, so the signals and the exit code are the binary's own.
 const execve = (process as { execve?: (file: string, args: string[], env: NodeJS.ProcessEnv) => never }).execve;
-if (typeof execve === 'function') {
+// On Windows it writes an experimental warning to stderr, and a child is what the rest of this file is built for.
+if (typeof execve === 'function' && process.platform !== 'win32') {
     try {
         execve(binary, [binary, ...args], process.env);
     } catch {

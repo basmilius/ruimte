@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { binaryPathOf, exitCodeOf, INTEL_NODE_REFUSAL, LauncherError, MUSL_REFUSAL, platformPackageOf, WINDOWS_REFUSAL, type Resolve } from './launcher';
+import { binaryPathOf, exitCodeOf, INTEL_NODE_REFUSAL, LauncherError, MUSL_REFUSAL, platformPackageOf, type Resolve } from './launcher';
 
 function installed(...names: string[]): Resolve {
     return (request) => {
@@ -19,8 +19,9 @@ describe('platformPackageOf', () => {
         expect(platformPackageOf({ platform: 'linux', arch: 'arm64' })).toBe('@ruimte/linux-arm64');
     });
 
-    test('says Windows is not supported yet', () => {
-        expect(() => platformPackageOf({ platform: 'win32', arch: 'x64' })).toThrow(WINDOWS_REFUSAL);
+    test('names the Windows package, on x64 alone', () => {
+        expect(platformPackageOf({ platform: 'win32', arch: 'x64' })).toBe('@ruimte/win32-x64');
+        expect(() => platformPackageOf({ platform: 'win32', arch: 'arm64' })).toThrow(LauncherError);
     });
 
     test('names a platform or architecture it has no build for', () => {
@@ -59,19 +60,6 @@ describe('binaryPathOf', () => {
         };
         binaryPathOf({ platform: 'linux', arch: 'arm64' }, installed('@ruimte/linux-arm64'), libc);
         expect(asked).toBe(false);
-    });
-
-    test('refuses Windows before it looks for a package', () => {
-        const resolveInstalled = installed('@ruimte/win32-x64');
-        for (const arch of ['arm64', 'x64']) {
-            let asked = false;
-            const resolve: Resolve = (request) => {
-                asked = true;
-                return resolveInstalled(request);
-            };
-            expect(() => binaryPathOf({ platform: 'win32', arch }, resolve)).toThrow(WINDOWS_REFUSAL);
-            expect(asked).toBe(false);
-        }
     });
 });
 

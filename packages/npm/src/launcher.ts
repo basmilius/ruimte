@@ -20,8 +20,6 @@ export type Libc = 'glibc' | 'musl' | null;
 
 export class LauncherError extends Error {}
 
-export const WINDOWS_REFUSAL = 'Ruimte does not run on Windows yet. It runs on Macs with Apple silicon and on Linux, on arm64 and x64.';
-
 export const INTEL_NODE_REFUSAL =
     'This Node is built for Intel Macs, and Ruimte runs on Macs with Apple silicon only. On a Mac with Apple silicon this Node runs under Rosetta: install the arm64 build of Node and run Ruimte with that.';
 
@@ -29,9 +27,6 @@ export const MUSL_REFUSAL =
     'Ruimte runs on Linux with glibc, and this system uses musl (as Alpine does), so npm left its binary out. Run it on a distribution with glibc, such as Debian or Ubuntu, or in a container of one.';
 
 export function platformPackageOf(host: Host): string {
-    if (host.platform === 'win32') {
-        throw new LauncherError(WINDOWS_REFUSAL);
-    }
     if (host.platform === 'darwin' && host.arch === 'x64') {
         throw new LauncherError(INTEL_NODE_REFUSAL);
     }

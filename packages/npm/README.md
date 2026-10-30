@@ -15,7 +15,7 @@ npx ruimte closed-lid remove
 npx ruimte --version
 ```
 
-`bunx ruimte` works too. Node is enough. It runs on Apple silicon Macs and on Linux (x64 and arm64), not on Windows yet.
+`bunx ruimte` works too. Node is enough. It runs on Apple silicon Macs, on Linux (x64 and arm64) and on Windows (x64).
 
 ## Reaching it
 
