@@ -13,17 +13,8 @@ import { useProject } from '@/state/project';
 import { fakeProvider } from '../../testing/fake-provider';
 import { emptyCanvas } from '../../testing/project-fixtures';
 import { completed, confirmed, expectQuestion, expectUndoable } from './action-support';
-import {
-    clientActions,
-    createClientActionRegistry,
-    createNodeAction,
-    ignoreRefusal,
-    performIn,
-    PERSON_ACTION_CALL,
-    selectAllAction,
-    toggleFlagAction,
-    VOICE_ACTION_CALL
-} from './client-actions';
+import { clientActions, createClientActionRegistry } from './client-action-registry';
+import { createNodeAction, ignoreRefusal, performIn, PERSON_ACTION_CALL, selectAllAction, toggleFlagAction, VOICE_ACTION_CALL } from './client-actions';
 
 const PROJECT: ProjectSummary = {
     projectId: 'atlas',

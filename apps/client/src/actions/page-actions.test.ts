@@ -3,7 +3,8 @@ import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
 import type { BrowserState } from '@/browser/registry';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry } from './client-action-registry';
 import type { PageDrive, PageMachine } from './page-actions';
 
 const main: ProjectCanvasView = {

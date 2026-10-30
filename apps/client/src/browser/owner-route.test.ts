@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from 'bun:test';
 import { ProjectDocumentSchema, withNodeAsView, withViewAsNode, type ProjectCanvasView } from '@ruimte/contracts';
-import { createClientActionRegistry, PERSON_ACTION_CALL } from '@/actions/client-actions';
+import { PERSON_ACTION_CALL } from '@/actions/client-actions';
+import { createClientActionRegistry } from '@/actions/client-action-registry';
 import { readNodeHost } from '@/nodes/node-host';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';

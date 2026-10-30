@@ -9,7 +9,8 @@ import {
     type VoiceWatchedSession
 } from '@ruimte/voice';
 import i18next from 'i18next';
-import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
+import { clientActions } from '@/actions/client-action-registry';
+import { VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { accentLabel } from '@/canvas/accents';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';

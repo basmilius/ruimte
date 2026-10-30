@@ -462,7 +462,7 @@ describe('ProjectClient', () => {
         await tick();
         expect(useDocument.getState().shared).toEqual([]);
 
-        setViewShared('main', true);
+        await setViewShared('main', true);
         await tick(10);
         const save = lastSave(transport, 0);
         expect(save.shared).toEqual(['main']);
