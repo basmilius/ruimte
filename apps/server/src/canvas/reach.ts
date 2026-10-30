@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
 import { VerbRefusal, field, type CanvasHost } from './verb.ts';
 
-/* A project another project's agents may reach: open on this machine, in at least one client. */
+/* A project another project's agents may reach: in use on this machine, outside Recent. */
 export interface ReachableProject {
     projectId: string;
     name: string;
@@ -15,8 +16,15 @@ export interface ReachableProject {
  */
 export interface ReachHost {
     enabled(): boolean;
-    /* The projects a client holds now, the Chats project left out, since nothing is reached there. */
+    /* Projects outside Recent, including those in the background; Chats is left out. */
     open(): Promise<ReachableProject[]>;
+}
+
+export function projectReach(projects: Pick<ProjectStore, 'list'>, enabled: () => boolean): ReachHost {
+    return {
+        enabled,
+        open: async () => (await projects.list()).filter((project) => project.closedAt == null && project.scratch !== true)
+    };
 }
 
 /* The verbs that take `--project`; every other one refuses it by name, so nothing crosses by accident. */
@@ -68,7 +76,7 @@ export async function reachedPlace(host: Pick<CanvasHost, 'reach' | 'projects'>,
     if (target === undefined) {
         throw new VerbRefusal(
             'project-not-open',
-            `${projectId} is no project open on this machine; a project is reachable only while a window has it open`,
+            `${projectId} is no project open on this machine; open it from Recent to make it reachable`,
             reachableLines(others)
         );
     }

@@ -1,6 +1,7 @@
 import { chatRequests } from '@adecore/agents/coordination';
 import { agentStates } from '../agents/agent-state.ts';
 import { openedAgentCount } from '../agents/hidden-agents.ts';
+import { projectReach } from '../canvas/reach.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
@@ -145,11 +146,7 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         artifacts: input.artifacts.artifacts,
         routines: agentRoutines(input.routines.routines, (id) => projects.index.titleFor(id)),
         templates: input.templates.store,
-        reach: {
-            enabled: () => identity.reachOpenProjects,
-            open: async () =>
-                (await projects.known()).filter((project) => project.folder !== projects.scratchFolder && projects.holdersOf(project.projectId).length > 0)
-        }
+        reach: projectReach(projects, () => identity.reachOpenProjects)
     };
     const forkDeps = chatForkDeps({
         chats,

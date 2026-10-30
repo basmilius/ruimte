@@ -74,12 +74,12 @@ const listAction = defineAction('project', {
     usage: '',
     summary: 'Lists the other projects open on this machine that --project reaches, while a person lets agents reach them',
     detail: [
-        'prints\tproject\tid\ttitle\tone line per project a window has open on this machine, your own and Chats left out',
+        'prints\tproject\tid\ttitle\tone line per project open on this machine, including those in the background; your own and Chats are left out',
         'empty\tNothing while the machine keeps agents in their own project; a person turns reaching on under Agents in the settings',
         `crosses\t--project <id> goes with ${CROSSING_VERBS.join(', ')}; every other verb refuses it with cross-project-refused`,
         'read\tread <id> --project P reads every view, node and text of P without a line, other chats and terminals included',
         'agent\tagent and team --project P open their agents on a canvas of P that --view names, where a person there sees them; --cwd and --worktree stay inside P',
-        'closed\tA project is reachable only while a window has it open: closing it in its last window ends the agents there and fails their tasks',
+        'closed\tSwitching away keeps a project reachable; closing it into Recent takes it out of reach, ends its agents and fails their tasks',
         SCOPE_LINE
     ],
     positionals: z.tuple([], { error: 'project list takes no arguments' }),

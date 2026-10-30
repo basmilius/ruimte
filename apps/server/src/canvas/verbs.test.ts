@@ -22,6 +22,7 @@ import {
     NODE_SIZE,
     PROJECT_ICON_NAMES,
     nodeSizeOf,
+    withViewAsNode,
     type NodeSizes,
     type AgentKind,
     type ProjectCanvasView,
@@ -65,7 +66,7 @@ import type { Notice } from '@adecore/agents/coordination';
 import type { NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
-import { reachedPlace } from './reach.ts';
+import { projectReach, reachedPlace } from './reach.ts';
 import { StartClaims } from '../actions/start-claims.ts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
@@ -4744,7 +4745,6 @@ describe('reaching another open project', () => {
     let other: string;
     let otherId: string;
     let reachOn: boolean;
-    let openIds: string[];
 
     beforeEach(async () => {
         reachOn = true;
@@ -4768,27 +4768,57 @@ describe('reaching another open project', () => {
                 { kind: 'chat', id: 'chat-b', name: 'Their chat', node: {} }
             ]
         });
-        store.release(otherId);
-        openIds = [projectId, otherId];
+        store.hold('client-1', otherId);
+        store.letGo('client-1', otherId);
     });
 
     function reaching(): CanvasHost {
         return {
             ...host(),
-            reach: {
-                enabled: () => reachOn,
-                open: async () => openIds.map((id) => ({ projectId: id, name: id === otherId ? 'other' : 'repo', folder: id === otherId ? other : folder }))
-            }
+            reach: projectReach(store, () => reachOn)
         };
     }
 
-    test('project list names the other open projects only while the switch is on', async () => {
-        expect((await post('project', ['list'], 'term', reaching())).lines).toEqual([`project\t${otherId}\tother`]);
+    test.each(['canvas', 'chat view'])('a %s reaches a project after switching away, until it is closed', async (surface) => {
+        if (surface === 'canvas') {
+            const current = await store.read(projectId);
+            const moved = withViewAsNode(current.views, 'chat-1', 'main', { x: 600, y: 0 });
+
+            if (moved === null) {
+                throw new Error('The caller chat could not move onto its canvas');
+            }
+
+            await replaceContent({ ...current, views: moved.views });
+        }
+
+        const through = reaching();
+        expect((await post('project', ['list'], 'chat', through)).lines).toEqual([`project\t${otherId}\tother`]);
+        expect((await post('view', ['list', '--project', otherId], 'chat', through)).status).toBe(200);
+
+        await store.closeProject(otherId, 'client-1');
+
+        expect((await post('project', ['list'], 'chat', through)).lines).toEqual([]);
+        expect((await post('view', ['list', '--project', otherId], 'chat', through)).lines[0]).toStartWith('refused\tproject-not-open\t');
+
+        await store.openProject({ projectId: otherId });
+
+        expect((await post('project', ['list'], 'chat', through)).lines).toEqual([`project\t${otherId}\tother`]);
+
         reachOn = false;
-        expect((await post('project', ['list'], 'term', reaching())).lines).toEqual([]);
+
+        expect((await post('project', ['list'], 'chat', through)).lines).toEqual([]);
+        expect((await post('view', ['list', '--project', otherId], 'chat', through)).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
     });
 
-    test('--project refuses while the switch is off, for the own project and for a project nobody has open', async () => {
+    test('Chats stays out of reach even while a client holds it', async () => {
+        const scratch = await store.ensureProject(store.scratchFolder, { name: 'Chats', icon: { kind: 'lucide', value: 'messages-square' } });
+        store.hold('client-2', scratch.projectId);
+
+        expect((await post('project', ['list'], 'chat', reaching())).lines).toEqual([`project\t${otherId}\tother`]);
+        expect((await post('view', ['list', '--project', scratch.projectId], 'chat', reaching())).lines[0]).toStartWith('refused\tproject-not-open\t');
+    });
+
+    test('--project refuses while the switch is off, for the own project and for a closed project', async () => {
         reachOn = false;
         expect((await post('view', ['list', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tprojects-not-reachable\t');
         reachOn = true;
@@ -4796,7 +4826,7 @@ describe('reaching another open project', () => {
             `refused\town-project\t${projectId} is your own project; leave --project out to work in it`,
             `project\t${otherId}\tother`
         ]);
-        openIds = [projectId];
+        await store.closeProject(otherId, 'client-1');
         expect((await post('view', ['list', '--project', otherId], 'term', reaching())).lines[0]).toStartWith('refused\tproject-not-open\t');
     });
 
