@@ -6,8 +6,8 @@ import { useDocument } from '@/state/document';
 import { defaultDrawings } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { completed, confirmed } from './action-support';
-import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { createClientActionRegistry } from './client-action-registry';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import type { ContentMachine } from './content-actions';
 
 const main: ProjectCanvasView = {

@@ -64,6 +64,7 @@ describe('what the start screen preloads', () => {
             `${APP}/drawing/paint.ts`,
             `${APP}/actions/client-action-registry.ts`,
             `${APP}/actions/canvas-actions.ts`,
+            `${APP}/actions/developer-actions.ts`,
             `${APP}/database/sql-bindings.ts`,
             `${LINKED}/diagram/src/svg.ts`,
             `${NPM}/editor-react/src/EditorView.tsx`

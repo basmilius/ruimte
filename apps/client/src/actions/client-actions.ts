@@ -16,7 +16,7 @@ import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import type { CreatableNodeKind, CreatableViewKind } from '@/actions/action-reach';
 import { loadedClientActionRegistry, loadClientActionRegistry } from '@/actions/client-action-loader';
-import { GIT_OPERATION } from '@/actions/developer-actions';
+import { GIT_OPERATION } from '@/actions/git-operation';
 import type { AgentSession } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';

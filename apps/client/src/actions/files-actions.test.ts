@@ -3,8 +3,8 @@ import type { FileLocation, FsEntry, RequestMap, RequestType } from '@ruimte/con
 import { useDocument } from '@/state/document';
 import { TransportError } from '@/transport/transport';
 import { completed } from './action-support';
-import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { createClientActionRegistry } from './client-action-registry';
+import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import type { FilesMachine } from './files-actions';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] };

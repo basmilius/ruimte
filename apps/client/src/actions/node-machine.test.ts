@@ -7,7 +7,8 @@ import { pool } from '@/transport';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { fakeProvider } from '../../testing/fake-provider';
 import { confirmed } from './action-support';
-import { createClientActionRegistry, VOICE_ACTION_CALL } from './client-actions';
+import { createClientActionRegistry } from './client-action-registry';
+import { VOICE_ACTION_CALL } from './client-actions';
 
 const GONE = 'machine-gone';
 const refused = { status: 'failed', error: { code: 'no-machine' } };
