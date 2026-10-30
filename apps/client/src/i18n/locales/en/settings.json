@@ -864,7 +864,10 @@
             "previousMessage": "Previous message you sent",
             "nextMessage": "Next message you sent",
             "sendAndNewChat": "Send and start new chat beside it",
-            "dictation": "Dictate: press to toggle, hold to talk"
+            "dictation": "Dictate: press to toggle, hold to talk",
+            "textLarger": "Larger Chat Text",
+            "textSmaller": "Smaller Chat Text",
+            "textReset": "Default Chat Text Size"
         },
         "browser": {
             "back": "Back",

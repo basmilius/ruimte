@@ -1,0 +1,47 @@
+/* Capture the inherited scale before the inner body remaps its roles. */
+.chat-reading-scope {
+    --chat-type-xs: var(--text-xs);
+    --chat-type-xs-line: var(--text-xs--line-height);
+    --chat-type-sm: var(--text-sm);
+    --chat-type-sm-line: var(--text-sm--line-height);
+    --chat-type-base: var(--text-base);
+    --chat-type-base-line: var(--text-base--line-height);
+    --chat-type-lg: var(--text-lg);
+    --chat-type-lg-line: var(--text-lg--line-height);
+}
+
+.chat-reading-scope[data-chat-text-size='0'] > .chat-reading-content {
+    --text-sm: var(--chat-type-xs);
+    --text-sm--line-height: var(--chat-type-xs-line);
+    --text-base: var(--chat-type-sm);
+    --text-base--line-height: var(--chat-type-sm-line);
+    --text-lg: var(--chat-type-base);
+    --text-lg--line-height: var(--chat-type-base-line);
+    --text-code: var(--chat-type-xs);
+    --text-code--line-height: var(--chat-type-xs-line);
+    --leading-normal: var(--chat-type-xs-line);
+}
+
+.chat-reading-scope[data-chat-text-size='2'] > .chat-reading-content {
+    --text-xs: var(--chat-type-sm);
+    --text-xs--line-height: var(--chat-type-sm-line);
+    --text-sm: var(--chat-type-base);
+    --text-sm--line-height: var(--chat-type-base-line);
+    --text-base: var(--chat-type-lg);
+    --text-base--line-height: var(--chat-type-lg-line);
+    --text-code: var(--chat-type-sm);
+    --text-code--line-height: var(--chat-type-sm-line);
+    --leading-normal: var(--chat-type-base-line);
+}
+
+.chat-reading-scope[data-chat-text-size='3'] > .chat-reading-content {
+    --text-xs: var(--chat-type-base);
+    --text-xs--line-height: var(--chat-type-base-line);
+    --text-sm: var(--chat-type-lg);
+    --text-sm--line-height: var(--chat-type-lg-line);
+    --text-base: var(--chat-type-lg);
+    --text-base--line-height: var(--chat-type-lg-line);
+    --text-code: var(--chat-type-base);
+    --text-code--line-height: var(--chat-type-base-line);
+    --leading-normal: var(--chat-type-lg-line);
+}

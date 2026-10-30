@@ -890,7 +890,10 @@
             "settings": "Settings",
             "launchesEdit": "Edit launches…",
             "launchesAfterSettleOff": "Run nothing after a worktree chat finishes",
-            "attentionQueue": "Open attention queue"
+            "attentionQueue": "Open attention queue",
+            "chatTextLarger": "Larger Chat Text",
+            "chatTextSmaller": "Smaller Chat Text",
+            "chatTextReset": "Default Chat Text Size"
         },
         "sections": {
             "recent": "Recent",
@@ -1241,7 +1244,10 @@
         "drawingSavePng": "Save as PNG…",
         "drawingSaveSvg": "Save as SVG…",
         "drawingOnCanvas": "Show on Canvas",
-        "attentionQueue": "Attention Queue"
+        "attentionQueue": "Attention Queue",
+        "chatTextLarger": "Larger Chat Text",
+        "chatTextSmaller": "Smaller Chat Text",
+        "chatTextReset": "Default Chat Text Size"
     },
     "addToMachine": {
         "title": "Add to another machine",

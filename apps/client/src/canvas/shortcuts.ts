@@ -40,6 +40,8 @@ export const CANVAS_SHORTCUTS = {
     group: shortcut('Mod+G'),
     selectAll: shortcut('Mod+A'),
     zoomReset: shortcut('Mod+0'),
+    chatTextLarger: shortcut('Mod++'),
+    chatTextSmaller: shortcut('Mod+-'),
     fitAll: shortcut('Shift+1'),
     zoomSelection: shortcut('Shift+2'),
     zoomNode: shortcut('Mod+Shift+2'),

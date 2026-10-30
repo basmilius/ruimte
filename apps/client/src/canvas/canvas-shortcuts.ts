@@ -2,6 +2,7 @@ import { useSubagentView, stepEffortFromComposer, stepTimelineMessage } from '@a
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { useEffect } from 'react';
+import { resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import {
     closeCellAction,
     closeTabAction,
@@ -188,6 +189,10 @@ function escapeCanvas(e: KeyboardEvent, s: CanvasState): void {
 
 /* The keys about the window, its cells and its views, which answer from anywhere. Answers whether the key is spoken for. */
 function answerWindowKey(e: KeyboardEvent, s: CanvasState, is: Matches, command: Command, apple: boolean): boolean {
+    if (command === 'chat-text-larger' || command === 'chat-text-smaller') {
+        return true;
+    }
+
     if (command === 'zoom-node' && !onStandaloneView() && !isInFloatingLayer(e.target) && !useUi.getState().settings.open) {
         if (zoomNodeTargetOf(s) !== null) {
             e.preventDefault();
@@ -556,6 +561,23 @@ export function useCanvasShortcuts(): void {
            window too, and only stopping the key here keeps them from also acting on it. */
         const onKeyDownCapture = (e: KeyboardEvent): void => {
             setGapModifierDown(e.altKey);
+            // The composer's editor has its own keymap; reading-size keys must reach their chat first.
+            if (!e.defaultPrevented && !e.isComposing && !isInFloatingLayer(e.target) && !useUi.getState().settings.open && !useRoutinesStage.getState().open) {
+                const command = commandForKey('workspace', e, isApplePlatform());
+
+                if (command === 'chat-text-larger' || command === 'chat-text-smaller' || command === 'zoom-reset') {
+                    const handled = command === 'zoom-reset' ? resetChatTextSize() : stepChatTextSize(command === 'chat-text-larger' ? 1 : -1);
+
+                    if (handled) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        countCommand(command, 'shortcut');
+
+                        return;
+                    }
+                }
+            }
+
             if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {
                 if (voiceShortcut.press(e.timeStamp, e.repeat)) {
                     e.preventDefault();

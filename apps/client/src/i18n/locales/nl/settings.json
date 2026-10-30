@@ -864,7 +864,10 @@
             "previousMessage": "Vorig bericht dat je stuurde",
             "nextMessage": "Volgend bericht dat je stuurde",
             "sendAndNewChat": "Versturen en daarnaast een nieuwe chat starten",
-            "dictation": "Dicteren: druk om te schakelen, houd vast om te spreken"
+            "dictation": "Dicteren: druk om te schakelen, houd vast om te spreken",
+            "textLarger": "Grotere chattekst",
+            "textSmaller": "Kleinere chattekst",
+            "textReset": "Standaard chattekstgrootte"
         },
         "browser": {
             "back": "Terug",

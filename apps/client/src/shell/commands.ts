@@ -55,6 +55,7 @@ import { afterSettleCandidates, chooseAfterSettle, chosenLaunchId, startLaunch, 
 import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import type { MeasureVariant } from '@/measure/scene';
+import { focusedChatTextSize, resetChatTextSize, stepChatTextSize } from '@/chat/text-size';
 import { openOnboarding } from '@/onboarding/open';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
@@ -376,6 +377,7 @@ function coreCommands(prRepos: readonly PrRepo[]): Command[] {
     /* The start screen is outside every project, so only the rows about the window are offered there. */
     const inWorkspace = windowWorkspace() !== null;
     const chat = inWorkspace ? focusedChatId() : null;
+    const textSize = inWorkspace ? focusedChatTextSize() : null;
     const chatKey = chat === null ? '' : endpointKey(endpointOfNodeId(chat), chat);
     // The palette cannot grey a row, so a chat that works offers none; the menu says why.
     const leaving = inWorkspace ? activeViewFacts() : null;
@@ -565,11 +567,36 @@ function coreCommands(prRepos: readonly PrRepo[]): Command[] {
                         ]
                       : []),
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
+                  ...(textSize !== null
+                      ? [
+                            ...(textSize < 3
+                                ? [
+                                      row(
+                                          'chat-text-larger',
+                                          afterPaletteCloses(() => void stepChatTextSize(1))
+                                      )
+                                  ]
+                                : []),
+                            ...(textSize > 0
+                                ? [
+                                      row(
+                                          'chat-text-smaller',
+                                          afterPaletteCloses(() => void stepChatTextSize(-1))
+                                      )
+                                  ]
+                                : []),
+                            row(
+                                'zoom-reset',
+                                afterPaletteCloses(() => void resetChatTextSize()),
+                                { label: i18next.t('shell:palette.commands.chatTextReset') }
+                            )
+                        ]
+                      : []),
                   ...(onCanvas || drawing || diagram
                       ? [
                             row('fit', () => fitAction()),
                             row('zoom-selection', () => zoomTarget().zoomToSelection()),
-                            row('zoom-reset', () => zoomTarget().zoomTo(1))
+                            ...(textSize === null ? [row('zoom-reset', () => zoomTarget().zoomTo(1))] : [])
                         ]
                       : []),
                   ...(onCanvas

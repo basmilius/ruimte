@@ -84,6 +84,8 @@ export const USAGE_DESKTOP_COMMANDS = [
     'zoomSelection',
     'zoomNode',
     'zoomReset',
+    'chatTextLarger',
+    'chatTextSmaller',
     'theme',
     'fullscreen',
     'palette',

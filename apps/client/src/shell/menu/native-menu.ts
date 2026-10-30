@@ -22,6 +22,7 @@ import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
+import { useChatTextSizes } from '@/state/chat-text-size';
 import { useWindow } from '@/state/window';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
@@ -60,6 +61,7 @@ export function useNativeMenu(): void {
             useSessions.subscribe(schedule),
             useProposals.subscribe(schedule),
             useSettings.subscribe(schedule),
+            useChatTextSizes.subscribe(schedule),
             useServers.subscribe(schedule),
             useWindow.subscribe(schedule),
             useLaunches.subscribe(schedule),

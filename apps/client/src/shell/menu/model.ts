@@ -53,6 +53,7 @@ export interface MenuContext {
     routines: boolean;
     /* A chat has the focus: the chat view in the focused cell, or the chat node with the keyboard or selected alone (`focused-chat.ts`). */
     chat: boolean;
+    chatTextSize: number | null;
     /* A terminal has the keyboard, which takes the clear key for itself (`terminal/xterm.ts`). */
     terminalKeys: boolean;
     /* That terminal has a find bar, which answers the find key. */

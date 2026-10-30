@@ -79,6 +79,7 @@ function context(patch: Partial<MenuContext> = {}): MenuContext {
         prWatch: false,
         routines: false,
         chat: false,
+        chatTextSize: null,
         terminalKeys: false,
         terminalFind: false,
         diff: false,
@@ -116,6 +117,18 @@ function offered(spec: MenuSpec, id: string): Extract<MenuNode, { kind: 'command
     expect(row, id).toBeDefined();
     return row!;
 }
+
+test('chat text shares one contextual reset and keeps the existing editor font commands', () => {
+    const spec = menuModel(context({ view: 'chat', chat: true, chatTextSize: 3 }));
+    expect(offered(spec, 'chat-text-larger').enabled).toBe(false);
+    expect(offered(spec, 'chat-text-smaller').enabled).not.toBe(false);
+    expect(offered(spec, 'zoom-reset').label).toBe('Default Chat Text Size');
+    expect(commandIds(spec).filter((id) => id === 'zoom-reset')).toHaveLength(1);
+    expect(offered(spec, 'increase-font-size')).toBeDefined();
+    const plain = menuModel(context({ chatTextSize: null }));
+    expect(find(plain, 'chat-text-larger')).toBeUndefined();
+    expect(offered(plain, 'zoom-reset').label).toBe('Actual Size');
+});
 
 const EVERY_CONTEXT: MenuContext[] = [
     START_SCREEN,
