@@ -3,7 +3,14 @@ import * as fs from 'node:fs/promises';
 import { mkdir, mkdtemp, rename, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { untrackedNumstat } from './untracked-lines.ts';
+import { untrackedNumstat as readUntrackedNumstat } from './untracked-lines.ts';
+
+async function untrackedNumstat(root: string, path: string) {
+    const stat = await fs.lstat(join(root, path), { bigint: true }).catch(() => null);
+    const changedAt = stat === null ? 0n : stat.mtimeNs > stat.ctimeNs ? stat.mtimeNs : stat.ctimeNs;
+
+    return await readUntrackedNumstat(root, path, Number(changedAt / 1_000_000n) + 5000);
+}
 
 let root: string;
 
@@ -79,7 +86,8 @@ describe('untrackedNumstat', () => {
             );
 
             try {
-                expect(await untrackedNumstat(root, 'growing.txt')).toEqual({
+                // At time zero every file is fresh and never reused, so the second size is counted too.
+                expect(await readUntrackedNumstat(root, 'growing.txt', 0)).toEqual({
                     path: 'growing.txt',
                     added: size === limit ? 1 : 0,
                     deleted: 0,
@@ -123,6 +131,43 @@ describe('untrackedNumstat', () => {
             expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
             expect(await untrackedNumstat(root, name)).toMatchObject({ added: 1 });
         } finally {
+            metadata.mockRestore();
+        }
+    });
+
+    test('recent or future colliding timestamps are reread before older stable counts are reused', async () => {
+        const name = 'coarse-timestamps.txt';
+        const absolute = join(root, name);
+        await writeFile(absolute, 'a\nb\n');
+        let mtimeNs = 1_000_000_000n;
+        const original = fs.lstat;
+        const metadata = spyOn(fs, 'lstat').mockImplementation(async (path, options) => {
+            const stat = await original(path, options);
+
+            return path === absolute ? Object.assign(Object.create(stat), { mtimeNs, ctimeNs: 1_000_000_000n }) : stat;
+        });
+        const opens = spyOn(fs, 'open');
+
+        try {
+            expect(await readUntrackedNumstat(root, name, 1000)).toMatchObject({ added: 2 });
+            await writeFile(absolute, 'abcd');
+            expect(await readUntrackedNumstat(root, name, 1001)).toMatchObject({ added: 1 });
+            expect(await readUntrackedNumstat(root, name, 3001)).toMatchObject({ added: 1 });
+            expect(await readUntrackedNumstat(root, name, 3002)).toMatchObject({ added: 1 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(3);
+
+            await writeFile(absolute, 'a\nb\n');
+            expect(await readUntrackedNumstat(root, name, 500)).toMatchObject({ added: 2 });
+            expect(await readUntrackedNumstat(root, name, 600)).toMatchObject({ added: 2 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(5);
+
+            mtimeNs = 10_000_000_000n;
+            expect(await readUntrackedNumstat(root, name, 5000)).toMatchObject({ added: 2 });
+            await writeFile(absolute, 'abcd');
+            expect(await readUntrackedNumstat(root, name, 5001)).toMatchObject({ added: 1 });
+            expect(opens.mock.calls.filter(([path]) => path === absolute)).toHaveLength(7);
+        } finally {
+            opens.mockRestore();
             metadata.mockRestore();
         }
     });
