@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import type { FsChangedEvent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { FolderWatcher } from './watch.ts';
+import { FolderWatcher, MAX_CHANGED_PATHS } from './watch.ts';
 
 // Nothing touches the disk: the fake watch reports whatever a test emits.
 const root = resolve('/work/repo');
@@ -40,6 +40,17 @@ describe('FolderWatcher', () => {
 
         await fake.settle();
         expect(changes).toEqual([{ root, paths: [join(root, 'src')], changedPaths: [join(root, 'src', 'a.ts'), join(root, 'src', 'b.ts')] }]);
+    });
+
+    test('a burst past the limit names only its directories', async () => {
+        const watcher = watcherOn('darwin');
+        await watcher.watch('client-1', root);
+        for (let i = 0; i <= MAX_CHANGED_PATHS; i++) {
+            fake.on(root).emit(join('src', `${i}.ts`));
+        }
+
+        await fake.settle();
+        expect(changes).toEqual([{ root, paths: [join(root, 'src')] }]);
     });
 
     test('a change without a name reports the root', async () => {

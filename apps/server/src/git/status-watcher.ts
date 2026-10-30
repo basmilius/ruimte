@@ -8,6 +8,7 @@ import { git, repositoryRoot } from './run.ts';
 import { noRepository, readStatusAt, trackedFiles } from './status.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { isUnder } from '../fs/path-segment.ts';
+import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 
 // A save, a formatter and a checkout all touch the repository in a burst; one status per burst is enough.
 const SETTLE_MS = 300;
@@ -288,7 +289,8 @@ export class GitStatusWatcher {
         }
         await this.run(watch.root);
         // A diff reads the bytes, not the status, so it is told about a burst the status slept through.
-        const broad = touched.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
+        const broad =
+            touched.length > MAX_CHANGED_PATHS || touched.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
         const hint = broad ? {} : { changedPaths: touched.sort() };
         this.publish(watch, (cwd) => ({ event: 'git.changed', payload: { cwd, ...hint } }));
     }

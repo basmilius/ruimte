@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
 import { SharedWatch } from '../fs/shared-watch.ts';
-import { FolderWatcher } from '../fs/watch.ts';
+import { FolderWatcher, MAX_CHANGED_PATHS } from '../fs/watch.ts';
 import { GitStatusWatcher } from './status-watcher.ts';
 import { forgetBase, readStatus } from './status.ts';
 import * as runner from './run.ts';
@@ -93,6 +93,17 @@ describe('GitStatusWatcher', () => {
         expect(events[0]!.status.live).toBe(true);
         expect(events[0]!.status.files.map((file) => file.path).sort()).toEqual(['a.txt', 'b.txt', 'tracked.txt']);
         expect(changed).toEqual([{ cwd: repo, changedPaths: ['a.txt', 'b.txt', 'tracked.txt'].map((path) => join(repo, path)) }]);
+    });
+
+    test('a burst past the limit says everything was touched instead of naming each file', async () => {
+        await watcher.watch('c1', repo);
+        await writeFile(join(repo, 'a.txt'), 'a\n');
+        for (let i = 0; i <= MAX_CHANGED_PATHS; i++) {
+            fake.on(repo).emit(`generated-${i}.txt`);
+        }
+        await fake.settle();
+
+        expect(changed).toEqual([{ cwd: repo }]);
     });
 
     test('a status that did not change is not sent again', async () => {

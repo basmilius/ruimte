@@ -10,6 +10,9 @@ const SETTLE_MS = 250;
 // FSEvents can miss writes immediately after `fs.watch`; delay readiness until its stream is running.
 const STREAM_START_MS = 200;
 
+// Past this a hint costs every client more than rereading; without one a client takes everything as touched.
+export const MAX_CHANGED_PATHS = 1000;
+
 interface Watch {
     root: string;
     recursive: boolean;
@@ -137,7 +140,7 @@ export class FolderWatcher {
 
     private flush(clientId: string, state: Watch): void {
         const paths = [...state.touched].sort();
-        const changedPaths = state.changedPaths === null ? undefined : [...state.changedPaths].sort();
+        const changedPaths = state.changedPaths === null || state.changedPaths.size > MAX_CHANGED_PATHS ? undefined : [...state.changedPaths].sort();
         state.touched.clear();
         state.changedPaths = new Set();
 
