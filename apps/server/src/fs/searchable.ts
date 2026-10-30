@@ -8,6 +8,7 @@ import { realOrNull, realOrSelf } from './real-path.ts';
 
 // Windows has neither flag; there the check on the opened file below is all the guard.
 const OPEN_FLAGS = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
+const BINARY_PREFIX = 1024;
 
 /* Where a search runs: the folder as asked for and as it really is, and the home it stays out of. */
 export interface SearchRoot {
@@ -64,7 +65,7 @@ export async function readSearchable(root: SearchRoot, path: string, afterOpen?:
         if (there.dev !== opened.dev || there.ino !== opened.ino || !isInside(root.realCwd, real) || isMachineStatePath(root.policy, real)) {
             return null;
         }
-        const prefix = Buffer.alloc(Math.min(1024, Number(opened.size)));
+        const prefix = Buffer.alloc(Math.min(BINARY_PREFIX, Number(opened.size)));
         let offset = 0;
         while (offset < prefix.byteLength) {
             const { bytesRead } = await handle.read({ buffer: prefix, offset, length: prefix.byteLength - offset, position: offset });
@@ -80,8 +81,8 @@ export async function readSearchable(root: SearchRoot, path: string, afterOpen?:
         }
 
         const content = await handle.readFile('utf8');
-        // Preserve decoded-prefix rejection for Unicode and for content changed after the probe.
-        return content.slice(0, 1024).includes('\0') ? null : content;
+        // A NUL near the start marks binary. Decoded text catches Unicode and changes after the byte probe.
+        return content.slice(0, BINARY_PREFIX).includes('\0') ? null : content;
     } catch {
         return null;
     } finally {

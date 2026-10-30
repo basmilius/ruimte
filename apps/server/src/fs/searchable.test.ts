@@ -76,14 +76,17 @@ async function observeFile(content: string | Uint8Array) {
 }
 
 describe('readSearchable', () => {
-    test('an early NUL rejects a large binary file without reading or decoding its body', async () => {
-        const content = Buffer.alloc(2 * 1024 * 1024, 97);
-        content[1023] = 0;
+    test.each([
+        { name: 'small', size: 4, nul: 0, probeBytes: 4 },
+        { name: 'large', size: 2 * 1024 * 1024, nul: 1023, probeBytes: 1024 }
+    ])('an early NUL rejects a $name binary file before the full UTF-8 read', async ({ size, nul, probeBytes }) => {
+        const content = Buffer.alloc(size, 97);
+        content[nul] = 0;
         const io = await observeFile(content);
         try {
             expect(await readSearchable(search, 'docs/key.txt')).toBeNull();
             expect(io.readFile).not.toHaveBeenCalled();
-            expect(io.bytesRead).toBe(1024);
+            expect(io.bytesRead).toBe(probeBytes);
             expect(io.close).toHaveBeenCalledTimes(1);
         } finally {
             await io.dispose();
@@ -94,7 +97,7 @@ describe('readSearchable', () => {
         const content = Buffer.alloc(2048, 97);
         content[1023] = 0;
         const io = await observeFile(content);
-        io.read.mockImplementation((options) => io.readAt({ ...options, length: Math.min(options?.length ?? 1024, 113) }));
+        io.read.mockImplementation((options) => io.readAt({ ...options, length: Math.min(options.length ?? 1024, 113) }));
         try {
             expect(await readSearchable(search, 'docs/key.txt')).toBeNull();
             expect(io.readFile).not.toHaveBeenCalled();
@@ -108,7 +111,7 @@ describe('readSearchable', () => {
     test('text is read from its start with Unicode spanning the probe boundary', async () => {
         const content = 'é'.repeat(511) + '😀 tail\n'.repeat(100);
         const io = await observeFile(content);
-        io.read.mockImplementation((options) => io.readAt({ ...options, length: Math.min(options?.length ?? 1024, 113) }));
+        io.read.mockImplementation((options) => io.readAt({ ...options, length: Math.min(options.length ?? 1024, 113) }));
         try {
             expect(await readSearchable(search, 'docs/key.txt')).toBe(content);
             expect(io.readFile).toHaveBeenCalledTimes(1);
