@@ -32,8 +32,11 @@ describe.skipIf(process.platform !== 'win32')('stop-machine.ps1', () => {
     const folders: string[] = [];
     const children: Bun.Subprocess[] = [];
 
-    afterEach(() => {
-        children.splice(0).forEach((child) => child.kill());
+    afterEach(async () => {
+        const ending = children.splice(0);
+        ending.forEach((child) => child.kill());
+        // Windows refuses to remove an executable until its process is really gone (`EPERM`).
+        await Promise.all(ending.map((child) => child.exited));
         folders.splice(0).forEach((folder) => rmSync(folder, { recursive: true, force: true }));
     });
 
