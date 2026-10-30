@@ -3912,12 +3912,13 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `agentIntegrations`: PairResultEndpointAgentIntegrations?
     public let `worktreeRoot`: Presence<String>
     public let `terminalShell`: PairResultEndpointTerminalShell?
+    public let `gitBashMissing`: Bool?
     public let `nodeSizes`: [String: PairResultEndpointNodeSizesValue]?
     public let `usageStats`: Bool?
     public let `features`: [String]?
     public let `viewReferences`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `gitBashMissing`: Bool? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3952,6 +3953,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`agentIntegrations` = `agentIntegrations`
         self.`worktreeRoot` = `worktreeRoot`
         self.`terminalShell` = `terminalShell`
+        self.`gitBashMissing` = `gitBashMissing`
         self.`nodeSizes` = `nodeSizes`
         self.`usageStats` = `usageStats`
         self.`features` = `features`
@@ -3994,6 +3996,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `agentIntegrations` = try container.decodeIfPresent(PairResultEndpointAgentIntegrations.self, forKey: .`agentIntegrations`)
         `worktreeRoot` = try container.contains(.`worktreeRoot`) ? (container.decodeNil(forKey: .`worktreeRoot`) ? .null : .value(container.decode(String.self, forKey: .`worktreeRoot`))) : .missing
         `terminalShell` = try container.decodeIfPresent(PairResultEndpointTerminalShell.self, forKey: .`terminalShell`)
+        `gitBashMissing` = try container.decodeIfPresent(Bool.self, forKey: .`gitBashMissing`)
         `nodeSizes` = try container.decodeIfPresent([String: PairResultEndpointNodeSizesValue].self, forKey: .`nodeSizes`)
         `usageStats` = try container.decodeIfPresent(Bool.self, forKey: .`usageStats`)
         `features` = try container.decodeIfPresent([String].self, forKey: .`features`)
@@ -4056,6 +4059,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case .value(let value): try container.encode(value, forKey: .`worktreeRoot`)
         }
         try container.encodeIfPresent(`terminalShell`, forKey: .`terminalShell`)
+        try container.encodeIfPresent(`gitBashMissing`, forKey: .`gitBashMissing`)
         try container.encodeIfPresent(`nodeSizes`, forKey: .`nodeSizes`)
         try container.encodeIfPresent(`usageStats`, forKey: .`usageStats`)
         try container.encodeIfPresent(`features`, forKey: .`features`)
@@ -4097,6 +4101,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `agentIntegrations` = "agentIntegrations"
         case `worktreeRoot` = "worktreeRoot"
         case `terminalShell` = "terminalShell"
+        case `gitBashMissing` = "gitBashMissing"
         case `nodeSizes` = "nodeSizes"
         case `usageStats` = "usageStats"
         case `features` = "features"

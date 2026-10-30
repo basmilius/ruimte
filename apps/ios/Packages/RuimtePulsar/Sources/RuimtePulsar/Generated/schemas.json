@@ -6656,6 +6656,9 @@
               "wsl"
             ]
           },
+          "gitBashMissing": {
+            "type": "boolean"
+          },
           "nodeSizes": {
             "type": "object",
             "propertyNames": {
@@ -62253,6 +62256,9 @@
           "wsl"
         ]
       },
+      "gitBashMissing": {
+        "type": "boolean"
+      },
       "nodeSizes": {
         "type": "object",
         "propertyNames": {
@@ -63106,6 +63112,9 @@
           "wsl"
         ]
       },
+      "gitBashMissing": {
+        "type": "boolean"
+      },
       "nodeSizes": {
         "type": "object",
         "propertyNames": {
@@ -63746,6 +63755,9 @@
           "wsl"
         ]
       },
+      "gitBashMissing": {
+        "type": "boolean"
+      },
       "nodeSizes": {
         "type": "object",
         "propertyNames": {
@@ -64334,6 +64346,9 @@
           "cmd",
           "wsl"
         ]
+      },
+      "gitBashMissing": {
+        "type": "boolean"
       },
       "nodeSizes": {
         "type": "object",
@@ -65120,6 +65135,9 @@
           "cmd",
           "wsl"
         ]
+      },
+      "gitBashMissing": {
+        "type": "boolean"
       },
       "nodeSizes": {
         "type": "object",
