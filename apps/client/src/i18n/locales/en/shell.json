@@ -1345,13 +1345,16 @@
     "attention": {
         "title": "Attention queue",
         "project": "Waiting and unseen turns in {{project}}",
+        "projectLeft": "{{project}}, {{count}} left",
+        "answered": "Answer sent to {{title}}",
+        "showMore": "Show more",
+        "showLess": "Show less",
         "openQueue": "Open attention queue",
         "empty": "Nothing is waiting or finished unseen.",
         "waiting": "Waiting on you",
         "finishedUnseen": "Finished unseen",
         "finished": "Finished",
         "error": "Error",
-        "lastMessage": "Last agent message",
         "terminalFinished": "Open the terminal to read its result.",
         "noExcerpt": "No agent message is available in this preview.",
         "openSession": "Open session",
@@ -1363,8 +1366,7 @@
             "waiting": "Waiting"
         },
         "backToList": "Back to list",
-        "underMinute": "< {{minute}} min",
-        "openToAnswer": "Open the session to answer.",
+        "underMinute": "< {{minute}} min",        "openToAnswer": "Open the session to answer.",
         "previewUnavailable": "This request cannot be previewed here."
     }
 }

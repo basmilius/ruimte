@@ -1345,13 +1345,16 @@
     "attention": {
         "title": "Aandachtswachtrij",
         "project": "Wachtenden en ongeziene beurten in {{project}}",
+        "projectLeft": "{{project}}, nog {{count}}",
+        "answered": "Antwoord verstuurd naar {{title}}",
+        "showMore": "Toon meer",
+        "showLess": "Toon minder",
         "openQueue": "Open aandachtswachtrij",
         "empty": "Er wacht niets en er zijn geen ongeziene afgeronde beurten.",
         "waiting": "Wacht op jou",
         "finishedUnseen": "Afgerond en ongezien",
         "finished": "Afgerond",
         "error": "Fout",
-        "lastMessage": "Laatste agentbericht",
         "terminalFinished": "Open de terminal om het resultaat te lezen.",
         "noExcerpt": "Er is geen agentbericht beschikbaar in deze voorvertoning.",
         "openSession": "Open sessie",
@@ -1363,8 +1366,7 @@
             "waiting": "Wacht"
         },
         "backToList": "Terug naar lijst",
-        "underMinute": "< {{minute}} min",
-        "openToAnswer": "Open de sessie om te antwoorden.",
+        "underMinute": "< {{minute}} min",        "openToAnswer": "Open de sessie om te antwoorden.",
         "previewUnavailable": "Dit verzoek kan hier niet worden getoond."
     }
 }

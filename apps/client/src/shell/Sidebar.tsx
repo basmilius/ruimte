@@ -519,7 +519,11 @@ export function Sidebar() {
                                     {separatorsBefore.map(separatorRow)}
                                     {!(section.group && hidden.has(section.group.key)) && (
                                         <div
-                                            className={clsx('flex flex-col gap-px', section.group ? 'mb-px' : 'mb-3')}
+                                            className={clsx(
+                                                'flex flex-col gap-px',
+                                                section.group ? 'mb-px' : 'mb-3',
+                                                section.kind === 'needs-you' && '-mx-2 border-y border-border bg-surface-raised bg-clip-padding px-2 py-1'
+                                            )}
                                             onDragOver={(e) => {
                                                 if (e.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) {
                                                     if (movableGroup !== null && projectDrag !== null) {

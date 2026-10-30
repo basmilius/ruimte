@@ -220,7 +220,11 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {node.finished && <UnseenMark />}
                     {node.alert && <ProcessWarningMark />}
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
-                    {snoozable && node.status === 'needs-you' ? <WaitLabel detail={node.wait} /> : <RowStatus status={node.status} work={node.work} />}
+                    {snoozable && node.status === 'needs-you' ? (
+                        <WaitLabel detail={node.wait} snoozed={Boolean(node.snoozedUntil)} />
+                    ) : (
+                        <RowStatus status={node.status} work={node.work} />
+                    )}
                 </span>
             </ContextMenu.Trigger>
             <CellViewContext.Provider value={row.viewId}>
@@ -503,7 +507,11 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
                 {view.self?.finished && <UnseenMark />}
                 {view.self?.snoozedUntil && <SnoozedMark until={view.self.snoozedUntil} />}
-                <RowStatus status={row.status} work={view.self ? view.self.work : heaviestWork(view.nodes)} />
+                {view.self?.wait && row.status === 'needs-you' ? (
+                    <WaitLabel detail={view.self.wait} snoozed={Boolean(view.self.snoozedUntil)} />
+                ) : (
+                    <RowStatus status={row.status} work={view.self ? view.self.work : heaviestWork(view.nodes)} />
+                )}
                 {/* Last, after the dots that are the news. Only a shared row is marked, since a view is
                     private until someone says otherwise; never in the accent. */}
                 {view.shared && (

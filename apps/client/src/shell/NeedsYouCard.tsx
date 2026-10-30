@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
 import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
@@ -13,6 +13,7 @@ import {
     PromptView
 } from '@adecore/agents-react/prompts';
 import { ChatScopeContext, useChatHost } from '@adecore/agents-react';
+import { Markdown } from '@adecore/agents-react/chat/ui';
 import { useChats, type ChatState, useProviders } from '@adecore/agents-react/state';
 import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { canvasPrompts, stackFront, type CanvasPrompt } from '@/canvas/prompts';
@@ -30,6 +31,8 @@ import type { SidebarNode } from './sidebar-rows';
 import { WaitAge } from '@/attention/WaitLabel';
 
 const NO_APPROVALS: readonly ComputerApproval[] = [];
+const EXCERPT_LENGTH = 280;
+const EXCERPT_LINES = 4;
 const NO_SECRETS: readonly SecretRequest[] = [];
 const NO_PROPOSALS: readonly ProjectProposal[] = [];
 
@@ -76,26 +79,42 @@ interface WaitingPrompts {
     /* Null until the chat was read. */
     prompts: CanvasPrompt[] | null;
     failed: boolean;
-    lastLine: string | null;
+    lastText: string | null;
     reread(): void;
 }
 
 /* Existing words only: the queue adds no model turn to summarize a finished turn. */
-function lastLineOf(chat: ChatState | undefined): string | null {
+function lastTextOf(chat: ChatState | undefined): string | null {
     for (const id of [...(chat?.order ?? [])].reverse()) {
         const item = chat?.items[id];
         const text = item?.kind === 'assistant' && !item.parentToolUseId ? item.text : item?.kind === 'note' && item.level === 'error' ? item.text : '';
-        const line = text
-            .split('\n')
-            .map((part) => part.trim())
-            .find(Boolean);
+        const trimmed = text.trim();
 
-        if (line) {
-            return line.length > 280 ? `${line.slice(0, 279).trimEnd()}…` : line;
+        if (trimmed) {
+            return trimmed;
         }
     }
 
     return null;
+}
+
+function QueueExcerpt({ text }: { text: string }) {
+    const { t } = useTranslation('shell');
+    const [expanded, setExpanded] = useState(false);
+    const long = text.length > EXCERPT_LENGTH || text.split('\n').length > EXCERPT_LINES;
+
+    return (
+        <div className="text-sm text-text-muted">
+            <div className={long && !expanded ? 'max-h-24 overflow-hidden' : ''}>
+                <Markdown text={text} fileLinks={false} />
+            </div>
+            {long && (
+                <button type="button" className="mt-1 text-xs text-text hover:underline" onClick={() => setExpanded((before) => !before)}>
+                    {t(expanded ? 'attention.showLess' : 'attention.showMore')}
+                </button>
+            )}
+        </div>
+    );
 }
 
 /*
@@ -173,7 +192,7 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
         }).prompts;
     }, [inspects, read, chat, session, since, computer, secrets, proposals, endpointId, key, node.id, node.kind, node.title, node.provider]);
 
-    return { prompts, failed: read?.failed ?? false, lastLine: lastLineOf(chat), reread: () => setRevision((before) => before + 1) };
+    return { prompts, failed: read?.failed ?? false, lastText: lastTextOf(chat), reread: () => setRevision((before) => before + 1) };
 }
 
 export function WaitingPrompt({
@@ -182,6 +201,7 @@ export function WaitingPrompt({
     onOpen,
     onEmpty,
     onFocusEmpty,
+    onSent,
     summary = false,
     completed = false,
     preferredKind
@@ -191,13 +211,14 @@ export function WaitingPrompt({
     onOpen?(): void;
     onEmpty?(): void;
     onFocusEmpty?(): void;
+    onSent?(): void;
     summary?: boolean;
     completed?: boolean;
     preferredKind?: WaitDetails['kind'];
 }) {
     const { t } = useTranslation(['shell', 'canvas']);
     const local = useEndpointId() === endpointId;
-    const { prompts, failed, lastLine, reread } = useWaitingPrompts(endpointId, node);
+    const { prompts, failed, lastText, reread } = useWaitingPrompts(endpointId, node);
     const disabled = useEndpointConnection(endpointId).status !== 'open';
     const chatHost = useChatHost();
     const providers = useProviders((row) => row.providers);
@@ -221,10 +242,14 @@ export function WaitingPrompt({
         if (completed && prompts !== null) {
             return (
                 <div className="space-y-3 p-3">
-                    <p className="text-xs text-text-muted">{t('attention.lastMessage')}</p>
-                    <p className="whitespace-pre-wrap break-words text-sm text-text">
-                        {lastLine ?? t(node.kind === 'terminal' ? 'attention.terminalFinished' : failed ? 'sidebar.promptFailed' : 'attention.noExcerpt')}
-                    </p>
+                    <h3 className="min-w-0 break-words text-sm font-medium text-text">{node.title}</h3>
+                    {lastText ? (
+                        <QueueExcerpt text={lastText} />
+                    ) : (
+                        <p className="text-sm text-text-muted">
+                            {t(node.kind === 'terminal' ? 'attention.terminalFinished' : failed ? 'sidebar.promptFailed' : 'attention.noExcerpt')}
+                        </p>
+                    )}
                     {failed && <Button onClick={reread}>{t('common:action.retry')}</Button>}
                     {onOpen && <Button onClick={onOpen}>{t('attention.openSession')}</Button>}
                 </div>
@@ -254,10 +279,26 @@ export function WaitingPrompt({
             setActive(next.id);
         }
     };
+    const stepper = waiting.length > 1 && (
+        <ButtonGroup render={<span />} className="shrink-0">
+            <IconButton icon={ChevronLeft} size="sm" label={t('canvas:promptStack.previous')} disabled={index === 0} onClick={() => step(-1)} />
+            <span className="px-1 tabular-nums">{t('canvas:promptStack.position', { index: index + 1, count: waiting.length })}</span>
+            <IconButton icon={ChevronRight} size="sm" label={t('canvas:promptStack.next')} disabled={index === waiting.length - 1} onClick={() => step(1)} />
+        </ButtonGroup>
+    );
 
     return (
         <div ref={container}>
-            {summary && lastLine && <p className="break-words px-3 py-2 text-sm text-text-muted">{lastLine}</p>}
+            {summary && (
+                <div className="space-y-3 px-3 pt-3">
+                    <div className="flex min-w-0 items-start gap-2 text-xs text-text-muted">
+                        <h3 className="min-w-0 grow break-words text-sm font-medium text-text">{node.title}</h3>
+                        {stepper}
+                        {onOpen && <IconButton icon={ExternalLink} size="sm" label={t('attention.openSession')} onClick={onOpen} />}
+                    </div>
+                    {lastText && <QueueExcerpt text={lastText} />}
+                </div>
+            )}
             <ErrorBoundary label={t('canvas:promptStack.failed')} resetKeys={[active.id]} className="relative p-3">
                 <PromptView
                     key={active.id}
@@ -272,6 +313,7 @@ export function WaitingPrompt({
                             .then((result) => {
                                 if (result === 'sent') {
                                     reread();
+                                    onSent?.();
                                 } else {
                                     refocus.release();
                                 }
@@ -285,36 +327,20 @@ export function WaitingPrompt({
                     sending={session.sending}
                     error={session.errorOf(active.id)}
                     top={
-                        <div className="flex h-[39px] min-w-0 shrink-0 items-center gap-2 border-b border-dashed border-border pl-2.5 pr-1 text-xs text-text-muted">
-                            {onOpen ? (
-                                <button type="button" className="min-w-0 truncate font-medium text-text hover:underline" onClick={onOpen}>
-                                    {node.title}
-                                </button>
-                            ) : (
-                                <span className="min-w-0 truncate font-medium text-text">{node.title}</span>
-                            )}
-                            <span className="grow" />
-                            <WaitAge since={promptCreatedAt(active.subject)} />
-                            {waiting.length > 1 && (
-                                <ButtonGroup render={<span />} className="shrink-0">
-                                    <IconButton
-                                        icon={ChevronLeft}
-                                        size="sm"
-                                        label={t('canvas:promptStack.previous')}
-                                        disabled={index === 0}
-                                        onClick={() => step(-1)}
-                                    />
-                                    <span className="px-1 tabular-nums">{t('canvas:promptStack.position', { index: index + 1, count: waiting.length })}</span>
-                                    <IconButton
-                                        icon={ChevronRight}
-                                        size="sm"
-                                        label={t('canvas:promptStack.next')}
-                                        disabled={index === waiting.length - 1}
-                                        onClick={() => step(1)}
-                                    />
-                                </ButtonGroup>
-                            )}
-                        </div>
+                        summary ? undefined : (
+                            <div className="flex h-[39px] min-w-0 shrink-0 items-center gap-2 border-b border-dashed border-border pl-2.5 pr-1 text-xs text-text-muted">
+                                {onOpen ? (
+                                    <button type="button" className="min-w-0 truncate font-medium text-text hover:underline" onClick={onOpen}>
+                                        {node.title}
+                                    </button>
+                                ) : (
+                                    <span className="min-w-0 truncate font-medium text-text">{node.title}</span>
+                                )}
+                                <span className="grow" />
+                                <WaitAge since={promptCreatedAt(active.subject)} />
+                                {stepper}
+                            </div>
+                        )
                     }
                 />
             </ErrorBoundary>

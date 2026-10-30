@@ -1,16 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChatScopeContext } from '@adecore/agents-react';
 import { useChats } from '@adecore/agents-react/state';
 import { isHiddenChatView } from '@ruimte/contracts';
-import { Button, Dialog, IconButton } from '@adecore/ui';
-import { X } from 'lucide-react';
+import { Button, Dialog, Icon, IconButton, Pill } from '@adecore/ui';
+import { formatNumber, useFormatLocale } from '@adecore/ui/format';
+import { Check, CircleAlert, X } from 'lucide-react';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { projectNodes, useProjectNodes, type ProjectNodeRef } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { WaitingPrompt } from '@/shell/NeedsYouCard';
 import type { SidebarNode } from '@/shell/sidebar-rows';
-import { waitAskLine } from '@/shell/wait-ask';
 import { groupAttention, useAttention } from '@/state/attention';
 import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -31,8 +31,29 @@ function subscribeQueueWidth(changed: () => void): () => void {
     return () => query.removeEventListener('change', changed);
 }
 
-function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HTMLButtonElement | null>; fallbackFocus: RefObject<HTMLButtonElement | null> }) {
+function QueueGroup({ label, count, children }: { label: string; count: number; children: ReactNode }) {
+    return (
+        <>
+            <p className="flex justify-between gap-2 px-3 py-2 text-xs font-medium text-text-muted">
+                <span>{label}</span>
+                <span className="tabular-nums">{formatNumber(count)}</span>
+            </p>
+            {children}
+        </>
+    );
+}
+
+function QueueBody({
+    projectName,
+    initialFocus,
+    fallbackFocus
+}: {
+    projectName: string;
+    initialFocus: RefObject<HTMLButtonElement | null>;
+    fallbackFocus: RefObject<HTMLButtonElement | null>;
+}) {
     const { t } = useTranslation('shell');
+    useFormatLocale();
     const endpointId = useEndpointId();
     const nodes = useProjectNodes();
     const sessions = useSessions((state) => state.byKey);
@@ -41,6 +62,7 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
     const snoozes = useSnoozes((state) => state.byKey);
     const since = useWaitingSince((state) => state.byKey);
     const [selected, setSelected] = useState<string | null>(null);
+    const [answered, setAnswered] = useState<string | null>(null);
     const views = useDocument((state) => state.views);
     const wide = useSyncExternalStore(
         subscribeQueueWidth,
@@ -109,8 +131,7 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
     };
 
     const row = (node: ProjectNodeRef, waits: boolean) => {
-        const detail = details.get(node.id);
-        const ask = detail?.ask;
+        const failed = nodeStatus(node, sessions, chats, endpointId) === 'error';
 
         return (
             <Button
@@ -126,77 +147,89 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
                         initialFocus.current = element;
                     }
                 }}
-                className={`h-auto w-full flex-col items-stretch gap-1 px-3 py-2 text-left ${active?.id === node.id ? 'bg-surface-hover text-text' : ''}`}
+                className={`h-auto w-full items-start justify-start gap-2 whitespace-normal px-3 py-2 text-left ${active?.id === node.id ? 'bg-surface-hover text-text' : ''}`}
                 aria-pressed={active?.id === node.id}
                 onClick={() => {
                     detailRequested.current = true;
+                    setAnswered(null);
                     setSelected(node.id);
                 }}
             >
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="min-w-0 grow truncate">{node.title}</span>
-                    {waits ? (
-                        <WaitLabel detail={detail} />
-                    ) : (
-                        <span className="text-xs text-text-muted">
-                            {t(nodeStatus(node, sessions, chats, endpointId) === 'error' ? 'attention.error' : 'attention.finished')}
-                        </span>
-                    )}
-                </span>
-                {waits && ask && <span className="truncate text-xs text-text-muted">{waitAskLine(ask)}</span>}
+                <span className="line-clamp-2 min-w-0 grow break-words">{node.title}</span>
+                {waits ? (
+                    <WaitLabel detail={details.get(node.id)} />
+                ) : (
+                    <Pill size="sm" tone={failed ? 'error' : 'muted'} icon={<Icon icon={failed ? CircleAlert : Check} size={12} />}>
+                        <span className="sr-only">{t(failed ? 'attention.error' : 'attention.finished')}</span>
+                    </Pill>
+                )}
             </Button>
         );
     };
 
     if (entries.length === 0) {
-        return <p className="py-6 text-sm text-text-muted">{t('attention.empty')}</p>;
+        return (
+            <>
+                <Dialog.Description className="px-5">{t('attention.project', { project: projectName })}</Dialog.Description>
+                <p className="px-5 pb-5 pt-6 text-sm text-text-muted">{t('attention.empty')}</p>
+            </>
+        );
     }
 
     return (
-        <div className="mt-4 grid min-h-0 gap-4 md:grid-cols-[16rem_minmax(0,1fr)]">
-            <div className={`max-h-60 overflow-auto md:max-h-96 ${selected === null ? '' : 'hidden md:block'}`}>
-                {asks.length > 0 && (
-                    <>
-                        <p className="px-3 py-2 text-xs font-medium text-text-muted">{t('attention.waiting')}</p>
-                        {asks.map((node) => row(node, true))}
-                    </>
-                )}
-                {completed.length > 0 && (
-                    <>
-                        <p className="px-3 py-2 text-xs font-medium text-text-muted">{t('attention.finishedUnseen')}</p>
-                        {completed.map((node) => row(node, false))}
-                    </>
-                )}
+        <>
+            <Dialog.Description className="px-5 pb-4">
+                {t('attention.projectLeft', { project: projectName, count: formatNumber(entries.length) })}
+            </Dialog.Description>
+            <div className="grid min-h-0 grow border-t border-border md:h-[28rem] md:grid-cols-[18rem_minmax(0,1fr)]">
+                <div className={`max-h-60 overflow-auto border-border p-2 md:max-h-none md:border-r ${selected === null ? '' : 'hidden md:block'}`}>
+                    {asks.length > 0 && (
+                        <QueueGroup label={t('attention.waiting')} count={asks.length}>
+                            {asks.map((node) => row(node, true))}
+                        </QueueGroup>
+                    )}
+                    {completed.length > 0 && (
+                        <QueueGroup label={t('attention.finishedUnseen')} count={completed.length}>
+                            {completed.map((node) => row(node, false))}
+                        </QueueGroup>
+                    )}
+                    {answered !== null && (
+                        <p role="status" className="px-3 py-2 text-xs text-text-muted">
+                            {t('attention.answered', { title: answered })}
+                        </p>
+                    )}
+                </div>
+                <div ref={detail} className={`min-w-0 overflow-auto ${selected === null ? 'hidden md:block' : ''}`}>
+                    <Button
+                        ref={back}
+                        className="m-2 md:hidden"
+                        onClick={() => {
+                            restoreRow.current = active?.id ?? null;
+                            setSelected(null);
+                        }}
+                    >
+                        {t('attention.backToList')}
+                    </Button>
+                    {preview && (
+                        <ChatScopeContext.Provider value={chatScopeOf(machine)}>
+                            <WaitingPrompt
+                                key={endpointKey(machine, preview.id)}
+                                endpointId={machine}
+                                node={preview}
+                                onOpen={hidden ? undefined : openSession}
+                                onFocusEmpty={() => {
+                                    (wide ? rows.current.get(preview.id) : back.current)?.focus();
+                                }}
+                                onSent={() => setAnswered(preview.title)}
+                                summary
+                                completed={!waiting.has(preview.id)}
+                                preferredKind={details.get(preview.id)?.kind}
+                            />
+                        </ChatScopeContext.Provider>
+                    )}
+                </div>
             </div>
-            <div ref={detail} className={`min-w-0 max-h-96 overflow-auto rounded-md border border-border ${selected === null ? 'hidden md:block' : ''}`}>
-                <Button
-                    ref={back}
-                    className="m-2 md:hidden"
-                    onClick={() => {
-                        restoreRow.current = active?.id ?? null;
-                        setSelected(null);
-                    }}
-                >
-                    {t('attention.backToList')}
-                </Button>
-                {preview && (
-                    <ChatScopeContext.Provider value={chatScopeOf(machine)}>
-                        <WaitingPrompt
-                            key={endpointKey(machine, preview.id)}
-                            endpointId={machine}
-                            node={preview}
-                            onOpen={hidden ? undefined : openSession}
-                            onFocusEmpty={() => {
-                                (wide ? rows.current.get(preview.id) : back.current)?.focus();
-                            }}
-                            summary
-                            completed={!waiting.has(preview.id)}
-                            preferredKind={details.get(preview.id)?.kind}
-                        />
-                    </ChatScopeContext.Provider>
-                )}
-            </div>
-        </div>
+        </>
     );
 }
 
@@ -220,16 +253,15 @@ export function AttentionQueue() {
         <Dialog.Root open={open} onOpenChange={(next) => !next && closeAttentionQueue()}>
             <Dialog.Popup
                 initialFocus={initialFocus}
-                className="flex max-h-[calc(100dvh-2rem)] w-[800px] max-w-[calc(100vw-2rem)] flex-col overflow-y-auto p-5"
+                className="flex max-h-[calc(100dvh-2rem)] w-[800px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0"
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 px-5 pt-5">
                     <Dialog.Title size="lg" className="grow">
                         {t('attention.title')}
                     </Dialog.Title>
                     <IconButton ref={closeButton} icon={X} label={t('common:action.close')} onClick={closeAttentionQueue} />
                 </div>
-                <Dialog.Description>{t('attention.project', { project: project?.name ?? '' })}</Dialog.Description>
-                {open && <QueueBody initialFocus={initialFocus} fallbackFocus={closeButton} />}
+                {open && <QueueBody projectName={project?.name ?? ''} initialFocus={initialFocus} fallbackFocus={closeButton} />}
             </Dialog.Popup>
         </Dialog.Root>
     );

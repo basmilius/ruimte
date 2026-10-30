@@ -43,7 +43,7 @@ const REPLY: ChatItem = {
     kind: 'assistant',
     turnId: null,
     createdAt: NOW - 60_000,
-    text: 'The release notes are ready.\nThe second line stays out of the excerpt.',
+    text: 'The **release notes** are ready.\n\nThe second paragraph stays in the excerpt.',
     streaming: false
 };
 
@@ -145,7 +145,7 @@ describe('the attention queue', () => {
         expect(rows[0]!.textContent).toContain('Build checks');
         expect(rows[1]!.textContent).toContain('Database choice');
         expect(rows[0]!.textContent).toContain('Approval');
-        expect(rows[0]!.querySelector('time')!.textContent).toBe('6 min');
+        expect(rows[0]!.querySelector('time')!.textContent).toBe('6m');
         expect(rows[1]!.querySelector('time')!.getAttribute('aria-label')).toBe('Waiting for 12 min, at least ten minutes');
 
         await clickOn(button('Allow'));
@@ -160,7 +160,7 @@ describe('the attention queue', () => {
         const rows = (): Element[] => [...page.host.querySelectorAll('[data-sidebar-row^="needs:"]')];
         await until(() => rows().length === 2);
         expect(rows()[0]!.textContent).toContain('Build checks');
-        expect(rows()[0]!.querySelector('time')!.textContent).toBe('6 min');
+        expect(rows()[0]!.querySelector('time')!.textContent).toBe('6m');
 
         await act(async () => useSnoozes.getState().receive('fake-machine', [{ nodeId: APPROVAL.id, until: NOW + 60_000 }]));
         await openQueue();
@@ -177,7 +177,8 @@ describe('the attention queue', () => {
         });
         await openQueue();
         await until(() => dialog()!.textContent?.includes('The release notes are ready.') === true);
-        expect(dialog()!.textContent).not.toContain('The second line stays out');
+        expect(dialog()!.textContent).toContain('The second paragraph stays in the excerpt.');
+        expect(dialog()!.textContent).not.toContain('**');
         expect(machine.requests('chat.send')).toEqual([]);
         expect(machine.requests('chat.approve')).toEqual([]);
         expect(page.host.querySelector('[data-split-cell][data-view-id="main"]')).not.toBeNull();
