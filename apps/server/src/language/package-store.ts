@@ -407,8 +407,10 @@ export class PackageStore {
             } catch (error) {
                 const code = (error as NodeJS.ErrnoException).code;
 
-                // Windows answers EPERM for a rename onto a folder that exists.
-                if (code !== 'EEXIST' && code !== 'ENOTEMPTY' && code !== 'EPERM') {
+                // Windows answers EPERM for a rename onto a folder that exists; elsewhere it is a real refusal.
+                const exists = code === 'EEXIST' || code === 'ENOTEMPTY' || (code === 'EPERM' && process.platform === 'win32');
+
+                if (!exists) {
                     throw error;
                 }
 
