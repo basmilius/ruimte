@@ -88,7 +88,8 @@ async function keptOverlayOf(path: string): Promise<Record<string, ProjectNodeOv
 }
 
 function newId(): string {
-    return randomBytes(6).toString('base64url');
+    // A leading `--` reads as a flag on `--project <id>`, which refused one project in 4096.
+    return randomBytes(6).toString('base64url').replace(/^-/, '0');
 }
 
 function documentOf(content: ProjectContent, rev: number, shared: string[]): ProjectDocument {
