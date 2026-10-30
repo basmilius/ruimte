@@ -68,6 +68,18 @@ function button(text: string): HTMLElement | null {
     return [...(dialog()?.querySelectorAll<HTMLElement>('button') ?? [])].find((element) => element.textContent?.trim() === text) ?? null;
 }
 
+function queueWidth(wide: boolean): void {
+    window.matchMedia = (query) => {
+        const list = matchMedia.call(window, query);
+
+        if (query === '(min-width: 768px)') {
+            Object.defineProperty(list, 'matches', { value: wide });
+        }
+
+        return list;
+    };
+}
+
 beforeEach(async () => {
     disconnectRemote = null;
     previousUnseen = useAttention.getState().unseen;
@@ -279,15 +291,7 @@ describe('the attention queue', () => {
     });
 
     test('a narrow queue moves focus into the detail and restores the selected row on Back', async () => {
-        window.matchMedia = (query) => {
-            const list = matchMedia.call(window, query);
-
-            if (query === '(min-width: 768px)') {
-                Object.defineProperty(list, 'matches', { value: false });
-            }
-
-            return list;
-        };
+        queueWidth(false);
         await openQueue();
         const row = dialog()!.querySelector<HTMLElement>('[aria-pressed="true"]')!;
 
@@ -295,6 +299,48 @@ describe('the attention queue', () => {
         await until(() => document.activeElement === button('Back to list'));
         await clickOn(button('Back to list'));
         await until(() => document.activeElement === row);
+    });
+
+    test('an item answered elsewhere leaves the keyboard on another surviving row', async () => {
+        await act(async () => useAttention.setState({ unseen: { [endpointKey('fake-machine', FINISHED.id)]: true } }));
+        await openQueue();
+        await until(() => button('Allow') !== null);
+        const row = [...dialog()!.querySelectorAll<HTMLElement>('[aria-pressed]')].find((entry) => entry.textContent?.includes('Release notes'))!;
+        await act(async () => row.focus());
+        await act(async () => machine.emit('chat.status', { chatId: APPROVAL.id, info: chatInfoOf(APPROVAL.id) }));
+        await until(() => dialog()!.querySelectorAll('[aria-pressed]').length === 2);
+
+        expect(document.activeElement === row).toBe(true);
+    });
+
+    test.each([{ wide: true }, { wide: false }])('answering one of two prompts keeps focus in the next card when wide is $wide', async ({ wide }) => {
+        queueWidth(wide);
+        const second = { ...WRITE, id: 'second', requestId: 'second', createdAt: WRITE.createdAt + 1 };
+        const request = { ...infos[APPROVAL.id]!.requests![0]!, itemId: second.id, requestId: second.requestId, createdAt: second.createdAt };
+        infos[APPROVAL.id] = { ...infos[APPROVAL.id]!, requests: [...infos[APPROVAL.id]!.requests!, request] };
+        let items = [WRITE, second];
+        machine.answer('chat.attach', ({ chatId }) => ({ info: infos[chatId] ?? chatInfoOf(chatId), items: chatId === APPROVAL.id ? items : [ASK] }));
+        machine.answer('chat.approve', ({ chatId }) => {
+            items = [second];
+            infos[chatId] = { ...infos[chatId]!, requests: [request] };
+            machine.emit('chat.status', { chatId, info: infos[chatId] });
+
+            return {};
+        });
+        await act(async () => machine.emit('chat.status', { chatId: APPROVAL.id, info: infos[APPROVAL.id]! }));
+        await openQueue();
+
+        if (!wide) {
+            await clickOn(dialog()!.querySelector('[aria-pressed="true"]'));
+        }
+
+        await until(() => button('Allow') !== null);
+        await act(async () => button('Allow')!.focus());
+        await clickOn(button('Allow'));
+        await until(() => machine.requests('chat.approve').length === 1);
+        await until(() => dialog()!.querySelector('.prompt-card')?.contains(document.activeElement) === true);
+        expect(machine.requests('chat.approve')[0]).toMatchObject({ requestId: WRITE.requestId });
+        expect(dialog()!.querySelector('[aria-pressed="true"]')!.textContent).toContain('Build checks');
     });
 
     test('a hidden inline chat can be answered without offering an invalid open-view link', async () => {
@@ -316,6 +362,23 @@ describe('the attention queue', () => {
         await until(() => machine.requests('chat.approve').length === 1);
         expect(machine.requests('chat.approve')[0]).toMatchObject({ chatId: hidden.id, requestId: WRITE.requestId });
         expect(page.host.querySelector('[data-split-cell][data-view-id="main"]')).not.toBeNull();
+    });
+
+    test('a hidden inline chat without prompts does not ask the person to open an unavailable session', async () => {
+        const hidden: ProjectView = { kind: 'chat', id: 'inline', name: 'Inline change', node: {}, hidden: true };
+        const info = chatInfoOf(hidden.id, { status: 'needs-you' });
+        machine.answer('chat.attach', () => ({ info, items: [] }));
+        await act(async () => {
+            useDocument.setState((state) => ({ views: [...state.views, hidden] }));
+            machine.emit('chat.status', { chatId: APPROVAL.id, info: chatInfoOf(APPROVAL.id) });
+            machine.emit('chat.status', { chatId: QUESTION.id, info: chatInfoOf(QUESTION.id) });
+            machine.emit('chat.status', { chatId: hidden.id, info });
+        });
+
+        await openQueue();
+        await until(() => dialog()!.textContent?.includes('This request cannot be previewed here.') === true);
+        expect(dialog()!.textContent).not.toContain('Open the session to answer.');
+        expect(button('Open session')).toBeNull();
     });
 
     test('an approval from another machine goes only to that machine', async () => {

@@ -18,10 +18,19 @@ afterEach(async () => {
 test.each([
     { label: 'less than a minute', since: NOW - 12_000, text: '< 1 min' },
     { label: 'one minute', since: NOW - 60_000, text: '1 min' },
+    { label: 'one and a half minutes', since: NOW - 90_000, text: '1 min' },
+    { label: 'less than ten minutes', since: NOW - 599_000, text: '9 min' },
     { label: 'an unknown zero date', since: 0, text: '' },
     { label: 'an unknown infinite date', since: Infinity, text: '' },
     { label: 'a negative date', since: -1, text: '' }
 ])('renders $label without suggesting a false age', async ({ since, text }) => {
     await page.render(<WaitAge since={since} />);
     expect(page.host.textContent).toBe(text);
+});
+
+test('the ten-minute label and overdue wording start together', async () => {
+    await page.render(<WaitAge since={NOW - 599_000} />);
+    expect(page.host.querySelector('time')!.getAttribute('aria-label')).toBe('Waiting for 9 min');
+    await page.render(<WaitAge since={NOW - 600_000} />);
+    expect(page.host.querySelector('time')!.getAttribute('aria-label')).toBe('Waiting for 10 min, at least ten minutes');
 });

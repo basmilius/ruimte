@@ -1364,6 +1364,7 @@
         },
         "backToList": "Terug naar lijst",
         "underMinute": "< {{minute}} min",
-        "openToAnswer": "Open de sessie om te antwoorden."
+        "openToAnswer": "Open de sessie om te antwoorden.",
+        "previewUnavailable": "Dit verzoek kan hier niet worden getoond."
     }
 }

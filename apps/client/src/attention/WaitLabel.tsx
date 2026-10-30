@@ -19,7 +19,7 @@ export function WaitAge({ since }: { since: number }) {
 
     const elapsed = Math.max(0, now - since);
     const long = elapsed >= LONG_WAIT_MS;
-    const age = elapsed < 60_000 ? t('attention.underMinute', { minute: formatNumber(1) }) : formatDuration(elapsed);
+    const age = elapsed < 60_000 ? t('attention.underMinute', { minute: formatNumber(1) }) : formatDuration(Math.floor(elapsed / 60_000) * 60_000);
 
     return (
         <time

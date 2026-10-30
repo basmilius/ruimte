@@ -1364,6 +1364,7 @@
         },
         "backToList": "Back to list",
         "underMinute": "< {{minute}} min",
-        "openToAnswer": "Open the session to answer."
+        "openToAnswer": "Open the session to answer.",
+        "previewUnavailable": "This request cannot be previewed here."
     }
 }

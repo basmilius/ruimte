@@ -49,10 +49,10 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
     );
     const rows = useRef(new Map<string, HTMLButtonElement>());
     const back = useRef<HTMLButtonElement | null>(null);
+    const detail = useRef<HTMLDivElement | null>(null);
     const detailRequested = useRef(false);
     const restoreRow = useRef<string | null>(null);
-    const [answered, setAnswered] = useState(0);
-    const previous = useRef<{ id: string | null; wide: boolean; answered: number }>({ id: null, wide, answered: 0 });
+    const previous = useRef<{ id: string | null; wide: boolean }>({ id: null, wide });
 
     const groups = groupAttention(nodes, sessions, chats, endpointId, unseen, snoozes);
     const waiting = new Set(groups.needsYou);
@@ -85,20 +85,20 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
         const before = previous.current;
         const removed = before.id !== null && !rows.current.has(before.id);
         const layoutChanged = before.wide !== wide;
-        const didAnswer = before.answered !== answered;
+        const displaced = removed && (document.activeElement === document.body || detail.current?.contains(document.activeElement) === true);
 
         if (restoreRow.current !== null) {
             rows.current.get(restoreRow.current)?.focus();
             restoreRow.current = null;
-        } else if (!wide && selected !== null && (detailRequested.current || layoutChanged || removed || didAnswer)) {
+        } else if (!wide && selected !== null && (detailRequested.current || layoutChanged || displaced)) {
             (active === null ? fallbackFocus.current : back.current)?.focus();
-        } else if (removed || didAnswer || (wide && layoutChanged && selected !== null)) {
+        } else if (displaced || (wide && layoutChanged && selected !== null)) {
             (active === null ? fallbackFocus.current : rows.current.get(active.id))?.focus();
         }
 
         detailRequested.current = false;
-        previous.current = { id: active?.id ?? null, wide, answered };
-    }, [active, answered, fallbackFocus, selected, wide]);
+        previous.current = { id: active?.id ?? null, wide };
+    }, [active, fallbackFocus, selected, wide]);
 
     const openSession = (): void => {
         if (active !== null && projectNodes().some((node) => node.id === active.id)) {
@@ -168,7 +168,7 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
                     </>
                 )}
             </div>
-            <div className={`min-w-0 max-h-96 overflow-auto rounded-md border border-border ${selected === null ? 'hidden md:block' : ''}`}>
+            <div ref={detail} className={`min-w-0 max-h-96 overflow-auto rounded-md border border-border ${selected === null ? 'hidden md:block' : ''}`}>
                 <Button
                     ref={back}
                     className="m-2 md:hidden"
@@ -186,10 +186,8 @@ function QueueBody({ initialFocus, fallbackFocus }: { initialFocus: RefObject<HT
                             endpointId={machine}
                             node={preview}
                             onOpen={hidden ? undefined : openSession}
-                            onAnswered={() => {
-                                if (rows.current.size > 0) {
-                                    setAnswered((before) => before + 1);
-                                }
+                            onFocusEmpty={() => {
+                                (wide ? rows.current.get(preview.id) : back.current)?.focus();
                             }}
                             summary
                             completed={!waiting.has(preview.id)}

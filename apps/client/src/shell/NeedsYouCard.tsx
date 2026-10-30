@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChatAttachResult, ComputerApproval, ProjectProposal, SecretRequest } from '@ruimte/contracts';
 import { Button, ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@adecore/ui';
-import { answerPrompt, promptCreatedAt, type ChatPromptClients, usePromptSession, PROMPT_SURFACE, PromptView } from '@adecore/agents-react/prompts';
+import {
+    answerPrompt,
+    promptCreatedAt,
+    type ChatPromptClients,
+    useFocusAfterAnswer,
+    usePromptSession,
+    PROMPT_SURFACE,
+    PromptView
+} from '@adecore/agents-react/prompts';
 import { ChatScopeContext, useChatHost } from '@adecore/agents-react';
 import { useChats, type ChatState, useProviders } from '@adecore/agents-react/state';
 import { PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
@@ -173,7 +181,7 @@ export function WaitingPrompt({
     node,
     onOpen,
     onEmpty,
-    onAnswered,
+    onFocusEmpty,
     summary = false,
     completed = false,
     preferredKind
@@ -182,7 +190,7 @@ export function WaitingPrompt({
     node: SidebarNode;
     onOpen?(): void;
     onEmpty?(): void;
-    onAnswered?(): void;
+    onFocusEmpty?(): void;
     summary?: boolean;
     completed?: boolean;
     preferredKind?: WaitDetails['kind'];
@@ -200,6 +208,8 @@ export function WaitingPrompt({
         disabled
     });
     const { active, waiting, index, setActive } = session;
+    const container = useRef<HTMLDivElement | null>(null);
+    const refocus = useFocusAfterAnswer(active?.id ?? null, container, () => onFocusEmpty?.());
 
     useEffect(() => {
         if (prompts !== null && waiting.length === 0) {
@@ -224,7 +234,11 @@ export function WaitingPrompt({
         return (
             <div className="space-y-3 p-3">
                 <p className="text-sm text-text-muted">
-                    {failed ? t('sidebar.promptFailed') : prompts === null ? t('sidebar.promptLoading') : t('attention.openToAnswer')}
+                    {failed
+                        ? t('sidebar.promptFailed')
+                        : prompts === null
+                          ? t('sidebar.promptLoading')
+                          : t(onOpen ? 'attention.openToAnswer' : 'attention.previewUnavailable')}
                 </p>
                 {failed && <Button onClick={reread}>{t('common:action.retry')}</Button>}
                 {onOpen && <Button onClick={onOpen}>{t('attention.openSession')}</Button>}
@@ -242,7 +256,7 @@ export function WaitingPrompt({
     };
 
     return (
-        <>
+        <div ref={container}>
             {summary && lastLine && <p className="break-words px-3 py-2 text-sm text-text-muted">{lastLine}</p>}
             <ErrorBoundary label={t('canvas:promptStack.failed')} resetKeys={[active.id]} className="relative p-3">
                 <PromptView
@@ -251,12 +265,15 @@ export function WaitingPrompt({
                     draft={session.draftOf(active.id)}
                     onDraft={(draft) => session.setDraft(active.id, draft)}
                     onAction={(action) => {
+                        refocus.hold();
+
                         void session
                             .act(active, () => answerPrompt(active.subject, action, clients, chatHost))
                             .then((result) => {
                                 if (result === 'sent') {
-                                    onAnswered?.();
                                     reread();
+                                } else {
+                                    refocus.release();
                                 }
                             });
                     }}
@@ -301,7 +318,7 @@ export function WaitingPrompt({
                     }
                 />
             </ErrorBoundary>
-        </>
+        </div>
     );
 }
 
