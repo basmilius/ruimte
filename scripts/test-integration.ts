@@ -35,7 +35,7 @@ async function main(): Promise<void> {
     try {
         const { values, positionals: files } = parseArgs({
             args: process.argv.slice(2),
-            options: { suite: { type: 'string' }, browser: { type: 'boolean' } },
+            options: { suite: { type: 'string' }, browser: { type: 'boolean' }, shard: { type: 'string' } },
             allowPositionals: true
         });
         if (values.browser && values.suite !== undefined && values.suite !== 'browser') {
@@ -51,7 +51,9 @@ async function main(): Promise<void> {
         if (selected.length === 0) {
             throw new Error('No integration tests found in apps, packages or scripts.');
         }
-        const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...selected], {
+        const shard = values.shard === undefined ? [] : [`--shard=${values.shard}`];
+
+        const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...shard, ...selected], {
             env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
             stdin: 'inherit',
             stdout: 'inherit',
