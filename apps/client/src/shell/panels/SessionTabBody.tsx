@@ -213,12 +213,13 @@ function ComparisonView({ tab }: { tab: CompareTab }) {
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const refresh = tab.refresh ?? 0;
+    const [retry, setRetry] = useState(0);
     const [held, setHeld] = useState<{ key: string; value?: GitCompareResult; error?: string } | null>(null);
     const [selected, setSelected] = useState<string | null>(null);
     const [section, setSection] = useState<'files' | 'commits'>('files');
     const layout = useSettings((state) => state.diffLayout);
     const width = useGit((state) => state.commitTreeWidth);
-    const key = JSON.stringify([endpointId, tab.cwd, tab.from, tab.to, tab.mode, refresh]);
+    const key = JSON.stringify([endpointId, tab.cwd, tab.from, tab.to, tab.mode, refresh, retry]);
     useEffect(() => {
         let alive = true;
         const current = useFiles.getState().tabs.find((entry) => entry.key === tab.key);
@@ -279,7 +280,7 @@ function ComparisonView({ tab }: { tab: CompareTab }) {
                 />
             </div>
             {held?.key === key && held.error !== undefined ? (
-                <Failure message={held.error} retry={() => useFiles.getState().refreshComparison(tab.key)} />
+                <Failure message={held.error} retry={() => setRetry((value) => value + 1)} />
             ) : ready === undefined ? (
                 <EmptyState busy>{t('git.compare.reading')}</EmptyState>
             ) : (

@@ -266,3 +266,26 @@ test('the comparison palette opens the pinned right snapshot and a repeated jump
     await until(() => editor.selectionStart === 0);
     expect(machine.requests('fs.read').filter(({ path }) => path === `${CWD}/cart.ts`)).toEqual([]);
 });
+
+test('Retry after a pinned comparison fails preserves the original commits', async () => {
+    let fail = false;
+    const movedTip = 'e'.repeat(40);
+    machine.answer('git.compare', ({ from, to, mode }) => {
+        if (fail) {
+            throw new Error('Temporary Git read failure');
+        }
+        return { ...comparison(), from, to, mode, toCommit: to === 'refs/heads/right' && mode === 'merge-base' ? movedTip : RIGHT };
+    });
+    await act(async () => openComparison(CWD, 'refs/heads/left', 'refs/heads/right', 'tips'));
+    await until(() => document.body.textContent?.includes('Branch tip aaaaaaa → bbbbbbb') === true);
+    fail = true;
+    await clickOn(document.querySelector('[aria-label="Comparison"]'));
+    await until(() => [...document.querySelectorAll('[role="option"]')].some((row) => row.textContent === 'Since common ancestor'));
+    await clickOn([...document.querySelectorAll('[role="option"]')].find((row) => row.textContent === 'Since common ancestor') ?? null);
+    await until(() => document.body.textContent?.includes('Temporary Git read failure') === true);
+    fail = false;
+    await clickOn(buttonWithText('Try again'));
+    await until(() => machine.requests('git.compare').length === 3);
+    expect(machine.requests('git.compare')[2]).toMatchObject({ from: LEFT, to: RIGHT, mode: 'merge-base' });
+    await until(() => document.body.textContent?.includes('Common ancestor ccccccc → bbbbbbb') === true);
+});
