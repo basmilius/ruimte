@@ -176,7 +176,7 @@ public enum WireSchema {
         let value = try projectEntry(input, metadata: schema["x-project-entry"])
         let fail = { WireValidationError.invalid("Invalid \(path)") }
         if let options = (schema["oneOf"] ?? schema["anyOf"])?.arrayValue {
-            for option in options {
+            for option in options where !literalMismatch(value, schema: option) {
                 if let parsed = try? parse(value, schema: option, path: path, definitions: definitions) {
                     return parsed
                 }
@@ -287,6 +287,22 @@ public enum WireSchema {
         default: throw WireValidationError.invalid("Unsupported generated schema at \(path)")
         }
         return value
+    }
+
+    private static func literalMismatch(_ input: JSONValue, schema: JSONValue) -> Bool {
+        guard let object = input.objectValue, let properties = schema["properties"]?.objectValue else { return false }
+        for (key, property) in properties {
+            guard let literal = property["const"], let value = object[key], value != literal else { continue }
+            // These can transform or short-circuit before checking a local literal.
+            guard schema["type"] == .string("object"), schema["$ref"] == nil,
+                schema["oneOf"] == nil, schema["anyOf"] == nil, schema["x-project-entry"] == nil
+            else { return false }
+            guard property["$ref"] == nil, property["oneOf"] == nil, property["anyOf"] == nil,
+                property["x-project-entry"] == nil
+            else { continue }
+            return true
+        }
+        return false
     }
 
     private static func projectEntry(_ input: JSONValue, metadata: JSONValue?) throws -> JSONValue {

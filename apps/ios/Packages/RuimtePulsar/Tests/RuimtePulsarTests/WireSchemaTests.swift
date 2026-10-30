@@ -23,6 +23,49 @@ struct WireSchemaTests {
         }
     }
 
+    @Test func literalTagsStillRequireTheirWholePayloadAndStripUnknownKeys() throws {
+        let action: [String: JSONValue] = [
+            "deviceId": .string("phone"), "backendId": .string("ios"),
+            "platform": .string("ios"), "action": .string("erase"),
+        ]
+        var extended = action
+        extended["future"] = .bool(true)
+        #expect(try WireSchema.validate("request.device.action.payload", .object(extended)) == .object(action))
+
+        var missingTag = action
+        missingTag.removeValue(forKey: "action")
+        var unknownTag = action
+        unknownTag["action"] = .string("future")
+        var invalidField = action
+        invalidField["deviceId"] = .number(1)
+        var missingField = action
+        missingField.removeValue(forKey: "deviceId")
+        for input in [missingTag, unknownTag, invalidField, missingField] {
+            #expect(throws: (any Error).self) {
+                try WireSchema.validate("request.device.action.payload", .object(input))
+            }
+        }
+    }
+
+    @Test func booleanTagsKeepReplyValidationAndNullableFailureIDs() throws {
+        let success: JSONValue = .object([
+            "id": .string("reply"), "ok": .bool(true), "result": .object(["future": .number(42)]),
+        ])
+        #expect(try WireSchema.validate("ReplySchema", success) == success)
+        let failure: JSONValue = .object([
+            "id": .null, "ok": .bool(false),
+            "error": .object(["code": .string("invalid-query"), "message": .string("Invalid query")]),
+        ])
+        #expect(try WireSchema.validate("ReplySchema", failure) == failure)
+        for input: JSONValue in [
+            .object(["id": .string("reply"), "ok": .bool(true)]),
+            .object(["id": .null, "ok": .bool(false), "error": .object(["message": .string("Missing code")])]),
+            .object(["id": .string("reply"), "ok": .string("true"), "result": .null]),
+        ] {
+            #expect(throws: (any Error).self) { try WireSchema.validate("ReplySchema", input) }
+        }
+    }
+
     @Test func aValidationErrorNamesTheField() {
         do {
             try WireSchema.validate("request.server.ping.result", .object(["time": .string("now")]))
