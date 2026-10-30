@@ -7,6 +7,7 @@ describe('an agent kind on the wire', () => {
         const base = { id: 'm1', label: 'Mac', nameSource: 'default', icon: null };
         const summary = { providers: [{ provider: 'future-cli', state: 'on', reviewed: true }], fixed: false };
 
+        expect(EndpointChangedEventSchema.parse({ ...base, textModel: { provider: 'future-cli', model: null } }).textModel?.provider).toBe('future-cli');
         expect(EndpointChangedEventSchema.parse({ ...base, agentIntegrations: summary }).agentIntegrations?.providers[0]?.provider).toBe('future-cli');
         expect(REQUEST_SCHEMAS['endpoint.setAgentIntegration'].payload.safeParse({ provider: 'grok', on: true }).success).toBe(true);
     });

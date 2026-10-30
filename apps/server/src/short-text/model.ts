@@ -1,4 +1,5 @@
 import { TEXT_MODEL_PROVIDERS, type AgentKind, type TextModelChoice } from '@ruimte/contracts';
+import { buildTitlePrompt, parseTitle, type ChatTitleInput } from '@adecore/agents/chat';
 import { launchEnv, type AccountLaunches, type ChatProvider } from '@adecore/agents/providers';
 import type { OnDeviceModel } from '../ondevice/model.ts';
 import { oneShotRun } from '../git/one-shot.ts';
@@ -46,6 +47,22 @@ export class ShortTextModels {
         return this.host.choice();
     }
 
+    titlePolicy(): 'native' | 'generated' {
+        return this.choice() === null ? 'native' : 'generated';
+    }
+
+    async title(input: ChatTitleInput, automatic: () => Promise<string | null>): Promise<string | null> {
+        const writer = await this.prepare(undefined, 'title');
+
+        if (writer === null) {
+            return automatic();
+        }
+
+        const result = await writer.run(input.cwd, buildTitlePrompt(input.prompt, input.answer), 45_000);
+
+        return result.code === 0 ? parseTitle(result.stdout) : null;
+    }
+
     async validate(choice: TextModelChoice): Promise<void> {
         await this.prepareChoice(choice, 'git');
     }
@@ -72,8 +89,7 @@ export class ShortTextModels {
             throw new GitError('git-failed', 'Install the Antigravity CLI before choosing its text model.');
         }
 
-        const environment = launchEnv(this.host.accounts, choice.provider, account, process.env);
-        const env = Object.fromEntries(Object.entries(environment).filter((entry): entry is [string, string] => entry[1] !== undefined));
+        const env = this.environment(choice.provider, account);
         const result = await (this.host.run ?? streamWithTimeout)(installed.command[0]!, ['models'], '/', 10_000, { env });
 
         if (result.code !== 0) {
@@ -85,7 +101,7 @@ export class ShortTextModels {
         for (const line of result.stdout.split(/\r?\n/)) {
             const match = /^(\S{1,200}?)(?:\t|\\t)(.+)$/.exec(line);
 
-            if (match !== null) {
+            if (match !== null && !(match[1]!.toLowerCase() === 'model' && match[2]!.trim().toLowerCase() === 'name')) {
                 models.set(match[1]!, match[2]!.trim());
             }
         }
@@ -110,18 +126,24 @@ export class ShortTextModels {
         if (preferred !== undefined && preferred !== choice.provider) {
             throw new GitError(
                 'git-failed',
-                `This machine uses ${this.host.providers.get(choice.provider).name} for short texts. Its text model setting changed; try again.`
+                `This machine uses ${this.host.providers.get(choice.provider).name} for short texts. Its text model setting changed; reopen the commit or conflict view and try again.`
             );
         }
 
         return this.prepareChoice(choice, purpose);
     }
 
+    private environment(provider: AgentKind, account: string | undefined): Record<string, string> {
+        const environment = launchEnv(this.host.accounts, provider, account, process.env);
+
+        return Object.fromEntries(Object.entries(environment).filter((entry): entry is [string, string] => entry[1] !== undefined));
+    }
+
     private async prepareChoice(choice: TextModelChoice, purpose: 'git' | 'title'): Promise<TextWriter> {
         const { providers, accounts } = this.host;
         const provider = providers.get(choice.provider);
 
-        if (!TEXT_MODEL_PROVIDERS.includes(choice.provider) || !providers.enabled(choice.provider)) {
+        if (!TEXT_MODEL_PROVIDERS.some((kind) => kind === choice.provider) || !providers.enabled(choice.provider)) {
             throw new GitError('git-failed', `${provider.name} is not enabled for short texts on this machine. Choose another text model in Settings.`);
         }
 
@@ -138,10 +160,6 @@ export class ShortTextModels {
                 `The text model '${choice.model}' is no longer available in ${provider.name}. Choose its default or another model in Settings.`
             );
         }
-
-        const account = choice.account ?? accounts.defaultFor?.(choice.provider);
-        const environment = launchEnv(accounts, choice.provider, account, process.env);
-        const env = Object.fromEntries(Object.entries(environment).filter((entry): entry is [string, string] => entry[1] !== undefined));
 
         if (choice.provider === 'apple') {
             if (!this.host.appleEnabled()) {
@@ -190,6 +208,8 @@ export class ShortTextModels {
             };
         }
 
+        const account = choice.account ?? accounts.defaultFor?.(choice.provider);
+        const env = this.environment(choice.provider, account);
         const installed = await providers.oneShotProvider(choice.provider);
 
         if (installed?.kind !== choice.provider) {

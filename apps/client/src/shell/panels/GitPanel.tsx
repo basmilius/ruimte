@@ -182,12 +182,26 @@ export function GitPanel() {
         if (probe === null) {
             return;
         }
+        let cancelled = false;
+
         // What this machine can offer is the same for every repository on it; one is enough to ask.
         transport
             .request('git.capabilities', { cwd: probe })
-            .then(setCapabilities)
-            .catch(() => setCapabilities(null));
-    }, [transport, probe, textModel]);
+            .then((next) => {
+                if (!cancelled) {
+                    setCapabilities(next);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setCapabilities(null);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [transport, probe, textModel?.provider]);
 
     /* One action on one checkout: it runs, it says how it went, and that checkout is read again after. */
     const actOn = async (

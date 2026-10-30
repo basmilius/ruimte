@@ -1,14 +1,5 @@
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
-import {
-    AttachmentStore,
-    BookmarkStore,
-    ChatStore,
-    ClaudeTitleReader,
-    VisualStore,
-    buildTitlePrompt,
-    parseTitle,
-    suggestChatTitle
-} from '@adecore/agents/chat';
+import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore, suggestChatTitle } from '@adecore/agents/chat';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
@@ -345,18 +336,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => later.usage().limits.applyLive(update),
         claudeTitles,
-        titlePolicy: () => (identity.textModel === null ? 'native' : 'generated'),
-        nameChat: async (provider, input) => {
-            const writer = await textModels.prepare(undefined, 'title');
-
-            if (writer === null) {
-                return suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) });
-            }
-
-            const result = await writer.run(input.cwd, buildTitlePrompt(input.prompt, input.answer), 45_000);
-
-            return result.code === 0 ? parseTitle(result.stdout) : null;
-        },
+        titlePolicy: () => textModels.titlePolicy(),
+        nameChat: (provider, input) =>
+            textModels.title(input, async () => suggestChatTitle(providers.providers, provider, { ...input, cwd: await oneShot.cwdFor(input.cwd) })),
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),

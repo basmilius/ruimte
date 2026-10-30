@@ -6410,14 +6410,9 @@
                 "properties": {
                   "provider": {
                     "type": "string",
-                    "enum": [
-                      "claude",
-                      "codex",
-                      "grok",
-                      "copilot",
-                      "antigravity",
-                      "apple"
-                    ]
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[a-z][a-z0-9-]*$"
                   },
                   "model": {
                     "anyOf": [
@@ -62023,12 +62018,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -62360,12 +62357,14 @@
     "properties": {
       "provider": {
         "type": "string",
-        "enum": [
+        "minLength": 1,
+        "maxLength": 32,
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "x-open-enum": [
           "claude",
           "codex",
-          "grok",
+          "gemini",
           "copilot",
-          "antigravity",
           "apple"
         ]
       },
@@ -62644,12 +62643,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -62998,12 +62999,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -63358,12 +63361,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -63708,12 +63713,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -64332,12 +64339,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -65153,12 +65162,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },
@@ -79693,12 +79704,14 @@
             "properties": {
               "provider": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "x-open-enum": [
                   "claude",
                   "codex",
-                  "grok",
+                  "gemini",
                   "copilot",
-                  "antigravity",
                   "apple"
                 ]
               },

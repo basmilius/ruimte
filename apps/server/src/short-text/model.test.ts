@@ -14,6 +14,8 @@ function harness(initial: TextModelChoice | null = null) {
     let installed = true;
     let enabled = true;
     let available = true;
+    let output = '{"subject":"A message","body":""}';
+    let exitCode = 0;
     const launches: string[] = [];
     const envAccounts: (string | undefined)[] = [];
     const calls: { command: string; args: string[]; cwd: string; options: StreamOptions }[] = [];
@@ -67,7 +69,7 @@ function harness(initial: TextModelChoice | null = null) {
             calls.push({ command, args, cwd, options });
             options.onSpawn?.(() => undefined);
 
-            return { code: 0, stdout: args[0] === 'models' ? 'small\\tSmall\nother\tOther model\n' : '{"subject":"A message","body":""}', stderr: '' };
+            return { code: exitCode, stdout: args[0] === 'models' ? 'MODEL\tNAME\nsmall\\tSmall\nother\tOther model\n' : output, stderr: '' };
         }
     });
 
@@ -77,6 +79,10 @@ function harness(initial: TextModelChoice | null = null) {
         launches,
         envAccounts,
         completions,
+        reply: (text: string, code = 0) => {
+            output = text;
+            exitCode = code;
+        },
         pick: (next: TextModelChoice | null) => {
             choice = next;
         },
@@ -124,6 +130,35 @@ describe('the machine choice of short-text writer', () => {
             expect(run.completions).toEqual([]);
         });
     }
+
+    test('title routing follows the current choice, parses a successful writer and never falls back after a failed writer', async () => {
+        const run = harness();
+        let automatic = 0;
+        const fallback = async () => {
+            automatic += 1;
+            return 'Legacy title';
+        };
+        const input = { cwd: '/project', prompt: 'Review the change', answer: 'The change is good' };
+        expect(run.models.titlePolicy()).toBe('native');
+        expect(await run.models.title(input, fallback)).toBe('Legacy title');
+        run.pick({ provider: 'codex', model: 'small' });
+        run.reply('{"title":"Chosen title"}');
+        expect(run.models.titlePolicy()).toBe('generated');
+        expect(await run.models.title(input, fallback)).toBe('Chosen title');
+        expect(run.calls.at(-1)?.options.stdin).toContain('Review the change');
+        run.reply('{"title":"Do not use this failed result"}', 1);
+        expect(await run.models.title(input, fallback)).toBeNull();
+        run.reply('not a title object');
+        expect(await run.models.title(input, fallback)).toBeNull();
+        expect(automatic).toBe(1);
+    });
+
+    test('a future wire provider is refused before any model or account process starts', async () => {
+        const run = harness({ provider: 'future-cli', model: null });
+        await expect(run.models.prepare()).rejects.toThrow('not enabled');
+        expect(run.envAccounts).toEqual([]);
+        expect(run.calls).toEqual([]);
+    });
 
     test('Automatic leaves provider hints and legacy selection to the existing callers', async () => {
         const run = harness();
@@ -217,6 +252,7 @@ describe('the machine choice of short-text writer', () => {
         expect(result.code).toBe(1);
         expect(run.completions[0]).toMatchObject({ background: true, maxTokens: 128, prompt: 'Name this chat' });
         expect(run.calls).toEqual([]);
+        expect(run.envAccounts).toEqual([]);
         run.unavailable();
         await expect(run.models.prepare()).rejects.toThrow('Apple unavailable here');
     });

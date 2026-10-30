@@ -4114,11 +4114,11 @@ public enum PairResultEndpointNameSource: String, CaseIterable, Codable, Sendabl
 }
 
 public struct PairResultEndpointTextModel: Codable, Sendable, Equatable {
-    public let `provider`: PairResultEndpointTextModelProvider
+    public let `provider`: String
     public let `model`: String?
     public let `account`: String?
 
-    public init(`provider`: PairResultEndpointTextModelProvider, `model`: String?, `account`: String? = nil) {
+    public init(`provider`: String, `model`: String?, `account`: String? = nil) {
         self.`provider` = `provider`
         self.`model` = `model`
         self.`account` = `account`
@@ -4126,7 +4126,7 @@ public struct PairResultEndpointTextModel: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `provider` = try container.decode(PairResultEndpointTextModelProvider.self, forKey: .`provider`)
+        `provider` = try container.decode(String.self, forKey: .`provider`)
         `model` = try container.decode(String?.self, forKey: .`model`)
         `account` = try container.decodeIfPresent(String.self, forKey: .`account`)
     }
@@ -4143,15 +4143,6 @@ public struct PairResultEndpointTextModel: Codable, Sendable, Equatable {
         case `model` = "model"
         case `account` = "account"
     }
-}
-
-public enum PairResultEndpointTextModelProvider: String, CaseIterable, Codable, Sendable, Equatable {
-    case `claude` = "claude"
-    case `codex` = "codex"
-    case `grok` = "grok"
-    case `copilot` = "copilot"
-    case `antigravity` = "antigravity"
-    case `apple` = "apple"
 }
 
 public enum PairResultEndpointKeepAwake: String, CaseIterable, Codable, Sendable, Equatable {
