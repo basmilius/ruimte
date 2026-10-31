@@ -252,7 +252,7 @@ struct ChatReferenceChip: View {
                 ForEach(look.trail, id: \.id) { step in
                     Image(lucide: ChatReferables.icon(step.kind), size: 12).foregroundStyle(MobileStyle.muted)
                     Text(step.name).lineLimit(1).fontWeight(.regular).foregroundStyle(MobileStyle.muted)
-                    ChatTrailChevron().stroke(MobileStyle.text.opacity(0.16)).frame(width: 8).padding(.horizontal, 2)
+                    Image(lucide: "chevron-right", size: 12).foregroundStyle(MobileStyle.muted)
                 }
                 Image(lucide: look.icon, size: 12)
                 // The name it leads to stays whole; the places on the way shorten first.
@@ -283,17 +283,6 @@ struct ChatReferenceChip: View {
             id: id, icon: item.mark,
             title: item.name.isEmpty ? String(localized: "Untitled") : item.name, opens: true, gone: false,
             trail: item.trail)
-    }
-}
-
-/// The step between two places in a chip, over the chip's whole height.
-private struct ChatTrailChevron: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path { path in
-            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        }
     }
 }
 

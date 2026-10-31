@@ -713,7 +713,8 @@ final class ChatModel {
             switch kind {
             case "#":
                 await refreshReachedProjects()
-                let exclude = [chatID] + composition.picked.map(\.id)
+                // Only what is still in the text: a pick a person deleted would stay out of the list for good.
+                let exclude = [chatID] + ChatDraftSyntax.presentReferences(in: composition.text, references: composition.picked)
                 found = ChatReferables.suggestions(referables, chatsOnly: chatsOnly, query: query, exclude: exclude)
                     .map {
                         ChatSuggestion(

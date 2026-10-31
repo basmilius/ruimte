@@ -5,7 +5,7 @@ import { runContext } from '../cli/context.ts';
 import { CONTEXT_ENV, routeContextCli } from '../cli/context-test-helpers.ts';
 import { ProjectIndex } from '../projects/project-index.ts';
 import fixture from '../../../ios/Tests/Fixtures/view-references.json';
-import { attachedReferences, referenceNote, referenced, referencedIds, resolveReference, resolveReferences } from './references.ts';
+import { attachedReferences, referablesOfViews, referenceNote, referenced, referencedIds, resolveReference, resolveReferences } from './references.ts';
 import { handleContextRequest } from './context-route.ts';
 import { ContextStore } from './context-store.ts';
 
@@ -236,5 +236,16 @@ describe('a reference in another project', () => {
         expect(note).toContain('`ruimte-context read runner --project other`');
         expect(note).toContain('`ruimte-context notify runner --project other`');
         expect(note).not.toContain('of this project');
+    });
+});
+
+describe('what another project may point at', () => {
+    test('a design wears its own kind, and a view that is shown nowhere is left out', () => {
+        const views = [
+            { kind: 'design', id: 'design-1', name: 'Design', canvasId: null, chats: [{ id: 'design-1', name: 'Design', node: {} }] },
+            { kind: 'chat', id: 'hidden', name: 'Inline', node: {}, hidden: true }
+        ] as unknown as ProjectView[];
+
+        expect(referablesOfViews(views, null).map(({ id, kind }) => ({ id, kind }))).toEqual([{ id: 'design-1', kind: 'design' }]);
     });
 });

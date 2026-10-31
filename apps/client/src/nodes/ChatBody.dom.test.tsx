@@ -146,10 +146,10 @@ async function attachChat(viewId: string, title: string): Promise<void> {
     await clickOn(option(viewId, title));
 }
 
-/* A row of the picker, which names the chat and then its kind. */
+/* A row of the picker, which names the chat. */
 function option(viewId: string, title: string): Element | null {
     const options = page.host.querySelectorAll(`[data-split-cell][data-view-id="${viewId}"] [role="option"]`);
-    return Array.from(options).find((candidate) => candidate.textContent?.trim() === `${title}chat`) ?? null;
+    return Array.from(options).find((candidate) => candidate.textContent?.trim() === title) ?? null;
 }
 
 /* A chat in the text of a draft, drawn as a chip. */

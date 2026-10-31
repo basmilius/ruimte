@@ -151,11 +151,17 @@ export function referablesOfViews(
         }
 
         const own = resolveReference(views, view.id, folder);
-        const nodes = isCanvasView(view)
-            ? view.nodes.filter((node) => node.machine === undefined).flatMap((node) => nodeReference(view, node.id, folder) ?? [])
-            : [];
+        const standing = isCanvasView(view) ? view.nodes.filter((node) => node.machine === undefined) : [];
+        const nodes = isCanvasView(view) ? standing.flatMap((node) => nodeReference(view, node.id, folder) ?? []) : [];
+        // A reference to a design reads as its chats, but a person picks it by the mark of a design.
+        const designs = new Set([...(isDesignView(view) ? [view.id] : []), ...standing.filter((node) => node.kind === 'design').map((node) => node.id)]);
 
-        return [...(own === null ? [] : [own]), ...nodes].map(({ id, name, kind, canvas }) => ({ id, name, kind, ...(canvas === null ? {} : { canvas }) }));
+        return [...(own === null ? [] : [own]), ...nodes].map(({ id, name, kind, canvas }) => ({
+            id,
+            name,
+            kind: designs.has(id) ? 'design' : kind,
+            ...(canvas === null ? {} : { canvas })
+        }));
     });
 }
 

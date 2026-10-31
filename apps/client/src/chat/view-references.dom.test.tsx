@@ -78,7 +78,7 @@ describe('a # in the composer', () => {
         await open(true);
         await type('Draw a sun in #Sch');
         await until(() => option('Schets') !== null);
-        expect(option('Schets')?.textContent).toBe('Schetsdrawing');
+        expect(option('Schets')?.textContent).toBe('Schets');
         expect(option('Schets')?.querySelector('svg.lucide-brain')).not.toBeNull();
         await clickOn(option('Schets'));
         expect(composer()!.state.doc.toString()).toBe('Draw a sun in #Schets ');

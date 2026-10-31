@@ -44,8 +44,7 @@ function nodeReferable(node: Pick<ProjectNode, 'id' | 'kind' | 'title' | 'viewId
         case 'browser':
             return { id: node.id, name: node.title, kind: node.kind };
         case 'design':
-            // A design is reached as its own chat, under the node's id.
-            return { id: node.id, name: node.title, kind: 'chat' };
+            return { id: node.id, name: node.title, kind: 'design' };
         case 'drawing':
         case 'diagram':
             return node.viewId ? { id: node.viewId, name: node.title, kind: node.kind } : null;
@@ -58,7 +57,18 @@ function nodeReferable(node: Pick<ProjectNode, 'id' | 'kind' | 'title' | 'viewId
     }
 }
 
-const VIEW_KINDS: ReadonlySet<string> = new Set<ReferableKind>(['canvas', 'chat', 'terminal', 'browser', 'device', 'drawing', 'diagram', 'file', 'database']);
+const VIEW_KINDS: ReadonlySet<string> = new Set<ReferableKind>([
+    'canvas',
+    'design',
+    'chat',
+    'terminal',
+    'browser',
+    'device',
+    'drawing',
+    'diagram',
+    'file',
+    'database'
+]);
 
 function viewReferable(view: ProjectView): Referable | null {
     if (isDividerView(view) || isUnlistedView(view) || view.kind === UNKNOWN_KIND || !VIEW_KINDS.has(view.kind)) {

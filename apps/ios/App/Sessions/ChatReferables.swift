@@ -48,10 +48,10 @@ struct ChatReferenceSource {
 /// The views a person picked from, what each id is spelled as, and how `#Name` in a reply is found. Mirrors the
 /// desktop's `projectReferables` and the shared composer's matchers, so both clients offer and send the same.
 enum ChatReferables {
-    static let results = 8
+    static let results = 20
 
     private static let viewKinds: Set<String> = [
-        "canvas", "chat", "terminal", "browser", "device", "drawing", "diagram", "file", "database",
+        "canvas", "design", "chat", "terminal", "browser", "device", "drawing", "diagram", "file", "database",
     ]
 
     /// The nodes and texts of the canvas `chatID` is a node of, then the views in sidebar order, never the chat
@@ -177,6 +177,7 @@ enum ChatReferables {
     static func icon(_ kind: String) -> String {
         switch kind {
         case "project": "folder"
+        case "design": "swatch-book"
         case "canvas": "frame"
         case "chat": "message-square"
         case "terminal": "terminal"
@@ -292,7 +293,7 @@ enum ChatReferables {
         let title = node.text("title")
         let icon = WorkspaceViewIcon.name(for: node)
         switch kind {
-        case "chat", "terminal", "note", "browser":
+        case "chat", "terminal", "note", "browser", "design":
             return ChatReferable(id: node.stableID, name: title, kind: kind, group: .canvas, icon: icon)
         case "drawing", "diagram":
             let viewID = node.text("viewId")
