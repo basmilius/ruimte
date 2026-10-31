@@ -775,6 +775,7 @@ const updater = createUpdater({
     load: loadAutoUpdater,
     publish: (state) => windows.send('update:state', state),
     onQuit: windows.quitForUpdate,
+    silentInstall: process.platform === 'win32',
     // Refreshed with the check, so the notes of a version it finds are on disk before anyone asks.
     beforeCheck: () => void releaseNotes.list(true)
 });

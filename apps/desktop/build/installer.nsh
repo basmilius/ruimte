@@ -38,6 +38,13 @@ Var machineTaskDisabled
       nsExec::Exec `"$SYSDIR\schtasks.exe" /Change /TN "${MACHINE_TASK}" /ENABLE`
       Pop $R0
     ${endIf}
+    ; A silent update has no window to say this in and the app already quit, so the old version comes back.
+    !ifndef BUILD_UNINSTALLER
+      ${if} ${Silent}
+      ${andIf} ${isUpdated}
+        Exec `"$INSTDIR\${APP_EXECUTABLE_FILENAME}"`
+      ${endIf}
+    !endif
     Quit
   ${endIf}
 !macroend
