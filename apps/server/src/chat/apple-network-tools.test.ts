@@ -127,7 +127,7 @@ describe('Apple web tool routing', () => {
         expect(urls[0]?.searchParams.get('format')).toBe('json');
     });
 
-    test('extracts page content and never returns a late canceled result', async () => {
+    test('never parses or returns a page that arrives after a cancel', async () => {
         const controller = new AbortController();
         let complete!: (value: Awaited<ReturnType<AppleWebRequest>>) => void;
         const request: AppleWebRequest = () =>
