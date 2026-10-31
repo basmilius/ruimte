@@ -10,7 +10,7 @@
         "typecheck": "bun check --no-script && bun check --no-script -p tsconfig.test.json"
     },
     "dependencies": {
-        "@adecore/agents": "0.49.2",
+        "@adecore/agents": "0.49.4",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
         "@sentry/cloudflare": "11.8.0",

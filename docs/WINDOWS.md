@@ -116,10 +116,11 @@ SSH is elevated, so what must run without elevation goes through a scheduled tas
 
 Open questions for the next PC session:
 
-- Packaging, in a window:
-  - Run the setup by hand: SmartScreen's "More info, Run anyway", the folder page, the shortcuts, and "Run Ruimte" at the end.
+- Packaging, in a window. A person at the PC confirmed on 2026-10-31 that the setup installs and that updates work from 0.29.0-beta.3 through beta.5, on the installer's old, visible path:
+  - The first silent update, from a build with `silentInstall` (0.29.0-beta.6 or later): no installer window, the app starts again by itself, and the task is back on. A failed stop brings the old version back, which is compiled but has not run.
+  - With a machine that will not stop, Retry and Cancel in the setup: the task it disabled is on again afterwards. Not confirmed separately.
   - With Ruimte open, run the setup or the uninstaller: the "is running" question comes first, and Cancel leaves app and daemon running.
-  - After the first start, under a terminal with a running shell, choose the update from About once a release has a feed: the question about the sessions it ends comes first.
+  - After the first start, under a terminal with a running shell, choose the update from About: the question about the sessions it ends comes first.
   - Log out and back in: the daemon is up without opening the app.
 
 - In the app: the processes panel shows each terminal and chat with live CPU and memory, and a dev server's port appears on its terminal node, in PowerShell and in Git Bash (`npm run dev`). An idle Git Bash does not count as work when quitting.
