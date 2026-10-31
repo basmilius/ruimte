@@ -5,7 +5,7 @@ import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { gitBash } from '../pty/pty.ts';
 import { childCounter } from '../service/work.ts';
 import { SessionManager } from '../sessions/manager.ts';
-import { waitFor } from '../sessions/test-helpers.ts';
+import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
 import { identityOf, processRates, type ProcessSampler, type RawProcess } from './sampler.ts';
 
 function bunArgs(script: string): string[] {
@@ -108,7 +108,8 @@ describe.skipIf(process.platform !== 'win32')('a Git Bash session on a ConPTY', 
                 });
             };
 
-            await Bun.sleep(1500);
+            // Readline flushes the input as it starts, which takes a line typed any earlier with it.
+            await waitForAsync(async () => (await manager.live('tree')!.serializeScreen()).includes('$'), 'the prompt of Git Bash');
             expect(childCounter(sampler.sample().processes)(root)).toBe(0);
             manager.write('tree', "sh -c 'sleep 30; :' &\n");
             await waitFor(() => inTree('sleep'), 'sleep under the shell');
