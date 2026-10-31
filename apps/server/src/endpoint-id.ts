@@ -45,6 +45,9 @@ const FileSchema = z.object({
     /* Whether an agent may reach the other projects open here with `--project`. A machine setting because
        the daemon enforces it. Absent is off. */
     reachOpenProjects: z.boolean().optional().catch(undefined),
+    /* Whether a message of an agent joins a running turn. The person's "Send to a working agent right away",
+       a machine setting because no client stands between two agents. Absent is off. */
+    steerMessages: z.boolean().optional().catch(undefined),
     /* Whether clients may stream browser pages and device screens. Absent is on. */
     streamingAllowed: z.boolean().optional().catch(undefined),
     /* Whether a chat stopped on a limit may resume on a clock when its own switch lets it. The daemon
@@ -87,6 +90,7 @@ interface IdentityOptions {
     icon: ProjectIconChoice | null;
     agentsDeleteAnyView: boolean;
     reachOpenProjects: boolean;
+    steerMessages: boolean;
     streamingAllowed: boolean;
     resumeAtReset: boolean;
     visualReplies: boolean;
@@ -133,6 +137,7 @@ interface IdentityAgentIntegrations {
 export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
     reachOpenProjects?: boolean;
+    steerMessages?: boolean;
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
     visualReplies?: boolean;
@@ -165,6 +170,7 @@ export class EndpointIdentity {
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
     private reachOpen: boolean;
+    private steerAgents: boolean;
     private allowStreaming: boolean;
     private resumeLimited: boolean;
     private visuals: boolean;
@@ -191,6 +197,7 @@ export class EndpointIdentity {
         this.chosenIcon = options.icon;
         this.deleteAnyView = options.agentsDeleteAnyView;
         this.reachOpen = options.reachOpenProjects;
+        this.steerAgents = options.steerMessages;
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
         this.visuals = options.visualReplies;
@@ -224,6 +231,10 @@ export class EndpointIdentity {
     /* Read at every call across projects, so turning it off refuses the next one. */
     get reachOpenProjects(): boolean {
         return this.reachOpen;
+    }
+
+    get steerMessages(): boolean {
+        return this.steerAgents;
     }
 
     get streamingAllowed(): boolean {
@@ -337,6 +348,7 @@ export class EndpointIdentity {
         this.chosenIcon = icon;
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
         this.reachOpen = flags.reachOpenProjects ?? this.reachOpen;
+        this.steerAgents = flags.steerMessages ?? this.steerAgents;
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
         this.visuals = flags.visualReplies ?? this.visuals;
@@ -379,6 +391,7 @@ export class EndpointIdentity {
                 icon: this.chosenIcon,
                 agentsDeleteAnyView: this.deleteAnyView,
                 reachOpenProjects: this.reachOpen,
+                steerMessages: this.steerAgents,
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
                 visualReplies: this.visuals,
@@ -407,6 +420,7 @@ export class EndpointIdentity {
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
             ...(this.reachOpen ? { reachOpenProjects: true } : {}),
+            ...(this.steerAgents ? { steerMessages: true } : {}),
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
             ...(this.visuals ? {} : { visualReplies: false }),
@@ -475,6 +489,7 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         icon: file?.icon ?? null,
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
         reachOpenProjects: file?.reachOpenProjects ?? false,
+        steerMessages: file?.steerMessages ?? false,
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,
         visualReplies: file?.visualReplies ?? true,

@@ -327,7 +327,7 @@ describe('a message another node left', () => {
                 terminal: () => null,
                 // No outbox in these tests, so the message waits for the turn the test sends itself.
                 chat: async (id) => (manager.get(id) === undefined ? 'none' : 'running'),
-                wokenBy: () => []
+                hop: () => 0
             },
             notice
         );
@@ -359,7 +359,7 @@ describe('a message another node left', () => {
             level: 'info',
             turnId: null,
             text: read,
-            message: { from: 'term-1', title: 'dev server', text: 'the build is green' }
+            message: { from: 'term-1', title: 'dev server', text: 'the build is green', state: 'waiting' }
         });
 
         await manager.send('chat-msg', 'second');
@@ -385,7 +385,7 @@ describe('a message another node left', () => {
                 level: 'info',
                 turnId: null,
                 text: read,
-                message: { from: 'term-1', title: 'dev server', text: 'the build is green' }
+                message: { from: 'term-1', title: 'dev server', text: 'the build is green', state: 'waiting' }
             })
         ]);
 

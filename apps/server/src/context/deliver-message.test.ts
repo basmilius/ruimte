@@ -134,7 +134,7 @@ describe('a message to a chat', () => {
         daemon.chats.cancel('chat-other');
     });
 
-    test('sent from a turn a message started to anyone but the sender wakes nobody, and says why', async () => {
+    test('sent from a turn a message started moves the next chat along the chain', async () => {
         const daemon = await boot();
         await idle(daemon, 'chat-lead');
         await idle(daemon, 'chat-other');
@@ -147,23 +147,11 @@ describe('a message to a chat', () => {
         const before = turnsOf(daemon, 'chat-third').length;
 
         const lines = await notify(daemon, 'chat-other', 'chat-third', 'the word is walnut');
-        expect(lines).toEqual([
-            notified(
-                'chat-third',
-                'waiting',
-                'a message started the turn you are in, and from such a turn only an answer to a node that asked wakes it; that chat reads this one in front of its next turn (1 waiting)'
-            )
-        ]);
-        // The third chat is between turns and still gets none: this is the step the daemon does not take.
-        expect(daemon.chats.get('chat-third')?.info.activeTurnId).toBeNull();
-        expect(turnsOf(daemon, 'chat-third')).toHaveLength(before);
-        expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
-        expect(daemon.notices.waiting('chat-third')).toHaveLength(1);
-
-        // What was said still reaches it, in the next turn a person gives it.
-        daemon.chats.cancel('chat-other');
-        await daemon.chats.send('chat-third', 'anything back?');
+        expect(lines).toEqual([notified('chat-third', 'now', 'that chat takes a turn on it, and reads it there')]);
         await daemon.until(() => repliesOf(daemon, 'chat-third').some((text) => text.includes('the word is walnut')));
+        expect(turnsOf(daemon, 'chat-third').length).toBeGreaterThan(before);
+        expect(turnsOf(daemon, 'chat-third').at(-1)?.messageHop).toBe(2);
+        daemon.chats.cancel('chat-other');
     });
 
     test('to a chat that is in a turn keeps that turn, and lands in front of its next one', async () => {
@@ -176,7 +164,9 @@ describe('a message to a chat', () => {
         const before = turnsOf(daemon, 'chat-other').length;
 
         const lines = await notify(daemon, 'chat-lead', 'chat-other', 'the build is green');
-        expect(lines).toEqual([notified('chat-other', 'waiting', 'that chat is in a turn; it reads the message in front of its next one (1 waiting)')]);
+        expect(lines).toEqual([
+            notified('chat-other', 'waiting', 'that chat is in a turn; it reads the message at the latest in a turn of its own when this one ends (1 waiting)')
+        ]);
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
         expect(turnsOf(daemon, 'chat-other')).toHaveLength(before);
 

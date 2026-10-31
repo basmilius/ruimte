@@ -2162,6 +2162,26 @@
         }
       }
     },
+    "Waiting for the next turn" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht op de volgende beurt"
+          }
+        }
+      }
+    },
+    "Expired before the agent read it" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vervallen voordat de agent het las"
+          }
+        }
+      }
+    },
     "This project" : {
       "localizations" : {
         "nl" : {

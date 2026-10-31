@@ -16,11 +16,20 @@ import { SettingsRow } from '@adecore/ui/settings';
 import { Select, Switch } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
+import { saveMachineSetting } from '@/shell/settings/machine-setting';
+import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
 
 const STREAMING_MODES = ['words', 'blocks', 'whole'] as const;
 
 /* How a chat reads and sends, apart from what its agent may do: that stays under Agents. */
+/* A message between two agents passes no client, so each machine keeps the person's last choice for it. */
+function tellMachinesOfSteering(next: boolean): void {
+    for (const endpoint of useEndpoints.getState().endpoints) {
+        void saveMachineSetting(endpoint, { steerMessages: next });
+    }
+}
+
 export function ChatsPane() {
     const { t } = useTranslation('settings');
     const chatStreaming = useSettings((s) => s.chatStreaming);
@@ -98,7 +107,7 @@ export function ChatsPane() {
                         />
                     }
                 />
-                <SettingSwitchRow id="chats.steerByDefault" setting="chatSteerByDefault" />
+                <SettingSwitchRow id="chats.steerByDefault" setting="chatSteerByDefault" onChanged={tellMachinesOfSteering} />
             </SettingsSection>
             <SettingsSection title={t('chats.views.title')}>
                 <SettingSwitchRow id="chats.showViews" setting="agentsShowViews" />

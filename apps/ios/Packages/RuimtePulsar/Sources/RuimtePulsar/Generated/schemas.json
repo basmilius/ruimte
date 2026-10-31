@@ -6391,6 +6391,9 @@
           "reachOpenProjects": {
             "type": "boolean"
           },
+          "steerMessages": {
+            "type": "boolean"
+          },
           "streamingAllowed": {
             "type": "boolean"
           },
@@ -15777,6 +15780,9 @@
                     "type": "string"
                   }
                 },
+                "messageHop": {
+                  "type": "number"
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -15885,6 +15891,13 @@
                     },
                     "title": {
                       "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "dropped"
+                      ]
                     },
                     "text": {
                       "type": "string"
@@ -18201,6 +18214,9 @@
                     "type": "string"
                   }
                 },
+                "messageHop": {
+                  "type": "number"
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -18309,6 +18325,13 @@
                     },
                     "title": {
                       "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "dropped"
+                      ]
                     },
                     "text": {
                       "type": "string"
@@ -19859,6 +19882,9 @@
                     "type": "string"
                   }
                 },
+                "messageHop": {
+                  "type": "number"
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -19967,6 +19993,13 @@
                     },
                     "title": {
                       "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "dropped"
+                      ]
                     },
                     "text": {
                       "type": "string"
@@ -21511,6 +21544,9 @@
                             "type": "string"
                           }
                         },
+                        "messageHop": {
+                          "type": "number"
+                        },
                         "native": {
                           "type": "object",
                           "properties": {
@@ -21619,6 +21655,13 @@
                             },
                             "title": {
                               "type": "string"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "waiting",
+                                "dropped"
+                              ]
                             },
                             "text": {
                               "type": "string"
@@ -24895,6 +24938,9 @@
                               "type": "string"
                             }
                           },
+                          "messageHop": {
+                            "type": "number"
+                          },
                           "native": {
                             "type": "object",
                             "properties": {
@@ -25003,6 +25049,13 @@
                               },
                               "title": {
                                 "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": [
+                                  "waiting",
+                                  "dropped"
+                                ]
                               },
                               "text": {
                                 "type": "string"
@@ -27073,6 +27126,9 @@
                     "type": "string"
                   }
                 },
+                "messageHop": {
+                  "type": "number"
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -27181,6 +27237,13 @@
                     },
                     "title": {
                       "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "dropped"
+                      ]
                     },
                     "text": {
                       "type": "string"
@@ -32291,6 +32354,9 @@
                     "type": "string"
                   }
                 },
+                "messageHop": {
+                  "type": "number"
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -32399,6 +32465,13 @@
                     },
                     "title": {
                       "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "dropped"
+                      ]
                     },
                     "text": {
                       "type": "string"
@@ -62337,6 +62410,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "steerMessages": {
+        "type": "boolean"
+      },
       "streamingAllowed": {
         "type": "boolean"
       },
@@ -62874,6 +62950,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "steerMessages": {
+        "type": "boolean"
+      },
       "streamingAllowed": {
         "type": "boolean"
       },
@@ -63191,6 +63270,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "steerMessages": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -63521,6 +63603,9 @@
       "reachOpenProjects": {
         "type": "boolean"
       },
+      "steerMessages": {
+        "type": "boolean"
+      },
       "streamingAllowed": {
         "type": "boolean"
       },
@@ -63834,6 +63919,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "steerMessages": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -64426,6 +64514,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "steerMessages": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -65215,6 +65306,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "steerMessages": {
         "type": "boolean"
       },
       "streamingAllowed": {
@@ -75038,6 +75132,9 @@
                           "type": "string"
                         }
                       },
+                      "messageHop": {
+                        "type": "number"
+                      },
                       "native": {
                         "type": "object",
                         "properties": {
@@ -75146,6 +75243,13 @@
                           },
                           "title": {
                             "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "dropped"
+                            ]
                           },
                           "text": {
                             "type": "string"
@@ -78422,6 +78526,9 @@
                             "type": "string"
                           }
                         },
+                        "messageHop": {
+                          "type": "number"
+                        },
                         "native": {
                           "type": "object",
                           "properties": {
@@ -78530,6 +78637,13 @@
                             },
                             "title": {
                               "type": "string"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "waiting",
+                                "dropped"
+                              ]
                             },
                             "text": {
                               "type": "string"
@@ -79723,6 +79837,9 @@
         "type": "boolean"
       },
       "reachOpenProjects": {
+        "type": "boolean"
+      },
+      "steerMessages": {
         "type": "boolean"
       },
       "streamingAllowed": {

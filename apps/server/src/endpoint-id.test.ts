@@ -138,6 +138,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     icon: null,
                     agentsDeleteAnyView: false,
                     reachOpenProjects: false,
+                    steerMessages: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,

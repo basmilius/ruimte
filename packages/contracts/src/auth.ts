@@ -46,6 +46,8 @@ const MACHINE_SWITCHES = {
     // Lets an agent read the other projects open on this machine and start agents there (`--project`). Enforced
     // by the daemon, so it lives in `endpoint.json`. Absent reads as false.
     reachOpenProjects: z.boolean().optional(),
+    // Lets a message of an agent join a running turn, as a person's "Send to a working agent right away" does. Absent reads as false.
+    steerMessages: z.boolean().optional(),
     // Browser pages and device screens. Absent reads as true.
     streamingAllowed: z.boolean().optional(),
     // Lets a chat that stopped on a limit resume on a clock when its own switch allows. Absent reads as false.

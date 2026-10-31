@@ -1,5 +1,6 @@
 import { personShell } from '../pty/pty.ts';
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes } from '@adecore/agents/coordination';
+import { wakeForWaitingMessages } from '../context/agent-messages.ts';
 import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualStore, suggestChatTitle } from '@adecore/agents/chat';
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
@@ -263,6 +264,8 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
     const plans = new PlanStore(config.home);
     const bookmarks = new BookmarkStore(config.home);
     const visuals = new VisualStore(config.home, attachments);
+    // A microtask: a queue is taken in the middle of building a prompt, which a thread write must not cut into.
+    notices.onSettled((chatId, settled, state) => queueMicrotask(() => chats.settleMessages(chatId, settled, state)));
     const chats: ChatManager = new ChatManager({
         providers: providers.providers,
         projectAccount,
@@ -313,10 +316,14 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         standalone: (chatId) => index().locate(chatId)?.canvasId === null,
         inlineChat: (chatId) => index().isHiddenChat(chatId),
         design: (chatId) => index().designOf(chatId),
-        turnEnded: (chatId) => {
+        turnEnded: (chatId, state) => {
             if (index().designOf(chatId) !== null) {
                 void later.projects().store.settleDesignsAfterTurn(chatId);
             }
+
+            void wakeForWaitingMessages(notices, chatId, state, index().locate(chatId)?.projectId ?? null, (projectId, work) =>
+                outboxLink.enqueue(projectId, chatId, work)
+            );
         },
         openingAgent: agentChatOpening(outbox, (provider) => chats.composerPreferences.for(provider)),
         messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),

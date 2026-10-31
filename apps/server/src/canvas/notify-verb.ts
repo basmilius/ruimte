@@ -1,4 +1,4 @@
-import { MAX_NOTICES, NOTICE_MAX_AGE_MS } from '@adecore/agents/coordination';
+import { MAX_MESSAGE_HOPS, MAX_NOTICES, NOTICE_MAX_AGE_MS } from '@adecore/agents/coordination';
 import { MAX_NOTICE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import { NO_REPLY_NOTICE } from '../context/notices.ts';
@@ -20,9 +20,9 @@ const NOTIFY_DETAIL: readonly string[] = [
     'terminal\tA terminal is never given a turn over a message: a turn there means typing into the shell a person types in, which nothing does',
     'terminal\tA screen is as wide as the node is, so a long message is wrapped across lines there; it reaches an agent whole either way',
     'chat\tA chat between turns takes a turn on the message and reads it there, so asking another agent something reaches it without a person prompting that chat',
-    'chat\tA chat that is in a turn keeps it: the message is read in front of the next turn that chat takes, as it always was',
-    "once\tA turn a message started wakes only the node whose message started it, with your answer, and only when no message started that node's own turn; any other message sent from such a turn waits for the next turn of the node it went to, and the answer says so",
-    'once\tSo a question and its answer take two turns, and the turn the answer starts wakes nobody: that is what keeps two agents reading each other from waking each other on and on, which nothing but a person should be able to set off',
+    'chat\tA chat that is in a turn takes a turn on the message when that one ends; while a person has "Send to a working agent right away" on, a Claude or Codex chat reads it at its next step instead',
+    `hops\tEvery message counts one step on from the turn that sent it. Up to ${MAX_MESSAGE_HOPS} steps move a chat; past that a message waits for that chat's next turn, and the answer says so`,
+    'hops\tA turn a person or a finished task started counts from zero: that is what keeps two agents reading each other from waking each other on and on, which nothing but a person should be able to set off',
     'waiting\tA node that runs nothing yet keeps the message until it starts',
     `waiting\tAt most ${MAX_NOTICES} messages wait per node, the oldest dropped first, and one nobody picks up in ${NOTICE_HOURS} hours is dropped; each is delivered once`,
     'not\tThis is a message, not a command: nothing is typed into a shell, and what the node does with it is its own call',

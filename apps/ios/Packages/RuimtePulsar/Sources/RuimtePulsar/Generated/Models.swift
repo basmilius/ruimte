@@ -3884,6 +3884,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `icon`: Presence<MachineIcon>
     public let `agentsDeleteAnyView`: Bool?
     public let `reachOpenProjects`: Bool?
+    public let `steerMessages`: Bool?
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
     public let `visualReplies`: Bool?
@@ -3918,13 +3919,14 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `features`: [String]?
     public let `viewReferences`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `gitBashMissing`: Bool? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `reachOpenProjects`: Bool? = nil, `steerMessages`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `visualReplies`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `keepAwakeLidClosed`: Bool? = nil, `keepAwakeLidAvailable`: Bool? = nil, `keepAwakeLidRule`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `lan`: Presence<PairResultEndpointLan> = .missing, `lanDoor`: Bool? = nil, `lanDoorFixed`: Bool? = nil, `accountId`: Presence<String> = .missing, `agentIntegrations`: PairResultEndpointAgentIntegrations? = nil, `worktreeRoot`: Presence<String> = .missing, `terminalShell`: PairResultEndpointTerminalShell? = nil, `gitBashMissing`: Bool? = nil, `nodeSizes`: [String: PairResultEndpointNodeSizesValue]? = nil, `usageStats`: Bool? = nil, `features`: [String]? = nil, `viewReferences`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
         self.`icon` = `icon`
         self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
         self.`reachOpenProjects` = `reachOpenProjects`
+        self.`steerMessages` = `steerMessages`
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
         self.`visualReplies` = `visualReplies`
@@ -3968,6 +3970,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(MachineIcon.self, forKey: .`icon`))) : .missing
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `reachOpenProjects` = try container.decodeIfPresent(Bool.self, forKey: .`reachOpenProjects`)
+        `steerMessages` = try container.decodeIfPresent(Bool.self, forKey: .`steerMessages`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
         `visualReplies` = try container.decodeIfPresent(Bool.self, forKey: .`visualReplies`)
@@ -4015,6 +4018,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         }
         try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
         try container.encodeIfPresent(`reachOpenProjects`, forKey: .`reachOpenProjects`)
+        try container.encodeIfPresent(`steerMessages`, forKey: .`steerMessages`)
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
         try container.encodeIfPresent(`visualReplies`, forKey: .`visualReplies`)
@@ -4073,6 +4077,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `icon` = "icon"
         case `agentsDeleteAnyView` = "agentsDeleteAnyView"
         case `reachOpenProjects` = "reachOpenProjects"
+        case `steerMessages` = "steerMessages"
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
         case `visualReplies` = "visualReplies"
@@ -6338,13 +6343,14 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
     public let `deliveryPending`: Bool?
     public let `taskIds`: [String]?
     public let `messageFrom`: [String]?
+    public let `messageHop`: Double?
     public let `native`: ChatTurnItemNative?
     public let `checkpointAfter`: String?
     public let `summaryFor`: String?
     public let `limit`: ChatTurnItemLimit?
     public let `checkpointDiffRef`: ChatTurnItemCheckpointDiffRef?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "turn", `state`: ChatTurnItemState, `origin`: ChatTurnItemOrigin? = nil, `label`: String? = nil, `taskToolUseId`: String? = nil, `endedAt`: Double?, `costUsd`: Double, `checkpoint`: String? = nil, `checkpointHead`: String? = nil, `checkpointHeadAfter`: String? = nil, `checkpointDiff`: ChatTurnItemCheckpointDiff? = nil, `attempt`: Int64? = nil, `resumePending`: Bool? = nil, `deliveryPending`: Bool? = nil, `taskIds`: [String]? = nil, `messageFrom`: [String]? = nil, `native`: ChatTurnItemNative? = nil, `checkpointAfter`: String? = nil, `summaryFor`: String? = nil, `limit`: ChatTurnItemLimit? = nil, `checkpointDiffRef`: ChatTurnItemCheckpointDiffRef? = nil) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "turn", `state`: ChatTurnItemState, `origin`: ChatTurnItemOrigin? = nil, `label`: String? = nil, `taskToolUseId`: String? = nil, `endedAt`: Double?, `costUsd`: Double, `checkpoint`: String? = nil, `checkpointHead`: String? = nil, `checkpointHeadAfter`: String? = nil, `checkpointDiff`: ChatTurnItemCheckpointDiff? = nil, `attempt`: Int64? = nil, `resumePending`: Bool? = nil, `deliveryPending`: Bool? = nil, `taskIds`: [String]? = nil, `messageFrom`: [String]? = nil, `messageHop`: Double? = nil, `native`: ChatTurnItemNative? = nil, `checkpointAfter`: String? = nil, `summaryFor`: String? = nil, `limit`: ChatTurnItemLimit? = nil, `checkpointDiffRef`: ChatTurnItemCheckpointDiffRef? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
@@ -6364,6 +6370,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         self.`deliveryPending` = `deliveryPending`
         self.`taskIds` = `taskIds`
         self.`messageFrom` = `messageFrom`
+        self.`messageHop` = `messageHop`
         self.`native` = `native`
         self.`checkpointAfter` = `checkpointAfter`
         self.`summaryFor` = `summaryFor`
@@ -6392,6 +6399,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         `deliveryPending` = try container.decodeIfPresent(Bool.self, forKey: .`deliveryPending`)
         `taskIds` = try container.decodeIfPresent([String].self, forKey: .`taskIds`)
         `messageFrom` = try container.decodeIfPresent([String].self, forKey: .`messageFrom`)
+        `messageHop` = try container.decodeIfPresent(Double.self, forKey: .`messageHop`)
         `native` = try container.decodeIfPresent(ChatTurnItemNative.self, forKey: .`native`)
         `checkpointAfter` = try container.decodeIfPresent(String.self, forKey: .`checkpointAfter`)
         `summaryFor` = try container.decodeIfPresent(String.self, forKey: .`summaryFor`)
@@ -6420,6 +6428,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`deliveryPending`, forKey: .`deliveryPending`)
         try container.encodeIfPresent(`taskIds`, forKey: .`taskIds`)
         try container.encodeIfPresent(`messageFrom`, forKey: .`messageFrom`)
+        try container.encodeIfPresent(`messageHop`, forKey: .`messageHop`)
         try container.encodeIfPresent(`native`, forKey: .`native`)
         try container.encodeIfPresent(`checkpointAfter`, forKey: .`checkpointAfter`)
         try container.encodeIfPresent(`summaryFor`, forKey: .`summaryFor`)
@@ -6447,6 +6456,7 @@ public struct ChatTurnItem: Codable, Sendable, Equatable {
         case `deliveryPending` = "deliveryPending"
         case `taskIds` = "taskIds"
         case `messageFrom` = "messageFrom"
+        case `messageHop` = "messageHop"
         case `native` = "native"
         case `checkpointAfter` = "checkpointAfter"
         case `summaryFor` = "summaryFor"
@@ -6709,11 +6719,13 @@ public enum ChatNoteItemLevel: String, CaseIterable, Codable, Sendable, Equatabl
 public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
     public let `from`: String
     public let `title`: String
+    public let `state`: ChatNoteItemMessageState?
     public let `text`: String
 
-    public init(`from`: String, `title`: String, `text`: String) {
+    public init(`from`: String, `title`: String, `state`: ChatNoteItemMessageState? = nil, `text`: String) {
         self.`from` = `from`
         self.`title` = `title`
+        self.`state` = `state`
         self.`text` = `text`
     }
 
@@ -6721,6 +6733,7 @@ public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `from` = try container.decode(String.self, forKey: .`from`)
         `title` = try container.decode(String.self, forKey: .`title`)
+        `state` = try container.decodeIfPresent(ChatNoteItemMessageState.self, forKey: .`state`)
         `text` = try container.decode(String.self, forKey: .`text`)
     }
 
@@ -6728,14 +6741,21 @@ public struct ChatNoteItemMessage: Codable, Sendable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(`from`, forKey: .`from`)
         try container.encode(`title`, forKey: .`title`)
+        try container.encodeIfPresent(`state`, forKey: .`state`)
         try container.encode(`text`, forKey: .`text`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `from` = "from"
         case `title` = "title"
+        case `state` = "state"
         case `text` = "text"
     }
+}
+
+public enum ChatNoteItemMessageState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `waiting` = "waiting"
+    case `dropped` = "dropped"
 }
 
 public struct ChatCompactionItem: Codable, Sendable, Equatable {

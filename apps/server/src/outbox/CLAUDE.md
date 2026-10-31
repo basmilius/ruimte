@@ -21,8 +21,8 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 
 ### What wakes a chat
 
-- Three things wake a chat, each once. A finished task wakes the chat that delegated it. A message wakes the chat it was sent to. A PR-watch a person turned on for one chat wakes that chat once per terminal check state of the current head, or per new review.
-- The wake runs through the outbox; an observer only notes. The turn a message opened wakes nobody, except the sender it answers, once, while no message opened that sender's own turn (`deliverToChat` in `@adecore/agents`). A question and its answer take two steps; a PR-watch's turn wakes nobody. A terminal is never woken.
+- Three things wake a chat. A finished task wakes the chat that delegated it, once. A message wakes the chat it was sent to, up to `MAX_MESSAGE_HOPS` steps along a chain. A PR-watch a person turned on for one chat wakes that chat once per terminal check state of the current head, or per new review.
+- The wake runs through the outbox; an observer only notes. Each message is one hop past the turn that sent it (`deliverToChat` in `@adecore/agents`); a turn a person or task opened is hop 0, and past hop 4 a message only waits. One that lands in a turn opens a turn when that one finishes (not after a Stop or an error), or joins it through `steerNotices` while `steerMessages` is on, which raises that turn's hop. A PR-watch's turn wakes nobody. A terminal is never woken.
 
 ### When a task settles
 

@@ -1,4 +1,4 @@
-import { chatNoticeTargets, showNotices, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
+import { chatNoticeTargets, showNotices, steerNotices, withinHops, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
 import type { MessageHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
@@ -15,6 +15,24 @@ interface AgentMessageDeps {
     projects: Pick<ProjectStore, 'index'>;
     enqueue(projectId: string, nodeId: string, work: OutboxWork): Promise<void>;
     push(): Pick<PushService, 'notify'>;
+    /* The person's "Send to a working agent right away", which holds for a message of an agent as well. */
+    steerMessages?(): boolean;
+}
+
+/*
+ * The turn messages that landed during a turn are owed once it ends. Only after a turn that finished:
+ * a person's Stop or an error is no moment to start another on its own.
+ */
+export async function wakeForWaitingMessages(
+    notices: Pick<NoticeStore, 'waiting'>,
+    chatId: string,
+    state: 'done' | 'aborted' | 'error',
+    projectId: string | null,
+    enqueue: (projectId: string, work: OutboxWork) => Promise<void>
+): Promise<void> {
+    if (state === 'done' && projectId !== null && notices.waiting(chatId).some(withinHops)) {
+        await enqueue(projectId, { kind: 'deliver-message', payload: { from: chatId } });
+    }
 }
 
 /* What `notify` and `alert` reach: another node's agent, and the person's devices. */
@@ -58,6 +76,12 @@ export function agentMessages(deps: AgentMessageDeps): MessageHost {
             /* After the line in the thread, so a person sees the message itself above the turn it opens. */
             if (delivery.wake) {
                 await deps.enqueue(notice.projectId, notice.targetId, { kind: 'deliver-message', payload: { from: notice.from } });
+            }
+            /* Not awaited: a CLI takes a steer only between tool calls, and the sender goes on meanwhile. */
+            if (delivery.inTurn === true && deps.steerMessages?.() === true) {
+                void steerNotices(notices, { steer: (id, steer) => chats.steerMessages(id, steer) }, MESSAGE_WORDS, notice.targetId).catch((e) =>
+                    console.error(`Steering a message into chat ${notice.targetId} failed:`, errorText(e))
+                );
             }
             return delivery;
         }

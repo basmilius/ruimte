@@ -362,6 +362,7 @@ describe('auth handlers', () => {
                     icon: { kind: 'lucide', value: 'server' },
                     agentsDeleteAnyView: false,
                     reachOpenProjects: false,
+                    steerMessages: false,
                     streamingAllowed: true,
                     resumeAtReset: false,
                     visualReplies: true,

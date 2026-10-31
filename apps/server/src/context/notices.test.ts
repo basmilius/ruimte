@@ -47,12 +47,12 @@ describe('the words of a message', () => {
         expect(noticeNote({ ...left('the build is green'), fromTitle: '', createdAt: 0 })).toBe('Node term-1 sent a message: the build is green');
     });
 
-    test('labels a woken turn by each sender once, and tells its agent that a message starts one turn', () => {
+    test('labels a woken turn by each sender once, and tells its agent how far messages go', () => {
         const notice = (from: string, fromTitle: string): Notice => ({ ...left('hi'), from, fromTitle, createdAt: 0 });
         expect(messageLabel([notice('term-1', 'shell')])).toBe('Message from shell');
         expect(messageLabel([notice('term-1', 'shell'), notice('term-3', ''), notice('term-1', 'shell')])).toBe('Messages from shell, node term-3');
         expect(messageText(2)).toStartWith('2 agents of this project sent you the messages above.');
-        expect(messageText(1)).toContain('your answer wakes the node that asked once');
+        expect(messageText(1)).toContain('Agents reading each other wake each other a few times');
     });
 });
 
@@ -60,7 +60,7 @@ describe('deliverNotice', () => {
     const targets = (overrides: Partial<NoticeTargets> = {}): NoticeTargets => ({
         terminal: () => null,
         chat: async () => 'none',
-        wokenBy: () => [],
+        hop: () => 0,
         ...overrides
     });
 
@@ -110,24 +110,21 @@ describe('deliverNotice', () => {
         expect(busy).toEqual({
             at: 'waiting',
             wake: false,
-            detail: answer('that chat is in a turn; it reads the message in front of its next one (1 waiting)')
+            inTurn: true,
+            detail: answer('that chat is in a turn; it reads the message at the latest in a turn of its own when this one ends (1 waiting)')
         });
         const cold = await deliverNotice(store, targets(), left('and another', 'term-3'));
         expect(cold.detail).toStartWith('nothing runs in that node yet');
         expect(cold.wake).toBe(false);
     });
 
-    test('a sender in a turn a message started wakes nobody, and hears why', async () => {
-        const delivery = await deliverNotice(
-            store,
-            targets({ chat: async () => 'idle', wokenBy: (id) => (id === 'term-1' ? ['chat-9'] : []) }),
-            left('and what about the tests', 'chat-2')
-        );
+    test('a message past the hop limit wakes nobody, and its sender hears why', async () => {
+        const delivery = await deliverNotice(store, targets({ chat: async () => 'idle', hop: () => 4 }), left('and what about the tests', 'chat-2'));
         expect(delivery).toEqual({
             at: 'waiting',
             wake: false,
             detail: answer(
-                'a message started the turn you are in, and from such a turn only an answer to a node that asked wakes it; that chat reads this one in front of its next turn (1 waiting)'
+                'this chain of messages has woken agents 4 times, which is as far as messages go; that chat reads this one when it next takes a turn for another reason (1 waiting)'
             )
         });
         expect(store.waiting('chat-2')).toHaveLength(1);
@@ -138,7 +135,7 @@ describe('deliverNotice', () => {
         const deliveries = [
             await deliverNotice(store, targets({ chat: async () => 'idle' }), left('the build is green', 'chat-2')),
             await deliverNotice(store, targets({ chat: async () => 'running' }), left('and the tests', 'chat-3')),
-            await deliverNotice(store, targets({ chat: async () => 'idle', wokenBy: () => ['chat-9'] }), left('and the docs', 'chat-4')),
+            await deliverNotice(store, targets({ chat: async () => 'idle', hop: () => 4 }), left('and the docs', 'chat-4')),
             await deliverNotice(store, targets(), left('and the types', 'chat-5')),
             await deliverNotice(store, targets({ terminal: () => ({ agent: null, notice: () => {} }) }), left('and the lint', 'term-9')),
             await deliverNotice(store, targets({ terminal: () => ({ agent: agent('claude'), notice: () => {} }) }), left('and the rest', 'term-8'))

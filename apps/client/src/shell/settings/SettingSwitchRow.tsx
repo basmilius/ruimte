@@ -10,7 +10,17 @@ type BooleanSetting = { [Key in keyof Settings]: Settings[Key] extends boolean ?
  * A switch for one setting of this client, with its words under `settings:<id>.label` and `.description`;
  * the search finds it by `id`. `leading` stands before the words, such as a picture of what it does.
  */
-export function SettingSwitchRow({ id, setting, leading }: { id: string; setting: BooleanSetting; leading?: ReactNode }) {
+export function SettingSwitchRow({
+    id,
+    setting,
+    leading,
+    onChanged
+}: {
+    id: string;
+    setting: BooleanSetting;
+    leading?: ReactNode;
+    onChanged?: (next: boolean) => void;
+}) {
     const { t } = useTranslation('settings');
     const checked = useSettings((s) => s[setting]);
     const update = useSettings((s) => s.update);
@@ -21,7 +31,16 @@ export function SettingSwitchRow({ id, setting, leading }: { id: string; setting
             leading={leading}
             label={t(`${id}.label`)}
             description={t(`${id}.description`)}
-            control={<Switch checked={checked} onCheckedChange={(next) => update({ [setting]: next })} label={t(`${id}.label`)} />}
+            control={
+                <Switch
+                    checked={checked}
+                    onCheckedChange={(next) => {
+                        update({ [setting]: next });
+                        onChanged?.(next);
+                    }}
+                    label={t(`${id}.label`)}
+                />
+            }
         />
     );
 }

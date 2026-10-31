@@ -148,6 +148,10 @@ struct ChatSentMessage: View {
         ) {
             ChatReferenceChip(look: ChatReferenceChip.look(message.from, chat: false, lookup: lookup, lastName: message.title))
         }
+        if let state = message.state {
+            Text(state == .waiting ? String(localized: "Waiting for the next turn") : String(localized: "Expired before the agent read it"))
+                .font(.caption).foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

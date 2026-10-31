@@ -1134,7 +1134,7 @@
         },
         "steerByDefault": {
             "label": "Send to a working agent right away",
-            "description": "A message sent while Claude or Codex works reaches it at its next step. When off, it waits until the agent is done. Hold Option or Alt to do the opposite."
+            "description": "A message sent while Claude or Codex works reaches it at its next step, also one another agent sends, which can then redirect it. When off, it waits until the agent is done. Hold Option or Alt to do the opposite."
         },
         "showToolCalls": {
             "label": "Show what an agent reads and runs",

@@ -1134,7 +1134,7 @@
         },
         "steerByDefault": {
             "label": "Meteen naar een werkende agent sturen",
-            "description": "Een bericht dat je stuurt terwijl Claude of Codex werkt, komt bij de volgende stap aan. Als dit uit staat, wacht het tot de agent klaar is. Houd Option of Alt ingedrukt voor het omgekeerde."
+            "description": "Een bericht dat je stuurt terwijl Claude of Codex werkt, komt bij de volgende stap aan, ook een bericht van een andere agent, die het werk dan kan bijsturen. Als dit uit staat, wacht het tot de agent klaar is. Houd Option of Alt ingedrukt voor het omgekeerde."
         },
         "showToolCalls": {
             "label": "Laten zien wat een agent leest en draait",

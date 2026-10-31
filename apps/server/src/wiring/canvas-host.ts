@@ -110,7 +110,7 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         },
         machine: identity,
         endSession: input.projects.endSession,
-        messages: agentMessages({ notices: stores.notices, sessions, chats, projects, enqueue, push: later.push }),
+        messages: agentMessages({ notices: stores.notices, sessions, chats, projects, enqueue, push: later.push, steerMessages: () => identity.steerMessages }),
         diagrams: input.projects.diagrams,
         drawings: input.projects.drawings,
         tasks: work.tasks.host,

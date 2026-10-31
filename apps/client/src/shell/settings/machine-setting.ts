@@ -13,6 +13,7 @@ export interface MachineSettingPatch extends Partial<Record<MachineSwitch, boole
     readonly broker?: BrokerSetting;
     readonly lanDoor?: boolean;
     readonly streamingAllowed?: boolean;
+    readonly steerMessages?: boolean;
     readonly worktreeRoot?: string;
     readonly terminalShell?: TerminalShell;
     readonly usageStats?: boolean;

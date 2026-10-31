@@ -104,7 +104,7 @@ interface ChatManagerOptions extends ChatCoreOptions {
     // The folder a chat works on as a design and whether that design stands on a canvas, which it hears about when its CLI starts; null for any other chat.
     design?: (chatId: string) => { folder: string; onCanvas: boolean } | null;
     // Told each time a turn of a chat ends, so a design folder that moved during it takes in what the turn still wrote to the old one.
-    turnEnded?: (chatId: string) => void;
+    turnEnded?: (chatId: string, state: 'done' | 'aborted' | 'error') => void;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
     // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
@@ -272,7 +272,7 @@ export class ChatManager extends ChatCore {
     private readonly briefs = new Map<string, string>();
     private readonly inlineChat: (chatId: string) => boolean;
     private readonly design: (chatId: string) => { folder: string; onCanvas: boolean } | null;
-    private readonly turnEnded: (chatId: string) => void;
+    private readonly turnEnded: (chatId: string, state: 'done' | 'aborted' | 'error') => void;
     private readonly modeCeiling: (chatId: string) => RuntimeMode | null;
     private readonly peerChat: (chatId: string) => boolean;
     private readonly checkCwd: (chatId: string, cwd: string) => Promise<void>;
@@ -610,7 +610,8 @@ export class ChatManager extends ChatCore {
         session.wake({
             ...continueOnWake(turn.limit.kind, this.accountLabel(kind, to), false),
             taskIds: turn.taskIds ?? [],
-            ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
+            ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom }),
+            ...(turn.messageHop === undefined ? {} : { messageHop: turn.messageHop })
         });
     }
 
@@ -809,7 +810,7 @@ export class ChatManager extends ChatCore {
             this.turnUsage.turn(chatId, event.item, info);
         }
         if (event.type === 'item' && event.item.kind === 'turn' && event.item.state !== 'running') {
-            this.turnEnded(chatId);
+            this.turnEnded(chatId, event.item.state);
         }
         for (const hold of this.childHolds.values()) {
             if (hold.childId === chatId) {

@@ -1,4 +1,4 @@
-import { deliverToChat, type ChatDelivery, type ChatNoticeTargets, type MessageWords } from '@adecore/agents/coordination';
+import { deliverToChat, MAX_MESSAGE_HOPS, type ChatDelivery, type ChatNoticeTargets, type MessageWords } from '@adecore/agents/coordination';
 import type { Notice, NoticeStore } from '@adecore/agents/coordination';
 import type { AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
@@ -18,7 +18,7 @@ export function noticeNote(notice: Notice): string {
  * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
 export function messageText(count: number): string {
-    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. A message starts one turn: your answer wakes the node that asked once, and anything else you send from this turn is read by its node at the start of its next one.`;
+    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. Agents reading each other wake each other a few times; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
 }
 
 /* What a person reads above the turn in the thread: who it came from, by the name they see on the canvas. */
@@ -35,6 +35,8 @@ export interface NoticeDelivery {
     detail: string;
     /* Whether the receiving chat is owed a turn on this message; the daemon's outbox is what opens it. */
     wake: boolean;
+    /* Whether the message may join the turn the chat is running. */
+    inTurn?: boolean;
 }
 
 // Without this tail on every answer to a notify, a model polls the node it wrote to until it gives up.
@@ -56,12 +58,15 @@ function chatDelivered({ outcome, waiting }: ChatDelivery): NoticeDelivery {
         case 'no-chat':
             return delivered('waiting', false, `nothing runs in that node yet; it reads the message when it starts (${count})`);
         case 'in-turn':
-            return delivered('waiting', false, `that chat is in a turn; it reads the message in front of its next one (${count})`);
-        case 'from-message':
+            return {
+                ...delivered('waiting', false, `that chat is in a turn; it reads the message at the latest in a turn of its own when this one ends (${count})`),
+                inTurn: true
+            };
+        case 'hop-limit':
             return delivered(
                 'waiting',
                 false,
-                `a message started the turn you are in, and from such a turn only an answer to a node that asked wakes it; that chat reads this one in front of its next turn (${count})`
+                `this chain of messages has woken agents ${MAX_MESSAGE_HOPS} times, which is as far as messages go; that chat reads this one when it next takes a turn for another reason (${count})`
             );
         case 'wake':
             return delivered('now', true, 'that chat takes a turn on it, and reads it there');
