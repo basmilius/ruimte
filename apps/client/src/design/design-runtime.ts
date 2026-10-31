@@ -15,8 +15,8 @@ const RUNTIME = String.raw`(function () {
     var M = ${JSON.stringify(DESIGN_METHODS)};
     var MIN = 0.05, MAX = 8, PAD = 48;
     var staged = window.parent !== window;
-    var canvas = false, world = null, layer = null, fitted = false, told = 0;
-    var camera = { x: 0, y: 0, zoom: 1 };
+    var canvas = false, world = null, layer = null, told = 0;
+    var camera = { x: PAD, y: PAD, zoom: 1 };
     var tool = 'view', hovered = null, selected = null, pins = [], tweaks = null;
 
     function post(method, params) {
@@ -26,9 +26,13 @@ const RUNTIME = String.raw`(function () {
 
     // Canvas.
 
+    function place() {
+        world.style.transform = 'translate(' + camera.x + 'px, ' + camera.y + 'px) scale(' + camera.zoom + ')';
+    }
+
     function apply() {
         if (!canvas) { return; }
-        world.style.transform = 'translate(' + camera.x + 'px, ' + camera.y + 'px) scale(' + camera.zoom + ')';
+        place();
         draw();
         var now = Date.now();
         clearTimeout(apply.timer);
@@ -78,7 +82,6 @@ const RUNTIME = String.raw`(function () {
         document.head.appendChild(style);
         addEventListener('wheel', function (event) {
             event.preventDefault();
-            fitted = true;
             if (event.ctrlKey || event.metaKey) {
                 zoomAt(event.clientX, event.clientY, Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.05 : 0.01)));
             } else {
@@ -90,8 +93,7 @@ const RUNTIME = String.raw`(function () {
             var background = event.target === document.body || event.target === document.documentElement || event.target === world;
             if (tool === 'draw' || !(event.button === 1 || (event.button === 0 && background && tool === 'view'))) { return; }
             event.preventDefault();
-            fitted = true;
-            var from = { x: event.clientX - camera.x, y: event.clientY - camera.y };
+            var from ={ x: event.clientX - camera.x, y: event.clientY - camera.y };
             document.body.style.cursor = 'grabbing';
             function move(next) { camera = { zoom: camera.zoom, x: next.clientX - from.x, y: next.clientY - from.y }; apply(); }
             function end() { document.body.style.cursor = ''; removeEventListener('pointermove', move); removeEventListener('pointerup', end); removeEventListener('pointercancel', end); }
@@ -99,9 +101,8 @@ const RUNTIME = String.raw`(function () {
             addEventListener('pointerup', end);
             addEventListener('pointercancel', end);
         });
-        addEventListener('resize', function () { if (!fitted) { fitAll(); } });
-        addEventListener('load', function () { if (!fitted) { fitAll(); } });
-        fitAll();
+        // Told to no one: a page that opens again gets its camera from the stage, which this would overwrite.
+        place();
     }
 
     // A link to an option flies to it on the canvas and scrolls to it on a page.
@@ -111,7 +112,7 @@ const RUNTIME = String.raw`(function () {
         var target = document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
         if (!target) { return; }
         event.preventDefault();
-        if (canvas) { fitted = true; fitTo(worldBox(target)); } else { window.scrollTo({ top: target.getBoundingClientRect().top + scrollY - PAD, behavior: 'smooth' }); }
+        if (canvas) { fitTo(worldBox(target)); } else { window.scrollTo({ top: target.getBoundingClientRect().top + scrollY - PAD, behavior: 'smooth' }); }
     }, true);
 
     // What an element is, for a comment, an edit or a person reading which one they picked.
@@ -288,11 +289,9 @@ const RUNTIME = String.raw`(function () {
         if (!staged || event.source !== window.parent || !data || data.jsonrpc !== '2.0' || !data.params && data.method !== M.clear) { return; }
         var params = data.params || {};
         if (data.method === M.camera && canvas && isFinite(params.x) && isFinite(params.y) && params.zoom > 0) {
-            fitted = true;
             camera = { x: params.x, y: params.y, zoom: Math.min(MAX, Math.max(MIN, params.zoom)) };
             apply();
         } else if (data.method === M.zoom && canvas) {
-            fitted = true;
             if (params.action === 'fit') { fitAll(); } else if (params.action === 'set' && params.zoom > 0) { zoomAt(innerWidth / 2, innerHeight / 2, params.zoom / camera.zoom); }
         } else if (data.method === M.tool && typeof params.tool === 'string') {
             tool = params.tool;

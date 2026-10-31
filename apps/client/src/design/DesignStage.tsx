@@ -10,7 +10,7 @@ import { DesignCommentPopover } from '@/design/DesignCommentPopover';
 import { DesignDrawLayer } from '@/design/DesignDrawLayer';
 import { DesignEditPanel } from '@/design/DesignEditPanel';
 import { DesignTweaks } from '@/design/DesignTweaks';
-import { useDesignChat } from '@/design/design-chat';
+import { designCameraKey, useDesignChat } from '@/design/design-chat';
 import { editsCss, editsOf, withEdits, withTweakValues, type DesignEdits } from '@/design/design-file';
 import { bakePrompt, commentsPrompt, drawPrompt, textEditPrompt, type DesignComment } from '@/design/design-messages';
 import { changeReaches, designFiles, pageMtime, pageName, pagesByChange } from '@/design/design-page';
@@ -19,7 +19,6 @@ import {
     designMessage,
     designPageMessage,
     tweaksOf,
-    type DesignCamera,
     type DesignElement,
     type DesignTool,
     type DesignZoom,
@@ -115,8 +114,6 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const [deleteBusy, setDeleteBusy] = useState(false);
     const now = useNow(MINUTE_MS);
     const frameBox = useRef<HTMLDivElement>(null);
-    // Per page and for as long as the view is open: a person's place on the canvas is no one else's business.
-    const cameras = useRef(new Map<string, DesignCamera>());
     const located = useRef<((elements: DesignElement[]) => void) | null>(null);
     const assets = useRef<{ opened: string; read: (path: string) => Promise<Blob | null> } | null>(null);
 
@@ -210,12 +207,13 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         switch (message.method) {
             case DESIGN_METHODS.ready: {
                 const declared = tweaksOf(message.params.tweaks);
-                const kept = cameras.current.get(active);
+                const kept = useDesignChat.getState().cameras[designCameraKey(designId, active)];
                 const held = heldTweakValues(declared, values);
                 setCanvas(message.params.canvas);
                 setTweaks(declared);
                 setValues(held.values);
                 setPicked(null);
+                setZoom(kept?.zoom ?? 1);
                 // A page drawn again knows nothing yet: the tool, the pins, what a person changed and did not save, and the camera go to it once more.
                 frame.postMessage(designMessage(DESIGN_METHODS.tool, { tool }), '*');
                 frame.postMessage(designMessage(DESIGN_METHODS.pins, { pins: pinsOf(comments) }), '*');
@@ -227,12 +225,11 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
                 }
                 if (kept !== undefined && message.params.canvas) {
                     frame.postMessage(designMessage(DESIGN_METHODS.camera, kept), '*');
-                    setZoom(kept.zoom);
                 }
                 return;
             }
             case DESIGN_METHODS.camera:
-                cameras.current.set(active, message.params);
+                useDesignChat.getState().keepCamera(designCameraKey(designId, active), message.params);
                 setZoom(message.params.zoom);
                 return;
             case DESIGN_METHODS.pick:

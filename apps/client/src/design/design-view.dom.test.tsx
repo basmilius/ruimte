@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
 import { useDesignChat } from '@/design/design-chat';
+import { DESIGN_METHODS } from '@/design/design-protocol';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -26,7 +27,7 @@ let listing: FsEntry[];
 
 beforeEach(async () => {
     localStorage.clear();
-    useDesignChat.setState({ picked: {}, pages: {} });
+    useDesignChat.setState({ picked: {}, pages: {}, cameras: {} });
     restoreLayout = layOutChat();
     listing = PAGES;
     machine = new FakeMachine();
@@ -61,6 +62,39 @@ function button(label: string): HTMLElement | null {
 }
 
 describe('a design view', () => {
+    test('gives a page the camera a person left it at when the view opens again', async () => {
+        const camera = { x: -120, y: 40, zoom: 0.5 };
+        const posted: { method: string; params?: unknown }[] = [];
+        const frame = { postMessage: (message: { method: string; params?: unknown }) => posted.push(message) };
+
+        // The real frame waits for a measured width, which this DOM never has; a stand-in beside it speaks for the page.
+        const openPage = async (): Promise<void> => {
+            await until(() => shownPage() !== null);
+
+            const stand = document.createElement('iframe');
+            const box = mounted.host.querySelector('button[aria-label^="Page: "]')?.parentElement?.nextElementSibling;
+
+            Object.defineProperty(stand, 'contentWindow', { value: frame });
+            box?.prepend(stand);
+        };
+
+        const say = (method: string, params: object): Promise<void> =>
+            act(async () => {
+                window.dispatchEvent(new MessageEvent('message', { source: frame as never, data: { jsonrpc: '2.0', method, params } }));
+            });
+
+        await openPage();
+        await say(DESIGN_METHODS.camera, camera);
+        await mounted.unmount();
+
+        mounted = mount();
+        await mounted.renderApp();
+        await openPage();
+        await say(DESIGN_METHODS.ready, { canvas: true, tweaks: null });
+
+        expect(posted.find((message) => message.method === DESIGN_METHODS.camera)?.params).toEqual(camera);
+    });
+
     test('opens the page last worked on', async () => {
         await until(() => shownPage() !== null);
 

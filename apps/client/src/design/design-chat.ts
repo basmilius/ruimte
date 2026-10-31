@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { designNodeChats, viewChats, type DesignPlace, type ProjectDesignView, type ProjectNode } from '@ruimte/contracts';
+import type { DesignCamera } from '@/design/design-protocol';
 
 interface DesignChatState {
     /* The chat a person picked per design, by the design's view id. One window's, never saved. */
@@ -9,14 +10,24 @@ interface DesignChatState {
     /* The page in front per design, null while none is, so the actions of a design act on the page it shows. */
     pages: Record<string, string | null>;
     showPage(viewId: string, file: string | null): void;
+
+    /* Where a person left each page, by `designCameraKey`. One window's, never saved: it outlives the stage, which goes with its view. */
+    cameras: Record<string, DesignCamera>;
+    keepCamera(key: string, camera: DesignCamera): void;
 }
 
 export const useDesignChat = create<DesignChatState>((set) => ({
     picked: {},
     pick: (viewId, chatId) => set((state) => ({ picked: { ...state.picked, [viewId]: chatId } })),
     pages: {},
-    showPage: (viewId, file) => set((state) => (state.pages[viewId] === file ? state : { pages: { ...state.pages, [viewId]: file } }))
+    showPage: (viewId, file) => set((state) => (state.pages[viewId] === file ? state : { pages: { ...state.pages, [viewId]: file } })),
+    cameras: {},
+    keepCamera: (key, camera) => set((state) => ({ cameras: { ...state.cameras, [key]: camera } }))
 }));
+
+export function designCameraKey(designId: string, file: string): string {
+    return `${designId}/${file}`;
+}
 
 /* The key that makes every saved version of a design one artifact of Output. */
 export function designVersionKey(viewId: string): string {
