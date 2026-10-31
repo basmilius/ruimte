@@ -178,7 +178,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                     ))}
                 </div>
                 {plan.meta.status && <p className="text-xs text-text select-text">{plan.meta.status}</p>}
-                <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
+                <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-track" aria-hidden>
                     <span className="bg-positive" style={{ flexGrow: progress.done }} />
                     <span className="bg-status-needs-you" style={{ flexGrow: progress.warning }} />
                     <span className="bg-status-running" style={{ flexGrow: progress.info }} />
