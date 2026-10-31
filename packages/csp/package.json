@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "devDependencies": {
     "@ruimte/telemetry": "workspace:*",

@@ -9,7 +9,7 @@
         "build:bundle": "vite build",
         "build:station": "tsc -b && vite build --mode station --outDir ../station/dist --emptyOutDir",
         "build:bench": "tsc -b && vite build --mode bench --outDir ../bench/dist --emptyOutDir",
-        "typecheck": "tsc -b",
+        "typecheck": "bun check --no-script -b",
         "preview": "vite preview"
     },
     "dependencies": {

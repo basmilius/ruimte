@@ -15,7 +15,7 @@
         "smoke": "bun run build:main && RUIMTE_DEV_URL=http://localhost:4212 RUIMTE_SMOKE=1 bun scripts/launch.ts",
         "build": "bun run build:main",
         "icon": "bun scripts/icon.ts",
-        "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+        "typecheck": "bun check --no-script && bun check --no-script -p tsconfig.test.json",
         "start": "bun run build:main && bun scripts/launch.ts",
         "pack": "bun run build:main && electron-builder --publish never",
         "pack:dir": "bun run build:main && electron-builder --dir --publish never",

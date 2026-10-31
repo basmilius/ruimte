@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "bun ../computer-use/scripts/build.ts && bun scripts/dev.ts",
         "start": "bun src/main.ts",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "bun check --no-script",
         "smoke": "bun src/smoke.ts",
         "compile": "bun scripts/compile.ts",
         "measure:memory": "bun scripts/measure-team-memory.ts",

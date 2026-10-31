@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "bun src/main.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "dependencies": {
     "@ruimte/pulsar": "workspace:*",

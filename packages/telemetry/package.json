@@ -8,7 +8,7 @@
     "./file-store": "./src/file-store.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

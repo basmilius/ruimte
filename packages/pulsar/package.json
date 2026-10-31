@@ -9,7 +9,7 @@
         "./verify-web": "./src/verify-web.ts"
     },
     "scripts": {
-        "typecheck": "tsc --noEmit"
+        "typecheck": "bun check --no-script"
     },
     "dependencies": {
         "@adecore/agent-contracts": "0.49.1",

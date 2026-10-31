@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "WRANGLER_BUILD_CONDITIONS=source,workerd,worker,browser bunx wrangler@4.136.3 dev --local --port 8788 --inspector-port 9230",
         "deploy": "bunx wrangler@4.136.3 deploy",
-        "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+        "typecheck": "bun check --no-script && bun check --no-script -p tsconfig.test.json"
     },
     "dependencies": {
         "@ruimte/pulsar": "workspace:*",

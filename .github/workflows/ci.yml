@@ -72,7 +72,7 @@ jobs:
       - uses: ./.github/actions/install
       - uses: ./.github/actions/cache-react-compiler
       - run: bun run check:generated
-      # verify owns client tsc -b; public builds still typecheck before bundling.
+      # verify owns the client's typecheck; public builds still run tsc -b before bundling.
       - run: bun run --cwd apps/client build:bundle
       - run: bun run --cwd apps/desktop build
       # The unit shards run on Linux; a case-insensitive volume is what only a Mac has under these tests.
@@ -98,7 +98,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install
-      - run: bun run check:types
       - run: bun run lint
       # Two workers instead of one per core, and without the test files that run git: windows-ci.bunfig.toml says why.
       - run: bun --config=windows-ci.bunfig.toml test --conditions=source --parallel=2 --only-failures

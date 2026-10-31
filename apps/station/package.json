@@ -6,7 +6,7 @@
   "scripts": {
     "build": "bun run --cwd ../client build:station && cp -R public/. dist/",
     "deploy": "bun run build && wrangler deploy",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+    "typecheck": "bun check --no-script && bun check --no-script -p tsconfig.test.json"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260922.1",
