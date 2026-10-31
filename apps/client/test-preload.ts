@@ -1,3 +1,4 @@
+import { afterEach } from 'bun:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,10 @@ import { AGENTS_LOCALES } from '@adecore/agents-react/locales';
 import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
 import { connectFormat } from './src/format/source';
 import { FALLBACK_LANGUAGE } from './src/i18n/languages';
+import { defaultCanvases, focusedCanvas } from './src/state/canvas';
+import { useDocument } from './src/state/document';
+import { useEndpoints } from './src/state/endpoints';
+import { useToasts } from './src/state/toasts';
 
 /*
  * The English words, in memory, before the first test runs, so a pure function that builds a label
@@ -39,3 +44,17 @@ await i18next.init({
 
 // The formatters of @adecore/ui read the client's settings, which the tests set.
 connectFormat();
+
+/*
+ * Files share a worker under `--no-isolate`, and a preload's `afterAll` only runs when the worker ends,
+ * so the stores nearly every client test writes go back to their first state after each test.
+ */
+const focusedCanvasStore = focusedCanvas();
+const sharedStores: { getState(): object; setState(state: object, replace: true): void }[] = [useDocument, useEndpoints, useToasts, focusedCanvasStore];
+const firstStates = sharedStores.map((store) => store.getState());
+
+afterEach(() => {
+    defaultCanvases.focus(null);
+    defaultCanvases.keep([]);
+    sharedStores.forEach((store, index) => store.setState(firstStates[index]!, true));
+});
