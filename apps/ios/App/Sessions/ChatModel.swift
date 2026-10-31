@@ -716,10 +716,8 @@ final class ChatModel {
                 let exclude = [chatID] + composition.picked.map(\.id)
                 found = ChatReferables.suggestions(referables, chatsOnly: chatsOnly, query: query, exclude: exclude)
                     .map {
-                        let canvas = $0.trail.last { $0.kind == "canvas" }?.name
-                        return ChatSuggestion(
-                            kind: "#", value: $0.id, title: $0.name,
-                            detail: canvas ?? $0.detail ?? ChatReferables.kindName($0.kind),
+                        ChatSuggestion(
+                            kind: "#", value: $0.id, title: $0.name, detail: "",
                             referable: $0)
                     }
             case "@":

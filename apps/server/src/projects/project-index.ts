@@ -24,7 +24,7 @@ import {
     viewChats
 } from '@ruimte/contracts';
 import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { referablesOfViews, resolveReference, type Reference } from '../context/references.ts';
+import { resolveReference, type Reference } from '../context/references.ts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */
@@ -246,13 +246,6 @@ export class ProjectIndex {
         }
 
         return null;
-    }
-
-    /* What a `#` from another project may point at in this one; empty for a project the daemon does not know. */
-    referables(projectId: string): ReturnType<typeof referablesOfViews> {
-        const project = this.projects.get(projectId);
-
-        return project === undefined ? [] : referablesOfViews(project.content.views, project.folder);
     }
 
     /* The terminal or chat under `id`, a node or a view of its own, as a source a read takes; null for anything else. */

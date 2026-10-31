@@ -142,10 +142,16 @@ enum ChatReferables {
         _ items: [ChatReferable], chatsOnly: Bool, query: String, exclude: [String], limit: Int = results
     ) -> [ChatReferable] {
         let needle = query.lowercased()
-        let matches = items.filter { item in
+        // A name on the way counts as well, so typing a project or a canvas finds what stands in it.
+        let found = items.filter { item in
             !item.name.isEmpty && (!chatsOnly || item.kind == "chat") && !exclude.contains(item.id)
-                && (needle.isEmpty || item.name.lowercased().contains(needle))
+                && (needle.isEmpty
+                    || ([item.name] + item.trail.map(\.name)).contains { $0.lowercased().contains(needle) })
         }
+        // A node never stands in the list without its canvas above it, even a canvas that does not match or is picked.
+        let foundIDs = Set(found.map(\.id))
+        let canvases = Set(found.flatMap { $0.trail.filter { $0.kind == "canvas" }.map(\.id) })
+        let matches = items.filter { foundIDs.contains($0.id) || canvases.contains($0.id) }
         var taken: [String: Int] = [:]
         return (matches.filter { $0.group == .canvas } + matches.filter { $0.group == .views }).filter { item in
             let section = item.section?.id ?? ""

@@ -16,13 +16,7 @@ export function registerProjectHandlers(
     dispatcher.register('project.list', async () => ({ projects: await store.list() }));
 
     dispatcher.register('project.referables', async () => {
-        if (!reachOpenProjects()) {
-            return { projects: [] };
-        }
-
-        const open = (await store.list()).filter((project) => project.closedAt == null && project.scratch !== true);
-
-        return { projects: open.map((project) => ({ project, items: store.index.referables(project.projectId) })) };
+        return reachOpenProjects() ? store.referables() : { projects: [] };
     });
 
     dispatcher.register('project.open', async (payload, client) => {

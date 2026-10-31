@@ -444,6 +444,7 @@ struct ChatSuggestionRows: View {
                         }
                         Spacer(minLength: 0)
                     }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                    .padding(.leading, suggestion.referable?.trail.last?.kind == "canvas" ? 20 : 0)
                 }.buttonStyle(.plain)
             }
         }

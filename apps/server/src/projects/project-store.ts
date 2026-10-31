@@ -5,6 +5,7 @@ import {
     DEFAULT_PROJECT_COLOR,
     EMPTY_LOCAL,
     projectSidebarViews,
+    type ProjectReferablesResult,
     type ProjectSidebarResult,
     EMPTY_PRIVATE_FILE,
     PROJECT_PRIVATE_VERSION,
@@ -65,6 +66,7 @@ import { ProjectError } from './project-error.ts';
 import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
 import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
+import { referablesOfViews } from '../context/references.ts';
 import { errorText } from '../error-text.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { scratchFolderOf } from './scratch-project.ts';
@@ -453,6 +455,36 @@ export class ProjectStore {
                 }
             })
         );
+        return { projects };
+    }
+
+    /*
+     * What a `#` may point at in each open project. Read from the files as the sidebar is, since the index
+     * misses a project with no shared file until someone opens it. Such a project is indexed here, or a
+     * message that points into it would find nothing behind the id it picked.
+     */
+    async referables(): Promise<ProjectReferablesResult> {
+        const entries = await this.registry.load();
+        const summaries = (await this.list()).filter((summary) => summary.closedAt == null && summary.scratch !== true);
+        const projects = await Promise.all(
+            summaries.map(async (project) => {
+                const entry = entries.find((candidate) => candidate.projectId === project.projectId);
+
+                try {
+                    const { content, rev, shared } = await this.locked(project.projectId, () => this.currentOf(project.projectId, true));
+
+                    if (entry !== undefined && !this.index.has(project.projectId)) {
+                        await this.indexRead(entry, documentOf(content, rev, shared));
+                    }
+
+                    return { project, items: referablesOfViews(content.views, project.folder) };
+                } catch {
+                    // One missing or newer project must not hide the other projects on this machine.
+                    return { project, items: [] };
+                }
+            })
+        );
+
         return { projects };
     }
 
