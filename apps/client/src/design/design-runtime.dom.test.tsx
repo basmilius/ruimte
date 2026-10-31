@@ -9,8 +9,14 @@ test('a canvas page opens at its top left at 100%, and tells the stage only that
     document.head.innerHTML = '<meta name="ruimte-design" content="canvas">';
     document.body.innerHTML = '<div id="1a"></div>';
 
-    new Function('window', DESIGN_RUNTIME)(stand);
+    // The runtime takes the wheel and clicks of its window, which here would be every later test's.
+    new Function('window', 'addEventListener', DESIGN_RUNTIME)(stand, () => {});
 
-    expect(document.getElementById('ruimte-design-world')?.style.transform).toBe('translate(48px, 48px) scale(1)');
+    const transform = document.getElementById('ruimte-design-world')?.style.transform;
+
+    document.head.innerHTML = '';
+    document.body.innerHTML = '';
+
+    expect(transform).toBe('translate(48px, 48px) scale(1)');
     expect(posted.map((message) => message.method)).toEqual([DESIGN_METHODS.ready]);
 });
