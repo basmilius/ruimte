@@ -404,9 +404,27 @@ struct ChatSuggestionRows: View {
         } else if model.suggestions.isEmpty {
             Text("No matches").font(.subheadline).foregroundStyle(MobileStyle.muted).padding(12)
         } else {
-            let shown = Array(model.suggestions.prefix(limit))
+            // The limit would keep every other project out of sight; the rows scroll.
+            let sectioned = model.suggestions.contains { $0.referable?.section != nil }
+            let shown = sectioned ? model.suggestions : Array(model.suggestions.prefix(limit))
             ForEach(Array(shown.enumerated()), id: \.element.id) { index, suggestion in
-                if let group = suggestion.referable?.group, index == 0 || shown[index - 1].referable?.group != group {
+                if let section = suggestion.referable?.section {
+                    if index == 0 || shown[index - 1].referable?.section != section {
+                        HStack(spacing: 6) {
+                            Image(lucide: ChatReferables.icon("project"), size: 12)
+                            Text(section.name).lineLimit(1)
+                            if section.current {
+                                Spacer(minLength: 8)
+                                Text("This project").fontWeight(.regular)
+                            }
+                        }
+                        .font(.caption.weight(.semibold)).foregroundStyle(MobileStyle.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, index == 0 ? 0 : 6)
+                        .accessibilityAddTraits(.isHeader)
+                    }
+                } else if let group = suggestion.referable?.group,
+                    index == 0 || shown[index - 1].referable?.group != group
+                {
                     Text(group == .canvas ? String(localized: "On this canvas") : String(localized: "Views"))
                         .font(.caption.weight(.semibold)).foregroundStyle(MobileStyle.muted)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.top, index == 0 ? 0 : 6)

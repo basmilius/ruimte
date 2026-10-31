@@ -4,6 +4,7 @@ import {
     isCanvasView,
     isDatabaseView,
     isDesignView,
+    isUnlistedView,
     nodeChats,
     resolveStoredPath,
     viewChats,
@@ -41,6 +42,8 @@ export interface Reference {
     sources: ContextSource[];
     /* The table a database view shows, which `read` names with the command that reads it. */
     database?: ProjectDatabaseTarget;
+    /* The other project it stands in; its commands then take `--project`, which checks the reach at every call. */
+    project?: string;
 }
 
 function viewSource(view: ProjectView, folder: string | null): ContextSource | null {
@@ -137,6 +140,25 @@ export function resolveReference(views: readonly ProjectView[], id: string, fold
     };
 }
 
+/* What a `#` from another project may point at here: the views a sidebar lists, each with the nodes on it that have something to read. */
+export function referablesOfViews(
+    views: readonly ProjectView[],
+    folder: string | null
+): Array<{ id: string; name: string; kind: string; canvas?: { id: string; name: string } }> {
+    return views.flatMap((view) => {
+        if (isUnlistedView(view)) {
+            return [];
+        }
+
+        const own = resolveReference(views, view.id, folder);
+        const nodes = isCanvasView(view)
+            ? view.nodes.filter((node) => node.machine === undefined).flatMap((node) => nodeReference(view, node.id, folder) ?? [])
+            : [];
+
+        return [...(own === null ? [] : [own]), ...nodes].map(({ id, name, kind, canvas }) => ({ id, name, kind, ...(canvas === null ? {} : { canvas }) }));
+    });
+}
+
 /* The ids that still stand in the project, once each and in the order given; `lookup` answers null for any other. */
 export function resolveReferences(ids: readonly string[] | undefined, lookup: (id: string) => Reference | null): Reference[] {
     const references: Reference[] = [];
@@ -180,8 +202,19 @@ function writeCommand(reference: Reference): string | null {
     }
 }
 
+/* In another project only what `--project` crosses with: reading, and a message to a terminal or a chat. */
+function crossingLine(reference: Reference, what: string, project: string): string {
+    const read = command(`read ${reference.id} --project ${project}`);
+    const write =
+        reference.kind === 'chat' || reference.kind === 'terminal' ? ` · message it with ${command(`notify ${reference.id} --project ${project}`)}` : '';
+    return `- ${JSON.stringify(reference.name)} (${what} in project ${project}): ${read}${write}`;
+}
+
 function referenceLine(reference: Reference): string {
     const what = reference.canvas === null ? reference.kind : `${reference.kind} on ${JSON.stringify(reference.canvas.name)}`;
+    if (reference.project !== undefined) {
+        return crossingLine(reference, what, reference.project);
+    }
     const read = command(`read ${reference.id}`);
     const write = writeCommand(reference);
     return `- ${JSON.stringify(reference.name)} (${what}): ${read}${write === null ? '' : ` · ${write}`}`;
@@ -193,7 +226,7 @@ export function referenceNote(references: readonly Reference[]): string | null {
         return null;
     }
     return [
-        'The person referenced views and nodes of this project in this message. Read each with the command beside it before you answer.',
+        `The person referenced views and nodes${references.some((reference) => reference.project !== undefined) ? '' : ' of this project'} in this message. Read each with the command beside it before you answer.`,
         ...references.map(referenceLine),
         'When you refer back to one of them, write `#` and its name exactly as listed (#Name), and the person can open it from your answer.'
     ].join('\n');

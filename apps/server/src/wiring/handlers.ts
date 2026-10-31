@@ -280,15 +280,21 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
         })
     );
     registerPeerArtifactHandlers(dispatcher, store.peers, artifacts.artifacts);
-    registerProjectHandlers(dispatcher, store, async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false, {
-        start: (payload) => chats.create(payload),
-        // Loaded first: a chat nobody opened since a restart has no session to end, only a record to remove.
-        end: async (chatId) => {
-            await chats.create({ chatId }).catch(() => undefined);
-            await projects.endSession('chat', chatId);
+    registerProjectHandlers(
+        dispatcher,
+        store,
+        async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false,
+        {
+            start: (payload) => chats.create(payload),
+            // Loaded first: a chat nobody opened since a restart has no session to end, only a record to remove.
+            end: async (chatId) => {
+                await chats.create({ chatId }).catch(() => undefined);
+                await projects.endSession('chat', chatId);
+            },
+            worktreePaths: (folder) => git.checkouts.paths(folder)
         },
-        worktreePaths: (folder) => git.checkouts.paths(folder)
-    });
+        () => identity.reachOpenProjects
+    );
     registerPeerHandlers(dispatcher, {
         links: store.peers,
         lineage: stores.lineage,

@@ -1,9 +1,12 @@
 import type { ReferenceIconProps } from '@adecore/agents-react';
 import { REFERENCE_ICONS } from '@adecore/agents-react/chat';
 import { Icon } from '@adecore/ui';
+import { useReachedReferables } from '@/chat/reached-referables';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { viewGlyphOf } from '@/shell/cell-view';
 import { useSidebarSource } from '@/shell/sidebar-source';
+import { useProject } from '@/state/project';
 
 /*
  * The mark a `#` reference wears, the same as its row in the sidebar: a view with the icon a person picked
@@ -13,6 +16,23 @@ import { useSidebarSource } from '@/shell/sidebar-source';
 export function ReferenceGlyph({ id, kind, size, className }: ReferenceIconProps) {
     const source = useSidebarSource();
     const view = source.views.find((candidate) => candidate.id === id);
+    const own = useProject((s) => s.current);
+    const reached = useReachedReferables((s) => s.byEndpoint);
+
+    if (kind === 'project') {
+        const project =
+            own?.projectId === id
+                ? own
+                : Object.values(reached)
+                      .flat()
+                      .find((entry) => entry.project.projectId === id)?.project;
+
+        return project ? (
+            <ProjectGlyph projectId={id} icon={project.icon} color={project.color} size={size} className={className} />
+        ) : (
+            <Icon icon={REFERENCE_ICONS.project} size={size} className={className} />
+        );
+    }
 
     if (view) {
         return <ViewGlyph {...viewGlyphOf(view)} size={size} className={className} />;

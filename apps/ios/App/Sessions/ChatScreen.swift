@@ -338,10 +338,16 @@ struct ChatScreen: View {
             let chatID = model.chatID
             let session = machineSession
             model.referenceSource = ChatReferenceSource(
-                items: { [weak workspace] in
-                    workspace.map { ChatReferables.project(views: $0.views, chatID: chatID) } ?? []
+                items: { [weak workspace, weak chat] in
+                    guard let workspace else { return [] }
+                    return ChatReferables.withReached(
+                        ChatReferables.project(views: workspace.views, chatID: chatID),
+                        ownID: workspace.projectID, ownName: workspace.summary.text("name"),
+                        reached: chat?.reachedProjects ?? [])
                 },
                 viewReferences: { [weak session] in session?.icons.viewReferences ?? false })
+            // Up front as well as at a `#`, so a chip of a message already sent shows where it points.
+            Task { await chat.refreshReachedProjects() }
             model.presentation.places = ChatPlaces(
                 title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
                 shape: { ChatForking.origin(in: workspace.views, chatID: $0)?.shape },

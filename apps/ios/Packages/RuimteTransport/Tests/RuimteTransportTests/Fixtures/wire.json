@@ -222,6 +222,7 @@
     "accounts.reorder",
     "project.sidebar",
     "project.list",
+    "project.referables",
     "project.open",
     "project.save",
     "project.save-local",

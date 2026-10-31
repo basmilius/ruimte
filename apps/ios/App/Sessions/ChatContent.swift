@@ -303,7 +303,7 @@ enum ChatInlineMarks {
         references: ChatInlineReferences = ChatInlineReferences()
     ) -> AttributedString {
         var value = source
-        var pills: [(range: Range<Int>, kind: ChatPill.Kind, font: Font, link: URL?)] = []
+        var pills: [(range: Range<Int>, kind: ChatPill.Kind, font: Font, link: URL?, trail: String)] = []
         let codeFont = ChatInlineFonts.code(around: font)
         let codeRuns = value.runs[\.inlinePresentationIntent].filter { $0.0?.contains(.code) == true }.map(\.1)
         for range in codeRuns {
@@ -312,7 +312,7 @@ enum ChatInlineMarks {
             if let cwd, ChatFileReference.parse(token, cwd: cwd) != nil {
                 value[range].link = ChatFileReference.url(token)
             }
-            pills.append((offsets(range, in: value), .code, codeFont, nil))
+            pills.append((offsets(range, in: value), .code, codeFont, nil, ""))
         }
         let plain = String(value.characters)
         let code = pills.map(\.range)
@@ -334,9 +334,10 @@ enum ChatInlineMarks {
             case "#":
                 guard !references.named || !links.contains(where: { $0.overlaps(span) }) else { continue }
                 let mark = lookup.item(token.value)?.mark ?? ChatReferables.icon("text")
-                pills.append((span, .reference(mark), chipFont, ChatReferables.url(token.value)))
-            case "$": pills.append((span, .skill, chipFont, nil))
-            default: pills.append((span, .file(token.value), chipFont, nil))
+                let trail = lookup.item(token.value)?.trail.map { "\($0.name) › " }.joined() ?? ""
+                pills.append((span, .reference(mark), chipFont, ChatReferables.url(token.value), trail))
+            case "$": pills.append((span, .skill, chipFont, nil, ""))
+            default: pills.append((span, .file(token.value), chipFont, nil, ""))
             }
         }
         for (id, pill) in pills.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }).enumerated().reversed() {
@@ -348,6 +349,12 @@ enum ChatInlineMarks {
                 value[range].swiftUI.foregroundColor = mark.tint
             }
             if let link = pill.link { value[range].link = link }
+            if !pill.trail.isEmpty {
+                // Behind the sigil, which the mark of the kind replaces wherever the pill starts.
+                let attributes = value[range].runs.first?.attributes ?? .init()
+                value.insert(
+                    AttributedString(pill.trail, attributes: attributes), at: index(pill.range.lowerBound + 1, in: value))
+            }
             // In the proportional font, since a monospaced space is as wide as a letter.
             var pad = AttributedString(String(padding))
             pad.swiftUI.font = chipFont

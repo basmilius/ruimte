@@ -309,7 +309,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             return place !== null && (await later.projects().store.heldFolders(clientId)).includes(place.folder);
         },
         contextSources: (chatId) => context.list(chatId),
-        reference: (chatId, id) => index().referenceBeside(chatId, id),
+        reference: (chatId, id) => index().referenceBeside(chatId, id) ?? (identity.reachOpenProjects ? index().referenceElsewhere(chatId, id) : null),
         standalone: (chatId) => index().locate(chatId)?.canvasId === null,
         inlineChat: (chatId) => index().isHiddenChat(chatId),
         design: (chatId) => index().designOf(chatId),

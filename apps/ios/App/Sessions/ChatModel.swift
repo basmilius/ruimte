@@ -67,6 +67,8 @@ final class ChatModel {
     var searching = false
     var searchProblem: String?
     @ObservationIgnored var referenceSource = ChatReferenceSource()
+    /// The other open projects a `#` may point at, while the machine lets agents reach them.
+    var reachedProjects: [JSONValue] = []
     /// What `#` offers in this chat now.
     var referables: [ChatReferable] { referenceSource.items() }
     /// A machine from before `viewReferences` drops `references`, so its `#` reaches chats only.
@@ -691,6 +693,12 @@ final class ChatModel {
         }
     }
 
+    /// What the machine offers of its other open projects; none when it cannot tell or does not answer.
+    func refreshReachedProjects() async {
+        guard (client as? MachineFeatures)?.answers(.projectReferables) == true else { return }
+        reachedProjects = (try? await client.request("project.referables"))?.list("projects") ?? []
+    }
+
     func search(_ kind: String, query: String) async {
         searchGeneration += 1
         let current = searchGeneration
@@ -704,12 +712,14 @@ final class ChatModel {
             var found: [ChatSuggestion] = []
             switch kind {
             case "#":
+                await refreshReachedProjects()
                 let exclude = [chatID] + composition.picked.map(\.id)
                 found = ChatReferables.suggestions(referables, chatsOnly: chatsOnly, query: query, exclude: exclude)
                     .map {
-                        ChatSuggestion(
+                        let canvas = $0.trail.last { $0.kind == "canvas" }?.name
+                        return ChatSuggestion(
                             kind: "#", value: $0.id, title: $0.name,
-                            detail: $0.detail ?? ChatReferables.kindName($0.kind),
+                            detail: canvas ?? $0.detail ?? ChatReferables.kindName($0.kind),
                             referable: $0)
                     }
             case "@":

@@ -24,7 +24,7 @@ import {
     viewChats
 } from '@ruimte/contracts';
 import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { resolveReference, type Reference } from '../context/references.ts';
+import { referablesOfViews, resolveReference, type Reference } from '../context/references.ts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */
@@ -227,6 +227,32 @@ export class ProjectIndex {
         const place = id === fromId ? null : this.locate(fromId);
         const project = place === null ? undefined : this.projects.get(place.projectId);
         return project === undefined ? null : resolveReference(project.content.views, id, project.folder);
+    }
+
+    /*
+     * The view or node under `id` in a project other than that of `fromId`. It only words the note in
+     * front of a message: this opens no door, since the `--project` of every command there checks the
+     * reach again, and what a chat may reach without it still asks `referenceBeside`.
+     */
+    referenceElsewhere(fromId: string, id: string): Reference | null {
+        const own = this.locate(fromId)?.projectId;
+
+        for (const [projectId, project] of this.projects) {
+            const found = projectId === own ? null : resolveReference(project.content.views, id, project.folder);
+
+            if (found !== null) {
+                return { ...found, project: projectId };
+            }
+        }
+
+        return null;
+    }
+
+    /* What a `#` from another project may point at in this one; empty for a project the daemon does not know. */
+    referables(projectId: string): ReturnType<typeof referablesOfViews> {
+        const project = this.projects.get(projectId);
+
+        return project === undefined ? [] : referablesOfViews(project.content.views, project.folder);
     }
 
     /* The terminal or chat under `id`, a node or a view of its own, as a source a read takes; null for anything else. */

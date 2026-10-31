@@ -228,3 +228,13 @@ describe('a reference sent from the iPhone', () => {
         expect(attached).toEqual({ chats: fixture.send.chats, references: fixture.send.references, note: fixture.note });
     });
 });
+
+describe('a reference in another project', () => {
+    test('names only what --project crosses with', () => {
+        const note = referenceNote([{ id: 'runner', kind: 'terminal', name: 'Runner', canvas: null, sources: [], project: 'other' }]);
+
+        expect(note).toContain('`ruimte-context read runner --project other`');
+        expect(note).toContain('`ruimte-context notify runner --project other`');
+        expect(note).not.toContain('of this project');
+    });
+});

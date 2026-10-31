@@ -171,3 +171,31 @@ import XCTest
 
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
+
+final class ChatReferenceTrailTests: XCTestCase {
+    private let canvas: JSONValue = .object([
+        "kind": .string("canvas"), "id": .string("board"), "name": .string("Board"),
+        "nodes": .array([
+            .object(["kind": .string("terminal"), "id": .string("runner"), "title": .string("Runner")])
+        ]),
+    ])
+
+    func testAChatViewReachesANodeThroughItsCanvas() {
+        let chat: JSONValue = .object(["kind": .string("chat"), "id": .string("lead"), "name": .string("Lead")])
+        let items = ChatReferables.project(views: [chat, canvas], chatID: "lead")
+        XCTAssertEqual(items.map(\.id), ["board", "runner"])
+        XCTAssertEqual(items[1].trail.map(\.name), ["Board"])
+    }
+
+    func testAnotherProjectComesBehindTheChatsOwn() {
+        let reached: JSONValue = .object([
+            "project": .object(["projectId": .string("other"), "name": .string("Other")]),
+            "items": .array([.object(["id": .string("note"), "name": .string("Note"), "kind": .string("note")])]),
+        ])
+        let own = [ChatReferable(id: "board", name: "Board", kind: "canvas", group: .views)]
+        let items = ChatReferables.withReached(own, ownID: "mine", ownName: "Mine", reached: [reached])
+        XCTAssertEqual(items.map(\.section?.id), ["mine", "other"])
+        XCTAssertEqual(items[1].trail.map(\.name), ["Other"])
+        XCTAssertEqual(ChatReferables.withReached(own, ownID: "mine", ownName: "Mine", reached: []), own)
+    }
+}

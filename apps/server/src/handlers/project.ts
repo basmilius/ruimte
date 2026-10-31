@@ -5,9 +5,25 @@ import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } 
 import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
 
-export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectStore, written?: ChatWritten, inline?: InlineChatHost): void {
+export function registerProjectHandlers(
+    dispatcher: Dispatcher,
+    store: ProjectStore,
+    written?: ChatWritten,
+    inline?: InlineChatHost,
+    reachOpenProjects: () => boolean = () => false
+): void {
     dispatcher.register('project.sidebar', () => store.sidebar());
     dispatcher.register('project.list', async () => ({ projects: await store.list() }));
+
+    dispatcher.register('project.referables', async () => {
+        if (!reachOpenProjects()) {
+            return { projects: [] };
+        }
+
+        const open = (await store.list()).filter((project) => project.closedAt == null && project.scratch !== true);
+
+        return { projects: open.map((project) => ({ project, items: store.index.referables(project.projectId) })) };
+    });
 
     dispatcher.register('project.open', async (payload, client) => {
         const opened = await store.openProject(payload);

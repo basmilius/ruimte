@@ -620,6 +620,7 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply project.open #/properties/local/properties/panels/properties/panel/properties/kind = ["devices", "files", "git", "processes"]",
   "reply project.open #/properties/local/properties/panels/properties/tabs/items/properties/view/properties/scope = ["base", "commit", "worktree"]",
   "reply project.open #/properties/summary/properties/nameSource = ["chosen", "folder"]",
+  "reply project.referables #/properties/projects/items/properties/project/properties/nameSource = ["chosen", "folder"]",
   "reply project.setIcon #/properties/summary/properties/nameSource = ["chosen", "folder"]",
   "reply project.setIdentity #/properties/summary/properties/nameSource = ["chosen", "folder"]",
   "reply project.sidebar #/properties/projects/items/properties/summary/properties/nameSource = ["chosen", "folder"]",

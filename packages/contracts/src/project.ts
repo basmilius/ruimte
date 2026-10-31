@@ -1402,6 +1402,24 @@ export const ProjectListResultSchema = z.object({
 });
 export type ProjectListResult = z.infer<typeof ProjectListResultSchema>;
 
+/* What a `#` may point at in another open project. A kind is a plain string, so one a client does not know is left out, not refused. */
+export const ProjectReferablesResultSchema = z.object({
+    projects: z.array(
+        z.object({
+            project: ProjectSummarySchema,
+            items: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    kind: z.string(),
+                    canvas: z.object({ id: z.string(), name: z.string() }).optional()
+                })
+            )
+        })
+    )
+});
+export type ProjectReferablesResult = z.infer<typeof ProjectReferablesResultSchema>;
+
 // Opening a folder creates its project file when none exists.
 export const ProjectOpenPayloadSchema = z
     .object({

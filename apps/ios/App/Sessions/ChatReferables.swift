@@ -14,11 +14,28 @@ struct ChatReferable: Equatable, Identifiable, Sendable {
     let kind: String
     /// What tells it apart from another of the same name and kind: the canvas it stands on.
     var detail: String?
-    let group: Group
+    var group: Group
     /// The Lucide mark its row in the sidebar wears, such as the icon a person picked; nil wears its kind's.
     var icon: String?
+    /// Where it stands, outermost first; its chip draws these in front of its name.
+    var trail: [ChatReferenceStep] = []
+    /// The project heading it is offered under once there is more than one project to offer.
+    var section: ChatReferenceSection?
 
     var mark: String { icon ?? ChatReferables.icon(kind) }
+}
+
+/// One place on the way to a reference: the project or the canvas it stands in.
+struct ChatReferenceStep: Equatable, Sendable {
+    let id: String
+    let name: String
+    let kind: String
+}
+
+struct ChatReferenceSection: Equatable, Sendable {
+    let id: String
+    let name: String
+    var current = false
 }
 
 /// Where a chat finds what its `#` offers. Closures, so the picker reads the project as it is when it asks.
@@ -53,8 +70,8 @@ enum ChatReferables {
             }
         }
         let taken = Set([chatID] + onCanvas.map(\.id))
+        guard let canvas else { return standing(views: views, chatID: chatID, taken: taken) }
         let items = onCanvas + views.compactMap(viewReferable).filter { !taken.contains($0.id) }
-        guard let canvas else { return items }
         return items.enumerated().map { index, item in
             let twin = items.enumerated().contains { other, candidate in
                 other != index && candidate.kind == item.kind && candidate.name.lowercased() == item.name.lowercased()
@@ -66,8 +83,61 @@ enum ChatReferables {
         }
     }
 
+    /// A chat view stands on no canvas, so it reaches a node through the canvas that node stands on. A node showing
+    /// a drawing or a diagram has the id of that view, which is offered once, as a view.
+    private static func standing(views: [JSONValue], chatID: String, taken: Set<String>) -> [ChatReferable] {
+        let viewIDs = Set(views.map(\.stableID))
+        return views.flatMap { view -> [ChatReferable] in
+            let own = viewReferable(view).map { [$0] } ?? []
+            guard !chatID.isEmpty, view.text("kind") == "canvas", !unlisted(view) else { return own }
+            let step = ChatReferenceStep(id: view.stableID, name: view.text("name"), kind: "canvas")
+            let nodes = view.list("nodes").compactMap { node -> ChatReferable? in
+                guard var item = nodeReferable(node, views: views), !viewIDs.contains(item.id) else { return nil }
+                item.group = .views
+                item.trail = [step]
+                return item
+            }
+            return own + nodes
+        }.filter { !taken.contains($0.id) }
+    }
+
+    /// The other open projects under a heading each, behind the chat's own project. Nothing changes while there is
+    /// no other project to tell it apart from.
+    static func withReached(
+        _ items: [ChatReferable], ownID: String, ownName: String, reached: [JSONValue]
+    ) -> [ChatReferable] {
+        let others = reached.filter { entry in
+            entry["project"]?.text("projectId") != ownID && entry["project"]?["scratch"]?.boolValue != true
+        }
+        guard !others.isEmpty else { return items }
+        let section = ChatReferenceSection(id: ownID, name: ownName, current: true)
+        let own = items.map { item -> ChatReferable in
+            guard item.group == .views else { return item }
+            var placed = item
+            placed.section = section
+            return placed
+        }
+        return own + others.flatMap { entry -> [ChatReferable] in
+            guard let project = entry["project"] else { return [] }
+            let id = project.text("projectId")
+            let name = project.text("name")
+            let step = ChatReferenceStep(id: id, name: name, kind: "project")
+            return entry.list("items").compactMap { item -> ChatReferable? in
+                guard knownKinds.contains(item.text("kind")) else { return nil }
+                let inside = item["canvas"].map {
+                    [ChatReferenceStep(id: $0.text("id"), name: $0.text("name"), kind: "canvas")]
+                }
+                return ChatReferable(
+                    id: item.text("id"), name: item.text("name"), kind: item.text("kind"), group: .views,
+                    trail: [step] + (inside ?? []), section: ChatReferenceSection(id: id, name: name))
+            }
+        }
+    }
+
+    private static let knownKinds = viewKinds.union(["note", "text"])
+
     /// What a `#query` offers, the canvas first: never an id in `exclude`, and only chats where the machine takes
-    /// no more.
+    /// no more. The limit holds per project, or a large first project would keep every other one out.
     static func suggestions(
         _ items: [ChatReferable], chatsOnly: Bool, query: String, exclude: [String], limit: Int = results
     ) -> [ChatReferable] {
@@ -76,7 +146,12 @@ enum ChatReferables {
             !item.name.isEmpty && (!chatsOnly || item.kind == "chat") && !exclude.contains(item.id)
                 && (needle.isEmpty || item.name.lowercased().contains(needle))
         }
-        return Array((matches.filter { $0.group == .canvas } + matches.filter { $0.group == .views }).prefix(limit))
+        var taken: [String: Int] = [:]
+        return (matches.filter { $0.group == .canvas } + matches.filter { $0.group == .views }).filter { item in
+            let section = item.section?.id ?? ""
+            taken[section, default: 0] += 1
+            return taken[section, default: 0] <= limit
+        }
     }
 
     /// Whether `#` has anything to offer, so a `#fff` with nothing behind it opens no picker.
@@ -95,6 +170,7 @@ enum ChatReferables {
     /// The Lucide mark of a kind, as the desktop's `REFERENCE_ICONS`.
     static func icon(_ kind: String) -> String {
         switch kind {
+        case "project": "folder"
         case "canvas": "frame"
         case "chat": "message-square"
         case "terminal": "terminal"

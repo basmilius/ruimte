@@ -1,10 +1,25 @@
-import { isCanvasView, isDividerView, isUnlistedView, nodeChats, UNKNOWN_KIND, type ProjectNode, type ProjectText, type ProjectView } from '@ruimte/contracts';
-import type { Referable, ReferableKind, Referables } from '@adecore/agents-react/chat';
+import {
+    isCanvasView,
+    isDividerView,
+    isUnlistedView,
+    nodeChats,
+    UNKNOWN_KIND,
+    type ProjectNode,
+    type ProjectReferablesResult,
+    type ProjectText,
+    type ProjectView
+} from '@ruimte/contracts';
+import { REFERENCE_ICONS, type Referable, type ReferableKind, type Referables } from '@adecore/agents-react/chat';
+import { useReachedProjects, useReachedReferables } from '@/chat/reached-referables';
+import { openProject } from '@/project/open';
 import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
+
+type ReachedProject = ProjectReferablesResult['projects'][number];
 
 /* A reader of a canvas view's texts, handed in so a test can pass its own. */
 type TextsOfView = (view: ProjectView) => readonly ProjectText[];
@@ -73,10 +88,75 @@ export function projectReferables(views: readonly ProjectView[], nodesOf: NodesO
                   ...textsOf(canvas).map((text) => ({ id: text.id, name: textName(text.text), kind: 'text' as const, group: 'canvas' as const }))
               ];
     const taken = new Set([chatId, ...onCanvas.map((item) => item.id)]);
-    const items = [...onCanvas, ...views.flatMap((view) => viewReferable(view) ?? []).filter((item) => !taken.has(item.id))];
+    // A chat view stands on no canvas, so it reaches a node through the canvas that node stands on.
+    const nodesUnder = (view: ProjectView): Referable[] => {
+        if (canvas !== undefined || chatId === '' || !isCanvasView(view) || isUnlistedView(view)) {
+            return [];
+        }
+
+        const trail = [{ id: view.id, name: view.name, kind: 'canvas' as const }];
+
+        return nodesOf(view).flatMap((node) => {
+            const found = node.id === chatId ? null : nodeReferable(node);
+
+            return found === null ? [] : [{ ...found, group: 'views' as const, trail }];
+        });
+    };
+    const offered = views.flatMap((view) => {
+        const own = viewReferable(view);
+
+        return own === null ? nodesUnder(view) : [own, ...nodesUnder(view)];
+    });
+    // A node showing a drawing or a diagram has the id of that view, which is offered once, as a view.
+    const viewIds = new Set(views.map((view) => view.id));
+    const items = [...onCanvas, ...offered.filter((item) => !taken.has(item.id) && (item.trail === undefined || !viewIds.has(item.id)))];
     const twins = (item: Referable): boolean =>
         items.some((other) => other !== item && other.kind === item.kind && other.name.toLowerCase() === item.name.toLowerCase());
     return items.map((item) => (canvas !== undefined && item.group === 'canvas' && twins(item) ? { ...item, detail: canvas.name } : item));
+}
+
+/*
+ * The other open projects under a heading each, behind the chat's own project, which keeps the first
+ * place. Nothing changes while there is no other project to tell it apart from.
+ */
+export function withReachedProjects(
+    items: readonly Referable[],
+    own: { projectId: string; name: string } | null,
+    reached: readonly ReachedProject[]
+): readonly Referable[] {
+    const others = reached.filter(({ project }) => project.projectId !== own?.projectId && project.scratch !== true);
+
+    if (others.length === 0 || own === null) {
+        return items;
+    }
+
+    const section = { id: own.projectId, name: own.name, current: true };
+
+    return [
+        ...items.map((item) => (item.group === 'canvas' ? item : { ...item, section })),
+        ...others.flatMap(({ project, items: offered }) => {
+            const step = { id: project.projectId, name: project.name, kind: 'project' as const };
+
+            return offered.flatMap((item) => {
+                if (!(item.kind in REFERENCE_ICONS) || item.kind === 'project') {
+                    return [];
+                }
+
+                const inside = item.canvas === undefined ? [] : [{ ...item.canvas, kind: 'canvas' as const }];
+
+                return [
+                    {
+                        id: item.id,
+                        name: item.name,
+                        kind: item.kind as ReferableKind,
+                        group: 'views' as const,
+                        trail: [step, ...inside],
+                        section: { id: project.projectId, name: project.name }
+                    }
+                ];
+            });
+        })
+    ];
 }
 
 /* The texts of a canvas view: what its editor holds while it is on screen, else what the document has. */
@@ -93,13 +173,20 @@ function sameReferables(before: readonly Referable[], next: readonly Referable[]
         before.length === next.length &&
         before.every((item, i) => {
             const other = next[i]!;
-            return item.id === other.id && item.name === other.name && item.kind === other.kind && item.group === other.group && item.detail === other.detail;
+            return (
+                item.id === other.id &&
+                item.name === other.name &&
+                item.kind === other.kind &&
+                item.group === other.group &&
+                item.detail === other.detail &&
+                item.trail?.map((step) => step.name).join() === other.trail?.map((step) => step.name).join()
+            );
         })
     );
 }
 
 /* A chip's click: a view opens, a node is zoomed to on its canvas, which comes to the front first. */
-export function openReference(_endpointId: string, id: string): void {
+function openHere(id: string): void {
     if (useDocument.getState().views.some((view) => view.id === id)) {
         showView(id);
         return;
@@ -107,9 +194,23 @@ export function openReference(_endpointId: string, id: string): void {
     revealNode(id);
 }
 
+/* A reference in another project opens that project first. */
+export function openReference(endpointId: string, id: string): void {
+    const elsewhere = useReachedReferables.getState().byEndpoint[endpointId]?.find(({ items }) => items.some((item) => item.id === id));
+
+    if (elsewhere === undefined) {
+        openHere(id);
+        return;
+    }
+
+    void openProject(endpointId, elsewhere.project.projectId).then(() => openHere(id));
+}
+
 /* The open project's views and nodes for a chat's `#`; a machine from before `viewReferences` is offered its chats only. */
 export function useReferables(endpointId: string, chatId: string): Referables {
     const items = useViewNodes((views, nodesOf) => projectReferables(views, nodesOf, textsOfView, chatId), sameReferables);
     const chatsOnly = useServers((s) => s.byEndpoint[endpointId]?.viewReferences !== true);
-    return { items, chatsOnly };
+    const own = useProject((s) => s.current);
+    const reached = useReachedProjects(endpointId);
+    return { items: withReachedProjects(items, own, reached), chatsOnly };
 }

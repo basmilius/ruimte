@@ -130,6 +130,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `accountsReorder` = "accounts.reorder"
     case `projectSidebar` = "project.sidebar"
     case `projectList` = "project.list"
+    case `projectReferables` = "project.referables"
     case `projectOpen` = "project.open"
     case `projectSave` = "project.save"
     case `projectSaveLocal` = "project.save-local"

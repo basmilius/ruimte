@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { isCanvasView, type ProjectNode, type ProjectText, type ProjectView } from '@ruimte/contracts';
 import fixture from '../../../ios/Tests/Fixtures/view-references.json';
 import type { Referable } from '@adecore/agents-react/chat';
-import { projectReferables } from '@/chat/referables';
+import { projectReferables, withReachedProjects } from '@/chat/referables';
 
 function node(id: string, kind: ProjectNode['kind'], title: string, extra: Partial<ProjectNode> = {}): ProjectNode {
     return { id, kind, title, x: 0, y: 0, w: 100, h: 100, ...extra } as ProjectNode;
@@ -47,8 +47,8 @@ describe('projectReferables', () => {
         ]);
     });
 
-    test('a chat view gets the views alone, without itself, dividers or hidden chats', () => {
-        expect(projectReferables(VIEWS, nodesOf, textsOf, 'chat-view').map((item) => item.id)).toEqual(['board', 'sketch']);
+    test('a chat view gets the views and what stands on each canvas, without itself, dividers or hidden chats', () => {
+        expect(projectReferables(VIEWS, nodesOf, textsOf, 'chat-view').map((item) => item.id)).toEqual(['board', 'chat-here', 'note-1', 'sketch']);
     });
 
     test('a node with the name and kind of a view is told apart by its canvas', () => {
@@ -74,5 +74,42 @@ describe('the offer the iPhone shares', () => {
         const nodesOf = (view: ProjectView): readonly ProjectNode[] => (isCanvasView(view) ? view.nodes : []);
         const textsOf = (view: ProjectView): readonly ProjectText[] => (isCanvasView(view) ? view.texts : []);
         expect(projectReferables(views, nodesOf, textsOf, fixture.chatId)).toEqual(fixture.referables as Referable[]);
+    });
+});
+
+describe('references across canvases and projects', () => {
+    const canvas = { kind: 'canvas', id: 'board', name: 'Board', nodes: [node('runner', 'terminal', 'Runner')], texts: [] } as unknown as ProjectView;
+    const nodesOfBoard = (view: ProjectView): ProjectNode[] => (isCanvasView(view) ? (view.nodes as ProjectNode[]) : []);
+
+    test('a chat view reaches a node through the canvas it stands on', () => {
+        const chatView = { kind: 'chat', id: 'lead', name: 'Lead' } as unknown as ProjectView;
+        const items = projectReferables([chatView, canvas], nodesOfBoard, () => [], 'lead');
+
+        expect(items.map((item) => item.id)).toEqual(['board', 'runner']);
+        expect(items[1]?.trail).toEqual([{ id: 'board', name: 'Board', kind: 'canvas' }]);
+    });
+
+    test("another project comes under its own heading, behind the chat's project", () => {
+        const own = [{ id: 'board', name: 'Board', kind: 'canvas', group: 'views' }] as Referable[];
+        const project = { projectId: 'other', name: 'Other' };
+        const reached = [
+            {
+                project,
+                items: [
+                    { id: 'note', name: 'Note', kind: 'note', canvas: { id: 'c', name: 'Canvas' } },
+                    { id: 'odd', name: 'Odd', kind: 'future' }
+                ]
+            }
+        ];
+        const items = withReachedProjects(own, { projectId: 'mine', name: 'Mine' }, reached as never);
+
+        expect(items.map((item) => item.section?.id)).toEqual(['mine', 'other']);
+        expect(items[1]?.trail?.map((step) => step.name)).toEqual(['Other', 'Canvas']);
+    });
+
+    test('with no other project nothing gets a heading', () => {
+        const own = [{ id: 'board', name: 'Board', kind: 'canvas', group: 'views' }] as Referable[];
+
+        expect(withReachedProjects(own, { projectId: 'mine', name: 'Mine' }, [])).toBe(own);
     });
 });

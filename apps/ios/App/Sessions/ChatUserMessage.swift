@@ -234,6 +234,7 @@ struct ChatReferenceChip: View {
         /// False for one that is no longer in the project, or a thread outside any project.
         let opens: Bool
         let gone: Bool
+        var trail: [ChatReferenceStep] = []
     }
 
     let look: Look
@@ -244,14 +245,20 @@ struct ChatReferenceChip: View {
             if let url = ChatReferables.url(look.id) { openURL(url) }
         } label: {
             HStack(spacing: 4) {
+                ForEach(look.trail, id: \.id) { step in
+                    Image(lucide: ChatReferables.icon(step.kind), size: 12).foregroundStyle(MobileStyle.muted)
+                    Text(step.name).lineLimit(1).fontWeight(.regular).foregroundStyle(MobileStyle.muted)
+                    Image(lucide: "chevron-right", size: 12).foregroundStyle(MobileStyle.muted)
+                }
                 Image(lucide: look.icon, size: 12)
-                Text(look.title).lineLimit(1)
+                // The name it leads to stays whole; the places on the way shorten first.
+                Text(look.title).lineLimit(1).layoutPriority(1)
             }
             .chatChip(gone: look.gone)
         }
         .buttonStyle(.plain)
         .disabled(!look.opens)
-        .accessibilityLabel(look.title)
+        .accessibilityLabel((look.trail.map(\.name) + [look.title]).joined(separator: ", "))
     }
 
     /// Without the project around it a thread cannot tell a reference that left it from one it does not know.
@@ -270,7 +277,8 @@ struct ChatReferenceChip: View {
         }
         return Look(
             id: id, icon: item.mark,
-            title: item.name.isEmpty ? String(localized: "Untitled") : item.name, opens: true, gone: false)
+            title: item.name.isEmpty ? String(localized: "Untitled") : item.name, opens: true, gone: false,
+            trail: item.trail)
     }
 }
 
