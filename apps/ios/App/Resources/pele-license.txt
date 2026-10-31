@@ -1,4 +1,4 @@
-Pele 1.8.0
+Pele 1.13.0
 https://github.com/obsidianmd/pele
 
 MIT License
