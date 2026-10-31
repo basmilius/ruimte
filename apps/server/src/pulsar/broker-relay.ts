@@ -23,7 +23,7 @@ const SILENCE_MS = 90_000;
 const ICE_RETRY_MS = 60_000;
 
 /*
- * werift 0.24.4 reads the first STUN URL and the first TURN URL of the whole list and nothing else,
+ * werift 0.25 reads the first STUN URL and the first TURN URL of the whole list and nothing else,
  * so the daemon keeps every STUN server (the first still wins) and one TURN URL: UDP when the broker
  * offers it, since a relay over TCP is what a TURN client falls back to anyway.
  */
