@@ -1,3 +1,16 @@
+diff --git a/lib/common/src/transport.js b/lib/common/src/transport.js
+index a1cff0eeba1099179be0a59b686bf2a9b26caca7..05bba7990d02f93172e1631596440d94e70dfbea 100644
+--- a/lib/common/src/transport.js
++++ b/lib/common/src/transport.js
+@@ -160,6 +160,8 @@ class UdpTransport {
+             this.socket.bind({ address });
+         }
+         await new Promise((r) => this.socket.once("listening", r));
++        // Ruimte: a peer that went away answers with ICMP, which Linux reports here as recvmsg ECONNREFUSED. Without a listener that error ends the process.
++        this.socket.on("error", (error) => log("udp socket error", error));
+     }
+     get address() {
+         return this.socket.address();
 diff --git a/lib/sctp/src/sctp.js b/lib/sctp/src/sctp.js
 index 3fffcf0029d35c53a724766f5606f10080ea6886..8c8233e249c2f688f365d89a7179a86595366b42 100644
 --- a/lib/sctp/src/sctp.js
