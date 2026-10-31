@@ -29,7 +29,8 @@ for (const startup of ['.zshenv', '.zshrc']) {
                 const preview = await fixture.preview();
                 expect(preview.targets).toHaveLength(1);
                 await fixture.prepare.prepare('owner', preview.targets[0]!.token, fixture.client);
-                expect(await fixture.session.plainText()).toContain('echo chosen > chosen');
+                // The editor answers over its socket; what it drew comes through the terminal, which may still be on its way.
+                await waitForAsync(async () => (await fixture.session.plainText()).includes('echo chosen > chosen'), 'the prepared command on the screen');
                 await expect(access(join(fixture.home, 'chosen'))).rejects.toThrow();
                 expect(await readFile(join(fixture.home, '.zshenv'), 'utf8')).toBe(env);
                 expect(await readFile(join(fixture.home, '.zshrc'), 'utf8')).toBe(rc);
@@ -88,7 +89,7 @@ for (const change of ['partial-key', 'type-and-clear', 'decoder-only'] as const)
             fixture.forward();
             await expect(reused).resolves.toEqual({ sessionId: 'shell' });
             expect(await readdir(dirname(fixture.editorAddress))).toEqual(['editor.sock']);
-            expect(await fixture.session.plainText()).toContain('echo chosen > chosen');
+            await waitForAsync(async () => (await fixture.session.plainText()).includes('echo chosen > chosen'), 'the prepared command on the screen');
             await expect(access(join(fixture.home, 'chosen'))).rejects.toThrow();
         } finally {
             await fixture.cleanup();
@@ -108,7 +109,7 @@ for (const loss of ['timeout', 'disconnect']) {
             const token = preview.targets[0]!.token;
             await expect(fixture.prepare.prepare('owner', token, fixture.client)).rejects.toMatchObject({ code: 'terminal-prepare-unconfirmed' });
             expect(await readdir(dirname(fixture.editorAddress))).toEqual(['editor.sock']);
-            expect(await fixture.session.plainText()).toContain('echo chosen > chosen');
+            await waitForAsync(async () => (await fixture.session.plainText()).includes('echo chosen > chosen'), 'the prepared command on the screen');
             await expect(access(join(fixture.home, 'chosen'))).rejects.toThrow();
             expect((await fixture.preview()).targets).toEqual([]);
             await expect(fixture.prepare.prepare('owner', token, fixture.client)).rejects.toThrow('no longer available');
