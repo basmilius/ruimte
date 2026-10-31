@@ -191,7 +191,7 @@ describe('createReleaseNotes', () => {
         const readFile = fs.readFile;
         let reads = 0;
         let calls = 0;
-        const reader = spyOn(fs, 'readFile').mockImplementation(((path, options) => {
+        const reader = spyOn(fs, 'readFile').mockImplementation(((path: Parameters<typeof fs.readFile>[0], options: Parameters<typeof fs.readFile>[1]) => {
             if (String(path) !== cacheFile || options !== 'utf8') {
                 return readFile(path, options);
             }

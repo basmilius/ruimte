@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@ruimte/contracts": "workspace:*",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.2",
+    "@types/bun": "^1.4.4",
     "typescript": "^7.0.2"
   }
 }

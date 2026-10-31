@@ -12,11 +12,11 @@
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
         "@sentry/cloudflare": "11.8.0",
-        "zod": "^4.6.5"
+        "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260922.1",
-        "@types/bun": "^1.4.2",
+        "@cloudflare/workers-types": "^5.20261030.1",
+        "@types/bun": "^1.4.4",
         "typescript": "^7.0.2"
     }
 }

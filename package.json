@@ -40,10 +40,10 @@
     "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.2",
+    "@types/bun": "^1.4.4",
     "oxfmt": "^0.70.0",
-    "oxlint": "^1.85.0",
-    "oxlint-tsgolint": "^7.0.2004",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
     "typescript": "^7.0.2",
     "oxc-parser": "^0.151.0"
   },

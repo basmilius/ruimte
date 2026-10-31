@@ -27,7 +27,7 @@
         "@adecore/merge": "0.49.1",
         "@adecore/plan": "0.49.1",
         "@adecore/service": "0.49.1",
-        "@modelcontextprotocol/client": "^2.1.0",
+        "@modelcontextprotocol/client": "^2.4.0",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
@@ -38,14 +38,14 @@
         "@xterm/addon-serialize": "^0.14.0",
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
-        "linkedom": "^0.18.13",
+        "linkedom": "^0.18.14",
         "reflect-metadata": "0.2.2",
         "serve-sim": "0.1.48",
         "werift": "0.24.4",
-        "zod": "^4.6.5"
+        "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@types/bun": "^1.4.2",
+        "@types/bun": "^1.4.4",
         "typescript": "^7.0.2"
     }
 }
