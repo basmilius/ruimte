@@ -41,7 +41,7 @@
         "linkedom": "^0.18.14",
         "reflect-metadata": "0.2.2",
         "serve-sim": "0.1.48",
-        "werift": "0.24.4",
+        "werift": "^0.25.2",
         "zod": "^4.6.7"
     },
     "devDependencies": {

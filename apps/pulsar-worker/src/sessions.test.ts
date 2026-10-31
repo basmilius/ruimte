@@ -19,7 +19,7 @@ function moveClockTo(time: number): void {
     setSystemTime(new Date(time));
 }
 
-function signedWith(key: ReturnType<typeof generateKeyPairSync>, refreshToken: string, issuedAt = clock): SessionRefreshPayload {
+function signedWith(key: typeof deviceKey, refreshToken: string, issuedAt = clock): SessionRefreshPayload {
     return {
         refreshToken,
         issuedAt,

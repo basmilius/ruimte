@@ -42,7 +42,7 @@ endsolid part
 
 describe('refusing resources outside a model', () => {
     test('a root USDZ material sends missing textures to refusal and completes an embedded image', async () => {
-        const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'Image');
+        const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
         const requested: string[] = [];
         const created: Blob[] = [];
         const revoked: string[] = [];
@@ -55,17 +55,23 @@ describe('refusing resources outside a model', () => {
             return createUrl(blob);
         });
         const revoke = spyOn(URL, 'revokeObjectURL').mockImplementation((url) => revoked.push(url));
-        // Observe the loader's actual Image.src boundary without permitting disk or network I/O.
-        Object.defineProperty(globalThis, 'Image', {
-            configurable: true,
-            value: class {
-                onload: (() => void) | null = null;
-                onerror: (() => void) | null = null;
-                set src(url: string) {
-                    requested.push(url);
-                    queueMicrotask(() => (url.startsWith('blob:') ? this.onload?.() : this.onerror?.()));
-                }
+        // Observe the loader's actual image.src boundary without permitting disk or network I/O.
+        class FakeImage {
+            listeners = new Map<string, () => void>();
+            addEventListener(name: string, listener: () => void): void {
+                this.listeners.set(name, listener);
             }
+            removeEventListener(name: string): void {
+                this.listeners.delete(name);
+            }
+            set src(url: string) {
+                requested.push(url);
+                queueMicrotask(() => this.listeners.get(url.startsWith('blob:') ? 'load' : 'error')?.call(this));
+            }
+        }
+        Object.defineProperty(globalThis, 'document', {
+            configurable: true,
+            value: { createElementNS: () => new FakeImage() }
         });
         const pixel = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), (char) =>
             char.charCodeAt(0)
@@ -121,9 +127,9 @@ def Xform "Root" {
                 URL.revokeObjectURL(url);
             }
             if (descriptor) {
-                Object.defineProperty(globalThis, 'Image', descriptor);
+                Object.defineProperty(globalThis, 'document', descriptor);
             } else {
-                Reflect.deleteProperty(globalThis, 'Image');
+                Reflect.deleteProperty(globalThis, 'document');
             }
         }
     });

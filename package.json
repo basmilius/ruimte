@@ -41,16 +41,16 @@
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",
-    "oxfmt": "^0.70.0",
+    "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
     "oxlint-tsgolint": "^7.0.2005",
     "typescript": "^7.0.2",
-    "oxc-parser": "^0.151.0"
+    "oxc-parser": "^0.156.0"
   },
   "trustedDependencies": [
     "electron"
   ],
   "patchedDependencies": {
-    "werift@0.24.4": "patches/werift@0.24.4.patch"
+    "werift@0.25.2": "patches/werift@0.25.2.patch"
   }
 }

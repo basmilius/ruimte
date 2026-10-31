@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { homedir, userInfo } from 'node:os';
-import { posix, win32, type PlatformPath } from 'node:path';
+import { posix, win32 } from 'node:path';
 import { diskFiles, platformServiceManager as createPlatformServiceManager, runCommand, type ServiceManager, type ServiceSpec } from '@adecore/service';
 
 const LAUNCH_AGENT_LABEL = 'app.ruimte.daemon';
@@ -8,7 +8,7 @@ const SYSTEMD_UNIT_NAME = 'ruimte-daemon.service';
 
 export type HostEnvironment = Record<string, string | undefined>;
 
-export function pathsOf(platform: NodeJS.Platform): PlatformPath {
+export function pathsOf(platform: NodeJS.Platform): typeof posix {
     return platform === 'win32' ? win32 : posix;
 }
 
