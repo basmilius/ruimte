@@ -151,6 +151,10 @@ class FakeSink implements SessionSink {
         this.held.set(nodeId, command);
     }
 
+    setShell(): void {
+        // What a drop reads; no test here types a path.
+    }
+
     setAccount(nodeId: string, account: string | undefined): void {
         this.accounts.set(nodeId, account);
     }

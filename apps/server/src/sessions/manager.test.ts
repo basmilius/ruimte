@@ -385,6 +385,7 @@ describe('SessionManager on Windows', () => {
             expect(pty.options.shell).toBe(bash);
             expect(pty.options.env.RUIMTE_START_LINE).toStartWith("{ echo hi\n}; exec 'powershell.exe' '-NoLogo' '-NoExit' '-EncodedCommand' ");
             expect(windows.manager.get('command')!.handedBack).toBe(true);
+            expect(windows.manager.list()[0]?.shell).toBe('powershell');
         } finally {
             await windows.cleanup();
         }

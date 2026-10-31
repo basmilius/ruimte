@@ -215,6 +215,10 @@
             "title": "That file name cannot be typed",
             "description": "The name contains a hidden character that could run a command, so Ruimte typed nothing."
         },
+        "unquotable": {
+            "title": "That file name cannot be typed in this shell",
+            "description": "This shell would read a character in the name as part of a command, so Ruimte typed nothing."
+        },
         "noBridge": {
             "title": "Files from {{app}} only drop in the desktop app",
             "description": "Open it from the Files panel.",

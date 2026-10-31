@@ -1091,7 +1091,8 @@ export class SessionManager {
             ...(session.exitCode !== null ? { exitCode: session.exitCode } : {}),
             agent: session.agent,
             ...(session.heldCommand !== null ? { heldCommand: session.heldCommand } : {}),
-            ...this.accountOf(session)
+            ...this.accountOf(session),
+            shell: shellName(session.handedBack ? this.personShell() : session.shell)
         };
     }
 

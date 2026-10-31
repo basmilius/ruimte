@@ -137,6 +137,7 @@ beforeEach(async () => {
         setExited() {},
         setAgent() {},
         setAccount() {},
+        setShell() {},
         setHeldCommand() {},
         forget() {}
     };

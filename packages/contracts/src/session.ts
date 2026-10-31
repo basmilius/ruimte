@@ -38,7 +38,9 @@ export const SessionInfoSchema = z.object({
     // without it, and `session.runHeld` types it. A client that does not know the field shows a bare shell.
     heldCommand: z.string().optional(),
     // The account the CLI this shell was opened for runs under, however the daemon settled it; absent is its default account.
-    account: ProviderAccountIdSchema.optional()
+    account: ProviderAccountIdSchema.optional(),
+    // The name of the shell a line typed here reaches (`powershell`, `bash`, `cmd`), so a client quotes for it.
+    shell: z.string().optional()
 });
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 

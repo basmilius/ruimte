@@ -28,12 +28,29 @@ describe('shellQuotedPaths on a POSIX shell', () => {
 });
 
 describe('shellQuotedPaths on Windows', () => {
-    test('a path stays a Windows path in single quotes, which PowerShell and Git Bash both read literally', () => {
-        expect(shellQuotedPaths(['C:\\My Files\\shot.png', 'C:\\a&b\\c.png'], 'win32')).toBe("'C:\\My Files\\shot.png' 'C:\\a&b\\c.png' ");
+    const attack = "C:/repo/O'Neil$(whoami).txt";
+
+    test('PowerShell doubles every quote that ends its single-quoted strings', () => {
+        expect(shellQuotedPaths([attack], 'win32', 'powershell')).toBe("'C:/repo/O''Neil$(whoami).txt' ");
+        expect(shellQuotedPaths(['C:\\it\u2019s.txt'], 'win32', 'pwsh')).toBe("'C:\\it\u2019\u2019s.txt' ");
+        expect(shellQuotedPaths(['C:\\a&b.txt'], 'win32', 'PowerShell')).toBe("'C:\\a&b.txt' ");
     });
 
-    test('a path with an apostrophe goes in double quotes', () => {
-        expect(shellQuotedPaths(["C:\\bas's\\y.png"], 'win32')).toBe('"C:\\bas\'s\\y.png" ');
+    test('Git Bash closes, escapes and opens its single quotes again', () => {
+        expect(shellQuotedPaths([attack], 'win32', 'bash')).toBe("'C:/repo/O'\\''Neil$(whoami).txt' ");
+    });
+
+    test('cmd reads double quotes, doubles a closing backslash and refuses what it expands inside them', () => {
+        expect(shellQuotedPaths([attack], 'win32', 'cmd')).toBe('"C:/repo/O\'Neil$(whoami).txt" ');
+        expect(shellQuotedPaths(['C:\\a&b.txt', 'C:\\'], 'win32', 'cmd')).toBe('"C:\\a&b.txt" "C:\\\\" ');
+        expect(shellQuotedPaths(['C:\\100%PATH%.txt'], 'win32', 'cmd')).toBeNull();
+        expect(shellQuotedPaths(['C:\\wow!.txt'], 'win32', 'cmd')).toBeNull();
+    });
+
+    test('a shell it does not know gets the form that runs nothing in PowerShell or Git Bash, without what cmd acts on', () => {
+        expect(shellQuotedPaths([attack], 'win32')).toBe("'C:/repo/O''Neil$(whoami).txt' ");
+        expect(shellQuotedPaths(['C:\\My Files\\shot.png'], 'win32', 'nu')).toBe("'C:\\My Files\\shot.png' ");
+        expect(shellQuotedPaths(['C:\\plain.png', 'C:\\a&b.png'], 'win32')).toBeNull();
     });
 });
 

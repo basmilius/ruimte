@@ -7069,6 +7069,9 @@
       "account": {
         "type": "string",
         "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      },
+      "shell": {
+        "type": "string"
       }
     },
     "required": [
@@ -9657,6 +9660,9 @@
             "account": {
               "type": "string",
               "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "shell": {
+              "type": "string"
             }
           },
           "required": [
@@ -10076,6 +10082,9 @@
       "account": {
         "type": "string",
         "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      },
+      "shell": {
+        "type": "string"
       }
     },
     "required": [

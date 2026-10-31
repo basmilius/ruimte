@@ -15,6 +15,8 @@ export interface SessionState {
     heldCommand?: string;
     /* The account the daemon started this shell's CLI under, also when the node names none; absent is the CLI's default account. */
     account?: string;
+    /* The shell a line typed here reaches, for a machine that names it. */
+    shell?: string;
 }
 
 /* Rows keyed with `endpointKey`, so a session says which daemon it runs on. */
@@ -27,6 +29,7 @@ export interface SessionSink {
     setAgent(nodeId: string, agent: AgentInfo | null): void;
     setHeldCommand(nodeId: string, command: string | undefined): void;
     setAccount(nodeId: string, account: string | undefined): void;
+    setShell(nodeId: string, shell: string | undefined): void;
     forget(nodeId: string): void;
 }
 
@@ -39,6 +42,7 @@ interface SessionsStore {
     setAgent(key: string, agent: AgentInfo | null): void;
     setHeldCommand(key: string, command: string | undefined): void;
     setAccount(key: string, account: string | undefined): void;
+    setShell(key: string, shell: string | undefined): void;
     forget(key: string): void;
     restart(key: string): void;
     /* Drops one machine's rows. Its sessions keep running; this client is done looking at them. */
@@ -51,7 +55,12 @@ function patchRow(byKey: SessionsByKey, key: string, patch: Partial<SessionState
 }
 
 /* A field set only when it changes, and never on a row that does not exist only to clear it. */
-function setOptional<K extends 'heldCommand' | 'account'>(byKey: SessionsByKey, key: string, field: K, value: SessionState[K]): { byKey?: SessionsByKey } {
+function setOptional<K extends 'heldCommand' | 'account' | 'shell'>(
+    byKey: SessionsByKey,
+    key: string,
+    field: K,
+    value: SessionState[K]
+): { byKey?: SessionsByKey } {
     const current = byKey[key];
     if (current?.[field] === value || (!current && value === undefined)) {
         return {};
@@ -84,6 +93,9 @@ export const useSessions = create<SessionsStore>((set) => ({
     setAccount(key, account) {
         set((s) => setOptional(s.byKey, key, 'account', account));
     },
+    setShell(key, shell) {
+        set((s) => setOptional(s.byKey, key, 'shell', shell));
+    },
     forget(key) {
         set((s) => {
             const next = { ...s.byKey };
@@ -107,6 +119,7 @@ export function sessionSinkFor(endpointId: string): SessionSink {
         setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
         setHeldCommand: (nodeId, command) => useSessions.getState().setHeldCommand(endpointKey(endpointId, nodeId), command),
         setAccount: (nodeId, account) => useSessions.getState().setAccount(endpointKey(endpointId, nodeId), account),
+        setShell: (nodeId, shell) => useSessions.getState().setShell(endpointKey(endpointId, nodeId), shell),
         forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
     };
 }

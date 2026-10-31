@@ -215,6 +215,10 @@
             "title": "Ruimte kan die bestandsnaam niet typen",
             "description": "De naam bevat een verborgen teken dat een opdracht kan uitvoeren, dus Ruimte heeft niets getypt."
         },
+        "unquotable": {
+            "title": "Ruimte kan die bestandsnaam niet typen in deze shell",
+            "description": "Deze shell zou een teken in de naam als deel van een opdracht lezen, dus Ruimte heeft niets getypt."
+        },
         "noBridge": {
             "title": "Bestanden uit {{app}} kun je alleen in de desktop-app neerzetten",
             "description": "Open het via het paneel Bestanden.",

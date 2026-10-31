@@ -88,6 +88,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const attached = useSessionRow(id, (row) => row?.attached);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
     const heldCommand = useSessionRow(id, (row) => row?.heldCommand);
+    const shell = useSessionRow(id, (row) => row?.shell);
     const provider = useNodeHost(id)?.provider;
     const find = useFind(surfaceRef, failure === null);
     const terminalFind = useTerminalFind(find, viewRef, builds);
@@ -147,7 +148,16 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             });
             return;
         }
-        viewRef.current?.paste(shellQuotedPaths(paths, serverInfoOf(endpointId).platform));
+        const typed = shellQuotedPaths(paths, serverInfoOf(endpointId).platform, shell);
+        if (typed === null) {
+            useToasts.getState().show({
+                kind: 'error',
+                title: i18next.t('canvas:drop.unquotable.title'),
+                description: i18next.t('canvas:drop.unquotable.description')
+            });
+            return;
+        }
+        viewRef.current?.paste(typed);
         const canvas = canvasOfNode(id);
         if (canvas === null) {
             useDocument.getState().setBodyFocused(true);
