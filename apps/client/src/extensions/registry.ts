@@ -112,7 +112,7 @@ export interface ExtensionSettingsContribution {
 export interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
-    icon?: string;
+    icon?: LucideIcon;
     setEnabled(enabled: boolean): void;
 }
 

@@ -10,8 +10,6 @@ function row(id: string): { id: string; label: string; description: string } {
     return { id: `pets.${id}`, label: `pets:pets.${id}.label`, description: `pets:pets.${id}.description` };
 }
 
-const icon = new URL('../assets/icon.svg', import.meta.url).href;
-
 defineBuiltIn(
     manifest,
     () => [
@@ -33,5 +31,5 @@ defineBuiltIn(
         defineSharedStorage({ id: PET_SPRITES_STORAGE_KEY, reload: petSpritesChanged }),
         onPageAsk(notePageAsk)
     ],
-    icon
+    PawPrint
 );

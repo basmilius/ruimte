@@ -1,4 +1,5 @@
 import { lazy, type ComponentType } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import type { ExtensionManifest } from '@ruimte/contracts';
 import { z } from 'zod';
 import { storedJson } from '@/state/stored-json';
@@ -39,7 +40,7 @@ export function defineViewAccessory(accessory: Omit<ViewAccessoryContribution, '
  * A built-in with its manifest, which is what Settings shows, as for any other extension. `setup` holds
  * its `define*` calls, so turning it off takes them out again and turning it on runs them anew.
  */
-export function defineBuiltIn(manifest: ExtensionManifest, setup: () => (() => void)[], icon?: string): void {
+export function defineBuiltIn(manifest: ExtensionManifest, setup: () => (() => void)[], icon?: LucideIcon): void {
     let disposers: (() => void)[] = [];
     const apply = (enabled: boolean): void => {
         disposers.forEach((dispose) => dispose());

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Package } from 'lucide-react';
+import { Package, type LucideIcon } from 'lucide-react';
 import { Icon } from '@adecore/ui';
 import { inkOn } from '@/extensions/ink';
 
@@ -19,8 +19,8 @@ export function ExtensionGlyph({ url, size, className }: { url: string; size: nu
     );
 }
 
-/* An extension's mark: its `assets/icon.svg` on the `color` of its manifest, or a package on a plain ground. */
-export function ExtensionTile({ icon, color, size }: { icon: string | null | undefined; color: string | undefined; size: number }) {
+/* An extension's mark: its `assets/icon.svg`, or a built-in's Lucide icon, on the `color` of its manifest, or a package on a plain ground. */
+export function ExtensionTile({ icon, color, size }: { icon: string | LucideIcon | null | undefined; color: string | undefined; size: number }) {
     const glyph = Math.round(size * 0.625);
 
     return (
@@ -34,7 +34,7 @@ export function ExtensionTile({ icon, color, size }: { icon: string | null | und
                 ...(color === undefined ? {} : { background: color, color: inkOn(color) })
             }}
         >
-            {icon === null || icon === undefined ? <Icon icon={Package} size={glyph} /> : <ExtensionGlyph url={icon} size={glyph} />}
+            {typeof icon === 'string' ? <ExtensionGlyph url={icon} size={glyph} /> : <Icon icon={icon ?? Package} size={glyph} />}
         </span>
     );
 }

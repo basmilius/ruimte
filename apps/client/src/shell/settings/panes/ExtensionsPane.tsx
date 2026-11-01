@@ -1,6 +1,6 @@
 import { createElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Store } from 'lucide-react';
+import { Store, type LucideIcon } from 'lucide-react';
 import { Button, Icon, Switch } from '@adecore/ui';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
@@ -33,7 +33,7 @@ function ExtensionHeader({
     meta,
     description
 }: {
-    icon: string | null | undefined;
+    icon: string | LucideIcon | null | undefined;
     color: string | undefined;
     name: string;
     meta: readonly (string | false | undefined)[];
