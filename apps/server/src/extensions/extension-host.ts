@@ -1,7 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { appendFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
+import { EXTENSION_ACTIONS, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { VerbRefusal } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
@@ -14,6 +15,7 @@ import { ExtensionPackError, type ExtensionStore, type StoredExtension } from '.
 // Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
 const CALL_TIMEOUT_MS = 50_000;
 const MAX_CRASHES = 3;
+const CLIENT_FOLDERS = new Set(['client', 'assets', 'locales', 'themes', 'views']);
 const RUNTIME_FILE = 'runtime.ts';
 
 interface Pending {
@@ -53,6 +55,8 @@ export interface ExtensionHostOptions {
     store: ExtensionStore;
     asks?: () => ExtensionAsks;
     startChat?: (extensionId: string, start: ExtensionChatStart) => Promise<{ nodeId: string }>;
+    runAction?: (extensionId: string, projectId: string, action: string, input: unknown) => Promise<unknown>;
+    addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
     now?: () => number;
     spawnProcess?: typeof spawn;
 }
@@ -118,6 +122,7 @@ export class ExtensionHost {
             hash: extension.hash,
             enabled: extension.enabled,
             hasServer: this.options.store.serverEntry(extension) !== null,
+            hasClient: existsSync(join(extension.folder, 'client', 'index.js')),
             status: this.statusOf(extension),
             ...(extension.devFolder === undefined ? {} : { devFolder: extension.devFolder, revision: extension.revision ?? 0 })
         }));
@@ -450,7 +455,72 @@ export class ExtensionHost {
         return this.options.startChat(id, start);
     }
 
+    /* An action of the machine, within the list and the manifest. Both checked here, so the client's own check is only a courtesy. */
+    async runAction(id: string, projectId: string, action: string, input: unknown): Promise<unknown> {
+        const permission = EXTENSION_ACTIONS[action];
+
+        if (permission === undefined) {
+            throw new Error(`An extension cannot ask for ${action}`);
+        }
+
+        const extension = await this.options.store.get(id);
+
+        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, permission)) {
+            throw new Error(`${id} did not ask for the permission ${permission} in its manifest`);
+        }
+
+        if (this.options.runAction === undefined) {
+            throw new Error('This machine does not run actions for an extension');
+        }
+
+        return this.options.runAction(id, projectId, action, input);
+    }
+
+    /* What a client with no shell of its own loads. Not its server part, which only runs here. */
+    async clientFiles(id: string): Promise<{ hash: string; files: Record<string, string> }> {
+        const extension = await this.options.store.get(id);
+
+        if (extension === null) {
+            throw new ExtensionPackError('extension-unknown', `No extension ${id} on this machine`);
+        }
+
+        const files: Record<string, string> = {};
+        const walk = async (folder: string, prefix: string): Promise<void> => {
+            for (const entry of await readdir(folder, { withFileTypes: true })) {
+                const path = `${prefix}${entry.name}`;
+
+                if (entry.isDirectory()) {
+                    if (prefix !== '' || CLIENT_FOLDERS.has(entry.name)) {
+                        await walk(join(folder, entry.name), `${path}/`);
+                    }
+                } else if (prefix !== '' || entry.name === 'manifest.json') {
+                    files[path] = (await readFile(join(folder, entry.name))).toString('base64');
+                }
+            }
+        };
+
+        await walk(extension.folder, '');
+
+        return { hash: extension.hash, files };
+    }
+
     private async answerAsk(id: string, method: string, args: unknown[]): Promise<unknown> {
+        if (method === 'action') {
+            const [projectId, action, input] = args as [string, string, unknown];
+
+            return this.runAction(id, projectId, action, input);
+        }
+
+        if (method === 'languages.add') {
+            const extension = await this.options.store.get(id);
+
+            if (!Object.hasOwn(extension?.manifest.permissions ?? {}, 'languages.servers')) {
+                throw new Error(`${id} did not ask for the permission languages.servers in its manifest`);
+            }
+
+            return this.options.addLanguageServer?.(id, args[0] as object);
+        }
+
         if (method === 'agents.start') {
             return this.startAgent(id, args[0] as ExtensionChatStart);
         }

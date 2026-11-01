@@ -1,0 +1,19 @@
+{
+    "id": "poc.machine",
+    "name": "POC machine",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Palette rows, a language server, launches, routines, artifacts, plans, terminals, browsers and devices.",
+    "color": "#0891b2",
+    "permissions": {
+        "launches.read": "Lists your launches",
+        "routines.read": "Lists your routines",
+        "artifacts.read": "Lists what is in Output",
+        "browser.control": "Reads the browser you select",
+        "devices.control": "Lists your devices",
+        "terminals.read": "Reads the terminal you select",
+        "canvas.write": "Opens a terminal",
+        "languages.servers": "Adds a language server when you press the button"
+    }
+}

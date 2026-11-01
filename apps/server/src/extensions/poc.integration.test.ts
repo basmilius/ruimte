@@ -7,7 +7,7 @@ import { packExtension } from './pack.ts';
 import { ExtensionStore } from './store.ts';
 
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
-const POCS = ['surfaces', 'workspace', 'chat', 'server', 'agents', 'frame', 'themes', 'broken', 'broken-load'];
+const POCS = ['surfaces', 'workspace', 'chat', 'machine', 'server', 'agents', 'frame', 'themes', 'broken', 'broken-load'];
 const root = mkdtempSync(join(tmpdir(), 'ruimte-extension-poc-'));
 const hosts: ExtensionHost[] = [];
 
@@ -140,6 +140,34 @@ describe('the proof-of-concept extensions', () => {
         expect(await host.call('poc.server', 'startChat', ['project-1'])).toEqual({ nodeId: 'chat-1' });
         expect(started[0]).toMatchObject({ id: 'poc.server', projectId: 'project-1' });
         await expect(host.startAgent('poc.none', { projectId: 'project-1' })).rejects.toThrow('agents.start');
+    });
+
+    test('an action of the machine goes only through the list and the manifest', async () => {
+        const ran: string[] = [];
+        const host = new ExtensionHost({
+            store: new ExtensionStore(join(root, 'actions')),
+            runAction: async (_id, _project, action) => void ran.push(action)
+        });
+
+        hosts.push(host);
+        await host.install(await packOf('machine'));
+        await host.runAction('poc.machine', 'project', 'launch.list', {});
+
+        expect(ran).toEqual(['launch.list']);
+        await expect(host.runAction('poc.machine', 'project', 'launch.start', {})).rejects.toThrow('launches.run');
+        await expect(host.runAction('poc.machine', 'project', 'node.delete', {})).rejects.toThrow('cannot ask for');
+    });
+
+    test('a client with no shell gets the client part and never the server part', async () => {
+        const { host } = hostIn('files');
+
+        await host.install(await packOf('machine'));
+
+        const { files } = await host.clientFiles('poc.machine');
+
+        expect(Object.keys(files)).toContain('manifest.json');
+        expect(Object.keys(files).some((path) => path.startsWith('client/'))).toBe(true);
+        expect(Object.keys(files).some((path) => path.startsWith('server/'))).toBe(false);
     });
 
     test('poc-broken fails at load, and stays off after three tries', async () => {

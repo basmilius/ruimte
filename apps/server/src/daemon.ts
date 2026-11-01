@@ -24,7 +24,9 @@ import { ExtensionHost } from './extensions/extension-host.ts';
 import { ExtensionStore } from './extensions/store.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
-import { voiceActionCall } from './actions/context.ts';
+import { serverActionCall, voiceActionCall } from './actions/context.ts';
+import type { ActionName } from '@ruimte/actions';
+import type { CustomLanguageServerInput } from '@ruimte/contracts';
 import { serverActions } from './actions/server-actions.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
@@ -67,11 +69,15 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     };
     const { home } = config;
     let extensionAsks: ExtensionAsks = {};
+    let runExtensionAction: NonNullable<ExtensionHostOptions['runAction']> = () => Promise.reject(new Error('The machine is still starting'));
+    let addExtensionLanguageServer: NonNullable<ExtensionHostOptions['addLanguageServer']> = () => Promise.reject(new Error('The machine is still starting'));
     let startExtensionChat: NonNullable<ExtensionHostOptions['startChat']> = () => Promise.reject(new Error('The machine is still starting'));
     const extensions = new ExtensionHost({
         store: new ExtensionStore(home),
         asks: () => extensionAsks,
-        startChat: (id, start) => startExtensionChat(id, start)
+        startChat: (id, start) => startExtensionChat(id, start),
+        runAction: (id, projectId, action, input) => runExtensionAction(id, projectId, action, input),
+        addLanguageServer: (id, server) => addExtensionLanguageServer(id, server)
     });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
@@ -271,6 +277,29 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         }
 
         return { nodeId: (result.output as { nodeId: string }).nodeId };
+    };
+    runExtensionAction = async (id, projectId, action, input) => {
+        const folder = projects.store.index.folderOf(projectId);
+
+        if (folder === null) {
+            throw new Error(`No project ${projectId} on this machine`);
+        }
+
+        const call = serverActionCall(canvasHost, { projectId, folder, canvasId: null }, `extension:${id}`);
+
+        call.context.extension = true;
+
+        const result = await serverActions.execute(action as ActionName, input as never, call);
+
+        if (result.status !== 'completed') {
+            throw new Error(result.status === 'failed' ? result.error.message : `${action} needs a confirmation`);
+        }
+
+        return result.output;
+    };
+    // Saved like one a person added, so it is listed in Settings and held when its file changes.
+    addExtensionLanguageServer = async (id, server) => {
+        await language.host.customSave({ ...server, id: `extension-${id.replace('.', '-')}` } as CustomLanguageServerInput);
     };
     extensionAsks = {
         'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),

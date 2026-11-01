@@ -113,6 +113,9 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
         return {};
     });
 
+    dispatcher.register('extension.action', async ({ id, projectId, action, input }) => ({ output: await host.runAction(id, projectId, action, input) }));
+    dispatcher.register('extension.clientFiles', ({ id }) => host.clientFiles(id));
+
     dispatcher.register('extension.agentStart', async ({ id, ...start }) => host.startAgent(id, start));
 
     dispatcher.register('extension.agentStop', async (payload) => {

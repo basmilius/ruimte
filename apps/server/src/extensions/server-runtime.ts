@@ -87,7 +87,13 @@ function everyMs(every: string): number {
 }
 
 const server = {
-    machine: { platform: process.platform, dataFolder },
+    machine: {
+        platform: process.platform,
+        dataFolder,
+        // An action of the machine in a project, within what the manifest asks for.
+        run: (projectId: string, action: string, input: unknown = {}) => ask('action', [projectId, action, input])
+    },
+    defineLanguageServer: (languageServer: object) => void ask('languages.add', [languageServer]),
     agents: {
         run: (options: { prompt: string; context?: string[]; provider?: string }) => ask('agents.run', [options]),
         start: (options: { projectId: string; prompt?: string; provider?: string; title?: string; viewId?: string; beside?: string }) =>

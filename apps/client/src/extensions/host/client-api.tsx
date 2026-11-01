@@ -246,6 +246,16 @@ function serverClient(extension: LoadedExtension, transport: Pick<Transport, 're
 export function clientApiFor(extension: LoadedExtension) {
     const { id } = extension.manifest;
     const servers = new WeakMap<object, unknown>();
+    const machineActions = (area: string, verbs: readonly string[]) =>
+        Object.fromEntries(
+            verbs.map((verb) => [
+                verb,
+                (input: object = {}) =>
+                    activeTransport
+                        .request('extension.action', { id, projectId: useProject.getState().current?.projectId ?? '', action: `${area}.${verb}`, input })
+                        .then(({ output }) => output)
+            ])
+        );
     const reportFailure = (what: string) => (text: string) => {
         if (extension.dev === true) {
             sendDevLog(id, 'error', [`${what}: ${text}`]);
@@ -426,6 +436,13 @@ export function clientApiFor(extension: LoadedExtension) {
                 tools: result.tools,
                 component: surfaceOf(extension, result) as ComponentType<{ call: { name: string; input: unknown; output: string | null; state: string } }>
             });
+        },
+        definePaletteSource(source: {
+            id: string;
+            title: string;
+            search: (query: string) => Promise<readonly { id: string; title: string; detail?: string; run: () => void }[]>;
+        }) {
+            add('paletteSources', { id: `${id}/${source.id}`, title: source.title, search: source.search });
         },
         defineSlashCommand(command: { name: string; description: string; run: (args: string) => string | Promise<string> }) {
             add('slashCommands', {
@@ -831,6 +848,36 @@ export function clientApiFor(extension: LoadedExtension) {
                 requiresPermission(extension, 'git.read');
 
                 return activeTransport.request('git.log', { cwd: options?.repository ?? inProject('.'), limit: options?.limit ?? 30 });
+            }
+        },
+        launches: machineActions('launch', ['list', 'read', 'start', 'restart', 'stop']),
+        routines: machineActions('routine', ['list', 'run', 'pause', 'resume']),
+        artifacts: machineActions('artifact', ['list', 'read', 'publish']),
+        browser: machineActions('browser', ['inspect', 'navigate', 'back', 'forward', 'reload', 'screenshot']),
+        devices: machineActions('device', ['list', 'inspect', 'screenshot', 'tap', 'launch']),
+        terminals: {
+            async read(terminal: { id: string }) {
+                requiresPermission(extension, 'terminals.read');
+
+                const { sources } = await activeTransport.request('extension.contextRead', {
+                    projectId: useProject.getState().current?.projectId ?? '',
+                    nodeIds: [terminal.id]
+                });
+
+                return sources[0]?.text ?? '';
+            },
+            // Opens a shell and types nothing: only a person types in a terminal.
+            open(options?: { title?: string; cwd?: string; near?: { id: string }[] }) {
+                requiresPermission(extension, 'canvas.write');
+
+                const nodeId = focusedCanvas()
+                    .getState()
+                    .addNode('terminal', besideNode(options?.near?.[0]?.id), {
+                        ...(options?.title === undefined ? {} : { title: options.title }),
+                        ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                    });
+
+                return nodeId === null ? null : { id: nodeId };
             }
         },
         database: {

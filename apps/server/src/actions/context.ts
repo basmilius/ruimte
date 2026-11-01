@@ -15,6 +15,8 @@ export interface ServerActionContext {
     origin?: IndexedPlace;
     /* Set only for the voice actor, so a handler open to Voice and an agent tells the two apart. */
     voice?: VoiceCaller;
+    /* Set only for an extension whose manifest names the permission: it has no node, so no line can run to it. */
+    extension?: true;
 }
 
 /* A project in use on this machine, as Voice lists it and moves to it. */

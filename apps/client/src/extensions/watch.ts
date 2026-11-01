@@ -1,4 +1,5 @@
-import { followDevLinks, syncExtensions } from '@/extensions/loader';
+import { followDevLinks, followStationMachine, syncExtensions } from '@/extensions/loader';
+import { IS_STATION } from '@/station';
 import { isThisMachine } from '@/state/local-machine';
 import { watchPool } from '@/transport/pool-watch';
 import type { Transport } from '@/transport';
@@ -9,7 +10,9 @@ export function startExtensions(): () => void {
 
     return watchPool((link: Transport, endpointId: string) => {
         const follow = (): void => {
-            if (isThisMachine(endpointId)) {
+            if (IS_STATION) {
+                followStationMachine(link);
+            } else if (isThisMachine(endpointId)) {
                 void link.request('extension.list', {}).then(({ extensions }) => followDevLinks(extensions));
             }
         };

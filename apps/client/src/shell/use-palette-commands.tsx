@@ -1,7 +1,8 @@
+import { usePaletteHits } from '@/extensions/palette-sources';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
-import { SlidersHorizontal, Zap } from 'lucide-react';
+import { Blocks, SlidersHorizontal, Zap } from 'lucide-react';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { Icon } from '@adecore/ui';
 import { openProjectAction } from '@/actions/client-actions';
@@ -124,9 +125,24 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         return { jumps, viewSwitches, switches, commands };
     }, [enabled, connected, endpoints, nodesByView, pages, views, activeViewId, projects, currentProjectId, currentEndpointId, prRepos, t]);
 
+    const hits = usePaletteHits(query, enabled);
+    const fromExtensions: readonly Entry[] = hits.map((hit) => ({
+        id: `extension:${hit.id}`,
+        label: hit.title,
+        hint: hit.detail ?? hit.source,
+        // Found by the extension's own reasoning, so the palette's match on words never hides it.
+        keywords: query,
+        icon: <Icon icon={Blocks} size={14} />,
+        section: 'actions',
+        run: () => {
+            close();
+            hit.run();
+        }
+    }));
+
     const entries: Entry[] = (() => {
         if (catalog === null) {
-            return [];
+            return [...fromExtensions];
         }
         const { jumps, viewSwitches, switches, commands } = catalog;
         const asEntry = (command: Command, section: Entry['section']): Entry => ({
@@ -157,7 +173,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         }));
         const named = namesSetting(query, settings);
         const rest = [...switches.filter(keep), ...commands.map((command) => asEntry(command, 'actions')).filter(keep)];
-        return [...viewSwitches.filter(keep), ...jumps.filter(keep), ...orderBelowJumps({ named, settings, files, rest })];
+        return [...fromExtensions, ...viewSwitches.filter(keep), ...jumps.filter(keep), ...orderBelowJumps({ named, settings, files, rest })];
     })();
 
     const run = (entry: Entry, newWindow: boolean): void => {

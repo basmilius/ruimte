@@ -9,6 +9,33 @@ export const ExtensionIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*\.[a-z0-9]
 /* Where a pack keeps its mark, the same for every extension, so a list needs no word from its code. */
 export const EXTENSION_ICON_PATH = 'assets/icon.svg';
 
+/* The permission each action of the machine needs. What is not here an extension cannot name. */
+export const EXTENSION_ACTIONS: Readonly<Record<string, string>> = {
+    'launch.list': 'launches.read',
+    'launch.read': 'launches.read',
+    'launch.start': 'launches.run',
+    'launch.restart': 'launches.run',
+    'launch.stop': 'launches.run',
+    'routine.list': 'routines.read',
+    'routine.run': 'routines.run',
+    'routine.pause': 'routines.run',
+    'routine.resume': 'routines.run',
+    'artifact.list': 'artifacts.read',
+    'artifact.read': 'artifacts.read',
+    'artifact.publish': 'artifacts.write',
+    'browser.inspect': 'browser.control',
+    'browser.navigate': 'browser.control',
+    'browser.back': 'browser.control',
+    'browser.forward': 'browser.control',
+    'browser.reload': 'browser.control',
+    'browser.screenshot': 'browser.control',
+    'device.list': 'devices.control',
+    'device.inspect': 'devices.control',
+    'device.screenshot': 'devices.control',
+    'device.tap': 'devices.control',
+    'device.launch': 'devices.control'
+};
+
 export const ExtensionManifestSchema = z.object({
     id: ExtensionIdSchema,
     name: z.string().min(1).max(80),
@@ -77,6 +104,7 @@ export const ExtensionInfoSchema = z.object({
     hash: z.string().min(1),
     enabled: z.boolean(),
     hasServer: z.boolean(),
+    hasClient: z.boolean().optional(),
     status: ExtensionStatusSchema,
     // Linked from a folder by `ruimte extension dev`, which is where a client on this machine reads it from.
     devFolder: z.string().optional(),
@@ -133,6 +161,13 @@ export const ExtensionAgentStartPayloadSchema = z.object({
 });
 export const ExtensionAgentStartResultSchema = z.object({ nodeId: z.string() });
 
+/* An action of the machine, by name, within what `EXTENSION_ACTIONS` lets an extension ask for. */
+export const ExtensionActionPayloadSchema = z.object({ id: ExtensionIdSchema, projectId: z.string().min(1), action: z.string().min(1), input: z.unknown() });
+export const ExtensionActionResultSchema = z.object({ output: z.unknown() });
+
+/* What a client without a shell of its own loads, from the machine. */
+export const ExtensionClientFilesResultSchema = z.object({ hash: z.string(), files: z.record(z.string(), z.string()) });
+
 /* One read-only statement, as an agent may run it. */
 export const ExtensionDatabaseQueryPayloadSchema = z.object({ projectId: z.string().min(1), connection: z.string().min(1), sql: z.string().min(1) });
 export const ExtensionDatabaseQueryResultSchema = z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), hasMore: z.boolean() });
@@ -182,6 +217,8 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.agentStart': { payload: ExtensionAgentStartPayloadSchema, result: ExtensionAgentStartResultSchema },
     'extension.agentStop': { payload: ExtensionAgentStopPayloadSchema, result: EmptySchema },
     'extension.databaseQuery': { payload: ExtensionDatabaseQueryPayloadSchema, result: ExtensionDatabaseQueryResultSchema },
+    'extension.action': { payload: ExtensionActionPayloadSchema, result: ExtensionActionResultSchema },
+    'extension.clientFiles': { payload: ExtensionIdPayloadSchema, result: ExtensionClientFilesResultSchema },
     'extension.log': { payload: ExtensionLogPayloadSchema, result: EmptySchema },
     'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema }
 } as const;

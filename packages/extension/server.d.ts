@@ -45,7 +45,15 @@ export const secrets: {
     set(key: string, value: string): Promise<void>;
 };
 
-export const machine: { platform: string; dataFolder: string };
+export const machine: {
+    platform: string;
+    dataFolder: string;
+    /** An action of the machine in a project, such as launch.start, within what your manifest asks for. */
+    run(projectId: string, action: string, input?: object): Promise<any>;
+};
+
+/** Needs `languages.servers`. Saved like one a person added, so it shows in Settings, Language servers. */
+export function defineLanguageServer(server: { name: string; command: string; args?: string[]; env?: Record<string, string>; languages: string[]; patterns: string[] }): void;
 
 export const log: {
     info(message: string): void;

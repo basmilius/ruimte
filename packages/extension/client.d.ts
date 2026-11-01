@@ -52,6 +52,8 @@ export function defineOverlay<Params = void, Result = void>(overlay: {
 /** Draws these tools' calls in a chat, by their exact name, instead of the thread's own view. */
 export function defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: { name: string; input: unknown; output: string | null; state: string } }> }): void;
 /** After `/` in a chat. It expands into the prompt, and the person still sends it. */
+/** Rows in the command palette for what a person types. It waits for a pause in the typing; a slow or failing one costs only its own rows. */
+export function definePaletteSource(source: { id: string; title: string; search(query: string): Promise<{ id: string; title: string; detail?: string; run(): void }[]> }): void;
 export function defineSlashCommand(command: { name: string; description: string; run(args: string): string | Promise<string> }): void;
 /** Things from outside the project for `#` in a chat. Picking one puts what `read` answers in the prompt. */
 export function defineReference(reference: { id: string; title: string; list(): Promise<{ id: string; name: string }[]>; read(item: { id: string; name: string }): Promise<string> }): void;
@@ -277,6 +279,26 @@ export const chats: {
     list(): Promise<unknown[]>;
     read(chatId: string): Promise<string>;
     send(chatId: string, text: string): Promise<void>;
+};
+
+type MachineAction = (input?: object) => Promise<any>;
+
+/** `list` and `read` need `launches.read`, the rest `launches.run`. */
+export const launches: Record<'list' | 'read' | 'start' | 'restart' | 'stop', MachineAction>;
+/** `list` needs `routines.read`, the rest `routines.run`. */
+export const routines: Record<'list' | 'run' | 'pause' | 'resume', MachineAction>;
+/** `list` and `read` need `artifacts.read`, `publish` `artifacts.write`. */
+export const artifacts: Record<'list' | 'read' | 'publish', MachineAction>;
+/** Needs `browser.control`. */
+export const browser: Record<'inspect' | 'navigate' | 'back' | 'forward' | 'reload' | 'screenshot', MachineAction>;
+/** Needs `devices.control`. */
+export const devices: Record<'list' | 'inspect' | 'screenshot' | 'tap' | 'launch', MachineAction>;
+
+export const terminals: {
+    /** Needs `terminals.read`. */
+    read(terminal: NodeRef): Promise<string>;
+    /** Needs `canvas.write`. Opens a shell and types nothing: only a person types in a terminal. */
+    open(options?: { title?: string; cwd?: string; near?: NodeRef[] }): NodeRef | null;
 };
 
 /** Needs `database.read`. One SELECT or WITH statement on a read-only session, as for an agent. */

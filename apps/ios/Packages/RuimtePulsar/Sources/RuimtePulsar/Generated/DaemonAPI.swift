@@ -12,6 +12,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `extensionAgentStart` = "extension.agentStart"
     case `extensionAgentStop` = "extension.agentStop"
     case `extensionDatabaseQuery` = "extension.databaseQuery"
+    case `extensionAction` = "extension.action"
+    case `extensionClientFiles` = "extension.clientFiles"
     case `extensionLog` = "extension.log"
     case `extensionCall` = "extension.call"
     case `serverHello` = "server.hello"

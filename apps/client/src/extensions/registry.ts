@@ -160,6 +160,12 @@ export interface SlotEntry {
     addsNode?: boolean;
 }
 
+export interface PaletteSourceContribution {
+    id: string;
+    title: string;
+    search: (query: string) => Promise<readonly { id: string; title: string; detail?: string; run: () => void }[]>;
+}
+
 export interface SlashCommandContribution {
     id: string;
     name: string;
@@ -244,6 +250,7 @@ export interface Contributions {
     markdownBlocks: readonly MarkdownBlockContribution[];
     toolResults: readonly ToolResultContribution[];
     slashCommands: readonly SlashCommandContribution[];
+    paletteSources: readonly PaletteSourceContribution[];
     references: readonly ReferenceContribution[];
     diffViewers: readonly DiffViewerContribution[];
     voiceActions: readonly VoiceActionContribution[];
@@ -270,6 +277,7 @@ export const useContributions = create<Contributions>(() => ({
     markdownBlocks: [],
     toolResults: [],
     slashCommands: [],
+    paletteSources: [],
     references: [],
     diffViewers: [],
     voiceActions: [],

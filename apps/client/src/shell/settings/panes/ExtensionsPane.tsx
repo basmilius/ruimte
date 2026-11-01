@@ -5,6 +5,7 @@ import { Button, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
+import { IS_STATION } from '@/station';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
 import { SchemaSettings } from '@/extensions/SchemaSettings';
 import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
@@ -304,7 +305,7 @@ export function ExtensionsPane() {
         void syncExtensions();
     }, []);
 
-    if (desktop()?.extensions === undefined) {
+    if (desktop()?.extensions === undefined && !IS_STATION) {
         return <p className="text-sm text-text-muted">{t('extensions.desktopOnly')}</p>;
     }
 

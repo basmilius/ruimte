@@ -799,6 +799,7 @@ export function Canvas() {
             <ContextMenu.Trigger
                 render={<div />}
                 ref={rootRef}
+                data-surface="canvas"
                 className="canvas-ground relative h-full w-full touch-none overflow-hidden"
                 style={{
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceDown ? 'grab' : undefined

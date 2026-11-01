@@ -56,7 +56,12 @@ function lineLines(id: string, callerCanvas: string | null, deviceCanvas: string
  * person pointed the caller at it with, or the canvas a chat view names. No card asks a person: the
  * device is a sandbox of its own, and the line is the permission.
  */
-async function referenceOf({ host, place }: ServerActionContext, caller: string, id: string, viewId: string | null | undefined): Promise<DeviceReference> {
+async function referenceOf(
+    { host, place, extension }: ServerActionContext,
+    caller: string,
+    id: string,
+    viewId: string | null | undefined
+): Promise<DeviceReference> {
     const content = await host.projects.read(place.projectId);
     // A peer drives no device: a hidden canvas holds the nodes of another machine, whatever lines it mirrored.
     const callerCanvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === caller));
@@ -83,7 +88,7 @@ async function referenceOf({ host, place }: ServerActionContext, caller: string,
     if (!node.device) {
         throw new VerbRefusal('no-device', `${id} points at no device yet; a person picks one on the node`);
     }
-    if (!sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
+    if (extension !== true && !sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
         if (chatView) {
             throw viewRequired(id, canvas, `device state ${id}`);
         }

@@ -72,7 +72,7 @@ function lineLines(id: string, url: string | undefined, callerCanvas: string | n
  * `#` a person pointed the caller at it with. A chat view has no lines, and drives any page of the
  * canvas it names instead.
  */
-async function targetOf({ host, place }: ServerActionContext, caller: string, id: string, viewId: string | null | undefined): Promise<ProjectNode> {
+async function targetOf({ host, place, extension }: ServerActionContext, caller: string, id: string, viewId: string | null | undefined): Promise<ProjectNode> {
     const content = await host.projects.read(place.projectId);
     const chatView = isChatView(content, caller);
     const arranged = arrangedCanvas(content, caller, viewId);
@@ -90,7 +90,7 @@ async function targetOf({ host, place }: ServerActionContext, caller: string, id
     if (node.kind !== 'browser') {
         throw new VerbRefusal('not-a-browser', `${id} is a ${node.kind} node, and only a browser node has a page to drive`, await lines());
     }
-    if (!sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
+    if (extension !== true && !sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
         if (chatView) {
             throw viewRequired(id, canvas, `browser state ${id}`);
         }

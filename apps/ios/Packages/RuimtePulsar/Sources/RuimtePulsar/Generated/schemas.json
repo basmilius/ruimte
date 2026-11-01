@@ -6982,6 +6982,9 @@
             "hasServer": {
               "type": "boolean"
             },
+            "hasClient": {
+              "type": "boolean"
+            },
             "status": {
               "type": "string",
               "enum": [
@@ -7113,6 +7116,9 @@
         "type": "boolean"
       },
       "hasServer": {
+        "type": "boolean"
+      },
+      "hasClient": {
         "type": "boolean"
       },
       "status": {
@@ -7383,6 +7389,76 @@
       "columns",
       "rows",
       "hasMore"
+    ]
+  },
+  "request.extension.action.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "action": {
+        "type": "string",
+        "minLength": 1
+      },
+      "input": {}
+    },
+    "required": [
+      "id",
+      "projectId",
+      "action",
+      "input"
+    ]
+  },
+  "request.extension.action.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "output": {}
+    },
+    "required": [
+      "output"
+    ]
+  },
+  "request.extension.clientFiles.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "request.extension.clientFiles.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "hash": {
+        "type": "string"
+      },
+      "files": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "hash",
+      "files"
     ]
   },
   "request.extension.log.payload": {

@@ -19,6 +19,8 @@
 
 ## Product rules
 
+- An extension whose manifest names `browser.control` or `devices.control` drives a page or device without a line (`ServerActionContext.extension`). Only `ExtensionHost.runAction` reaches it, within `EXTENSION_ACTIONS`.
+
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - A node on a canvas reads, writes in and operates another node only over a line or a `#` reference, and keeps to them exactly. The one exception is `notify`: by Bas's choice it reaches every terminal and chat of the caller's project, with no line, so an agent can always answer the one that wrote to it. The wake rule for messages (`src/outbox`) keeps that from looping.

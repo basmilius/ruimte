@@ -58,13 +58,7 @@ function base64Of(bytes: Uint8Array): string {
  * takes it from its owner, so on someone else's the client part still works and this says what is missing.
  */
 export async function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
-    const bridge = desktop()?.extensions;
-
-    if (bridge === undefined) {
-        throw new Error('Extensions need the desktop app');
-    }
-
-    await bridge.install(bytes);
+    await desktop()?.extensions?.install(bytes);
 
     const onMachine = await transport.request('extension.install', { pack: base64Of(bytes) }).then(
         () => true,

@@ -104,6 +104,8 @@
     "extension.agentStart",
     "extension.agentStop",
     "extension.databaseQuery",
+    "extension.action",
+    "extension.clientFiles",
     "extension.log",
     "extension.call",
     "server.hello",
