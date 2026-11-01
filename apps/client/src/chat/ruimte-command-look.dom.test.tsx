@@ -89,7 +89,17 @@ beforeEach(async () => {
                     reply('reply-1', 2),
                     shellCall('call-go', 'ruimte-context browser go browser-3f2a9k1d --url https://ruimte.app/download --view main', 3),
                     reply('reply-2', 4),
-                    shellCall('call-plain', 'ls -la', 5)
+                    shellCall('call-plain', 'ls -la', 5),
+                    reply('reply-3', 6),
+                    {
+                        ...shellCall('call-note', "ruimte-context notify browser-3f2a9k1d --text 'Pick it up'", 7),
+                        output: 'notified\tbrowser-3f2a9k1d\tnow\tdetail\tDownloads'
+                    } as ChatItem,
+                    reply('reply-4', 8),
+                    {
+                        ...shellCall('call-gone', "ruimte-context notify chat-gone --text 'Are you there'", 9),
+                        output: 'notified\tchat-gone\twaiting\tdetail'
+                    } as ChatItem
                 ],
                 seq: 1
             }) as never
@@ -120,6 +130,20 @@ describe('a ruimte-context call in a chat', () => {
         expect(line).not.toContain('Bash');
         const hidden = [...page.host.querySelectorAll('[data-find-item="call-go"] .sr-only')].map((element) => element.textContent);
         expect(hidden).toEqual(['browser-3f2a9k1d', 'main']);
+    });
+
+    test('a notify reads as the message it sent, to whom and how it went', () => {
+        const row = page.host.querySelector('[data-find-item="call-note"]')!;
+        expect(row.textContent).toContain('Pick it up');
+        expect(row.textContent).toContain('To');
+        expect(row.parentElement?.textContent).toContain('Delivered');
+        expect(row.textContent).not.toContain('Ruimte Message');
+    });
+
+    test('a notify to a node that went says so, and that it waits', () => {
+        const row = page.host.querySelector('[data-find-item="call-gone"]')!;
+        expect(row.textContent).toContain('Not in this project');
+        expect(row.parentElement?.textContent).toContain('Waiting until it takes its next turn');
     });
 
     test('any other shell call still reads as Bash', () => {

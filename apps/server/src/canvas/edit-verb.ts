@@ -2,7 +2,7 @@ import { MAX_PER_CALL } from '@ruimte/actions';
 import { z } from 'zod';
 import { canvasIdFor, defineActionVerb, pointedCanvas, runAction } from './action-verb.ts';
 import { ONE_WRITE, jsonBatch } from './batch.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { VIEW_FLAG, VerbRefusal, placeOf } from './verb.ts';
 
 const NEEDS_TEXT = '--text needs the body to write, in quotes';

@@ -2162,6 +2162,156 @@
         }
       }
     },
+    "Sent %lld messages" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Sent 1 message"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Sent %lld messages"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 bericht verstuurd"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld berichten verstuurd"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delivered" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afgeleverd"
+          }
+        }
+      }
+    },
+    "In another project" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In een ander project"
+          }
+        }
+      }
+    },
+    "Message to %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht aan %@"
+          }
+        }
+      }
+    },
+    "No such terminal or chat" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die terminal of chat bestaat niet"
+          }
+        }
+      }
+    },
+    "Not sent" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niet verstuurd"
+          }
+        }
+      }
+    },
+    "Sending" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezig met versturen"
+          }
+        }
+      }
+    },
+    "That is on another machine" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die staat op een andere machine"
+          }
+        }
+      }
+    },
+    "That is this chat itself" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dat is deze chat zelf"
+          }
+        }
+      }
+    },
+    "That runs no agent" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daar draait geen agent"
+          }
+        }
+      }
+    },
+    "To" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aan"
+          }
+        }
+      }
+    },
+    "Waiting until it takes its next turn" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht tot de volgende beurt"
+          }
+        }
+      }
+    },
     "Waiting for the next turn" : {
       "localizations" : {
         "nl" : {

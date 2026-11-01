@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { NO_REPLY_NOTICE } from '../context/notices.ts';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
 import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { lengthOf, oneArgument } from './verb.ts';
 
 const NEEDS_TEXT = '--text needs the message to leave, in quotes';
@@ -63,6 +63,8 @@ export const notifyVerb = defineStandaloneActionVerb({
     }),
     async run({ positionals: [id], flags }, call) {
         const delivery = await runAction(call, 'agent.notify', { nodeId: id, text: flags.text });
-        return [`notified\t${delivery.nodeId}\t${delivery.at}\t${delivery.detail}`];
+        const fields = ['notified', delivery.nodeId, delivery.at, delivery.detail, ...(delivery.title === undefined ? [] : [delivery.title])];
+
+        return [fields.join('\t')];
     }
 });

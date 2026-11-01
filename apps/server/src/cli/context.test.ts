@@ -3,7 +3,7 @@ import { mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { VISUAL_LIMITS } from '@ruimte/contracts';
-import { unescapeText } from '../canvas/text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { VERBS } from '../canvas/verbs.ts';
 import { runContext } from './context.ts';
 

@@ -86,7 +86,14 @@
         "used_one": "Used Ruimte {{name}} once",
         "used_other": "Used Ruimte {{name}} {{count}} times",
         "usedAny_one": "Used Ruimte once",
-        "usedAny_other": "Used Ruimte {{count}} times"
+        "usedAny_other": "Used Ruimte {{count}} times",
+        "inAnotherProject": "In another project",
+        "refused": {
+            "self-notify": "That is this chat itself",
+            "not-an-agent": "That runs no agent",
+            "unknown-node": "No such terminal or chat",
+            "node-on-other-machine": "That is on another machine"
+        }
     },
     "providerCommand": {
         "description": "Press Enter to run.",

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { VerbRefusal } from './verb.ts';
 
 const NEEDS_IDS = 'answer takes the id of the agent that asked and the id of its request';

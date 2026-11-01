@@ -12,7 +12,7 @@ import { effortFlag, modelFlag, modelLines } from './model.ts';
 import { MAX_CANVAS_NODES, idList } from './nodes.ts';
 import { TASK_LINES, nextLine } from './task-verbs.ts';
 import { MAX_TASK_PROMPT_LENGTH } from './tasks.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { DRY_RUN_PREVIEW, MAX_TITLE_LENGTH, TITLE_LINE, titleField, VIEW_FLAG } from './verb.ts';
 import { WORKTREE_LINES } from './worktree.ts';
 

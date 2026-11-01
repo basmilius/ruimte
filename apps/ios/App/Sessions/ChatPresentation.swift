@@ -147,6 +147,7 @@ extension ChatTimelineEntry {
             case .thinking?, .approval?: return true
             case .tool(let tool)?:
                 return ChatSubagents.handbackReport(.tool(tool)) == nil && !UiGeneratedImage.isGeneration(tool)
+                    && RuimteCommandLook.sent(of: tool) == nil
             default: return false
             }
         }
@@ -156,12 +157,15 @@ extension ChatTimelineEntry {
 extension ChatTimelineEntry {
     @MainActor var rhythm: ChatRowRhythm {
         if kind == .message, items.first?.item.userItem != nil { return .question }
+        if kind == .message, case .tool(let tool)? = items.first?.item, RuimteCommandLook.sent(of: tool) != nil {
+            return .sent
+        }
         return isWorkLine ? .work : .block
     }
 }
 
 enum ChatRowRhythm: Equatable {
-    case work, block, question
+    case work, block, question, sent
 }
 
 /// The space above and below a row. Work lines sit tight against each other; where a run of them meets prose, either
@@ -181,6 +185,11 @@ struct ChatRowPadding: Equatable {
             switch rhythm[index] {
             case .question: return ChatRowPadding(top: index == 0 ? prose : turn, bottom: answer)
             case .block: return ChatRowPadding(top: prose, bottom: prose)
+            // A run of sent messages sits as tight as work lines, so a fan-out reads as one stretch.
+            case .sent:
+                let above = index > 0 && rhythm[index - 1] == .sent
+                let below = index + 1 < rhythm.count && rhythm[index + 1] == .sent
+                return ChatRowPadding(top: above ? Self.work : prose, bottom: below ? Self.work : prose)
             case .work:
                 let above = index > 0 && rhythm[index - 1] != .work
                 let below = index + 1 < rhythm.count && rhythm[index + 1] != .work
@@ -617,7 +626,7 @@ final class ChatPresentation {
         for item in items where item.item.parentToolUseID == nil {
             // A subagent's `SubagentHandback` call reads as the report it carries rather than as a tool call.
             if case .tool(let tool) = item.item, tool.workflow == nil, ChatSubagents.handbackReport(item.item) == nil,
-                !UiGeneratedImage.isGeneration(tool)
+                !UiGeneratedImage.isGeneration(tool), RuimteCommandLook.sent(of: tool) == nil
             {
                 if historyBoundaries.contains(item.id) { flush() }
                 calls.append(item)
@@ -773,7 +782,13 @@ enum ChatToolPresentation {
         for tool in tools {
             let name = tool.name
             let key: String
-            if let group = RuimteCommandLook.run(of: tool)?.groupKey {
+            if let sent = RuimteCommandLook.sent(of: tool) {
+                guard sent.state != .failed else {
+                    other += 1
+                    continue
+                }
+                key = "sent"
+            } else if let group = RuimteCommandLook.run(of: tool)?.groupKey {
                 key = "look:\(group)"
             } else if failedFileChange(tool) {
                 other += 1
@@ -793,6 +808,7 @@ enum ChatToolPresentation {
         var parts = order.map { key in
             let count = counts[key] ?? 0
             if key.hasPrefix("look:") { return usedRuimte(String(key.dropFirst(5)), count: count) }
+            if key == "sent" { return ChatToolSentence(text: String(localized: "Sent \(count) messages")) }
             return ChatToolSentence(
                 text: key == "edited" ? String(localized: "Edited \(edited.count) files") : sentence(key, count: count))
         }

@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { createElement } from 'react';
-import type { CommandLook, CommandLookMatch, CommandName } from '@adecore/agents-react';
+import type { CommandLook, CommandLookCall, CommandLookMatch, CommandLookSent, CommandName } from '@adecore/agents-react';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
 import { Icon } from '@adecore/ui';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
@@ -117,6 +118,88 @@ export function useContextNames(endpointId: string, chatId: string): (word: stri
     };
 }
 
+/* The words of a `notify` call: one id and `--text`, and `--project` at most; null for anything else. */
+function notifyWords(args: readonly string[]): { id: string; text: string; project: string | null } | null {
+    const ids: string[] = [];
+    const flags = new Map<string, string>();
+
+    for (let i = 1; i < args.length; i++) {
+        const word = args[i]!;
+
+        if (!word.startsWith('--')) {
+            ids.push(word);
+
+            continue;
+        }
+
+        const equals = word.indexOf('=');
+        const name = equals === -1 ? word : word.slice(0, equals);
+        const value = equals === -1 ? args[++i] : word.slice(equals + 1);
+
+        if ((name !== '--text' && name !== '--project') || value === undefined || flags.has(name)) {
+            return null;
+        }
+
+        flags.set(name, value);
+    }
+
+    const [id] = ids;
+    const text = flags.get('--text');
+
+    return ids.length !== 1 || id === undefined || text === undefined ? null : { id, text, project: flags.get('--project') ?? null };
+}
+
+const REFUSALS = new Set(['self-notify', 'not-an-agent', 'unknown-node', 'node-on-other-machine']);
+
+/* How the call went, from its state and what it answered; null for a finished call whose answer says neither. */
+function notifyOutcome({ state, output }: CommandLookCall): Pick<CommandLookSent, 'state' | 'reason' | 'title'> | null {
+    const lines = (output ?? '').split('\n');
+    // A CLI may put its own line above what a failed command wrote, so a refusal is looked for in all of them.
+    const refused = lines.find((line) => line.startsWith('refused\t'));
+
+    if (refused !== undefined || state === 'error') {
+        const code = refused?.split('\t')[1];
+
+        return { state: 'failed', ...(code !== undefined && REFUSALS.has(code) ? { reason: i18next.t(`chat:commandLook.refused.${code}`) } : {}) };
+    }
+
+    if (state === 'running') {
+        return { state: 'sending' };
+    }
+
+    const [word, , at, , title] = (lines[0] ?? '').split('\t');
+
+    if (word !== 'notified' || (at !== 'now' && at !== 'waiting')) {
+        return null;
+    }
+
+    return { state: at === 'now' ? 'delivered' : 'waiting', ...(title === undefined || title === '' ? {} : { title }) };
+}
+
+/* A `notify` call as the message it sent, with its text read the way the machine reads it; stdin comes as it is. */
+export function sentByNotify(call: CommandLookCall): CommandLookSent | null {
+    if (call.args[0] !== 'notify') {
+        return null;
+    }
+
+    const words = notifyWords(call.args);
+
+    if (words === null) {
+        return null;
+    }
+
+    const text = words.text === '-' ? call.heredoc : unescapeText(words.text);
+    const outcome = notifyOutcome(call);
+
+    if (text === null || text === '' || outcome === null) {
+        return null;
+    }
+
+    const elsewhere = words.project === null ? {} : { title: i18next.t('chat:commandLook.inAnotherProject'), hint: words.project };
+
+    return { to: words.id, text, ...elsewhere, ...outcome };
+}
+
 /* `ruimte-context` as a tool of Ruimte's own in a chat, with the mark, the name of the part it works on and titles for ids. */
 const RUIMTE_COMMAND_LOOK: CommandLook = {
     program: 'ruimte-context',
@@ -124,7 +207,8 @@ const RUIMTE_COMMAND_LOOK: CommandLook = {
     Mark: RuimteMark,
     describe: describeContextCall,
     sentence: (count) => i18next.t('chat:commandLook.usedAny', { count }),
-    useNames: useContextNames
+    useNames: useContextNames,
+    sent: sentByNotify
 };
 
 export const RUIMTE_COMMAND_LOOKS: readonly CommandLook[] = [RUIMTE_COMMAND_LOOK];

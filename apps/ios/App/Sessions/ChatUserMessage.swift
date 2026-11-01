@@ -155,6 +155,53 @@ struct ChatSentMessage: View {
     }
 }
 
+/// A message this chat's agent sent another node: said by the agent, so outlined rather than filled like what is said
+/// to it, under a chip that names and opens where it went, with how it went below. Tapping that opens the call.
+struct ChatAgentSentMessage: View {
+    let item: ChatToolItem
+    let sent: ChatAgentSent
+    @Environment(\.chatReferenceLookup) private var lookup
+    @State private var opened = false
+
+    private var status: String {
+        let word =
+            switch sent.state {
+            case .sending: String(localized: "Sending")
+            case .delivered: String(localized: "Delivered")
+            case .waiting: String(localized: "Waiting until it takes its next turn")
+            case .failed: String(localized: "Not sent")
+            }
+        return sent.reason.map { "\(word) · \($0)" } ?? word
+    }
+
+    var body: some View {
+        ChatSaidMessage(
+            text: sent.text,
+            label: String(
+                localized: "Message to \(sent.title ?? String(localized: "another node"))",
+                comment: "%@ is the name of the node it went to"),
+            outlined: true,
+            dimmed: sent.state == .failed
+        ) {
+            HStack(spacing: 6) {
+                Label(String(localized: "To"), lucideIcon: "send", iconSize: 12).font(.caption).foregroundStyle(MobileStyle.muted)
+                ChatReferenceChip(look: ChatReferenceChip.look(sent.to, chat: false, lookup: lookup, lastName: sent.title ?? ""))
+            }
+        }
+        ChatExpansionButton(expanding: !opened) {
+            opened.toggle()
+        } label: {
+            Text(status).font(.caption).foregroundStyle(MobileStyle.muted)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(opened ? "Expanded" : "Collapsed")
+        if opened {
+            ChatToolBodyView(item: item)
+        }
+    }
+}
+
 /// What Ruimte told the agent in front of a prompt, said under Ruimte's own name, which the text then no longer has to
 /// lead with.
 struct ChatRuimteSaid: View {
@@ -184,6 +231,8 @@ struct ChatRuimteSaid: View {
 private struct ChatSaidMessage<Chip: View>: View {
     let text: String
     let label: String
+    var outlined = false
+    var dimmed = false
     @ViewBuilder let chip: Chip
     @State private var expanded = false
     private var long: Bool { text.count > 600 || text.split(separator: "\n").count > 8 }
@@ -219,7 +268,11 @@ private struct ChatSaidMessage<Chip: View>: View {
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(MobileStyle.hover, in: RoundedRectangle(cornerRadius: 18))
+            .background(outlined ? Color.clear : MobileStyle.hover, in: RoundedRectangle(cornerRadius: 18))
+            .overlay {
+                if outlined { RoundedRectangle(cornerRadius: 18).strokeBorder(MobileStyle.text.opacity(0.16)) }
+            }
+            .opacity(dimmed ? 0.6 : 1)
         }
         .frame(maxWidth: 620, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)

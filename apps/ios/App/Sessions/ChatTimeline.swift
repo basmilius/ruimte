@@ -1316,6 +1316,8 @@ private struct ChatTimelineRow: View {
                     Text("Report").font(.caption.weight(.medium)).foregroundStyle(MobileStyle.faint)
                         .accessibilityAddTraits(.isHeader)
                     MarkdownMessage(text: report)
+                } else if let sent = RuimteCommandLook.sent(of: tool) {
+                    ChatAgentSentMessage(item: tool, sent: sent)
                 } else if UiGeneratedImage.isGeneration(tool) {
                     GeneratedImageRow(item: tool, saveToProject: imageSave)
                 } else if let workflow = tool.workflow {

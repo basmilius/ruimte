@@ -1,5 +1,5 @@
 import { parseRefusalBody, refusalBody, type ParsedRefusal } from '@adecore/agents/context';
-import { escapeText } from '../canvas/text-escapes.ts';
+import { escapeText } from '@ruimte/actions/text-escapes';
 import { flagValue, stdinWords, takeAll } from './flags.ts';
 
 // Exit codes distinguish daemon failures, stale sessions and command refusals for callers that script this CLI.

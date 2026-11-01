@@ -171,6 +171,51 @@ final class ChatCommandLookTests: XCTestCase {
         XCTAssertEqual(ChatShell.commands("echo $(ruimte-context node list)").map(\.programName), ["echo"])
     }
 
+    private func notify(_ command: String, output: String?, state: String = "done") -> ChatAgentSent? {
+        RuimteCommandLook.sent(
+            of: ChatWire.item([
+                "id": .string("call"), "kind": .string("tool"), "name": .string("Bash"),
+                "input": .object(["command": .string(command)]), "state": .string(state),
+                "output": output.map(JSONValue.string) ?? .null,
+            ]).chatTool)
+    }
+
+    func testANotifyReadsAsTheMessageItSentAndHowItWent() {
+        let call = #"ruimte-context notify chat-b --text "first\nsecond""#
+        XCTAssertEqual(
+            notify(call, output: "notified\tchat-b\tnow\tdetail\tLead"),
+            ChatAgentSent(to: "chat-b", title: "Lead", hint: nil, text: "first\nsecond", state: .delivered, reason: nil))
+        XCTAssertEqual(notify(call, output: "notified\tchat-b\twaiting\tdetail")?.state, .waiting)
+        XCTAssertEqual(notify(call, output: nil, state: "running")?.state, .sending)
+        XCTAssertEqual(notify(call, output: "Exit code 3\nrefused\tnot-an-agent\tmessage", state: "error")?.state, .failed)
+        XCTAssertNotNil(notify(call, output: "Exit code 3\nrefused\tnot-an-agent\tmessage", state: "error")?.reason)
+        XCTAssertNil(notify(call, output: "refused\tnew-code\tmessage", state: "error")?.reason)
+        XCTAssertNil(notify(call, output: ""))
+    }
+
+    func testANotifyFedAHeredocSaysItsLinesUnlessTheShellFillsThemIn() {
+        let answer = "notified\tchat-b\tnow\tdetail"
+        XCTAssertEqual(notify("ruimte-context notify chat-b --text - <<'EOF'\ncosts $5\nEOF", output: answer)?.text, "costs $5\n")
+        XCTAssertNil(notify("ruimte-context notify chat-b --text - <<EOF\ncosts $PRICE\nEOF", output: answer))
+    }
+
+    func testANotifyTheClientCannotReadStaysAToolLine() {
+        let answer = "notified\tchat-b\tnow\tdetail"
+        XCTAssertNil(notify(#"cd x && ruimte-context notify chat-b --text "hi""#, output: answer))
+        XCTAssertNil(notify(#"ruimte-context notify chat-b --text "$MESSAGE""#, output: answer))
+        XCTAssertNil(notify(#"ruimte-context notify chat-b --text "a"; ruimte-context notify chat-c --text "b""#, output: answer))
+        XCTAssertNil(notify("echo hi | ruimte-context notify chat-b --text -", output: answer))
+        XCTAssertNil(notify(#"ruimte-context answer chat-b --text "hi""#, output: answer))
+        XCTAssertEqual(notify("ruimte-context notify chat-b --text 'costs $5'", output: answer)?.text, "costs $5")
+    }
+
+    func testANotifyToAnotherProjectSaysSoUntilItKnowsTheName() {
+        let call = #"ruimte-context notify chat-b --text "hi" --project site"#
+        let sent = notify(call, output: "notified\tchat-b\tnow\tdetail")
+        XCTAssertEqual(sent?.hint, "site")
+        XCTAssertEqual(notify(call, output: "notified\tchat-b\tnow\tdetail\tLead")?.title, "Lead")
+    }
+
     private struct Line: Equatable {
         let label: String
         let detail: String

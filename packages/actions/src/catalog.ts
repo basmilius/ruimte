@@ -2010,7 +2010,9 @@ export const ACTION_DEFINITIONS = {
             nodeId,
             // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.
             at: z.enum(['now', 'waiting']),
-            detail: z.string()
+            detail: z.string(),
+            // What the node is called now, which a thread keeps showing once it is gone.
+            title: z.string().optional()
         })
     },
     'agent.answer': {

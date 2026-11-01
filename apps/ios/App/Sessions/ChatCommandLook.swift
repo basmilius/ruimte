@@ -17,6 +17,8 @@ struct ChatShellCommand: Equatable {
     /// The index of the word it runs, past assignments, wrappers and runners; nil for a command of assignments only.
     var program: Int?
     var heredoc = false
+    /// The lines of its one heredoc; nil without one, with more, or with one the shell fills in.
+    var heredocText: String?
 
     var programName: String? {
         program.map {
@@ -77,7 +79,7 @@ private struct ChatShellParser {
     private var current = ChatShellCommand()
     private var serial = 0
     private var redirects = 0
-    private var pending: [(serial: Int, delimiter: String, strip: Bool)] = []
+    private var pending: [(serial: Int, delimiter: String, strip: Bool, literal: Bool)] = []
 
     init(_ source: [Unicode.Scalar]) {
         self.source = source
@@ -91,8 +93,11 @@ private struct ChatShellParser {
             if char == "\n" {
                 index += 1
                 for heredoc in pending {
-                    index = heredocEnd(from: index, delimiter: heredoc.delimiter, strip: heredoc.strip)
-                    markHeredoc(heredoc.serial)
+                    let (bodyEnd, next) = heredocEnd(from: index, delimiter: heredoc.delimiter, strip: heredoc.strip)
+                    let body = String(String.UnicodeScalarView(source[index..<bodyEnd]))
+                    let filled = !heredoc.literal && body.contains { "$`\\".contains($0) }
+                    markHeredoc(heredoc.serial, text: filled ? nil : body)
+                    index = next
                 }
                 pending.removeAll()
                 finish()
@@ -108,7 +113,8 @@ private struct ChatShellParser {
                 let strip = scalar(at: index + 2) == "-"
                 let delimiter = word(from: skipBlanks(index + (strip ? 3 : 2)))
                 if !delimiter.text.isEmpty {
-                    pending.append((serial, delimiter.text, strip))
+                    let quoted = source[delimiter.start..<delimiter.end].contains { $0 == "'" || $0 == "\"" || $0 == "\\" }
+                    pending.append((serial, delimiter.text, strip, quoted))
                 }
                 index = delimiter.end
             } else if char == "<" || char == ">" || (char == "&" && scalar(at: index + 1) == ">") {
@@ -162,15 +168,18 @@ private struct ChatShellParser {
         redirects = 0
     }
 
-    private mutating func markHeredoc(_ owner: Int) {
+    private mutating func markHeredoc(_ owner: Int, text: String?) {
         if owner == serial {
+            current.heredocText = current.heredoc ? nil : text
             current.heredoc = true
         } else if let index = serials.firstIndex(of: owner) {
+            commands[index].heredocText = commands[index].heredoc ? nil : text
             commands[index].heredoc = true
         }
     }
 
-    private func heredocEnd(from start: Int, delimiter: String, strip: Bool) -> Int {
+    /// Where the lines of a heredoc end, and where the line after its delimiter starts.
+    private func heredocEnd(from start: Int, delimiter: String, strip: Bool) -> (body: Int, next: Int) {
         var index = start
         while index < source.count {
             let lineEnd = source[index...].firstIndex(of: "\n") ?? source.count
@@ -178,11 +187,11 @@ private struct ChatShellParser {
             if line.hasSuffix("\r") { line = line.dropLast() }
             if strip { line = line.drop { $0 == "\t" } }
             if line == delimiter {
-                return min(lineEnd + 1, source.count)
+                return (index, min(lineEnd + 1, source.count))
             }
             index = lineEnd + 1
         }
-        return source.count
+        return (source.count, source.count)
     }
 
     private func word(from start: Int) -> ChatShellWord {
@@ -281,6 +290,12 @@ struct RuimteCommandRun: Equatable {
     /// How many more `ruimte-context` calls the line makes.
     let more: Int
     let heredoc: Bool
+    /// The words after the program, quotes taken out.
+    var args: [String] = []
+    /// The lines of its one heredoc, when the shell leaves them alone.
+    var heredocText: String?
+    /// Whether the shell fills in a part of a word, so its text here is not what the program gets.
+    var expands = false
 
     struct Word: Equatable {
         /// Offsets in Unicode scalars into the detail.
@@ -302,6 +317,22 @@ struct ChatCommandName: Equatable {
 enum ChatCommandDetailPart: Equatable {
     case text(String)
     case name(ChatCommandName, word: String)
+}
+
+/// A message this chat's agent sent another node, read from its call.
+struct ChatAgentSent: Equatable {
+    enum State: Equatable {
+        case sending, delivered, waiting, failed
+    }
+
+    let to: String
+    /// What the node was called when the message went, or where it is when that is not known.
+    let title: String?
+    /// The project it went to, when that is not this one.
+    let hint: String?
+    let text: String
+    let state: State
+    let reason: String?
 }
 
 enum RuimteCommandLook {
@@ -383,7 +414,113 @@ enum RuimteCommandLook {
         let (detail, words) = detailOf(source, found, from: index + 1 + (look?.from ?? 0))
         return RuimteCommandRun(
             label: look?.name ?? "", groupKey: look?.name, detail: detail, words: words, others: others, more: more,
-            heredoc: found.heredoc)
+            heredoc: found.heredoc, args: found.words.dropFirst(index + 1).map(\.text),
+            heredocText: found.heredocText,
+            expands: found.words.contains { expandsInShell(source[$0.start..<$0.end]) })
+    }
+
+    /// Whether the shell would fill in a part of this source: a `$` or backtick outside single quotes and not escaped.
+    private static func expandsInShell(_ source: ArraySlice<Unicode.Scalar>) -> Bool {
+        var single = false
+        var double = false
+        var escaped = false
+        for char in source {
+            if single {
+                single = char != "'"
+            } else if escaped {
+                escaped = false
+            } else if char == "\\" {
+                escaped = true
+            } else if char == "$" || char == "`" {
+                return true
+            } else if char == "'" && !double {
+                single = true
+            } else if char == "\"" {
+                double.toggle()
+            }
+        }
+        return false
+    }
+
+    /// The message a `notify` call sent, as `sentByNotify` on the desktop reads it, for a line that holds only that
+    /// call and nothing the shell fills in; nil leaves it a tool line.
+    static func sent(of tool: ChatToolItem) -> ChatAgentSent? {
+        guard let run = run(of: tool), run.args.first == "notify", run.others.isEmpty, run.more == 0, !run.expands,
+            let words = notifyWords(run.args),
+            let text = words.text == "-" ? run.heredocText : unescape(words.text), !text.isEmpty,
+            let outcome = notifyOutcome(tool)
+        else { return nil }
+        let elsewhere = words.project != nil ? String(localized: "In another project") : nil
+        return ChatAgentSent(
+            to: words.id, title: outcome.title ?? elsewhere, hint: words.project, text: text, state: outcome.state,
+            reason: outcome.reason)
+    }
+
+    private static func notifyWords(_ args: [String]) -> (id: String, text: String, project: String?)? {
+        var ids: [String] = []
+        var flags: [String: String] = [:]
+        var index = 1
+        while index < args.count {
+            let word = args[index]
+            index += 1
+            guard word.hasPrefix("--") else {
+                ids.append(word)
+                continue
+            }
+            let parts = word.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+            let name = parts[0]
+            var value = parts.count > 1 ? parts[1] : nil
+            if value == nil, index < args.count {
+                value = args[index]
+                index += 1
+            }
+            guard name == "--text" || name == "--project", flags[name] == nil, let value else { return nil }
+            flags[name] = value
+        }
+        guard ids.count == 1, let text = flags["--text"] else { return nil }
+        return (ids[0], text, flags["--project"])
+    }
+
+    private static func notifyOutcome(_ tool: ChatToolItem) -> (state: ChatAgentSent.State, title: String?, reason: String?)? {
+        let lines = (tool.output ?? "").components(separatedBy: "\n")
+        // A CLI may put its own line above what a failed command wrote, so a refusal is looked for in all of them.
+        let refused = lines.first { $0.hasPrefix("refused\t") }
+        if refused != nil || tool.state == .error {
+            let code = refused?.components(separatedBy: "\t").dropFirst().first
+            return (.failed, nil, code.flatMap(refusal))
+        }
+        if tool.state == .running { return (.sending, nil, nil) }
+        let fields = lines[0].components(separatedBy: "\t")
+        guard fields.count >= 3, fields[0] == "notified", fields[2] == "now" || fields[2] == "waiting" else { return nil }
+        let title = fields.count > 4 && !fields[4].isEmpty ? fields[4] : nil
+        return (fields[2] == "now" ? .delivered : .waiting, title, nil)
+    }
+
+    private static func refusal(_ code: String) -> String? {
+        switch code {
+        case "self-notify": String(localized: "That is this chat itself")
+        case "not-an-agent": String(localized: "That runs no agent")
+        case "unknown-node": String(localized: "No such terminal or chat")
+        case "node-on-other-machine": String(localized: "That is on another machine")
+        default: nil
+        }
+    }
+
+    /// `\\n`, `\\t` and `\\\\` as the machine reads them (`unescapeText`); any other backslash stays.
+    private static func unescape(_ value: String) -> String {
+        var result = String.UnicodeScalarView()
+        var scalars = value.unicodeScalars.makeIterator()
+        var next = scalars.next()
+        while let char = next {
+            next = scalars.next()
+            guard char == "\\", let escaped = next, escaped == "n" || escaped == "t" || escaped == "\\" else {
+                result.append(char)
+                continue
+            }
+            result.append(escaped == "n" ? "\n" : escaped == "t" ? "\t" : "\\")
+            next = scalars.next()
+        }
+        return String(result)
     }
 
     /// The words of a command from `first` on with their spacing, a redirect between them a single space.

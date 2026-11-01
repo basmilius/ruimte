@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { defineStandaloneActionVerb, runAction } from './action-verb.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 
 export const alertVerb = defineStandaloneActionVerb({
     name: 'alert',

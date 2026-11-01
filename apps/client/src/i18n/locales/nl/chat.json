@@ -86,7 +86,14 @@
         "used_one": "1 keer Ruimte {{name}} gebruikt",
         "used_other": "{{count}} keer Ruimte {{name}} gebruikt",
         "usedAny_one": "1 keer Ruimte gebruikt",
-        "usedAny_other": "{{count}} keer Ruimte gebruikt"
+        "usedAny_other": "{{count}} keer Ruimte gebruikt",
+        "inAnotherProject": "In een ander project",
+        "refused": {
+            "self-notify": "Dat is deze chat zelf",
+            "not-an-agent": "Daar draait geen agent",
+            "unknown-node": "Die terminal of chat bestaat niet",
+            "node-on-other-machine": "Die staat op een andere machine"
+        }
     },
     "providerCommand": {
         "description": "Druk op Enter om uit te voeren.",

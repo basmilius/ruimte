@@ -2,7 +2,7 @@ import { TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES } from '@ruimte/co
 import { z } from 'zod';
 import { DRY_RUN_PREVIEW, SCOPE_LINE, VerbRefusal, field, orNote, textFlag } from './verb.ts';
 import { JSON_PARAM, defineActionVerb, jsonLines as json, runAction } from './action-verb.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 
 const REFUSALS = 'template-invalid\ttemplate-key-taken\tno-templates\tthe codes this action refuses with';
 

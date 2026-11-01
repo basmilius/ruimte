@@ -22,7 +22,7 @@ function requestLine(nodeId: string, item: ChatQuestionItem | ChatApprovalItem):
 }
 
 /* The caller's name as a message signs it: any chat by its own name, a later one of a design too, else its node on a canvas or the view it is. */
-function callerTitle(views: readonly ProjectView[], caller: string): string {
+function titleOf(views: readonly ProjectView[], caller: string): string {
     const chatName = chatNameOf(views, caller);
     if (chatName !== null) {
         return chatName;
@@ -161,7 +161,7 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
 
         // A caller in another project, which `--project` reached this one from, is named with its project, so the answer knows where to go.
         const own = context.origin === undefined ? null : await host.projects.read(context.origin.projectId);
-        const fromTitle = own === null ? callerTitle(content.views, caller) : `${callerTitle(own.views, caller)} in ${own.name}`;
+        const fromTitle = own === null ? titleOf(content.views, caller) : `${titleOf(own.views, caller)} in ${own.name}`;
         const delivery = await host.messages.notify({
             projectId: place.projectId,
             targetId: nodeId,
@@ -170,6 +170,8 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
             text
         });
 
-        return { output: { nodeId, at: delivery.at, detail: delivery.detail } };
+        const title = titleOf(content.views, nodeId).replace(/\s+/g, ' ').trim();
+
+        return { output: { nodeId, at: delivery.at, detail: delivery.detail, ...(title === '' ? {} : { title }) } };
     }
 };

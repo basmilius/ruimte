@@ -15,7 +15,7 @@ import {
 import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
 import { fieldLines } from './diagram-verb.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { defineNoun, field, oneArgument } from './verb.ts';
 
 /* Agents repeat ids to people, who only know a plan and its steps by their titles. */

@@ -7,7 +7,7 @@ import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 import { ONE_WRITE, idBatch, jsonBatch } from './batch.ts';
 import { EVERY_KIND_LINE, JSON_NODE_KINDS, NODE_VERB_KINDS, REQUIRED_FLAG, kindLine, kindsFor } from './node-kinds.ts';
 import { MAX_CANVAS_NODES } from './nodes.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import {
     DRY_RUN_PREVIEW,
     MAX_TITLE_LENGTH,

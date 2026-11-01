@@ -3574,7 +3574,7 @@ describe('notify', () => {
 
         const sent = await post('notify', [target, '--text', 'the build is green']);
         expect(sent.status).toBe(200);
-        expect(sent.lines).toEqual([`notified\t${target}\twaiting\t${delivery.detail}`]);
+        expect(sent.lines).toEqual([`notified\t${target}\twaiting\t${delivery.detail}\tbuilder`]);
         // The sender goes along by id, with its title only so the receiver can read the line.
         expect(notified).toEqual([{ projectId, targetId: target, from: 'term-1', fromTitle: 'shell', text: 'the build is green' }]);
     });
@@ -3597,7 +3597,7 @@ describe('notify', () => {
         const target = await madeId(post('node', ['new', 'terminal']));
         delivery = { at: 'now', wake: false, detail: 'printed on the screen of that terminal' };
         expect((await post('notify', [target, '--text', 'look at the log'])).lines).toEqual([
-            `notified\t${target}\tnow\tprinted on the screen of that terminal`
+            `notified\t${target}\tnow\tprinted on the screen of that terminal\tTerminal`
         ]);
     });
 

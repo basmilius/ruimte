@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineActionVerb, defineStandaloneActionVerb, runAction } from './action-verb.ts';
 import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, taskLine } from './tasks.ts';
-import { unescapeText } from './text-escapes.ts';
+import { unescapeText } from '@ruimte/actions/text-escapes';
 import { MAX_TITLE_LENGTH, titleField, oneArgument } from './verb.ts';
 import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 

@@ -80,8 +80,8 @@ async function notify(daemon: TestDaemon, from: string, to: string, text: string
 }
 
 /* The line notify prints, which every answer ends with the same way. */
-function notified(id: string, at: string, detail: string): string {
-    return `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}`;
+function notified(id: string, at: string, detail: string, title: string): string {
+    return `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}\t${title}`;
 }
 
 /* What a person reads in the thread about a message, wherever it was written. */
@@ -97,7 +97,7 @@ describe('a message to a chat', () => {
         await link(daemon, 'chat-lead', 'chat-other');
 
         const lines = await notify(daemon, 'chat-lead', 'chat-other', 'what is the secret word');
-        expect(lines).toEqual([notified('chat-other', 'now', 'that chat takes a turn on it, and reads it there')]);
+        expect(lines).toEqual([notified('chat-other', 'now', 'that chat takes a turn on it, and reads it there', 'Builder')]);
 
         await daemon.until(() => turnsOf(daemon, 'chat-other').some((turn) => (turn.messageFrom ?? []).length > 0 && turn.state === 'done'));
         const turn = turnsOf(daemon, 'chat-other').find((candidate) => (candidate.messageFrom ?? []).length > 0)!;
@@ -126,7 +126,7 @@ describe('a message to a chat', () => {
         await daemon.until(() => daemon.chats.get('chat-other')?.info.activeTurnId !== null);
 
         const lines = await notify(daemon, 'chat-other', 'chat-lead', 'the word is walnut');
-        expect(lines).toEqual([notified('chat-lead', 'now', 'that chat takes a turn on it, and reads it there')]);
+        expect(lines).toEqual([notified('chat-lead', 'now', 'that chat takes a turn on it, and reads it there', 'Lead')]);
         await daemon.until(() => repliesOf(daemon, 'chat-lead').some((text) => text.includes('the word is walnut')));
         expect(turnsOf(daemon, 'chat-lead').filter((turn) => (turn.messageFrom ?? []).length > 0)).toEqual([
             expect.objectContaining({ messageFrom: ['chat-other'] })
@@ -147,7 +147,7 @@ describe('a message to a chat', () => {
         const before = turnsOf(daemon, 'chat-third').length;
 
         const lines = await notify(daemon, 'chat-other', 'chat-third', 'the word is walnut');
-        expect(lines).toEqual([notified('chat-third', 'now', 'that chat takes a turn on it, and reads it there')]);
+        expect(lines).toEqual([notified('chat-third', 'now', 'that chat takes a turn on it, and reads it there', 'Reviewer')]);
         await daemon.until(() => repliesOf(daemon, 'chat-third').some((text) => text.includes('the word is walnut')));
         expect(turnsOf(daemon, 'chat-third').length).toBeGreaterThan(before);
         expect(turnsOf(daemon, 'chat-third').at(-1)?.messageHop).toBe(2);
@@ -165,7 +165,12 @@ describe('a message to a chat', () => {
 
         const lines = await notify(daemon, 'chat-lead', 'chat-other', 'the build is green');
         expect(lines).toEqual([
-            notified('chat-other', 'waiting', 'that chat is in a turn; it reads the message at the latest in a turn of its own when this one ends (1 waiting)')
+            notified(
+                'chat-other',
+                'waiting',
+                'that chat is in a turn; it reads the message at the latest in a turn of its own when this one ends (1 waiting)',
+                'Builder'
+            )
         ]);
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
         expect(turnsOf(daemon, 'chat-other')).toHaveLength(before);
@@ -185,7 +190,7 @@ describe('a message to a chat', () => {
         await daemon.until(() => daemon.sessions.get(termId) !== undefined);
 
         const lines = await notify(daemon, 'chat-lead', termId, 'the build is green');
-        expect(lines).toEqual([notified(termId, 'now', 'printed on the screen of that terminal')]);
+        expect(lines).toEqual([notified(termId, 'now', 'printed on the screen of that terminal', 'Claude Code')]);
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
         // A shell with no agent in it reads the line off its screen, so nothing is left waiting either.
         expect(daemon.notices.waiting(termId)).toEqual([]);
