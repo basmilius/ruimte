@@ -312,7 +312,13 @@ function extensionCommands(): Command[] {
         ...commands.filter((command) => command.when?.() ?? true).map((command) => ({ id: command.id, label: command.title, run: () => void command.run() })),
         ...resolveSlot(slotEntries, 'commandPalette', context).flatMap(({ entry, title }) =>
             entry.kind === 'action'
-                ? [{ id: `extension:${entry.id}`, label: title, run: () => void runAction({ ...entry, title }, context, 'commandPalette') }]
+                ? [
+                      {
+                          id: `extension:${entry.id}`,
+                          label: entry.addsNode === true ? `Add ${title}` : title,
+                          run: () => void runAction({ ...entry, title }, context, 'commandPalette')
+                      }
+                  ]
                 : []
         )
     ];
