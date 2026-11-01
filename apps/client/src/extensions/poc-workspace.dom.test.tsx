@@ -2,12 +2,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import type { ComponentType } from 'react';
 import type { LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
-import { HostDialogs } from '@/extensions/host/host-dialogs';
+import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import { runAction } from '@/extensions/action-runs';
 import { useContributions } from '@/extensions/registry';
 import { baseContext } from '@/extensions/slots';
 import { useToasts } from '@/state/toasts';
-import { mount, until, type Mounted } from '../../testing/dom';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { loadPoc } from '../../testing/poc';
 
 let extension: LoadedExtension;
@@ -59,6 +59,19 @@ describe('poc-workspace', () => {
         extension.manifest.permissions = before;
 
         expect(JSON.stringify(useToasts.getState())).toContain('canvas.write');
+    });
+
+    test('opens its own UI in an overlay, and hears what it closed with', async () => {
+        mounted = mount();
+        await mounted.render(<HostOverlays />);
+
+        const pending = runAction(action('overlay'), baseContext(), 'test');
+
+        await until(() => document.body.textContent?.includes('Which one?') ?? false);
+        await clickOn([...document.querySelectorAll('button')].find((button) => button.textContent === 'The second') ?? null);
+        await pending;
+
+        expect(JSON.stringify(useToasts.getState())).toContain('The second');
     });
 
     test('asks through the dialogs of Ruimte', async () => {

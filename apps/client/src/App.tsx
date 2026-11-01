@@ -5,7 +5,7 @@ import { useProjectSwitch } from '@/project/open';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import '@/extensions/built-in';
 import { startExtensions } from '@/extensions/watch';
-import { HostDialogs } from '@/extensions/host/host-dialogs';
+import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
 import { allSettingsSections } from '@/shell/settings/sections';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { StartScreen } from '@/shell/StartScreen';
@@ -192,6 +192,7 @@ export function App() {
                     <Floating surface="toasts">
                         <Toasts />
                         <HostDialogs />
+                        <HostOverlays />
                     </Floating>
                     <ReleaseNotesDialog />
                     <Floating surface="machineUpdate">

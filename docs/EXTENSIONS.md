@@ -29,13 +29,21 @@ ruimte extension logs           what server/ wrote
 
 `extensions/limits` is a worked example on the public API alone. Try it with `bun run dev` in that folder while Ruimte runs.
 
-## Actions
+## Slots
 
-`defineAction` holds what happens, and `show` says where: `selectionBar`, `nodeHeader`, `nodeMenu` or `commands`. `defineMenu` groups actions into a menu of the extension's own, as a submenu in a node's menu and a dropdown elsewhere. `defineNodeHeader` draws its own UI in a node's header.
+A slot is a place, with a function that gets what is true there and answers `false`, `true` or changes (`title`, `icon`, `disabled`, `badge`, `order`). `defineAction`, `defineMenu` and `defineWidget` all go in slots: a button or menu item, a menu of the extension's own, and its own React. An action without slots only shows where a menu puts it.
 
-In a node's menu an extension always comes below Ruimte's own items, above removing the node.
+The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `composer`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. In a menu an extension always comes below Ruimte's own items.
 
-While `run` is pending, the nodes it is about show a spinner with its title and its button is disabled. A throw reaches the person as a toast. Work that is no action uses `host.busy`, and `useActionRunning` draws a state of your own.
+While `run` is pending, the nodes it is about show a spinner that also stops it through `signal`, and its button is disabled for those nodes. A throw reaches the person as a toast. Work that is no action uses `host.busy`.
+
+`defineOverlay` opens your own UI over the app and answers what it closed with. `host.confirm`, `host.prompt` and `host.pick` ask through the dialogs of Ruimte.
+
+## Permissions
+
+Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `context.read`, `files.read`, `files.write`, `git.read`, `chats.read`, `chats.send`, `agents.run`, `agents.start`, `agents.status`, `usage.read`, `clock`.
+
+`chats.send` from `server/` is limited to 20 messages per chat per hour, so a loop with a chat stops on its own. Typing into a terminal and answering a permission prompt stay out of reach.
 
 ## Logging
 
@@ -47,8 +55,9 @@ While `run` is pending, the nodes it is about show a spinner with its title and 
 
 | Folder | What to look for |
 | --- | --- |
-| `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay, settings detail, commands, actions at each place, a menu of its own and a tag in a note's header. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
+| `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay and settings detail. An action in every slot, a menu of its own, a widget in a note's header, a viewer for `.csv` and a `poc` fence in a chat. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
 | `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. A line from its node to a chat gives the chat the fact. |
+| `poc-workspace` | Its menu writes to the canvas and the project, reads git, opens an overlay and asks through dialogs. Its panel hears events, shows params, keeps storage per project and machine, and speaks Dutch and English. A chat's composer gets a button that sends, and a chat's menu starts a second opinion. |
 | `poc-agents` | Summarize in the bar, a node's header, its menu or the palette writes a linked note, with a spinner on the nodes meanwhile. The card lists agents. |
 | `poc-frame` | Shows an opaque origin, refused storage and refused fetch, and still gets an answer from its server. |
 | `poc-themes` | Paper is tokens alone. Midnight adds an image and outlines through `data-surface`. Your accent stays on top. |
@@ -87,6 +96,4 @@ Opening a window with `?safe-mode` loads no extension and no theme, so a person 
 
 ## Not built yet
 
-`defineFileViewer`, `defineToolResult`, `defineReference`, `defineComposerAction`, `defineViewAction`, a streaming `agents.run`, and a `--safe-mode` flag on the launcher.
-
-Open product decisions: whether `agents.start` on a server part is an exception to the rule that only `agent` starts anything, and whether a server part may keep a clock of its own.
+From [the API report](reports/2026-11-01-extension-api.html): `defineAgentTool`, `defineToolResult`, `defineMessageBlock`, `defineReference`, `defineSlashCommand`, `defineTemplate`, `defineStatusItem`, `defineVoiceAction`, `defineNotificationAction`, `defineDiffViewer`, `defineFileIcon`, the slots `messageMenu`, `lineMenu` and `projectMenu`, `database`, `agents.stream`, `files.watch`, `defineSettings` with a schema, `agents.start` from `server/`, `hosts` and `activation` in the manifest, a `--safe-mode` flag on the launcher, and webhooks, which stay out by choice.

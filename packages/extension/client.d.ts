@@ -39,6 +39,13 @@ export function defineCanvasOverlay(overlay: { id: string; component: LazyCompon
 export function defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo & { text: string | null } }> }): void;
 /** Draws a fenced block of this language in a chat and in markdown, on this client. Elsewhere it stays code. */
 export function defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }): void;
+/** Your own UI over the app. `open` answers what `close` was given, or null when a person dismissed it. */
+export function defineOverlay<Params = void, Result = void>(overlay: {
+    id: string;
+    title: string;
+    size?: 'sm';
+    component: LazyComponent<{ params: Params; close(result?: Result): void }>;
+}): { open(params: Params): Promise<Result | null>; close(): void };
 export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;
 export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] }): void;
 

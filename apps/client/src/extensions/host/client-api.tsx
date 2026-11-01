@@ -15,7 +15,7 @@ import { DevReport } from '@/extensions/DevReport';
 import { contribute, useContributions, type ExtensionSurfaceProps, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { baseContext, nodeInfoOf, type NodeInfo } from '@/extensions/slots';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
-import { askHost } from '@/extensions/host/host-dialog-state';
+import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { openFileLink } from '@/shell/panels/file-links';
 import { currentEndpointId } from '@/state/keys';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
@@ -373,6 +373,30 @@ export function clientApiFor(extension: LoadedExtension) {
                 language: block.language,
                 component: surfaceOf(extension, block) as ComponentType<{ source: string }>
             });
+        },
+        defineOverlay<Params, Result>(overlay: {
+            id: string;
+            title: string;
+            size?: 'sm';
+            component: LazyComponent<{ params: Params; close: (result?: Result) => void }>;
+        }) {
+            assertLazy(overlay, `defineOverlay ${overlay.id}`);
+
+            const component = surfaceOf(extension, overlay) as unknown as OpenOverlay['component'];
+            const closers = new Set<(result?: unknown) => void>();
+
+            extension.disposers.push(() => closers.forEach((close) => close()));
+
+            return {
+                open(params: Params): Promise<Result | null> {
+                    const { result, close } = openOverlay({ title: overlay.title, size: overlay.size, component, params });
+
+                    closers.add(close);
+
+                    return result.finally(() => closers.delete(close)) as Promise<Result | null>;
+                },
+                close: () => closers.forEach((close) => close())
+            };
         },
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
             add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run });

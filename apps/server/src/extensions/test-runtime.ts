@@ -28,6 +28,11 @@ const client: Record<string, unknown> = {
     defineNode: recording('node'),
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
+    defineOverlay: (definition: unknown) => {
+        defined.push({ kind: 'overlay', definition });
+
+        return { open: async () => null, close: () => undefined };
+    },
     defineFileViewer: recording('fileViewer'),
     defineMarkdownBlock: recording('markdownBlock'),
     defineExtensionSettings: recording('settings'),

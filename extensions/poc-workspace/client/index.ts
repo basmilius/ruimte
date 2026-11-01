@@ -1,6 +1,27 @@
-import { agents, canvas, chats, defineAction, defineMenu, defineNode, definePanel, files, git, host, views, type NodeInfo } from '@ruimte/extension/client';
+import {
+    agents,
+    canvas,
+    chats,
+    defineAction,
+    defineMenu,
+    defineNode,
+    defineOverlay,
+    definePanel,
+    files,
+    git,
+    host,
+    views,
+    type NodeInfo
+} from '@ruimte/extension/client';
 
 const panel = definePanel<{ from: string }>({ id: 'workspace', title: 'POC workspace', icon: 'layers', component: () => import('./WorkspacePanel') });
+
+const picker = defineOverlay<{ title: string }, string>({ id: 'picker', title: 'POC overlay', size: 'sm', component: () => import('./PickerOverlay') });
+const fromOverlay = defineAction({
+    id: 'overlay',
+    title: 'Open an overlay',
+    run: async () => host.notify((await picker.open({ title: 'Which one?' })) ?? 'Dismissed')
+});
 
 defineNode({ id: 'stamp', title: 'POC stamp', icon: 'stamp', initialData: { at: '' }, component: () => import('./StampNode') });
 
@@ -57,7 +78,7 @@ defineMenu({
     title: 'POC workspace',
     icon: 'layers',
     slots: { canvasMenu: true, nodeMenu: true },
-    items: [openPanel, badge, 'separator', stamp, note, log, newView, pick, rename]
+    items: [openPanel, badge, fromOverlay, 'separator', stamp, note, log, newView, pick, rename]
 });
 
 defineAction({
