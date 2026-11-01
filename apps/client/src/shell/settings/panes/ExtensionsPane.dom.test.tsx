@@ -26,12 +26,12 @@ afterEach(async () => {
 });
 
 describe('the list of extensions', () => {
-    test('has the store, then what you are building, what you installed and what is included', async () => {
+    test('has the store, then what you are building, what you installed and what is built in', async () => {
         await mounted.render(<ExtensionsPane />);
         await until(() => mounted.host.textContent?.includes('Being built') ?? false);
 
         const nav = mounted.host.querySelector('nav')?.textContent ?? '';
-        const places = ['Browse store', 'In development', 'Being built', 'Installed', 'From the store', 'Included', 'Pets'].map((word) => nav.indexOf(word));
+        const places = ['Browse store', 'In development', 'Being built', 'Installed', 'From the store', 'Built-in', 'Pets'].map((word) => nav.indexOf(word));
 
         expect(places).not.toContain(-1);
         expect(places).toEqual([...places].sort((left, right) => left - right));

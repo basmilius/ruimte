@@ -1895,17 +1895,16 @@
         "back": "Back",
         "notOnMachine": "{{name}} is on this computer, but its part for the machine takes that machine's owner.",
         "installFailed": "{{name}} could not be installed",
-        "dev": "in development",
         "enabled": "On",
         "remove": "Remove",
         "desktopOnly": "Extensions work in the desktop app.",
         "safeMode": "Safe mode: no extensions are loaded.",
-        "included": "included with Ruimte",
         "permissions": "Asks to",
         "noPermissions": "Asks for nothing extra.",
         "removeDescription": "Takes it and what it stored off this computer.",
         "groupDevelopment": "In development",
         "groupInstalled": "Installed",
-        "groupIncluded": "Included"
+        "builtIn": "Built-in",
+        "development": "Development"
     }
 }

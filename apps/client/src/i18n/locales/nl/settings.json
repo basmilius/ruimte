@@ -1895,17 +1895,16 @@
         "back": "Terug",
         "notOnMachine": "{{name}} staat op deze computer, maar het deel voor de machine vraagt de eigenaar van die machine.",
         "installFailed": "{{name}} kon niet worden geïnstalleerd",
-        "dev": "in ontwikkeling",
         "enabled": "Aan",
         "remove": "Verwijderen",
         "desktopOnly": "Extensies werken in de desktopapp.",
         "safeMode": "Veilige modus: er zijn geen extensies geladen.",
-        "included": "meegeleverd met Ruimte",
         "permissions": "Vraagt om",
         "noPermissions": "Vraagt nergens extra om.",
         "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer.",
         "groupDevelopment": "In ontwikkeling",
         "groupInstalled": "Geïnstalleerd",
-        "groupIncluded": "Meegeleverd"
+        "builtIn": "Ingebouwd",
+        "development": "Ontwikkeling"
     }
 }

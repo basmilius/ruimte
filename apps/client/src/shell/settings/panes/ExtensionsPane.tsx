@@ -1,7 +1,7 @@
 import { createElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Store, type LucideIcon } from 'lucide-react';
-import { Button, Icon, SectionLabel, Switch } from '@adecore/ui';
+import { Button, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
@@ -32,19 +32,24 @@ function ExtensionHeader({
     color,
     name,
     meta,
+    badge,
     description
 }: {
     icon: string | LucideIcon | null | undefined;
     color: string | undefined;
     name: string;
-    meta: readonly (string | false | undefined)[];
+    meta: readonly (string | undefined)[];
+    badge?: string | undefined;
     description: string | undefined;
 }) {
     return (
         <header className="flex min-w-0 items-start gap-3">
             <ExtensionTile icon={icon} color={color} size={HEADER_TILE} />
             <div className="min-w-0">
-                <h3 className="text-sm font-medium text-text">{name}</h3>
+                <div className="flex min-w-0 items-center gap-2">
+                    <h3 className="text-sm font-medium text-text">{name}</h3>
+                    {badge !== undefined && <Pill>{badge}</Pill>}
+                </div>
                 <p className="text-xs text-text-muted">{meta.filter(Boolean).join(', ')}</p>
                 {description !== undefined && <p className="mt-1 text-sm text-text-muted">{description}</p>}
             </div>
@@ -175,7 +180,8 @@ function BuiltInDetail({ id }: { id: string }) {
                 icon={entry.icon}
                 color={entry.manifest.color}
                 name={entry.manifest.name}
-                meta={[t('extensions.included')]}
+                meta={[entry.manifest.publisher, entry.manifest.version]}
+                badge={t('extensions.builtIn')}
                 description={entry.manifest.description}
             />
             <SettingsSection>
@@ -216,7 +222,8 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                 icon={extensionIconUrl(entry)}
                 color={manifest.color}
                 name={manifest.name}
-                meta={[manifest.publisher, manifest.version, entry.dev && t('extensions.dev')]}
+                meta={[manifest.publisher, manifest.version]}
+                badge={entry.dev ? t('extensions.development') : undefined}
                 description={manifest.description}
             />
             {failure !== undefined && <p className="text-sm text-status-error">{failure}</p>}
@@ -313,7 +320,7 @@ export function ExtensionsPane() {
                     </MasterItem>
                     <InstalledGroup title={t('extensions.groupDevelopment')} entries={developing} selected={selected} onSelect={setSelected} />
                     <InstalledGroup title={t('extensions.groupInstalled')} entries={fromStore} selected={selected} onSelect={setSelected} />
-                    {builtIns.length > 0 && <SectionLabel className="px-3 pt-3 pb-1">{t('extensions.groupIncluded')}</SectionLabel>}
+                    {builtIns.length > 0 && <SectionLabel className="px-3 pt-3 pb-1">{t('extensions.builtIn')}</SectionLabel>}
                     {builtIns.map((entry) => (
                         <MasterItem key={entry.id} selected={selected === entry.id} onSelect={() => setSelected(entry.id)}>
                             <ExtensionTile icon={entry.icon} color={entry.manifest.color} size={LIST_ROW_TILE} />
