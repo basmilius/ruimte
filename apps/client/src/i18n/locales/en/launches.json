@@ -24,7 +24,7 @@
     },
     "approve": {
         "title": "Run a command from the project file?",
-        "description": "This launch comes from the project file. It runs on this machine only after you approve it.",
+        "description": "This launch runs on this machine only after you approve it.",
         "cancel": "Cancel",
         "confirm": "Launch"
     },
@@ -78,7 +78,7 @@
             "group": "Group"
         },
         "kindHint": {
-            "service": "Keeps running, such as a web server. With an address it is running once the port answers.",
+            "service": "Keeps running, like a web server. With an address, it counts as running once the port answers.",
             "task": "Runs until done, like tests or a build.",
             "group": "Starts the checked launches together."
         },

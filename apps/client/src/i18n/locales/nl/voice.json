@@ -51,7 +51,7 @@
     "waveformLines": "Jouw stem boven de lijn en Voice Control eronder",
     "dictation": {
         "title": "Speech to text",
-        "description": "Dicteer in elk tekstveld. Herkenning gebeurt op deze computer; audio wordt nooit verstuurd of opgeslagen.",
+        "description": "Dicteer in elk tekstveld. Herkenning gebeurt op deze computer. Ruimte verstuurt of bewaart nooit audio.",
         "enable": "Speech to text inschakelen",
         "downloadHint": "Downloadt bij eerste gebruik een model van 2,6 GB. Geen account of API-sleutel nodig. Uitzetten bewaart het model.",
         "desktopOnly": "Beschikbaar in de desktop-app.",

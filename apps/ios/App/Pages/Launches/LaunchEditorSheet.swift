@@ -264,7 +264,7 @@ struct LaunchEditorSheet: View {
         case "task": String(localized: "Runs until done, like tests or a build.")
         case "group": String(localized: "Starts the checked launches together.")
         default:
-            String(localized: "Keeps running, such as a web server. With an address it is running once the port answers.")
+            String(localized: "Keeps running, like a web server. With an address, it counts as running once the port answers.")
         }
     }
 }

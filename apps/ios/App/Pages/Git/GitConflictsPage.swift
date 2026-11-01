@@ -268,7 +268,7 @@ struct GitConflictFilePage: View {
             Button("Drop file", role: .destructive) { Task { await take("delete") } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The file is taken out of the checkout on both sides of the \(session.operation ?? "merge").", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
+            Text("Removes the file from the checkout on both sides of the \(session.operation ?? "merge").", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
         }
     }
 

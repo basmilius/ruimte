@@ -31,7 +31,7 @@ describe('powerLook', () => {
         expect(powerLook({ level: 10, plugged: false, charging: false, simulated: true })).toMatchObject({
             tone: 'muted',
             simulated: true,
-            tooltip: 'Simulated: apps see 10%. Reset it in the tools.'
+            tooltip: 'Simulated. Apps see 10%. Reset it in the tools.'
         });
     });
 });

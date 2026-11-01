@@ -319,7 +319,7 @@ struct MachinePage: View {
                 title: String(localized: "Also with the lid closed"),
                 detail: closedLid.ruleInstalled
                     ? String(
-                        localized: "Sleep stays off while keep awake holds, so the Mac keeps running with its lid shut.")
+                        localized: "The Mac keeps running with its lid closed while it stays awake.")
                     : String(localized: "Allow it once in Ruimte on the Mac, under Settings, Agents."))
         }
         .disabled(endpoint.savingKeepAwake || !closedLid.ruleInstalled)

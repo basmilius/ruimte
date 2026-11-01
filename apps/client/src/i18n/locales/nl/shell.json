@@ -167,7 +167,7 @@
         "noMachine": "Dit venster heeft geen machine om hem op te bouwen"
     },
     "toasts": {
-        "deletedView": "Weergave “{{name}}” verwijderd",
+        "deletedView": "Weergave \"{{name}}\" verwijderd",
         "copyOutput": "Output kopiëren"
     },
     "projectName": {
@@ -494,7 +494,7 @@
     },
     "linkMachine": {
         "title": "Machine koppelen met code",
-        "description": "Voor een machine zonder de app: draai daar `ruimte login` en vul de code in die hij toont.",
+        "description": "Draai op een machine zonder de app `ruimte login` en vul hier de code in die hij toont.",
         "unavailable": "Een machine goedkeuren kan in de desktop-app en op station.ruimte.app.",
         "signingIn": "Inloggen…",
         "signIn": "Log in op het account waar de machine bij hoort.",
@@ -552,12 +552,12 @@
         "turnGone": "Deze turn zit niet meer in het gesprek.",
         "theOriginal": "het origineel",
         "itsCanvas": "het canvas ervan",
-        "intoView": "Een nieuwe chatweergave gaat daarvandaan verder, direct na {{after}} in de zijbalk. Er wordt niets verstuurd tot je het eerste bericht schrijft.",
-        "intoNode": "Een nieuwe chat-node gaat daarvandaan verder, naast het origineel en met een lijn ernaartoe. Er wordt niets verstuurd tot je het eerste bericht schrijft.",
+        "intoView": "Een nieuwe chatweergave gaat daarvandaan verder, direct na {{after}} in de zijbalk. Ruimte verstuurt niets voordat je het eerste bericht schrijft.",
+        "intoNode": "Een nieuwe chat-node gaat daarvandaan verder, naast het origineel en met een lijn ernaartoe. Ruimte verstuurt niets voordat je het eerste bericht schrijft.",
         "continueWith": "Verder met",
         "account": "Account",
         "accountOf": "{{provider}}-account",
-        "handoffNote": "De nieuwe agent krijgt het laatste deel van het gesprek als tekst en kan de rest van het origineel zelf lezen.",
+        "handoffNote": "De nieuwe agent krijgt het laatste deel van het gesprek als tekst. De rest kan hij in het origineel lezen.",
         "titleLabel": "Titel",
         "into": "Forken naar",
         "shapes": {
@@ -580,7 +580,7 @@
         "machine": "Machine",
         "thisMachine": "Deze machine",
         "onMachine": "Een nieuwe chat op {{machine}} begint met een transcript van deze. Daarna kies je de checkout.",
-        "handoffHere": "Een nieuwe chatnode hier begint met een transcript van deze, in de map van dit project. Er gaat niets weg voordat je het eerste bericht schrijft.",
+        "handoffHere": "Een nieuwe chat-node hier begint met een transcript van deze, in de map van dit project. Ruimte verstuurt niets voordat je het eerste bericht schrijft.",
         "chooseCheckout": "Kies een checkout…"
     },
     "merge": {
@@ -594,8 +594,8 @@
         "endedByIt_other": ", en de {{count}} agents die hij opende",
         "endedByThem_one": ", en de agent die zij openden",
         "endedByThem_other": ", en de {{count}} agents die zij openden",
-        "live_one": "{{names}} staat er nog open en wordt gestopt voordat de worktree verdwijnt.",
-        "live_other": "{{names}} staan er nog open en worden gestopt voordat de worktree verdwijnt.",
+        "live_one": "{{names}} staat er nog open. Ruimte stopt die voordat de worktree wordt verwijderd.",
+        "live_other": "{{names}} staan er nog open. Ruimte stopt ze voordat de worktree wordt verwijderd.",
         "commitFirst": "Eerst niet-gecommitte bestanden committen",
         "commitFirstHint": "Anders laat de merge dat werk achter.",
         "commitMessage": "Commit message",
@@ -1269,7 +1269,7 @@
         "files": {
             "intro": "De clone op {{machine}} mist deze genegeerde bestanden. Kies welke je kopieert.",
             "label": "Genegeerde bestanden",
-            "none": "Git negeert hier geen bestand dat de clone zou missen.",
+            "none": "De clone mist geen genegeerde bestanden.",
             "truncated": "Meer genegeerde bestanden dan getoond.",
             "skip": "Overslaan",
             "copy_one": "{{count}} bestand kopiëren",
@@ -1363,7 +1363,7 @@
         "finished": "Afgerond",
         "error": "Fout",
         "terminalFinished": "Open de terminal om het resultaat te lezen.",
-        "noExcerpt": "Er is geen agentbericht beschikbaar in deze voorvertoning.",
+        "noExcerpt": "Geen agentbericht om te tonen.",
         "openSession": "Open sessie",
         "waitAge": "Wacht al {{age}}",
         "longWait": "Wacht al {{age}}, minstens tien minuten",

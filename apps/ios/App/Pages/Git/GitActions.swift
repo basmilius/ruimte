@@ -38,8 +38,8 @@ enum GitConfirmation: Identifiable {
         case .deleteBranch(_, _, let force):
             force
                 ? String(localized: "This branch has not been merged anywhere. Its commits are only reachable by hash.")
-                : String(localized: "The branch is removed here; the remote keeps its own.")
-        case .checkout: String(localized: "Changes in the working tree are stashed first, so nothing is lost.")
+                : String(localized: "Removes the branch here. The remote keeps its own.")
+        case .checkout: String(localized: "Stashes the changes in the working tree first, so nothing is lost.")
         case .rebase:
             String(
                 localized:

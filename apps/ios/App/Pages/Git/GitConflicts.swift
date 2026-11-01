@@ -507,7 +507,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
         } else {
             files[path] = after
             drafts[path] = draft(path).carried(from: before, to: after)
-            note = String(localized: "The file changed on the machine and was read again. Answers that still fit were kept.")
+            note = String(localized: "The file changed on the machine. Ruimte read it again and kept the answers that still fit.")
         }
     }
 }

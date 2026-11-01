@@ -13,7 +13,7 @@
         "count": "{{done}} of {{total}} done",
         "progress": "Tasks done",
         "tasks": "Tasks",
-        "closeNote": "Close any time; reopen it from Settings › About.",
+        "closeNote": "Close this any time and reopen it from Settings › About.",
         "next": "Next: {{task}}",
         "finish": "Finish"
     },

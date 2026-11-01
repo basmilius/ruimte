@@ -45,7 +45,7 @@ enum SubagentStatusWord: String, CaseIterable {
         case .running: String(localized: "Running")
         case .done: String(localized: "Done")
         case .failed: String(localized: "Failed")
-        case .cancelled: String(localized: "Cancelled")
+        case .cancelled: String(localized: "Canceled")
         }
     }
 
@@ -185,7 +185,7 @@ enum ChatSubagents {
             return String(localized: "Paused until \(time)", comment: "%@ is a time, or a day and a time")
         case .done: return String(localized: "Done")
         case .failed: return String(localized: "Failed")
-        case .cancelled: return String(localized: "Cancelled")
+        case .cancelled: return String(localized: "Canceled")
         }
     }
 

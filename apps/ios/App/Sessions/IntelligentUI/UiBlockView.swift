@@ -269,7 +269,7 @@ struct UiFallbackPart: View {
         VStack(alignment: .leading, spacing: 6) {
             Label {
                 switch problem {
-                case .unknown(let component): Text("This version cannot draw \(component)")
+                case .unknown(let component): Text("This version cannot show \(component)")
                 case .failed: Text("Could not show this part")
                 }
             } icon: {

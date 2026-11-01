@@ -282,7 +282,7 @@ enum GitHaltedText {
         let count = checkout.conflictCount
         let files =
             count == 0
-            ? String(localized: "Every file is resolved; Continue finishes it.")
+            ? String(localized: "Every file is resolved. Continue finishes it.")
             : String(localized: "\(count) files conflict.")
         guard let ours, let theirs else { return files }
         return String(

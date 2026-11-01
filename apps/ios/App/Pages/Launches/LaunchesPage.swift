@@ -113,7 +113,7 @@ struct LaunchesPage: View {
                 }
                 if let held = document.launches.first(where: { views[$0.id]?.phase == .held }) {
                     Text(
-                        "\(held.name) comes from the project file. It runs on this machine only after you approve it."
+                        "\(held.name) runs on this machine only after you approve it."
                     )
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                 }
@@ -373,7 +373,7 @@ struct LaunchApprovalSheet: View {
         NavigationStack {
             MobileList {
                 Text(
-                    "This launch comes from the project file. It runs on this machine only after you approve it."
+                    "This launch runs on this machine only after you approve it."
                 )
                 .foregroundStyle(MobileStyle.muted)
                 ForEach(held) { entry in

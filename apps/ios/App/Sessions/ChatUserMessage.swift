@@ -168,7 +168,7 @@ struct ChatAgentSentMessage: View {
             switch sent.state {
             case .sending: String(localized: "Sending")
             case .delivered: String(localized: "Delivered")
-            case .waiting: String(localized: "Waiting until it takes its next turn")
+            case .waiting: String(localized: "Waiting for its next turn")
             case .failed: String(localized: "Not sent")
             }
         return sent.reason.map { "\(word) · \($0)" } ?? word

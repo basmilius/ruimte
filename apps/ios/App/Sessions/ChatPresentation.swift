@@ -850,7 +850,7 @@ enum ChatToolPresentation {
         case "Grep": String(localized: "Searched \(count) patterns")
         case "Glob": String(localized: "Listed \(count) patterns")
         case "WebFetch": String(localized: "Fetched \(count) pages")
-        case "WebSearch": String(localized: "Searched the web \(count) queries")
+        case "WebSearch": String(localized: "Ran \(count) web searches")
         case "Task", "Agent": String(localized: "Delegated \(count) tasks")
         case "Skill": String(localized: "Used \(count) skills")
         case "TodoWrite": String(localized: "Updated \(count) plans")

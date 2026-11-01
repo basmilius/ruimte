@@ -21,7 +21,7 @@
         "state": {
             "booted": "{{name}} draait.",
             "shutdown": "{{name}} is gestopt.",
-            "transitioning": "{{name}} verandert van staat."
+            "transitioning": "{{name}} start of stopt."
         },
         "boot": "Apparaat starten",
         "noStream": "Schermstreaming zit niet in deze build.",
@@ -39,7 +39,7 @@
             "notCharging": "laadt niet op",
             "full": "vol",
             "simulated": "gesimuleerd",
-            "simulatedTooltip": "Gesimuleerd: apps zien {{level}}. Herstel het in de tools.",
+            "simulatedTooltip": "Gesimuleerd. Apps zien {{level}}. Herstel het in de tools.",
             "source": {
                 "ac": "stopcontact",
                 "usb": "USB",
@@ -156,7 +156,7 @@
                 "stop": "Opname stoppen",
                 "recording": "Opname loopt, {{time}}",
                 "ended": "Afgelopen",
-                "endedLabel": "Opname gestopt; video ligt klaar",
+                "endedLabel": "Opname gestopt, video ligt klaar",
                 "saveVideo": "Video bewaren",
                 "recordFailed": "Kon de opname niet maken",
                 "androidLimit": "Android stopt opnames na 3 minuten."
@@ -174,7 +174,7 @@
                 "default": "Standaard",
                 "battery": "Batterij",
                 "charging": "Opladen",
-                "cosmetic": "Alleen de statusbalk toont dit niveau; apps lezen nog steeds een volle batterij.",
+                "cosmetic": "Alleen de statusbalk toont dit niveau. Apps lezen nog steeds een volle batterij.",
                 "reset": "Batterij herstellen"
             },
             "biometrics": {
@@ -190,7 +190,7 @@
                 "up": "Eén map omhoog",
                 "cancel": "Stoppen met kiezen",
                 "list": "Bestanden op de machine",
-                "empty": "Niets wat dit apparaat aanneemt.",
+                "empty": "Geen bestanden die dit apparaat aanneemt.",
                 "add": "Toevoegen",
                 "drop": "Loslaten om de app te installeren of de foto's toe te voegen",
                 "dropFailed": "Het apparaat kon dat bestand niet gebruiken",
@@ -206,7 +206,7 @@
                 },
                 "pickFile": "Bestand kiezen…",
                 "file": "Toont",
-                "note": "De app start de eerste keer opnieuw met het camerabeeld."
+                "note": "De app herstart de eerste keer dat je een beeld kiest."
             }
         },
         "operated": {
@@ -330,7 +330,7 @@
             "signedInAs": "Ingelogd met {{provider}} als {{login}}",
             "linked": "{{provider}} is aan je account toegevoegd",
             "deleted": "Account verwijderd en uitgelogd",
-            "deletedAndLeft": "Account verwijderd, uitgelogd, en de machine van deze computer heeft het account verlaten",
+            "deletedAndLeft": "Account verwijderd en uitgelogd. De machine van deze computer staat er niet meer op.",
             "deletedLeaveFailed": "Account verwijderd en uitgelogd, maar de machine van deze computer staat er nog op. Haal hem eraf onder Instellingen › Account voordat je opnieuw inlogt."
         },
         "sessionEndedOnDevice": "Sessie afgelopen. Log opnieuw in om je machines te openen.",
@@ -339,7 +339,7 @@
         "signInFirst": "Log eerst in",
         "statementMismatch": "Je account gaf een onverwacht antwoord. Probeer het opnieuw.",
         "signInAndConnect": "Log eerst in en verbind met de machine",
-        "noBroker": "{{name}} is nog niet via je account verbonden en is dus alleen op zijn eigen netwerk te bereiken",
+        "noBroker": "{{name}} is nog niet via je account verbonden. Je bereikt hem alleen op zijn eigen netwerk.",
         "refusal": {
             "onlyOnMachine": "Alleen de app op die machine kan hem op een account zetten.",
             "machineHasAccount": "Deze machine staat op een ander account. Haal hem daar eerst af, op de machine zelf.",
@@ -359,7 +359,7 @@
         "daemon-newer": "Deze machine draait een nieuwere Ruimte dan deze app. Werk deze app bij."
     },
     "broker": {
-        "badUrl": "Het adres {{url}} van de verbindingsdienst gaat niet open",
+        "badUrl": "Kon de verbindingsdienst op {{url}} niet openen",
         "limited": "De verbindingsdienst beperkt dit apparaat. Nieuwe poging over {{seconds}} seconden.",
         "refusedClient": "De verbindingsdienst weigerde dit apparaat: {{reason}}",
         "unreachable": "Kon de verbindingsdienst op {{host}} niet bereiken",
@@ -375,7 +375,7 @@
             "timeout": "De machine gaf het wachten op de directe verbinding op",
             "done": "De machine heeft de directe verbinding beëindigd",
             "not-paired": "De machine laat dit apparaat niet binnen. De toegang is ingetrokken, of je account kon het niet bevestigen.",
-            "statements-refused": "De machine weigert inloggen via een account.",
+            "statements-refused": "Deze machine accepteert geen inloggen via een account.",
             "other": "De machine heeft de directe verbinding gesloten"
         },
         "channelEarly": "Kon de directe verbinding niet opzetten. Probeer het opnieuw.",
@@ -384,27 +384,27 @@
         "badFrame": "De machine stuurde gegevens die deze app niet kan lezen",
         "channelClosed": "De directe verbinding is gesloten",
         "channelClosedEarly": "De verbinding sloot voordat de machine dit apparaat binnenliet",
-        "noPathWithRelay": "Geen netwerkpad naar de machine, ook niet via de relay.",
-        "noPath": "Geen netwerkpad naar de machine. Een directe verbinding heeft UDP aan beide kanten nodig, en er is geen relay om op terug te vallen.",
+        "noPathWithRelay": "Geen netwerkpad naar de machine, zelfs niet via de relay.",
+        "noPath": "Geen netwerkpad naar de machine. Een directe verbinding heeft UDP aan beide kanten nodig, en er is geen relay beschikbaar.",
         "noOffer": "De browser kon geen directe verbinding starten",
         "refused": "De machine nam de directe verbinding niet aan: {{reason}}",
         "noReason": "geen reden gegeven",
         "unreachable": "Kon de machine niet bereiken om een directe verbinding op te zetten",
         "unreachableWith": "Kon de machine niet bereiken om een directe verbinding op te zetten: {{reason}}",
         "unsignedSignal": "Een verbindingsverzoek zegt van de machine te komen, maar is niet te controleren",
-        "noKeyOverBroker": "Een directe verbinding via je account logt in met een key, en deze browser kan er geen maken",
+        "noKeyOverBroker": "Deze browser kan de key niet maken die nodig is om via je account te verbinden",
         "notProven": "{{label}} bewees zijn identiteit niet over de directe verbinding",
-        "noKey": "Een directe verbinding logt in met een key, en deze browser kan er geen maken",
+        "noKey": "Deze browser kan de key voor een directe verbinding niet maken",
         "needsPairedKey": "Een directe verbinding vraagt om een machine op je account, of om de Ruimte-app op deze machine",
         "timedOut": "De directe verbinding kwam niet binnen {{seconds}} seconden op",
-        "frameRefused": "De directe verbinding weigerde gegevens: {{reason}}",
+        "frameRefused": "Kon geen gegevens over de directe verbinding sturen: {{reason}}",
         "answerNotApplied": "Kon het antwoord van de machine niet gebruiken: {{reason}}",
         "refusedVerdict": "De machine weigerde de directe verbinding: {{reason}}",
         "setupFailed": "Een directe verbinding opzetten lukte niet: {{reason}}"
     },
     "lan": {
-        "notProven": "De machine op dit adres in het lokale netwerk kon niet bewijzen dat ze deze machine is",
-        "noKey": "Een verbinding op het lokale netwerk logt in met een key, en deze browser kan er geen maken",
+        "notProven": "De machine op dit lokale adres kon zijn identiteit niet bewijzen",
+        "noKey": "Deze browser kan de key niet maken die nodig is om op het lokale netwerk te verbinden",
         "unsignedSignal": "Een verbinding op het lokale netwerk zegt van de machine te komen, maar is niet te controleren",
         "refused": "De machine weigerde dit apparaat op het lokale netwerk: {{reason}}",
         "failed": "Kon niet met de machine verbinden op het lokale netwerk: {{reason}}",
@@ -425,7 +425,7 @@
         "timedOut": "De machine antwoordde niet binnen {{seconds}} seconden op {{type}}"
     },
     "file": {
-        "tooLarge": "Dit bestand is {{size}} MB; over een directe verbinding laadt hoogstens {{max}} MB",
+        "tooLarge": "Dit bestand is {{size}} MB. Een directe verbinding laadt hoogstens {{max}} MB.",
         "emptyPiece": "Het bestand stopte met laden voor het einde. Probeer het opnieuw.",
         "changed": "Het bestand veranderde tijdens het laden"
     }

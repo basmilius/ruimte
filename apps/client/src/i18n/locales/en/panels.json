@@ -97,7 +97,7 @@
             "failed": "Could not show {{name}}. {{reason}}",
             "fit": "Fit",
             "maybeChanged": "It may have changed while loading.",
-            "notShown": "{{name}} is a {{format}} image, a format this app does not show."
+            "notShown": "{{name}} is a {{format}} image, which this app cannot show."
         },
         "menu": {
             "copy": "Copy",
@@ -134,7 +134,7 @@
         "model": {
             "crashed": "Could not show the 3D model",
             "failed": "Could not show {{name}}. {{reason}}",
-            "nestedRoot": "Its model sits in a subfolder of the file, which this app does not open.",
+            "nestedRoot": "This app cannot open a model stored in a subfolder of the file.",
             "noWebgl": "{{name}} is a 3D model, and this window cannot show 3D.",
             "pause": "Pause animation",
             "play": "Play animation",
@@ -150,7 +150,7 @@
             "crashed": "Could not show the PDF",
             "failed": "Could not open {{name}}. {{reason}}",
             "page": "Page {{page}} of {{total}}",
-            "password": "It is protected with a password, which this app does not ask for."
+            "password": "This app cannot open password-protected PDFs."
         },
         "tooLarge": "{{name}} is {{size}}. Files over {{limit}} do not open here.",
         "audio": {
@@ -173,7 +173,7 @@
             "truncated": "Cut off",
             "truncatedHint": "Too long to show in full. Files after the cut are not listed or colored.",
             "mismatch": "Hunks out of date",
-            "mismatchHint": "The patch no longer matches its hunk headers. Editing works, but header counts are not repaired."
+            "mismatchHint": "The patch no longer matches its hunk headers. You can still edit it, but the header counts stay wrong."
         },
         "markdown": {
             "frontmatter": "Frontmatter",
@@ -182,8 +182,8 @@
         "edit": {
             "label": "Code file {{path}}",
             "readOnly": "Read only",
-            "outsideProject": "Only files in this project and its worktrees can be edited",
-            "ruimteState": "Ruimte's own state, not edited by hand",
+            "outsideProject": "You can only edit files in this project and its worktrees",
+            "ruimteState": "Ruimte manages this file, so you cannot edit it here",
             "large": "Over {{size}}, shown as plain text and read only",
             "plain": "Over {{lines}} lines, shown as plain text and read only",
             "longLines": "Very long lines, shown as plain text and read only",
@@ -234,7 +234,7 @@
             "unsaved": "unsaved",
             "yoursRemoved": "you removed these lines",
             "keepYours": "Keep yours",
-            "keepTheirs": "Keep {{name}}’s",
+            "keepTheirs": "Keep {{name}}'s",
             "keepOther": "Keep theirs",
             "keepBoth": "Keep both",
             "other": "Another program",
@@ -304,8 +304,8 @@
             "entry": {
                 "reading": "Reading {{name}}…",
                 "notReadable": "{{name}} is encrypted or packed in a way this machine does not unpack.",
-                "link": "{{name}} is a link. Links in an archive are never followed.",
-                "tooLarge": "{{name}} is {{size}}. Entries over {{limit}} are not previewed. Extract it to open it.",
+                "link": "{{name}} is a link. Ruimte does not follow links in an archive.",
+                "tooLarge": "{{name}} is {{size}}, over the {{limit}} preview limit. Extract it to open it.",
                 "nested": "{{name}} is an archive inside this one. Extract it to open it.",
                 "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
                 "failed": "Could not read {{name}}. {{reason}}"
@@ -325,8 +325,8 @@
                 "badName": "Enter one folder name, without slashes.",
                 "done_one": "Extracted {{count}} file into {{folder}}",
                 "done_other": "Extracted {{count}} files into {{folder}}",
-                "skipped_one": "{{count}} entry was skipped. Links, and names outside the folder or in .git, are never extracted.",
-                "skipped_other": "{{count}} entries were skipped. Links, and names outside the folder or in .git, are never extracted."
+                "skipped_one": "Skipped {{count}} entry. Ruimte never extracts links, or files that would land outside the folder or in .git.",
+                "skipped_other": "Skipped {{count}} entries. Ruimte never extracts links, or files that would land outside the folder or in .git."
             }
         }
     },
@@ -342,25 +342,25 @@
             "folder": "New folder…",
             "folderName": "Folder name",
             "problem": {
-                "characters": "“{{name}}” has a character a name cannot hold.",
-                "dots": "“{{name}}” is not a name.",
+                "characters": "\"{{name}}\" has a character that is not allowed in a name.",
+                "dots": "\"{{name}}\" is not a valid name.",
                 "empty": "Type a name.",
-                "exists": "“{{name}}” already exists.",
-                "in-file": "“{{name}}” is a file, so nothing can go in it.",
-                "long": "“{{name}}” is too long.",
-                "reserved": "“{{name}}” cannot be made here.",
+                "exists": "\"{{name}}\" already exists.",
+                "in-file": "\"{{name}}\" is a file, so nothing can go in it.",
+                "long": "\"{{name}}\" is too long.",
+                "reserved": "\"{{name}}\" cannot be created here.",
                 "segment": "A folder name between two slashes is empty."
             },
             "refused": {
                 "bad-path": "That is not a path the machine can use.",
                 "exists": "That name is already taken.",
-                "git-state": "Git keeps its own state in there, so nothing is made in it.",
+                "git-state": "You cannot create anything in .git.",
                 "machine-state": "That belongs to the machine and cannot be made here.",
                 "no-machine": "This project's machine is not connected.",
                 "not-a-directory": "Part of that path is a file.",
                 "not-writable": "The machine cannot write there.",
                 "outside-project": "That is outside this project.",
-                "ruimte-state": "Ruimte keeps its own state in there, so nothing is made in it.",
+                "ruimte-state": "You cannot create anything in .ruimte.",
                 "too-large": "That text is too large."
             }
         },
@@ -391,7 +391,7 @@
         },
         "rename": {
             "confirm": "Rename",
-            "description": "Type a new name, or a path in the project to move it. Imports and namespaces that refer to it are updated too.",
+            "description": "Type a new name, or a path in the project to move it. Imports and namespaces that refer to it update too.",
             "failed": "Could not move",
             "fallback": "Rename this?",
             "fileTitle": "Rename {{name}}",
@@ -401,7 +401,7 @@
             "refused": {
                 "bad-path": "That is not a path the machine can use.",
                 "exists": "That name is already taken.",
-                "git-state": "Git keeps its own state in there, so nothing moves in or out of it.",
+                "git-state": "You cannot move anything into or out of .git.",
                 "into-itself": "A folder cannot go inside itself.",
                 "language-failed": "Could not update the references to it, so nothing moved.",
                 "machine-state": "That belongs to the machine and cannot be moved from here.",
@@ -411,9 +411,9 @@
                 "not-writable": "The machine cannot write there.",
                 "outside-project": "That is outside this project.",
                 "project-root": "Move the project folder in Finder or a terminal.",
-                "ruimte-state": "Ruimte keeps its own state in there, so nothing moves in or out of it."
+                "ruimte-state": "You cannot move anything into or out of .ruimte."
             },
-            "unsaved": "{{name}} has changes that could not be saved, so nothing moved."
+            "unsaved": "Could not save the changes in {{name}}, so nothing moved."
         },
         "showHidden": "Show hidden and ignored files",
         "searching": "Searching files…",
@@ -684,7 +684,7 @@
         "group": {
             "changes": "Changes",
             "conflicts": "Conflicts",
-            "unversioned": "Unversioned Files"
+            "unversioned": "Unversioned files"
         },
         "list": {
             "clean": "No changes",
@@ -1027,7 +1027,7 @@
         "empty": "No problems in open files.",
         "emptyProject": "No problems in the project.",
         "workspace": "Check whole project",
-        "workspaceHint": "Asks the language servers for the problems of every file, also those that are not open",
+        "workspaceHint": "Checks every file, also those that are not open",
         "filter": "Filter",
         "nothingMatches": "No problem matches the filter"
     },
@@ -1095,7 +1095,7 @@
         "baseBranch": "the base branch",
         "leftBehind": {
             "clean": "Works in worktree {{branch}}, which holds no work.",
-            "holding": "Works in worktree {{branch}}, which holds {{work}}. It stays; merge or remove it from the git panel."
+            "holding": "Works in worktree {{branch}}, which holds {{work}}. It stays until you merge or remove it in the git panel."
         },
         "merge": {
             "commits_one": "{{count}} commit",
@@ -1104,13 +1104,13 @@
             "nothing": "nothing yet",
             "one": "worktree",
             "removed": "Removed the worktree and its branch.",
-            "removedKeptBranch": "Removed the worktree; its branch stays.",
+            "removedKeptBranch": "Removed the worktree. Its branch stays.",
             "several_one": "{{count}} worktree",
             "several_other": "{{count}} worktrees",
             "strategy": {
                 "merge": {
                     "label": "Merge",
-                    "line": "A merge commit; every worktree commit stays in history."
+                    "line": "A merge commit. Every worktree commit stays in history."
                 },
                 "rebase": {
                     "label": "Rebase",

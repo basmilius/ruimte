@@ -33,7 +33,7 @@
         },
         "certificate": {
             "title": "The connection is not secure",
-            "hint": "Invalid certificate, so the page was not loaded."
+            "hint": "The certificate is invalid, so the page did not load."
         },
         "timeout": {
             "title": "The server took too long",

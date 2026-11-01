@@ -766,7 +766,7 @@ struct ProjectItemPage: View {
             if current["browserOwner"] != nil {
                 ContentUnavailableView {
                     Label {
-                        Text("The project's machine cannot be reached")
+                        Text("Could not reach the project's machine")
                     } icon: {
                         Image(lucide: "unplug", size: 48)
                     }
@@ -834,7 +834,7 @@ struct ProjectItemPage: View {
             ContentUnavailableView(
                 String(localized: "A newer view"), lucideIcon: "circle-question-mark",
                 description: Text(
-                    "Open this view in a newer Ruimte. Its content is preserved when you edit this project."))
+                    "Open this view in a newer Ruimte. Editing this project keeps its content."))
         }
     }
 

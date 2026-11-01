@@ -172,7 +172,7 @@ final class DrawingEditorModel {
         } catch {
             problem = String(
                 localized:
-                    "An object changed on another device during this gesture. Its latest version is kept. Try the edit again."
+                    "An object changed on another device during your edit. Ruimte kept the latest version. Try again."
             )
             return false
         }

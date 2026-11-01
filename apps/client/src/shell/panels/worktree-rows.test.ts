@@ -163,7 +163,7 @@ describe('what deleting a node says about its worktree', () => {
 
     test('names the work of one that holds some and says it stays', () => {
         expect(leftBehindLine({ ...lexer, work: { changed: 0, untracked: 2, ahead: 0 } })).toBe(
-            'Works in worktree lexer, which holds 2 new files. It stays; merge or remove it from the git panel.'
+            'Works in worktree lexer, which holds 2 new files. It stays until you merge or remove it in the git panel.'
         );
         expect(leftBehindLine({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0 } })).toBe('Works in worktree lexer, which holds no work.');
     });

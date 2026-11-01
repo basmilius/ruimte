@@ -49,7 +49,7 @@
             "templateRequest": "Het sjabloonformulier kon niet worden getoond",
             "onboarding": "Het instellen van Ruimte kon niet worden getoond",
             "agentIntegrations": "De vraag over de agentinstellingen kon niet worden getoond",
-            "firstRun": "De eerste start kon niet worden getoond."
+            "firstRun": "Het scherm voor de eerste start kon niet worden getoond"
         }
     },
     "answer": {

@@ -239,7 +239,7 @@
                 "title": "Op het apparaat",
                 "help": {
                     "label": "Uitleg en naamsuggesties",
-                    "description": "Gebruikt Apple Foundation Models op deze Mac. Code wordt nergens naartoe gestuurd."
+                    "description": "Gebruikt Apple Foundation Models. Code blijft op deze Mac."
                 },
                 "ghost": {
                     "label": "Suggesties tijdens het typen",
@@ -398,7 +398,7 @@
             "loading": "Sjablonen laden",
             "tooOld": "Deze machine heeft een nieuwere Ruimte nodig voor sjablonen.",
             "empty": "Nog geen eigen sjablonen. Voeg er een toe, of selecteer code en kies Opslaan als sjabloon.",
-            "noMatch": "Geen sjabloon gevonden voor “{{query}}”.",
+            "noMatch": "Geen sjabloon gevonden voor \"{{query}}\".",
             "projectTooNew": "De sjablonen van dit project komen van een nieuwere Ruimte en blijven ongemoeid.",
             "projectInvalid": "Het sjablonenbestand van dit project is onleesbaar. Herstel of verwijder het om projectsjablonen te gebruiken.",
             "search": "Zoek sjablonen",
@@ -496,7 +496,7 @@
                 "where": "Waar",
                 "wherePersonal": "Van jou",
                 "whereProject": "Dit project",
-                "whereNoProject": "Dit project heeft geen schrijfbaar bestand voor sjablonen.",
+                "whereNoProject": "Sjablonen kunnen niet in dit project worden opgeslagen.",
                 "cancel": "Annuleren",
                 "save": "Opslaan",
                 "failed": "Het sjabloon kon niet worden opgeslagen"
@@ -618,7 +618,7 @@
         },
         "editor": {
             "label": "Editor",
-            "description": "Lettertype, kleuren, typen, templates en language servers."
+            "description": "Lettertype, kleuren, typen, sjablonen en language servers."
         },
         "terminal": {
             "label": "Terminal",
@@ -892,7 +892,7 @@
             "dev": "De dev-app draait altijd een eigen machine en stopt die als hij afsluit.",
             "windows": "Nog niet beschikbaar op Windows, dus deze machine stopt als Ruimte afsluit.",
             "appimage": "Niet beschikbaar in de AppImage. Installeer het deb- of rpm-pakket om deze machine te laten draaien.",
-            "commandLine": "Deze machine draait als de dienst die `npx ruimte service install` heeft ingesteld. Verwijder hem met `npx ruimte service uninstall`."
+            "commandLine": "Deze machine draait als dienst, ingesteld met `npx ruimte service install`. Verwijder hem met `npx ruimte service uninstall`."
         },
         "pending": {
             "takeOver": "Gaat in zodra Ruimte de volgende keer afsluit.",
@@ -1033,7 +1033,7 @@
             "lid": {
                 "label": "Ook met de klep dicht",
                 "description": "Je Mac blijft met de klep dicht doorwerken zolang hij wakker blijft. Op de batterij is Ook op de batterij nodig en stopt het onder {{percent}}.",
-                "search": "De Mac laten doorwerken met de klep dicht zolang wakker houden geldt.",
+                "search": "De Mac laten doorwerken met de klep dicht zolang hij wakker blijft.",
                 "rule": {
                     "label": "Toestemming op deze Mac",
                     "missing": "Laat Ruimte slaap zonder wachtwoord uit- en aanzetten, en verder niets. macOS vraagt eerst om een beheerderswachtwoord.",
@@ -1081,9 +1081,9 @@
                 "removed": "Regels van Ruimte verwijderd",
                 "deleted": "Het bestand van Ruimte verwijderd",
                 "none": "Geen regels van Ruimte gevonden",
-                "keptEdited": "Ongemoeid: je hebt de regel van Ruimte aangepast",
+                "keptEdited": "Ongemoeid omdat je de regel van Ruimte hebt aangepast",
                 "missing": "Bestand niet gevonden",
-                "refused": "Niet aangepast: Ruimte kan dit bestand niet lezen",
+                "refused": "Ongemoeid omdat Ruimte dit bestand niet kan lezen",
                 "failed": "Mislukt: {{message}}"
             }
         }
@@ -1134,7 +1134,7 @@
         },
         "steerByDefault": {
             "label": "Meteen naar een werkende agent sturen",
-            "description": "Een bericht dat je stuurt terwijl Claude of Codex werkt, komt bij de volgende stap aan, ook een bericht van een andere agent, die het werk dan kan bijsturen. Als dit uit staat, wacht het tot de agent klaar is. Houd Option of Alt ingedrukt voor het omgekeerde."
+            "description": "Een bericht dat je stuurt terwijl Claude of Codex werkt, komt bij de volgende stap aan en kan het werk bijsturen. Dat geldt ook voor berichten van andere agents. Als dit uit staat, wacht een bericht tot de agent klaar is. Houd Option of Alt ingedrukt voor het omgekeerde."
         },
         "showToolCalls": {
             "label": "Laten zien wat een agent leest en draait",
@@ -1370,7 +1370,7 @@
             "search": "Laat een apparaat op hetzelfde netwerk direct verbinden met de machine.",
             "open": "Een apparaat op hetzelfde netwerk verbindt hier direct.",
             "noAddress": "Open, maar de machine heeft geen adres op een lokaal netwerk.",
-            "notListening": "Niet open. Een andere app houdt de poort misschien bezet, of de machine is gestart met de deur dicht.",
+            "notListening": "Niet open. Een andere app houdt de poort misschien bezet, of de machine is gestart met de poort dicht.",
             "closed": "Dicht. Elk apparaat bereikt deze machine via je account.",
             "fixed": "De machine is hiermee gestart, dus de schakelaar geldt pas als hij zonder start",
             "fixedNote": "De machine is hiermee gestart, dus de schakelaar geldt pas als hij zonder start.",
@@ -1436,7 +1436,7 @@
         "terminalShell": {
             "label": "Terminal-shell",
             "description": "De shell waarin een nieuwe terminal opent. Agents en launches draaien altijd in Git Bash.",
-            "gitBashMissing": "Git for Windows is niet geïnstalleerd, dus een terminal kan niet in Git Bash openen en opent in PowerShell of de opdrachtprompt, en agents en launches kunnen niet starten. Je vindt het op gitforwindows.org.",
+            "gitBashMissing": "Git for Windows is niet geïnstalleerd. Terminals openen in PowerShell of de opdrachtprompt, en agents en launches kunnen niet starten. Je vindt het op gitforwindows.org.",
             "options": {
                 "powershell": "PowerShell",
                 "git-bash": "Git Bash",
@@ -1453,7 +1453,7 @@
             "choose": "Kiezen…",
             "reset": "Herstellen",
             "refusedRoot": "Gebruik een absoluut pad buiten de schijfroot, je thuismap of de datamap van Ruimte.",
-            "notAFolder": "Dat is geen map, of de map kan niet worden aangemaakt of beschreven."
+            "notAFolder": "Dat is geen map, of Ruimte kan hem niet aanmaken of er niet in schrijven."
         },
         "streaming": {
             "label": "Streamen van browser en apparaten",
@@ -1611,7 +1611,7 @@
             "description": "Machines op je account open je vanaf elk apparaat waarop je inlogt.",
             "unavailable": {
                 "label": "Inloggen werkt in de desktopapp en op station.ruimte.app.",
-                "description": "Het account stuurt een inlog alleen daarheen terug."
+                "description": "Open Ruimte daar om in te loggen."
             },
             "signedOut": {
                 "label": "Niet ingelogd",
@@ -1637,7 +1637,7 @@
                     "account": "Het account en de manieren om erop in te loggen.",
                     "sessions": "Elke inlog op het account, op elk apparaat.",
                     "push": "Meldingen op je telefoons en tablets.",
-                    "machines": "Je machines van het account. De machine van deze computer verlaat het meteen; haal elke andere eerst op die machine zelf eraf voordat hij op een ander account komt. Elke machine houdt zijn projecten."
+                    "machines": "Je machines van het account. Elke machine houdt zijn projecten. De machine van deze computer verlaat het meteen. Haal een andere machine eerst op die machine zelf eraf voordat hij op een ander account komt."
                 },
                 "field": "Typ {{name}} om te bevestigen",
                 "fieldWord": "Dit account heeft geen naam. Typ {{word}} om te bevestigen",
@@ -1741,7 +1741,7 @@
             "label": "Apple Foundation Models inschakelen",
             "description": "Gebruik het model op deze Mac voor chats en tools. Vereist Apple silicon, macOS 26.4 of nieuwer en Apple Intelligence.",
             "toggleDescription": "Uitschakelen stopt actieve Apple-chats en openstaande toolgoedkeuringen op deze machine.",
-            "tools": "Het model draait op deze Mac. Webzoeken, pagina’s ophalen en MCP-tools die je goedkeurt, kunnen gegevens naar hun eigen diensten sturen.",
+            "tools": "Het model draait op deze Mac. Webzoeken, pagina's ophalen en MCP-tools die je goedkeurt, kunnen gegevens naar hun eigen diensten sturen.",
             "status": "Beschikbaarheid",
             "disabled": "Uit op deze machine.",
             "ready": "Beschikbaar.",
@@ -2026,12 +2026,12 @@
         },
         "inViews": {
             "label": "In eigen weergaven",
-            "description": "Een chat of terminal die als eigen weergave open staat, heeft ook zijn figuurtje: op de composer, of in de balk van de terminal."
+            "description": "Een chat of terminal die als eigen weergave open staat, heeft ook een figuurtje, op de composer of in de balk van de terminal."
         },
         "agents": {
             "title": "Per agent",
             "label": "Een figuur per agent",
-            "description": "Geef een CLI een pakket of één vaste figuur, zoals Nox voor Codex. Die gaat voor de pakketten die aan staan. Een CLI op Standaard krijgt zijn pets uit die pakketten.",
+            "description": "Geef een CLI een pakket of één vaste figuur, zoals Nox voor Codex. Dat gaat voor de pakketten die je aanzette. Een CLI op Standaard gebruikt die pakketten.",
             "default": "Standaard",
             "packs": "Pakketten",
             "own": "Je eigen figuren",
@@ -2039,7 +2039,7 @@
         },
         "beam": {
             "label": "Teleport",
-            "description": "Hoe een pet komt en gaat: als zijn agent start of stopt, en als je pets aan- of uitzet.",
+            "description": "Hoe een pet verschijnt en vertrekt als zijn agent start of stopt, en als je pets aan- of uitzet.",
             "gather": "Samentrekken",
             "scan": "Scanlijn",
             "rain": "Pixelregen",

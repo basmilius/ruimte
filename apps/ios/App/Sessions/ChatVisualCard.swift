@@ -153,7 +153,7 @@ struct ChatVisualDialogs: ViewModifier {
                     Task { await model.removeVisual(visual.id) }
                 }
             } message: { visual in
-                Text("\(visual.title) is deleted from the chat on every device. This cannot be undone.")
+                Text("Deletes \(visual.title) from the chat on every device. This cannot be undone.")
             }
     }
 }

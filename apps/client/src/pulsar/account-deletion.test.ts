@@ -72,7 +72,7 @@ describe('deleting the account', () => {
         expect(calls.signOuts).toBe(1);
         expect(left).toEqual(['account-1']);
         expect(usePulsarAccount.getState()).toMatchObject({ status: 'signed-out', account: null });
-        expect(useAccountConfirmation.getState().text).toBe("Account deleted, signed out, and this computer's machine left it");
+        expect(useAccountConfirmation.getState().text).toBe("Account deleted and signed out. This computer's machine is no longer on it.");
     });
 
     test('says when this computer was on no account, and when it could not leave', async () => {

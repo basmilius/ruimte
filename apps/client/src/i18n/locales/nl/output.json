@@ -15,7 +15,7 @@
         "failed": "Kon Output niet laden.",
         "tooOld": "Werk deze machine bij om Output te gebruiken.",
         "emptyTitle": "Nog niets bewaard",
-        "empty": "Resultaten van agents en pagina's of afbeeldingen die je uit een chat bewaart, verschijnen hier.",
+        "empty": "Toont wat agents publiceren en de pagina's en afbeeldingen die je uit een chat bewaart.",
         "noMatch": "Niets past bij deze filters.",
         "shown_one": "{{count}} getoond, {{size}}",
         "shown_other": "{{count}} getoond, {{size}}",

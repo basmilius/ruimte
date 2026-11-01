@@ -97,7 +97,7 @@
             "failed": "Kon {{name}} niet tonen. {{reason}}",
             "fit": "Passend",
             "maybeChanged": "Het bestand is misschien veranderd tijdens het laden.",
-            "notShown": "{{name}} is een {{format}}-afbeelding, een formaat dat deze app niet toont."
+            "notShown": "{{name}} is een {{format}}-afbeelding, die deze app niet kan tonen."
         },
         "menu": {
             "copy": "Kopiëren",
@@ -134,7 +134,7 @@
         "model": {
             "crashed": "Kon het 3D-model niet tonen",
             "failed": "Kon {{name}} niet tonen. {{reason}}",
-            "nestedRoot": "Het model staat in een submap van het bestand, en dat opent deze app niet.",
+            "nestedRoot": "Deze app kan geen model openen dat in een submap van het bestand staat.",
             "noWebgl": "{{name}} is een 3D-model, en dit venster kan geen 3D tonen.",
             "pause": "Animatie pauzeren",
             "play": "Animatie afspelen",
@@ -150,7 +150,7 @@
             "crashed": "Kon de PDF niet tonen",
             "failed": "Kon {{name}} niet openen. {{reason}}",
             "page": "Pagina {{page}} van {{total}}",
-            "password": "Het is beveiligd met een wachtwoord, en daar vraagt deze app niet om."
+            "password": "Deze app kan geen PDF's met een wachtwoord openen."
         },
         "tooLarge": "{{name}} is {{size}}. Bestanden boven {{limit}} openen hier niet.",
         "audio": {
@@ -173,7 +173,7 @@
             "truncated": "Afgekapt",
             "truncatedHint": "Te lang om helemaal te tonen. Bestanden na de afkapping staan er niet in en zijn niet gekleurd.",
             "mismatch": "Hunks verouderd",
-            "mismatchHint": "De patch past niet meer bij de hunkkoppen. Bewerken kan, maar de aantallen worden niet hersteld."
+            "mismatchHint": "De patch past niet meer bij de hunkkoppen. Bewerken kan nog, maar de aantallen in de koppen blijven fout."
         },
         "markdown": {
             "frontmatter": "Frontmatter",
@@ -183,11 +183,11 @@
             "label": "Codebestand {{path}}",
             "readOnly": "Alleen lezen",
             "outsideProject": "Alleen bestanden in dit project en zijn worktrees kun je bewerken",
-            "ruimteState": "Eigen staat van Ruimte, niet met de hand te bewerken",
+            "ruimteState": "Ruimte beheert dit bestand, dus je kunt het hier niet bewerken",
             "large": "Groter dan {{size}}, getoond als platte tekst en alleen-lezen",
             "plain": "Meer dan {{lines}} regels, getoond als platte tekst en alleen-lezen",
             "longLines": "Heel lange regels, getoond als platte tekst en alleen-lezen",
-            "tooLargeToSave": "Deze tekst is te groot om op deze machine te bewaren",
+            "tooLargeToSave": "Deze tekst is te groot om op deze machine op te slaan",
             "touch": "Bewerken vraagt om een muis of een trackpad",
             "loadFailed": "Kon de editor niet laden",
             "noMoreOccurrences": "Geen treffers meer",
@@ -304,8 +304,8 @@
             "entry": {
                 "reading": "{{name}} lezen…",
                 "notReadable": "{{name}} is versleuteld of ingepakt op een manier die deze machine niet uitpakt.",
-                "link": "{{name}} is een link. Links in een archief worden nooit gevolgd.",
-                "tooLarge": "{{name}} is {{size}}. Items boven {{limit}} worden niet getoond. Pak het uit om het te openen.",
+                "link": "{{name}} is een link. Ruimte volgt geen links in een archief.",
+                "tooLarge": "{{name}} is {{size}}, boven de voorbeeldlimiet van {{limit}}. Pak het uit om het te openen.",
                 "nested": "{{name}} is een archief in dit archief. Pak het uit om het te openen.",
                 "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet worden getoond.",
                 "failed": "Kon {{name}} niet lezen. {{reason}}"
@@ -325,8 +325,8 @@
                 "badName": "Vul één mapnaam in, zonder schuine strepen.",
                 "done_one": "{{count}} bestand uitgepakt in {{folder}}",
                 "done_other": "{{count}} bestanden uitgepakt in {{folder}}",
-                "skipped_one": "{{count}} item is overgeslagen. Links en namen buiten de map of in .git worden nooit uitgepakt.",
-                "skipped_other": "{{count}} items zijn overgeslagen. Links en namen buiten de map of in .git worden nooit uitgepakt."
+                "skipped_one": "{{count}} item overgeslagen. Ruimte pakt nooit links uit, en ook geen bestanden die buiten de map of in .git terechtkomen.",
+                "skipped_other": "{{count}} items overgeslagen. Ruimte pakt nooit links uit, en ook geen bestanden die buiten de map of in .git terechtkomen."
             }
         }
     },
@@ -342,25 +342,25 @@
             "folder": "Nieuwe map…",
             "folderName": "Mapnaam",
             "problem": {
-                "characters": "“{{name}}” bevat een teken dat niet in een naam kan.",
-                "dots": "“{{name}}” is geen naam.",
+                "characters": "\"{{name}}\" bevat een teken dat niet in een naam mag.",
+                "dots": "\"{{name}}\" is geen geldige naam.",
                 "empty": "Typ een naam.",
-                "exists": "“{{name}}” bestaat al.",
-                "in-file": "“{{name}}” is een bestand, dus daar kan niets in.",
-                "long": "“{{name}}” is te lang.",
-                "reserved": "“{{name}}” kan hier niet worden gemaakt.",
+                "exists": "\"{{name}}\" bestaat al.",
+                "in-file": "\"{{name}}\" is een bestand, dus daar kan niets in.",
+                "long": "\"{{name}}\" is te lang.",
+                "reserved": "\"{{name}}\" kan hier niet worden gemaakt.",
                 "segment": "Een mapnaam tussen twee slashes is leeg."
             },
             "refused": {
                 "bad-path": "Dat is geen pad dat de machine kan gebruiken.",
                 "exists": "Die naam is al in gebruik.",
-                "git-state": "Git bewaart daar zijn eigen staat, dus daarin wordt niets gemaakt.",
+                "git-state": "Je kunt niets maken in .git.",
                 "machine-state": "Dat hoort bij de machine en kan hier niet worden gemaakt.",
                 "no-machine": "De machine van dit project is niet verbonden.",
                 "not-a-directory": "Een deel van dat pad is een bestand.",
                 "not-writable": "De machine kan daar niet schrijven.",
                 "outside-project": "Dat valt buiten dit project.",
-                "ruimte-state": "Ruimte bewaart daar zijn eigen staat, dus daarin wordt niets gemaakt.",
+                "ruimte-state": "Je kunt niets maken in .ruimte.",
                 "too-large": "Die tekst is te groot."
             }
         },
@@ -401,7 +401,7 @@
             "refused": {
                 "bad-path": "Dat is geen pad dat de machine kan gebruiken.",
                 "exists": "Die naam is al in gebruik.",
-                "git-state": "Git bewaart zijn eigen staat daar, dus er verplaatst niets in of uit.",
+                "git-state": "Je kunt niets naar of uit .git verplaatsen.",
                 "into-itself": "Een map kan niet in zichzelf.",
                 "language-failed": "Kon de verwijzingen ernaar niet bijwerken, dus er is niets verplaatst.",
                 "machine-state": "Dat hoort bij de machine en wordt niet vanaf hier verplaatst.",
@@ -411,9 +411,9 @@
                 "not-writable": "De machine kan daar niet schrijven.",
                 "outside-project": "Dat valt buiten dit project.",
                 "project-root": "Verplaats de projectmap in Finder of een terminal.",
-                "ruimte-state": "Ruimte bewaart zijn eigen staat daar, dus er verplaatst niets in of uit."
+                "ruimte-state": "Je kunt niets naar of uit .ruimte verplaatsen."
             },
-            "unsaved": "{{name}} heeft wijzigingen die niet konden worden opgeslagen, dus er is niets verplaatst."
+            "unsaved": "Kon de wijzigingen in {{name}} niet opslaan, dus er is niets verplaatst."
         },
         "showHidden": "Verborgen en genegeerde bestanden tonen",
         "searching": "Bestanden zoeken…",
@@ -480,7 +480,7 @@
             "draft": "Concept",
             "state": {
                 "open": "Open",
-                "merged": "Samengevoegd",
+                "merged": "Gemerged",
                 "closed": "Gesloten"
             },
             "files_one": "{{count}} bestand gewijzigd",
@@ -527,7 +527,7 @@
                 "stop": "Stoppen met volgen",
                 "watching": "Gevolgd voor {{chat}}",
                 "ended": "Het volgen is beëindigd.",
-                "merged": "De pull request is samengevoegd, dus het volgen is beëindigd.",
+                "merged": "De pull request is gemerged, dus het volgen is beëindigd.",
                 "closed": "De pull request is gesloten, dus het volgen is beëindigd.",
                 "expired": "Het volgen liep 7 dagen en is beëindigd.",
                 "folderMissing": "De map van de chat is weg, dus het volgen is gestopt.",
@@ -543,7 +543,7 @@
             "folder": "Map",
             "inWorktree": "in een andere worktree",
             "loading": "Branches lezen…",
-            "mergeWorktrees": "Worktrees samenvoegen…",
+            "mergeWorktrees": "Worktrees mergen…",
             "noMatch": "Geen passende branch.",
             "project": "Project",
             "search": "Branches zoeken",
@@ -789,7 +789,7 @@
         },
         "worktree": {
             "label": "Worktree",
-            "merge": "Samenvoegen"
+            "merge": "Merge"
         },
         "repo": {
             "ahead_one": "{{count}} commit om te pushen",
@@ -1027,7 +1027,7 @@
         "empty": "Geen problemen in geopende bestanden.",
         "emptyProject": "Geen problemen in het project.",
         "workspace": "Hele project controleren",
-        "workspaceHint": "Vraagt de language servers om de problemen van elk bestand, ook die niet open zijn",
+        "workspaceHint": "Controleert elk bestand, ook die niet open zijn",
         "filter": "Filter",
         "nothingMatches": "Geen probleem past bij het filter"
     },
@@ -1095,7 +1095,7 @@
         "baseBranch": "de base branch",
         "leftBehind": {
             "clean": "Werkt in worktree {{branch}}, waarin geen werk staat.",
-            "holding": "Werkt in worktree {{branch}}, die {{work}} bevat. Hij blijft staan; merge of verwijder hem via het git-paneel."
+            "holding": "Werkt in worktree {{branch}}, die {{work}} bevat. Hij blijft staan tot je hem merget of verwijdert via het git-paneel."
         },
         "merge": {
             "commits_one": "{{count}} commit",
@@ -1104,13 +1104,13 @@
             "nothing": "nog niets",
             "one": "worktree",
             "removed": "De worktree en de branch zijn verwijderd.",
-            "removedKeptBranch": "De worktree is verwijderd; de branch blijft staan.",
+            "removedKeptBranch": "De worktree is verwijderd. De branch blijft staan.",
             "several_one": "{{count}} worktree",
             "several_other": "{{count}} worktrees",
             "strategy": {
                 "merge": {
                     "label": "Merge",
-                    "line": "Een merge commit; elke worktree-commit blijft in de historie."
+                    "line": "Een merge commit. Elke worktree-commit blijft in de historie."
                 },
                 "rebase": {
                     "label": "Rebase",
@@ -1160,7 +1160,7 @@
         "verdict": {
             "inspecting": "Bezig met inspecteren…",
             "clean": "Er gaat niets verloren. Hij kan weg.",
-            "hasWork": "Hij bevat {{work}}. Verwijderen verliest dat.",
+            "hasWork": "Hij bevat {{work}}. Bij verwijderen gaat dat verloren.",
             "locked": "Hij is vergrendeld. Kies Toch verwijderen om hem te verwijderen.",
             "agentWorking": "Er werkt een agent in. Stop die eerst.",
             "missing": "De map is weg. Alleen de registratie blijft over.",

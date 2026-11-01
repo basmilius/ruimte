@@ -244,13 +244,13 @@ describe('capturing a device', () => {
         await until(() => buttonWithText('Save video') !== null);
 
         expect(buttonWithText('Record')).toBeNull();
-        expect(page.host.querySelector('[role="status"][aria-label="Recording ended; video ready"]')).not.toBeNull();
+        expect(page.host.querySelector('[role="status"][aria-label="Recording ended, video ready"]')).not.toBeNull();
         await clickOn(buttonWithText('Save video'));
         await until(() => downloads.length === 1);
 
         expect(machine.requests('device.record').map((request) => request.mode)).toEqual(['stop']);
         expect(downloads[0]).toMatch(/^Pixel 9 .*\.mp4$/);
-        expect(page.host.querySelector('[role="status"][aria-label="Recording ended; video ready"]')).toBeNull();
+        expect(page.host.querySelector('[role="status"][aria-label="Recording ended, video ready"]')).toBeNull();
         expect(buttonWithText('Record')).not.toBeNull();
     });
 

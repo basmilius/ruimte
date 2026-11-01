@@ -82,7 +82,7 @@ enum GitMergeStrategy: String, CaseIterable, Identifiable {
     var line: String {
         switch self {
         case .squash: String(localized: "One commit on the target with the message below.")
-        case .merge: String(localized: "A merge commit; every worktree commit stays in history.")
+        case .merge: String(localized: "A merge commit. Every worktree commit stays in history.")
         case .rebase: String(localized: "The commits on top of the target, in a straight line.")
         }
     }
@@ -242,7 +242,7 @@ enum GitWorktreeText {
         }
         if result["removed"] == .bool(true) {
             return result["branchDeleted"] == .bool(false)
-                ? String(localized: "\(summary) Removed the worktree; its branch stays.", comment: "%@ is what the merge did")
+                ? String(localized: "\(summary) Removed the worktree. Its branch stays.", comment: "%@ is what the merge did")
                 : String(localized: "\(summary) Removed the worktree and its branch.", comment: "%@ is what the merge did")
         }
         return summary

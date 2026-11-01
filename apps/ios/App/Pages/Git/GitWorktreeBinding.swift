@@ -206,7 +206,7 @@ struct GitWorktreeBindSheet: View {
                         }.disabled(model.busy)
                     } footer: {
                         Text(
-                            "Unbinding leaves the worktree as it is; new nodes in the group start in the project folder again."
+                            "Unbinding leaves the worktree as it is. New nodes in the group start in the project folder again."
                         )
                     }
                 }

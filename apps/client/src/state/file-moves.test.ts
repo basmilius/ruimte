@@ -92,7 +92,7 @@ describe('moving a file', () => {
         useTextDrafts.setState({ rows: { 'm:/p/a.ts': row('changed') } });
         const fake = drafts(['/p/a.ts']).fake;
         await expect(moveFile(transport, 'm', 'p1', '/p/a.ts', '/p/b.ts', { edits: true }, fake)).rejects.toThrow(
-            'a.ts has changes that could not be saved, so nothing moved.'
+            'Could not save the changes in a.ts, so nothing moved.'
         );
         expect(asked).toEqual([]);
         expect(useFiles.getState().tabs.map((tab) => tab.key)).toEqual(['/p/a.ts']);

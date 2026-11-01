@@ -167,7 +167,7 @@ struct DeleteAccountPage: View {
         String(localized: "Notifications to your phones and tablets."),
         String(
             localized:
-                "Your machines from the account. Each keeps its projects; take one off the account on that machine before it joins another."
+                "Your machines from the account. Each keeps its projects. Before a machine joins a different account, take it off on that machine."
         ),
     ]
 }

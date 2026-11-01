@@ -113,7 +113,7 @@ final class GitSheetTests: XCTestCase {
             "main against ios-redesign. 2 files conflict.")
         XCTAssertEqual(
             GitHaltedText.detail(checkout("app"), ours: nil, theirs: nil),
-            "Every file is resolved; Continue finishes it.")
+            "Every file is resolved. Continue finishes it.")
     }
 
     func testWriteWithTheAgentFillsTheMessageFromTheStagedDiff() async {

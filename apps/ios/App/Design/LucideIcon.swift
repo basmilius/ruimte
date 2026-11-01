@@ -72,7 +72,7 @@ extension ContentUnavailableView where Label == SwiftUI.Label<Text, Image>, Desc
     /// `ContentUnavailableView.search` with the Lucide magnifier in place of the system's.
     @MainActor static func search(for text: String) -> Self {
         Self(
-            String(localized: "No results for “\(text)”"), lucideIcon: "search",
+            String(localized: "No results for \"\(text)\""), lucideIcon: "search",
             description: Text("Check the spelling or try a new search."))
     }
 

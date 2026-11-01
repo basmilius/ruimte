@@ -163,7 +163,7 @@
         "outputSpeed": "Uitvoertokens/s",
         "timeToFirstAnswer": "Tijd tot eerste antwoord",
         "responseTime": "Totale antwoordtijd",
-        "context": "Medianen over API-aanbieders. Totale antwoordtijd is gemeten met 500 antwoordtokens."
+        "context": "Medianen over API-aanbieders. Totale antwoordtijd geldt voor 500 antwoordtokens."
     },
     "evaluation": {
         "context": "Kosten van de volledige Artificial Analysis Intelligence Index-evaluatie."

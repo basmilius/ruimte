@@ -51,7 +51,7 @@
     "waveformLines": "Your voice above the line and Voice Control below it",
     "dictation": {
         "title": "Speech to text",
-        "description": "Dictate into any text field. Recognition runs on this computer; audio is never uploaded or saved.",
+        "description": "Dictate into any text field. Recognition runs on this computer. Ruimte never uploads or saves audio.",
         "enable": "Enable Speech to text",
         "downloadHint": "Downloads a 2.6 GB model on first use. No account or API key needed. Turning this off keeps the model.",
         "desktopOnly": "Available in the desktop app.",

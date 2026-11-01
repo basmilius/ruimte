@@ -163,7 +163,7 @@
         "outputSpeed": "Output tokens/s",
         "timeToFirstAnswer": "Time to first answer",
         "responseTime": "Total response time",
-        "context": "Median values across API providers. Total response time is benchmarked with 500 answer tokens."
+        "context": "Median values across API providers. Total response time covers 500 answer tokens."
     },
     "evaluation": {
         "context": "Cost of the full Artificial Analysis Intelligence Index evaluation."

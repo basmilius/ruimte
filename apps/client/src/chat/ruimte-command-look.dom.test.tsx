@@ -143,7 +143,7 @@ describe('a ruimte-context call in a chat', () => {
     test('a notify to a node that went says so, and that it waits', () => {
         const row = page.host.querySelector('[data-find-item="call-gone"]')!;
         expect(row.textContent).toContain('Not in this project');
-        expect(row.parentElement?.textContent).toContain('Waiting until it takes its next turn');
+        expect(row.parentElement?.textContent).toContain('Waiting for its next turn');
     });
 
     test('any other shell call still reads as Bash', () => {

@@ -73,7 +73,7 @@ describe('a view a person deletes', () => {
         expect(await deleteBoard()).toMatchObject({ status: 'completed', output: { viewId: 'board', view: 'Test 4' } });
         expect(viewIds()).toEqual(['other']);
         expect(useDocument.getState().activeViewId).toBe('other');
-        expect(useToasts.getState().toasts).toMatchObject([{ kind: 'deleted', title: 'Deleted view “Test 4”', action: { label: 'Undo' } }]);
+        expect(useToasts.getState().toasts).toMatchObject([{ kind: 'deleted', title: 'Deleted view "Test 4"', action: { label: 'Undo' } }]);
         // The file still has it, so no other client and no daemon lets go of what runs on it.
         expect(
             useDocument

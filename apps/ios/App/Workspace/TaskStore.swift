@@ -120,7 +120,7 @@ struct TaskMark: View {
         case .open: String(localized: "working on it", comment: "Status of a task an agent gave")
         case .done: String(localized: "done", comment: "Status of a task an agent gave")
         case .failed: String(localized: "failed", comment: "Status of a task an agent gave")
-        case .cancelled: String(localized: "cancelled", comment: "Status of a task an agent gave")
+        case .cancelled: String(localized: "canceled", comment: "Status of a task an agent gave")
         }
     }
 

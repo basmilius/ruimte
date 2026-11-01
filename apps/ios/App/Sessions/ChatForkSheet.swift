@@ -77,9 +77,9 @@ struct ChatForkSheet: View {
                     Text(
                         shape == .view
                             ? origin == .node
-                                ? "A new chat view goes on from there, right after its canvas. Nothing is sent until you write the first message."
-                                : "A new chat view goes on from there, right after the original. Nothing is sent until you write the first message."
-                            : "A new chat node goes on from there, beside the original. Nothing is sent until you write the first message."
+                                ? "A new chat view continues from there, right after its canvas. Ruimte sends nothing until you write the first message."
+                                : "A new chat view continues from there, right after the original. Ruimte sends nothing until you write the first message."
+                            : "A new chat node continues from there, beside the original. Ruimte sends nothing until you write the first message."
                     )
                 }
                 if !pickable.isEmpty {
@@ -145,7 +145,7 @@ struct ChatForkSheet: View {
         } footer: {
             if chosenProvider != originalProvider {
                 Text(
-                    "The new agent gets the last part of the conversation as text and can read the rest of the original itself."
+                    "The new agent gets the last part of the conversation as text. It can read the rest in the original."
                 )
             }
         }
@@ -192,7 +192,7 @@ struct ChatForkSheet: View {
                 } else if !canRestoreFiles {
                     Text("The files of this turn are no longer in the repository, so the worktree starts from the latest commit.")
                 } else if filesAfterTurn {
-                    Text("The worktree starts from the files as they were after this turn; the original keeps its own.")
+                    Text("The worktree starts from the files as they were after this turn. The original keeps its own.")
                 } else {
                     Text("The worktree starts from the latest commit, without uncommitted work.")
                 }

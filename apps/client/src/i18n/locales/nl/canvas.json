@@ -25,7 +25,7 @@
         },
         "zoom": {
             "label": "Zoomen",
-            "hint": "Wiel en knijpen worden genegeerd"
+            "hint": "Wiel en knijpen doen niets"
         },
         "move": {
             "label": "Nodes verplaatsen",
@@ -45,7 +45,7 @@
         "delegating": "Sub-agents bezig"
     },
     "node": {
-        "failed": "Deze node kon niet worden getoond",
+        "failed": "Kon deze node niet tonen",
         "zoomTo": "Naar node zoomen",
         "collapse": "Node inklappen",
         "expand": "Node uitklappen",
@@ -170,7 +170,7 @@
         "previous": "Vorige prompt",
         "next": "Volgende prompt",
         "position": "{{index}} van {{count}}",
-        "failed": "Deze prompt kon niet worden getoond",
+        "failed": "Kon deze prompt niet tonen",
         "fold": "Prompt inklappen",
         "open": "Prompt openen",
         "waiting_one": "{{count}} wachtend",
@@ -286,18 +286,18 @@
             "unknown": "Sessiepoorten onbekend",
             "unavailable": "Poorten tonen vraagt om macOS en een actuele Ruimte op de machine.",
             "openFailed": "Kon de poort niet openen",
-            "retry": "Kon de poort niet controleren. Probeer het na de volgende scan opnieuw."
+            "retry": "Kon de poort niet controleren. Probeer het zo opnieuw."
         }
     },
     "chat": {
         "openFailed": "Kon de chat niet openen",
         "retargetFailed": "Kon de provider niet wijzigen",
         "sendFailed": "Kon het bericht niet versturen",
-        "conversationFailed": "Dit gesprek kon niet worden getoond"
+        "conversationFailed": "Kon dit gesprek niet tonen"
     },
     "browser": {
         "routeUnavailable": "Dit adres staat op de machine van het project, en die kan deze browser niet bereiken.",
-        "ownerUnavailable": "De machine van het project is niet bereikbaar",
+        "ownerUnavailable": "Kon de machine van het project niet bereiken",
         "back": "Terug",
         "forward": "Vooruit",
         "stop": "Laden stoppen",
@@ -373,7 +373,7 @@
         "writeTo": "Schrijf naar {{title}}",
         "typeIn": "Typ in {{title}}",
         "waiting": "{{title}} heeft je nodig",
-        "failed": "De pets konden niet worden getoond"
+        "failed": "Kon de pets niet tonen"
     },
     "missingProvider": {
         "notInstalled": "{{name}} is niet geïnstalleerd op deze machine.",
@@ -389,7 +389,7 @@
         "settled": "{{settled}}/{{total}}",
         "stop": "Workflow stoppen",
         "stopping": "Bezig met stoppen…",
-        "stopFailed": "De workflow kon niet worden gestopt",
+        "stopFailed": "Kon de workflow niet stoppen",
         "dismiss": "Sluiten",
         "showInChat": "In chat tonen",
         "notInChat": "De chat bevat deze workflow niet meer",

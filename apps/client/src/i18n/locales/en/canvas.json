@@ -25,7 +25,7 @@
         },
         "zoom": {
             "label": "Zoom",
-            "hint": "Wheel and pinch are ignored"
+            "hint": "Wheel and pinch do nothing"
         },
         "move": {
             "label": "Move nodes",
@@ -45,7 +45,7 @@
         "delegating": "Sub-agents working"
     },
     "node": {
-        "failed": "This node could not be shown",
+        "failed": "Could not show this node",
         "zoomTo": "Zoom to node",
         "collapse": "Collapse node",
         "expand": "Expand node",
@@ -170,7 +170,7 @@
         "previous": "Previous prompt",
         "next": "Next prompt",
         "position": "{{index}} of {{count}}",
-        "failed": "This prompt could not be shown",
+        "failed": "Could not show this prompt",
         "fold": "Fold prompt",
         "open": "Open prompt",
         "waiting_one": "{{count}} waiting",
@@ -269,7 +269,7 @@
             "openInRuimte": "{{modifier}}+click to open in Ruimte",
             "remoteLoopback": "This address only works on {{machine}}.",
             "unavailable": "Cannot open this link here",
-            "thisMachine": "the terminal’s machine"
+            "thisMachine": "the terminal's machine"
         },
         "startFailed": "Could not start the session",
         "sessionEnded": "[session ended]",
@@ -282,22 +282,22 @@
             "label": "Session ports",
             "open": "Open :{{port}}",
             "openHint": "Open in a linked browser",
-            "remote": "Opens in Ruimte on the session’s machine.",
+            "remote": "Opens in Ruimte on the session's machine.",
             "unknown": "Session ports unknown",
             "unavailable": "Showing ports needs macOS and a current Ruimte on the machine.",
             "openFailed": "Could not open the port",
-            "retry": "Could not verify the port. Try again after the next scan."
+            "retry": "Could not verify the port. Try again in a moment."
         }
     },
     "chat": {
         "openFailed": "Could not open the chat",
         "retargetFailed": "Could not change the provider",
         "sendFailed": "Could not send the message",
-        "conversationFailed": "This conversation could not be shown"
+        "conversationFailed": "Could not show this conversation"
     },
     "browser": {
-        "routeUnavailable": "This address is on the project’s machine, which this browser cannot reach.",
-        "ownerUnavailable": "The project’s machine cannot be reached",
+        "routeUnavailable": "This address is on the project's machine, which this browser cannot reach.",
+        "ownerUnavailable": "Could not reach the project's machine",
         "back": "Back",
         "forward": "Forward",
         "stop": "Stop loading",
@@ -373,7 +373,7 @@
         "writeTo": "Write to {{title}}",
         "typeIn": "Type in {{title}}",
         "waiting": "{{title}} needs you",
-        "failed": "The pets could not be shown"
+        "failed": "Could not show the pets"
     },
     "missingProvider": {
         "notInstalled": "{{name}} is not installed on this machine.",
@@ -389,7 +389,7 @@
         "settled": "{{settled}}/{{total}}",
         "stop": "Stop workflow",
         "stopping": "Stopping…",
-        "stopFailed": "The workflow could not be stopped",
+        "stopFailed": "Could not stop the workflow",
         "dismiss": "Close",
         "showInChat": "Show in chat",
         "notInChat": "The chat no longer holds this workflow",

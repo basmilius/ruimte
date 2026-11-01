@@ -36,7 +36,7 @@ struct AboutPage: View {
                     Label(String(localized: "Licenses"), lucideIcon: "file-text")
                 }
             } footer: {
-                Text("Projects and sessions stay on your machines. This app connects to them remotely.")
+                Text("Projects and sessions stay on your machines. This app connects to them.")
             }
             .listRowBackground(MobileStyle.panel)
         }

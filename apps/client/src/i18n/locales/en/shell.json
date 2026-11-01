@@ -167,7 +167,7 @@
         "noMachine": "This window has no machine to build it on"
     },
     "toasts": {
-        "deletedView": "Deleted view “{{name}}”",
+        "deletedView": "Deleted view \"{{name}}\"",
         "copyOutput": "Copy output"
     },
     "projectName": {
@@ -494,7 +494,7 @@
     },
     "linkMachine": {
         "title": "Link machine with code",
-        "description": "For a machine without the app: run `ruimte login` there, and enter the code it prints.",
+        "description": "On a machine without the app, run `ruimte login` and enter the code it prints here.",
         "unavailable": "Approving a machine works in the desktop app and at station.ruimte.app.",
         "signingIn": "Signing in…",
         "signIn": "Sign in to the account the machine should join.",
@@ -552,12 +552,12 @@
         "turnGone": "This turn is no longer in the conversation.",
         "theOriginal": "the original",
         "itsCanvas": "its canvas",
-        "intoView": "A new chat view goes on from there, right after {{after}} in the sidebar. Nothing is sent until you write the first message.",
-        "intoNode": "A new chat node goes on from there, beside the original and with a line from it. Nothing is sent until you write the first message.",
+        "intoView": "A new chat view continues from there, right after {{after}} in the sidebar. Ruimte sends nothing until you write the first message.",
+        "intoNode": "A new chat node continues from there, beside the original and with a line from it. Ruimte sends nothing until you write the first message.",
         "continueWith": "Continue with",
         "account": "Account",
         "accountOf": "{{provider}} account",
-        "handoffNote": "The new agent gets the last part of the conversation as text and can read the rest of the original itself.",
+        "handoffNote": "The new agent gets the last part of the conversation as text. It can read the rest in the original.",
         "titleLabel": "Title",
         "into": "Fork into",
         "shapes": {
@@ -580,7 +580,7 @@
         "machine": "Machine",
         "thisMachine": "This machine",
         "onMachine": "A new chat on {{machine}} starts from a transcript of this one. You choose its checkout next.",
-        "handoffHere": "A new chat node here starts from a transcript of this one, in this project's folder. Nothing is sent until you write the first message.",
+        "handoffHere": "A new chat node here starts from a transcript of this one, in this project's folder. Ruimte sends nothing until you write the first message.",
         "chooseCheckout": "Choose a checkout…"
     },
     "merge": {
@@ -594,8 +594,8 @@
         "endedByIt_other": ", and the {{count}} agents it opened",
         "endedByThem_one": ", and the agent they opened",
         "endedByThem_other": ", and the {{count}} agents they opened",
-        "live_one": "{{names}} is still open in it and is stopped before the worktree goes.",
-        "live_other": "{{names}} are still open in it and are stopped before the worktree goes.",
+        "live_one": "{{names}} is still open in it. Ruimte stops it before removing the worktree.",
+        "live_other": "{{names}} are still open in it. Ruimte stops them before removing the worktree.",
         "commitFirst": "Commit uncommitted files first",
         "commitFirstHint": "Otherwise the merge leaves that work behind.",
         "commitMessage": "Commit message",
@@ -1269,7 +1269,7 @@
         "files": {
             "intro": "The clone on {{machine}} lacks these ignored files. Choose which to copy.",
             "label": "Ignored files",
-            "none": "Git ignores no file here that the clone would miss.",
+            "none": "The clone is missing no ignored files.",
             "truncated": "More ignored files than shown.",
             "skip": "Skip",
             "copy_one": "Copy {{count}} file",
@@ -1363,7 +1363,7 @@
         "finished": "Finished",
         "error": "Error",
         "terminalFinished": "Open the terminal to read its result.",
-        "noExcerpt": "No agent message is available in this preview.",
+        "noExcerpt": "No agent message to preview.",
         "openSession": "Open session",
         "waitAge": "Waiting for {{age}}",
         "longWait": "Waiting for {{age}}, at least ten minutes",

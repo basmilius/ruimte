@@ -268,7 +268,7 @@ final class ChatTaskRowTests: XCTestCase {
             ChatSubagents.taskStateText(.paused, task: paused, now: now, locale: locale), "Paused until 01:00 PM")
         XCTAssertEqual(ChatSubagents.taskStateText(.paused, task: nil, now: now, locale: locale), "Paused")
         XCTAssertEqual(ChatSubagents.taskStateText(.waiting, task: nil, now: now, locale: locale), "Waiting for you")
-        XCTAssertEqual(ChatSubagents.taskStateText(.cancelled, task: nil, now: now, locale: locale), "Cancelled")
+        XCTAssertEqual(ChatSubagents.taskStateText(.cancelled, task: nil, now: now, locale: locale), "Canceled")
     }
 
     func testTheTitleNamesTheModelBeforeTheTask() {

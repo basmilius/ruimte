@@ -305,7 +305,7 @@ private struct CanvasLinkSheet: View {
                     Text("Who reads \(source?.text("title") ?? String(localized: "this node"))")
                 } footer: {
                     Text(
-                        "An agent reads every node a line runs to it from. Between two agents a line runs both ways."
+                        "An agent reads every node with a line to it. A line between two agents runs both ways."
                     )
                 }
                 if !links.isEmpty {

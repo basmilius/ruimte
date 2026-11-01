@@ -24,7 +24,7 @@
     },
     "approve": {
         "title": "Een commando uit het projectbestand uitvoeren?",
-        "description": "Deze launch komt uit het projectbestand. Hij draait pas op deze machine als je hem goedkeurt.",
+        "description": "Deze launch draait pas op deze machine als je hem goedkeurt.",
         "cancel": "Annuleren",
         "confirm": "Starten"
     },
@@ -78,7 +78,7 @@
             "group": "Groep"
         },
         "kindHint": {
-            "service": "Blijft draaien, zoals een webserver. Met een adres draait hij pas als de poort antwoordt.",
+            "service": "Blijft draaien, zoals een webserver. Met een adres telt hij als draaiend zodra de poort antwoordt.",
             "task": "Draait tot hij klaar is, zoals tests of een build.",
             "group": "Start de aangevinkte launches samen."
         },

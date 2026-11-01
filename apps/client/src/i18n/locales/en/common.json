@@ -47,9 +47,9 @@
             "login": "The login terminal could not be shown",
             "providerCommand": "The terminal for a provider command could not be shown",
             "templateRequest": "The template form could not be shown",
-            "onboarding": "The setup of Ruimte could not be shown",
+            "onboarding": "Ruimte setup could not be shown",
             "agentIntegrations": "The question about agent settings could not be shown",
-            "firstRun": "The first start could not be shown."
+            "firstRun": "The first-run screen could not be shown"
         }
     },
     "answer": {

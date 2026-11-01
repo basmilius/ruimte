@@ -319,7 +319,7 @@ struct MachineAgentsPage: View {
                 Toggle(isOn: endpointBinding("visualReplies")) {
                     Text("Visual replies")
                     Text(
-                        "Agents may show a chart, table or mockup above a reply. Off, they answer in text; existing visuals stay."
+                        "Agents may show a chart, table or mockup above a reply. Off, they answer in text. Existing visuals stay."
                     )
                 }
                 .disabled(model.state.busy)
@@ -368,7 +368,7 @@ struct MachineAgentsPage: View {
             } header: {
                 Text("On this machine")
             } footer: {
-                Text("Turning Computer Use on and letting an agent into an app happens on the machine itself.")
+                Text("Turn on Computer Use and let an agent into an app on the machine itself.")
             }
         }
     }

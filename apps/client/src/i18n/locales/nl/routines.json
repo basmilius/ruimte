@@ -107,7 +107,7 @@
   },
   "approval": {
     "fromOutside": "Toegevoegd via het projectbestand",
-    "byAgent": "Toegevoegd door een agent in “{{title}}”",
+    "byAgent": "Toegevoegd door een agent in \"{{title}}\"",
     "anAgent": "een chat",
     "deny": "Weigeren",
     "approve": "Goedkeuren",
@@ -175,7 +175,7 @@
     "failed": "De machine kon dit niet doen."
   },
   "remove": {
-    "title": "“{{title}}” verwijderen?",
+    "title": "\"{{title}}\" verwijderen?",
     "description": "Hij draait niet meer. Zijn eerdere runs, hun chats en zijn Output blijven staan.",
     "confirm": "Verwijderen",
     "failed": "Kon de routine niet verwijderen."
@@ -189,7 +189,7 @@
     "titlePlaceholder": "Ochtendsamenvatting",
     "prompt": "Prompt",
     "promptPlaceholder": "Wat moet de agent elke keer doen?",
-    "promptHint": "Typ / voor een commando, $ voor een skill, @ voor een bestand en # voor een view.",
+    "promptHint": "Typ / voor een commando, $ voor een skill, @ voor een bestand en # voor een weergave.",
     "agent": "Agent",
     "noAgent": "Er is geen agent geïnstalleerd op deze machine.",
     "mode": "Modus",
@@ -214,7 +214,7 @@
     "cronHint": "Minuut, uur, dag van de maand, maand en dag van de week, op de klok van de machine. 0 9 * * 1-5 draait doordeweeks om 09:00.",
     "cronNext": "Volgende: {{times}}",
     "cronShape": "Geef vijf velden: minuut, uur, dag van de maand, maand en dag van de week.",
-    "cronField": "Het veld {{field}} neemt geen “{{part}}”.",
+    "cronField": "Het veld {{field}} neemt geen \"{{part}}\".",
     "cronOften": "Dit draait vaker dan elke 15 minuten. Houd de tijden minstens 15 minuten uit elkaar.",
     "cronNever": "Deze datum komt nooit, zoals 31 februari.",
     "cronFields": {
@@ -229,7 +229,7 @@
     "time": "Tijd",
     "machineClock": "op de klok van de machine",
     "shared": "Delen met team",
-    "sharedHint": "Gedeelde routines worden met het project gecommit.",
+    "sharedHint": "Gedeelde routines komen in het projectbestand dat je team commit.",
     "create": "Routine maken",
     "save": "Opslaan",
     "failed": "Kon de routine niet opslaan.",

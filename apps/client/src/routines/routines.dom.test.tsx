@@ -274,7 +274,7 @@ describe('Routines', () => {
         expect(form.querySelector('[role="alert"]')?.textContent).toStartWith('This runs more often than every 15 minutes.');
         expect(create.disabled).toBe(true);
         await type(field, '0 25 * * *');
-        expect(form.querySelector('[role="alert"]')?.textContent).toBe('The hour (0-23) field does not take “25”.');
+        expect(form.querySelector('[role="alert"]')?.textContent).toBe('The hour (0-23) field does not take "25".');
 
         await type(field, ' 30 8  * * 1-5');
         expect(form.querySelector('[role="alert"]')).toBeNull();

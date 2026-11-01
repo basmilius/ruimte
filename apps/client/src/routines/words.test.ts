@@ -60,7 +60,7 @@ describe('a cron in words', () => {
 
     test('says why the form does not take an expression', () => {
         expect(cronProblemWords({ kind: 'shape' })).toBe('Give five fields: minute, hour, day of month, month and day of week.');
-        expect(cronProblemWords({ kind: 'field', field: 'hour', part: '25' })).toBe('The hour (0-23) field does not take “25”.');
+        expect(cronProblemWords({ kind: 'field', field: 'hour', part: '25' })).toBe('The hour (0-23) field does not take "25".');
         expect(cronProblemWords({ kind: 'often' })).toStartWith('This runs more often than every 15 minutes.');
     });
 });

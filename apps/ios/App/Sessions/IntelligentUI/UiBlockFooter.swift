@@ -22,7 +22,7 @@ struct UiBlockFooter: View {
                     if let live { UiLivePart(live: live, hint: $hint) }
                     if let answered {
                         HStack(spacing: 4) {
-                            Text("Answered with “\(answered)”")
+                            Text("Answered with \"\(answered)\"")
                             if let at = model.answer?["at"]?.numberValue {
                                 Text(verbatim: "·").accessibilityHidden(true)
                                 Text(Format.moment(UiFormat.moment(milliseconds: at)))

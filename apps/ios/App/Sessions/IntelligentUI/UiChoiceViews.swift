@@ -202,9 +202,9 @@ struct UiChoiceLine: View {
             origin.older
             ? String(
                 localized:
-                    "Chose “\(label)” on the reply of \(Format.moment(UiFormat.moment(milliseconds: origin.sourceAt)))"
+                    "Chose \"\(label)\" on the reply of \(Format.moment(UiFormat.moment(milliseconds: origin.sourceAt)))"
             )
-            : String(localized: "Chose “\(label)”")
+            : String(localized: "Chose \"\(label)\"")
         Group {
             if let reveal {
                 Button(action: reveal) { choiceLabel(words) }.buttonStyle(.plain)

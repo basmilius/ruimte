@@ -21,7 +21,7 @@
         "state": {
             "booted": "{{name}} is running.",
             "shutdown": "{{name}} is stopped.",
-            "transitioning": "{{name}} is changing state."
+            "transitioning": "{{name}} is starting or stopping."
         },
         "boot": "Start device",
         "noStream": "Screen streaming is not available in this build.",
@@ -39,7 +39,7 @@
             "notCharging": "not charging",
             "full": "full",
             "simulated": "simulated",
-            "simulatedTooltip": "Simulated: apps see {{level}}. Reset it in the tools.",
+            "simulatedTooltip": "Simulated. Apps see {{level}}. Reset it in the tools.",
             "source": {
                 "ac": "AC",
                 "usb": "USB",
@@ -156,7 +156,7 @@
                 "stop": "Stop recording",
                 "recording": "Recording, {{time}}",
                 "ended": "Ended",
-                "endedLabel": "Recording ended; video ready",
+                "endedLabel": "Recording ended, video ready",
                 "saveVideo": "Save video",
                 "recordFailed": "Could not make the recording",
                 "androidLimit": "Android stops recordings after 3 minutes."
@@ -174,7 +174,7 @@
                 "default": "Default",
                 "battery": "Battery",
                 "charging": "Charging",
-                "cosmetic": "Only the status bar shows this level; apps still read a full battery.",
+                "cosmetic": "Only the status bar shows this level. Apps still read a full battery.",
                 "reset": "Reset battery"
             },
             "biometrics": {
@@ -190,7 +190,7 @@
                 "up": "Up one folder",
                 "cancel": "Stop picking",
                 "list": "Files on the machine",
-                "empty": "Nothing this device accepts.",
+                "empty": "No files this device accepts.",
                 "add": "Add",
                 "drop": "Drop to install the app or add the pictures",
                 "dropFailed": "The device could not use that file",
@@ -206,7 +206,7 @@
                 },
                 "pickFile": "Choose file…",
                 "file": "Showing",
-                "note": "The app starts again with the camera feed the first time."
+                "note": "The app restarts the first time you choose a picture."
             }
         },
         "operated": {
@@ -330,7 +330,7 @@
             "signedInAs": "Signed in with {{provider}} as {{login}}",
             "linked": "{{provider}} added to your account",
             "deleted": "Account deleted and signed out",
-            "deletedAndLeft": "Account deleted, signed out, and this computer's machine left it",
+            "deletedAndLeft": "Account deleted and signed out. This computer's machine is no longer on it.",
             "deletedLeaveFailed": "Account deleted and signed out, but this computer's machine is still on it. Remove it under Settings › Account before signing in again."
         },
         "sessionEndedOnDevice": "Session ended. Sign in again to open your machines.",
@@ -339,7 +339,7 @@
         "signInFirst": "Sign in first",
         "statementMismatch": "Your account sent an unexpected answer. Try again.",
         "signInAndConnect": "Sign in and connect to the machine first",
-        "noBroker": "{{name}} is not connected through your account yet, so it can only be reached on its own network",
+        "noBroker": "{{name}} is not connected through your account yet. You can only reach it on its own network.",
         "refusal": {
             "onlyOnMachine": "Only the app on that machine can put it on an account.",
             "machineHasAccount": "This machine is on another account. Take it off that account on the machine itself first.",
@@ -359,7 +359,7 @@
         "daemon-newer": "This machine runs a newer Ruimte than this app. Update this app."
     },
     "broker": {
-        "badUrl": "The address {{url}} of the connection service does not open",
+        "badUrl": "Could not open the connection service at {{url}}",
         "limited": "The connection service is limiting this device. Trying again in {{seconds}} seconds.",
         "refusedClient": "The connection service refused this device: {{reason}}",
         "unreachable": "Could not reach the connection service at {{host}}",
@@ -375,7 +375,7 @@
             "timeout": "The machine gave up waiting for the direct connection",
             "done": "The machine ended the direct connection",
             "not-paired": "The machine does not let this device in. Its access was revoked, or your account could not confirm it.",
-            "statements-refused": "The machine turns away sign-in through an account.",
+            "statements-refused": "This machine does not accept sign-in through an account.",
             "other": "The machine closed the direct connection"
         },
         "channelEarly": "Could not set up the direct connection. Try again.",
@@ -384,27 +384,27 @@
         "badFrame": "The machine sent data this app cannot read",
         "channelClosed": "The direct connection closed",
         "channelClosedEarly": "The connection closed before the machine let this device in",
-        "noPathWithRelay": "No network path to the machine, also not through the relay.",
-        "noPath": "No network path to the machine. A direct connection needs UDP between both sides, and there is no relay to fall back on.",
+        "noPathWithRelay": "No network path to the machine, not even through the relay.",
+        "noPath": "No network path to the machine. A direct connection needs UDP on both sides, and no relay is available.",
         "noOffer": "The browser could not start a direct connection",
         "refused": "The machine did not take the direct connection: {{reason}}",
         "noReason": "no reason given",
         "unreachable": "Could not reach the machine to set up a direct connection",
         "unreachableWith": "Could not reach the machine to set up a direct connection: {{reason}}",
         "unsignedSignal": "A connection request claims to come from the machine but cannot be verified",
-        "noKeyOverBroker": "A direct connection through your account signs in with a key, and this browser cannot make one",
+        "noKeyOverBroker": "This browser cannot create the key needed to connect through your account",
         "notProven": "{{label}} did not prove its identity over the direct connection",
-        "noKey": "A direct connection signs in with a key, and this browser cannot make one",
+        "noKey": "This browser cannot create the key needed for a direct connection",
         "needsPairedKey": "A direct connection needs a machine on your account, or the Ruimte app on this machine",
         "timedOut": "The direct connection did not come up within {{seconds}} seconds",
-        "frameRefused": "The direct connection refused data: {{reason}}",
+        "frameRefused": "Could not send data over the direct connection: {{reason}}",
         "answerNotApplied": "Could not use the machine's answer: {{reason}}",
         "refusedVerdict": "The machine refused the direct connection: {{reason}}",
         "setupFailed": "Could not set up a direct connection: {{reason}}"
     },
     "lan": {
-        "notProven": "The machine at this address on the local network could not prove it is this machine",
-        "noKey": "A connection on the local network signs in with a key, and this browser cannot make one",
+        "notProven": "The machine at this local address could not prove its identity",
+        "noKey": "This browser cannot create the key needed to connect on the local network",
         "unsignedSignal": "A connection on the local network claims to come from the machine but cannot be verified",
         "refused": "The machine refused this device on the local network: {{reason}}",
         "failed": "Could not connect to the machine on the local network: {{reason}}",
@@ -425,7 +425,7 @@
         "timedOut": "The machine did not answer {{type}} within {{seconds}} seconds"
     },
     "file": {
-        "tooLarge": "This file is {{size}} MB; at most {{max}} MB loads over a direct connection",
+        "tooLarge": "This file is {{size}} MB. A direct connection loads at most {{max}} MB.",
         "emptyPiece": "The file stopped loading before the end. Try again.",
         "changed": "The file changed while it was loading"
     }

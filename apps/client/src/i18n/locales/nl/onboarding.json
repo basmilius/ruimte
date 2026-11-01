@@ -13,7 +13,7 @@
         "count": "{{done}} van {{total}} klaar",
         "progress": "Taken klaar",
         "tasks": "Taken",
-        "closeNote": "Sluit wanneer je wilt; heropen via Instellingen › Over.",
+        "closeNote": "Sluit dit wanneer je wilt en open het opnieuw via Instellingen › Over.",
         "next": "Volgende: {{task}}",
         "finish": "Afronden"
     },

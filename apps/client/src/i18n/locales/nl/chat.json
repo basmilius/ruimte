@@ -79,7 +79,7 @@
     },
     "restart": {
         "done": "Agentsessie herstart",
-        "doneDescription": "Het volgende bericht zet het gesprek voort en laadt nieuwe skills, plugins, commando’s en MCP-servers.",
+        "doneDescription": "Het volgende bericht zet het gesprek voort en laadt nieuwe skills, plugins, commando's en MCP-servers.",
         "failed": "Kon de agentsessie niet herstarten"
     },
     "commandLook": {

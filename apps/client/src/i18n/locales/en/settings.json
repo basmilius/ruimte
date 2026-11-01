@@ -239,7 +239,7 @@
                 "title": "On device",
                 "help": {
                     "label": "Explain and name suggestions",
-                    "description": "Uses Apple Foundation Models on this Mac. Code is not sent anywhere."
+                    "description": "Uses Apple Foundation Models. Code stays on this Mac."
                 },
                 "ghost": {
                     "label": "Suggestions while typing",
@@ -398,7 +398,7 @@
             "loading": "Loading templates",
             "tooOld": "This machine needs a newer Ruimte for templates.",
             "empty": "No templates of your own yet. Add one, or select code and choose Save as Live Template.",
-            "noMatch": "No template matches “{{query}}”.",
+            "noMatch": "No template matches \"{{query}}\".",
             "projectTooNew": "This project's templates come from a newer Ruimte and are left alone.",
             "projectInvalid": "This project's templates file cannot be read. Fix or remove it to use project templates.",
             "search": "Search templates",
@@ -496,7 +496,7 @@
                 "where": "Where",
                 "wherePersonal": "Yours",
                 "whereProject": "This project",
-                "whereNoProject": "This project has no file for templates that can be written.",
+                "whereNoProject": "Templates cannot be saved in this project.",
                 "cancel": "Cancel",
                 "save": "Save",
                 "failed": "Could not save the template"
@@ -892,7 +892,7 @@
             "dev": "The dev app always runs a machine of its own and stops it when it quits.",
             "windows": "Not available on Windows yet, so this machine stops when Ruimte quits.",
             "appimage": "Not available in the AppImage. Install the deb or rpm package to keep this machine running.",
-            "commandLine": "This machine runs as the service `npx ruimte service install` set up. Remove it with `npx ruimte service uninstall`."
+            "commandLine": "This machine runs as a service, set up with `npx ruimte service install`. Remove it with `npx ruimte service uninstall`."
         },
         "pending": {
             "takeOver": "Takes effect the next time Ruimte quits.",
@@ -1033,7 +1033,7 @@
             "lid": {
                 "label": "Also with the lid closed",
                 "description": "Your Mac keeps running with its lid closed while it stays awake. On battery this needs Also on battery and stops below {{percent}}.",
-                "search": "Keep the Mac running with its lid shut while keep awake holds.",
+                "search": "Keep the Mac running with its lid closed while it stays awake.",
                 "rule": {
                     "label": "Permission on this Mac",
                     "missing": "Lets Ruimte turn sleep off and on without a password, and nothing else. macOS asks for an administrator password first.",
@@ -1081,9 +1081,9 @@
                 "removed": "Removed Ruimte's entries",
                 "deleted": "Removed the file Ruimte created",
                 "none": "No Ruimte entries found",
-                "keptEdited": "Left alone: you changed Ruimte's entry",
+                "keptEdited": "Left alone because you changed Ruimte's entry",
                 "missing": "File not found",
-                "refused": "Left alone: Ruimte cannot read this file",
+                "refused": "Left alone because Ruimte cannot read this file",
                 "failed": "Failed: {{message}}"
             }
         }
@@ -1134,7 +1134,7 @@
         },
         "steerByDefault": {
             "label": "Send to a working agent right away",
-            "description": "A message sent while Claude or Codex works reaches it at its next step, also one another agent sends, which can then redirect it. When off, it waits until the agent is done. Hold Option or Alt to do the opposite."
+            "description": "A message sent while Claude or Codex works reaches it at its next step and can redirect it. The same goes for messages from other agents. When off, a message waits until the agent is done. Hold Option or Alt to do the opposite."
         },
         "showToolCalls": {
             "label": "Show what an agent reads and runs",
@@ -1436,7 +1436,7 @@
         "terminalShell": {
             "label": "Terminal shell",
             "description": "The shell a new terminal opens in. Agents and launches always run in Git Bash.",
-            "gitBashMissing": "Git for Windows is not installed, so a terminal cannot open in Git Bash and opens in PowerShell or Command Prompt instead, and agents and launches cannot start. Get it at gitforwindows.org.",
+            "gitBashMissing": "Git for Windows is not installed. Terminals open in PowerShell or Command Prompt instead, and agents and launches cannot start. Get it at gitforwindows.org.",
             "options": {
                 "powershell": "PowerShell",
                 "git-bash": "Git Bash",
@@ -1453,7 +1453,7 @@
             "choose": "Choose…",
             "reset": "Reset",
             "refusedRoot": "Use an absolute path other than the disk root, your home folder or Ruimte's data folder.",
-            "notAFolder": "That is not a folder, or it cannot be made or written to."
+            "notAFolder": "That is not a folder, or Ruimte cannot create it or write to it."
         },
         "streaming": {
             "label": "Browser and device streaming",
@@ -1611,7 +1611,7 @@
             "description": "Machines on your account open from any device you sign in on.",
             "unavailable": {
                 "label": "Signing in works in the desktop app and at station.ruimte.app.",
-                "description": "The account sends a sign-in back to those places only."
+                "description": "Open Ruimte there to sign in."
             },
             "signedOut": {
                 "label": "Not signed in",
@@ -1637,7 +1637,7 @@
                     "account": "The account and the ways to sign in to it.",
                     "sessions": "Every sign-in to it, on every device.",
                     "push": "Notifications to your phones and tablets.",
-                    "machines": "Your machines from the account. This computer's machine leaves it now; take any other off on that machine itself before it joins another account. Each keeps its projects."
+                    "machines": "Your machines from the account. Each keeps its projects. This computer's machine leaves now. Before another machine joins a different account, take it off on that machine."
                 },
                 "field": "Type {{name}} to confirm",
                 "fieldWord": "This account has no name. Type {{word}} to confirm",
@@ -2026,12 +2026,12 @@
         },
         "inViews": {
             "label": "In views of their own",
-            "description": "A chat or a terminal open as a view of its own has its pet too: on the composer, or in the terminal's bar."
+            "description": "A chat or terminal open as its own view has a pet too, on the composer or in the terminal's bar."
         },
         "agents": {
             "title": "Per agent",
             "label": "A figure per agent",
-            "description": "Give a CLI a pack or one fixed figure, such as Nox for Codex. It goes before the packs switched on. A CLI on Default takes its pets from those.",
+            "description": "Give a CLI a pack or one fixed figure, such as Nox for Codex. That overrides the packs you turned on. A CLI on Default uses those packs.",
             "default": "Default",
             "packs": "Packs",
             "own": "Your own figures",
@@ -2039,7 +2039,7 @@
         },
         "beam": {
             "label": "Teleport",
-            "description": "How a pet comes and goes: when its agent starts or ends, and when you turn pets on or off.",
+            "description": "How a pet appears and leaves when its agent starts or ends, and when you turn pets on or off.",
             "gather": "Gather",
             "scan": "Scanline",
             "rain": "Pixel rain",

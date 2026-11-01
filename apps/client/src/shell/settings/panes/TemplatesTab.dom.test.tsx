@@ -69,7 +69,7 @@ describe('the Templates tab of the editor settings', () => {
 
         await typeInto(document.querySelector<HTMLInputElement>('input[aria-label="Search templates"]')!, 'zzz');
 
-        expect(everything()).toContain('No template matches “zzz”.');
+        expect(everything()).toContain('No template matches "zzz".');
         expect(switchNamed('Use log')).toBeNull();
     });
 

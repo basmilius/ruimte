@@ -107,7 +107,7 @@
   },
   "approval": {
     "fromOutside": "Added through the project file",
-    "byAgent": "Added by an agent in “{{title}}”",
+    "byAgent": "Added by an agent in \"{{title}}\"",
     "anAgent": "a chat",
     "deny": "Deny",
     "approve": "Approve",
@@ -175,7 +175,7 @@
     "failed": "The machine could not do this."
   },
   "remove": {
-    "title": "Remove “{{title}}”?",
+    "title": "Remove \"{{title}}\"?",
     "description": "It will not run again. Its past runs, their chats and its Output stay.",
     "confirm": "Remove",
     "failed": "Could not remove the routine."
@@ -211,10 +211,10 @@
     "toTime": "Last time",
     "cron": "Cron",
     "cronExpression": "Cron expression",
-    "cronHint": "Minute, hour, day of month, month and day of week, on the machine’s clock. 0 9 * * 1-5 runs on weekdays at 09:00.",
+    "cronHint": "Minute, hour, day of month, month and day of week, on the machine's clock. 0 9 * * 1-5 runs on weekdays at 09:00.",
     "cronNext": "Next: {{times}}",
     "cronShape": "Give five fields: minute, hour, day of month, month and day of week.",
-    "cronField": "The {{field}} field does not take “{{part}}”.",
+    "cronField": "The {{field}} field does not take \"{{part}}\".",
     "cronOften": "This runs more often than every 15 minutes. Keep the times at least 15 minutes apart.",
     "cronNever": "This date never comes, such as 31 February.",
     "cronFields": {
@@ -227,9 +227,9 @@
     "date": "Date",
     "days": "Days",
     "time": "Time",
-    "machineClock": "on the machine’s clock",
+    "machineClock": "on the machine's clock",
     "shared": "Share with team",
-    "sharedHint": "Shared routines are committed with the project.",
+    "sharedHint": "Shared routines go in the project file your team commits.",
     "create": "Create routine",
     "save": "Save",
     "failed": "Could not save the routine.",

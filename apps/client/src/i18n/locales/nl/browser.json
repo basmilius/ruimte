@@ -33,7 +33,7 @@
         },
         "certificate": {
             "title": "De verbinding is niet veilig",
-            "hint": "Ongeldig certificaat, dus de pagina is niet geladen."
+            "hint": "Het certificaat is ongeldig, dus de pagina is niet geladen."
         },
         "timeout": {
             "title": "De server deed er te lang over",

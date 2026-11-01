@@ -85,7 +85,7 @@ struct OutputPage: View {
             if items.isEmpty {
                 ContentUnavailableView(
                     String(localized: "Nothing saved yet"), lucideIcon: "package",
-                    description: Text("Results agents publish and pages or images you save from a chat show up here."))
+                    description: Text("Shows what agents publish and the pages and images you save from a chat."))
             }
         } else if let problem = store.problem {
             ContentUnavailableView {
