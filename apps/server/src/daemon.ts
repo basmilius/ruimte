@@ -47,6 +47,8 @@ import { wireUsageStats } from './wiring/usage-stats.ts';
 import { wireVoice } from './wiring/voice.ts';
 import { registerVoiceHandlers } from './handlers/voice.ts';
 
+const EXTENSION_QUERY_ROWS = 500;
+
 /*
  * Runs the daemon until a signal ends the process. The wiring modules are called in boot order; a
  * module that needs one wired after it reaches it through `later`, which only runs once the daemon
@@ -231,7 +233,22 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         viewsOf: (projectId) => projects.store.index.viewsOf(projectId),
         folderOf: (projectId) => projects.store.index.folderOf(projectId),
         readSource: async (source, projectId) => (await agents.context.answerSource('extension', source, null, null, projectId)).text ?? '',
-        providers: providers.providers
+        providers: providers.providers,
+        databaseQuery: async (projectId, connection, sql) => {
+            const folder = projects.store.index.folderOf(projectId);
+
+            if (folder === null) {
+                throw new Error('This project has no folder');
+            }
+
+            const { result } = await databases.agents.query({ projectId, folder }, 'extension', connection, sql, { schema: null, limit: EXTENSION_QUERY_ROWS });
+
+            return {
+                columns: result.columns.map((column) => (typeof column === 'string' ? column : column.name)),
+                rows: result.rows as unknown[][],
+                hasMore: result.hasMore
+            };
+        }
     });
     registerEditorHandlers(dispatcher, {
         machine,

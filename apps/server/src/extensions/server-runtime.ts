@@ -47,6 +47,11 @@ function keyValues(name: string) {
         },
         async set(key: string, value: unknown): Promise<void> {
             writeJsonFile(name, { ...jsonFile(name), [key]: value });
+        },
+        async delete(key: string): Promise<void> {
+            const { [key]: _gone, ...rest } = jsonFile(name);
+
+            writeJsonFile(name, rest);
         }
     };
 }
@@ -82,6 +87,7 @@ function everyMs(every: string): number {
 }
 
 const server = {
+    machine: { platform: process.platform, dataFolder },
     agents: {
         run: (options: { prompt: string; context?: string[]; provider?: string }) => ask('agents.run', [options])
     },

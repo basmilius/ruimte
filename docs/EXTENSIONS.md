@@ -33,7 +33,7 @@ ruimte extension logs           what server/ wrote
 
 A slot is a place, with a function that gets what is true there and answers `false`, `true` or changes (`title`, `icon`, `disabled`, `badge`, `order`). `defineAction`, `defineMenu` and `defineWidget` all go in slots: a button or menu item, a menu of the extension's own, and its own React. An action without slots only shows where a menu puts it.
 
-The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `composer`, `messageActions`, `lineMenu`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. In a menu an extension always comes below Ruimte's own items.
+The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `projectMenu`, `sidebarFooter`, `editorStatusBar`, `composer`, `messageActions`, `lineMenu`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. In a menu an extension always comes below Ruimte's own items.
 
 While `run` is pending, the nodes it is about show a spinner that also stops it through `signal`, and its button is disabled for those nodes. A throw reaches the person as a toast. Work that is no action uses `host.busy`.
 
@@ -41,7 +41,7 @@ While `run` is pending, the nodes it is about show a spinner that also stops it 
 
 ## Permissions
 
-Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `context.read`, `files.read`, `files.write`, `git.read`, `chats.read`, `chats.send`, `agents.run`, `agents.start`, `agents.status`, `agents.tools`, `usage.read`, `clock`.
+Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `context.read`, `database.read`, `files.read`, `files.write`, `git.read`, `chats.read`, `chats.send`, `agents.run`, `agents.start`, `agents.status`, `agents.tools`, `usage.read`, `clock`.
 
 `chats.send` from `server/` is limited to 20 messages per chat per hour, so a loop with a chat stops on its own. Typing into a terminal and answering a permission prompt stay out of reach.
 
@@ -58,6 +58,7 @@ Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `
 | `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay and settings detail. An action in every slot, a menu of its own, a widget in a note's header, a viewer for `.csv`, a `poc` fence in a chat and its own view of a `Read` call. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
 | `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. Add its node from Extensions in the canvas menu, or the palette; a line from it to a chat gives the chat the fact. |
 | `poc-workspace` | Its menu writes to the canvas and the project, reads git, opens an overlay and asks through dialogs. Its panel hears events, shows params, keeps storage per project and machine, and speaks Dutch and English. A chat's composer gets a button that sends, and a chat's menu starts a second opinion. |
+| `poc-chat` | `/review` and `/readme` in a chat, POC issues after `#`, a panel that streams an answer and queries a database, Three notes under Extensions in the canvas menu, mod+alt+k, an icon and a diff view for `.poc` files, buttons in the project menu, the sidebar footer and the editor's status bar, and settings Ruimte draws. |
 | `poc-agents` | Summarize in the bar, a node's header, its menu or the palette writes a linked note, with a spinner on the nodes meanwhile. The card lists agents. |
 | `poc-frame` | Shows an opaque origin, refused storage and refused fetch, and still gets an answer from its server. |
 | `poc-themes` | Paper is tokens alone. Midnight adds an image and outlines through `data-surface`. Your accent stays on top. |
@@ -94,6 +95,6 @@ Still to set up before the store opens:
 
 Opening a window with `?safe-mode` loads no extension and no theme, so a person can always remove one that hangs the app.
 
-## Not built yet
+## Choices against the report
 
-From [the API report](reports/2026-11-01-extension-api.html): `defineReference`, `defineSlashCommand`, `defineTemplate`, `defineStatusItem`, `defineVoiceAction`, `defineNotificationAction`, `defineDiffViewer`, `defineFileIcon`, the slot `projectMenu`, `database`, `agents.stream`, `defineSettings` with a schema, `agents.start` from `server/`, `hosts` and `activation` in the manifest, a `--safe-mode` flag on the launcher, and webhooks, which stay out by choice.
+`defineStatusItem` became the slots `sidebarFooter` and `editorStatusBar`, `defineMessageBlock` is `defineMarkdownBlock`, and `messageMenu` is `messageActions`. A `defineNotificationAction` is `host.notify` with an `action`. `defineTemplate` shows under Extensions in the canvas menu. A reference and a slash command come down to text in the prompt, which the person still sends. `agents.start` is the client's: a chat needs a canvas, so `server/` uses `emit` and lets a client start it. `hosts` are the `net:` permissions of a frame. Webhooks and `secrets.request` stay out. Voice reaches an extension through the two actions `extension.voiceList` and `extension.voiceRun`, since the catalog of tools is fixed.

@@ -1,3 +1,4 @@
+import { ExtensionDiffViewer } from '@/extensions/ExtensionDiffViewer';
 import { useEffect, useState, type ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +55,11 @@ export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: s
     if (isCheckoutDiff(path, view)) {
         return <CommitDiff tabKey={tabKey} cwd={view.cwd} base={view.base ?? null} />;
     }
-    return <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />;
+    return (
+        <ExtensionDiffViewer path={path} cwd={view.cwd}>
+            <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />
+        </ExtensionDiffViewer>
+    );
 }
 
 /* One changed file, in whichever scope the tab is set to. */

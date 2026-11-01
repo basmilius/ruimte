@@ -100,6 +100,9 @@
     "extension.setEnabled",
     "extension.storageGet",
     "extension.storageSet",
+    "extension.agentStream",
+    "extension.agentStop",
+    "extension.databaseQuery",
     "extension.log",
     "extension.call",
     "server.hello",
@@ -449,6 +452,7 @@
   "eventTypes": [
     "extension.changed",
     "extension.message",
+    "extension.agentChunk",
     "push.attention",
     "snooze.changed",
     "peer.changed",

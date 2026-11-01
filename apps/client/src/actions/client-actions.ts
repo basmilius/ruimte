@@ -1,3 +1,4 @@
+import { extensionVoiceActions } from '@/actions/extension-actions';
 import { messageOf } from '@adecore/ui';
 import { terminalPrepareActions } from '@/actions/terminal-prepare-actions';
 import i18next from 'i18next';
@@ -137,6 +138,7 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
     };
     const handlers: ActionHandlers<void> = {
         ...terminalPrepareActions(),
+        ...extensionVoiceActions(),
         ...inspectionActions(document),
         ...developerActions(document, developer),
         ...sessionActions(document, sessions),

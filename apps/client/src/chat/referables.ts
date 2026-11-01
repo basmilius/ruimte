@@ -1,3 +1,4 @@
+import { useExtensionReferables } from '@/extensions/chat-references';
 import {
     isCanvasView,
     isDividerView,
@@ -222,5 +223,7 @@ export function useReferables(endpointId: string, chatId: string): Referables {
     const chatsOnly = useServers((s) => s.byEndpoint[endpointId]?.viewReferences !== true);
     const own = useProject((s) => s.current);
     const reached = useReachedProjects(endpointId);
-    return { items: withReachedProjects(items, own, reached), chatsOnly };
+    const fromExtensions = useExtensionReferables();
+
+    return { items: [...withReachedProjects(items, own, reached), ...fromExtensions], chatsOnly };
 }

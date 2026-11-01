@@ -34,6 +34,7 @@ export const chats: {
 export const storage: {
     get<Value>(key: string): Promise<Value | undefined>;
     set(key: string, value: unknown): Promise<void>;
+    delete(key: string): Promise<void>;
 };
 
 /** Kept readable only by the person who runs the machine. */
@@ -41,6 +42,8 @@ export const secrets: {
     get(key: string): Promise<string | undefined>;
     set(key: string, value: string): Promise<void>;
 };
+
+export const machine: { platform: string; dataFolder: string };
 
 export const log: {
     info(message: string): void;

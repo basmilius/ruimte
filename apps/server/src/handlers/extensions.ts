@@ -3,7 +3,7 @@ import type { ChatProvider } from '@adecore/agents/providers';
 import type { Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
-import { oneShotProvider, runOneShot } from '../git/one-shot.ts';
+import { oneShotProvider, oneShotRun, runOneShot } from '../git/one-shot.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { homedir } from 'node:os';
 
@@ -14,6 +14,7 @@ export interface ExtensionHandlerDeps {
     folderOf(projectId: string): string | null;
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
+    databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: unknown[][]; hasMore: boolean }>;
 }
 
 function nodesIn(views: readonly ProjectView[], nodeIds: readonly string[] | undefined, viewId: string | undefined): ProjectNode[] {
@@ -79,6 +80,46 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
 
         return { text: result.stdout };
     });
+
+    const streams = new Map<string, { kill(): void }>();
+
+    // The same process as above, read as it writes rather than when it is done.
+    dispatcher.register('extension.agentStream', async (payload) => {
+        const options = payload.provider === undefined ? {} : { provider: payload.provider as ChatProvider['kind'] };
+        const provider = await oneShotProvider(deps.providers, options, 'answer an extension');
+        const run = oneShotRun(provider, payload.prompt);
+
+        if (run === null) {
+            throw new Error(`${provider.name} cannot answer a single prompt`);
+        }
+
+        const child = Bun.spawn([provider.command[0] as string, ...run.args], {
+            cwd: deps.folderOf(payload.projectId) ?? homedir(),
+            stdin: run.stdin === undefined ? 'ignore' : new TextEncoder().encode(run.stdin),
+            stdout: 'pipe',
+            stderr: 'ignore'
+        });
+        const decoder = new TextDecoder();
+
+        streams.set(payload.runId, child);
+
+        for await (const piece of child.stdout) {
+            host.emitChunk(payload.runId, decoder.decode(piece, { stream: true }));
+        }
+
+        await child.exited;
+        streams.delete(payload.runId);
+
+        return {};
+    });
+
+    dispatcher.register('extension.agentStop', async (payload) => {
+        streams.get(payload.runId)?.kill();
+
+        return {};
+    });
+
+    dispatcher.register('extension.databaseQuery', async (payload) => deps.databaseQuery(payload.projectId, payload.connection, payload.sql));
 
     dispatcher.register('extension.list', async () => ({ extensions: await host.list() }));
 

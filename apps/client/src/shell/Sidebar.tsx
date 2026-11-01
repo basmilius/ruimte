@@ -1,3 +1,4 @@
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
 import clsx from 'clsx';
@@ -692,7 +693,8 @@ export function Sidebar() {
                 </div>
                 <SidebarCards />
 
-                <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border p-2">
+                <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border px-2 py-1.5">
+                    <SlotRow place="sidebarFooter" context={{}} />
                     {combined ? (
                         <button type="button" className={FOOTER_BUTTON} onClick={() => useSidebarProjects.getState().addSeparator(movable, movable.length)}>
                             <Icon icon={Plus} size={14} /> {t('sidebar.separator')}

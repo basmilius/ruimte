@@ -743,6 +743,27 @@ export const ACTION_DEFINITIONS = {
         }),
         output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string(), icon: z.string() })
     },
+    'extension.voiceList': {
+        title: 'List extension actions',
+        description: 'Lists what the extensions of this window offer by voice, each with what it does and the input it takes.',
+        effect: 'read',
+        domain: 'agents',
+        actors: PERSON_AND_VOICE,
+        input: z.object({}),
+        output: z.object({ actions: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
+    },
+    'extension.voiceRun': {
+        title: 'Run an extension action',
+        description: 'Runs what an extension offers by voice, with its input as JSON, and says what it answers.',
+        effect: 'local',
+        domain: 'agents',
+        actors: PERSON_AND_VOICE,
+        input: z.object({
+            id: z.string().min(1).max(256).describe('As extension.voiceList names it'),
+            input: z.string().max(10_000).describe('Its input, as JSON')
+        }),
+        output: z.object({ text: z.string() })
+    },
     'workspace.inspect': {
         title: 'Inspect workspace',
         description: 'Reads the current project, active view, openable views, the cells of the split grid on screen, active canvas nodes and selection.',

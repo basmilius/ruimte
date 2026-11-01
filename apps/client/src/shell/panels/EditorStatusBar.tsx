@@ -1,3 +1,5 @@
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useTranslation } from 'react-i18next';
 import { CircleX, GitBranch, TriangleAlert } from 'lucide-react';
 import type { Editor, EditorBlock, EditorIndentation } from '@adecore/editor';
@@ -47,6 +49,7 @@ export function EditorStatusBar({ editor, language, path, languageId, indentatio
             className="relative flex h-[26px] shrink-0 items-center gap-1.5 border-t border-border bg-surface px-2 text-xs whitespace-nowrap text-text-muted select-none"
             data-editor-status-bar
         >
+            <SlotRow place="editorStatusBar" context={{ file: fileInfoOf(path) }} />
             {branch !== null && (
                 <Tooltip label={t('statusBar.branch')}>
                     <span className={ITEM}>

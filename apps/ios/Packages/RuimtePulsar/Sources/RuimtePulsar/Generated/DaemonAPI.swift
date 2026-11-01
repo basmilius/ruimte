@@ -8,6 +8,9 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `extensionSetEnabled` = "extension.setEnabled"
     case `extensionStorageGet` = "extension.storageGet"
     case `extensionStorageSet` = "extension.storageSet"
+    case `extensionAgentStream` = "extension.agentStream"
+    case `extensionAgentStop` = "extension.agentStop"
+    case `extensionDatabaseQuery` = "extension.databaseQuery"
     case `extensionLog` = "extension.log"
     case `extensionCall` = "extension.call"
     case `serverHello` = "server.hello"
@@ -361,6 +364,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
 public enum WireEvent: String, CaseIterable, Sendable {
     case `extensionChanged` = "extension.changed"
     case `extensionMessage` = "extension.message"
+    case `extensionAgentChunk` = "extension.agentChunk"
     case `pushAttention` = "push.attention"
     case `snoozeChanged` = "snooze.changed"
     case `peerChanged` = "peer.changed"

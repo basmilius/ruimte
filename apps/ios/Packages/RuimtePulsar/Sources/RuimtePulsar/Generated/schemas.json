@@ -6956,6 +6956,13 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "activation": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 }
               },
               "required": [
@@ -7077,6 +7084,13 @@
             }
           },
           "themes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "activation": {
             "type": "array",
             "items": {
               "type": "string",
@@ -7221,6 +7235,107 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.extension.agentStream.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "runId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "prompt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "provider": {
+        "type": "string"
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "runId",
+      "prompt",
+      "projectId"
+    ]
+  },
+  "request.extension.agentStream.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.extension.agentStop.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "runId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "runId"
+    ]
+  },
+  "request.extension.agentStop.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.extension.databaseQuery.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "connection": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sql": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "connection",
+      "sql"
+    ]
+  },
+  "request.extension.databaseQuery.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "columns": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "rows": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {}
+        }
+      },
+      "hasMore": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "columns",
+      "rows",
+      "hasMore"
+    ]
   },
   "request.extension.log.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -73544,6 +73659,22 @@
       "id",
       "name",
       "payload"
+    ]
+  },
+  "event.extension.agentChunk": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "runId": {
+        "type": "string"
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "runId",
+      "text"
     ]
   },
   "event.push.attention": {

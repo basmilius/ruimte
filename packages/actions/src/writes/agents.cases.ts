@@ -28,6 +28,11 @@ const role = { title: 'Tester', prompt: 'Write the tests', provider: 'codex', mo
 const team: ActionInput<'team.start'> = { label: 'Release', roles: [role], cwd: null, reads: null, viewId: null, mode: null, worktree: false, task: true };
 
 export const cases: WriteCases = {
+    'extension.voiceRun': {
+        actors: ['person', 'voice'],
+        input: { id: 'acme.builds/status', input: '{}' },
+        refused: { 'no action': { input: '{}' } }
+    },
     'tool.run': {
         actors: ['agent'],
         input: { id: 'acme.builds/failing-log', input: '{}' },

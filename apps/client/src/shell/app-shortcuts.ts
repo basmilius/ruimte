@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { countCommand } from '@/desktop/usage';
 import { isInNodeBody } from '@/canvas/node-body';
+import { runActionShortcut } from '@/extensions/action-shortcuts';
 import { newChat } from '@/project/new-chat';
 import { canOpenWindows, openNewWindow } from '@/project/windows';
 import { commandForKey, type WindowCommandId } from '@/shell/command-table';
@@ -78,6 +79,9 @@ export function useAppShortcuts(): void {
                 windows: canOpenWindows()
             });
             if (shortcut === null) {
+                // Ruimte's own first, so an extension never takes a key from it.
+                runActionShortcut(e, isApplePlatform());
+
                 return;
             }
             e.preventDefault();

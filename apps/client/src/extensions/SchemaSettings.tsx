@@ -1,0 +1,47 @@
+import { useSyncExternalStore } from 'react';
+import { Input, Select, Switch } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { settingKey, subscribeStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
+import { useContributions, type SettingField } from '@/extensions/registry';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { storedText } from '@/state/stored-json';
+
+function Field({ id, field }: { id: string; field: SettingField }) {
+    const key = settingKey(id, field.key);
+    const stored = useSyncExternalStore(subscribeStorage, () => storedText(key).read());
+    const value = stored === null ? field.default : (JSON.parse(stored) as boolean | string);
+    const write = (next: boolean | string): void => writeExtensionStorage(key, next);
+
+    return (
+        <SettingsRow
+            label={field.label}
+            {...(field.description === undefined ? {} : { description: field.description })}
+            control={
+                field.type === 'boolean' ? (
+                    <Switch checked={value === true} label={field.label} onCheckedChange={write} />
+                ) : field.type === 'select' ? (
+                    <Select value={String(value)} label={field.label} align="end" items={[...(field.options ?? [])]} onValueChange={write} />
+                ) : (
+                    <Input aria-label={field.label} value={String(value)} onChange={(event) => write(event.target.value)} />
+                )
+            }
+        />
+    );
+}
+
+/* Fields an extension named, in rows like any other setting, so a simple one needs no React. */
+export function SchemaSettings({ id }: { id: string }) {
+    const schema = useContributions((state) => state.extensionSchemas.find((each) => each.id === id));
+
+    if (schema === undefined) {
+        return null;
+    }
+
+    return (
+        <SettingsSection>
+            {schema.fields.map((field) => (
+                <Field key={field.key} id={id} field={field} />
+            ))}
+        </SettingsSection>
+    );
+}

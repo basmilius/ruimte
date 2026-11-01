@@ -26,7 +26,9 @@ export const ExtensionManifestSchema = z.object({
     autostart: z.boolean().optional(),
     // What it asks for, each with the reason a person reads before installing.
     permissions: z.record(z.string().min(1), z.string().min(1).max(200)).optional(),
-    themes: z.array(z.string().min(1)).optional()
+    themes: z.array(z.string().min(1)).optional(),
+    // When client/ loads, such as node:stamp or file:csv. Without it, with the app.
+    activation: z.array(z.string().min(1)).optional()
 });
 export type ExtensionManifest = z.infer<typeof ExtensionManifestSchema>;
 
@@ -109,6 +111,20 @@ export const ExtensionStorageGetPayloadSchema = z.object({ id: ExtensionIdSchema
 export const ExtensionStorageGetResultSchema = z.object({ value: z.unknown() });
 export const ExtensionStorageSetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256), value: z.unknown() });
 
+/* A prompt whose answer comes in pieces, as `extension.agentChunk` for this client's own run id. It answers once the run is over. */
+export const ExtensionAgentStreamPayloadSchema = z.object({
+    runId: z.string().min(1).max(64),
+    prompt: z.string().min(1),
+    provider: z.string().optional(),
+    projectId: z.string().min(1)
+});
+export const ExtensionAgentStopPayloadSchema = z.object({ runId: z.string().min(1).max(64) });
+export const ExtensionAgentChunkEventSchema = z.object({ runId: z.string(), text: z.string() });
+
+/* One read-only statement, as an agent may run it. */
+export const ExtensionDatabaseQueryPayloadSchema = z.object({ projectId: z.string().min(1), connection: z.string().min(1), sql: z.string().min(1) });
+export const ExtensionDatabaseQueryResultSchema = z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), hasMore: z.boolean() });
+
 /* One line for the terminal of `ruimte extension dev`. */
 export const ExtensionLogPayloadSchema = z.object({ id: ExtensionIdSchema, text: z.string().max(16_000) });
 
@@ -150,11 +166,15 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.setEnabled': { payload: ExtensionSetEnabledPayloadSchema, result: EmptySchema },
     'extension.storageGet': { payload: ExtensionStorageGetPayloadSchema, result: ExtensionStorageGetResultSchema },
     'extension.storageSet': { payload: ExtensionStorageSetPayloadSchema, result: EmptySchema },
+    'extension.agentStream': { payload: ExtensionAgentStreamPayloadSchema, result: EmptySchema },
+    'extension.agentStop': { payload: ExtensionAgentStopPayloadSchema, result: EmptySchema },
+    'extension.databaseQuery': { payload: ExtensionDatabaseQueryPayloadSchema, result: ExtensionDatabaseQueryResultSchema },
     'extension.log': { payload: ExtensionLogPayloadSchema, result: EmptySchema },
     'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema }
 } as const;
 
 export const EXTENSION_EVENT_SCHEMAS = {
     'extension.changed': EmptySchema,
-    'extension.message': ExtensionMessageEventSchema
+    'extension.message': ExtensionMessageEventSchema,
+    'extension.agentChunk': ExtensionAgentChunkEventSchema
 } as const;

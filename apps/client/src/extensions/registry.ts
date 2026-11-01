@@ -108,6 +108,9 @@ export type SlotName =
     | 'viewMenu'
     | 'panelHeader'
     | 'commandPalette'
+    | 'projectMenu'
+    | 'sidebarFooter'
+    | 'editorStatusBar'
     | 'composer'
     | 'messageActions'
     | 'fileMenu'
@@ -136,8 +139,38 @@ export interface SlotEntry {
     items?: readonly SlotMenuItem[] | ((context: object) => readonly SlotMenuItem[]);
     component?: ComponentType<{ context: object; nodeId?: string | undefined }>;
     onFailure?: (text: string) => void;
+    // Like mod+shift+k. Always with a modifier, as every shortcut in Ruimte.
+    shortcut?: string;
     // Adds a node of an extension, so a menu lists it with the others of its kind.
     addsNode?: boolean;
+}
+
+export interface SlashCommandContribution {
+    id: string;
+    name: string;
+    description: string;
+    expand: (args: string) => Promise<string>;
+}
+
+export interface ReferenceContribution {
+    id: string;
+    title: string;
+    list: () => Promise<readonly { id: string; name: string }[]>;
+    read: (item: { id: string; name: string }) => Promise<string>;
+}
+
+export interface DiffViewerContribution {
+    id: string;
+    title: string;
+    extensions: readonly string[];
+    component: ComponentType<{ file: { path: string; name: string; extension: string }; diff: string }>;
+}
+
+export interface VoiceActionContribution {
+    id: string;
+    description: string;
+    parameters: object;
+    run: (input: unknown) => Promise<string>;
 }
 
 export interface ToolResultContribution {
@@ -165,6 +198,20 @@ export interface ExtensionSettingsContribution {
     keywords: readonly string[];
 }
 
+export interface SettingField {
+    key: string;
+    type: 'boolean' | 'text' | 'select';
+    label: string;
+    description?: string;
+    default: boolean | string;
+    options?: readonly { value: string; label: string }[];
+}
+
+export interface ExtensionSchemaContribution {
+    id: string;
+    fields: readonly SettingField[];
+}
+
 export interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
@@ -181,6 +228,10 @@ export interface Contributions {
     fileViewers: readonly FileViewerContribution[];
     markdownBlocks: readonly MarkdownBlockContribution[];
     toolResults: readonly ToolResultContribution[];
+    slashCommands: readonly SlashCommandContribution[];
+    references: readonly ReferenceContribution[];
+    diffViewers: readonly DiffViewerContribution[];
+    voiceActions: readonly VoiceActionContribution[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
@@ -188,6 +239,7 @@ export interface Contributions {
     extensionViews: readonly ExtensionViewContribution[];
     commands: readonly CommandContribution[];
     extensionSettings: readonly ExtensionSettingsContribution[];
+    extensionSchemas: readonly ExtensionSchemaContribution[];
 }
 
 type ContributionKind = keyof Contributions;
@@ -202,13 +254,18 @@ export const useContributions = create<Contributions>(() => ({
     fileViewers: [],
     markdownBlocks: [],
     toolResults: [],
+    slashCommands: [],
+    references: [],
+    diffViewers: [],
+    voiceActions: [],
     viewAccessories: [],
     sharedStorage: [],
     sidebarCards: [],
     extensionNodes: [],
     extensionViews: [],
     commands: [],
-    extensionSettings: []
+    extensionSettings: [],
+    extensionSchemas: []
 }));
 
 /* Whether a stored entry is an extension's: every Ruimte keeps it as an unknown kind, so it survives one without the extension. */

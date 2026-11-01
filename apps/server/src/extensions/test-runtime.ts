@@ -28,6 +28,17 @@ const client: Record<string, unknown> = {
     defineNode: recording('node'),
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
+    defineSlashCommand: recording('slashCommand'),
+    defineReference: recording('reference'),
+    defineDiffViewer: recording('diffViewer'),
+    defineFileIcon: recording('fileIcon'),
+    defineVoiceAction: recording('voiceAction'),
+    defineTemplate: recording('template'),
+    useSetting: () => undefined,
+    useMachine: () => ({ id: 'test-machine' }),
+    useTheme: () => ({ side: 'dark' }),
+    useChat: () => null,
+    database: { connections: async () => [], query: async () => ({ columns: [], rows: [], hasMore: false }) },
     defineToolResult: recording('toolResult'),
     defineOverlay: (definition: unknown) => {
         defined.push({ kind: 'overlay', definition });
@@ -71,7 +82,13 @@ const client: Record<string, unknown> = {
     useServerEvent: () => undefined,
     host: { busy: (_work: unknown, run: () => unknown) => run(), notify: () => undefined, confirm: async () => true, openUrl: () => undefined },
     context: { read: async () => [] },
-    agents: { run: async () => ({ text: '' }), start: async () => ({ id: 'chat' }) },
+    agents: {
+        run: async () => ({ text: '' }),
+        stream: async function* () {
+            yield { text: '' };
+        },
+        start: async () => ({ id: 'chat' })
+    },
     files: { readText: async () => '', write: async () => undefined, list: async () => [], watch: () => () => undefined, open: () => undefined },
     git: { status: async () => ({}), diff: async () => ({}), log: async () => ({}) },
     chats: { list: async () => [], read: async () => '', send: async () => undefined },
@@ -88,13 +105,19 @@ const server: Record<string, unknown> = {
     defineAgentTool: () => undefined,
     agents: { run: async () => ({ text: '' }) },
     chats: { list: async () => [], send: async () => undefined },
-    storage: { get: async () => undefined, set: async () => undefined },
+    machine: { platform: 'test', dataFolder: '' },
+    storage: { get: async () => undefined, set: async () => undefined, delete: async () => undefined },
     secrets: { get: async () => undefined, set: async () => undefined },
     log: { info: () => undefined, error: () => undefined }
 };
 
 const testing = {
     definitions: () => defined,
+    slotAnswer(definition: { slots?: Record<string, unknown> }, slot: string, context: object): unknown {
+        const answer = definition.slots?.[slot];
+
+        return typeof answer === 'function' ? answer(context) : (answer ?? false);
+    },
     renderSurface(component: unknown, options: { server?: typeof fakeServer; data?: unknown; props?: object } = {}): string {
         fakeServer = options.server ?? {};
         nodeData = options.data ?? {};

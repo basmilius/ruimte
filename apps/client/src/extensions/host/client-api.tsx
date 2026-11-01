@@ -1,18 +1,23 @@
-import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
+import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, type ComponentType } from 'react';
 import { icons, Package, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { z } from 'zod';
 import { create } from 'zustand';
+import { databaseConnections } from '@/database/connections';
+import { desktop } from '@/desktop/bridge';
+import { assertShortcut } from '@/extensions/action-shortcuts';
+import { addFileIcons } from '@/extensions/file-icons';
+import { settingKey, useExtensionStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
+import { useTheme as useUiTheme } from '@/state/theme';
 import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
-import type { AgentKind, ExtensionManifest, RequestMap } from '@ruimte/contracts';
+import type { AgentKind, ExtensionManifest, NodeAccent, RequestMap } from '@ruimte/contracts';
 import { revealNode } from '@/project/views';
 import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
-import { contribute, useContributions, type ExtensionSurfaceProps, type SlotEntry, type SlotName } from '@/extensions/registry';
+import { contribute, useContributions, type ExtensionSurfaceProps, type SettingField, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { baseContext, nodeInfoOf, type NodeInfo } from '@/extensions/slots';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
@@ -20,12 +25,11 @@ import { openFileLink } from '@/shell/panels/file-links';
 import { currentEndpointId } from '@/state/keys';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { useEndpointId } from '@/state/keys';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { storedJson, storedText } from '@/state/stored-json';
 import { useFocusedMachine } from '@/transport/connections';
 import { transport as activeTransport, type Transport } from '@/transport';
 
@@ -198,6 +202,8 @@ function wordsOf(extension: LoadedExtension, language: string): Promise<Record<s
 
     return words;
 }
+
+const ARRANGE_GAP = 40;
 
 function requiresPermission(extension: LoadedExtension, permission: string): void {
     if (!Object.hasOwn(extension.manifest.permissions ?? {}, permission)) {
@@ -421,19 +427,85 @@ export function clientApiFor(extension: LoadedExtension) {
                 component: surfaceOf(extension, result) as ComponentType<{ call: { name: string; input: unknown; output: string | null; state: string } }>
             });
         },
+        defineSlashCommand(command: { name: string; description: string; run: (args: string) => string | Promise<string> }) {
+            add('slashCommands', {
+                id: `${id}/${command.name}`,
+                name: command.name,
+                description: command.description,
+                expand: async (args) => command.run(args)
+            });
+        },
+        defineReference(reference: {
+            id: string;
+            title: string;
+            list: () => Promise<readonly { id: string; name: string }[]>;
+            read: (item: { id: string; name: string }) => Promise<string>;
+        }) {
+            add('references', { id: `${id}/${reference.id}`, title: reference.title, list: reference.list, read: reference.read });
+        },
+        defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: object; diff: string }> }) {
+            assertLazy(viewer, `defineDiffViewer ${viewer.id}`);
+            add('diffViewers', {
+                id: `${id}/${viewer.id}`,
+                title: viewer.title,
+                extensions: viewer.extensions.map((name) => name.toLowerCase()),
+                component: surfaceOf(extension, viewer) as ComponentType<{ file: { path: string; name: string; extension: string }; diff: string }>
+            });
+        },
+        defineFileIcon(icon: { extensions: string[]; path: string }) {
+            extension.disposers.push(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));
+        },
+        defineVoiceAction(action: { id: string; description: string; parameters?: object; run: (input: unknown) => string | Promise<string> }) {
+            add('voiceActions', {
+                id: `${id}/${action.id}`,
+                description: action.description,
+                parameters: action.parameters ?? { type: 'object', properties: {} },
+                run: async (input) => action.run(input)
+            });
+        },
+        defineTemplate(template: { id: string; title: string; icon?: string; create: (context: object) => void | Promise<void> }) {
+            add('slotEntries', {
+                id: `${id}/template/${template.id}`,
+                kind: 'action',
+                addsNode: true,
+                title: template.title,
+                ...(template.icon === undefined ? {} : { icon: iconOf(template.icon, extension) }),
+                slots: { canvasMenu: true },
+                run: template.create,
+                onFailure: reportFailure(template.id)
+            });
+        },
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
             add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run });
         },
-        defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] }) {
+        defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] }) {
+            if ('fields' in settings) {
+                add('extensionSchemas', { id, fields: settings.fields });
+
+                return;
+            }
+
             assertLazy(settings, `defineExtensionSettings ${id}`);
             add('extensionSettings', { id, component: surfaceOf(extension, settings) as ComponentType, keywords: settings.keywords ?? [] });
         },
-        defineAction(action: { id: string; title: string; icon?: string; slots?: PublicSlots; run: (context: never) => void | Promise<void> }) {
+        defineAction(action: {
+            id: string;
+            title: string;
+            icon?: string;
+            shortcut?: string;
+            slots?: PublicSlots;
+            run: (context: never) => void | Promise<void>;
+        }) {
+            if (action.shortcut !== undefined) {
+                assertShortcut(action.shortcut);
+            }
+
             const entry: SlotEntry = {
                 id: `${id}/${action.id}`,
                 kind: 'action',
                 title: action.title,
                 ...(action.icon === undefined ? {} : { icon: iconOf(action.icon, extension) }),
+                ...(action.shortcut === undefined ? {} : { shortcut: action.shortcut }),
                 slots: slotsOf(action.slots ?? {}),
                 run: action.run as (context: object) => void | Promise<void>,
                 onFailure: reportFailure(action.id)
@@ -592,6 +664,25 @@ export function clientApiFor(extension: LoadedExtension) {
         useSelection() {
             return useCanvas((state) => state.selection).map(nodeInfoOf);
         },
+        useSetting<Value>(key: string): Value {
+            const extensionNow = useExtension();
+            const fields = useContributions((state) => state.extensionSchemas.find((schema) => schema.id === extensionNow.manifest.id)?.fields);
+            const initial = fields?.find((field) => field.key === key)?.default;
+
+            return useExtensionStorage(settingKey(extensionNow.manifest.id, key), initial as Value);
+        },
+        useMachine() {
+            return { id: useFocusedMachine().endpointId };
+        },
+        useTheme() {
+            return { side: useUiTheme((state) => state.resolved) };
+        },
+        useChat(chatId: string) {
+            const endpointId = useEndpointId();
+            const info = useChats((state) => state.byKey[endpointKey(endpointId, chatId)]?.info);
+
+            return info === undefined ? null : { id: chatId, status: info.status, provider: info.provider };
+        },
         useNode(nodeId: string) {
             useCanvas((state) => state.nodes[nodeId]);
 
@@ -642,8 +733,16 @@ export function clientApiFor(extension: LoadedExtension) {
             busy<Result>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Result | Promise<Result>) {
                 return trackRun({ actionId: null, title: work.title, nodeIds: (work.nodes ?? []).map((node) => node.id) }, run);
             },
-            notify(text: string, options?: { tone?: 'neutral' | 'error' }) {
-                useToasts.getState().show({ kind: options?.tone === 'error' ? 'error' : 'success', title: text });
+            notify(text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run: () => void } }) {
+                useToasts.getState().show({
+                    kind: options?.tone === 'error' ? 'error' : 'success',
+                    title: text,
+                    ...(options?.action === undefined ? {} : { action: { label: options.action.title, run: options.action.run } })
+                });
+            },
+            pickFolder: (initial?: string) => desktop()?.pickFolder?.(initial) ?? Promise.resolve(null),
+            openSettings() {
+                useUi.getState().setSettings({ open: true, section: 'extensions' });
             },
             confirm: async ({ title, body, danger }: { title: string; body: string; danger?: boolean }) =>
                 (await askHost({ title, body, ...(danger === undefined ? {} : { danger }) })) !== null,
@@ -734,6 +833,21 @@ export function clientApiFor(extension: LoadedExtension) {
                 return activeTransport.request('git.log', { cwd: options?.repository ?? inProject('.'), limit: options?.limit ?? 30 });
             }
         },
+        database: {
+            async connections() {
+                requiresPermission(extension, 'database.read');
+
+                return ((await databaseConnections.ready()) ?? []).map((connection: { id: string; name: string }) => ({
+                    id: connection.id,
+                    name: connection.name
+                }));
+            },
+            query(connection: string, sql: string) {
+                requiresPermission(extension, 'database.read');
+
+                return activeTransport.request('extension.databaseQuery', { projectId: useProject.getState().current?.projectId ?? '', connection, sql });
+            }
+        },
         chats: {
             list: () => {
                 requiresPermission(extension, 'chats.read');
@@ -794,6 +908,51 @@ export function clientApiFor(extension: LoadedExtension) {
                     })
                     .then(({ text }) => ({ text }));
             },
+            async *stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncGenerator<{ text: string }> {
+                requiresPermission(extension, 'agents.run');
+
+                const runId = crypto.randomUUID();
+                const pieces: string[] = [];
+                let wake = (): void => undefined;
+                let done = false;
+                const stop = activeTransport.on('extension.agentChunk', (chunk) => {
+                    if (chunk.runId === runId) {
+                        pieces.push(chunk.text);
+                        wake();
+                    }
+                });
+                const finished = activeTransport
+                    .request('extension.agentStream', {
+                        runId,
+                        prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
+                        ...(options.provider === undefined ? {} : { provider: options.provider }),
+                        projectId: useProject.getState().current?.projectId ?? ''
+                    })
+                    .finally(() => {
+                        done = true;
+                        wake();
+                    });
+
+                options.signal?.addEventListener('abort', () => void activeTransport.request('extension.agentStop', { runId }).catch(() => undefined));
+
+                try {
+                    while (!done || pieces.length > 0) {
+                        const text = pieces.shift();
+
+                        if (text !== undefined) {
+                            yield { text };
+                        } else if (!done) {
+                            await new Promise<void>((resolve) => {
+                                wake = resolve;
+                            });
+                        }
+                    }
+
+                    await finished;
+                } finally {
+                    stop();
+                }
+            },
             // A chat a person can see, follow and stop, as if they had opened it themselves.
             async start(options: { prompt?: string; provider?: AgentKind; title?: string; near?: { id: string }[] }) {
                 requiresPermission(extension, 'agents.start');
@@ -817,7 +976,7 @@ export function clientApiFor(extension: LoadedExtension) {
             }
         },
         canvas: {
-            createNote(note: { title?: string; text: string; near?: { id: string }[] }) {
+            createNote(note: { title?: string; text: string; near?: { id: string }[]; color?: NodeAccent }) {
                 requiresPermission(extension, 'canvas.write');
 
                 const nodeId = focusedCanvas()
@@ -826,6 +985,10 @@ export function clientApiFor(extension: LoadedExtension) {
 
                 if (nodeId !== null) {
                     focusedCanvas().getState().updateNode(nodeId, { body: note.text });
+
+                    if (note.color !== undefined) {
+                        focusedCanvas().getState().setNodeColor(nodeId, note.color);
+                    }
                 }
 
                 return nodeId === null ? null : { id: nodeId };
@@ -878,6 +1041,51 @@ export function clientApiFor(extension: LoadedExtension) {
                 requiresPermission(extension, 'canvas.write');
                 canvasOfNode(node.id)?.getState().updateNode(node.id, { body: text });
             },
+            arrange(nodes: { id: string }[], layout: 'row' | 'column' | 'grid') {
+                requiresPermission(extension, 'canvas.write');
+
+                const store = focusedCanvas().getState();
+                const placed = nodes.flatMap((node) => {
+                    const current = store.nodes[node.id];
+
+                    return current === undefined ? [] : [current];
+                });
+                const first = placed[0];
+
+                if (first === undefined) {
+                    return;
+                }
+
+                const columns = layout === 'row' ? placed.length : layout === 'column' ? 1 : Math.ceil(Math.sqrt(placed.length));
+                const width = Math.max(...placed.map((node) => node.w));
+                const height = Math.max(...placed.map((node) => node.h));
+
+                placed.forEach((node, index) => {
+                    store.resizeNode(node.id, {
+                        x: first.x + (index % columns) * (width + ARRANGE_GAP),
+                        y: first.y + Math.floor(index / columns) * (height + ARRANGE_GAP),
+                        w: node.w,
+                        h: node.h
+                    });
+                });
+            },
+            // A person confirms, as anywhere a node goes away.
+            async remove(nodes: { id: string }[]) {
+                requiresPermission(extension, 'canvas.write');
+
+                const asked = await askHost({ title: `Remove ${nodes.length} nodes?`, body: `${extension.manifest.name} asks to remove them.`, danger: true });
+
+                if (asked === null) {
+                    return false;
+                }
+
+                const store = focusedCanvas().getState();
+
+                store.select(nodes.map((node) => node.id));
+                store.deleteSelected();
+
+                return true;
+            },
             group(nodes: { id: string }[]) {
                 requiresPermission(extension, 'canvas.write');
 
@@ -913,28 +1121,4 @@ export function clientApiFor(extension: LoadedExtension) {
             }
         }
     };
-}
-
-const storageListeners = new Set<() => void>();
-
-function writeExtensionStorage(key: string, value: unknown): void {
-    storedJson(key, z.unknown()).write(value);
-
-    for (const listener of storageListeners) {
-        listener();
-    }
-}
-
-function subscribeStorage(listener: () => void): () => void {
-    storageListeners.add(listener);
-
-    return () => {
-        storageListeners.delete(listener);
-    };
-}
-
-function useExtensionStorage<Value>(key: string, initial: Value): Value {
-    const stored = useSyncExternalStore(subscribeStorage, () => storedText(key).read());
-
-    return stored === null ? initial : (JSON.parse(stored) as Value);
 }

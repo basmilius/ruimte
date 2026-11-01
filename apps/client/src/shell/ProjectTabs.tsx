@@ -1,3 +1,4 @@
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useEffect, useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, Pin, PinOff } from 'lucide-react';
@@ -215,6 +216,7 @@ export function ProjectTabs({ dirty }: { readonly dirty: boolean }) {
                                     </Menu.Item>
                                 </>
                             )}
+                        <SlotMenuItems place="projectMenu" context={{}} />
                     </ContextMenu.Popup>
                 </ContextMenu.Root>
             </Tabs.Root>

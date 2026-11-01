@@ -6,6 +6,7 @@ import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
+import { SchemaSettings } from '@/extensions/SchemaSettings';
 import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { readDisabled } from '@/extensions/internal';
 import { useContributions } from '@/extensions/registry';
@@ -256,6 +257,7 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                 )}
             </SettingsSection>
             <PermissionsSection permissions={manifest.permissions} />
+            {entry.enabled && <SchemaSettings id={id} />}
             {settings !== undefined && entry.enabled && createElement(settings.component)}
         </div>
     );

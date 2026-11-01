@@ -1,6 +1,7 @@
 import { EXTENSION_ICON_PATH, type ExtensionInfo } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
+import { wantsLoading, watchActivation } from '@/extensions/activation';
 import { refreshExtensionTheme } from '@/extensions/themes';
 import { create } from 'zustand';
 
@@ -14,6 +15,7 @@ export const useInstalledExtensions = create<ExtensionsState>(() => ({ installed
 
 const loaded = new Map<string, string>();
 let safeMode = false;
+let stopActivation: (() => void) | null = null;
 
 /* `ruimte --safe-mode` sets this on the window's address, so a person can always get back into an app an extension hangs. */
 function inSafeMode(): boolean {
@@ -54,7 +56,11 @@ export async function syncExtensions(): Promise<void> {
 
     await refreshExtensionTheme(installed);
 
-    const wanted = installed.filter((entry) => entry.enabled && entry.hasClient);
+    const wanted = installed.filter((entry) => entry.enabled && entry.hasClient && (loaded.has(entry.manifest.id) || wantsLoading(entry.manifest.activation)));
+
+    if (installed.some((entry) => entry.manifest.activation !== undefined) && stopActivation === null) {
+        stopActivation = watchActivation(() => void syncExtensions());
+    }
 
     if (wanted.length === 0 && loaded.size === 0) {
         return;
