@@ -35,8 +35,24 @@ export function minimapFits(viewport: Viewport): boolean {
 
 /* What the map draws, groups first so a frame lies under the nodes in it. A collapsed group's members are not drawn on the canvas either. */
 export function mappedNodes(nodes: Readonly<Record<string, CanvasNode>>, hidden: ReadonlySet<string>): CanvasNode[] {
-    const shown = Object.values(nodes).filter((node) => !hidden.has(node.id));
-    return [...shown.filter((node) => node.kind === 'group'), ...shown.filter((node) => node.kind !== 'group')];
+    const groups: CanvasNode[] = [];
+    const others: CanvasNode[] = [];
+
+    for (const id in nodes) {
+        if (!Object.hasOwn(nodes, id)) {
+            continue;
+        }
+
+        const node = nodes[id]!;
+
+        if (hidden.has(node.id)) {
+            continue;
+        }
+
+        (node.kind === 'group' ? groups : others).push(node);
+    }
+
+    return groups.concat(others);
 }
 
 /* The cards drawn beside the nodes the map draws (`derivedCards`): where each stands and the node it belongs to. */

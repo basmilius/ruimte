@@ -30,14 +30,28 @@ function containsCenter(group: GapNode, node: GapNode): boolean {
 }
 
 export function parentGroupOf(node: GapNode, nodes: readonly GapNode[]): string | null {
-    return (
-        nodes
-            .filter(
-                (group) =>
-                    group.kind === 'group' && group.id !== node.id && !group.collapsed && group.w * group.h > node.w * node.h && containsCenter(group, node)
-            )
-            .sort((first, second) => first.w * first.h - second.w * second.h || first.id.localeCompare(second.id))[0]?.id ?? null
-    );
+    let parent: GapNode | null = null;
+    let area = Infinity;
+    const ownArea = node.w * node.h;
+
+    for (const group of nodes) {
+        if (group.kind !== 'group' || group.id === node.id || group.collapsed) {
+            continue;
+        }
+
+        const candidateArea = group.w * group.h;
+
+        if (!(candidateArea > ownArea) || !containsCenter(group, node)) {
+            continue;
+        }
+
+        if (parent === null || (candidateArea - area || group.id.localeCompare(parent.id)) < 0) {
+            parent = group;
+            area = candidateArea;
+        }
+    }
+
+    return parent?.id ?? null;
 }
 
 function gapBetween(first: GapNode, second: GapNode, axis: 'x' | 'y'): Omit<EditableGap, 'shared' | 'moves' | 'minimum' | 'fixed'> | null {
@@ -106,19 +120,57 @@ function shareEqualGaps(gaps: EditableGap[], nodes: readonly GapNode[]): void {
 
 function unselectedGaps(nodes: readonly GapNode[]): EditableGap[] {
     const levels = new Map<string | null, GapNode[]>();
+    const groups = nodes.filter((node) => node.kind === 'group');
+
     for (const node of nodes) {
-        const parent = parentGroupOf(node, nodes);
+        const parent = parentGroupOf(node, groups);
         const siblings = levels.get(parent) ?? [];
         siblings.push(node);
         levels.set(parent, siblings);
     }
     const result: EditableGap[] = [];
     for (const siblings of levels.values()) {
+        let byId: Map<string, GapNode> | null = null;
         for (const axis of ['x', 'y'] as const) {
+            const size = axis === 'x' ? 'w' : 'h';
+            const ordered = siblings.length < 32 ? null : siblings.toSorted((first, second) => first[axis] - second[axis]);
+            const candidates = ordered ?? siblings;
+            // An earlier wide node can still cross the gap; prefix maxima keep it in the blocker range.
+            let furthest = -Infinity;
+            const ends = ordered?.map((node) => {
+                furthest = Math.max(furthest, node[axis] + node[size]);
+
+                return furthest;
+            });
+
             for (const first of siblings) {
+                const start = first[axis] + first[size];
+                let begin = 0;
+
+                if (ordered !== null) {
+                    let end = ordered.length;
+
+                    while (begin < end) {
+                        const middle = begin + Math.floor((end - begin) / 2);
+
+                        if (ordered[middle]![axis] < start) {
+                            begin = middle + 1;
+                        } else {
+                            end = middle;
+                        }
+                    }
+                }
+
                 let nearest: ReturnType<typeof gapBetween> = null;
-                for (const second of siblings) {
-                    if (first.id === second.id) {
+
+                for (let index = begin; index < candidates.length; index++) {
+                    const second = candidates[index]!;
+
+                    if (ordered !== null && nearest !== null && second[axis] > nearest.end) {
+                        break;
+                    }
+
+                    if (first.id === second.id || second[axis] < start || (nearest !== null && second[axis] > nearest.end)) {
                         continue;
                     }
                     const gap = gapBetween(first, second, axis);
@@ -130,24 +182,64 @@ function unselectedGaps(nodes: readonly GapNode[]): EditableGap[] {
                     continue;
                 }
                 const gap = nearest;
-                const second = siblings.find((node) => node.id === gap.to)!;
-                const size = axis === 'x' ? 'w' : 'h';
+                if (siblings.length >= 32 && byId === null) {
+                    byId = new Map();
+
+                    for (const node of siblings) {
+                        // Match find's first occurrence if ids are repeated.
+                        if (!byId.has(node.id)) {
+                            byId.set(node.id, node);
+                        }
+                    }
+                }
+
+                const second = (byId === null ? siblings.find((node) => node.id === gap.to) : byId.get(gap.to))!;
                 const cross = axis === 'x' ? 'y' : 'x';
                 const crossSize = axis === 'x' ? 'h' : 'w';
                 const low = Math.max(first[cross], second[cross]);
                 const high = Math.min(first[cross] + first[crossSize], second[cross] + second[crossSize]);
-                if (
-                    siblings.some(
-                        (node) =>
-                            node.id !== first.id &&
-                            node.id !== second.id &&
-                            node[axis] < gap.end &&
-                            node[axis] + node[size] > gap.start &&
-                            overlapSpan(node[cross], node[crossSize], low, high - low) !== null
-                    )
-                ) {
+                let blockerStart = 0;
+
+                if (ends !== undefined) {
+                    let end = ends.length;
+
+                    while (blockerStart < end) {
+                        const middle = blockerStart + Math.floor((end - blockerStart) / 2);
+
+                        if (ends[middle]! <= gap.start) {
+                            blockerStart = middle + 1;
+                        } else {
+                            end = middle;
+                        }
+                    }
+                }
+
+                let blocked = false;
+
+                for (let index = blockerStart; index < candidates.length; index++) {
+                    const node = candidates[index]!;
+
+                    if (ordered !== null && node[axis] >= gap.end) {
+                        break;
+                    }
+
+                    if (
+                        node.id !== first.id &&
+                        node.id !== second.id &&
+                        node[axis] < gap.end &&
+                        node[axis] + node[size] > gap.start &&
+                        overlapSpan(node[cross], node[crossSize], low, high - low) !== null
+                    ) {
+                        blocked = true;
+
+                        break;
+                    }
+                }
+
+                if (blocked) {
                     continue;
                 }
+
                 result.push({
                     ...gap,
                     shared: false,
@@ -163,11 +255,26 @@ function unselectedGaps(nodes: readonly GapNode[]): EditableGap[] {
 }
 
 export function editableGaps(nodes: readonly GapNode[], selection: readonly string[]): EditableGap[] {
-    const lines = new Set(nodes.filter((node) => node.kind === 'line').map((node) => node.id));
-    const withGrid = (gaps: EditableGap[]): EditableGap[] =>
-        gaps.map((gap) =>
-            [gap.from, gap.to, ...gap.fixed, ...gap.moves.map((move) => move.id)].some((id) => lines.has(id)) ? { ...gap, gridOnly: true } : gap
+    const lines = new Set<string>();
+
+    for (const node of nodes) {
+        if (node.kind === 'line') {
+            lines.add(node.id);
+        }
+    }
+
+    const withGrid = (gaps: EditableGap[]): EditableGap[] => {
+        if (lines.size === 0) {
+            return gaps;
+        }
+
+        return gaps.map((gap) =>
+            lines.has(gap.from) || lines.has(gap.to) || gap.fixed.some((id) => lines.has(id)) || gap.moves.some((move) => lines.has(move.id))
+                ? { ...gap, gridOnly: true }
+                : gap
         );
+    };
+
     if (selection.length === 0) {
         return withGrid(unselectedGaps(nodes));
     }
@@ -175,26 +282,34 @@ export function editableGaps(nodes: readonly GapNode[], selection: readonly stri
     if (picked.length === 0 || picked.length !== selection.length) {
         return [];
     }
-    const parent = parentGroupOf(picked[0]!, nodes);
-    if (picked.some((node) => parentGroupOf(node, nodes) !== parent)) {
+    const groups = nodes.filter((node) => node.kind === 'group');
+    const parent = parentGroupOf(picked[0]!, groups);
+    if (picked.some((node) => parentGroupOf(node, groups) !== parent)) {
         return [];
     }
-    const siblings = nodes.filter((node) => parentGroupOf(node, nodes) === parent);
+    const siblings = nodes.filter((node) => parentGroupOf(node, groups) === parent);
     const result: EditableGap[] = [];
     for (const axis of ['x', 'y'] as const) {
         if (picked.length === 1) {
             const active = picked[0]!;
             for (const direction of [-1, 1]) {
-                const neighbors = siblings
-                    .flatMap((other) => {
-                        if (other.id === active.id) {
-                            return [];
-                        }
-                        const gap = direction > 0 ? gapBetween(active, other, axis) : gapBetween(other, active, axis);
-                        return gap === null ? [] : [gap];
-                    })
-                    .sort((first, second) => first.end - first.start - (second.end - second.start) || first.id.localeCompare(second.id));
-                const gap = neighbors[0];
+                let gap: ReturnType<typeof gapBetween> = null;
+
+                for (const other of siblings) {
+                    if (other.id === active.id) {
+                        continue;
+                    }
+
+                    const candidate = direction > 0 ? gapBetween(active, other, axis) : gapBetween(other, active, axis);
+
+                    if (
+                        candidate !== null &&
+                        (gap === null || (candidate.end - candidate.start - (gap.end - gap.start) || candidate.id.localeCompare(gap.id)) < 0)
+                    ) {
+                        gap = candidate;
+                    }
+                }
+
                 if (gap) {
                     result.push({
                         ...gap,

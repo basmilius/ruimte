@@ -20,14 +20,74 @@ export interface EdgeLine {
 
 /* The lines to draw for a set of edges, in the order the edges came, a pair folded into one. */
 export function edgeLines(edges: readonly Edge[]): EdgeLine[] {
+    if (edges.length === 0) {
+        return [];
+    }
+
+    // Index setup costs more than a short scan on small canvases.
+    if (edges.length >= 64) {
+        return indexedEdgeLines(edges);
+    }
+
     const lines: EdgeLine[] = [];
     const paired = new Set<string>();
+
+    for (const edge of edges) {
+        if (paired.has(edge.id)) {
+            continue;
+        }
+
+        paired.add(edge.id);
+        const back = edges.find((other) => !paired.has(other.id) && other.from === edge.to && other.to === edge.from && other.from !== other.to) ?? null;
+
+        if (back !== null) {
+            paired.add(back.id);
+        }
+
+        lines.push({ edge, back, ids: back === null ? [edge.id] : [edge.id, back.id], label: edge.label ?? back?.label });
+    }
+
+    return lines;
+}
+
+function indexedEdgeLines(edges: readonly Edge[]): EdgeLine[] {
+    const lines: EdgeLine[] = [];
+    const paired = new Set<string>();
+    const directions = new Map<string, Map<string, { entries: Edge[]; next: number }>>();
+
+    for (const edge of edges) {
+        if (edge.from === edge.to) {
+            continue;
+        }
+
+        let destinations = directions.get(edge.from);
+
+        if (destinations === undefined) {
+            destinations = new Map();
+            directions.set(edge.from, destinations);
+        }
+
+        const queue = destinations.get(edge.to);
+
+        if (queue === undefined) {
+            destinations.set(edge.to, { entries: [edge], next: 0 });
+        } else {
+            queue.entries.push(edge);
+        }
+    }
+
     for (const edge of edges) {
         if (paired.has(edge.id)) {
             continue;
         }
         paired.add(edge.id);
-        const back = edges.find((other) => !paired.has(other.id) && other.from === edge.to && other.to === edge.from && other.from !== other.to) ?? null;
+        const reverse = directions.get(edge.to)?.get(edge.from);
+
+        while (reverse !== undefined && reverse.next < reverse.entries.length && paired.has(reverse.entries[reverse.next]!.id)) {
+            reverse.next++;
+        }
+
+        const back = reverse?.entries[reverse.next++] ?? null;
         if (back) {
             paired.add(back.id);
         }

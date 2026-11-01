@@ -37,12 +37,17 @@ await withProjectFixture({ projects: 1, views }, async (fixture) => {
                 }
                 const before = (await view.cdp('Performance.getMetrics')) as { metrics: { name: string; value: number }[] };
                 await view.evaluate(
-                    `(()=>{window.benchKeys=[];window.benchEvents=[];window.benchLongTasks=[];window.benchPhaseStart=performance.now();window.dispatchEvent(new KeyboardEvent('keydown',{key:${JSON.stringify(shortcut)},code:${JSON.stringify(shortcut === 'k' ? 'KeyK' : 'Comma')},metaKey:true,bubbles:true}));return window.benchFrames();})()`
+                    `(()=>{window.benchKeys=[];window.benchEvents=[];window.benchLongTasks=[];window.benchOpenedAt=null;
+                    const opening=new MutationObserver(()=>{if(document.querySelector(${JSON.stringify(name === 'palette' ? '[role=dialog] input[role=combobox]' : '[role=dialog] input[placeholder="Search settings"]')})){window.benchOpenedAt=performance.now();opening.disconnect()}});
+                    opening.observe(document.documentElement,{childList:true,subtree:true});
+                    window.benchPhaseStart=performance.now();window.dispatchEvent(new KeyboardEvent('keydown',{key:${JSON.stringify(shortcut)},code:${JSON.stringify(shortcut === 'k' ? 'KeyK' : 'Comma')},metaKey:true,bubbles:true}));return window.benchFrames();})()`
                 );
                 await view.evaluate(
                     `new Promise((resolve,reject)=>{const deadline=performance.now()+10000;const next=()=>{const input=document.querySelector(${JSON.stringify(name === 'palette' ? '[role=dialog] input[role=combobox]' : '[role=dialog] input[placeholder="Search settings"]')});if(input){input.focus();resolve()}else if(performance.now()>deadline)reject(new Error('Missing ${name} input'));else requestAnimationFrame(next)};next()})`
                 );
-                const opened = await view.evaluate<number>('performance.now()-window.benchPhaseStart');
+                const opened = await view.evaluate<number>(
+                    `(()=>{if(window.benchOpenedAt===null)throw new Error('Missing dialog opening timestamp');return window.benchOpenedAt-window.benchPhaseStart})()`
+                );
                 for (const [keyIndex, key] of [...query!, ...Array.from(query!, () => 'Backspace')].entries()) {
                     await view.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key, ...(key === 'Backspace' ? { windowsVirtualKeyCode: 8 } : { text: key }) });
                     await view.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key });

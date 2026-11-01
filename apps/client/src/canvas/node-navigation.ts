@@ -9,47 +9,63 @@ export interface NavigationNode extends Rect {
 export function neighboringNode(nodes: readonly NavigationNode[], from: string | null, direction: NodeDirection, viewportCenter: Point): string | null {
     const origin = nodes.find((node) => node.id === from);
     if (!origin) {
-        return (
-            [...nodes].sort((first, second) => {
-                const a = centerOf(first);
-                const b = centerOf(second);
-                return (
-                    Math.hypot(a.x - viewportCenter.x, a.y - viewportCenter.y) - Math.hypot(b.x - viewportCenter.x, b.y - viewportCenter.y) ||
-                    first.id.localeCompare(second.id)
-                );
-            })[0]?.id ?? null
-        );
+        let nearest: NavigationNode | null = null;
+        let distance = Infinity;
+
+        for (const node of nodes) {
+            const center = centerOf(node);
+            const candidateDistance = Math.hypot(center.x - viewportCenter.x, center.y - viewportCenter.y);
+
+            if (nearest === null || (candidateDistance - distance || node.id.localeCompare(nearest.id)) < 0) {
+                nearest = node;
+                distance = candidateDistance;
+            }
+        }
+
+        return nearest?.id ?? null;
     }
+
     const horizontal = direction === 'left' || direction === 'right';
     const axis = horizontal ? 'x' : 'y';
     const cross = horizontal ? 'y' : 'x';
     const crossSize = horizontal ? 'h' : 'w';
     const sign = direction === 'left' || direction === 'up' ? -1 : 1;
     const start = centerOf(origin);
-    const candidates = nodes.flatMap((node) => {
+    let nearest: { id: string; band: number; distance: number; deviation: number } | null = null;
+
+    for (const node of nodes) {
         if (node.id === origin.id) {
-            return [];
+            continue;
         }
+
         const target = centerOf(node);
         const forward = (target[axis] - start[axis]) * sign;
+
         if (forward <= 0) {
-            return [];
+            continue;
         }
+
         const overlap = Math.min(node[cross] + node[crossSize], origin[cross] + origin[crossSize]) - Math.max(node[cross], origin[cross]);
-        return [
-            {
-                id: node.id,
-                band: overlap > 0 ? 0 : 1,
-                distance: Math.hypot(target.x - start.x, target.y - start.y),
-                deviation: Math.abs(target[cross] - start[cross]) / forward
-            }
-        ];
-    });
-    candidates.sort(
-        (first, second) =>
-            first.band - second.band || first.distance - second.distance || first.deviation - second.deviation || first.id.localeCompare(second.id)
-    );
-    return candidates[0]?.id ?? null;
+
+        const candidate = {
+            id: node.id,
+            band: overlap > 0 ? 0 : 1,
+            distance: Math.hypot(target.x - start.x, target.y - start.y),
+            deviation: Math.abs(target[cross] - start[cross]) / forward
+        };
+
+        if (
+            nearest === null ||
+            (candidate.band - nearest.band ||
+                candidate.distance - nearest.distance ||
+                candidate.deviation - nearest.deviation ||
+                candidate.id.localeCompare(nearest.id)) < 0
+        ) {
+            nearest = candidate;
+        }
+    }
+
+    return nearest?.id ?? null;
 }
 
 export function cameraToReveal(rect: Rect, camera: Camera, viewport: { w: number; h: number }, margin = 24): Camera {

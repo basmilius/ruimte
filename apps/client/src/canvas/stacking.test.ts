@@ -11,6 +11,24 @@ describe('stackingOrder', () => {
         expect(stackingOrder(nodes, ['a', 'b'])).toEqual({ a: 1, b: 2 });
     });
 
+    test('keeps duplicate positions, missing nodes and prototype-like ids as own keys', () => {
+        const nodes = Object.fromEntries([
+            ['__proto__', at('group', 0, 0)],
+            ['a', at('note', 0, 0)]
+        ]);
+        for (const extra of [[], Array.from({ length: 256 }, (_, index) => `extra-${index}`)]) {
+            const stacking = stackingOrder(nodes, ['a', '__proto__', 'missing', 'a', ...extra]);
+
+            expect(Object.hasOwn(stacking, '__proto__')).toBe(true);
+            expect(Object.getPrototypeOf(stacking)).toBe(Object.prototype);
+            expect(Object.entries(stacking).slice(0, 3)).toEqual([
+                ['__proto__', 1],
+                ['a', 4],
+                ['missing', 3]
+            ]);
+        }
+    });
+
     test('puts every group under every other node', () => {
         const nodes = { a: at('terminal', 0, 0), g: at('group', 0, 0) };
         expect(stackingOrder(nodes, ['a', 'g'])).toEqual({ g: 1, a: 2 });

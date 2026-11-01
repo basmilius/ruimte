@@ -35,6 +35,24 @@ describe('edgeLines', () => {
         const lines = edgeLines([edge('e1', 'a', 'a'), edge('e2', 'a', 'a')]);
         expect(lines.map((line) => line.ids)).toEqual([['e1'], ['e2']]);
     });
+
+    test('pairs repeated directions greedily without conflating endpoint strings or duplicate ids', () => {
+        const input = [
+            edge('first', 'a:b', 'c'),
+            edge('second', 'a:b', 'c'),
+            edge('back', 'c', 'a:b'),
+            edge('duplicate', 'a', 'b:c'),
+            edge('duplicate', 'x', 'y'),
+            edge('last', 'b:c', 'a')
+        ];
+
+        for (const padding of [[], Array.from({ length: 64 }, (_, index) => edge(`self-${index}`, 'self', 'self'))]) {
+            const lines = edgeLines([...input, ...padding]);
+            expect(lines.slice(0, 3).map((line) => line.ids)).toEqual([['first', 'back'], ['second'], ['duplicate', 'last']]);
+            expect(lines[0]!.edge).toBe(input[0]!);
+            expect(lines[0]!.back).toBe(input[2]!);
+        }
+    });
 });
 
 describe('what an edge aims at', () => {
