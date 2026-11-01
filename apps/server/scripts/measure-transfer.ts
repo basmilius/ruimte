@@ -365,11 +365,11 @@ function sendText(channel: RTCDataChannel, frame: string): void {
 }
 
 async function measure(): Promise<void> {
-    const { values } = parseArgs({ options: { mib: { type: 'string', default: '16' }, repeats: { type: 'string', default: '1' } } });
+    const { values } = parseArgs({ options: { mib: { type: 'string', default: '16' }, repeats: { type: 'string', default: '1' }, link: { type: 'string', default: '' } } });
     const bytes = Number(values.mib) * 1024 * 1024;
     const results: Result[] = [];
 
-    for (const link of LINKS) {
+    for (const link of LINKS.filter((each) => each.name.includes(values.link))) {
         for (const mode of MODES) {
             for (let i = 0; i < Number(values.repeats); i++) {
                 const result = await run(link, mode, bytes);
