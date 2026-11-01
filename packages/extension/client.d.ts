@@ -35,6 +35,10 @@ export function defineNode<Data = unknown>(
     } & Surface
 ): void;
 export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;
+/** Opens every file with these extensions in your component, with Ruimte's own view one click away. */
+export function defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo & { text: string | null } }> }): void;
+/** Draws a fenced block of this language in a chat and in markdown, on this client. Elsewhere it stays code. */
+export function defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }): void;
 export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;
 export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] }): void;
 

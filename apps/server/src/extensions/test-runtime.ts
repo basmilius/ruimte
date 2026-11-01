@@ -28,6 +28,8 @@ const client: Record<string, unknown> = {
     defineNode: recording('node'),
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
+    defineFileViewer: recording('fileViewer'),
+    defineMarkdownBlock: recording('markdownBlock'),
     defineExtensionSettings: recording('settings'),
     defineAction: (definition: unknown) => {
         defined.push({ kind: 'action', definition });
@@ -76,7 +78,9 @@ const server: Record<string, unknown> = {
     onEvent: () => () => undefined,
     emit: () => undefined,
     defineNodeContext: () => undefined,
-    defineAgentTool: () => undefined,
+    schedule: () => undefined,
+    agents: { run: async () => ({ text: '' }) },
+    chats: { list: async () => [], send: async () => undefined },
     storage: { get: async () => undefined, set: async () => undefined },
     secrets: { get: async () => undefined, set: async () => undefined },
     log: { info: () => undefined, error: () => undefined }

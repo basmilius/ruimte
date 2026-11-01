@@ -1,7 +1,17 @@
 /// <reference types="bun" />
-import { defineNodeContext, defineServer, emit, log, onEvent, secrets, storage } from '@ruimte/extension/server';
+import { agents, chats, defineNodeContext, defineServer, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
 
 let eventsSeen = 0;
+let ticks = 0;
+
+schedule({
+    id: 'tick',
+    every: '10s',
+    run: () => {
+        ticks += 1;
+        emit('tick', { ticks });
+    }
+});
 
 onEvent('chat.status', () => {
     eventsSeen += 1;
@@ -29,6 +39,20 @@ const api = defineServer({
         emit('tick', { at: 'server' });
 
         return 'emitted';
+    },
+    async ticks() {
+        return ticks;
+    },
+    async ask(prompt: string) {
+        return agents.run({ prompt });
+    },
+    async chatCount() {
+        return (await chats.list()).length;
+    },
+    async poke(chatId: string) {
+        await chats.send(chatId, 'Say hello from poc-server.');
+
+        return 'sent';
     },
     async eventsSeen() {
         return eventsSeen;

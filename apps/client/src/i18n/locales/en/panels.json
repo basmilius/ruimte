@@ -328,6 +328,9 @@
                 "skipped_one": "Skipped {{count}} entry. Ruimte never extracts links, or files that would land outside the folder or in .git.",
                 "skipped_other": "Skipped {{count}} entries. Ruimte never extracts links, or files that would land outside the folder or in .git."
             }
+        },
+        "viewer": {
+            "original": "Original"
         }
     },
     "files": {

@@ -136,6 +136,19 @@ export interface SlotEntry {
     onFailure?: (text: string) => void;
 }
 
+export interface MarkdownBlockContribution {
+    id: string;
+    language: string;
+    component: ComponentType<{ source: string }>;
+}
+
+export interface FileViewerContribution {
+    id: string;
+    title: string;
+    extensions: readonly string[];
+    component: ComponentType<{ file: { path: string; name: string; extension: string; text: string | null } }>;
+}
+
 export interface ExtensionSettingsContribution {
     id: string;
     component: ComponentType;
@@ -155,6 +168,8 @@ export interface Contributions {
     settingsSections: readonly SettingsSectionContribution[];
     canvasLayers: readonly CanvasLayerContribution[];
     slotEntries: readonly SlotEntry[];
+    fileViewers: readonly FileViewerContribution[];
+    markdownBlocks: readonly MarkdownBlockContribution[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
@@ -173,6 +188,8 @@ export const useContributions = create<Contributions>(() => ({
     settingsSections: [],
     canvasLayers: [],
     slotEntries: [],
+    fileViewers: [],
+    markdownBlocks: [],
     viewAccessories: [],
     sharedStorage: [],
     sidebarCards: [],

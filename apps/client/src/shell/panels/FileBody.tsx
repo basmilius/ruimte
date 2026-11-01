@@ -1,3 +1,4 @@
+import { ExtensionFileViewer } from '@/extensions/ExtensionFileViewer';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileWarning } from 'lucide-react';
@@ -56,7 +57,11 @@ export function FileBody({ path, name, on, tabKey, nodeId }: { path: string; nam
                 </WithoutRenderer>
             );
         }
-        return renderFile({ path, name, read: state.read });
+        return (
+            <ExtensionFileViewer path={path} name={name} text={state.read.kind === 'text' ? state.read.text : null}>
+                {renderFile({ path, name, read: state.read })}
+            </ExtensionFileViewer>
+        );
     };
 
     return <FileActionsContext.Provider value={actions}>{body()}</FileActionsContext.Provider>;

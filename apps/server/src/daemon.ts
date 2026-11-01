@@ -22,7 +22,8 @@ import { wireCanvasHost } from './wiring/canvas-host.ts';
 import { repairChatMoves } from './wiring/chat-move.ts';
 import { ExtensionHost } from './extensions/extension-host.ts';
 import { ExtensionStore } from './extensions/store.ts';
-import { registerExtensionHandlers } from './handlers/extensions.ts';
+import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
+import type { ExtensionAsks } from './extensions/extension-host.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
 import { createComputer, wireDevices } from './wiring/devices.ts';
@@ -61,7 +62,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         contextUrl: `http://127.0.0.1:${config.port}${CONTEXT_PATH}`
     };
     const { home } = config;
-    const extensions = new ExtensionHost({ store: new ExtensionStore(home) });
+    let extensionAsks: ExtensionAsks = {};
+    const extensions = new ExtensionHost({ store: new ExtensionStore(home), asks: () => extensionAsks });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
     const codexProbe = probeCodexNoDaemon();
@@ -219,6 +221,11 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
 
         return Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text ?? '').join('\n') : typeof parts === 'string' ? parts : null;
     });
+    extensionAsks = {
+        'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),
+        'chats.send': (chatId: string, text: string) => chats.send(chatId, text),
+        'chats.list': async () => chats.list()
+    };
     registerExtensionHandlers(dispatcher, extensions, {
         viewsOf: (projectId) => projects.store.index.viewsOf(projectId),
         folderOf: (projectId) => projects.store.index.folderOf(projectId),

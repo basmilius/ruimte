@@ -75,6 +75,32 @@ describe('the proof-of-concept extensions', () => {
         expect(await host.nodeContext('poc.server', 'fact', { fact: 'The answer is 42' })).toEqual([{ text: 'The answer is 42' }]);
     });
 
+    test('poc-server asks the machine, within its permissions and at most 20 sends an hour', async () => {
+        const home = join(root, 'asks');
+        const sent: string[] = [];
+        const host = new ExtensionHost({
+            store: new ExtensionStore(home),
+            asks: () => ({
+                'agents.run': async () => ({ text: 'answered' }),
+                'chats.list': async () => [{}, {}],
+                'chats.send': async (chatId: string) => void sent.push(chatId)
+            })
+        });
+
+        hosts.push(host);
+        await host.install(await packOf('server'));
+
+        expect(await host.call('poc.server', 'ask', ['hi'])).toEqual({ text: 'answered' });
+        expect(await host.call('poc.server', 'chatCount', [])).toBe(2);
+
+        for (let count = 0; count < 20; count++) {
+            await host.call('poc.server', 'poke', ['chat']);
+        }
+
+        await expect(host.call('poc.server', 'poke', ['chat'])).rejects.toThrow('has to wait');
+        expect(sent).toHaveLength(20);
+    });
+
     test('poc-broken fails at load, and stays off after three tries', async () => {
         const { host } = hostIn('broken');
 

@@ -32,8 +32,17 @@ interface Running {
     stopping: boolean;
 }
 
+/* What `server/` may ask the daemon, each behind the permission of the same name. */
+export type ExtensionAsks = Readonly<Record<string, (...args: never[]) => Promise<unknown>>>;
+
+// A loop of an extension and a chat costs the person's plan, so a chat stops listening well before that hurts.
+const MAX_SENDS_PER_HOUR = 20;
+const HOUR_MS = 3_600_000;
+
 export interface ExtensionHostOptions {
     store: ExtensionStore;
+    asks?: () => ExtensionAsks;
+    now?: () => number;
     spawnProcess?: typeof spawn;
 }
 
@@ -49,6 +58,7 @@ export class ExtensionHost {
     private readonly running = new Map<string, Running>();
     private readonly crashes = new Map<string, number>();
     private readonly sinks = new ClientSinks();
+    private readonly sends = new Map<string, number[]>();
 
     private readonly options: ExtensionHostOptions;
 
@@ -271,7 +281,12 @@ export class ExtensionHost {
         const runtime = bunRuntime();
         const child = spawnProcess(runtime.command, [...runtime.args, runtimePath, entry, dataFolder], {
             cwd: dataFolder,
-            env: { ...process.env, ...runtime.env, RUIMTE_EXTENSION_ID: id },
+            env: {
+                ...process.env,
+                ...runtime.env,
+                RUIMTE_EXTENSION_ID: id,
+                RUIMTE_EXTENSION_PERMISSIONS: JSON.stringify(Object.keys(extension.manifest.permissions ?? {}))
+            },
             stdio: 'pipe'
         }) as ChildProcessWithoutNullStreams;
         const { promise: ready, resolve: resolveReady, reject: rejectReady } = Promise.withResolvers<void>();
@@ -333,7 +348,14 @@ export class ExtensionHost {
             return;
         }
 
-        if (message.type === 'ready') {
+        if (message.type === 'ask' && message.id !== undefined) {
+            const asked = message as unknown as { id: number; method: string; args: unknown[] };
+
+            void this.answerAsk(id, asked.method, asked.args).then(
+                (result) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, result: result ?? null })}\n`),
+                (e: unknown) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, error: errorText(e) })}\n`)
+            );
+        } else if (message.type === 'ready') {
             this.crashes.delete(id);
             markReady();
         } else if (message.type === 'subscribe' && message.name !== undefined) {
@@ -354,6 +376,39 @@ export class ExtensionHost {
                 }
             }
         }
+    }
+
+    private async answerAsk(id: string, method: string, args: unknown[]): Promise<unknown> {
+        const extension = await this.options.store.get(id);
+        const permission = method === 'chats.list' ? 'chats.read' : method;
+
+        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, permission)) {
+            throw new Error(`${id} did not ask for the permission ${permission} in its manifest`);
+        }
+
+        const run = this.options.asks?.()[method];
+
+        if (run === undefined) {
+            throw new Error(`This machine does not answer ${method}`);
+        }
+
+        if (method === 'chats.send') {
+            this.countSend(id, String(args[0]));
+        }
+
+        return (run as (...values: unknown[]) => Promise<unknown>)(...args);
+    }
+
+    private countSend(id: string, chatId: string): void {
+        const now = (this.options.now ?? Date.now)();
+        const key = `${id}:${chatId}`;
+        const recent = (this.sends.get(key) ?? []).filter((at) => now - at < HOUR_MS);
+
+        if (recent.length >= MAX_SENDS_PER_HOUR) {
+            throw new Error(`${id} sent ${chatId} ${MAX_SENDS_PER_HOUR} messages this hour and has to wait`);
+        }
+
+        this.sends.set(key, [...recent, now]);
     }
 
     private send(running: Running, message: object, label: string): Promise<unknown> {

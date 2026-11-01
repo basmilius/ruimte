@@ -18,7 +18,6 @@ if (entry === undefined || dataFolder === undefined) {
 const protocol = process.stdout;
 const listeners = new Map<string, Set<Listener>>();
 const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
-const tools = new Map<string, { description: string; run: (input: unknown) => unknown }>();
 
 function send(message: object): void {
     protocol.write(`${JSON.stringify(message)}\n`);
@@ -51,7 +50,53 @@ function keyValues(name: string) {
     };
 }
 
+const permissions = new Set<string>(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? '[]') as string[]);
+const asked = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+let nextAsk = 1;
+
+/* The daemon holds what this process does not: the person's agents and chats. It checks the permission too. */
+function ask(method: string, args: unknown[]): Promise<unknown> {
+    const id = nextAsk;
+
+    nextAsk += 1;
+
+    return new Promise((resolve, reject) => {
+        asked.set(id, { resolve, reject });
+        send({ type: 'ask', id, method, args });
+    });
+}
+
+const UNITS: Readonly<Record<string, number>> = { s: 1000, m: 60_000, h: 3_600_000 };
+const MIN_EVERY_MS = 10_000;
+
+function everyMs(every: string): number {
+    const match = /^(\d+)([smh])$/.exec(every);
+    const ms = match === null ? 0 : Number(match[1]) * (UNITS[match[2] as string] as number);
+
+    if (ms < MIN_EVERY_MS) {
+        throw new Error(`schedule takes something like 30s, 5m or 1h, of at least 10 seconds, not ${every}`);
+    }
+
+    return ms;
+}
+
 const server = {
+    agents: {
+        run: (options: { prompt: string; context?: string[]; provider?: string }) => ask('agents.run', [options])
+    },
+    chats: {
+        send: (chatId: string, text: string) => ask('chats.send', [chatId, text]),
+        list: () => ask('chats.list', [])
+    },
+    schedule(task: { id: string; every: string; run(): unknown }): void {
+        if (!permissions.has('clock')) {
+            throw new Error('schedule needs the permission clock in manifest.json');
+        }
+
+        setInterval(() => {
+            void (async () => task.run())().catch((e: unknown) => console.error(`${task.id} failed:`, e));
+        }, everyMs(task.every));
+    },
     defineServer: <Api extends Handlers>(api: Api): Api => api,
     onEvent(name: string, listener: Listener): () => void {
         const group = listeners.get(name) ?? new Set();
@@ -69,10 +114,6 @@ const server = {
     },
     defineNodeContext(nodeId: string, read: (node: { data: unknown }) => unknown): void {
         nodeContexts.set(nodeId, read);
-    },
-    defineAgentTool(tool: { id: string; description: string; run: (input: unknown) => unknown }): void {
-        tools.set(tool.id, tool);
-        send({ type: 'tool', id: tool.id, description: tool.description });
     },
     storage: keyValues('storage.json'),
     secrets: keyValues('secrets.json'),
@@ -119,7 +160,18 @@ process.stdin.on('data', (chunk: string) => {
             data: unknown;
         };
 
-        if (message.type === 'call') {
+        if (message.type === 'answer') {
+            const waiting = asked.get(message.id);
+            const { result, error } = message as { result?: unknown; error?: string };
+
+            asked.delete(message.id);
+
+            if (error === undefined) {
+                waiting?.resolve(result);
+            } else {
+                waiting?.reject(new Error(error));
+            }
+        } else if (message.type === 'call') {
             void answer(message.id, () => {
                 const handler = handlers[message.method];
 
@@ -135,8 +187,6 @@ process.stdin.on('data', (chunk: string) => {
             }
         } else if (message.type === 'nodeContext') {
             void answer(message.id, () => nodeContexts.get(message.node)?.({ data: message.data }) ?? []);
-        } else if (message.type === 'tool') {
-            void answer(message.id, () => tools.get(message.method)?.run(message.payload));
         }
     }
 });

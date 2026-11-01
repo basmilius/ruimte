@@ -28,6 +28,25 @@ function nodesIn(views: readonly ProjectView[], nodeIds: readonly string[] | und
     return canvases.flatMap((view) => view.nodes.filter((node) => wanted.has(node.id)));
 }
 
+/* One process that reads a prompt and prints an answer, for `agents.run` in `server/`, with no project behind it. */
+export async function runExtensionPrompt(
+    providers: ProviderRegistry,
+    options: { prompt: string; context?: string[]; provider?: string }
+): Promise<{ text: string }> {
+    const provider = await oneShotProvider(
+        providers,
+        options.provider === undefined ? {} : { provider: options.provider as ChatProvider['kind'] },
+        'answer an extension'
+    );
+    const result = await runOneShot(provider, homedir(), [options.prompt, ...(options.context ?? [])].join('\n\n'), AGENT_RUN_TIMEOUT_MS, {});
+
+    if (result.code !== 0) {
+        throw new Error(`${provider.name} did not answer: ${result.stderr.trim()}`);
+    }
+
+    return { text: result.stdout };
+}
+
 /* A list and a call are for any client let in. What changes what runs on this machine takes its owner. */
 export function registerExtensionHandlers(dispatcher: Dispatcher, host: ExtensionHost, deps: ExtensionHandlerDeps): void {
     dispatcher.register('extension.contextRead', async (payload) => {

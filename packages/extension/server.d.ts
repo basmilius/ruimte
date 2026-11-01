@@ -10,6 +10,21 @@ export function emit(name: string, payload: unknown): void;
 /** What an agent reads of a node along a line, also with no client open. */
 export function defineNodeContext<Data>(nodeType: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void;
 
+/** Needs the permission `clock`. Runs on this process's own clock: `every` is like 30s, 5m or 1h, of at least 10 seconds. */
+export function schedule(task: { id: string; every: string; run(): void | Promise<void> }): void;
+
+export const agents: {
+    /** Needs `agents.run`. */
+    run(options: { prompt: string; context?: string[]; provider?: string }): Promise<{ text: string }>;
+};
+
+export const chats: {
+    /** Needs `chats.read`. */
+    list(): Promise<unknown[]>;
+    /** Needs `chats.send`. Wakes the chat. At most 20 messages per chat per hour. */
+    send(chatId: string, text: string): Promise<void>;
+};
+
 export const storage: {
     get<Value>(key: string): Promise<Value | undefined>;
     set(key: string, value: unknown): Promise<void>;

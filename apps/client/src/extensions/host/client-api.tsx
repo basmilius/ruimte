@@ -357,6 +357,23 @@ export function clientApiFor(extension: LoadedExtension) {
             assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
             add('canvasLayers', { id: `${id}/${overlay.id}`, place: 'screen', component: surfaceOf(extension, overlay) as ComponentType<{ z: number }> });
         },
+        defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: object }> }) {
+            assertLazy(viewer, `defineFileViewer ${viewer.id}`);
+            add('fileViewers', {
+                id: `${id}/${viewer.id}`,
+                title: viewer.title,
+                extensions: viewer.extensions.map((name) => name.toLowerCase()),
+                component: surfaceOf(extension, viewer) as ComponentType<{ file: { path: string; name: string; extension: string; text: string | null } }>
+            });
+        },
+        defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }) {
+            assertLazy(block, `defineMarkdownBlock ${block.language}`);
+            add('markdownBlocks', {
+                id: `${id}/${block.language}`,
+                language: block.language,
+                component: surfaceOf(extension, block) as ComponentType<{ source: string }>
+            });
+        },
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
             add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run });
         },

@@ -328,6 +328,9 @@
                 "skipped_one": "{{count}} item overgeslagen. Ruimte pakt nooit links uit, en ook geen bestanden die buiten de map of in .git terechtkomen.",
                 "skipped_other": "{{count}} items overgeslagen. Ruimte pakt nooit links uit, en ook geen bestanden die buiten de map of in .git terechtkomen."
             }
+        },
+        "viewer": {
+            "original": "Origineel"
         }
     },
     "files": {

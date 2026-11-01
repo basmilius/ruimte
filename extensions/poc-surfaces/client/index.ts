@@ -4,6 +4,8 @@ import {
     defineCommand,
     defineExtensionSettings,
     defineNode,
+    defineFileViewer,
+    defineMarkdownBlock,
     defineMenu,
     defineWidget,
     definePanel,
@@ -95,4 +97,6 @@ for (const word of OTHER_SLOTS) {
 }
 
 defineWidget({ id: 'tag', slots: { nodeHeader: ({ node }) => node.kind === 'note' }, component: () => import('./HeaderTag') });
+defineFileViewer({ id: 'csv', title: 'Table', extensions: ['csv'], component: () => import('./CsvTable') });
+defineMarkdownBlock({ language: 'poc', component: () => import('./PocFence') });
 console.info('poc-surfaces loaded');
