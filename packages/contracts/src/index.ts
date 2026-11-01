@@ -60,6 +60,7 @@ import {
     RegistryCatalogResultSchema
 } from './agent-registry.ts';
 import { AgentServerPayloadSchema, AgentServerResultSchema } from './agent-server.ts';
+import { EXTENSION_EVENT_SCHEMAS, EXTENSION_REQUEST_SCHEMAS } from './extension.ts';
 import { AGENT_EVENT_SCHEMAS, AGENT_REQUEST_SCHEMAS, EmptySchema } from '@adecore/agent-contracts/protocol';
 import {
     ChatExternalPayloadSchema,
@@ -562,6 +563,7 @@ export * from './terminal-prepare.ts';
 export * from './text.ts';
 export * from './usage.ts';
 export * from './visual.ts';
+export * from './extension.ts';
 export * from './voice.ts';
 export * from './voice-languages.ts';
 export * from './wait-ask.ts';
@@ -579,6 +581,7 @@ export {
 // Every request the wire knows, with the schema of what goes in and what comes back.
 // Both apps derive their types from this table, so a shape can only change here.
 export const REQUEST_SCHEMAS = {
+    ...EXTENSION_REQUEST_SCHEMAS,
     'server.hello': { payload: ServerHelloPayloadSchema, result: ServerHelloResultSchema },
     'server.ping': { payload: ServerPingPayloadSchema, result: ServerPingResultSchema },
     'session.create': { payload: SessionCreatePayloadSchema, result: SessionInfoSchema },
@@ -972,6 +975,7 @@ export type RequestMap = {
 };
 
 export const EVENT_SCHEMAS = {
+    ...EXTENSION_EVENT_SCHEMAS,
     'push.attention': PushAttentionEntrySchema,
     // Every snooze the machine holds, to every client, whenever one is set, cleared or ends.
     'snooze.changed': SnoozeListSchema,

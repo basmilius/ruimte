@@ -26,9 +26,9 @@ const COLOR_LITERALS = new Set([
     'ui/EclipseStars.tsx',
     'ui/galaxy/Galaxy.tsx',
     'measure/scene.ts',
-    'pets/sprite-colors.ts',
-    'pets/catalog.ts',
-    'pets/sketches.ts'
+    'extensions/pets/sprite-colors.ts',
+    'extensions/pets/catalog.ts',
+    'extensions/pets/sketches.ts'
 ]);
 // A hex color, or a color function given numbers rather than a token, anywhere in a string.
 const COLOR_LITERAL = /(?:^|[\s[(:,'"])#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z])|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(\s*[\d.]/i;

@@ -35,6 +35,23 @@ function directivesString(directives: CspDirectives): string {
         .join('; ');
 }
 
+/* Where a window reads the files of an extension. */
+export const EXTENSION_FILES_PATH = '/__extensions/';
+
+/* The policy of a frame an extension draws: its own files, and only the hosts its manifest names. */
+export function extensionFrameCsp(origin: string, hosts: readonly string[]): string {
+    return directivesString({
+        'default-src': ["'none'"],
+        'script-src': [origin, "'unsafe-inline'", "'wasm-unsafe-eval'"],
+        'style-src': [origin, "'unsafe-inline'"],
+        'img-src': [origin, 'data:', 'blob:'],
+        'font-src': [origin, 'data:'],
+        'media-src': [origin, 'data:', 'blob:'],
+        'connect-src': [origin, ...hosts],
+        'worker-src': ['blob:']
+    });
+}
+
 /* The policy as a header value. An override replaces a directive whole, and a name that is not in the table is added to the end. */
 export function cspString(overrides: CspDirectives = {}): string {
     return directivesString({ ...CLIENT_CSP_DIRECTIVES, ...overrides });

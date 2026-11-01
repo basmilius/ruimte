@@ -20,6 +20,9 @@ import { registerTemplateHandlers } from './handlers/template.ts';
 import { wireAgentWork } from './wiring/agent-work.ts';
 import { wireCanvasHost } from './wiring/canvas-host.ts';
 import { repairChatMoves } from './wiring/chat-move.ts';
+import { ExtensionHost } from './extensions/extension-host.ts';
+import { ExtensionStore } from './extensions/store.ts';
+import { registerExtensionHandlers } from './handlers/extensions.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
 import { createComputer, wireDevices } from './wiring/devices.ts';
@@ -58,6 +61,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         contextUrl: `http://127.0.0.1:${config.port}${CONTEXT_PATH}`
     };
     const { home } = config;
+    const extensions = new ExtensionHost({ store: new ExtensionStore(home) });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
     const codexProbe = probeCodexNoDaemon();
@@ -166,6 +170,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     sessions.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
     chats.observe((event) => launches.secrets.observe(event));
+    chats.observe((event) => extensions.forwardEvent(event.event, event.payload));
+    sessions.observe((event) => extensions.forwardEvent(event.event, event.payload));
     chats.observe((event) => agents.proposals.observe(event));
     chats.observe((event) => launches.afterSettle.chatEvent(event));
     chats.observe((event) => {
@@ -208,6 +214,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         sqlAnalysis: databases.sqlAnalysis,
         agents
     });
+    registerExtensionHandlers(dispatcher, extensions);
     registerEditorHandlers(dispatcher, {
         machine,
         providers,
@@ -226,6 +233,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const network = wireNetwork(config, compiled, machine, dispatcher, { clients: () => clients });
 
     noteMoment('daemon.boot', 'wired');
+    void extensions.startAutostarted();
     // Only from here on has the identity everything its announce describes; a CLI found sooner took the daemon down.
     providers.integrations.onChanged(() => identity.announce());
     void providers.integrations.refreshInstalled();
@@ -233,6 +241,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
 
     const clients = wireClients(machine.handshake, {
         dispatcher,
+        extensions,
         presence: push,
         snoozes: work.snoozes,
         prWatches: work.prWatches,
@@ -301,6 +310,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     }).catch((e) => console.error('Removing old hidden agent chats failed:', errorText(e)));
     const server = serveDaemon({
         requestStop: () => void shutdown('a request'),
+        extensions,
         runtime,
         machine,
         stores,
@@ -372,6 +382,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             }
         };
         await step('Stopping maintenance', () => maintenance.stop());
+        await step('Stopping extensions', async () => extensions.stopAll());
         // Before the sessions go: a Voice session left open at OpenAI keeps costing.
         await step('Ending Voice sessions', async () => voice.sessions.stopAll());
         await step('Settling tasks', () => work.tasks.coordinator.settled());

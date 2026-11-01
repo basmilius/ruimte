@@ -3,6 +3,7 @@ import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
+import { ClientExtensions } from './main/extensions';
 import { installBrowserRoutes } from './browser-routes';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
@@ -99,6 +100,8 @@ const scheme = createDesktopAppScheme(clientRoot(), devUrl ?? undefined);
 const daemonUrl = `http://127.0.0.1:${port}`;
 
 protocol.registerSchemesAsPrivileged([scheme.privileged]);
+
+const clientExtensions = new ClientExtensions(join(app.getPath('userData'), 'extensions'));
 
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
 
@@ -598,6 +601,12 @@ ipc.handle('browser:capture', async (_event, id: number) => {
     return guest ? (await guest.capturePage()).toPNG() : null;
 });
 
+ipc.handle('extensions:list', () => clientExtensions.list());
+ipc.handle('extensions:install', (_event, pack: Uint8Array) => clientExtensions.install(pack));
+ipc.handle('extensions:remove', (_event, id: string) => clientExtensions.remove(id));
+ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => clientExtensions.setEnabled(id, enabled));
+ipc.handle('extensions:link', (_event, folder: string, revision: number) => clientExtensions.link(folder, revision));
+ipc.handle('extensions:unlink', (_event, id: string) => clientExtensions.unlink(id));
 const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 const login = installLogin(ipc);
@@ -868,7 +877,7 @@ if (!app.requestSingleInstanceLock()) {
 
     void app.whenReady().then(async () => {
         menu.setStatic();
-        protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request));
+        protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request, clientExtensions));
         sealAppSession();
         sealPreviewSession();
         browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));

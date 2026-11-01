@@ -67,6 +67,7 @@ export interface ConnectionServices {
     diagrams: Subscribable;
     launchStore?: Subscribable;
     launches?: Subscribable;
+    extensions?: Subscribable;
     /* The database sessions a client opened, which close when it goes. */
     databases?: { release(clientId: string): Promise<void> };
     databaseConnections?: Subscribable;
@@ -133,6 +134,7 @@ function subscribeClient(services: ConnectionServices, client: ClientConnection,
         services.diagrams,
         services.launchStore,
         services.launches,
+        services.extensions,
         services.databaseConnections,
         services.databaseAgents,
         services.language,

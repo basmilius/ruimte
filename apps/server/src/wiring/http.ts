@@ -1,4 +1,5 @@
 import type { Server } from 'bun';
+import { errorText } from '../error-text.ts';
 import {
     MACHINE_HEALTH_PATH,
     MACHINE_NOTIFY_PATH,
@@ -30,6 +31,7 @@ import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
 import { handleContextRequest } from '../context/context-route.ts';
 import { CONTEXT_PATH } from '../context/context-store.ts';
+import type { ExtensionHost } from '../extensions/extension-host.ts';
 import type { ClientAccess } from '../dispatcher.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
@@ -53,6 +55,8 @@ import type { VoiceBundle } from './voice.ts';
 
 // What `ruimte login` has the machine sign; local secret only, like the work.
 const MACHINE_LINK_PATH = '/machine/link-request';
+const EXTENSION_LINK_PATH = '/extensions/link';
+const EXTENSION_UNLINK_PATH = '/extensions/unlink';
 const MACHINE_REGISTRATION_PATH = '/machine/registration';
 // What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app.
 const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
@@ -60,6 +64,8 @@ const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 const VoiceKeyRequestSchema = z.object({ key: z.string() });
+const ExtensionLinkSchema = z.object({ folder: z.string().min(1) });
+const ExtensionUnlinkSchema = z.object({ id: z.string().min(1) });
 
 // Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
 const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
@@ -83,12 +89,14 @@ interface HttpInput {
     canvasHost: CanvasHost;
     voice: VoiceBundle;
     artifacts: ArtifactsBundle;
+    extensions: ExtensionHost;
 }
 
 /* Every HTTP route and the upgrade, before the cross-origin headers the desktop app's page needs. */
 function daemonRoutes(input: HttpInput): Route<SocketData>[] {
     const { runtime, machine, stores, agents, projects, devices, processes, power, network, clients, canvasHost, voice } = input;
     const { config } = runtime;
+    const { extensions } = input;
     const { identity, auth, handshake, access, machineHome } = machine;
     const { sessions, chats, context } = agents;
     const { brokerSwitch } = network;
@@ -192,6 +200,33 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     },
                     reach
                 } satisfies MachineStatus);
+            }
+        },
+        {
+            exact: [EXTENSION_LINK_PATH, EXTENSION_UNLINK_PATH],
+            // `ruimte extension dev` on the local secret, which is the only way a folder starts running here.
+            handle: async ({ request, url, remote }) => {
+                const refused = await refuseUnlessOwner(request, remote, 'POST');
+                if (refused) {
+                    return refused;
+                }
+                const body: unknown = await request.json().catch(() => null);
+                try {
+                    if (url.pathname === EXTENSION_LINK_PATH) {
+                        const parsed = ExtensionLinkSchema.safeParse(body);
+                        return parsed.success
+                            ? Response.json({ id: await extensions.linked(parsed.data.folder) })
+                            : new Response('Expected a folder', { status: 400 });
+                    }
+                    const parsed = ExtensionUnlinkSchema.safeParse(body);
+                    if (!parsed.success) {
+                        return new Response('Expected an id', { status: 400 });
+                    }
+                    await extensions.unlink(parsed.data.id);
+                    return Response.json({});
+                } catch (e) {
+                    return Response.json({ message: errorText(e) }, { status: 422 });
+                }
             }
         },
         {

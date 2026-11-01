@@ -1,5 +1,5 @@
 import type { NavigationVerdict } from '@adecore/shell';
-import { VISUAL_HOST_PATH } from '@ruimte/csp';
+import { EXTENSION_FILES_PATH, VISUAL_HOST_PATH } from '@ruimte/csp';
 
 /*
  * What the shell lets a page do, as pure decisions, so `main.ts` only wires them to Electron's events.
@@ -37,6 +37,11 @@ function isVisualHost(url: string, isAppUrl: (url: string) => boolean): boolean 
     return isAppUrl(url) && URL.parse(url)?.pathname === VISUAL_HOST_PATH;
 }
 
+/* A page an extension draws in a frame of its own, from its own files. */
+function isExtensionFrame(url: string, isAppUrl: (url: string) => boolean): boolean {
+    return isAppUrl(url) && (URL.parse(url)?.pathname ?? '').startsWith(EXTENSION_FILES_PATH);
+}
+
 /* Whether the frame sits inside a visual: below a frame of the app's page that shows the sandbox host page. */
 function insideVisual(frame: FrameInPage | null, isAppUrl: (url: string) => boolean): boolean {
     const chain: FrameInPage[] = [];
@@ -49,8 +54,8 @@ function insideVisual(frame: FrameInPage | null, isAppUrl: (url: string) => bool
 
 /*
  * Where a frame inside the app's page may go, which is never the system browser: nobody chose that
- * link. A frame of the app's page shows a visual's sandbox host page or an empty document and nothing
- * else, so an agent's page cannot take its frame anywhere, the app included. A frame inside an agent's
+ * link. A frame of the app's page shows a visual's sandbox host page, an extension's frame or an empty
+ * document and nothing else, so an agent's page cannot take its frame anywhere, the app included. A frame inside an agent's
  * page loads the web as the host page's policy lets it, and never the app. A frame Electron no longer
  * knows gets the stricter rule.
  */
@@ -61,7 +66,7 @@ export function appSubframeNavigation(url: string, frame: FrameInPage | null, is
     if (insideVisual(frame, isAppUrl)) {
         return /^(https|data|blob):/i.test(url) && !isAppUrl(url) ? 'allow' : 'refuse';
     }
-    return isVisualHost(url, isAppUrl) ? 'allow' : 'refuse';
+    return isVisualHost(url, isAppUrl) || isExtensionFrame(url, isAppUrl) ? 'allow' : 'refuse';
 }
 
 // TODO(Bas): media, location and notifications through a prompt per origin in the client, once that exists.

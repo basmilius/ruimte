@@ -64,6 +64,14 @@ const quickLookBridge = {
 
 /* What the client may ask the shell for, checked against the type the client reads it through. */
 const bridge = {
+    extensions: {
+        list: () => ipcRenderer.invoke('extensions:list'),
+        install: (pack: Uint8Array) => ipcRenderer.invoke('extensions:install', pack),
+        remove: (id: string) => ipcRenderer.invoke('extensions:remove', id),
+        setEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('extensions:set-enabled', id, enabled),
+        link: (folder: string, revision: number) => ipcRenderer.invoke('extensions:link', folder, revision),
+        unlink: (id: string) => ipcRenderer.invoke('extensions:unlink', id)
+    },
     platform: process.platform,
     bindBrowserRoute: (binding: BrowserRouteBinding): Promise<boolean> => ipcRenderer.invoke('browser:bind-route', binding),
     onBrowserRouteBlocked: subscribe<[event: BrowserRouteBlocked]>('browser:route-blocked'),
