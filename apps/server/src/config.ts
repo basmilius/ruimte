@@ -4,7 +4,7 @@ import { parseArgs } from 'node:util';
 import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
 import { RUIMTE_SESSION_VARIABLES } from '@adecore/agents/host';
 
-const COMMANDS = ['serve', 'login', 'logout', 'status', 'context', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
+const COMMANDS = ['serve', 'login', 'logout', 'status', 'context', 'extension', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
 type Command = (typeof COMMANDS)[number];
 
 function isCommand(value: string): value is Command {
@@ -115,7 +115,7 @@ function parseBrokerOverride(noBroker: boolean, value: string | undefined): Brok
 
 export function parseServerArgs(argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig {
     // Everything after `context` belongs to the agent's CLI (`node note --text ...`), whose flags the daemon parses, not this.
-    const cli = argv[0] === 'context';
+    const cli = argv[0] === 'context' || argv[0] === 'extension';
     const { values, positionals } = parseArgs({
         args: cli ? argv.slice(0, 1) : argv,
         options: {

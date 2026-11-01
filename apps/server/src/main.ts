@@ -109,6 +109,11 @@ if (config.command === 'notify') {
     );
 }
 
+if (config.command === 'extension') {
+    const { runExtension } = await import('./cli/extension.ts');
+    process.exit(await runExtension(config.args, { port: config.port, home: config.home }));
+}
+
 if (config.command === 'context') {
     const { runContext } = await import('./cli/context.ts');
     process.exit(await runContext(config.args));
