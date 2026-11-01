@@ -312,7 +312,7 @@ export function AppWindow({
     return (
         <div className="flex h-full w-full overflow-hidden rounded-[12px] border border-white/10 bg-[color-mix(in_srgb,var(--surface)_70%,var(--surface-sunken))] text-[14px] text-text shadow-[0_40px_120px_-20px_rgb(0_0_0/0.8),0_0_0_1px_rgb(0_0_0/0.6)]">
             {/* `.ade-workspace-sheet`: a rounded right edge, its hairline and its shadow over the rail. */}
-            <div className="relative z-1 flex min-w-0 grow overflow-hidden rounded-tr-[12px] bg-surface shadow-[0_0_0_1px_var(--border),0_0_14px_rgb(0_0_0/0.3)]">
+            <div className="relative z-1 flex min-w-0 grow overflow-hidden rounded-r-[12px] bg-surface shadow-[0_0_0_1px_var(--border),0_0_14px_rgb(0_0_0/0.3)]">
                 {sidebar}
                 <main className="flex min-w-0 grow flex-col">
                     {toolbar}
