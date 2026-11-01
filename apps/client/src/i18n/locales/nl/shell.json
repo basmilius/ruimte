@@ -1373,7 +1373,11 @@
             "waiting": "Wacht"
         },
         "backToList": "Terug naar lijst",
-        "underMinute": "< {{minute}} min",        "openToAnswer": "Open de sessie om te antwoorden.",
+        "underMinute": "< {{minute}} min",
+        "openToAnswer": "Open de sessie om te antwoorden.",
         "previewUnavailable": "Dit verzoek kan hier niet worden getoond."
+    },
+    "extensions": {
+        "failed": "Deze extensie kon niet worden getoond"
     }
 }

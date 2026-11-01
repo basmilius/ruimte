@@ -111,15 +111,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('views.canvas.renderDistance'),
     row('views.drawing.snap'),
     row('views.browser.swipe', canSwipeBetweenPages),
-    row('pets.enabled'),
-    row('pets.place'),
-    row('pets.inViews'),
-    row('pets.subagents'),
-    row('pets.visitor'),
-    row('pets.beam'),
-    row('pets.sprite'),
-    row('pets.custom'),
-    row('pets.agents'),
     row('files.files.openFiles'),
     row('files.files.hidden'),
     row('files.git.layout'),
@@ -394,6 +385,14 @@ export function shortcutSearchRows(groups: readonly ShortcutGroup[], apple: bool
  * Every pane and row whose words hold each word of the query, panes first, in the order of the
  * navigation. `built` holds the rows whose words exist only at run time, like the shortcuts.
  */
+function sectionEnglish(id: SettingsSectionId): string {
+    const contributed = useContributions.getState().settingsSections.find((section) => section.id === id);
+
+    return contributed === undefined
+        ? `${englishWords(`settings:sections.${id}.label`)} ${englishWords(`settings:sections.${id}.description`)}`
+        : `${englishWords(contributed.labelKey)} ${englishWords(contributed.descriptionKey)}`;
+}
+
 export function searchSettings(query: string, built: readonly SearchResult[] = []): SearchResult[] {
     const terms = fold(query).split(/\s+/).filter(Boolean);
     if (terms.length === 0) {
@@ -407,9 +406,7 @@ export function searchSettings(query: string, built: readonly SearchResult[] = [
             id: null,
             label: sectionLabel(meta.id),
             description: sectionDescription(meta.id),
-            english:
-                contributed.find((section) => section.id === meta.id)?.english ??
-                `${englishWords(`settings:sections.${meta.id}.label`)} ${englishWords(`settings:sections.${meta.id}.description`)}`
+            english: sectionEnglish(meta.id)
         }))
         .filter((result) => matches(terms, result.label, result.description, result.english));
     const order = sections.map((meta) => meta.id);
@@ -417,9 +414,9 @@ export function searchSettings(query: string, built: readonly SearchResult[] = [
         (section.search ?? []).map((row) => ({
             section: section.id,
             id: row.id,
-            label: row.label(),
-            description: row.description(),
-            english: row.english
+            label: words(row.label),
+            description: words(row.description),
+            english: `${englishWords(row.label)} ${englishWords(row.description)}`
         }))
     );
     const indexed = SETTINGS_INDEX.filter((entry) => entry.available?.() ?? true).map((entry) => ({

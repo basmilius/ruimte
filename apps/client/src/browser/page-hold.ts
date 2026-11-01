@@ -1,7 +1,7 @@
 import type { BrowserDriveEvent, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
 import { pageSnapshots } from '@/browser/page-snapshots';
 import { browserRegistry, useBrowser, type BrowserState } from '@/browser/registry';
-import { notePageAsk } from '@/pets/page-asks';
+import { reportPageAsk } from '@/browser/page-asks';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { watchPool } from '@/transport/pool-watch';
 import type { Transport } from '@/transport/transport';
@@ -145,8 +145,7 @@ export function startPageHolds(): () => void {
             subscriptions: [
                 useBrowser.subscribe(report),
                 link.on('browser.drive', (payload) => {
-                    // Its agent's pet walks over to the page while the asks come (`canvas/pets/page-trip.ts`).
-                    notePageAsk(endpointKey(endpointId, payload.browserId), Date.now());
+                    reportPageAsk(endpointKey(endpointId, payload.browserId), Date.now());
                     void answer(endpointId, payload).then((result) => link.request('browser.driveResult', result).catch(() => undefined));
                 })
             ]

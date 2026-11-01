@@ -22,7 +22,7 @@
     "check": "bun run check:types && bun run check:generated && bun run lint && bun run format:check",
     "check:types": "bun check --no-script -p tsconfig.scripts.json && bun run --filter '*' typecheck",
     "check:generated": "bun run --cwd packages/contracts check:swift",
-    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts",
+    "lint": "oxlint --deny-warnings && oxlint --type-aware --deny-warnings -c apps/server/oxlint.promises.json apps/server/src && bun scripts/check-client-conventions.ts && bun scripts/check-test-clock.ts && bun scripts/check-built-ins.ts",
     "symbolicate:electron": "bun scripts/symbolicate-electron.ts",
     "test": "bun test --conditions=source --parallel --no-isolate --only-failures --timings=test-timings.json",
     "test:windows": "bun test --conditions=source --parallel=8 --no-isolate --only-failures",

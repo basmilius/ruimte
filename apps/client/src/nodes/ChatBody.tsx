@@ -29,11 +29,11 @@ import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/node
 import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
-import { ChatViewPetMount } from '@/pets/ViewPetMounts';
+import { ViewAccessories } from '@/extensions/ContributedSlots';
 
 /*
- * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view its
- * pet stands on the composer (`pet`), since no node frame is there to carry it. A chat node's workflows
+ * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view what a built-in
+ * adds stands on the composer (`accessories`), since no node frame is there to carry it. A chat node's workflows
  * stand beside it on the canvas (`workflowsBeside`), so its composer draws no pill for them.
  */
 export function ChatBody({
@@ -41,13 +41,13 @@ export function ChatBody({
     focused,
     onCanvas = false,
     workflowsBeside = false,
-    pet
+    accessories
 }: {
     id: string;
     focused: boolean;
     onCanvas?: boolean;
     workflowsBeside?: boolean;
-    pet?: { title: string | undefined };
+    accessories?: { title: string | undefined };
 }) {
     useMountCount('chat');
     const { t } = useTranslation('canvas');
@@ -169,11 +169,11 @@ export function ChatBody({
                         chatId={id}
                         composer={
                             composer &&
-                            (pet === undefined ? (
+                            (accessories === undefined ? (
                                 composer
                             ) : (
                                 <div className="relative">
-                                    <ChatViewPetMount id={id} title={pet.title} />
+                                    <ViewAccessories on="chat" id={id} title={accessories.title} />
                                     {composer}
                                 </div>
                             ))

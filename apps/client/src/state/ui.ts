@@ -13,7 +13,6 @@ export type CoreSettingsSectionId =
     | 'editor'
     | 'terminal'
     | 'views'
-    | 'pets'
     | 'files'
     | 'providers'
     | 'chats'

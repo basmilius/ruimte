@@ -9,7 +9,6 @@ import {
     MessagesSquare,
     Mic,
     Palette,
-    PawPrint,
     Server,
     Settings,
     SquareTerminal,
@@ -50,7 +49,6 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
         label: 'workspace',
         sections: [
             { id: 'views', icon: LayoutGrid },
-            { id: 'pets', icon: PawPrint },
             { id: 'editor', icon: CodeXml },
             { id: 'terminal', icon: SquareTerminal },
             { id: 'files', icon: Folder }
@@ -103,12 +101,24 @@ function contributedSection(id: SettingsSectionId): SettingsSectionContribution 
 
 /* Read when a section is drawn, never at module level. The translations are not in yet while this file loads. */
 export function sectionLabel(id: SettingsSectionId): string {
-    return contributedSection(id)?.label() ?? AGENTS_SECTIONS[id]?.label() ?? i18next.t(`settings:sections.${id}.label`);
+    const contributed = contributedSection(id);
+
+    if (contributed !== undefined) {
+        return i18next.t(contributed.labelKey);
+    }
+
+    return AGENTS_SECTIONS[id]?.label() ?? i18next.t(`settings:sections.${id}.label`);
 }
 
 /* One line under the pane title that says what the pane is about. */
 export function sectionDescription(id: SettingsSectionId): string {
-    return contributedSection(id)?.description() ?? AGENTS_SECTIONS[id]?.description() ?? i18next.t(`settings:sections.${id}.description`);
+    const contributed = contributedSection(id);
+
+    if (contributed !== undefined) {
+        return i18next.t(contributed.descriptionKey);
+    }
+
+    return AGENTS_SECTIONS[id]?.description() ?? i18next.t(`settings:sections.${id}.description`);
 }
 
 export function groupLabel(label: NonNullable<SettingsNavGroup['label']>): string {

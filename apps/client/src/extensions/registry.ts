@@ -15,10 +15,11 @@ export interface PanelContribution {
 }
 
 export interface SettingsSearchRow {
+    /* The `searchId` of the row it leads to. */
     id: string;
-    label: () => string;
-    description: () => string;
-    english: string;
+    /* Full i18n keys, namespace included, so a search also finds the English words. */
+    label: string;
+    description: string;
 }
 
 export interface SettingsSectionContribution {
@@ -27,24 +28,58 @@ export interface SettingsSectionContribution {
     group: 'workspace';
     // The core section it comes after, so a built-in stays where a person knows it.
     after: string;
-    label: () => string;
-    description: () => string;
-    english: string;
+    labelKey: string;
+    descriptionKey: string;
     component: ComponentType;
     search?: readonly SettingsSearchRow[];
+}
+
+export interface CanvasLayerProps {
+    z: number;
+}
+
+export interface CanvasLayerContribution {
+    id: string;
+    // On the canvas under the camera, or over it in the cell's overlay.
+    place: 'canvas' | 'screen';
+    component: ComponentType<CanvasLayerProps>;
+}
+
+export interface ViewAccessoryProps {
+    id: string;
+    title: string | undefined;
+    onPress?: () => void;
+}
+
+export interface ViewAccessoryContribution {
+    id: string;
+    on: 'chat' | 'terminal';
+    component: ComponentType<ViewAccessoryProps>;
+}
+
+export interface SharedStorageContribution {
+    id: string;
+    reload: () => void;
 }
 
 export interface Contributions {
     panels: readonly PanelContribution[];
     settingsSections: readonly SettingsSectionContribution[];
+    canvasLayers: readonly CanvasLayerContribution[];
+    viewAccessories: readonly ViewAccessoryContribution[];
+    sharedStorage: readonly SharedStorageContribution[];
 }
 
 type ContributionKind = keyof Contributions;
 type ContributionOf<Kind extends ContributionKind> = Contributions[Kind][number];
 
-const EMPTY: Contributions = { panels: [], settingsSections: [] };
-
-export const useContributions = create<Contributions>(() => EMPTY);
+export const useContributions = create<Contributions>(() => ({
+    panels: [],
+    settingsSections: [],
+    canvasLayers: [],
+    viewAccessories: [],
+    sharedStorage: []
+}));
 
 function idOf(item: { id: string } | { kind: string }): string {
     return 'id' in item ? item.id : item.kind;

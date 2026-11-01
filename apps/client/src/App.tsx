@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { desktop, machineMode } from '@/desktop/bridge';
 import { useProjectSwitch } from '@/project/open';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
+import '@/extensions/built-in';
 import { allSettingsSections } from '@/shell/settings/sections';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { StartScreen } from '@/shell/StartScreen';

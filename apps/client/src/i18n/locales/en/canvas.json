@@ -368,13 +368,6 @@
     "minimap": {
         "label": "Canvas map"
     },
-    "pets": {
-        "goTo": "Go to {{title}}",
-        "writeTo": "Write to {{title}}",
-        "typeIn": "Type in {{title}}",
-        "waiting": "{{title}} needs you",
-        "failed": "Could not show the pets"
-    },
     "missingProvider": {
         "notInstalled": "{{name}} is not installed on this machine.",
         "notOffered": "{{name}} is not available on this machine.",

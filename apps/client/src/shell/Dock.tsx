@@ -25,7 +25,7 @@ import { applyLayoutAction, createNodeAction, createTextAction, deleteLayoutActi
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { centerWorld } from '@/actions/action-reach';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
-import { PET_LEDGE_ATTRIBUTE } from '@/canvas/pets/attributes';
+import { OVERLAY_LEDGE_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import type { Point } from '@/canvas/math';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
@@ -88,7 +88,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         return null;
     }
     return (
-        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [PET_LEDGE_ATTRIBUTE]: '' }}>
+        <DockShell autoHide={dockAutoHide} onHiddenChange={onHiddenChange} {...{ [OVERLAY_LEDGE_ATTRIBUTE]: '' }}>
             <StatusSummary />
 
             <Menu.Root>

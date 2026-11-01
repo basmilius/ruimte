@@ -20,7 +20,7 @@ import { isDatabaseTab } from '@/state/files';
 import { cellAt, type CellAt } from '@/shell/split';
 import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
-import { TerminalViewPetMount } from '@/pets/ViewPetMounts';
+import { ViewAccessories } from '@/extensions/ContributedSlots';
 
 /* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
@@ -129,9 +129,10 @@ export function CellToolbar({
                     compactActions={compactToolbar}
                     separated={leads}
                     accessory={
-                        // A terminal's text takes every pixel of its body, so its pet stands in the bar, on the line over the text.
+                        // A terminal's text takes every pixel of its body, so what a built-in adds stands in the bar.
                         view.kind === 'terminal' && (
-                            <TerminalViewPetMount
+                            <ViewAccessories
+                                on="terminal"
                                 id={view.id}
                                 title={visibleTitle}
                                 onPress={() => {

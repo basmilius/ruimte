@@ -368,13 +368,6 @@
     "minimap": {
         "label": "Canvaskaart"
     },
-    "pets": {
-        "goTo": "Ga naar {{title}}",
-        "writeTo": "Schrijf naar {{title}}",
-        "typeIn": "Typ in {{title}}",
-        "waiting": "{{title}} heeft je nodig",
-        "failed": "Kon de pets niet tonen"
-    },
     "missingProvider": {
         "notInstalled": "{{name}} is niet geïnstalleerd op deze machine.",
         "notOffered": "{{name}} is niet beschikbaar op deze machine.",

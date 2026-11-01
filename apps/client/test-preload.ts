@@ -1,5 +1,5 @@
 import { afterEach } from 'bun:test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import i18next from 'i18next';
@@ -7,6 +7,7 @@ import { CHARTS_NAMESPACE, CHARTS_RESOURCES } from '@adecore/charts';
 import { UI_NAMESPACE, UI_RESOURCES } from '@adecore/ui';
 import { AGENTS_LOCALES } from '@adecore/agents-react/locales';
 import editorWords from '@adecore/editor-react/locales/en.json' with { type: 'json' };
+import './src/extensions/built-in';
 import { connectFormat } from './src/format/source';
 import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';
@@ -29,6 +30,17 @@ const resources = Object.fromEntries(
         .map((name) => [name.slice(0, -'.json'.length), JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>])
 );
 
+// What a built-in brings, in a namespace named after its folder (`i18n/bundles`).
+const extensionFolder = fileURLToPath(new URL('./src/extensions/', import.meta.url));
+const extensionResources = Object.fromEntries(
+    readdirSync(extensionFolder, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && existsSync(join(extensionFolder, entry.name, 'locales', `${FALLBACK_LANGUAGE}.json`)))
+        .map((entry) => [
+            entry.name,
+            JSON.parse(readFileSync(join(extensionFolder, entry.name, 'locales', `${FALLBACK_LANGUAGE}.json`), 'utf8')) as Record<string, unknown>
+        ])
+);
+
 const agentsWords = await AGENTS_LOCALES[FALLBACK_LANGUAGE]!();
 
 // Awaited, so the first test already has the words.
@@ -38,7 +50,14 @@ await i18next.init({
     defaultNS: 'common',
     interpolation: { escapeValue: false },
     resources: {
-        [FALLBACK_LANGUAGE]: { ...resources, ...agentsWords, [UI_NAMESPACE]: UI_RESOURCES.en, [CHARTS_NAMESPACE]: CHARTS_RESOURCES.en, editor: editorWords }
+        [FALLBACK_LANGUAGE]: {
+            ...resources,
+            ...extensionResources,
+            ...agentsWords,
+            [UI_NAMESPACE]: UI_RESOURCES.en,
+            [CHARTS_NAMESPACE]: CHARTS_RESOURCES.en,
+            editor: editorWords
+        }
     }
 });
 

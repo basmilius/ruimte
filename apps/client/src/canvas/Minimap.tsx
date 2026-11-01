@@ -6,7 +6,7 @@ import { useChats } from '@adecore/agents-react/state';
 import { nodeColorOf } from '@ruimte/contracts';
 import { accentColor } from '@/canvas/accents';
 import { unionOf, visibleRect, type Point } from '@/canvas/math';
-import { PET_WALL_ATTRIBUTE } from '@/canvas/pets/attributes';
+import { OVERLAY_WALL_ATTRIBUTE } from '@/canvas/overlay-attributes';
 import {
     cameraLookingAt,
     mappedCards,
@@ -183,7 +183,7 @@ export function Minimap() {
 
     return (
         <Surface
-            {...{ [PET_WALL_ATTRIBUTE]: '' }}
+            {...{ [OVERLAY_WALL_ATTRIBUTE]: '' }}
             className="pointer-events-auto absolute right-4 bottom-4 rounded-xl p-1"
             // The card stands over the canvas, which would read a press, a move or a click on it as its own.
             onPointerDown={(event) => event.stopPropagation()}
