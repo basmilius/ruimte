@@ -7,7 +7,7 @@ import { memoByIdentity } from '@/state/identity-memo';
 import { viewIdsIn } from '@/shell/split';
 
 /* What a sidebar row reads of a node. A drag or a resize changes none of it. */
-export type SidebarCanvasNode = Pick<CanvasNode, 'id' | 'kind' | 'title' | 'titleSource' | 'provider' | 'status'>;
+export type SidebarCanvasNode = Pick<CanvasNode, 'id' | 'kind' | 'title' | 'titleSource' | 'provider' | 'status' | 'machine' | 'chats'>;
 
 export interface SidebarSource {
     views: ProjectView[];
@@ -27,7 +27,9 @@ function project(node: CanvasNode): SidebarCanvasNode {
         title: node.title,
         titleSource: node.titleSource,
         provider: node.provider,
-        status: node.status
+        status: node.status,
+        machine: node.machine,
+        chats: node.chats
     };
 }
 
@@ -42,7 +44,9 @@ function sameNode(before: SidebarCanvasNode | undefined, next: SidebarCanvasNode
         before.title === next.title &&
         before.titleSource === next.titleSource &&
         before.provider === next.provider &&
-        before.status === next.status
+        before.status === next.status &&
+        before.machine === next.machine &&
+        before.chats === next.chats
     );
 }
 

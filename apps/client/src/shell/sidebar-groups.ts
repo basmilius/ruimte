@@ -11,7 +11,8 @@ import { listedEndpoints } from '@/state/local-machine';
 import { sidebarSelection } from './sidebar-selection';
 import { machineTransport } from '@/transport';
 import { placeSeparators, sidebarProjectKey, useSidebarMachines, useSidebarProjects, type SeparatorPlaces } from './sidebar-projects';
-import type { SidebarGroup, SidebarNode, SidebarProject } from './sidebar-rows';
+import { heaviestStatus, type SidebarGroup, type SidebarNode, type SidebarProject } from './sidebar-rows';
+import type { AgentStatus } from '@ruimte/contracts';
 
 export function useSidebarGroups(enabled: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) {
     const endpoints = useEndpoints((state) => state.endpoints);
@@ -60,10 +61,16 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                       : snapshot?.state === 'ready' && views === null
                         ? 'error'
                         : (snapshot?.state ?? 'loading');
-                const node = (value: NonNullable<typeof views>[number]['nodes'][number]): SidebarNode => ({
+                const statusOf = (kind: string, id: string, stored: AgentStatus | null | undefined): AgentStatus | null =>
+                    state === 'ready' ? (snapshot?.statuses[`${kind}:${id}`] ?? stored ?? null) : null;
+                const node = ({ chats: later, ...value }: NonNullable<typeof views>[number]['nodes'][number]): SidebarNode => ({
                     ...value,
                     draft: false,
-                    status: state === 'ready' ? (snapshot?.statuses[`${value.kind}:${value.id}`] ?? value.status ?? null) : null,
+                    // The wire names no later chat of a design, so its one row speaks for all of them.
+                    status: heaviestStatus([
+                        { status: statusOf(value.kind, value.id, value.status) },
+                        ...(later ?? []).map((id) => ({ status: statusOf(value.kind, id, null) }))
+                    ]),
                     snoozedUntil: snoozeOf(snoozes, endpoint.id, value.id),
                     wait: waitDetailsOf(value, sessions, chats, waitingSince, endpoint.id)
                 });
@@ -72,7 +79,8 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
                 }
                 const activeNode = (value: SidebarNode): SidebarNode => ({
                     ...value,
-                    status: state !== 'ready' ? null : (snapshot?.statuses[`${value.kind}:${value.id}`] ?? value.status)
+                    // The snapshot knows only the first chat of a design, whose row already speaks for them all.
+                    status: state !== 'ready' ? null : value.chats ? value.status : (snapshot?.statuses[`${value.kind}:${value.id}`] ?? value.status)
                 });
                 groups.push({
                     key,

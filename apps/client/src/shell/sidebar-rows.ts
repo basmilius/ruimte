@@ -25,6 +25,10 @@ export interface SidebarNode {
     task?: Task | null;
     /* When a person's snooze runs out, while it holds: the node waits outside "Needs you" until then. */
     snoozedUntil?: number | null;
+    /* The design this row is one chat of, which has no name or menu of a node to offer. */
+    chatOf?: string;
+    /* The chats of a design with several, which this one row speaks for; each waits under "Needs you" by itself. */
+    chats?: SidebarNode[];
 }
 
 export interface SidebarView {
@@ -132,7 +136,7 @@ export function isSessionKind(kind: CanvasNodeKind): boolean {
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
 
-export function heaviestStatus(nodes: readonly SidebarNode[]): AgentStatus | null {
+export function heaviestStatus(nodes: readonly Pick<SidebarNode, 'status'>[]): AgentStatus | null {
     return nodes.reduce<AgentStatus | null>((heaviest, node) => {
         if (!node.status) {
             return heaviest;
@@ -149,6 +153,31 @@ export function heaviestWork(nodes: readonly SidebarNode[]): AgentWork | null {
     return nodes.some((node) => node.work === 'delegating') ? 'delegating' : null;
 }
 
+/* One state for a design's chats: what waits on a person first, then a problem, then work, and only then a turn that ended unseen. */
+export function withChats(own: SidebarNode, chats: SidebarNode[]): SidebarNode {
+    const waiting = chats.filter((chat) => chat.status === 'needs-you');
+    const awake = waiting.filter((chat) => !chat.snoozedUntil);
+    const status = heaviestStatus(chats);
+    const work = heaviestWork(chats);
+
+    return {
+        ...own,
+        status,
+        work,
+        wait: (awake[0] ?? waiting[0])?.wait,
+        draft: chats.some((chat) => chat.draft),
+        alert: chats.some((chat) => chat.alert),
+        finished: work === null && status !== 'needs-you' && chats.some((chat) => chat.finished),
+        snoozedUntil: awake.length === 0 ? (waiting[0]?.snoozedUntil ?? null) : null,
+        chats
+    };
+}
+
+/* The chat a snooze on this row puts aside: of a design, the one that waits. */
+export function snoozeTargetOf(node: SidebarNode): string {
+    return node.chats?.find(waitsOnYou)?.id ?? node.chats?.find((chat) => chat.status === 'needs-you')?.id ?? node.id;
+}
+
 /* Whether a node belongs in "Needs you": waiting, and not put aside for now. */
 export function waitsOnYou(node: SidebarNode): boolean {
     return node.status === 'needs-you' && !node.snoozedUntil;
@@ -159,16 +188,18 @@ export function buildSidebar({ project, expandedIds }: SidebarInput): SidebarSec
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];
     for (const view of project.views.filter((candidate) => !candidate.hidden)) {
-        for (const node of [...view.nodes, ...(view.self ? [view.self] : [])]) {
-            if (waitsOnYou(node)) {
-                waiting.push({
-                    type: 'node',
-                    rowId: `needs:${node.id}`,
-                    node,
-                    viewId: view.id,
-                    viewName: view.name,
-                    ...(node === view.self ? { ownView: true } : {})
-                });
+        for (const held of [...view.nodes, ...(view.self ? [view.self] : [])]) {
+            for (const node of held.chats ?? [held]) {
+                if (waitsOnYou(node)) {
+                    waiting.push({
+                        type: 'node',
+                        rowId: `needs:${node.id}`,
+                        node,
+                        viewId: view.id,
+                        viewName: view.name,
+                        ...(held === view.self && node.title === view.name ? { ownView: true } : {})
+                    });
+                }
             }
         }
     }

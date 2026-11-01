@@ -14,7 +14,7 @@ import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useUi } from '@/state/ui';
 import { useEndpointId } from '@/state/keys';
 import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
-import { heaviestWork, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
+import { heaviestWork, snoozeTargetOf, viewNameOf, type SidebarGroup, type SidebarNodeRow, type SidebarRow, type SidebarViewRow } from '@/shell/sidebar-rows';
 import { WaitingCount } from '@/attention/WaitingCount';
 import { WaitLabel } from '@/attention/WaitLabel';
 import { UnseenMark } from '@/attention/UnseenMark';
@@ -187,6 +187,10 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
             </ListRow>
         );
     }
+    const snooze =
+        node.status === 'needs-you' || node.snoozedUntil ? (
+            <SnoozeMenuItems endpointId={endpointId} nodeId={snoozeTargetOf(node)} needsYou={node.status === 'needs-you'} />
+        ) : undefined;
     const menu = (
         <ContextMenu.Root>
             <ContextMenu.Trigger
@@ -196,9 +200,13 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                 tabIndex={tabbable ? 0 : -1}
                 className={clsx(ROW, row.viewName === null && 'pl-6', selected ? ROW_SELECTED : ROW_PLAIN)}
                 onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
-                onDoubleClick={() => setRenaming(true)}
+                onDoubleClick={() => {
+                    if (node.chatOf === undefined) {
+                        setRenaming(true);
+                    }
+                }}
                 onKeyDown={(e) => {
-                    if (e.key === 'F2') {
+                    if (e.key === 'F2' && node.chatOf === undefined) {
                         e.preventDefault();
                         setRenaming(true);
                     }
@@ -227,26 +235,26 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     )}
                 </span>
             </ContextMenu.Trigger>
-            <CellViewContext.Provider value={row.viewId}>
-                <NodeMenuPopup
-                    id={node.id}
-                    viewId={row.viewId}
-                    onRename={() => {
-                        renamedFromMenu.current = true;
-                        setRenaming(true);
-                    }}
-                    finalFocus={() => {
-                        const renamed = renamedFromMenu.current;
-                        renamedFromMenu.current = false;
-                        return !renamed;
-                    }}
-                    snooze={
-                        node.status === 'needs-you' || node.snoozedUntil ? (
-                            <SnoozeMenuItems endpointId={endpointId} nodeId={node.id} needsYou={node.status === 'needs-you'} />
-                        ) : undefined
-                    }
-                />
-            </CellViewContext.Provider>
+            {node.chatOf !== undefined ? (
+                snooze && <ContextMenu.Popup>{snooze}</ContextMenu.Popup>
+            ) : (
+                <CellViewContext.Provider value={row.viewId}>
+                    <NodeMenuPopup
+                        id={node.id}
+                        viewId={row.viewId}
+                        onRename={() => {
+                            renamedFromMenu.current = true;
+                            setRenaming(true);
+                        }}
+                        finalFocus={() => {
+                            const renamed = renamedFromMenu.current;
+                            renamedFromMenu.current = false;
+                            return !renamed;
+                        }}
+                        snooze={snooze}
+                    />
+                </CellViewContext.Provider>
+            )}
         </ContextMenu.Root>
     );
     return snoozable ? (
@@ -529,7 +537,7 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                         <ContextMenu.Separator />
                     </>
                 )}
-                {view.self && <SnoozeMenuItems endpointId={endpointId} nodeId={view.self.id} needsYou={view.self.status === 'needs-you'} />}
+                {view.self && <SnoozeMenuItems endpointId={endpointId} nodeId={snoozeTargetOf(view.self)} needsYou={view.self.status === 'needs-you'} />}
                 <ViewMenuItems viewId={view.id} kind={view.kind} onSidebar />
             </ContextMenu.Popup>
         </ContextMenu.Root>

@@ -11,7 +11,9 @@ import {
     isSessionKind,
     rowAfterArrow,
     rowOrder,
+    snoozeTargetOf,
     viewNameOf,
+    withChats,
     type SidebarNode,
     type SidebarNodeRow,
     type SidebarProject,
@@ -35,6 +37,38 @@ function view(id: string, nodes: SidebarNode[] = []): SidebarView {
         self: null
     };
 }
+
+test('work on one chat of a design outranks a turn that ended unseen on another', () => {
+    const shared = withChats(node('design'), [
+        { ...node('done', 'idle'), finished: true },
+        { ...node('busy', 'running'), work: 'turn' }
+    ]);
+
+    expect(shared.status).toBe('running');
+    expect(shared.work).toBe('turn');
+    expect(shared.finished).toBe(false);
+});
+
+test('a design shows an unseen turn once none of its chats works or waits', () => {
+    const shared = withChats(node('design'), [
+        { ...node('done', 'idle'), finished: true },
+        { ...node('rest', 'idle'), work: null }
+    ]);
+
+    expect(shared.finished).toBe(true);
+});
+
+test('a design stays one row, while each chat that waits has its own under "Needs you"', () => {
+    const self = withChats(node('design'), [node('first', 'running'), node('later', 'needs-you'), node('other', 'needs-you')]);
+    const project: SidebarProject = { views: [{ ...view('design'), kind: 'design', self }], activeViewId: null, openViewIds: [] };
+    const [waiting, list] = buildSidebar({ project, expandedIds: new Set(['design']) });
+    const row = list!.rows[0]!;
+
+    expect(list!.rows).toHaveLength(1);
+    expect(row.type === 'view' && !row.expandable && row.status).toBe('needs-you');
+    expect(waiting!.rows.map((entry) => entry.rowId)).toEqual(['needs:later', 'needs:other']);
+    expect(snoozeTargetOf(self)).toBe('later');
+});
 
 function separator(id: string): SidebarView {
     return {

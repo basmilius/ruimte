@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ChartNoAxesColumn, Plus, Settings } from 'lucide-re
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { usePanelGap } from '@/shell/panel-layout';
-import { isSessionView, isUnlistedView, sessionKindOfView, type AgentKind } from '@ruimte/contracts';
+import { designNodeChats, isDesignView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@adecore/agents-react/chat';
@@ -31,6 +31,7 @@ import {
     isSessionKind,
     rowAfterArrow,
     rowOrder,
+    withChats,
     type SidebarGroup,
     type SidebarNode,
     type SidebarProject,
@@ -156,7 +157,10 @@ export function Sidebar() {
         openViewIds: source.openViewIds,
         views: source.views.map((view) => {
             const live = source.nodesOf(view);
-            const asRow = (node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind }): SidebarNode => {
+            const asRow = (
+                node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind },
+                chatOf?: string
+            ): SidebarNode => {
                 // A node that runs on another machine is that machine's to report on.
                 const machine = endpointOfNodeIn(endpoints, node, endpointId);
                 return {
@@ -172,10 +176,32 @@ export function Sidebar() {
                     alert: (warnings[machine] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, machine, node.id),
                     task: childTask(tasks[machine], node.id),
-                    snoozedUntil: snoozeOf(snoozes, machine, node.id)
+                    snoozedUntil: snoozeOf(snoozes, machine, node.id),
+                    ...(chatOf === undefined ? {} : { chatOf })
                 };
             };
+            const nodeRow = (node: (typeof live)[number]): SidebarNode => {
+                const own = asRow(node);
+                const later = node.kind === 'design' ? designNodeChats(node) : [];
+                if (later.length === 0) {
+                    return own;
+                }
+                return withChats(own, [
+                    asRow({ id: node.id, kind: 'chat', title: node.title, provider: node.provider, machine: node.machine }, node.id),
+                    // Under "Needs you", among the other nodes of its canvas, a later chat says which design it belongs to.
+                    ...later.map((chat) =>
+                        asRow(
+                            { id: chat.id, kind: 'chat', title: `${node.title} · ${chat.name}`, provider: chat.node.provider, machine: node.machine },
+                            node.id
+                        )
+                    )
+                ]);
+            };
+            const designChats = isDesignView(view) ? viewChats(view) : [];
             const { icon, provider, path } = viewGlyphOf(view);
+            const own = isSessionView(view)
+                ? asRow({ id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, provider: provider ?? undefined })
+                : null;
             return {
                 id: view.id,
                 name: view.name ?? '',
@@ -186,11 +212,15 @@ export function Sidebar() {
                 icon,
                 provider,
                 path,
-                nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
+                nodes: live.filter((node) => isSessionKind(node.kind)).map(nodeRow),
                 // Only a session view is a node of its own; a divider and a drawing have no status.
-                self: isSessionView(view)
-                    ? asRow({ id: view.id, kind: sessionKindOfView(view), title: view.name, titleSource: view.titleSource, provider: provider ?? undefined })
-                    : null,
+                self:
+                    own && designChats.length > 1
+                        ? withChats(
+                              own,
+                              designChats.map((chat) => asRow({ id: chat.id, kind: 'chat', title: chat.name, provider: chat.node.provider }, view.id))
+                          )
+                        : own,
                 hidden: isUnlistedView(view)
             };
         })
