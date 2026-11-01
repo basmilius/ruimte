@@ -1903,6 +1903,9 @@
         "included": "meegeleverd met Ruimte",
         "permissions": "Vraagt om",
         "noPermissions": "Vraagt nergens extra om.",
-        "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer."
+        "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer.",
+        "groupDevelopment": "In ontwikkeling",
+        "groupInstalled": "Geïnstalleerd",
+        "groupIncluded": "Meegeleverd"
     }
 }

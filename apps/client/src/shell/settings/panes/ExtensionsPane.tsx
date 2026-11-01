@@ -1,7 +1,8 @@
 import { createElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Store, type LucideIcon } from 'lucide-react';
-import { Button, Icon, Switch } from '@adecore/ui';
+import { Button, Icon, SectionLabel, Separator, Switch } from '@adecore/ui';
+import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
@@ -253,12 +254,42 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
     );
 }
 
+function InstalledGroup({
+    title,
+    entries,
+    selected,
+    onSelect
+}: {
+    title: string;
+    entries: readonly InstalledClientExtension[];
+    selected: string;
+    onSelect: (id: string) => void;
+}) {
+    if (entries.length === 0) {
+        return null;
+    }
+
+    return (
+        <>
+            <SectionLabel className="px-3 pt-3 pb-1">{title}</SectionLabel>
+            {entries.map((entry) => (
+                <MasterItem key={entry.manifest.id} selected={selected === entry.manifest.id} onSelect={() => onSelect(entry.manifest.id)}>
+                    <ExtensionTile icon={extensionIconUrl(entry)} color={entry.manifest.color} size={LIST_ROW_TILE} />
+                    {entry.manifest.name}
+                </MasterItem>
+            ))}
+        </>
+    );
+}
+
 /* Settings, Extensions: the store and what is installed on the left, and on the right one extension or the store. */
 export function ExtensionsPane() {
     const { t } = useTranslation('settings');
     const installed = useInstalledExtensions((state) => state.installed);
     const builtIns = useContributions((state) => state.builtIns);
     const [selected, setSelected] = useState(BROWSE);
+    const developing = installed.filter((entry) => entry.dev);
+    const fromStore = installed.filter((entry) => !entry.dev);
 
     useEffect(() => {
         void syncExtensions();
@@ -275,17 +306,18 @@ export function ExtensionsPane() {
             list={
                 <>
                     <MasterItem selected={selected === BROWSE} onSelect={() => setSelected(BROWSE)}>
-                        <Icon icon={Store} size={14} /> {t('extensions.browse')}
+                        <span className="inline-flex shrink-0 items-center justify-center" style={{ width: LIST_ROW_TILE }}>
+                            <Icon icon={Store} size={16} />
+                        </span>
+                        {t('extensions.browse')}
                     </MasterItem>
+                    <Separator orientation="horizontal" className="my-1.5" />
+                    <InstalledGroup title={t('extensions.groupDevelopment')} entries={developing} selected={selected} onSelect={setSelected} />
+                    <InstalledGroup title={t('extensions.groupInstalled')} entries={fromStore} selected={selected} onSelect={setSelected} />
+                    {builtIns.length > 0 && <SectionLabel className="px-3 pt-3 pb-1">{t('extensions.groupIncluded')}</SectionLabel>}
                     {builtIns.map((entry) => (
                         <MasterItem key={entry.id} selected={selected === entry.id} onSelect={() => setSelected(entry.id)}>
                             <ExtensionTile icon={entry.icon} color={entry.manifest.color} size={LIST_ROW_TILE} />
-                            {entry.manifest.name}
-                        </MasterItem>
-                    ))}
-                    {installed.map((entry) => (
-                        <MasterItem key={entry.manifest.id} selected={selected === entry.manifest.id} onSelect={() => setSelected(entry.manifest.id)}>
-                            <ExtensionTile icon={extensionIconUrl(entry)} color={entry.manifest.color} size={LIST_ROW_TILE} />
                             {entry.manifest.name}
                         </MasterItem>
                     ))}

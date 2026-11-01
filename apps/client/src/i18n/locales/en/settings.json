@@ -1903,6 +1903,9 @@
         "included": "included with Ruimte",
         "permissions": "Asks to",
         "noPermissions": "Asks for nothing extra.",
-        "removeDescription": "Takes it and what it stored off this computer."
+        "removeDescription": "Takes it and what it stored off this computer.",
+        "groupDevelopment": "In development",
+        "groupInstalled": "Installed",
+        "groupIncluded": "Included"
     }
 }
