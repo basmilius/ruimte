@@ -32,6 +32,11 @@ export async function readStore(fetcher: typeof fetch = fetch): Promise<StoreAns
     }
 }
 
+/* Over the same address as the rest of the store; the signed index names the path. */
+export function storeIconUrl(entry: ExtensionStoreEntry): string | null {
+    return entry.icon === undefined ? null : `${STORE_BASE}${entry.icon}`;
+}
+
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
     const digest = await crypto.subtle.digest('SHA-256', bytes as BufferSource);
 

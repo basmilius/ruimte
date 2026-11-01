@@ -51,6 +51,16 @@ describe('building an extension', () => {
         await expect(buildExtension(allowed)).resolves.toBeDefined();
     });
 
+    test('refuses an icon that is no svg', async () => {
+        const folder = project('icon', {
+            'manifest.json': JSON.stringify({ id: 'acme.icon', name: 'Icon', version: '0.1.0', api: 1, color: '#123456', themes: [] }),
+            'client/index.ts': 'export {};',
+            'assets/icon.svg': 'not a picture'
+        });
+
+        await expect(buildExtension(folder)).rejects.toThrow('not an svg');
+    });
+
     test('a pack is gzipped JSON with the manifest and every built file', async () => {
         const folder = project('packed', { 'client/index.ts': `console.info('hello');`, 'locales/en.json': '{}' });
         const packed = await packExtension(folder);

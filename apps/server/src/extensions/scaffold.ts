@@ -70,6 +70,8 @@ export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> 
     const files: Record<string, string> = {
         '.gitignore': GITIGNORE,
         'tsconfig.json': TSCONFIG,
+        'assets/icon.svg':
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/></svg>\n',
         'manifest.json': `${JSON.stringify({ id: answers.id, name: answers.name, version: '0.1.0', api: EXTENSION_API_VERSION, ...(answers.description === '' ? {} : { description: answers.description }), permissions: {} }, null, 4)}\n`,
         'package.json': `${JSON.stringify(
             {

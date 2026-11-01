@@ -5,6 +5,7 @@
     "api": 1,
     "publisher": "Ruimte",
     "description": "A theme of tokens alone, and one with a stylesheet and an image from its pack.",
+    "color": "#fde047",
     "themes": [
         "themes/paper.json",
         "themes/midnight.json"

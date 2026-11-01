@@ -6,6 +6,9 @@ export const EXTENSION_API_VERSION = 1;
 
 export const ExtensionIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9-]*$/);
 
+/* Where a pack keeps its mark, the same for every extension, so a list needs no word from its code. */
+export const EXTENSION_ICON_PATH = 'assets/icon.svg';
+
 export const ExtensionManifestSchema = z.object({
     id: ExtensionIdSchema,
     name: z.string().min(1).max(80),
@@ -14,6 +17,11 @@ export const ExtensionManifestSchema = z.object({
     description: z.string().max(280).optional(),
     publisher: z.string().max(80).optional(),
     category: z.string().max(40).optional(),
+    // The ground of its mark, as #rrggbb.
+    color: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .optional(),
     // Starts `server/` with the machine, for an extension that follows events with no client open.
     autostart: z.boolean().optional(),
     // What it asks for, each with the reason a person reads before installing.

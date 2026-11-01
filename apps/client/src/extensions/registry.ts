@@ -112,6 +112,7 @@ export interface ExtensionSettingsContribution {
 export interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
+    icon?: string;
     setEnabled(enabled: boolean): void;
 }
 

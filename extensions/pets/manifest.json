@@ -5,6 +5,7 @@
     "api": 1,
     "publisher": "Ruimte",
     "description": "Small figures that show what your agents do.",
+    "color": "#f59e0b",
     "permissions": {
         "ui.canvasOverlay": "Lets pets walk over the canvas",
         "agents.status": "Shows when an agent works or waits on you",

@@ -6,6 +6,7 @@ export interface InstalledClientExtension {
     base: string;
     enabled: boolean;
     hasClient: boolean;
+    hasIcon?: boolean;
     dev: boolean;
 }
 

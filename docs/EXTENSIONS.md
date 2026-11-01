@@ -5,11 +5,14 @@ An extension adds panels, canvas nodes, views, sidebar cards, commands or themes
 ## A package
 
 ```
-manifest.json     id, name, version, api, permissions, themes
+manifest.json     id, name, version, api, color, permissions, themes
+assets/icon.svg   its mark, always at this path
 client/index.ts   runs in the client, calls define*
 server/index.ts   runs on the machine, optional
 locales/ assets/ views/ themes/   copied into the pack
 ```
+
+The mark shows in Settings and the store: `assets/icon.svg` (up to 64 KB) is drawn as one ink on `color` (`#rrggbb`), so only its shape counts. Without an icon it gets a package, without a color a plain ground. A panel or node that names no Lucide `icon` shows the same mark.
 
 Types come from `@ruimte/extension` on npm (`/client`, `/server`, `/ui`, `/testing`). The code comes with Ruimte, and `pack` rewrites those imports and React to what the client supplies.
 

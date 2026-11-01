@@ -1,4 +1,4 @@
-import type { ExtensionInfo } from '@ruimte/contracts';
+import { EXTENSION_ICON_PATH, type ExtensionInfo } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
 import { refreshExtensionTheme } from '@/extensions/themes';
@@ -18,6 +18,10 @@ let safeMode = false;
 /* `ruimte --safe-mode` sets this on the window's address, so a person can always get back into an app an extension hangs. */
 function inSafeMode(): boolean {
     return safeMode || new URLSearchParams(window.location.search).has('safe-mode');
+}
+
+export function extensionIconUrl(entry: InstalledClientExtension): string | null {
+    return entry.hasIcon === true ? `${entry.base}${EXTENSION_ICON_PATH}` : null;
 }
 
 export function extensionsInSafeMode(): boolean {
@@ -70,7 +74,7 @@ export async function syncExtensions(): Promise<void> {
             continue;
         }
 
-        registerExtension({ manifest: entry.manifest, base: entry.base, disposers: [], settings: null });
+        registerExtension({ manifest: entry.manifest, base: entry.base, iconUrl: extensionIconUrl(entry), disposers: [], settings: null });
         loaded.set(entry.manifest.id, entry.base);
 
         try {

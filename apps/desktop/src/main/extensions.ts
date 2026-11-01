@@ -3,7 +3,14 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from '@ruimte/contracts';
+import {
+    EXTENSION_API_VERSION,
+    EXTENSION_ICON_PATH,
+    ExtensionManifestSchema,
+    ExtensionPackSchema,
+    isSafePackPath,
+    type ExtensionManifest
+} from '@ruimte/contracts';
 import { EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
@@ -73,6 +80,7 @@ export class ClientExtensions {
             base: `${EXTENSION_FILES_PATH}${entry.id}/${entry.hash}/`,
             enabled: entry.enabled,
             hasClient: existsSync(join(this.root, entry.id, entry.hash, 'client', 'index.js')),
+            hasIcon: existsSync(join(this.root, entry.id, entry.hash, EXTENSION_ICON_PATH)),
             dev: false
         };
     }
@@ -90,6 +98,7 @@ export class ClientExtensions {
             base: `${EXTENSION_FILES_PATH}${id}/dev-${link.revision}/`,
             enabled: true,
             hasClient: existsSync(join(link.folder, 'client', 'index.js')),
+            hasIcon: existsSync(join(link.folder, EXTENSION_ICON_PATH)),
             dev: true
         }));
 

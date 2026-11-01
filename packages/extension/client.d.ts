@@ -18,14 +18,15 @@ export interface ViewRef {
     id: string;
 }
 
-export function definePanel(panel: { id: string; title: string; icon: string; minWidth?: number } & Surface): Handle;
+/** `icon` names a Lucide icon. Without one, a surface shows the extension's `assets/icon.svg`. */
+export function definePanel(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface): Handle;
 export function defineSidebarCard(card: { id: string; title: string; component: LazyComponent }): Handle;
 export function defineView<Params = unknown>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>): Handle;
 export function defineNode<Data = unknown>(
     node: {
         id: string;
         title: string;
-        icon: string;
+        icon?: string;
         size?: { width: number; height: number };
         initialData?: Data;
         dataVersion?: number;

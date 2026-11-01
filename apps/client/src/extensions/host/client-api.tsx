@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
 import type { ExtensionManifest, RequestMap } from '@ruimte/contracts';
 import { revealNode } from '@/project/views';
+import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { contribute, type ExtensionSurfaceProps } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -21,6 +22,8 @@ export interface LoadedExtension {
     manifest: ExtensionManifest;
     // Where its files are on the app's origin, ending in a slash.
     base: string;
+    // Its `assets/icon.svg`, for a surface that names no Lucide icon of its own.
+    iconUrl?: string | null;
     disposers: (() => void)[];
     settings: ComponentType | null;
 }
@@ -32,7 +35,19 @@ type Surface<Props = {}> = { component: LazyComponent<Props> } | { frame: string
 const ExtensionContext = createContext<LoadedExtension | null>(null);
 const NodeContext = createContext<string | null>(null);
 
-function iconOf(name: string | undefined): LucideIcon {
+/* A surface's icon: the Lucide one it names, or the extension's own mark in the ink around it. */
+function iconOf(name: string | undefined, extension: LoadedExtension): LucideIcon {
+    const { iconUrl } = extension;
+
+    if (name === undefined && iconUrl !== undefined && iconUrl !== null) {
+        // oxlint-disable-next-line react/only-export-components -- Made per extension, and never hot-reloaded.
+        const Mark = ({ size, className }: { size?: number | string; className?: string }) => (
+            <ExtensionGlyph url={iconUrl} size={Number(size ?? 16)} {...(className === undefined ? {} : { className })} />
+        );
+
+        return Mark as unknown as LucideIcon;
+    }
+
     const key = (name ?? '')
         .split('-')
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -174,14 +189,14 @@ export function clientApiFor(extension: LoadedExtension) {
     });
 
     return {
-        definePanel(panel: { id: string; title: string; icon: string; minWidth?: number } & Surface) {
+        definePanel(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface) {
             assertLazy(panel, `definePanel ${panel.id}`);
 
             const kind = `extension:${id}/${panel.id}` as const;
 
             add('panels', {
                 kind,
-                icon: iconOf(panel.icon),
+                icon: iconOf(panel.icon, extension),
                 minWidth: panel.minWidth ?? 280,
                 toolbar: true,
                 group: 'extensions',
@@ -213,7 +228,7 @@ export function clientApiFor(extension: LoadedExtension) {
             node: {
                 id: string;
                 title: string;
-                icon: string;
+                icon?: string;
                 size?: { width: number; height: number };
                 initialData?: unknown;
                 dataVersion?: number;
@@ -225,7 +240,7 @@ export function clientApiFor(extension: LoadedExtension) {
             add('extensionNodes', {
                 id: `${id}/${node.id}`,
                 title: node.title,
-                icon: iconOf(node.icon),
+                icon: iconOf(node.icon, extension),
                 component: surfaceOf(extension, node) as ComponentType<ExtensionSurfaceProps>,
                 ...(node.migrate === undefined || node.dataVersion === undefined ? {} : { migrate: node.migrate, dataVersion: node.dataVersion })
             });

@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
     EXTENSION_API_VERSION,
+    EXTENSION_ICON_PATH,
     ExtensionManifestSchema,
     ExtensionThemeSchema,
     extensionThemeCssProblem,
@@ -24,6 +25,7 @@ const CLIENT_HOSTED: Readonly<Record<string, string>> = {
     '@ruimte/extension/ui': 'ui'
 };
 const SERVER_HOSTED: Readonly<Record<string, string>> = { '@ruimte/extension/server': 'server' };
+const MAX_ICON_BYTES = 64 * 1024;
 const COPIED_FOLDERS = ['locales', 'assets', 'views', 'themes'];
 
 export class ExtensionBuildError extends Error {}
@@ -46,6 +48,22 @@ export function readManifest(folder: string): ExtensionManifest {
     }
 
     return parsed.data;
+}
+
+function checkIcon(root: string): void {
+    const file = join(root, EXTENSION_ICON_PATH);
+
+    if (!existsSync(file)) {
+        return;
+    }
+
+    if (statSync(file).size > MAX_ICON_BYTES) {
+        throw new ExtensionBuildError(`${EXTENSION_ICON_PATH} is over ${MAX_ICON_BYTES / 1024} KB`);
+    }
+
+    if (!/<svg[\s>]/.test(readFileSync(file, 'utf8'))) {
+        throw new ExtensionBuildError(`${EXTENSION_ICON_PATH} is not an svg`);
+    }
 }
 
 function checkThemes(root: string, manifest: ExtensionManifest): void {
@@ -172,6 +190,7 @@ export async function buildExtension(folder: string): Promise<{ manifest: Extens
     }
 
     checkThemes(root, manifest);
+    checkIcon(root);
     cpSync(join(root, 'manifest.json'), join(outdir, 'manifest.json'));
 
     for (const name of COPIED_FOLDERS) {

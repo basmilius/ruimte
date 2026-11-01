@@ -4,14 +4,67 @@ import { Store } from 'lucide-react';
 import { Button, Icon, Switch } from '@adecore/ui';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
-import { extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
+import { ExtensionTile } from '@/extensions/ExtensionTile';
+import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { readDisabled } from '@/extensions/internal';
 import { useContributions } from '@/extensions/registry';
-import { installFromStore, readStore, removeExtension, setExtensionEnabled, type ExtensionStoreEntry, type StoreAnswer } from '@/extensions/store';
+import {
+    installFromStore,
+    readStore,
+    removeExtension,
+    setExtensionEnabled,
+    storeIconUrl,
+    type ExtensionStoreEntry,
+    type StoreAnswer
+} from '@/extensions/store';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
 
 const BROWSE = 'browse';
+const DETAIL = 'flex min-w-0 flex-col gap-5';
+const LIST_ROW_TILE = 20;
+const HEADER_TILE = 48;
+
+/* Above the cards, since a card only holds rows and text in it would run into its edges. */
+function ExtensionHeader({
+    icon,
+    color,
+    name,
+    meta,
+    description
+}: {
+    icon: string | null | undefined;
+    color: string | undefined;
+    name: string;
+    meta: readonly (string | false | undefined)[];
+    description: string | undefined;
+}) {
+    return (
+        <header className="flex min-w-0 items-start gap-3">
+            <ExtensionTile icon={icon} color={color} size={HEADER_TILE} />
+            <div className="min-w-0">
+                <h3 className="text-sm font-medium text-text">{name}</h3>
+                <p className="text-xs text-text-muted">{meta.filter(Boolean).join(', ')}</p>
+                {description !== undefined && <p className="mt-1 text-sm text-text-muted">{description}</p>}
+            </div>
+        </header>
+    );
+}
+
+function PermissionsSection({ permissions }: { permissions: Readonly<Record<string, string>> | undefined }) {
+    const { t } = useTranslation('settings');
+    const entries = Object.entries(permissions ?? {});
+
+    return (
+        <SettingsSection title={t('extensions.permissions')}>
+            {entries.length === 0 ? (
+                <SettingsRow label={t('extensions.noPermissions')} control={null} />
+            ) : (
+                entries.map(([permission, reason]) => <SettingsRow key={permission} label={reason} description={permission} control={null} />)
+            )}
+        </SettingsSection>
+    );
+}
 
 function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
     const { t } = useTranslation('settings');
@@ -33,21 +86,16 @@ function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
 
     if (open !== null) {
         return (
-            <SettingsSection title={open.name}>
-                <p className="text-sm text-text-muted">
-                    {[open.publisher, open.version, open.reviewedAt && t('extensions.reviewed', { date: open.reviewedAt })].filter(Boolean).join(', ')}
-                </p>
-                {open.description !== undefined && <p className="text-sm">{open.description}</p>}
-                <p className="text-sm font-medium">{t('extensions.asksTo')}</p>
-                <ul className="flex flex-col gap-1 text-sm">
-                    {Object.entries(open.permissions ?? {}).map(([permission, reason]) => (
-                        <li key={permission} className="flex justify-between gap-3">
-                            <span className="font-mono text-xs">{permission}</span>
-                            <span className="text-text-muted">{reason}</span>
-                        </li>
-                    ))}
-                </ul>
-                <p className="rounded-md bg-surface-sunken p-2 text-sm">{t('extensions.trust')}</p>
+            <div className={DETAIL}>
+                <ExtensionHeader
+                    icon={storeIconUrl(open)}
+                    color={open.color}
+                    name={open.name}
+                    meta={[open.publisher, open.version, open.reviewedAt && t('extensions.reviewed', { date: open.reviewedAt })]}
+                    description={open.description}
+                />
+                <PermissionsSection permissions={open.permissions} />
+                <p className="text-sm text-text-muted">{t('extensions.trust')}</p>
                 <div className="flex gap-2">
                     <Button
                         variant="primary"
@@ -71,7 +119,7 @@ function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
                     </Button>
                     <Button onClick={() => setOpen(null)}>{t('extensions.back')}</Button>
                 </div>
-            </SettingsSection>
+            </div>
         );
     }
 
@@ -80,7 +128,8 @@ function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
     );
 
     return (
-        <SettingsSection title={t('extensions.store')}>
+        <div className={DETAIL}>
+            <h3 className="text-sm font-medium text-text">{t('extensions.store')}</h3>
             <input
                 aria-label={t('extensions.search')}
                 placeholder={t('extensions.search')}
@@ -93,17 +142,20 @@ function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
                     <li key={entry.id}>
                         <button
                             type="button"
-                            className="w-full rounded-lg border border-border p-2 text-left hover:bg-surface-hover"
+                            className="flex w-full items-start gap-3 rounded-lg border border-border p-3 text-left hover:bg-surface-hover"
                             onClick={() => setOpen(entry)}
                         >
-                            <span className="block text-sm font-medium">{entry.name}</span>
-                            <span className="block text-xs text-text-muted">{entry.publisher ?? entry.id}</span>
-                            {entry.description !== undefined && <span className="mt-1 block text-sm text-text-muted">{entry.description}</span>}
+                            <ExtensionTile icon={storeIconUrl(entry)} color={entry.color} size={LIST_ROW_TILE * 2} />
+                            <span className="min-w-0">
+                                <span className="block text-sm font-medium">{entry.name}</span>
+                                <span className="block text-xs text-text-muted">{entry.publisher ?? entry.id}</span>
+                                {entry.description !== undefined && <span className="mt-1 block text-sm text-text-muted">{entry.description}</span>}
+                            </span>
                         </button>
                     </li>
                 ))}
             </ul>
-        </SettingsSection>
+        </div>
     );
 }
 
@@ -117,23 +169,30 @@ function BuiltInDetail({ id }: { id: string }) {
     }
 
     return (
-        <SettingsSection title={entry.manifest.name}>
-            <p className="text-sm text-text-muted">{[entry.manifest.publisher, t('extensions.included')].filter(Boolean).join(', ')}</p>
-            {entry.manifest.description !== undefined && <p className="text-sm">{entry.manifest.description}</p>}
-            <SettingsRow
-                label={t('extensions.enabled')}
-                control={
-                    <Switch
-                        checked={enabled}
-                        label={t('extensions.enabled')}
-                        onCheckedChange={(next) => {
-                            entry.setEnabled(next);
-                            setEnabled(next);
-                        }}
-                    />
-                }
+        <div className={DETAIL}>
+            <ExtensionHeader
+                icon={entry.icon}
+                color={entry.manifest.color}
+                name={entry.manifest.name}
+                meta={[t('extensions.included')]}
+                description={entry.manifest.description}
             />
-        </SettingsSection>
+            <SettingsSection>
+                <SettingsRow
+                    label={t('extensions.enabled')}
+                    control={
+                        <Switch
+                            checked={enabled}
+                            label={t('extensions.enabled')}
+                            onCheckedChange={(next) => {
+                                entry.setEnabled(next);
+                                setEnabled(next);
+                            }}
+                        />
+                    }
+                />
+            </SettingsSection>
+        </div>
     );
 }
 
@@ -150,11 +209,17 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
     const { manifest } = entry;
 
     return (
-        <>
+        <div className={DETAIL}>
             {/* Ruimte's own: an extension draws only below this, so it cannot hide the way out. */}
-            <SettingsSection title={manifest.name}>
-                <p className="text-sm text-text-muted">{[manifest.publisher, manifest.version, entry.dev && t('extensions.dev')].filter(Boolean).join(', ')}</p>
-                {failure !== undefined && <p className="text-sm text-status-error">{failure}</p>}
+            <ExtensionHeader
+                icon={extensionIconUrl(entry)}
+                color={manifest.color}
+                name={manifest.name}
+                meta={[manifest.publisher, manifest.version, entry.dev && t('extensions.dev')]}
+                description={manifest.description}
+            />
+            {failure !== undefined && <p className="text-sm text-status-error">{failure}</p>}
+            <SettingsSection>
                 <SettingsRow
                     label={t('extensions.enabled')}
                     control={
@@ -166,23 +231,25 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                         />
                     }
                 />
-                {Object.entries(manifest.permissions ?? {}).map(([permission, reason]) => (
-                    <SettingsRow key={permission} label={reason} description={permission} control={null} />
-                ))}
                 {!entry.dev && (
-                    <div>
-                        <Button
-                            onClick={() => {
-                                void removeExtension(id).then(onRemoved);
-                            }}
-                        >
-                            {t('extensions.remove')}
-                        </Button>
-                    </div>
+                    <SettingsRow
+                        label={t('extensions.remove')}
+                        description={t('extensions.removeDescription')}
+                        control={
+                            <Button
+                                onClick={() => {
+                                    void removeExtension(id).then(onRemoved);
+                                }}
+                            >
+                                {t('extensions.remove')}
+                            </Button>
+                        }
+                    />
                 )}
             </SettingsSection>
+            <PermissionsSection permissions={manifest.permissions} />
             {settings !== undefined && entry.enabled && createElement(settings.component)}
-        </>
+        </div>
     );
 }
 
@@ -212,11 +279,13 @@ export function ExtensionsPane() {
                     </MasterItem>
                     {builtIns.map((entry) => (
                         <MasterItem key={entry.id} selected={selected === entry.id} onSelect={() => setSelected(entry.id)}>
+                            <ExtensionTile icon={entry.icon} color={entry.manifest.color} size={LIST_ROW_TILE} />
                             {entry.manifest.name}
                         </MasterItem>
                     ))}
                     {installed.map((entry) => (
                         <MasterItem key={entry.manifest.id} selected={selected === entry.manifest.id} onSelect={() => setSelected(entry.manifest.id)}>
+                            <ExtensionTile icon={extensionIconUrl(entry)} color={entry.manifest.color} size={LIST_ROW_TILE} />
                             {entry.manifest.name}
                         </MasterItem>
                     ))}

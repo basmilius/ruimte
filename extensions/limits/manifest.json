@@ -5,6 +5,7 @@
     "api": 1,
     "publisher": "Ruimte",
     "description": "Shows how much of your plan windows you have used, in the sidebar.",
+    "color": "#0d9488",
     "permissions": {
         "usage.read": "Reads how much of each plan window you have used"
     }

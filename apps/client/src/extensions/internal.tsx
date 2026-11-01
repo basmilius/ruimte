@@ -39,7 +39,7 @@ export function defineViewAccessory(accessory: Omit<ViewAccessoryContribution, '
  * A built-in with its manifest, which is what Settings shows, as for any other extension. `setup` holds
  * its `define*` calls, so turning it off takes them out again and turning it on runs them anew.
  */
-export function defineBuiltIn(manifest: ExtensionManifest, setup: () => (() => void)[]): void {
+export function defineBuiltIn(manifest: ExtensionManifest, setup: () => (() => void)[], icon?: string): void {
     let disposers: (() => void)[] = [];
     const apply = (enabled: boolean): void => {
         disposers.forEach((dispose) => dispose());
@@ -47,7 +47,7 @@ export function defineBuiltIn(manifest: ExtensionManifest, setup: () => (() => v
         writeDisabled(manifest.id, !enabled);
     };
 
-    contribute('builtIns', { id: manifest.id, manifest, setEnabled: apply });
+    contribute('builtIns', { id: manifest.id, manifest, setEnabled: apply, ...(icon === undefined ? {} : { icon }) });
 
     if (!readDisabled().includes(manifest.id)) {
         disposers = setup();

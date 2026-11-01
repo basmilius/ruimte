@@ -11,7 +11,8 @@ import {
     host
 } from '@ruimte/extension/client';
 
-const panel = definePanel({ id: 'panel', title: 'POC panel', icon: 'flask-conical', component: () => import('./ContextDump') });
+const panel = // No icon, so it shows assets/icon.svg.
+    definePanel({ id: 'panel', title: 'POC panel', component: () => import('./ContextDump') });
 const view = defineView({ id: 'view', title: 'POC view', icon: 'flask-conical', component: () => import('./ViewBody') });
 
 defineSidebarCard({ id: 'card', title: 'POC card', component: () => import('./Counter') });

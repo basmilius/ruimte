@@ -13,6 +13,12 @@ export const ExtensionStoreEntrySchema = z.object({
     description: z.string().optional(),
     publisher: z.string().optional(),
     category: z.string().optional(),
+    color: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .optional(),
+    // A path in the store, like `path`.
+    icon: z.string().optional(),
     reviewedAt: z.string().optional(),
     permissions: z.record(z.string(), z.string()).optional(),
     path: z.string(),

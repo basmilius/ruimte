@@ -6931,6 +6931,10 @@
                   "type": "string",
                   "maxLength": 40
                 },
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                },
                 "autostart": {
                   "type": "boolean"
                 },
@@ -7052,6 +7056,10 @@
           "category": {
             "type": "string",
             "maxLength": 40
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
           },
           "autostart": {
             "type": "boolean"

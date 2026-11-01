@@ -1900,6 +1900,9 @@
         "remove": "Verwijderen",
         "desktopOnly": "Extensies werken in de desktopapp.",
         "safeMode": "Veilige modus: er zijn geen extensies geladen.",
-        "included": "meegeleverd met Ruimte"
+        "included": "meegeleverd met Ruimte",
+        "permissions": "Vraagt om",
+        "noPermissions": "Vraagt nergens extra om.",
+        "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer."
     }
 }

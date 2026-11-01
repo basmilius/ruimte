@@ -1900,6 +1900,9 @@
         "remove": "Remove",
         "desktopOnly": "Extensions work in the desktop app.",
         "safeMode": "Safe mode: no extensions are loaded.",
-        "included": "included with Ruimte"
+        "included": "included with Ruimte",
+        "permissions": "Asks to",
+        "noPermissions": "Asks for nothing extra.",
+        "removeDescription": "Takes it and what it stored off this computer."
     }
 }
