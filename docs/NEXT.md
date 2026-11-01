@@ -92,7 +92,7 @@ Accepted limits: a Claude chat cannot move to an account with another folder aft
 
 ## 16. Plugins
 
-After 1.0, declarative first: context, commands and panels, no executable code. Source: [the plugin report](reports/2026-09-14-plugins.html).
+Replaced by executable extensions: [EXTENSIONS.md](EXTENSIONS.md), source [the extensions report](reports/2026-10-30-extensions.html). The list below is from the earlier plugin report.
 
 2. Ship the compatibility changes first: unknown plugin data survives in project and client state.
 3. A manifest and an install, disable and error lifecycle under `$RUIMTE_HOME/plugins`. Opening a repository runs none of its suggested plugins.
