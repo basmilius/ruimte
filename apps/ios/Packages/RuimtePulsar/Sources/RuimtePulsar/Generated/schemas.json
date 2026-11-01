@@ -55816,6 +55816,118 @@
       "mtime"
     ]
   },
+  "request.fs.writeStart.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "size": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 33554432
+      },
+      "expectedMtime": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "path",
+      "size",
+      "expectedMtime"
+    ]
+  },
+  "request.fs.writeStart.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "uploadId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "uploadId"
+    ]
+  },
+  "request.fs.writePiece.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "uploadId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "offset": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "data": {
+        "type": "string",
+        "maxLength": 87384
+      }
+    },
+    "required": [
+      "uploadId",
+      "offset",
+      "data"
+    ]
+  },
+  "request.fs.writePiece.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.fs.writeCommit.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "uploadId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "uploadId"
+    ]
+  },
+  "request.fs.writeCommit.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "size": {
+        "type": "number"
+      },
+      "mtime": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "size",
+      "mtime"
+    ]
+  },
+  "request.fs.writeAbort.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "uploadId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "uploadId"
+    ]
+  },
+  "request.fs.writeAbort.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.fs.watch.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

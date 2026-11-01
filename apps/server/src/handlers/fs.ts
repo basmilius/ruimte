@@ -1,4 +1,4 @@
-import type { FsCreateResult } from '@ruimte/contracts';
+import { FS_WRITE_MAX_BYTES, type FsCreateResult } from '@ruimte/contracts';
 import type { Dispatcher } from '../dispatcher.ts';
 import { browseDirectories } from '../fs/browse.ts';
 import { createEntry, planCreate } from '../fs/create.ts';
@@ -14,6 +14,7 @@ import { revealInFileManager } from '../fs/reveal.ts';
 import { grepFiles } from '../fs/grep.ts';
 import { listSearchableFiles, searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
+import { TextUploads } from '../fs/text-uploads.ts';
 import { writeTextFile, type WriteBoundary } from '../fs/write.ts';
 
 /* How the host writes and makes the files a server's edit touches, inside the boundary of the client that asked. */
@@ -86,6 +87,38 @@ export function registerFsHandlers(
         void language?.saved(payload.path, payload.text).catch(() => undefined);
 
         return written;
+    });
+
+    const uploads = new TextUploads();
+
+    dispatcher.register('fs.writeStart', async (payload, client) => {
+        await machineHome.refuse(payload.path);
+
+        return { uploadId: uploads.start(client.id, payload.path, payload.size, payload.expectedMtime) };
+    });
+
+    dispatcher.register('fs.writePiece', (payload, client) => {
+        uploads.piece(client.id, payload.uploadId, payload.offset, payload.data);
+
+        return {};
+    });
+
+    dispatcher.register('fs.writeCommit', async (payload, client) => {
+        const { path, text, expectedMtime } = uploads.finish(client.id, payload.uploadId);
+
+        await machineHome.refuse(path);
+
+        const written = await writeTextFile(path, text, expectedMtime, await boundaryOf(client.id), FS_WRITE_MAX_BYTES);
+
+        void language?.saved(path, text).catch(() => undefined);
+
+        return written;
+    });
+
+    dispatcher.register('fs.writeAbort', (payload, client) => {
+        uploads.abort(client.id, payload.uploadId);
+
+        return {};
     });
 
     dispatcher.register('fs.create', async (payload, client) => {

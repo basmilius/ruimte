@@ -119,7 +119,13 @@ export async function openForSave(path: string): Promise<FileHandle> {
  * still be text by the same sniff, and still carry the mtime the read handed out. Written in place,
  * so the inode, its mode and its hard links stay what they were.
  */
-export async function writeTextFile(path: string, text: string, expectedMtime: number, boundary: WriteBoundary): Promise<FsWriteResult> {
+export async function writeTextFile(
+    path: string,
+    text: string,
+    expectedMtime: number,
+    boundary: WriteBoundary,
+    maxBytes: number = FS_READ_MAX_TEXT_BYTES
+): Promise<FsWriteResult> {
     const { file, mime, bom } = await inspect(path);
     const folder = await realOrNull(dirname(file.path));
     if (folder === null) {
@@ -138,7 +144,7 @@ export async function writeTextFile(path: string, text: string, expectedMtime: n
     const encoded = new TextEncoder().encode(text);
     // The read handed the text out without the mark, and a file that had one keeps it.
     const bytes = bom && !text.startsWith('\uFEFF') ? Buffer.concat([UTF8_BOM, encoded]) : encoded;
-    if (bytes.length > FS_READ_MAX_TEXT_BYTES) {
+    if (bytes.length > maxBytes) {
         throw new WriteError('too-large', 'That text is too large to save from here');
     }
     // An editor outside Ruimte can still race this in-place write; the queue only orders Ruimte's own saves.

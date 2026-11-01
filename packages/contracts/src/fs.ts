@@ -226,6 +226,34 @@ export const FsWriteResultSchema = z.object({
 });
 export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
 
+/*
+ * A save past what one frame carries: pieces small enough that a terminal on the same connection never waits
+ * behind one, joined on the machine and written at the commit under the rules of `fs.write`.
+ */
+export const FS_WRITE_MAX_BYTES = 32 * 1024 * 1024;
+export const FS_WRITE_PIECE_BYTES = 64 * 1024;
+
+export const FsWriteStartPayloadSchema = z.object({
+    path: z.string().min(1),
+    size: z.number().int().positive().max(FS_WRITE_MAX_BYTES),
+    expectedMtime: z.number()
+});
+export type FsWriteStartPayload = z.infer<typeof FsWriteStartPayloadSchema>;
+
+export const FsWriteStartResultSchema = z.object({ uploadId: z.string().min(1) });
+export type FsWriteStartResult = z.infer<typeof FsWriteStartResultSchema>;
+
+export const FsWritePiecePayloadSchema = z.object({
+    uploadId: z.string().min(1),
+    offset: z.number().int().nonnegative(),
+    // Base64, of at most `FS_WRITE_PIECE_BYTES`.
+    data: z.string().max(Math.ceil(FS_WRITE_PIECE_BYTES / 3) * 4)
+});
+export type FsWritePiecePayload = z.infer<typeof FsWritePiecePayloadSchema>;
+
+export const FsWriteUploadPayloadSchema = z.object({ uploadId: z.string().min(1) });
+export type FsWriteUploadPayload = z.infer<typeof FsWriteUploadPayloadSchema>;
+
 /* Makes missing parent folders. An existing path is refused as `exists`, unless `overwrite` makes a file of `text`
    over a file that is there (a folder, or a folder over a file, is still `exists`). Held to the boundary of
    `fs.write`, with `.git` and `.ruimte` closed; `text` is held to `FS_READ_MAX_TEXT_BYTES`. With a `projectId` the

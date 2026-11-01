@@ -201,6 +201,10 @@ import {
     FsSearchResultSchema,
     FsWatchPayloadSchema,
     FsWritePayloadSchema,
+    FsWriteStartPayloadSchema,
+    FsWriteStartResultSchema,
+    FsWritePiecePayloadSchema,
+    FsWriteUploadPayloadSchema,
     FsWriteResultSchema
 } from './fs.ts';
 import {
@@ -810,6 +814,10 @@ export const REQUEST_SCHEMAS = {
     'fs.delete': { payload: FsDeletePayloadSchema, result: FsDeleteResultSchema },
     'fs.rename': { payload: FsRenamePayloadSchema, result: FsRenameResultSchema },
     'fs.write': { payload: FsWritePayloadSchema, result: FsWriteResultSchema },
+    'fs.writeStart': { payload: FsWriteStartPayloadSchema, result: FsWriteStartResultSchema },
+    'fs.writePiece': { payload: FsWritePiecePayloadSchema, result: EmptySchema },
+    'fs.writeCommit': { payload: FsWriteUploadPayloadSchema, result: FsWriteResultSchema },
+    'fs.writeAbort': { payload: FsWriteUploadPayloadSchema, result: EmptySchema },
     'fs.watch': { payload: FsWatchPayloadSchema, result: EmptySchema },
     'fs.unwatch': { payload: FsWatchPayloadSchema, result: EmptySchema },
     'bytes.read': { payload: BytesReadPayloadSchema, result: BytesReadResultSchema },

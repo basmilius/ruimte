@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ServerFrame } from '@ruimte/contracts';
+import { FS_WRITE_PIECE_BYTES, type ServerFrame } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
 import { readServedFile } from '../fs/read.ts';
 import { MachineHome } from '../fs/machine-home.ts';
@@ -183,6 +183,47 @@ describe('files that go past the language servers', () => {
 
         expect(await request('fs.write', { path, text: 'new', expectedMtime: Math.round(mtimeMs) })).toMatchObject({ ok: true });
         expect(calls).toEqual([`saved ${path} new`]);
+    });
+
+    test('takes a save past one frame in pieces, tells the servers once and keeps a stale check', async () => {
+        const { calls } = withLanguage();
+        const path = join(root, 'large.txt');
+
+        await writeFile(path, 'old');
+
+        const { mtimeMs } = await stat(path);
+        const text = 'é'.repeat(100_000);
+        const bytes = Buffer.from(text);
+        const upload = async (expectedMtime: number): Promise<ServerFrame> => {
+            const started = await request('fs.writeStart', { path, size: bytes.byteLength, expectedMtime });
+            const { uploadId } = (started as { result: { uploadId: string } }).result;
+
+            for (let offset = 0; offset < bytes.byteLength; offset += FS_WRITE_PIECE_BYTES) {
+                await request('fs.writePiece', { uploadId, offset, data: bytes.subarray(offset, offset + FS_WRITE_PIECE_BYTES).toString('base64') });
+            }
+
+            return request('fs.writeCommit', { uploadId });
+        };
+
+        expect(await upload(Math.round(mtimeMs))).toMatchObject({ ok: true });
+        expect(await readFile(path, 'utf8')).toBe(text);
+        expect(calls).toEqual([`saved ${path} ${text}`]);
+        expect(await upload(Math.round(mtimeMs))).toMatchObject({ ok: false, error: { code: 'stale' } });
+    });
+
+    test('does not write an upload a piece of never arrived', async () => {
+        const path = join(root, 'partial.txt');
+
+        await writeFile(path, 'old');
+
+        const { mtimeMs } = await stat(path);
+        const started = await request('fs.writeStart', { path, size: 10, expectedMtime: Math.round(mtimeMs) });
+        const { uploadId } = (started as { result: { uploadId: string } }).result;
+
+        await request('fs.writePiece', { uploadId, offset: 0, data: Buffer.from('12345').toString('base64') });
+
+        expect(await request('fs.writeCommit', { uploadId })).toMatchObject({ ok: false, error: { code: 'upload-incomplete' } });
+        expect(await readFile(path, 'utf8')).toBe('old');
     });
 
     test('does not tell the servers about a write that is refused', async () => {

@@ -62,6 +62,7 @@ const REQUEST_COUNTERS: Readonly<Record<string, readonly UsageReportCounter[]>> 
     'database.request': ['actions.database'],
     'computer.control': ['actions.computer'],
     'fs.write': ['files.saved'],
+    'fs.writeCommit': ['files.saved'],
     'git.resolve': ['git.conflictsResolved'],
     'git.pr-watch': ['prWatches.started'],
     'voice.start': ['voice.sessions'],
