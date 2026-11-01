@@ -1,5 +1,6 @@
 import { createElement, type ReactNode } from 'react';
-import { Package, Square } from 'lucide-react';
+import { Blocks, Package, Square } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button, ContextMenu, Icon, IconButton, Menu, Pill, Spinner } from '@adecore/ui';
 import { isRunning, nodeIdsOf, runAction, useActionRuns } from '@/extensions/action-runs';
 import { useContributions, type SlotEntry, type SlotMenuItem, type SlotName } from '@/extensions/registry';
@@ -132,7 +133,8 @@ export function SlotRow({ place, context, words = false, wrap }: { place: SlotNa
 
 /* What extensions put in a menu, under a line of its own and so always below what Ruimte offers there. */
 export function SlotMenuItems({ place, context, kit: Kit = ContextMenu }: { place: SlotName; context: object; kit?: MenuKit }) {
-    const { resolved, full } = useSlot(place, context);
+    const { resolved: all, full } = useSlot(place, context);
+    const resolved = all.filter(({ entry }) => entry.addsNode !== true);
 
     if (resolved.length === 0) {
         return null;
@@ -166,6 +168,32 @@ export function SlotMenuItems({ place, context, kit: Kit = ContextMenu }: { plac
                 );
             })}
         </>
+    );
+}
+
+/* Every node an extension adds, together under one submenu, so they never mix with what Ruimte makes itself. */
+export function ExtensionNodesSubmenu({ at }: { at: { x: number; y: number } }) {
+    const { t } = useTranslation('canvas');
+    const { resolved, full } = useSlot('canvasMenu', { at });
+    const nodes = resolved.filter(({ entry }) => entry.addsNode === true);
+
+    if (nodes.length === 0) {
+        return null;
+    }
+
+    return (
+        <ContextMenu.SubmenuRoot>
+            <ContextMenu.SubmenuTrigger>
+                <Icon icon={Blocks} size={14} /> {t('canvasMenu.extensions')}
+            </ContextMenu.SubmenuTrigger>
+            <ContextMenu.Popup className="min-w-44">
+                {nodes.map(({ entry, title, icon }) => (
+                    <ContextMenu.Item key={entry.id} onClick={() => void runAction(entry, full, 'canvasMenu')}>
+                        {icon !== undefined && <Icon icon={icon} size={14} />} {title}
+                    </ContextMenu.Item>
+                ))}
+            </ContextMenu.Popup>
+        </ContextMenu.SubmenuRoot>
     );
 }
 

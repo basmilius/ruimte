@@ -348,7 +348,8 @@ export function clientApiFor(extension: LoadedExtension) {
             add('slotEntries', {
                 id: `${id}/node/${node.id}`,
                 kind: 'action',
-                title: `Add ${node.title}`,
+                title: node.title,
+                addsNode: true,
                 icon: iconOf(node.icon, extension),
                 slots: slotsOf(node.addFrom ?? { canvasMenu: true, commandPalette: true }),
                 run: (context) => {

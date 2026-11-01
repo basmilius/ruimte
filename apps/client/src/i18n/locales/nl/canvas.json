@@ -130,7 +130,8 @@
         "newRoutine": "Nieuwe routine…",
         "design": "Design",
         "groupSelection": "Selectie groeperen",
-        "zoomToFit": "Passend zoomen"
+        "zoomToFit": "Passend zoomen",
+        "extensions": "Extensies"
     },
     "empty": {
         "sections": {

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Maximize, Minus, Scan, SquareDashedMousePointer, Type } from 'lucide-react';
 import { createNodeAction, createTextAction, fitAction, groupSelectionAction, selectAllAction } from '@/actions/client-actions';
 import { AgentSubmenus } from '@/agents/AgentMenus';
-import { SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { ExtensionNodesSubmenu, SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import type { Point } from '@/canvas/math';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
@@ -32,6 +32,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     return (
         <ContextMenu.Popup>
             <CanvasCreateItems at={at} />
+            <ExtensionNodesSubmenu at={at()} />
             <ContextMenu.Separator />
             <ContextMenu.Group>
                 <ContextMenu.Item onClick={() => selectAllAction(canvasStore)}>

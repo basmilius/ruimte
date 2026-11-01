@@ -134,6 +134,8 @@ export interface SlotEntry {
     items?: readonly SlotMenuItem[] | ((context: object) => readonly SlotMenuItem[]);
     component?: ComponentType<{ context: object; nodeId?: string | undefined }>;
     onFailure?: (text: string) => void;
+    // Adds a node of an extension, so a menu lists it with the others of its kind.
+    addsNode?: boolean;
 }
 
 export interface MarkdownBlockContribution {

@@ -56,7 +56,7 @@ Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `
 | Folder | What to look for |
 | --- | --- |
 | `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay and settings detail. An action in every slot, a menu of its own, a widget in a note's header, a viewer for `.csv` and a `poc` fence in a chat. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
-| `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. Add its node from the canvas menu or the palette; a line from it to a chat gives the chat the fact. |
+| `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. Add its node from Extensions in the canvas menu, or the palette; a line from it to a chat gives the chat the fact. |
 | `poc-workspace` | Its menu writes to the canvas and the project, reads git, opens an overlay and asks through dialogs. Its panel hears events, shows params, keeps storage per project and machine, and speaks Dutch and English. A chat's composer gets a button that sends, and a chat's menu starts a second opinion. |
 | `poc-agents` | Summarize in the bar, a node's header, its menu or the palette writes a linked note, with a spinner on the nodes meanwhile. The card lists agents. |
 | `poc-frame` | Shows an opaque origin, refused storage and refused fetch, and still gets an answer from its server. |
