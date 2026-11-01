@@ -32,6 +32,8 @@ export function defineNode<Data = unknown>(
         initialData?: Data;
         dataVersion?: number;
         migrate?: (stored: unknown, fromVersion: number) => Data;
+        /** Where "Add" shows. By default the canvas menu, at the spot clicked, and the command palette. */
+        addFrom?: Partial<Slots>;
     } & Surface
 ): void;
 export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;

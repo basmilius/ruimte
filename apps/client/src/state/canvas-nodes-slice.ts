@@ -83,14 +83,14 @@ export function createCanvasNodesSlice(
             }
             set({ order: [...order.filter((entry) => entry !== id), id] });
         },
-        addExtensionNode(extension, type, title, size, data, dataVersion) {
+        addExtensionNode(extension, type, title, size, data, dataVersion, place) {
             if (get().viewId === null) {
                 return null;
             }
 
             const id = nextId('extension');
             const { viewport, camera } = get();
-            const at = { x: (viewport.w / 2 - camera.x) / camera.zoom, y: (viewport.h / 2 - camera.y) / camera.zoom };
+            const at = place ?? { x: (viewport.w / 2 - camera.x) / camera.zoom, y: (viewport.h / 2 - camera.y) / camera.zoom };
             const frame = { x: snapToGrid(at.x - size.width / 2), y: snapToGrid(at.y - size.height / 2), w: size.width, h: size.height };
             // Stored as it is here: a Ruimte without the extension keeps it whole, and none of it needs a new field on the wire.
             const raw = { kind: 'extension', id, extension, type, title, ...frame, data, ...(dataVersion === undefined ? {} : { dataVersion }) };

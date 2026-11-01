@@ -38,6 +38,12 @@ describe('poc-surfaces', () => {
         expect(state.slotEntries.map((entry) => entry.id)).toEqual(expect.arrayContaining(['poc.surfaces/count', 'poc.surfaces/menu', 'poc.surfaces/tag']));
     });
 
+    test('offers a node where a person adds nodes', () => {
+        const add = useContributions.getState().slotEntries.find((entry) => entry.id === 'poc.surfaces/node/counter');
+
+        expect(Object.keys(add?.slots ?? {}).toSorted()).toEqual(['canvasMenu', 'commandPalette']);
+    });
+
     test('draws a panel with the hooks that read the app', async () => {
         const panel = useContributions.getState().panels.find((entry) => entry.kind === 'extension:poc.surfaces/panel');
         const host = await draw(panel?.component as ComponentType);

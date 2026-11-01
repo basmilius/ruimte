@@ -167,7 +167,8 @@ export interface CanvasState extends CameraSlice {
         title: string,
         size: { width: number; height: number },
         data: unknown,
-        dataVersion?: number
+        dataVersion?: number,
+        at?: Point
     ): string | null;
     updateExtensionNode(id: string, patch: Record<string, unknown>): void;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */

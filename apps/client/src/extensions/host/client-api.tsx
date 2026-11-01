@@ -333,6 +333,7 @@ export function clientApiFor(extension: LoadedExtension) {
                 initialData?: unknown;
                 dataVersion?: number;
                 migrate?: (stored: unknown, from: number) => unknown;
+                addFrom?: PublicSlots;
             } & Surface
         ) {
             assertLazy(node, `defineNode ${node.id}`);
@@ -343,13 +344,25 @@ export function clientApiFor(extension: LoadedExtension) {
                 component: surfaceOf(extension, node) as ComponentType<ExtensionSurfaceProps>,
                 ...(node.migrate === undefined || node.dataVersion === undefined ? {} : { migrate: node.migrate, dataVersion: node.dataVersion })
             });
-            add('commands', {
-                id: `extension:${id}/node/${node.id}`,
+            // Adding is an action like any other, so an extension chooses where it shows; by default where a person adds nodes.
+            add('slotEntries', {
+                id: `${id}/node/${node.id}`,
+                kind: 'action',
                 title: `Add ${node.title}`,
-                run: () => {
+                icon: iconOf(node.icon, extension),
+                slots: slotsOf(node.addFrom ?? { canvasMenu: true, commandPalette: true }),
+                run: (context) => {
                     focusedCanvas()
                         .getState()
-                        .addExtensionNode(id, node.id, node.title, node.size ?? { width: 420, height: 300 }, node.initialData ?? {}, node.dataVersion);
+                        .addExtensionNode(
+                            id,
+                            node.id,
+                            node.title,
+                            node.size ?? { width: 420, height: 300 },
+                            node.initialData ?? {},
+                            node.dataVersion,
+                            (context as { at?: { x: number; y: number } }).at
+                        );
                 }
             });
         },
