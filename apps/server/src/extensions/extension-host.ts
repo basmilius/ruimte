@@ -57,6 +57,7 @@ export interface ExtensionHostOptions {
     startChat?: (extensionId: string, start: ExtensionChatStart) => Promise<{ nodeId: string }>;
     runAction?: (extensionId: string, projectId: string, action: string, input: unknown) => Promise<unknown>;
     addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
+    removeLanguageServers?: (extensionId: string) => Promise<void>;
     now?: () => number;
     spawnProcess?: typeof spawn;
 }
@@ -184,6 +185,7 @@ export class ExtensionHost {
     async remove(id: string): Promise<void> {
         this.stop(id);
         await this.options.store.remove(id);
+        await this.options.removeLanguageServers?.(id);
         this.crashes.delete(id);
         this.changed();
     }

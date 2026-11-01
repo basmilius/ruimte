@@ -150,6 +150,8 @@ export type CustomLanguageServerInput = z.infer<typeof CustomLanguageServerInput
 
 export const CustomLanguageServerSchema = z.object({
     id: LanguageServerIdSchema,
+    // The extension that added it, which takes it along when it goes. A person's edit makes it theirs.
+    extension: z.string().optional(),
     name: z.string(),
     command: z.string(),
     args: z.array(z.string()),

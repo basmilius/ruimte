@@ -1898,6 +1898,7 @@
         "enabled": "On",
         "remove": "Remove",
         "desktopOnly": "Extensions work in the desktop app.",
+        "frameDesktopOnly": "This part of the extension opens only in the desktop app.",
         "safeMode": "Safe mode: no extensions are loaded.",
         "permissions": "Asks to",
         "noPermissions": "Asks for nothing extra.",

@@ -158,6 +158,26 @@ describe('the proof-of-concept extensions', () => {
         await expect(host.runAction('poc.machine', 'project', 'node.delete', {})).rejects.toThrow('cannot ask for');
     });
 
+    test('a language server of an extension goes through the manifest, and leaves with the extension', async () => {
+        const added: object[] = [];
+        const removed: string[] = [];
+        const host = new ExtensionHost({
+            store: new ExtensionStore(join(root, 'languages')),
+            addLanguageServer: async (_id, server) => void added.push(server),
+            removeLanguageServers: async (id) => void removed.push(id)
+        });
+
+        hosts.push(host);
+        await host.install(await packOf('machine'));
+        await host.call('poc.machine', 'addServer', []);
+
+        expect(added).toMatchObject([{ name: 'POC language server', command: 'cat' }]);
+
+        await host.remove('poc.machine');
+
+        expect(removed).toEqual(['poc.machine']);
+    });
+
     test('a client with no shell gets the client part and never the server part', async () => {
         const { host } = hostIn('files');
 

@@ -481,6 +481,24 @@ describe('the daemon actions', () => {
         expect(stopped).toEqual(['chat-2']);
     });
 
+    test('an extension is no node, so it drives a page without a line and reads a list like an agent', async () => {
+        onMain({ id: 'web-1', kind: 'browser', title: 'Docs', url: 'https://example.com', x: 700, y: 0, w: 560, h: 360 });
+
+        const stranger = as('extension:poc.machine');
+
+        expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, stranger)).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });
+
+        const extension = as('extension:poc.machine');
+
+        extension.context.extension = true;
+
+        expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, extension)).toMatchObject({ status: 'completed' });
+        expect(await serverActions.execute('browser.back', { nodeId: 'term-1' }, extension)).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-a-browser' }
+        });
+    });
+
     test('a browser page nobody holds is an answer and not an error, and only a line lets the caller drive it', async () => {
         onMain({ id: 'web-1', kind: 'browser', title: 'Docs', url: 'https://example.com', x: 700, y: 0, w: 560, h: 360 });
         expect(await serverActions.execute('browser.back', { nodeId: 'web-1' }, agent())).toMatchObject({ status: 'failed', error: { code: 'not-linked' } });

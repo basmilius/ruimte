@@ -113,7 +113,7 @@ const server: Record<string, unknown> = {
     agents: { run: async () => ({ text: '' }), start: async () => ({ nodeId: 'chat' }) },
     chats: { list: async () => [], send: async () => undefined },
     machine: { platform: 'test', dataFolder: '', run: async () => undefined },
-    defineLanguageServer: () => undefined,
+    defineLanguageServer: async () => undefined,
     storage: { get: async () => undefined, set: async () => undefined, delete: async () => undefined },
     secrets: { get: async () => undefined, set: async () => undefined },
     log: { info: () => undefined, error: () => undefined }

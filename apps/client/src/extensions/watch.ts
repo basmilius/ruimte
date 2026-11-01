@@ -1,5 +1,6 @@
-import { followDevLinks, followStationMachine, syncExtensions } from '@/extensions/loader';
+import { followDevLinks, syncExtensions } from '@/extensions/loader';
 import { IS_STATION } from '@/station';
+import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
 import { watchPool } from '@/transport/pool-watch';
 import type { Transport } from '@/transport';
@@ -8,10 +9,20 @@ import type { Transport } from '@/transport';
 export function startExtensions(): () => void {
     void syncExtensions();
 
-    return watchPool((link: Transport, endpointId: string) => {
+    // Station runs what the machine of this window has, so another machine in the pool changes nothing.
+    const stopFollowing = IS_STATION
+        ? useEndpoints.subscribe((state, before) => {
+              if (state.activeId !== before.activeId) {
+                  void syncExtensions();
+              }
+          })
+        : undefined;
+    const stopWatching = watchPool((link: Transport, endpointId: string) => {
         const follow = (): void => {
             if (IS_STATION) {
-                followStationMachine(link);
+                if (endpointId === useEndpoints.getState().activeId) {
+                    void syncExtensions();
+                }
             } else if (isThisMachine(endpointId)) {
                 void link.request('extension.list', {}).then(({ extensions }) => followDevLinks(extensions));
             }
@@ -19,4 +30,9 @@ export function startExtensions(): () => void {
 
         return { onOpen: follow, subscriptions: [link.on('extension.changed', follow)] };
     });
+
+    return () => {
+        stopFollowing?.();
+        stopWatching();
+    };
 }

@@ -98,9 +98,19 @@ Still to set up before the store opens:
 
 Opening a window with `?safe-mode` loads no extension and no theme, so a person can always remove one that hangs the app.
 
+## The machine
+
+`definePaletteSource({ id, title, search })` adds rows to the command palette. It runs after a pause in the typing, and a slow or failing one costs only its own rows.
+
+`launches`, `routines`, `artifacts`, `browser` and `devices` call the actions of the same name (`launches.start({ name })` is `launch.start`) and answer with their output. The daemon checks each call against `EXTENSION_ACTIONS` and the manifest. From `server/`, `machine.run(projectId, 'launch.start', input)` does the same.
+
+`terminals.read(node)` returns a terminal's screen and `terminals.open()` opens a shell. Nothing types into one.
+
+`defineLanguageServer` in `server/` offers a server. It shows as held in Settings and starts only once a person saves it there, because only a person approves a command. The same name changes the offer, and removing the extension removes an offer nobody approved.
+
 ## Station
 
-Station has no shell, so it runs what the machine in front has. `extension.clientFiles` hands over everything but `server/`, the page caches it, and `extension-files-sw.js` answers it on the page's own origin, under the same `script-src 'self'`. Each machine brings its own extensions.
+Station has no shell, so it runs what the machine in front has. `extension.clientFiles` hands over everything but `server/`, the page caches it, and `extension-files-sw.js` answers it on the page's own origin, under the same `script-src 'self'`. A window runs the extensions of its own machine. A `frame` surface shows a notice there: a sandboxed frame gets no policy from the worker.
 
 ## Choices against the report
 

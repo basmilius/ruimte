@@ -506,6 +506,16 @@ export class LanguageHost {
         return saved;
     }
 
+    async customSaveFor(extension: string, input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+        const saved = await this.custom.saveFor(extension, input);
+        await this.customChanged(saved.id);
+        return saved;
+    }
+
+    async customRemoveOwned(extension: string): Promise<void> {
+        await Promise.all(this.custom.ownedBy(extension).map((id) => this.customRemove(id)));
+    }
+
     async customRemove(id: string): Promise<void> {
         if (await this.custom.remove(id)) {
             await this.customChanged(id);

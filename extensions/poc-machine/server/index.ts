@@ -2,9 +2,9 @@ import { defineLanguageServer, defineServer } from '@ruimte/extension/server';
 
 const api = defineServer({
     async addServer() {
-        defineLanguageServer({ name: 'POC language server', command: 'poc-language-server', languages: ['poc'], patterns: ['*.poc'] });
+        await defineLanguageServer({ name: 'POC language server', command: 'cat', languages: ['poc'], patterns: ['*.poc'] });
 
-        return 'Look in Settings, Language servers';
+        return 'Look in Settings, Language servers: it waits for you to approve it';
     }
 });
 

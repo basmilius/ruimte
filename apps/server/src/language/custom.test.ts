@@ -24,6 +24,26 @@ function store(): CustomLanguageServers {
 }
 
 describe('the language servers of a person', () => {
+    it('keeps one server per name for an extension, and a person who edits it makes it theirs', async () => {
+        const servers = store();
+        await servers.load();
+
+        const first = await servers.saveFor('poc.machine', zig);
+        const again = await servers.saveFor('poc.machine', { ...zig, args: ['--stdio'] });
+        await servers.saveFor('poc.other', zig);
+
+        expect(again.id).toBe(first.id);
+        expect(servers.list()).toHaveLength(2);
+        expect(servers.ownedBy('poc.machine')).toEqual([first.id]);
+        expect(servers.list().every((server) => server.held === true)).toBe(true);
+
+        await servers.save({ ...zig, id: first.id });
+
+        expect(servers.ownedBy('poc.machine')).toEqual([]);
+        expect(servers.get(first.id)?.held).toBeUndefined();
+        expect((await servers.saveFor('poc.machine', { ...zig, command: 'other', args: [] }).catch(() => null))?.id ?? first.id).toBe(first.id);
+    });
+
     it('saves a server and reads it back after a restart', async () => {
         const first = store();
         await first.load();

@@ -2,6 +2,7 @@ import { EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { ExtensionInfo } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import type { Transport } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 const CACHE = 'ruimte-extension-files';
 const WORKER = '/extension-files-sw.js';
@@ -21,7 +22,11 @@ async function workerReady(): Promise<void> {
 
     // Active is not yet in charge of this page, and an import before that misses the worker.
     if (navigator.serviceWorker.controller === null) {
-        await new Promise((resolve) => navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true }));
+        const inCharge = new Promise((resolve) => navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true }));
+
+        // A forced reload leaves an active worker out of charge, and only asking brings it back.
+        (await navigator.serviceWorker.ready).active?.postMessage('claim');
+        await inCharge;
     }
 }
 
@@ -33,7 +38,8 @@ function bytesOf(base64: string): Uint8Array<ArrayBuffer> {
 async function cached(link: Pick<Transport, 'request'>, info: ExtensionInfo, base: string): Promise<boolean> {
     const cache = await caches.open(CACHE);
 
-    if ((await cache.match(`${base}manifest.json`)) !== undefined) {
+    // A dev link keeps its hash over a restart of the machine, so it is never trusted.
+    if (!info.hash.startsWith('dev-') && (await cache.match(`${base}manifest.json`)) !== undefined) {
         return (await cache.match(`${base}assets/icon.svg`)) !== undefined;
     }
 
@@ -51,13 +57,28 @@ async function cached(link: Pick<Transport, 'request'>, info: ExtensionInfo, bas
     return files['assets/icon.svg'] !== undefined;
 }
 
+async function dropOtherVersions(bases: readonly string[]): Promise<void> {
+    const cache = await caches.open(CACHE);
+
+    for (const request of await cache.keys()) {
+        const { pathname } = new URL(request.url);
+
+        if (!bases.some((base) => pathname.startsWith(base))) {
+            await cache.delete(request);
+        }
+    }
+}
+
 /* What the machine in front has, for a client with no shell to keep files. */
-export async function machineExtensions(link: Pick<Transport, 'request'>): Promise<InstalledClientExtension[]> {
+export async function machineExtensions(link: Pick<Transport, 'request' | 'connection'>): Promise<InstalledClientExtension[]> {
+    if (!machineAnswers(link.connection, 'extension.clientFiles')) {
+        return [];
+    }
+
     await workerReady();
 
     const { extensions } = await link.request('extension.list', {});
-
-    return Promise.all(
+    const installed = await Promise.all(
         extensions.map(async (info) => {
             const base = `${EXTENSION_FILES_PATH}${info.manifest.id}/${info.hash}/`;
 
@@ -71,4 +92,8 @@ export async function machineExtensions(link: Pick<Transport, 'request'>): Promi
             };
         })
     );
+
+    await dropOtherVersions(installed.map((entry) => entry.base));
+
+    return installed;
 }

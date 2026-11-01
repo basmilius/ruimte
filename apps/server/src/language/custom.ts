@@ -100,7 +100,7 @@ export class CustomLanguageServers {
     }
 
     /* Saves a server a person gave, which approves starting exactly what it names. */
-    async save(input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+    async save(input: CustomLanguageServerInput, extension?: string): Promise<CustomLanguageServer> {
         this.assertWritable();
         const languages = [...new Set(input.languages.map((language) => language.trim().toLowerCase()))];
         const patterns = [...new Set(input.patterns.map((pattern) => pattern.trim()))];
@@ -121,6 +121,7 @@ export class CustomLanguageServers {
         }
         const server: CustomLanguageServer = {
             id,
+            ...(extension === undefined ? {} : { extension }),
             name: input.name.trim(),
             command: input.command.trim(),
             args: [...input.args],
@@ -130,10 +131,30 @@ export class CustomLanguageServers {
             ...(input.initializationOptions === undefined ? {} : { initializationOptions: input.initializationOptions }),
             ...(input.projects === undefined || input.projects.length === 0 ? {} : { projects: [...new Set(input.projects)] })
         };
-        const stored: StoredServer = { ...server, approval: approvalOf(server) };
+        // Only a person approves a command: an extension's server stays held until one saves it.
+        const stored: StoredServer = { ...server, approval: extension === undefined ? approvalOf(server) : '' };
         const index = this.servers.findIndex((candidate) => candidate.id === id);
         await this.write(index === -1 ? [...this.servers, stored] : this.servers.map((candidate) => (candidate.id === id ? stored : candidate)));
         return server;
+    }
+
+    /* An extension's server, by its name, so loading it again changes the one it already added. */
+    async saveFor(extension: string, input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+        const name = input.name.trim();
+        const approved = this.list().find((server) => server.extension === undefined && server.name === name);
+
+        // A person made it theirs, so loading the extension again neither changes it nor adds a second.
+        if (approved !== undefined) {
+            return approved;
+        }
+
+        const known = this.servers.find((server) => server.extension === extension && server.name === name);
+
+        return this.save({ ...input, ...(known === undefined ? {} : { id: known.id }) }, extension);
+    }
+
+    ownedBy(extension: string): string[] {
+        return this.servers.filter((server) => server.extension === extension).map((server) => server.id);
     }
 
     /* Whether there was such a server. */

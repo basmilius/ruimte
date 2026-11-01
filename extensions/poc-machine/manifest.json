@@ -14,6 +14,6 @@
         "devices.control": "Lists your devices",
         "terminals.read": "Reads the terminal you select",
         "canvas.write": "Opens a terminal",
-        "languages.servers": "Adds a language server when you press the button"
+        "languages.servers": "Offers a language server when you press the button"
     }
 }

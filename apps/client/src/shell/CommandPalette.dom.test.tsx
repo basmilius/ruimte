@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
+import { contribute } from '@/extensions/registry';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
 import { useDocument } from '@/state/document';
@@ -55,6 +56,31 @@ afterEach(async () => {
     await page.unmount();
     await act(async () => workspace?.close());
     workspace = null;
+});
+
+describe('the command palette with an extension', () => {
+    test('shows what a source finds for words no row holds, and pressing it runs it', async () => {
+        const ran: string[] = [];
+        const remove = contribute('paletteSources', {
+            id: 'poc/numbers',
+            title: 'POC',
+            search: async (query) => [{ id: query, title: 'From the source', run: () => ran.push(query) }]
+        });
+
+        try {
+            await openPalette(
+                () => useUi.getState().setPaletteOpen(true),
+                () => rows().length > 0
+            );
+            await type('zzzqqq');
+            await until(() => labels().some((label) => label.includes('From the source')));
+            await pressKey(field()!, 'Enter');
+
+            expect(ran).toEqual(['zzzqqq']);
+        } finally {
+            remove();
+        }
+    });
 });
 
 describe('the command palette keeps the keyboard in its field', () => {

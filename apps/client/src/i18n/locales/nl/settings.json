@@ -1898,6 +1898,7 @@
         "enabled": "Aan",
         "remove": "Verwijderen",
         "desktopOnly": "Extensies werken in de desktopapp.",
+        "frameDesktopOnly": "Dit deel van de extensie opent alleen in de desktopapp.",
         "safeMode": "Veilige modus: er zijn geen extensies geladen.",
         "permissions": "Vraagt om",
         "noPermissions": "Vraagt nergens extra om.",

@@ -52,8 +52,8 @@ export const machine: {
     run(projectId: string, action: string, input?: object): Promise<any>;
 };
 
-/** Needs `languages.servers`. Saved like one a person added, so it shows in Settings, Language servers. */
-export function defineLanguageServer(server: { name: string; command: string; args?: string[]; env?: Record<string, string>; languages: string[]; patterns: string[] }): void;
+/** Needs `languages.servers`. Offers a server, which shows as held in Settings and starts only once a person saves it there. Calling it again with the same name changes the offer, and removing the extension removes an offer nobody approved. Rejects when the command is not on this machine. */
+export function defineLanguageServer(server: { name: string; command: string; args?: string[]; env?: Record<string, string>; languages: string[]; patterns: string[] }): Promise<void>;
 
 export const log: {
     info(message: string): void;

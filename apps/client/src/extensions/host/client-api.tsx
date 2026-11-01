@@ -1,6 +1,7 @@
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, type ComponentType } from 'react';
 import { icons, Package, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { IS_STATION } from '@/station';
 import { create } from 'zustand';
 import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
@@ -88,6 +89,7 @@ function useExtension(): LoadedExtension {
 function frameHostFor(extension: LoadedExtension, path: string): ComponentType {
     // oxlint-disable-next-line react/only-export-components -- Made per extension, and never hot-reloaded.
     return function ExtensionFrame() {
+        const { t } = useTranslation('settings');
         const { transport } = useFocusedMachine();
         const frame = useRef<HTMLIFrameElement>(null);
 
@@ -110,6 +112,10 @@ function frameHostFor(extension: LoadedExtension, path: string): ComponentType {
 
             return () => window.removeEventListener('message', listen);
         }, [transport]);
+
+        if (IS_STATION) {
+            return <p className="p-3 text-sm text-text-muted">{t('extensions.frameDesktopOnly')}</p>;
+        }
 
         return (
             <iframe

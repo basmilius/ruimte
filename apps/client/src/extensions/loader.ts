@@ -3,7 +3,7 @@ import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
 import { machineExtensions } from '@/extensions/station-files';
 import { IS_STATION } from '@/station';
-import type { Transport } from '@/transport';
+import { transport } from '@/transport';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
 import { refreshExtensionTheme } from '@/extensions/themes';
 import { create } from 'zustand';
@@ -18,13 +18,6 @@ export const useInstalledExtensions = create<ExtensionsState>(() => ({ installed
 
 const loaded = new Map<string, string>();
 let safeMode = false;
-let stationLink: Transport | null = null;
-
-/* The web client has no shell: what it runs comes from the machine it is connected to. */
-export function followStationMachine(link: Transport): void {
-    stationLink = link;
-    void syncExtensions();
-}
 let stopActivation: (() => void) | null = null;
 
 /* `ruimte --safe-mode` sets this on the window's address, so a person can always get back into an app an extension hangs. */
@@ -50,7 +43,7 @@ function failed(id: string, e: unknown): void {
 
 /* Loads what is on and new, and takes down what went or moved to another version. One extension failing leaves the others alone. */
 export async function syncExtensions(): Promise<void> {
-    const installed = IS_STATION ? (stationLink === null ? null : await machineExtensions(stationLink)) : ((await desktop()?.extensions?.list()) ?? null);
+    const installed = IS_STATION ? await machineExtensions(transport).catch(() => null) : ((await desktop()?.extensions?.list()) ?? null);
 
     if (installed === null) {
         return;

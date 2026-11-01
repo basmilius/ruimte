@@ -26,7 +26,7 @@ import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extens
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
 import { serverActionCall, voiceActionCall } from './actions/context.ts';
 import type { ActionName } from '@ruimte/actions';
-import type { CustomLanguageServerInput } from '@ruimte/contracts';
+import { CustomLanguageServerInputSchema } from '@ruimte/contracts';
 import { serverActions } from './actions/server-actions.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
@@ -77,7 +77,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         asks: () => extensionAsks,
         startChat: (id, start) => startExtensionChat(id, start),
         runAction: (id, projectId, action, input) => runExtensionAction(id, projectId, action, input),
-        addLanguageServer: (id, server) => addExtensionLanguageServer(id, server)
+        addLanguageServer: (id, server) => addExtensionLanguageServer(id, server),
+        removeLanguageServers: (id) => language.host.customRemoveOwned(id)
     });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
@@ -299,7 +300,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     };
     // Saved like one a person added, so it is listed in Settings and held when its file changes.
     addExtensionLanguageServer = async (id, server) => {
-        await language.host.customSave({ ...server, id: `extension-${id.replace('.', '-')}` } as CustomLanguageServerInput);
+        await language.host.customSaveFor(id, CustomLanguageServerInputSchema.parse({ args: [], ...server, id: undefined }));
     };
     extensionAsks = {
         'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),
