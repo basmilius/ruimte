@@ -271,6 +271,8 @@ export default defineConfig(({ command, mode }) => ({
         // Keep the client same-origin in development; `RUIMTE_DAEMON` can target another daemon.
         proxy: {
             '/ws': { target: daemon, ws: true },
+            // The shell keeps these (`apps/desktop/src/main/dev-extension-files.ts`).
+            '/__extensions': { target: 'http://127.0.0.1:4213' },
             // Signing in, and bytes that stay off the JSON socket: project icons, files, attachments, live pixels.
             ...Object.fromEntries(
                 ['/auth', '/projects', '/fs', '/attachments', '/live-stream'].map((path) => [path, { target: daemon.replace(/^ws/, 'http') }])
