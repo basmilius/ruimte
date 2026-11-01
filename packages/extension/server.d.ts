@@ -10,6 +10,12 @@ export function emit(name: string, payload: unknown): void;
 /** What an agent reads of a node along a line, also with no client open. */
 export function defineNodeContext<Data>(nodeType: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void;
 
+/**
+ * Needs `agents.tools`. Any agent on this machine can then find it with `ruimte-context tool list` and call it with `tool run`.
+ * Having it starts `server/` with the machine, since an agent can only find what is running. It answers in text.
+ */
+export function defineAgentTool(tool: { id: string; description: string; parameters?: object; run(input: any, context: { caller: string }): string | Promise<string> }): void;
+
 /** Needs the permission `clock`. Runs on this process's own clock: `every` is like 30s, 5m or 1h, of at least 10 seconds. */
 export function schedule(task: { id: string; every: string; run(): void | Promise<void> }): void;
 

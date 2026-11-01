@@ -84,6 +84,7 @@ const server: Record<string, unknown> = {
     emit: () => undefined,
     defineNodeContext: () => undefined,
     schedule: () => undefined,
+    defineAgentTool: () => undefined,
     agents: { run: async () => ({ text: '' }) },
     chats: { list: async () => [], send: async () => undefined },
     storage: { get: async () => undefined, set: async () => undefined },

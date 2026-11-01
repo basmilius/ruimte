@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
+import { VerbRefusal } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
@@ -54,11 +55,16 @@ export interface ExtensionHostOptions {
  * Stopping one is the host's to do, unlike a person's own processes: it started this one and nothing
  * else depends on it.
  */
+function startsWithMachine(manifest: ExtensionInfo['manifest']): boolean {
+    return manifest.autostart === true || Object.hasOwn(manifest.permissions ?? {}, 'agents.tools');
+}
+
 export class ExtensionHost {
     private readonly running = new Map<string, Running>();
     private readonly crashes = new Map<string, number>();
     private readonly sinks = new ClientSinks();
     private readonly sends = new Map<string, number[]>();
+    private readonly tools = new Map<string, { description: string; parameters: unknown }>();
 
     private readonly options: ExtensionHostOptions;
 
@@ -76,7 +82,8 @@ export class ExtensionHost {
 
     async startAutostarted(): Promise<void> {
         for (const extension of await this.options.store.list()) {
-            if (extension.enabled && extension.manifest.autostart === true) {
+            // A tool only exists once its process said so, and an agent cannot ask for what it does not see.
+            if (extension.enabled && startsWithMachine(extension.manifest)) {
                 await this.start(extension).catch((e: unknown) => console.warn(`Extension ${extension.manifest.id} did not start: ${errorText(e)}`));
             }
         }
@@ -136,7 +143,7 @@ export class ExtensionHost {
         if (enabled) {
             const extension = await this.options.store.get(id);
 
-            if (extension?.manifest.autostart === true) {
+            if (extension !== null && startsWithMachine(extension.manifest)) {
                 await this.start(extension);
             }
         }
@@ -150,7 +157,7 @@ export class ExtensionHost {
         this.crashes.delete(extension.manifest.id);
         this.stop(extension.manifest.id);
 
-        if (extension.enabled && extension.manifest.autostart === true) {
+        if (extension.enabled && startsWithMachine(extension.manifest)) {
             await this.start(extension);
         }
 
@@ -204,6 +211,25 @@ export class ExtensionHost {
         await writeFile(file, JSON.stringify({ ...values, [key]: value }), { mode: 0o600 });
     }
 
+    agentTools(): readonly { id: string; description: string; parameters: unknown }[] {
+        return [...this.tools.entries()].map(([id, tool]) => ({ id, ...tool }));
+    }
+
+    /* An agent's call of a tool. It answers in text, as anything an agent reads does. */
+    async runAgentTool(tool: string, input: unknown, context: { caller: string }): Promise<string> {
+        const slash = tool.indexOf('/');
+
+        if (slash === -1 || !this.tools.has(tool)) {
+            throw new VerbRefusal('no-tool', `No tool ${tool}. ruimte-context tool list says what there is`);
+        }
+
+        const id = tool.slice(0, slash);
+        const running = await this.runningFor(id);
+        const answer = await this.send(running, { type: 'tool', method: tool.slice(slash + 1), payload: input, context }, tool);
+
+        return typeof answer === 'string' ? answer : JSON.stringify(answer);
+    }
+
     /* What a client of an extension in development says. Nothing keeps it for one that is installed. */
     async appendDevLog(id: string, text: string): Promise<void> {
         const extension = await this.options.store.get(id);
@@ -224,6 +250,14 @@ export class ExtensionHost {
         }
     }
 
+    private forgetTools(id: string): void {
+        for (const tool of this.tools.keys()) {
+            if (tool.startsWith(`${id}/`)) {
+                this.tools.delete(tool);
+            }
+        }
+    }
+
     private stop(id: string): void {
         const running = this.running.get(id);
 
@@ -234,6 +268,7 @@ export class ExtensionHost {
         running.stopping = true;
         running.child.kill();
         this.running.delete(id);
+        this.forgetTools(id);
         this.failPending(running, new Error('The extension stopped'));
     }
 
@@ -355,6 +390,14 @@ export class ExtensionHost {
                 (result) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, result: result ?? null })}\n`),
                 (e: unknown) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, error: errorText(e) })}\n`)
             );
+        } else if (message.type === 'tool') {
+            const tool = message as unknown as { name: string; description: string; parameters: unknown };
+
+            void this.options.store.get(id).then((extension) => {
+                if (Object.hasOwn(extension?.manifest.permissions ?? {}, 'agents.tools')) {
+                    this.tools.set(`${id}/${tool.name}`, { description: tool.description, parameters: tool.parameters });
+                }
+            });
         } else if (message.type === 'ready') {
             this.crashes.delete(id);
             markReady();
@@ -435,6 +478,7 @@ export class ExtensionHost {
         }
 
         this.running.delete(id);
+        this.forgetTools(id);
         this.crashes.set(id, (this.crashes.get(id) ?? 0) + 1);
         this.changed();
     }

@@ -1989,6 +1989,27 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ viewId, edgeIds: z.array(z.string().min(1)).min(1).max(MAX_PER_CALL) }),
         output: z.object({ viewId, edges: z.array(canvasLine) })
     },
+    'tool.list': {
+        title: 'List extension tools',
+        description: 'Lists the tools the extensions on this machine offer agents, each with what it does and the input it takes.',
+        effect: 'read',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({}),
+        output: z.object({ tools: z.array(z.object({ id: z.string(), description: z.string(), parameters: z.string() })) })
+    },
+    'tool.run': {
+        title: 'Run an extension tool',
+        description: 'Runs a tool an extension on this machine offers, with its input as JSON, and prints what it answers.',
+        effect: 'external',
+        domain: 'agents',
+        actors: AGENT,
+        input: z.object({
+            id: z.string().min(1).max(256).describe('The tool, as tool list prints it'),
+            input: z.string().max(100_000).describe('Its input, as JSON')
+        }),
+        output: z.object({ text: z.string() })
+    },
     'agent.alert': {
         title: 'Notify the person',
         description: 'Sends the person a notification from your own session. Use only when they asked for one, such as when your work is done.',

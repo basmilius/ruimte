@@ -1,8 +1,15 @@
 /// <reference types="bun" />
-import { agents, chats, defineNodeContext, defineServer, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
+import { agents, chats, defineAgentTool, defineNodeContext, defineServer, emit, log, onEvent, schedule, secrets, storage } from '@ruimte/extension/server';
 
 let eventsSeen = 0;
 let ticks = 0;
+
+defineAgentTool({
+    id: 'fact',
+    description: 'Answers a fact, to show an agent can call an extension',
+    parameters: { type: 'object', properties: { about: { type: 'string' } } },
+    run: ({ about }, { caller }) => `${about ?? 'Everything'} is 42, for ${caller}`
+});
 
 schedule({
     id: 'tick',

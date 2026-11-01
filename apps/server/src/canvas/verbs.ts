@@ -27,6 +27,7 @@ import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts'
 import { notifyVerb } from './notify-verb.ts';
 import { openAction } from './open-verb.ts';
 import { operationVerb } from './operation-verb.ts';
+import { toolVerb } from './tool-verb.ts';
 import { planVerb } from './plan-verb.ts';
 import { renameAction } from './rename-verb.ts';
 import { ROUTINE_ACTIONS, ROUTINE_DETAIL, ROUTINE_SUMMARY } from './routine-verb.ts';
@@ -284,6 +285,7 @@ export const VERBS: readonly VerbEntry[] = [
     uiNoun,
     worktreeVerb,
     operationVerb,
+    toolVerb,
     launchesNoun,
     routineNoun,
     secretNoun,

@@ -17,6 +17,7 @@ if (entry === undefined || dataFolder === undefined) {
 
 const protocol = process.stdout;
 const listeners = new Map<string, Set<Listener>>();
+const tools = new Map<string, { run(input: unknown, context: { caller: string }): unknown }>();
 const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
 
 function send(message: object): void {
@@ -87,6 +88,10 @@ const server = {
     chats: {
         send: (chatId: string, text: string) => ask('chats.send', [chatId, text]),
         list: () => ask('chats.list', [])
+    },
+    defineAgentTool(tool: { id: string; description: string; parameters?: unknown; run(input: unknown, context: { caller: string }): unknown }): void {
+        tools.set(tool.id, tool);
+        send({ type: 'tool', name: tool.id, description: tool.description, parameters: tool.parameters ?? { type: 'object', properties: {} } });
     },
     schedule(task: { id: string; every: string; run(): unknown }): void {
         if (!permissions.has('clock')) {
@@ -185,6 +190,18 @@ process.stdin.on('data', (chunk: string) => {
             for (const listener of listeners.get(message.name) ?? []) {
                 listener(message.payload);
             }
+        } else if (message.type === 'tool') {
+            const { payload, context } = message as unknown as { payload: unknown; context: { caller: string } };
+
+            void answer(message.id, () => {
+                const tool = tools.get(message.method);
+
+                if (tool === undefined) {
+                    throw new Error(`No tool ${message.method}`);
+                }
+
+                return tool.run(payload, context);
+            });
         } else if (message.type === 'nodeContext') {
             void answer(message.id, () => nodeContexts.get(message.node)?.({ data: message.data }) ?? []);
         }

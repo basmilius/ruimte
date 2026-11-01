@@ -137,6 +137,7 @@ export const USAGE_VERB_COUNTERS = {
     worktree: 'verbsWorktree',
     launches: 'verbsLaunches',
     operation: 'verbsLaunches',
+    tool: 'verbsLaunches',
     routine: 'verbsLaunches',
     secret: 'verbsSecret',
     language: 'verbsLanguage',

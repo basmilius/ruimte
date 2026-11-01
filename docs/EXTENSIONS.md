@@ -41,7 +41,7 @@ While `run` is pending, the nodes it is about show a spinner that also stops it 
 
 ## Permissions
 
-Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `context.read`, `files.read`, `files.write`, `git.read`, `chats.read`, `chats.send`, `agents.run`, `agents.start`, `agents.status`, `usage.read`, `clock`.
+Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `context.read`, `files.read`, `files.write`, `git.read`, `chats.read`, `chats.send`, `agents.run`, `agents.start`, `agents.status`, `agents.tools`, `usage.read`, `clock`.
 
 `chats.send` from `server/` is limited to 20 messages per chat per hour, so a loop with a chat stops on its own. Typing into a terminal and answering a permission prompt stay out of reach.
 
@@ -96,4 +96,4 @@ Opening a window with `?safe-mode` loads no extension and no theme, so a person 
 
 ## Not built yet
 
-From [the API report](reports/2026-11-01-extension-api.html): `defineAgentTool`, `defineToolResult`, `defineMessageBlock`, `defineReference`, `defineSlashCommand`, `defineTemplate`, `defineStatusItem`, `defineVoiceAction`, `defineNotificationAction`, `defineDiffViewer`, `defineFileIcon`, the slots `messageMenu`, `lineMenu` and `projectMenu`, `database`, `agents.stream`, `files.watch`, `defineSettings` with a schema, `agents.start` from `server/`, `hosts` and `activation` in the manifest, a `--safe-mode` flag on the launcher, and webhooks, which stay out by choice.
+From [the API report](reports/2026-11-01-extension-api.html): `defineToolResult`, `defineMessageBlock`, `defineReference`, `defineSlashCommand`, `defineTemplate`, `defineStatusItem`, `defineVoiceAction`, `defineNotificationAction`, `defineDiffViewer`, `defineFileIcon`, the slots `messageMenu`, `lineMenu` and `projectMenu`, `database`, `agents.stream`, `files.watch`, `defineSettings` with a schema, `agents.start` from `server/`, `hosts` and `activation` in the manifest, a `--safe-mode` flag on the launcher, and webhooks, which stay out by choice.

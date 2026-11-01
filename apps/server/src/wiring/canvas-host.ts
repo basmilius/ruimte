@@ -41,6 +41,7 @@ interface CanvasHostInput {
     git: GitBundle;
     devices: DevicesBundle;
     databases: DatabasesBundle;
+    extensions: NonNullable<CanvasHost['extensions']>;
     remote: RemoteBundle;
     usage: UsageBundle;
     artifacts: ArtifactsBundle;
@@ -127,6 +128,7 @@ export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
         agentImages: { attach: (chatId, upload) => chats.attachAgentImage(chatId, upload) },
         visuals: agentVisuals({ enabled: () => identity.visualReplies, visuals: agents.visuals, chats, renderer: devices.visualRenderer }),
         databases: databases.agents,
+        extensions: input.extensions,
         language: new AgentLanguage({
             host: {
                 forAgent: (projectId, request, languageWork) => later.language().forAgent(projectId, request, languageWork),

@@ -26,6 +26,12 @@ async function packOf(name: string): Promise<string> {
     return readFileSync(path).toString('base64');
 }
 
+async function until(condition: () => boolean): Promise<void> {
+    for (let attempt = 0; attempt < 200 && !condition(); attempt++) {
+        await Bun.sleep(10);
+    }
+}
+
 afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
 afterAll(() => {
     rmSync(root, { recursive: true, force: true });
@@ -99,6 +105,21 @@ describe('the proof-of-concept extensions', () => {
 
         await expect(host.call('poc.server', 'poke', ['chat'])).rejects.toThrow('has to wait');
         expect(sent).toHaveLength(20);
+    });
+
+    test('poc-server offers an agent a tool, only while it runs', async () => {
+        const { host } = hostIn('tools');
+
+        await host.install(await packOf('server'));
+        await until(() => host.agentTools().length > 0);
+
+        expect(host.agentTools().map((tool) => tool.id)).toEqual(['poc.server/fact']);
+        expect(await host.runAgentTool('poc.server/fact', { about: 'Life' }, { caller: 'chat-1' })).toBe('Life is 42, for chat-1');
+        await expect(host.runAgentTool('poc.server/none', {}, { caller: 'chat-1' })).rejects.toThrow('No tool');
+
+        await host.setEnabled('poc.server', false);
+
+        expect(host.agentTools()).toEqual([]);
     });
 
     test('poc-broken fails at load, and stays off after three tries', async () => {

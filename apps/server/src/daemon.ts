@@ -143,6 +143,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     });
     const maintenance = wireMaintenance(home, processes, { language: () => language.host, projects: () => projects.store.index });
     const canvasHost = wireCanvasHost({
+        extensions,
         identity,
         stores,
         providers,

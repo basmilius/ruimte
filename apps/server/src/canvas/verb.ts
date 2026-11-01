@@ -161,6 +161,10 @@ export interface CanvasHost {
     agentImages?: AgentImageHost;
     /* The databases of the caller's project as an agent may reach them; absent on a host without them. */
     databases?: DatabaseAgentHost;
+    extensions?: {
+        agentTools(): readonly { id: string; description: string; parameters: unknown }[];
+        runAgentTool(id: string, input: unknown, context: { caller: string }): Promise<string>;
+    };
     /* The project's running language servers as an agent may ask them; absent on a host without them. */
     language?: LanguageAgentHost;
     /* The ACP registry and the versions of the agent CLIs, which an agent reads and only a person installs from; absent on a host without them. */
