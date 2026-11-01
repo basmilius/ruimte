@@ -260,6 +260,8 @@ export class ExtensionHost {
             stopping: false
         };
 
+        // A stop while nobody waits on the start is no failure of anyone's.
+        ready.catch(() => undefined);
         this.running.set(id, running);
         child.stdout.setEncoding('utf8');
         child.stdout.on('data', (chunk: string) => this.read(id, running, chunk, markReady));

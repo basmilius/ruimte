@@ -294,6 +294,20 @@ export function clientApiFor(extension: LoadedExtension) {
 
             return server as Server;
         },
+        useServerEvent(name: string, listener: (payload: unknown) => void) {
+            const extensionNow = useExtension();
+            const { transport } = useFocusedMachine();
+
+            useEffect(
+                () =>
+                    transport.on('extension.message', (message) => {
+                        if (message.id === extensionNow.manifest.id && message.name === name) {
+                            listener(message.payload);
+                        }
+                    }),
+                [extensionNow, transport, name, listener]
+            );
+        },
         useUsageLimits() {
             requiresPermission(useExtension(), 'usage.read');
 

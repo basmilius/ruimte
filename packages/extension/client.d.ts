@@ -56,6 +56,8 @@ export type ServerClient<Server> = {
 };
 
 export function useServer<Server>(): ServerClient<Server>;
+/** Hears what `emit` says in `server/`. */
+export function useServerEvent(name: string, listener: (payload: unknown) => void): void;
 export function useNodeData<Data>(): [Data, (next: Data) => void];
 export function useStorage<Value>(key: string, initial: Value): [Value, (next: Value) => void];
 export function useProject(): { id: string; name: string };

@@ -264,7 +264,8 @@ export async function runExtension(args: readonly string[], options: LocalDaemon
     program
         .command('dev')
         .description('Load this extension into the running Ruimte, again on every save')
-        .action(() => dev(options));
+        .option('--port <port>', 'the machine to load it into, for one on another port than the default')
+        .action((values: { port?: string }) => dev(values.port === undefined ? options : { ...options, port: Number(values.port) }));
     program
         .command('test')
         .description('Run the tests against a fake host')
