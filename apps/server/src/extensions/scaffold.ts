@@ -9,7 +9,7 @@ export interface ScaffoldAnswers {
     git: boolean;
 }
 
-const GITIGNORE = 'node_modules\ndist\n.ruimte-build\n';
+const GITIGNORE = 'node_modules\ndist\n';
 
 const TSCONFIG = `${JSON.stringify(
     {

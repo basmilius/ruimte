@@ -13,7 +13,7 @@ import {
 } from '@ruimte/contracts';
 import type { BunPlugin } from 'bun';
 
-export const BUILD_FOLDER = '.ruimte-build';
+export const BUILD_FOLDER = 'dist';
 
 // What Ruimte itself supplies, so ten extensions do not carry ten copies, and nothing of it reaches npm.
 const CLIENT_HOSTED: Readonly<Record<string, string>> = {
@@ -151,7 +151,7 @@ async function bundle(entry: string, outdir: string, target: 'browser' | 'bun', 
     }
 }
 
-/* Builds a project into `<folder>/.ruimte-build`, as a pack holds it and a dev link reads it. */
+/* Builds a project into `<folder>/dist`, as a pack holds it and a dev link reads it. */
 export async function buildExtension(folder: string): Promise<{ manifest: ExtensionManifest; outdir: string }> {
     // Real, since a bundler names importers by their real path and a temporary folder may be a link.
     const root = realpathSync(resolve(folder));
@@ -224,10 +224,9 @@ export async function packExtension(folder: string): Promise<PackedExtension> {
         files: Object.fromEntries(filesIn(outdir).map((path) => [path, readFileSync(join(outdir, path)).toString('base64')]))
     };
     const bytes = gzipSync(JSON.stringify(pack));
-    const dist = join(resolve(folder), 'dist');
-    const path = join(dist, `${manifest.id}-${manifest.version}.rex`);
+    // Beside what it holds: a build empties the folder first, so a pack never takes in an older one.
+    const path = join(outdir, `${manifest.id}-${manifest.version}.rex`);
 
-    mkdirSync(dist, { recursive: true });
     writeFileSync(path, bytes);
 
     return { manifest, path, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };

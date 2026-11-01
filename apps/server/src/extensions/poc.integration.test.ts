@@ -32,7 +32,6 @@ afterAll(() => {
 
     for (const name of POCS) {
         rmSync(join(EXTENSIONS, `poc-${name}`, 'dist'), { recursive: true, force: true });
-        rmSync(join(EXTENSIONS, `poc-${name}`, '.ruimte-build'), { recursive: true, force: true });
     }
 });
 

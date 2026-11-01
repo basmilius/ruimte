@@ -154,7 +154,7 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
 
     await rebuild();
     watch(folder, { recursive: true }, (_event, name) => {
-        if (name === null || name.startsWith(BUILD_FOLDER) || name.startsWith('node_modules') || name.startsWith('dist') || name.startsWith('.git')) {
+        if (name === null || name.startsWith(BUILD_FOLDER) || name.startsWith('node_modules') || name.startsWith('.git')) {
             return;
         }
 

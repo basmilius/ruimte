@@ -22,4 +22,3 @@ apps/computer-use/.swiftpm/
 # The pinned Android screen server a development daemon fetches on first use.
 apps/server/.native/
 
-.ruimte-build

@@ -68,6 +68,6 @@ describe('building an extension', () => {
 
         expect(packed.path.endsWith('acme.builds-0.1.0.rex')).toBe(true);
         expect(Object.keys(files).toSorted()).toEqual(['client/index.js', 'locales/en.json', 'manifest.json']);
-        expect(BUILD_FOLDER).toBe('.ruimte-build');
+        expect(BUILD_FOLDER).toBe('dist');
     });
 });
