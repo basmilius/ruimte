@@ -42630,6 +42630,10 @@
               "databasesPanel": {
                 "type": "boolean"
               },
+              "extensionPanel": {
+                "type": "string",
+                "minLength": 1
+              },
               "panelWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
@@ -47019,6 +47023,10 @@
               },
               "databasesPanel": {
                 "type": "boolean"
+              },
+              "extensionPanel": {
+                "type": "string",
+                "minLength": 1
               },
               "panelWidth": {
                 "type": "integer",

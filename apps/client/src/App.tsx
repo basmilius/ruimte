@@ -3,7 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { desktop, machineMode } from '@/desktop/bridge';
 import { useProjectSwitch } from '@/project/open';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
-import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
+import { allSettingsSections } from '@/shell/settings/sections';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { StartScreen } from '@/shell/StartScreen';
 import { FLOATING_FAILURE, failed } from '@/shell/surface-failure';
@@ -164,7 +164,7 @@ export function App() {
     useEffect(
         () =>
             desktop()?.onOpenSettings?.((section) => {
-                const known = ALL_SETTINGS_SECTIONS.some((entry) => entry.id === section);
+                const known = allSettingsSections().some((entry) => entry.id === section);
                 useUi.getState().setSettings(known ? { open: true, section: section as SettingsSectionId } : { open: true });
             }),
         []

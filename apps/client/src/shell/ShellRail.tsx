@@ -5,7 +5,7 @@ import { IconButton, WorkspaceRail, WorkspaceRailSeparator, WorkspaceRailSpacer 
 import { hasOverlayControls } from '@/desktop/bridge';
 import { LaunchChip } from '@/launches/LaunchChip';
 import { PanelControls } from '@/shell/PanelControls';
-import { toolbarPanels } from '@/shell/panels';
+import { useToolbarPanels } from '@/shell/panels';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { isScratchProject, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -25,7 +25,7 @@ export function ShellRail() {
     const paletteOpen = useUi((s) => s.paletteOpen);
     // The Chats project has no folder to show, so no files, git, devices or launches either.
     const scratch = useProject((s) => isScratchProject(s.current));
-    const hasPanelButtons = toolbarPanels(scratch).length > 0;
+    const hasPanelButtons = useToolbarPanels(scratch).length > 0;
     // Both buttons draw nothing while they have nothing to say, and their separator goes with them.
     const voice = useVoice((s) => s.credential?.configured === true);
     const update = hasUpdate(useUpdates());

@@ -4,7 +4,7 @@ import { commandUsageName, openedBy, usageSectionOf } from '@/desktop/usage';
 import { COMMAND_IDS } from '@/shell/command-table';
 import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
 import { PANELS } from '@/shell/panels';
-import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
+import { allSettingsSections } from '@/shell/settings/sections';
 import type { PanelState } from '@/state/ui';
 
 const CLOSED: PanelState = { open: false, kind: 'files' };
@@ -42,9 +42,11 @@ describe('the counted panels and sections', () => {
     test('are the panels and settings sections the client has', () => {
         expect(PANELS.map((entry) => entry.kind).toSorted()).toEqual([...USAGE_DESKTOP_PANELS].toSorted());
         // An older client still counts the Computer use and Storage panes, which this one folded into Agents and a machine's detail.
-        expect(ALL_SETTINGS_SECTIONS.flatMap((section) => usageSectionOf(section.id) ?? []).toSorted()).toEqual(
-            USAGE_DESKTOP_SETTINGS_SECTIONS.filter((section) => section !== 'computer' && section !== 'storage').toSorted()
-        );
+        expect(
+            allSettingsSections()
+                .flatMap((section) => usageSectionOf(section.id) ?? [])
+                .toSorted()
+        ).toEqual(USAGE_DESKTOP_SETTINGS_SECTIONS.filter((section) => section !== 'computer' && section !== 'storage').toSorted());
     });
 
     test('leave Pets uncounted: opening it counts the dialog and no section', () => {

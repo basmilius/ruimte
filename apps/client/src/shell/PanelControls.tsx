@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
-import { toolbarPanels, type PanelGroup } from '@/shell/panels';
+import { useToolbarPanels, type PanelGroup } from '@/shell/panels';
 import { useFolderInRepo } from '@/state/git-repos';
 import { useGitStatus } from '@/state/git-watch';
 import { useEndpointId } from '@/state/keys';
@@ -11,7 +11,7 @@ import { isThisMachine } from '@/state/local-machine';
 import { isScratchProject, useProject } from '@/state/project';
 import { useShownPanel, useUi } from '@/state/ui';
 
-const GROUPS: readonly PanelGroup[] = ['project', 'connected', 'made'];
+const GROUPS: readonly PanelGroup[] = ['project', 'connected', 'made', 'extensions'];
 
 /* The panel toggles in the rail, one group under the other, and the Routines clock beside Output. A toggle
    opens its panel and closes it again, since the panel's header has no close button of its own. */
@@ -20,7 +20,7 @@ export function PanelControls() {
     const panel = useShownPanel();
     const scratch = useProject((s) => isScratchProject(s.current));
     const folder = useProject((s) => s.current?.folder ?? null);
-    const entries = toolbarPanels(scratch);
+    const entries = useToolbarPanels(scratch);
     const endpointId = useEndpointId();
     // Only a checkout of this machine is watched for the dot: a project elsewhere would hold a watch on that machine all the while.
     const candidate = entries.some((entry) => entry.kind === 'git') && isThisMachine(endpointId) ? folder : null;
@@ -45,7 +45,7 @@ export function PanelControls() {
                             <IconButton
                                 key={entry.kind}
                                 icon={entry.icon}
-                                label={dirty ? t('panel.gitChanges', { count: changes }) : t(`panel.names.${entry.kind}`)}
+                                label={dirty ? t('panel.gitChanges', { count: changes }) : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`)}
                                 tooltipSide="left"
                                 active={panel.open && panel.kind === entry.kind}
                                 className={dirty ? 'relative' : undefined}

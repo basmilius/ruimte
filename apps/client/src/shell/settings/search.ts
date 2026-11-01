@@ -2,7 +2,8 @@ import i18next from 'i18next';
 import { RENDERED_DOC_COMMENTS } from '@/features';
 import { canSwipeBetweenPages, desktop, isDesktop } from '@/desktop/bridge';
 import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
-import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
+import { useContributions } from '@/extensions/registry';
+import { allSettingsSections, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
@@ -398,14 +399,29 @@ export function searchSettings(query: string, built: readonly SearchResult[] = [
     if (terms.length === 0) {
         return [];
     }
-    const panes = ALL_SETTINGS_SECTIONS.map((meta) => ({
-        section: meta.id,
-        id: null,
-        label: sectionLabel(meta.id),
-        description: sectionDescription(meta.id),
-        english: `${englishWords(`settings:sections.${meta.id}.label`)} ${englishWords(`settings:sections.${meta.id}.description`)}`
-    })).filter((result) => matches(terms, result.label, result.description, result.english));
-    const order = ALL_SETTINGS_SECTIONS.map((meta) => meta.id);
+    const sections = allSettingsSections();
+    const contributed = useContributions.getState().settingsSections;
+    const panes = sections
+        .map((meta) => ({
+            section: meta.id,
+            id: null,
+            label: sectionLabel(meta.id),
+            description: sectionDescription(meta.id),
+            english:
+                contributed.find((section) => section.id === meta.id)?.english ??
+                `${englishWords(`settings:sections.${meta.id}.label`)} ${englishWords(`settings:sections.${meta.id}.description`)}`
+        }))
+        .filter((result) => matches(terms, result.label, result.description, result.english));
+    const order = sections.map((meta) => meta.id);
+    const contributedRows = contributed.flatMap((section) =>
+        (section.search ?? []).map((row) => ({
+            section: section.id,
+            id: row.id,
+            label: row.label(),
+            description: row.description(),
+            english: row.english
+        }))
+    );
     const indexed = SETTINGS_INDEX.filter((entry) => entry.available?.() ?? true).map((entry) => ({
         section: entry.section,
         id: entry.id,
@@ -413,7 +429,7 @@ export function searchSettings(query: string, built: readonly SearchResult[] = [
         description: entry.description ? words(entry.description) : '',
         english: `${englishWords(entry.label)} ${englishWords(entry.description)}`
     }));
-    const rows = [...indexed, ...built]
+    const rows = [...indexed, ...contributedRows, ...built]
         .filter((result) => matches(terms, result.label, result.description, result.english ?? ''))
         .sort((a, b) => order.indexOf(a.section) - order.indexOf(b.section));
     return [...panes, ...rows];

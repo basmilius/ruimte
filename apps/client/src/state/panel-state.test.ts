@@ -194,6 +194,17 @@ describe('panels in the machine-local file', () => {
     });
 });
 
+describe('an extension panel', () => {
+    const extension: PanelsState = { ...defaults, panel: { open: true, kind: 'extension:acme.builds/panel' } };
+
+    test('stays beside a kind an older client knows, and comes back', () => {
+        const stored = serializePanels(extension);
+
+        expect(stored).toMatchObject({ panel: { open: true, kind: 'files' }, extensionPanel: 'extension:acme.builds/panel' });
+        expect(parsePanels(stored, defaults).panel).toEqual(extension.panel);
+    });
+});
+
 describe('stripOf', () => {
     test('names the loose views in the order they were opened, and the one that was in front', () => {
         const stored = serializePanels(full);

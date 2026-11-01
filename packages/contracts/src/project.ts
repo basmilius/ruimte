@@ -1266,6 +1266,8 @@ export const ProjectPanelsSchema = z.object({
     launchesPanel: z.boolean().optional(),
     // Beside `panel` for the same reason as `launchesPanel`.
     databasesPanel: z.boolean().optional(),
+    // Beside `panel` for the same reason: `extension:<extension id>/<panel id>`.
+    extensionPanel: z.string().min(1).optional(),
     // Whole pixels.
     panelWidth: z.number().int().positive().optional(),
     // Whether the plan panel is open follows from its chat being on screen, never from this file.
