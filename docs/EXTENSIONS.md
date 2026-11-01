@@ -77,7 +77,7 @@ A theme is data. It needs no `client/` and applies before the first render.
 }
 ```
 
-`css` is optional. `url()` reaches only files in the pack and `@import` is refused, both when packing and when loading. The stable hooks are `[data-surface='sidebar']`, `'panel'` and `'node'`; an internal class can change in any release. Safe mode starts without a theme.
+`css` is optional. `url()` reaches only files in the pack and `@import` is refused, both when packing and when loading. The stable hooks are `[data-surface='sidebar']`, `'panel'` and `'node'` (the first two sit on a column, so its ground is `> div`); an internal class can change in any release. Safe mode starts without a theme.
 
 ## The store
 

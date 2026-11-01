@@ -27,7 +27,8 @@ const storedTheme = storedJson<StoredTheme>(STORAGE_KEY, StoredThemeSchema);
 function tokensCss(theme: ExtensionTheme): string {
     const lines = Object.entries(theme.tokens).map(([token, value]) => `${token}: ${value};`);
 
-    return `[data-theme='${theme.side}'] { ${lines.join(' ')} }`;
+    // Named twice to outweigh the base wherever its stylesheet lands, as the palette does; the palette comes later and stays on top.
+    return `[data-theme='${theme.side}'][data-theme] { ${lines.join(' ')} }`;
 }
 
 /* Ahead of the palette's stylesheet, so a person's own accent and tint stay over a theme. */

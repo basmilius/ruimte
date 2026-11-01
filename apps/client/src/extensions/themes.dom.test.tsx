@@ -21,7 +21,7 @@ describe('an extension theme', () => {
     test('writes its tokens under its side, and comes back on the next start', () => {
         chooseExtensionTheme(CHOICE);
 
-        expect(themeText()).toContain(`[data-theme='dark'] { --surface: #000; }`);
+        expect(themeText()).toContain(`[data-theme='dark'][data-theme] { --surface: #000; }`);
 
         document.getElementById('ruimte-extension-theme')?.remove();
         applyStoredExtensionTheme();

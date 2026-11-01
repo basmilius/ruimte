@@ -2,8 +2,14 @@
     "name": "POC midnight",
     "side": "dark",
     "tokens": {
-        "--surface": "#0b1020",
-        "--surface-raised": "#121a30"
+        "--bg": "#050a1f",
+        "--surface": "#0b1538",
+        "--surface-raised": "#14204d",
+        "--surface-sunken": "#060c26",
+        "--surface-hover": "#1b2a60",
+        "--surface-active": "#24367a",
+        "--canvas-bg": "#050a1f",
+        "--canvas-dot": "#22306b"
     },
     "css": "themes/midnight.css"
 }
