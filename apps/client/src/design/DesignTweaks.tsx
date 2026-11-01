@@ -75,7 +75,6 @@ function TweakControl({ name, tweak, value, onChange }: { name: string; tweak: T
                     value={String(value)}
                     onValueChange={onChange}
                     options={options.map((option) => ({ id: option, label: option }))}
-                    className="w-full"
                 />
             ) : (
                 <Select
