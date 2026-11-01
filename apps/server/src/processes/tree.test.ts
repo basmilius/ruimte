@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { groupsFor, indexTree, ownFamilyOf, ruimteTotals } from './tree.ts';
+import { groupsFor, indexTree, machineDisk, ownFamilyOf, ruimteTotals } from './tree.ts';
 import { identityOf, type ProcessRate, type RawProcess, type RawSample } from './sampler.ts';
 
 function proc(pid: number, ppid: number, name: string, path: string | null = null, overrides: Partial<RawProcess> = {}): RawProcess {
@@ -50,6 +50,16 @@ const SAMPLE: RawSample = {
 
 const ROOTS = { daemonPid: 100, sessions: [{ id: 'term-1', pid: 200 }], chats: [{ id: 'chat-1', pid: 300 }] };
 
+test('process totals distinguish unreadable values from measured zero and skip missing rates', () => {
+    const index = indexTree(SAMPLE, ROOTS);
+    const measured = new Map<string, ProcessRate>();
+    expect(ruimteTotals(index, measured)).toEqual({ cpu: null, memory: null, disk: null });
+    expect(machineDisk(measured)).toEqual({ read: null, write: null });
+    measured.set(identityOf(100, 100_000), { cpu: 0, memory: 0, diskRead: null, diskWrite: 0, spawned: false });
+    expect(ruimteTotals(index, measured)).toEqual({ cpu: 0, memory: 0, disk: 0 });
+    expect(machineDisk(measured)).toEqual({ read: null, write: 0 });
+});
+
 function rates(cpu: Record<number, number>): Map<string, ProcessRate> {
     return new Map(
         TABLE.map((process) => [
@@ -75,6 +85,24 @@ describe('the families', () => {
         // A word inside another word is not a family.
         expect(ownFamilyOf('precursor', '/usr/bin/precursor')).toBeNull();
     });
+});
+
+test('family precedence and the first two arguments retain their word boundaries', () => {
+    const sparse: string[] = [];
+    sparse[1] = '/tools/claude';
+    const cases: [string, string | null, string[] | null, string | null][] = [
+        ['codex', '/tools/claude', null, 'claude'],
+        ['worker', null, ['worker', '/tools/AGY'], 'antigravity'],
+        ['worker', null, ['worker', '/tools/task.js', '/tools/claude'], null],
+        ['precursor', '/tools/codexify', [], null],
+        ['worker', '/tools/aider', ['worker', '/tools/codex'], 'codex'],
+        ['worker', 'path@claude@x', null, null],
+        ['worker', null, sparse, 'claude']
+    ];
+
+    for (const [name, path, args, expected] of cases) {
+        expect(ownFamilyOf(name, path, args)).toBe(expected);
+    }
 });
 
 describe('the tree of Ruimte', () => {
@@ -121,6 +149,21 @@ describe('the tree of Ruimte', () => {
         const groups = groupsFor(index, rates({ 300: 50, 201: 10 }), 'ruimte', 'cpu', 50);
         expect(groups.map((group) => group.id)).toEqual(['chat:chat-1', 'terminal:term-1', 'app', 'daemon']);
         expect(groups[1]!.cpu).toBe(10);
+    });
+
+    test('group counters keep measured zero separate from missing and unreadable values', () => {
+        const empty = groupsFor(index, new Map(), 'ruimte', 'cpu', 50);
+
+        for (const group of empty) {
+            expect([group.cpu, group.memory, group.diskRead, group.diskWrite]).toEqual([null, null, null, null]);
+        }
+
+        const measured = new Map<string, ProcessRate>([
+            [identityOf(200, 200_000), { cpu: null, memory: 0, diskRead: null, diskWrite: 3, spawned: false }],
+            [identityOf(201, 201_000), { cpu: 0, memory: null, diskRead: 0, diskWrite: null, spawned: false }]
+        ]);
+        const terminal = groupsFor(index, measured, 'ruimte', 'cpu', 50).find((group) => group.nodeId === 'term-1');
+        expect(terminal).toMatchObject({ cpu: 0, memory: 0, diskRead: 0, diskWrite: 3 });
     });
 
     test('the share of Ruimte sums its readable processes', () => {

@@ -145,12 +145,36 @@ function holds(rect: NodeRect, item: GroupItem): boolean {
  * nowhere near the header. Only ids still present come back.
  */
 export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): string[] {
+    const members: string[] = [];
+    const length = items.length;
+
     if (group.collapsed === true) {
         const ids = new Set(group.memberIds ?? []);
-        return items.filter((item) => ids.has(item.id)).map((item) => item.id);
+
+        items.forEach((item) => {
+            if (ids.has(item.id)) {
+                members.push(item.id);
+            }
+        });
+
+        return members;
     }
+
     const rect = groupRect(group);
-    return items.filter((item) => item.id !== group.id && holds(rect, item)).map((item) => item.id);
+
+    for (let index = 0; index < length; index++) {
+        if (!(index in items)) {
+            continue;
+        }
+
+        const item = items[index]!;
+
+        if (item.id !== group.id && holds(rect, item)) {
+            members.push(item.id);
+        }
+    }
+
+    return members;
 }
 
 // The room between a node and the one placed next to it; a multiple of the client's 8 px grid.

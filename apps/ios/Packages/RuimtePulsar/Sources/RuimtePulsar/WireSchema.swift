@@ -240,7 +240,7 @@ public enum WireSchema {
                 })
         case "object":
             guard let object = value.objectValue else { throw fail() }
-            let required = schema["required"]?.arrayValue?.compactMap(\.stringValue) ?? []
+            let required = schema["required"]?.arrayValue ?? []
             let properties = schema["properties"]?.objectValue ?? [:]
             var result: [String: JSONValue] = [:]
             if let additional = schema["additionalProperties"] {
@@ -262,7 +262,7 @@ public enum WireSchema {
                     result[key] = try parse(input, schema: property, path: "\(path).\(key)", definitions: definitions)
                 } else if let fallback = property["default"] {
                     result[key] = fallback
-                } else if required.contains(key) {
+                } else if required.contains(.string(key)) {
                     throw WireValidationError.invalid("Missing \(path).\(key)")
                 }
             }
@@ -289,20 +289,31 @@ public enum WireSchema {
         return value
     }
 
+    private static let literalKeys = ["kind", "type", "ok", "action"]
+
     private static func literalMismatch(_ input: JSONValue, schema: JSONValue) -> Bool {
         guard let object = input.objectValue, let properties = schema["properties"]?.objectValue else { return false }
+        for key in literalKeys {
+            if let property = properties[key], literalMismatch(object[key], property: property) {
+                return canSkipLiteral(schema)
+            }
+        }
         for (key, property) in properties {
-            guard let literal = property["const"], let value = object[key], value != literal else { continue }
-            // These can transform or short-circuit before checking a local literal.
-            guard schema["type"] == .string("object"), schema["$ref"] == nil,
-                schema["oneOf"] == nil, schema["anyOf"] == nil, schema["x-project-entry"] == nil
-            else { return false }
-            guard property["$ref"] == nil, property["oneOf"] == nil, property["anyOf"] == nil,
-                property["x-project-entry"] == nil
-            else { continue }
-            return true
+            if literalMismatch(object[key], property: property) { return canSkipLiteral(schema) }
         }
         return false
+    }
+
+    private static func canSkipLiteral(_ schema: JSONValue) -> Bool {
+        // A wrapper can transform or short-circuit before checking a local literal.
+        schema["type"] == .string("object") && schema["$ref"] == nil && schema["oneOf"] == nil
+            && schema["anyOf"] == nil && schema["x-project-entry"] == nil
+    }
+
+    private static func literalMismatch(_ input: JSONValue?, property: JSONValue) -> Bool {
+        guard let literal = property["const"], let input, input != literal else { return false }
+        return property["$ref"] == nil && property["oneOf"] == nil && property["anyOf"] == nil
+            && property["x-project-entry"] == nil
     }
 
     private static func projectEntry(_ input: JSONValue, metadata: JSONValue?) throws -> JSONValue {

@@ -8,6 +8,31 @@ function node(id: string, x: number, y = 0, kind: CanvasNode['kind'] = 'note'): 
 }
 
 describe('editable gaps', () => {
+    test('ties at the same gap end still choose by id with and without a selection', () => {
+        const nodes = [node('origin', 0), node('z', 200), node('a', 200)];
+
+        for (const extra of [[], Array.from({ length: 40 }, (_, index) => node(`extra-${index}`, -10_000 - index * 200, 10_000))]) {
+            for (const selection of [[], ['origin']]) {
+                expect(
+                    editableGaps([...nodes, ...extra], selection)
+                        .filter((gap) => gap.from === 'origin')
+                        .map((gap) => [gap.from, gap.to, gap.axis])
+                ).toEqual([['origin', 'a', 'x']]);
+            }
+        }
+    });
+
+    test('an earlier wide node still blocks a gap in a large canvas', () => {
+        const nodes = [
+            node('origin', 100),
+            node('target', 400),
+            { ...node('wide', -500, 80), w: 750 },
+            ...Array.from({ length: 40 }, (_, index) => node(`extra-${index}`, -10_000 - index * 200, 10_000))
+        ];
+
+        expect(editableGaps(nodes, []).some((gap) => gap.from === 'origin' && gap.to === 'target')).toBe(false);
+    });
+
     test('a horizontal line shares gaps with nodes and keeps four-pixel spacing during precise edits', () => {
         const line = { ...lineBounds({ x: 232, y: 50, endX: 132, endY: 50 }), id: 'line', kind: 'line' };
         const frames = [node('a', 0), line, node('c', 264)];

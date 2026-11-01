@@ -12,9 +12,35 @@ export interface StackedNode extends Rect {
  * whatever its place in the order, since a group is a frame under its own nodes.
  */
 export function stackingOrder(nodes: Record<string, StackedNode>, order: string[]): Record<string, number> {
-    const groups = order.filter((id) => nodes[id]?.kind === 'group');
-    const rest = order.filter((id) => nodes[id]?.kind !== 'group');
-    return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
+    // Chrome builds large records faster through Object.fromEntries; short orders avoid its temporary arrays.
+    if (order.length >= 256) {
+        const groups = order.filter((id) => nodes[id]?.kind === 'group');
+        const rest = order.filter((id) => nodes[id]?.kind !== 'group');
+
+        return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
+    }
+
+    const stacking: Record<string, number> = {};
+    let next = 1;
+
+    for (const groups of [true, false]) {
+        for (const id of order) {
+            if ((nodes[id]?.kind === 'group') !== groups) {
+                continue;
+            }
+
+            // A stored id is an own property, as it was with Object.fromEntries.
+            if (id === '__proto__') {
+                Object.defineProperty(stacking, id, { value: next, enumerable: true, configurable: true, writable: true });
+            } else {
+                stacking[id] = next;
+            }
+
+            next++;
+        }
+    }
+
+    return stacking;
 }
 
 /* The corner of a node frame (`rounded-xl` in `canvas/NodeFrame.tsx`). */
@@ -36,15 +62,19 @@ export function nodesOverBrowsers(
     /* Nodes drawing a ring right now: the selection and whatever a line is being aimed at. */
     ringed: ReadonlySet<string>
 ): Record<string, PageHole[]> {
+    const browsers = order.filter((id) => nodes[id]?.kind === 'browser' && !hidden.has(id));
+
+    if (browsers.length === 0) {
+        return {};
+    }
+
     const stacking = stackingOrder(nodes, order);
     const over: Record<string, PageHole[]> = {};
-    for (const id of order) {
-        const node = nodes[id];
-        if (node === undefined || node.kind !== 'browser' || hidden.has(id)) {
-            continue;
-        }
+    for (const id of browsers) {
+        const node = nodes[id]!;
+        const level = stacking[id] ?? 0;
         const covering = order
-            .filter((other) => other !== id && !hidden.has(other) && (stacking[other] ?? 0) > (stacking[id] ?? 0))
+            .filter((other) => other !== id && !hidden.has(other) && (stacking[other] ?? 0) > level)
             .flatMap((other) => {
                 const candidate = nodes[other];
                 if (candidate === undefined || !intersects(node, candidate)) {

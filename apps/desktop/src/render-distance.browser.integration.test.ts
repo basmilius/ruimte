@@ -28,6 +28,9 @@ test('a real page past the render distance is hidden in its host, keeps its gues
                     {
                         name: 'client-shell-bridge',
                         setup(builder) {
+                            builder.onResolve({ filter: /^(react|react-dom|react-i18next|i18next)(\/.*)?$/ }, ({ path }) => ({
+                                path: Bun.resolveSync(path, client)
+                            }));
                             builder.onResolve({ filter: /^@adecore\/shell\/bridge$/ }, ({ path }) => ({ path: Bun.resolveSync(path, desktop) }));
                         }
                     }

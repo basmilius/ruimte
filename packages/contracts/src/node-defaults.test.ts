@@ -10,7 +10,8 @@ import {
     groupFrame,
     groupMemberIds,
     knownNodeSizes,
-    nodeSizeOf
+    nodeSizeOf,
+    type GroupItem
 } from './node-defaults.ts';
 
 describe('default node sizes', () => {
@@ -87,5 +88,22 @@ describe('groupMemberIds', () => {
     test('a collapsed frame holds what the file says, and only what is still there', () => {
         const folded = { ...frame, collapsed: true, expandedHeight: 1000, h: 40, memberIds: ['outside', 'gone'] };
         expect(groupMemberIds(folded, [folded, inside, outside])).toEqual(['outside']);
+    });
+
+    test('preserves item order, repeated ids and sparse inherited entries in both group modes', () => {
+        const first = { id: 'a', x: 20, y: 20 };
+        const repeated = { id: 'a', x: 30, y: 30 };
+        const inherited = { id: 'inherited', x: 40, y: 40 };
+        const items: GroupItem[] = [first];
+        items.length = 6;
+        items[2] = repeated;
+        items[3] = frame;
+        const prototype = Object.assign(Object.create(Array.prototype), { 4: inherited });
+        Object.setPrototypeOf(items, prototype);
+        Object.freeze(items);
+        const folded = { ...frame, collapsed: true, memberIds: ['inherited', frame.id, 'a', 'missing'] };
+
+        expect(groupMemberIds(frame, items)).toEqual(['a', 'a', 'inherited']);
+        expect(groupMemberIds(folded, items)).toEqual(['a', 'a', frame.id, 'inherited']);
     });
 });

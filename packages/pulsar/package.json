@@ -12,7 +12,7 @@
         "typecheck": "bun check --no-script"
     },
     "dependencies": {
-        "@adecore/agent-contracts": "0.49.6",
+        "@adecore/agent-contracts": "0.49.7",
         "zod": "^4.6.7"
     },
     "devDependencies": {

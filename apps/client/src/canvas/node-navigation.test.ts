@@ -7,6 +7,13 @@ function node(id: string, x: number, y: number): CanvasNode {
 }
 
 describe('spatial node navigation', () => {
+    test('breaks equal distances by id for both an initial choice and a directional move', () => {
+        const nodes = [node('origin', 0, 0), node('z', 200, 0), node('a', 200, 0)];
+        expect(neighboringNode(nodes, 'origin', 'right', { x: 250, y: 50 })).toBe('a');
+        expect(neighboringNode(nodes, null, 'down', { x: 250, y: 50 })).toBe('a');
+        expect(neighboringNode([], null, 'left', { x: 0, y: 0 })).toBeNull();
+    });
+
     test('prefers a node in the same row, then falls back to diagonals without wrapping', () => {
         const nodes = [node('a', 0, 0), node('row', 400, 0), node('diagonal', 110, 110)];
         expect(neighboringNode(nodes, 'a', 'right', { x: 0, y: 0 })).toBe('row');

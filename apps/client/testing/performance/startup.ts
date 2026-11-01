@@ -64,6 +64,9 @@ try {
     for (let i = 0; i < runs; i++) {
         const view = new Bun.WebView({ backend: { type: 'chrome', url: false }, headless: true, dataStore: { directory: join(profile, String(i)) } });
         try {
+            // Every sample starts without the client state retained by Chrome's shared profile.
+            await view.navigate('about:blank');
+            await view.cdp('Storage.clearDataForOrigin', { origin: `http://127.0.0.1:${server.port}`, storageTypes: 'all' });
             if (cpuRate !== 1) {
                 await view.navigate('about:blank');
                 await view.cdp('Emulation.setCPUThrottlingRate', { rate: cpuRate });

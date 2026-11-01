@@ -51,21 +51,42 @@ async function main(): Promise<void> {
         if (selected.length === 0) {
             throw new Error('No integration tests found in apps, packages or scripts.');
         }
-        const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...selected], {
-            env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
-            stdin: 'inherit',
-            stdout: 'inherit',
-            stderr: 'inherit'
-        });
-        const interrupt = () => child.kill('SIGINT');
-        const terminate = () => child.kill('SIGTERM');
-        process.once('SIGINT', interrupt);
-        process.once('SIGTERM', terminate);
-        try {
-            process.exitCode = await child.exited;
-        } finally {
-            process.off('SIGINT', interrupt);
-            process.off('SIGTERM', terminate);
+
+        // Chrome keeps the first launch flags and profile for a Bun process; browser files need independent backends.
+        const batches = browser ? selected.map((file) => [file]) : [selected];
+
+        for (const batch of batches) {
+            const child = Bun.spawn([process.execPath, `--config=${config}`, 'test', '--conditions=source', ...batch], {
+                env: { ...process.env, RUIMTE_INTEGRATION_FIXTURE_ROOT: fixtureRoot },
+                stdin: 'inherit',
+                stdout: 'inherit',
+                stderr: 'inherit'
+            });
+            let interrupted = false;
+            const interrupt = () => {
+                interrupted = true;
+                child.kill('SIGINT');
+            };
+            const terminate = () => {
+                interrupted = true;
+                child.kill('SIGTERM');
+            };
+            process.once('SIGINT', interrupt);
+            process.once('SIGTERM', terminate);
+            try {
+                const code = await child.exited;
+
+                if (code !== 0) {
+                    process.exitCode = code;
+                }
+            } finally {
+                process.off('SIGINT', interrupt);
+                process.off('SIGTERM', terminate);
+            }
+
+            if (interrupted) {
+                break;
+            }
         }
     } finally {
         await rm(fixtureRoot, { recursive: true, force: true });

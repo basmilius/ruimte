@@ -83,6 +83,9 @@ export async function measureRestore(options: {
                 dataStore: { directory: join(options.profile, String(run)) }
             });
             try {
+                // Chrome's profile is per process, so a new directory alone does not isolate this sample.
+                await view.navigate('about:blank');
+                await view.cdp('Storage.clearDataForOrigin', { origin: `http://127.0.0.1:${server.port}`, storageTypes: 'all' });
                 const waiting = performance.now();
                 if (waitBeforeWindow) {
                     await Bun.sleep(gateMs);

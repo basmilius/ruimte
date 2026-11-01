@@ -17,6 +17,13 @@ describe('the map of a canvas', () => {
     test('draws groups under the nodes and leaves out the members of a collapsed group', () => {
         const nodes = { a: node('a', 'note', 0, 0), g: node('g', 'group', 0, 0), b: node('b', 'terminal', 200, 0) };
         expect(mappedNodes(nodes, new Set(['b'])).map((entry) => entry.id)).toEqual(['g', 'a']);
+        const second = node('second', 'group', 400, 0);
+        const third = node('third', 'note', 500, 0);
+        const shown = mappedNodes({ ...nodes, second, third }, new Set());
+        expect(shown.map((entry) => entry.id)).toEqual(['g', 'second', 'a', 'b', 'third']);
+        expect(shown[0]).toBe(nodes.g);
+        const inherited = Object.assign(Object.create({ inherited: node('inherited', 'note', 0, 0) }), nodes);
+        expect(mappedNodes(inherited, new Set()).map((entry) => entry.id)).toEqual(['g', 'a', 'b']);
     });
 
     test('puts the dot of a node that waits inside a collapsed group on the group, once, and on the outer group when it is collapsed too', () => {

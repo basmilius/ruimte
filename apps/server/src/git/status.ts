@@ -55,10 +55,24 @@ function count(field: string | undefined): number {
 
 /* A `1`, `2` or `u` record: the two status letters come second and the path takes the fields from `pathAt` on. */
 function changedEntry(record: string, pathAt: number, unmerged: boolean): PorcelainEntry {
-    const fields = record.split(' ');
-    const xy = fields[1] ?? '';
+    const statusEnd = record.indexOf(' ', 2);
+    const xy = record.slice(2, statusEnd < 0 ? record.length : statusEnd);
     const fallback = unmerged ? 'U' : '.';
-    return { path: fields.slice(pathAt).join(' '), index: xy[0] ?? fallback, worktree: xy[1] ?? fallback, unmerged, untracked: false };
+    let start = 0;
+
+    for (let field = 0; field < pathAt; field++) {
+        const end = record.indexOf(' ', start);
+
+        if (end < 0) {
+            start = record.length;
+
+            break;
+        }
+
+        start = end + 1;
+    }
+
+    return { path: record.slice(start), index: xy[0] ?? fallback, worktree: xy[1] ?? fallback, unmerged, untracked: false };
 }
 
 /*

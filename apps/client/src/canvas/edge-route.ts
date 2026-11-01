@@ -551,13 +551,16 @@ function routeAround(from: Point, fromSide: Side, to: Point, toSide: Side, block
                 continue;
             }
             const nextPoint = pointAt(nextVertex);
-            if (near.some((box) => crosses(point, nextPoint, box))) {
-                continue;
-            }
             const walked = cost[state]! + Math.abs(nextPoint.x - point.x) + Math.abs(nextPoint.y - point.y) + (axis === axisOf(state) ? 0 : BEND_COST);
+
             if (walked >= cost[next]!) {
                 continue;
             }
+
+            if (near.some((box) => crosses(point, nextPoint, box))) {
+                continue;
+            }
+
             cost[next] = walked;
             cameFrom[next] = state;
             pushState(frontier, next, walked + estimate(nextVertex));
@@ -647,6 +650,12 @@ function crosses(a: Point, b: Point, box: Bounds): boolean {
     if (Math.max(a.x, b.x) <= box.minX || Math.min(a.x, b.x) >= box.maxX || Math.max(a.y, b.y) <= box.minY || Math.min(a.y, b.y) >= box.maxY) {
         return false;
     }
+
+    // For an axis-aligned run, strict bounding overlap already proves it enters the box.
+    if (a.x === b.x || a.y === b.y) {
+        return true;
+    }
+
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     let enter = 0;
