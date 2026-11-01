@@ -3,7 +3,21 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, CircleAlert, Clock, Info, LayoutGrid, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2, X } from 'lucide-react';
 import { isCanvasView, type RoutineEntry, type RoutineListResult } from '@ruimte/contracts';
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Menu, PromptDialog, Segmented, Select, Separator, useNow } from '@adecore/ui';
+import {
+    Button,
+    ButtonGroup,
+    Dialog,
+    EmptyState,
+    ErrorBoundary,
+    Icon,
+    IconButton,
+    Menu,
+    PromptDialog,
+    Segmented,
+    Select,
+    Separator,
+    useNow
+} from '@adecore/ui';
 import { formatDateTime } from '@adecore/ui/format';
 import { NOON_MS, weekOf, type AgendaWeek } from '@/routines/agenda';
 import { openRoutineForm } from '@/routines/form-state';
@@ -13,6 +27,7 @@ import { runRoutineNow, setRoutinePaused, showRoutineOnCanvas } from '@/routines
 import { refreshRoutines, useRoutineList } from '@/routines/routine-list';
 import { RoutineSide } from '@/routines/RoutineSide';
 import { leaveRoutines, setRoutinesFilter, setRoutinesLayout, showRoutine, stepWeek, useRoutinesStage } from '@/routines/stage';
+import { failed } from '@/shell/surface-failure';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
@@ -22,10 +37,27 @@ import { machineTransport } from '@/transport';
 
 const MINUTE_MS = 60_000;
 
-/* Routines over the whole view stage: the week of the project's routines, or one routine opened inside it. */
+/* Routines as a sheet over the workspace: the week of the project's routines, or one routine opened inside it. */
 export function RoutinesStage() {
     const { t } = useTranslation('routines');
+    const open = useRoutinesStage((s) => s.open);
     const endpointId = useEndpointId();
+    const answers = useRoutineList(endpointId) !== null;
+    const inProject = useProject((s) => s.current !== null);
+
+    return (
+        <Dialog.Root open={open && answers && inProject} onOpenChange={(next) => !next && leaveRoutines()}>
+            <Dialog.Popup aria-label={t('stage.title')} className="flex h-[calc(100dvh-80px)] w-[calc(100vw-112px)] flex-col overflow-hidden">
+                <ErrorBoundary label={failed('routines')} className="grow">
+                    <StageBody endpointId={endpointId} />
+                </ErrorBoundary>
+            </Dialog.Popup>
+        </Dialog.Root>
+    );
+}
+
+function StageBody({ endpointId }: { endpointId: string }) {
+    const { t } = useTranslation('routines');
     const list = useRoutineList(endpointId);
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const projectName = useProject((s) => s.current?.name ?? '');
@@ -36,7 +68,7 @@ export function RoutinesStage() {
     }
     if (list.status !== 'ready') {
         return (
-            <StageFrame>
+            <>
                 <StageHeader title={t('stage.title')} />
                 <div className="grid grow place-items-center">
                     {list.status === 'loading' ? (
@@ -45,7 +77,7 @@ export function RoutinesStage() {
                         <EmptyState icon={CircleAlert}>{t('stage.failed')}</EmptyState>
                     )}
                 </div>
-            </StageFrame>
+            </>
         );
     }
     const { result } = list;
@@ -53,23 +85,14 @@ export function RoutinesStage() {
         const entry = result.routines.find((candidate) => candidate.projectId === stage.routine?.projectId && candidate.routine.id === stage.routine.routineId);
         if (entry !== undefined) {
             return (
-                <StageFrame>
+                <>
                     <DetailHeader endpointId={endpointId} entry={entry} rev={result.revs[entry.projectId] ?? 0} />
                     <RoutineDetail endpointId={endpointId} entry={entry} runId={stage.runId} timeZone={result.timeZone} />
-                </StageFrame>
+                </>
             );
         }
     }
     return <WeekStage endpointId={endpointId} result={result} projectId={projectId} projectName={projectName} />;
-}
-
-function StageFrame({ children }: { children: React.ReactNode }) {
-    const { t } = useTranslation('routines');
-    return (
-        <section className="absolute inset-0 z-10 flex flex-col bg-surface" aria-label={t('stage.title')}>
-            {children}
-        </section>
-    );
 }
 
 /* Where in Routines this is, what can be done here, and Close at the far right. */
@@ -104,7 +127,7 @@ function WeekStage({ endpointId, result, projectId, projectName }: { endpointId:
     const filterLabel = (projects: string): string => (isThisMachine(endpointId) ? projects : t('filter.on', { projects, machine }));
 
     return (
-        <StageFrame>
+        <>
             <StageHeader title={t('stage.title')}>
                 <Separator />
                 <span className="truncate font-medium text-text">{rangeWords(week, result.timeZone)}</span>
@@ -163,7 +186,7 @@ function WeekStage({ endpointId, result, projectId, projectName }: { endpointId:
                 {/* Every project's, whatever the filter: the clock's dot counts them all, so this is where it is explained. */}
                 <RoutineSide endpointId={endpointId} entries={result.routines} projectId={grouped ? null : projectId} timeZone={result.timeZone} />
             </div>
-        </StageFrame>
+        </>
     );
 }
 

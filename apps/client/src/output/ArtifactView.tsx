@@ -56,7 +56,7 @@ import { fileViewOf, firstShownFile } from '@/output/file-view';
 import { showChat, useChatName } from '@/output/kinds';
 import { selectArtifactVersion, useArtifactSelection } from '@/output/open';
 import { useArtifact } from '@/output/use-artifact';
-import { showRoutine, useRoutinesStage } from '@/routines/stage';
+import { showRoutine } from '@/routines/stage';
 import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
@@ -74,7 +74,17 @@ const CopyToProjectDialog = lazyNamed(() => import('@/output/CopyToProjectDialog
  * where it came from and what to do with it behind the controls of the bar. Every byte is read by the
  * artifact's id and a version's id; the view never names a path on the machine.
  */
-export function ArtifactView({ artifactId, machineId, pin }: { artifactId: string; machineId?: string; pin?: ArtifactPin }) {
+export function ArtifactView({
+    artifactId,
+    machineId,
+    pin,
+    inItsRoutine = false
+}: {
+    artifactId: string;
+    machineId?: string;
+    pin?: ArtifactPin;
+    inItsRoutine?: boolean;
+}) {
     const { t } = useTranslation('output');
     const own = useEndpointId();
     const elsewhere = useEndpointIdOfMachine(machineId ?? '');
@@ -98,7 +108,7 @@ export function ArtifactView({ artifactId, machineId, pin }: { artifactId: strin
     if (state.status === 'gone' || state.result.versions.length === 0) {
         return <Centered icon={Package}>{t('view.gone')}</Centered>;
     }
-    return <ArtifactBody endpointId={endpointId} machineId={machineId} result={state.result} pin={pin} />;
+    return <ArtifactBody endpointId={endpointId} machineId={machineId} result={state.result} pin={pin} inItsRoutine={inItsRoutine} />;
 }
 
 /*
@@ -125,12 +135,14 @@ function ArtifactBody({
     endpointId,
     machineId,
     result,
-    pin
+    pin,
+    inItsRoutine
 }: {
     endpointId: string;
     machineId: string | undefined;
     result: ArtifactGetResult;
     pin: ArtifactPin | undefined;
+    inItsRoutine: boolean;
 }) {
     const { t } = useTranslation('output');
     const { artifact, versions } = result;
@@ -151,7 +163,6 @@ function ArtifactBody({
     const compare = comparing && canCompare;
     const base = compare ? baseFor(versions, version, baseId) : null;
     const routineId = version?.provenance.routineId;
-    const inItsRoutine = useRoutinesStage((s) => s.open && s.routine !== null && s.routine.routineId === routineId);
 
     const pick = (picked: ArtifactVersion): void => {
         const next = picked.versionId === latest.versionId ? null : picked.versionId;

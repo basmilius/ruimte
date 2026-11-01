@@ -48,7 +48,6 @@ import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { pool, transportFor } from '@/transport';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { useRoutinesStage } from '@/routines/stage';
 import { cellAt, cellCount, focusDirection, isTabHost, type SplitDirection } from '@/shell/split';
 import { cameraHistoryStep } from '@/state/canvas-camera-history';
 import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
@@ -530,10 +529,6 @@ export function useCanvasShortcuts(): void {
         const onKeyDown = (e: KeyboardEvent): void => {
             // A key something on the page already acted on is that thing's: the views of a database cell mark the keys they took that way.
             if (e.defaultPrevented || e.isComposing) {
-                return;
-            }
-            // Routines covers the view stage, so the canvas and the cells under it are out of reach of the keyboard too.
-            if (useRoutinesStage.getState().open) {
                 return;
             }
             const s = focusedCanvas().getState();

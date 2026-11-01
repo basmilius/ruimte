@@ -45,7 +45,7 @@ import { startBytesWorker } from '@/transport/bytes-worker-host';
 import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/ConnectionProvider';
 import { useRemoteHolds } from '@/transport/remote-holds';
-import { ErrorBoundary, LazyBoundary, Workspace as CoreWorkspace, lazyDialog, lazyNamed, prefetcher } from '@adecore/ui';
+import { ErrorBoundary, Workspace as CoreWorkspace, lazyDialog, prefetcher } from '@adecore/ui';
 import { useRoutineForm } from '@/routines/form-state';
 import { useRoutinesStage } from '@/routines/stage';
 import { ChatHostProvider } from '@adecore/agents-react';
@@ -133,7 +133,12 @@ const EraseDeviceDialog = lazyDialog(
     (s) => s.erasing !== null
 );
 
-const RoutinesStage = lazyNamed(() => import('@/routines/RoutinesStage'), 'RoutinesStage');
+const RoutinesStage = lazyDialog(
+    () => import('@/routines/RoutinesStage'),
+    'RoutinesStage',
+    useRoutinesStage,
+    (state) => state.open
+);
 
 const RoutineFormDialog = lazyDialog(
     () => import('@/routines/RoutineFormDialog'),
@@ -180,6 +185,7 @@ const DIALOGS: readonly (readonly [surface: string | null, dialog: ComponentType
     ['dialog', IssueStartDialog],
     ['dialog', PullRequestDialog],
     ['dialog', FileChoiceDialog],
+    [null, RoutinesStage],
     ['dialog', RoutineFormDialog],
     ['dialog', ImageSaveHost],
     ['dialog', AttentionQueue]
@@ -201,7 +207,6 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     const sidebarOpen = useUi((state) => state.sidebarOpen);
     const planOpen = useUi((state) => state.planOpen);
     const panelOpen = useShownPanel().open;
-    const routinesOpen = useRoutinesStage((state) => state.open);
     const lost = useMachineLost();
 
     useEffect(() => {
@@ -247,8 +252,7 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                             </ErrorBoundary>
                         }
                         sidePanelWidth="auto"
-                        // Routines takes the panel's place too, and leaves it as it was for the way back.
-                        sidePanelOpen={!routinesOpen && (planOpen || panelOpen)}
+                        sidePanelOpen={planOpen || panelOpen}
                         sidePanel={
                             <>
                                 <PlanPanel />
@@ -264,13 +268,6 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         <ErrorBoundary label={failed('cellChrome')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                             <CellOverlayLayer />
                         </ErrorBoundary>
-                        {routinesOpen && (
-                            <ErrorBoundary label={failed('routines')} resetKeys={[workspace]} className="absolute inset-0 z-10 bg-surface">
-                                <LazyBoundary fallback={<div className="absolute inset-0 z-10 bg-surface" />}>
-                                    <RoutinesStage />
-                                </LazyBoundary>
-                            </ErrorBoundary>
-                        )}
                         {/* After the parked pages, which carry no z-index of their own and would otherwise draw over this screen. */}
                         <ErrorBoundary label={failed('projectSwitch')} resetKeys={[workspace]} className="absolute inset-0 z-10">
                             <ProjectSwitchScreen />

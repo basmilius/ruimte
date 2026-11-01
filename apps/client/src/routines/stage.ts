@@ -23,10 +23,7 @@ interface RoutinesStage {
     runId: string | null;
 }
 
-/*
- * Routines over the whole view stage, one per window: what this client shows, never written to a project
- * file. The view and panel underneath stay as they were, so leaving brings them back by themselves.
- */
+/* Routines as a sheet over the workspace, one per window: what this client shows, never written to a project file. */
 export const useRoutinesStage = create<RoutinesStage>(() => ({ open: false, week: 0, filter: 'project', layout: 'week', routine: null, runId: null }));
 
 /* Always the start: this week's overview, never the routine or week left open last time. Filter and layout stay. */

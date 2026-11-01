@@ -157,8 +157,8 @@ describe('a routine node', () => {
     test("Show on canvas in a routine's page places it on the canvas", async () => {
         await open([]);
         await act(async () => showRoutine({ projectId: 'project-atlas', routineId: 'morning' }));
-        await until(() => page.host.querySelector('section[aria-label="Routines"] [aria-label="More"]') !== null);
-        await clickOn(page.host.querySelector<HTMLElement>('section[aria-label="Routines"] [aria-label="More"]'));
+        await until(() => document.querySelector('[role="dialog"][aria-label="Routines"] [aria-label="More"]') !== null);
+        await clickOn(document.querySelector<HTMLElement>('[role="dialog"][aria-label="Routines"] [aria-label="More"]'));
         await until(() => document.querySelector('[role="menu"]') !== null);
         await clickOn([...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent?.trim() === 'Show on canvas') ?? null);
         await until(() => !useRoutinesStage.getState().open && liveCanvas('main') !== null);

@@ -79,15 +79,15 @@ const HELD: RoutineEntry = {
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
 
 function text(): string {
-    return page.host.textContent ?? '';
+    return document.body.textContent ?? '';
 }
 
 function stage(): HTMLElement | null {
-    return page.host.querySelector('section[aria-label="Routines"]');
+    return document.querySelector('[role="dialog"][aria-label="Routines"]');
 }
 
 function clock(): HTMLElement | null {
-    return page.host.querySelector<HTMLElement>('nav[aria-label="Tools"] button[aria-label^="Routines"]');
+    return document.body.querySelector<HTMLElement>('nav[aria-label="Tools"] button[aria-label^="Routines"]');
 }
 
 /* The prompt of the routine form, an editor rather than a text field. */
@@ -103,11 +103,11 @@ async function typePrompt(form: ParentNode, words: string): Promise<void> {
 }
 
 function sidePanelShown(): boolean {
-    return page.host.querySelector('.ade-workspace')?.hasAttribute('data-side-panel') ?? false;
+    return document.body.querySelector('.ade-workspace')?.hasAttribute('data-side-panel') ?? false;
 }
 
 function looksOf(routineId: string): string[] {
-    return [...page.host.querySelectorAll(`[data-routine="${routineId}"] [data-look]`)].map((block) => block.getAttribute('data-look') ?? '');
+    return [...document.body.querySelectorAll(`[data-routine="${routineId}"] [data-look]`)].map((block) => block.getAttribute('data-look') ?? '');
 }
 
 async function openStage(): Promise<void> {
@@ -139,33 +139,27 @@ afterEach(async () => {
 });
 
 describe('Routines', () => {
-    test('opens over the view and its panel, and Close brings both back', async () => {
+    test('floats over the view and its panel, and Close, Escape and its key each leave it', async () => {
         await act(async () => useUi.getState().setPanel({ open: true, kind: 'output' }));
         await until(() => sidePanelShown());
         await openStage();
-        expect(sidePanelShown()).toBe(false);
-        expect(machine.requests('routine.watch')).toHaveLength(1);
-        // Routines covers the view, so no view in the sidebar reads as the one in front.
-        expect(page.host.querySelector('aside [aria-current="true"]')).toBeNull();
-
-        await clickOn(buttonWithText('Close', page.host));
-        await until(() => stage() === null);
         expect(sidePanelShown()).toBe(true);
-        expect(page.host.querySelector('aside [aria-current="true"]')).not.toBeNull();
+        expect(machine.requests('routine.watch')).toHaveLength(1);
+
+        await clickOn(buttonWithText('Close', stage()!));
+        await until(() => stage() === null);
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'output' });
 
-        // The key toggles it, with a modifier; a bare Escape leaves it where it is.
-        await pressKey(document.body, 's', { altKey: true, metaKey: isApplePlatform(), ctrlKey: !isApplePlatform() });
+        const pressShortcut = (target: HTMLElement): Promise<void> =>
+            pressKey(target, 's', { altKey: true, metaKey: isApplePlatform(), ctrlKey: !isApplePlatform() });
+        await pressShortcut(document.body);
         await until(() => stage() !== null);
-        await pressKey(document.body, 'Escape');
-        expect(stage()).not.toBeNull();
-        await clickOn(clock());
+        await pressKey(stage()!, 'Escape');
         await until(() => stage() === null);
 
-        // Picking a view in the sidebar leaves it too.
-        await openStage();
-        const row = ([...page.host.querySelectorAll('aside button')] as HTMLElement[]).find((button) => button.textContent?.trim() === 'Main') ?? null;
-        await clickOn(row);
+        await pressShortcut(document.body);
+        await until(() => stage() !== null);
+        await pressShortcut(stage()!);
         await until(() => stage() === null);
     });
 
@@ -173,10 +167,10 @@ describe('Routines', () => {
         await openStage();
         expect(looksOf('morning')).toEqual(['done', 'limit', 'caught-up', 'waited', 'skipped']);
         expect(text()).toContain('October 19 to 25');
-        const row = page.host.querySelector('[data-routine="morning"] [role="rowheader"]')?.textContent ?? '';
+        const row = document.body.querySelector('[data-routine="morning"] [role="rowheader"]')?.textContent ?? '';
         expect(row).toContain('Weekdays at');
         expect(row).toContain('Claude Code');
-        await clickOn(page.host.querySelector('button[aria-label="Next week"]'));
+        await clickOn(document.body.querySelector('button[aria-label="Next week"]'));
         await until(() => text().includes('Week 44'));
         expect(looksOf('morning')).toEqual(['next', 'next', 'next', 'next', 'next']);
     });
@@ -185,7 +179,7 @@ describe('Routines', () => {
         machine.answer('routine.runNow', () => ({ outcome: 'started' as const, runId: 'now' }));
         await openStage();
         const card = (): Element | null => document.querySelector('[aria-label="Run of Morning summary"]');
-        await clickOn(page.host.querySelector('[data-routine="morning"] button[data-look="done"]'));
+        await clickOn(document.body.querySelector('[data-routine="morning"] button[data-look="done"]'));
         await until(() => card()?.textContent?.includes('Started') === true);
         expect(card()?.textContent).toContain('Atlas');
         expect(card()?.textContent).toContain('Done in 3 min');
@@ -197,7 +191,7 @@ describe('Routines', () => {
         expect(machine.requests('routine.runNow')[0]).toEqual({ projectId: 'project-atlas', routineId: 'morning' });
         await until(() => card() === null);
 
-        await clickOn(page.host.querySelector('[data-routine="morning"] button[data-look="done"]'));
+        await clickOn(document.body.querySelector('[data-routine="morning"] button[data-look="done"]'));
         await until(() => card() !== null);
         await clickOn(buttonWithText('Open in Routines', card()!));
         expect(useRoutinesStage.getState()).toMatchObject({ routine: { projectId: 'project-atlas', routineId: 'morning' }, runId: 'mon' });
@@ -215,7 +209,7 @@ describe('Routines', () => {
         ];
         await openStage();
         await act(async () => machine.emit('routine.changed', { projectId: 'project-atlas' }));
-        const band = (): Element | null => page.host.querySelector('[data-routine="bundle"] [data-band="paused"]');
+        const band = (): Element | null => document.body.querySelector('[data-routine="bundle"] [data-band="paused"]');
         await until(() => band() !== null);
         expect(band()?.textContent).toContain('Paused since');
         expect(band()?.textContent).toContain('3 runs skipped');
@@ -228,8 +222,8 @@ describe('Routines', () => {
         routines = [MORNING, HELD];
         await openStage();
         await act(async () => machine.emit('routine.changed', { projectId: 'project-atlas' }));
-        await until(() => page.host.querySelector('article[aria-label="Weekly changelog draft"]') !== null);
-        const card = page.host.querySelector('article[aria-label="Weekly changelog draft"]');
+        await until(() => document.body.querySelector('article[aria-label="Weekly changelog draft"]') !== null);
+        const card = document.body.querySelector('article[aria-label="Weekly changelog draft"]');
         expect(card?.textContent).toContain('Every Friday at');
         expect(card?.textContent).toContain('Added through the project file');
         await clickOn(buttonWithText('Approve', card!));
@@ -241,9 +235,9 @@ describe('Routines', () => {
         routines = [MORNING, { ...HELD, projectId: 'project-other', projectName: 'Other' }];
         await openStage();
         await act(async () => machine.emit('routine.changed', { projectId: 'project-other' }));
-        await until(() => page.host.querySelector('article[aria-label="Weekly changelog draft"]') !== null);
+        await until(() => document.body.querySelector('article[aria-label="Weekly changelog draft"]') !== null);
         // The week stays this project's; only the column reaches further.
-        expect(page.host.querySelector('[data-routine="changelog"]')).toBeNull();
+        expect(document.body.querySelector('[data-routine="changelog"]')).toBeNull();
         expect(clock()?.getAttribute('aria-label')).toBe('Routines, 1 needs you');
     });
 
@@ -253,14 +247,14 @@ describe('Routines', () => {
         await act(async () => showRoutine({ projectId: 'project-atlas', routineId: 'changelog' }));
         await until(() => text().includes('Needs your approval'));
         expect(text()).toContain('Added through the project file');
-        await clickOn(buttonWithText('Approve', page.host));
+        await clickOn(buttonWithText('Approve', document.body));
         await until(() => machine.requests('routine.approve').length === 1);
         expect(machine.requests('routine.approve')[0]).toEqual({ projectId: 'project-atlas', routineId: 'changelog', digest: 'digest-changelog' });
     });
 
     test('a cron routine waits for an expression it reads, shows its next times and sends it', async () => {
         await openStage();
-        await clickOn(buttonWithText('New routine', page.host));
+        await clickOn(buttonWithText('New routine', document.body));
         await until(() => document.querySelector('form[aria-label="New routine"]') !== null);
         const form = document.querySelector('form[aria-label="New routine"]')!;
         const type = async (field: HTMLInputElement | HTMLTextAreaElement, value: string): Promise<void> => {
@@ -308,7 +302,7 @@ describe('Routines', () => {
             ]
         }));
         await openStage();
-        await clickOn(buttonWithText('New routine', page.host));
+        await clickOn(buttonWithText('New routine', document.body));
         await until(() => document.querySelector('form[aria-label="New routine"]') !== null);
         const form = document.querySelector('form[aria-label="New routine"]')!;
         await until(() => machine.requests('routine.skills').length > 0);
@@ -334,7 +328,7 @@ describe('Routines', () => {
 
     test('a routine through the day sends its days, its step and its first and last time', async () => {
         await openStage();
-        await clickOn(buttonWithText('New routine', page.host));
+        await clickOn(buttonWithText('New routine', document.body));
         await until(() => document.querySelector('form[aria-label="New routine"]') !== null);
         const form = document.querySelector('form[aria-label="New routine"]')!;
         const type = async (field: HTMLInputElement | HTMLTextAreaElement, value: string): Promise<void> => {
@@ -377,8 +371,8 @@ describe('Routines', () => {
         ];
         await openStage();
         await act(async () => machine.emit('routine.changed', { projectId: 'project-atlas' }));
-        await until(() => page.host.querySelector('[data-routine="hourly"] [data-fold="runs"]') !== null);
-        const row = page.host.querySelector('[data-routine="hourly"]')!;
+        await until(() => document.body.querySelector('[data-routine="hourly"] [data-fold="runs"]') !== null);
+        const row = document.body.querySelector('[data-routine="hourly"]')!;
         const folded = row.querySelector<HTMLElement>('[data-fold="runs"]')!;
         expect(folded.textContent).toBe('4 runs · 1 failed');
         // Sunday from 14:20 on: 15:00, 16:00 and 17:00 are still to come.
@@ -393,10 +387,10 @@ describe('Routines', () => {
 
     test('the keys of the canvas under it do nothing while it is open', async () => {
         await openStage();
-        await pressKey(document.body, 'n', { altKey: true });
+        await pressKey(stage()!, 'n', { altKey: true });
         expect(Object.keys(liveCanvas('main')?.nodes ?? {})).toEqual([]);
 
-        await clickOn(buttonWithText('Close', page.host));
+        await clickOn(buttonWithText('Close', document.body));
         await until(() => stage() === null);
         await pressKey(document.body, 'n', { altKey: true });
         await until(() => Object.values(liveCanvas('main')?.nodes ?? {}).some((node) => node.kind === 'note'));
@@ -407,7 +401,7 @@ describe('Routines', () => {
         routines = [{ ...MORNING, runs: [waiting, ...MORNING.runs] }];
         await openStage();
         await act(async () => machine.emit('routine.changed', { projectId: 'project-atlas' }));
-        const needsYou = (): string => page.host.querySelector('section[aria-label="Needs you"]')?.textContent ?? '';
+        const needsYou = (): string => document.body.querySelector('section[aria-label="Needs you"]')?.textContent ?? '';
         await until(() => needsYou().includes('Since'));
         const question = { id: 'q1', header: 'Branch', question: 'Which branch should the summary cover?', choices: [], multiSelect: false };
         const info = chatInfoOf('routine-chat-sun', {
@@ -440,7 +434,7 @@ describe('Routines', () => {
 
     test('a machine without routines shows no clock', async () => {
         machine.answersOnly((Object.keys(REQUEST_SCHEMAS) as RequestType[]).filter((type) => !type.startsWith('routine.')));
-        await until(() => page.host.querySelector('nav[aria-label="Tools"] button[aria-label="Search"]') !== null);
+        await until(() => document.body.querySelector('nav[aria-label="Tools"] button[aria-label="Search"]') !== null);
         await act(async () => {
             await new Promise((resolve) => setTimeout(resolve, 0));
         });

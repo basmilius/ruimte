@@ -207,7 +207,7 @@ function RunPane({ entry, run, timeZone }: { entry: RoutineEntry; run: RoutineRu
             {version !== null && shown === 'output' ? (
                 <FileToolbarSlotProvider value={fixedSlot(slot)}>
                     <div className="flex min-h-0 grow flex-col">
-                        <ArtifactView artifactId={version.artifactId} pin={{ version: pinned ?? version.versionId, set: setPinned }} />
+                        <ArtifactView artifactId={version.artifactId} pin={{ version: pinned ?? version.versionId, set: setPinned }} inItsRoutine />
                     </div>
                 </FileToolbarSlotProvider>
             ) : run.chatId !== undefined ? (

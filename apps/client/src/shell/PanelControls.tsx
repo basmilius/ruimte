@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
-import { leaveRoutines, useRoutinesStage } from '@/routines/stage';
 import { toolbarPanels, type PanelGroup } from '@/shell/panels';
 import { useFolderInRepo } from '@/state/git-repos';
 import { useGitStatus } from '@/state/git-watch';
@@ -19,7 +18,6 @@ const GROUPS: readonly PanelGroup[] = ['project', 'connected', 'made'];
 export function PanelControls() {
     const { t } = useTranslation('shell');
     const panel = useShownPanel();
-    const routines = useRoutinesStage((s) => s.open);
     const scratch = useProject((s) => isScratchProject(s.current));
     const folder = useProject((s) => s.current?.folder ?? null);
     const entries = toolbarPanels(scratch);
@@ -49,17 +47,9 @@ export function PanelControls() {
                                 icon={entry.icon}
                                 label={dirty ? t('panel.gitChanges', { count: changes }) : t(`panel.names.${entry.kind}`)}
                                 tooltipSide="left"
-                                active={!routines && panel.open && panel.kind === entry.kind}
+                                active={panel.open && panel.kind === entry.kind}
                                 className={dirty ? 'relative' : undefined}
-                                onClick={() => {
-                                    // Routines hides the panel rather than closing it, so a press here shows the panel it asks for.
-                                    if (routines) {
-                                        leaveRoutines();
-                                        useUi.getState().setPanel({ open: true, kind: entry.kind });
-                                    } else {
-                                        useUi.getState().togglePanel(entry.kind);
-                                    }
-                                }}
+                                onClick={() => useUi.getState().togglePanel(entry.kind)}
                             >
                                 {/* Gray as the unsaved dot is: it says there is something to commit, not that something is wrong. */}
                                 {dirty && (
