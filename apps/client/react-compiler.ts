@@ -31,7 +31,10 @@ const ADECORE_SOURCES = new RegExp(
 
 const CLIENT_SOURCES = new RegExp(`^${escaped(fileURLToPath(new URL('./src/', import.meta.url)))}.*\\.tsx?(?:$|\\?)`);
 
-export const REACT_COMPILED = [CLIENT_SOURCES, ADECORE_SOURCES];
+// A built-in is the client's own code, wherever its folder sits.
+const BUILT_IN_SOURCES = new RegExp(`^${escaped(fileURLToPath(new URL('../../extensions/', import.meta.url)))}.*\\.tsx?(?:$|\\?)`);
+
+export const REACT_COMPILED = [CLIENT_SOURCES, BUILT_IN_SOURCES, ADECORE_SOURCES];
 
 export const REACT_COMPILER_LEFT_OUT = [/\.test\.tsx?(?:$|\?)/, /[\\/]src[\\/]worker[\\/]/];
 

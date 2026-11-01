@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import type { ExtensionManifest } from '@ruimte/contracts';
 import { create } from 'zustand';
 
 export type PanelGroup = 'project' | 'connected' | 'made' | 'extensions';
@@ -62,24 +63,95 @@ export interface SharedStorageContribution {
     reload: () => void;
 }
 
+export interface ExtensionSurfaceProps {
+    nodeId?: string;
+}
+
+export interface SidebarCardContribution {
+    id: string;
+    title: string;
+    component: ComponentType;
+}
+
+export interface ExtensionNodeContribution {
+    // `<extension id>/<type>`.
+    id: string;
+    title: string;
+    icon: LucideIcon;
+    component: ComponentType<ExtensionSurfaceProps>;
+    dataVersion?: number;
+    migrate?: (stored: unknown, fromVersion: number) => unknown;
+}
+
+export interface ExtensionViewContribution {
+    id: string;
+    title: string;
+    component: ComponentType<{ params: unknown }>;
+}
+
+export interface CommandContribution {
+    id: string;
+    title: string;
+    when?: () => boolean;
+    run: () => void | Promise<void>;
+}
+
+export interface NodeMenuItemContribution {
+    id: string;
+    title: string;
+    when: (nodeId: string) => boolean;
+    run: (nodeId: string) => void;
+}
+
+export interface ExtensionSettingsContribution {
+    id: string;
+    component: ComponentType;
+    keywords: readonly string[];
+}
+
+export interface BuiltInContribution {
+    id: string;
+    manifest: ExtensionManifest;
+    setEnabled(enabled: boolean): void;
+}
+
 export interface Contributions {
+    builtIns: readonly BuiltInContribution[];
     panels: readonly PanelContribution[];
     settingsSections: readonly SettingsSectionContribution[];
     canvasLayers: readonly CanvasLayerContribution[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
+    sidebarCards: readonly SidebarCardContribution[];
+    extensionNodes: readonly ExtensionNodeContribution[];
+    extensionViews: readonly ExtensionViewContribution[];
+    commands: readonly CommandContribution[];
+    nodeMenuItems: readonly NodeMenuItemContribution[];
+    extensionSettings: readonly ExtensionSettingsContribution[];
 }
 
 type ContributionKind = keyof Contributions;
 type ContributionOf<Kind extends ContributionKind> = Contributions[Kind][number];
 
 export const useContributions = create<Contributions>(() => ({
+    builtIns: [],
     panels: [],
     settingsSections: [],
     canvasLayers: [],
     viewAccessories: [],
-    sharedStorage: []
+    sharedStorage: [],
+    sidebarCards: [],
+    extensionNodes: [],
+    extensionViews: [],
+    commands: [],
+    nodeMenuItems: [],
+    extensionSettings: []
 }));
+
+/* Whether a stored entry is an extension's: every Ruimte keeps it as an unknown kind, so it survives one without the extension. */
+export function extensionKeyOf(raw: Record<string, unknown> | undefined): string | null {
+    return raw?.kind === 'extension' && typeof raw.extension === 'string' && typeof raw.type === 'string' ? `${raw.extension}/${raw.type}` : null;
+}
 
 function idOf(item: { id: string } | { kind: string }): string {
     return 'id' in item ? item.id : item.kind;

@@ -58,6 +58,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { useContributions } from '@/extensions/registry';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
 import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
@@ -112,6 +113,7 @@ const NO_WORKFLOWS: readonly WorkflowCandidate[] = [];
 function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, finalFocus, createAt }: NodeMenuProps & { node: CanvasNode | undefined }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
+    const extensionItems = useContributions((state) => state.nodeMenuItems).filter((item) => item.when(id));
     const endpointId = useEndpointId();
     // A design's conversation is the one of the chat it shows.
     const chatId = useShownChatOfNode(node) ?? id;
@@ -273,6 +275,11 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                     <ContextMenu.Separator />
                 </>
             )}
+            {extensionItems.map((item) => (
+                <ContextMenu.Item key={item.id} onClick={() => item.run(id)}>
+                    {item.title}
+                </ContextMenu.Item>
+            ))}
             <ContextMenu.Item onClick={onRename}>
                 <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <ContextMenu.Hint>{t('menu.doubleClick')}</ContextMenu.Hint>
             </ContextMenu.Item>

@@ -179,6 +179,7 @@ export interface DocumentState {
     addDatabaseView(name: string, table: ProjectDatabaseTarget, opens?: boolean): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
+    addExtensionView(name: string, extension: string, type: string, params?: unknown): string;
     /* An artifact of this machine's Output as a view; `opens` means the same as for a file. */
     addArtifactView(name: string, artifact: NonNullable<StandaloneNode['artifact']>, opens?: boolean): string;
     /* A further chat on the folder of a design; false when the view is no design (any more). */

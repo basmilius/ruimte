@@ -77,7 +77,31 @@ export const ExtensionMessageEventSchema = z.object({
 });
 export type ExtensionMessageEvent = z.infer<typeof ExtensionMessageEventSchema>;
 
+export const ExtensionContextReadPayloadSchema = z.object({
+    projectId: z.string().min(1),
+    nodeIds: z.array(z.string().min(1)).max(100).optional(),
+    viewId: z.string().min(1).optional()
+});
+export type ExtensionContextReadPayload = z.infer<typeof ExtensionContextReadPayloadSchema>;
+
+export const ExtensionContextReadResultSchema = z.object({
+    sources: z.array(z.object({ id: z.string(), kind: z.string(), title: z.string(), text: z.string() }))
+});
+export type ExtensionContextReadResult = z.infer<typeof ExtensionContextReadResultSchema>;
+
+export const ExtensionAgentRunPayloadSchema = z.object({
+    prompt: z.string().min(1),
+    projectId: z.string().min(1),
+    provider: z.string().min(1).optional()
+});
+export type ExtensionAgentRunPayload = z.infer<typeof ExtensionAgentRunPayloadSchema>;
+
+export const ExtensionAgentRunResultSchema = z.object({ text: z.string() });
+export type ExtensionAgentRunResult = z.infer<typeof ExtensionAgentRunResultSchema>;
+
 export const EXTENSION_REQUEST_SCHEMAS = {
+    'extension.contextRead': { payload: ExtensionContextReadPayloadSchema, result: ExtensionContextReadResultSchema },
+    'extension.agentRun': { payload: ExtensionAgentRunPayloadSchema, result: ExtensionAgentRunResultSchema },
     'extension.list': { payload: EmptySchema, result: ExtensionListResultSchema },
     'extension.install': { payload: ExtensionInstallPayloadSchema, result: ExtensionInfoSchema },
     'extension.remove': { payload: ExtensionIdPayloadSchema, result: EmptySchema },

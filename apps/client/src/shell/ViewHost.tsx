@@ -12,6 +12,8 @@ import { useDrawing } from '@/state/drawing';
 import { BrowserFallback } from '@/nodes/BrowserBody';
 import { usePage } from '@/nodes/use-page';
 import { DeviceBody } from '@/devices/DeviceBody';
+import { ExtensionViewBody } from '@/extensions/ExtensionNodeBody';
+import { extensionKeyOf } from '@/extensions/registry';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
@@ -48,6 +50,7 @@ function StandaloneView({ view }: { view: ProjectView }) {
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
             {view.kind === 'device' && <DeviceBody id={view.id} />}
+            {view.kind === 'unknown' && extensionKeyOf(view.raw) !== null && <ExtensionViewBody raw={view.raw} />}
             {view.kind === 'drawing' && (
                 <LazyBoundary>
                     <DrawingView id={view.id} />

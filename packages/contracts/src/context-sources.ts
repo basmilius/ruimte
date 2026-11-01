@@ -38,7 +38,7 @@ function sourcesOf(
     return source ? [source] : [];
 }
 
-function sourceOf(node: ProjectNode | undefined, text: ProjectText | undefined, folder: string | null): ContextSource | null {
+export function sourceOf(node: ProjectNode | undefined, text: ProjectText | undefined, folder: string | null): ContextSource | null {
     if (text) {
         return { id: text.id, kind: 'text', title: titleOf(text.text), text: text.text };
     }
@@ -69,6 +69,9 @@ function sourceOf(node: ProjectNode | undefined, text: ProjectText | undefined, 
     }
     if (node.kind === 'routine' && node.routine) {
         return { id: node.id, kind: 'routine', title: node.title, routine: node.routine };
+    }
+    if (node.kind === 'unknown' && node.raw?.kind === 'extension' && typeof node.raw.extension === 'string' && typeof node.raw.type === 'string') {
+        return { id: node.id, kind: 'extension', title: node.title, extension: { id: node.raw.extension, type: node.raw.type, data: node.raw.data } };
     }
     if (node.kind === 'device' && node.device) {
         // What the node points at, never what it is: the daemon looks the device up at the moment of reading.

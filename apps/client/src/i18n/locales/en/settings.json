@@ -651,6 +651,10 @@
         "about": {
             "label": "About",
             "description": "Version, machine details and links."
+        },
+        "extensions": {
+            "label": "Extensions",
+            "description": "What you added to Ruimte, and the store."
         }
     },
     "gesture": {
@@ -1872,5 +1876,25 @@
             },
             "noKey": "No API key saved"
         }
+    },
+    "extensions": {
+        "list": "Extensions",
+        "browse": "Browse store",
+        "store": "Store",
+        "search": "Search extensions",
+        "storeUnavailable": "The store is not available right now.",
+        "reviewed": "reviewed {{date}}",
+        "asksTo": "This extension asks to",
+        "trust": "Extensions run inside Ruimte and can do what you can, on all your machines. Install only what you trust.",
+        "install": "Install",
+        "back": "Back",
+        "notOnMachine": "{{name}} is on this computer, but its part for the machine takes that machine's owner.",
+        "installFailed": "{{name}} could not be installed",
+        "dev": "in development",
+        "enabled": "On",
+        "remove": "Remove",
+        "desktopOnly": "Extensions work in the desktop app.",
+        "safeMode": "Safe mode: no extensions are loaded.",
+        "included": "included with Ruimte"
     }
 }

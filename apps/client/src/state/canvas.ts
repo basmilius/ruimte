@@ -161,6 +161,15 @@ export interface CanvasState extends CameraSlice {
     duplicateNode(id: string): void;
     /* Null with no view under the canvas, since nothing in the project file could hold such a node. */
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;
+    addExtensionNode(
+        extension: string,
+        type: string,
+        title: string,
+        size: { width: number; height: number },
+        data: unknown,
+        dataVersion?: number
+    ): string | null;
+    updateExtensionNode(id: string, patch: Record<string, unknown>): void;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
     /* Tidies the members that stand directly in a group into a grid, as one undo step; the ids of what moved, or why not. */

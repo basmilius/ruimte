@@ -6790,6 +6790,100 @@
     },
     "additionalProperties": {}
   },
+  "request.extension.contextRead.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "nodeIds": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.extension.contextRead.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sources": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "title",
+            "text"
+          ]
+        }
+      }
+    },
+    "required": [
+      "sources"
+    ]
+  },
+  "request.extension.agentRun.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "provider": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "prompt",
+      "projectId"
+    ]
+  },
+  "request.extension.agentRun.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  },
   "request.extension.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

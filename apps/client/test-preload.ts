@@ -31,7 +31,7 @@ const resources = Object.fromEntries(
 );
 
 // What a built-in brings, in a namespace named after its folder (`i18n/bundles`).
-const extensionFolder = fileURLToPath(new URL('./src/extensions/', import.meta.url));
+const extensionFolder = fileURLToPath(new URL('../../extensions/', import.meta.url));
 const extensionResources = Object.fromEntries(
     readdirSync(extensionFolder, { withFileTypes: true })
         .filter((entry) => entry.isDirectory() && existsSync(join(extensionFolder, entry.name, 'locales', `${FALLBACK_LANGUAGE}.json`)))

@@ -29,7 +29,8 @@ type ReferenceKind =
     | 'file'
     | 'database'
     | 'artifact'
-    | 'routine';
+    | 'routine'
+    | 'extension';
 
 /* A view, node, text or chat of the chat's own project that a person pointed at with `#` (a chat, before `#`, with `@`). */
 export interface Reference {

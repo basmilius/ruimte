@@ -219,7 +219,8 @@ export default defineConfig(({ command, mode }) => ({
     },
     resolve: {
         alias: {
-            '@': fileURLToPath(new URL('./src', import.meta.url))
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+            '@extensions': fileURLToPath(new URL('../../extensions', import.meta.url))
         },
         // The library's `source` export is its TypeScript, compiled here like the app's own.
         conditions: ['source', ...defaultClientConditions],

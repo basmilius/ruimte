@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { useContributions } from '@/extensions/registry';
 import {
     isCanvasView,
     isDiagramView,
@@ -298,6 +299,17 @@ function measureCommands(): Command[] {
 
 /* Every row the palette offers besides the jumps, each only while it can act. */
 export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Command[] {
+    return [...coreCommands(prRepos), ...extensionCommands()];
+}
+
+function extensionCommands(): Command[] {
+    return useContributions
+        .getState()
+        .commands.filter((command) => command.when?.() ?? true)
+        .map((command) => ({ id: command.id, label: command.title, run: () => void command.run() }));
+}
+
+function coreCommands(prRepos: readonly PrRepo[]): Command[] {
     const canvas = focusedCanvas().getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
     const current = useProject.getState().current;

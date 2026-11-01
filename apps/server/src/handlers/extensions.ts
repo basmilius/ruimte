@@ -1,8 +1,66 @@
+import { isCanvasView, sourceOf, type ContextSource, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import type { ChatProvider } from '@adecore/agents/providers';
 import type { Dispatcher } from '../dispatcher.ts';
+import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
+import { oneShotProvider, runOneShot } from '../git/one-shot.ts';
+import type { ProviderRegistry } from '../providers/registry.ts';
+import { homedir } from 'node:os';
+
+const AGENT_RUN_TIMEOUT_MS = 180_000;
+
+export interface ExtensionHandlerDeps {
+    viewsOf(projectId: string): readonly ProjectView[] | null;
+    folderOf(projectId: string): string | null;
+    readSource(source: ContextSource, projectId: string): Promise<string>;
+    providers: ProviderRegistry;
+}
+
+function nodesIn(views: readonly ProjectView[], nodeIds: readonly string[] | undefined, viewId: string | undefined): ProjectNode[] {
+    const canvases = views.filter(isCanvasView);
+
+    if (viewId !== undefined) {
+        return canvases.find((view) => view.id === viewId)?.nodes ?? [];
+    }
+
+    const wanted = new Set(nodeIds ?? []);
+
+    return canvases.flatMap((view) => view.nodes.filter((node) => wanted.has(node.id)));
+}
 
 /* A list and a call are for any client let in. What changes what runs on this machine takes its owner. */
-export function registerExtensionHandlers(dispatcher: Dispatcher, host: ExtensionHost): void {
+export function registerExtensionHandlers(dispatcher: Dispatcher, host: ExtensionHost, deps: ExtensionHandlerDeps): void {
+    dispatcher.register('extension.contextRead', async (payload) => {
+        const folder = deps.folderOf(payload.projectId);
+        const nodes = nodesIn(deps.viewsOf(payload.projectId) ?? [], payload.nodeIds, payload.viewId);
+        const sources = nodes.flatMap((node) => sourceOf(node, undefined, folder) ?? []);
+
+        return {
+            sources: await Promise.all(
+                sources.map(async (source) => ({
+                    id: source.id,
+                    kind: source.kind,
+                    title: source.title,
+                    text: await deps.readSource(source, payload.projectId).catch((e: unknown) => `(${errorText(e)})`)
+                }))
+            )
+        };
+    });
+
+    // One process that reads a prompt and prints an answer, on the person's own CLI and plan.
+    dispatcher.register('extension.agentRun', async (payload) => {
+        const options = payload.provider === undefined ? {} : { provider: payload.provider as ChatProvider['kind'] };
+        const provider = await oneShotProvider(deps.providers, options, 'answer an extension');
+
+        const result = await runOneShot(provider, deps.folderOf(payload.projectId) ?? homedir(), payload.prompt, AGENT_RUN_TIMEOUT_MS, options);
+
+        if (result.code !== 0) {
+            throw new Error(`${provider.name} did not answer: ${result.stderr.trim()}`);
+        }
+
+        return { text: result.stdout };
+    });
+
     dispatcher.register('extension.list', async () => ({ extensions: await host.list() }));
 
     dispatcher.register('extension.call', async (payload) => ({ result: await host.call(payload.id, payload.method, payload.args) }));

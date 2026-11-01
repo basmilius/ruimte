@@ -50,6 +50,7 @@ import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
+import { SidebarCards } from '@/extensions/SidebarCards';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { useSettings } from '@/state/settings';
@@ -688,6 +689,7 @@ export function Sidebar() {
                     )}
                     {!empty && separators.trailing.map(separatorRow)}
                 </div>
+                <SidebarCards />
 
                 <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border p-2">
                     {combined ? (

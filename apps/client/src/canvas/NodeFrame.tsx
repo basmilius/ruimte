@@ -79,6 +79,8 @@ import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
 import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
+import { ExtensionNodeBody } from '@/extensions/ExtensionNodeBody';
+import { extensionKeyOf } from '@/extensions/registry';
 import { Favicon } from '@/browser/Favicon';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
@@ -409,6 +411,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
     const borderAccent = isNote ? noteAccent : frameAccent;
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
     const isUnknown = node.kind === 'unknown';
+    const extensionKey = isUnknown ? extensionKeyOf(node.raw) : null;
     const collapsed = isGroup && node.collapsed === true;
     // Any other node folded to its header: its body stays mounted at the height it had, under the header and out of reach.
     const folded = !isGroup && node.collapsed === true;
@@ -643,7 +646,8 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                                     {node.kind === 'note' && <NoteNode id={id} focused={active} />}
                                     {node.kind === 'drawing' && <DrawingNode id={id} />}
                                     {node.kind === 'diagram' && (live && renderBody ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
-                                    {isUnknown && <UnknownNodePlate id={id} />}
+                                    {isUnknown &&
+                                        (extensionKey === null ? <UnknownNodePlate id={id} /> : <ExtensionNodeBody id={id} contributionKey={extensionKey} />)}
                                     {node.kind === 'artifact' && (
                                         <FileToolbarSlotProvider value={toolbarSlot}>
                                             <LazyBoundary>

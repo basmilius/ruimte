@@ -4,6 +4,7 @@ import { desktop, machineMode } from '@/desktop/bridge';
 import { useProjectSwitch } from '@/project/open';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import '@/extensions/built-in';
+import { startExtensions } from '@/extensions/watch';
 import { allSettingsSections } from '@/shell/settings/sections';
 import { DormantScreen, ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { StartScreen } from '@/shell/StartScreen';
@@ -160,6 +161,7 @@ export function App() {
 
     // Every embedded page steps aside while a drag lasts, so it never swallows a drop meant for the cell under it.
     useEffect(() => watchDrags(), []);
+    useEffect(() => startExtensions(), []);
 
     // The macOS application menu names a pane, and switches to it when the dialog is already open.
     useEffect(

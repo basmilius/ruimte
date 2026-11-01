@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs';
 
 /*
  * The core reaches a built-in only through the slots in `extensions/registry.ts`, so a built-in can be
- * turned off or moved without touching it. `extensions/built-in.ts` is the one file that names one.
+ * turned off or moved without touching it. `apps/client/src/extensions/built-in.ts` is the one file that names one.
  */
 const CLIENT = 'apps/client/src';
-const BUILT_IN = /@\/extensions\/(?!built-in\b|internal\b|registry\b|ContributedSlots\b|host\/|loader\b|store\b|settings\/)[a-z-]+\//;
+const BUILT_IN = /@extensions\//;
 const offenders: string[] = [];
 
 for (const path of new Glob('**/*.{ts,tsx}').scanSync(CLIENT)) {
-    if (path.startsWith('extensions/')) {
+    if (path === 'extensions/built-in.ts') {
         continue;
     }
 

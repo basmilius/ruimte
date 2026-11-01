@@ -25,6 +25,7 @@ const PANES: Record<CoreSettingsSectionId, ComponentType> = {
     editor: lazyNamed(() => import('@/shell/settings/panes/EditorPane'), 'EditorPane'),
     terminal: lazyNamed(() => import('@/shell/settings/panes/TerminalPane'), 'TerminalPane'),
     views: lazyNamed(() => import('@/shell/settings/panes/ViewsPane'), 'ViewsPane'),
+    extensions: lazyNamed(() => import('@/shell/settings/panes/ExtensionsPane'), 'ExtensionsPane'),
     files: lazyNamed(() => import('@/shell/settings/panes/FilesPane'), 'FilesPane'),
     providers: lazyNamed(() => import('@/shell/settings/panes/ProvidersPane'), 'ProvidersPane'),
     chats: lazyNamed(() => import('@/shell/settings/panes/ChatsPane'), 'ChatsPane'),

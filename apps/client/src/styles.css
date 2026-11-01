@@ -9,6 +9,7 @@
 
 /* The components of @adecore/ui and the chat of @adecore/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */
+@source "../../../extensions";
 @source "../node_modules/@adecore/ui/src";
 @source "../node_modules/@adecore/agents-react/src";
 @source "../node_modules/@adecore/editor-react/src";

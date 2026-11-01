@@ -92,6 +92,8 @@
     "message": "pulsar-push-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\",1000,121000,\"CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\",\"liveactivity\",\"Mac\",\"needs-you\",1000,1,1,2,\"review-1\",\"chat\",\"Review café 🚀\",\"needs-you\",900,\"build-2\",\"terminal\",\"Build app\",\"running\"]"
   },
   "requestTypes": [
+    "extension.contextRead",
+    "extension.agentRun",
     "extension.list",
     "extension.install",
     "extension.remove",

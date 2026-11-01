@@ -24,6 +24,7 @@ interface Pending {
 interface Running {
     child: ChildProcessWithoutNullStreams;
     ready: Promise<void>;
+    failStart(reason: Error): void;
     pending: Map<number, Pending>;
     subscriptions: Set<string>;
     nextCall: number;
@@ -238,12 +239,20 @@ export class ExtensionHost {
             env: { ...process.env, ...runtime.env, RUIMTE_EXTENSION_ID: id },
             stdio: 'pipe'
         }) as ChildProcessWithoutNullStreams;
-        let markReady = (): void => undefined;
+        const { promise: ready, resolve: resolveReady, reject: rejectReady } = Promise.withResolvers<void>();
+        // One that hangs while it loads would otherwise hold every call to it for good.
+        const startTimer = setTimeout(() => this.stop(id), CALL_TIMEOUT_MS);
+        const markReady = (): void => {
+            clearTimeout(startTimer);
+            resolveReady();
+        };
         const running: Running = {
             child,
-            ready: new Promise((resolve) => {
-                markReady = resolve;
-            }),
+            ready,
+            failStart: (reason) => {
+                clearTimeout(startTimer);
+                rejectReady(reason);
+            },
             pending: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
@@ -339,6 +348,8 @@ export class ExtensionHost {
     }
 
     private failPending(running: Running, reason: Error): void {
+        running.failStart(reason);
+
         for (const pending of running.pending.values()) {
             clearTimeout(pending.timer);
             pending.reject(reason);

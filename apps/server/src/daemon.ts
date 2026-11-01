@@ -214,7 +214,17 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         sqlAnalysis: databases.sqlAnalysis,
         agents
     });
-    registerExtensionHandlers(dispatcher, extensions);
+    agents.context.useExtensionNodes(async (extension, type, data) => {
+        const parts = await extensions.nodeContext(extension, type, data);
+
+        return Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text ?? '').join('\n') : typeof parts === 'string' ? parts : null;
+    });
+    registerExtensionHandlers(dispatcher, extensions, {
+        viewsOf: (projectId) => projects.store.index.viewsOf(projectId),
+        folderOf: (projectId) => projects.store.index.folderOf(projectId),
+        readSource: async (source, projectId) => (await agents.context.answerSource('extension', source, null, null, projectId)).text ?? '',
+        providers: providers.providers
+    });
     registerEditorHandlers(dispatcher, {
         machine,
         providers,

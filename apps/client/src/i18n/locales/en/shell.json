@@ -1378,6 +1378,7 @@
         "previewUnavailable": "This request cannot be previewed here."
     },
     "extensions": {
-        "failed": "This extension could not be shown"
+        "failed": "This extension could not be shown",
+        "nodeNeeds": "This needs an extension"
     }
 }

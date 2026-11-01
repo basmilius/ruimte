@@ -9,6 +9,7 @@ import {
     MessagesSquare,
     Mic,
     Palette,
+    Puzzle,
     Server,
     Settings,
     SquareTerminal,
@@ -51,7 +52,8 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
             { id: 'views', icon: LayoutGrid },
             { id: 'editor', icon: CodeXml },
             { id: 'terminal', icon: SquareTerminal },
-            { id: 'files', icon: Folder }
+            { id: 'files', icon: Folder },
+            { id: 'extensions', icon: Puzzle, split: true }
         ]
     },
     {

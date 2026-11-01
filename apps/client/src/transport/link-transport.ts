@@ -48,6 +48,8 @@ const UNBOUNDED_REQUESTS: ReadonlySet<RequestType> = new Set<RequestType>([
     'archive.extract',
     'artifact.importFrom',
     'chat.continueOn',
+    'extension.agentRun',
+    'extension.call',
     'chat.summarize',
     'database.request',
     'device.boot',

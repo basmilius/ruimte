@@ -1,0 +1,13 @@
+{
+    "id": "ruimte.pets",
+    "name": "Pets",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Small figures that show what your agents do.",
+    "permissions": {
+        "ui.canvasOverlay": "Lets pets walk over the canvas",
+        "agents.status": "Shows when an agent works or waits on you",
+        "storage.own": "Remembers your pets and sets"
+    }
+}

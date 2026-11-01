@@ -1378,6 +1378,7 @@
         "previewUnavailable": "Dit verzoek kan hier niet worden getoond."
     },
     "extensions": {
-        "failed": "Deze extensie kon niet worden getoond"
+        "failed": "Deze extensie kon niet worden getoond",
+        "nodeNeeds": "Hiervoor is een extensie nodig"
     }
 }

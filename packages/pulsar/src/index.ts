@@ -1,3 +1,4 @@
+export * from './extension-store.ts';
 export * from './address-book.ts';
 export * from './base64url.ts';
 export * from './address-book-client.ts';
