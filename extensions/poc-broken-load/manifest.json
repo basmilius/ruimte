@@ -1,0 +1,8 @@
+{
+    "id": "poc.broken-load",
+    "name": "POC broken-load",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Fails while its client loads, so Settings should show why on its row."
+}

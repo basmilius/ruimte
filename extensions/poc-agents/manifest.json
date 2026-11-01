@@ -1,0 +1,14 @@
+{
+    "id": "poc.agents",
+    "name": "POC agents",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Summarizes the selection with an agent and writes a note, the example from the report.",
+    "permissions": {
+        "context.read": "Reads the nodes you selected",
+        "agents.run": "Sends them to one of your agents",
+        "agents.status": "Shows which agents need you",
+        "canvas.write": "Writes the summary as a note"
+    }
+}

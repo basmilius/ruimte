@@ -4,7 +4,7 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "dev": "bun ../../apps/server/src/main.ts extension dev",
+        "dev": "RUIMTE_HOME=$HOME/.ruimte-dev bun ../../apps/server/src/main.ts extension dev --port 4211",
         "pack": "bun ../../apps/server/src/main.ts extension pack"
     },
     "dependencies": {

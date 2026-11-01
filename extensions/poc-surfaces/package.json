@@ -1,0 +1,17 @@
+{
+    "name": "@ruimte/extension-poc-surfaces",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "RUIMTE_HOME=$HOME/.ruimte-dev bun ../../apps/server/src/main.ts extension dev --port 4211",
+        "pack": "bun ../../apps/server/src/main.ts extension pack"
+    },
+    "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1"
+    },
+    "devDependencies": {
+        "@types/react": "^19.3.0"
+    }
+}

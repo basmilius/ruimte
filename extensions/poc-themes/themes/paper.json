@@ -1,0 +1,8 @@
+{
+    "name": "POC paper",
+    "side": "light",
+    "tokens": {
+        "--surface": "#fbf6e9",
+        "--surface-raised": "#fffdf6"
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "name": "POC midnight",
+    "side": "dark",
+    "tokens": {
+        "--surface": "#0b1020",
+        "--surface-raised": "#121a30"
+    },
+    "css": "themes/midnight.css"
+}

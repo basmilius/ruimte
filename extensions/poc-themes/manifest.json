@@ -1,0 +1,12 @@
+{
+    "id": "poc.themes",
+    "name": "POC themes",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "A theme of tokens alone, and one with a stylesheet and an image from its pack.",
+    "themes": [
+        "themes/paper.json",
+        "themes/midnight.json"
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "id": "poc.server",
+    "name": "POC server",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Every part of server/, started with the machine.",
+    "autostart": true
+}
