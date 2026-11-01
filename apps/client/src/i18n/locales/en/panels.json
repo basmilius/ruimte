@@ -186,6 +186,8 @@
             "ruimteState": "Ruimte's own state, not edited by hand",
             "large": "Over {{size}}, shown as plain text and read only",
             "plain": "Over {{lines}} lines, shown as plain text and read only",
+            "longLines": "Very long lines, shown as plain text and read only",
+            "tooLargeToSave": "This text is too large to save on this machine",
             "touch": "Editing needs a mouse or a trackpad",
             "loadFailed": "Could not load the editor",
             "noMoreOccurrences": "No more occurrences",

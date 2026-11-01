@@ -2,10 +2,12 @@ import i18next from 'i18next';
 import { create } from 'zustand';
 import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import { collapseBlankLines } from '@/shell/panels/blank-lines';
+import { readLargeText } from '@/shell/panels/large-text';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
 import { transportFor } from '@/transport';
 import { isConnectionError, TransportError } from '@/transport/transport';
+import { writeMachineText } from '@/transport/write-text';
 
 /* How long typing has to pause before the draft goes to disk. */
 export const AUTOSAVE_DELAY_MS = 1000;
@@ -484,8 +486,12 @@ function liveLink(endpointId: string): DraftLink | null {
         return null;
     }
     return {
-        read: (path) => transport.request('fs.read', { path }),
-        write: (path, text, expectedMtime) => transport.request('fs.write', { path, text, expectedMtime }),
+        read: async (path) => {
+            const read = await transport.request('fs.read', { path });
+
+            return read.kind === 'too-large' ? readLargeText(endpointId, path, read, null) : read;
+        },
+        write: (path, text, expectedMtime) => writeMachineText(transport, path, text, expectedMtime),
         projectOpen: () => {
             const connection = windowWorkspace()?.connection;
             return connection?.endpointId === endpointId ? connection.projects.whenOpen() : Promise.resolve();

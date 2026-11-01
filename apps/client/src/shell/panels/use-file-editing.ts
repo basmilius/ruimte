@@ -30,7 +30,7 @@ interface FileEditing {
 }
 
 /* How one text file on one surface is drawn and whether it can be edited there. */
-export function useFileEditing(path: string, read: FsReadText, plain: boolean, large: boolean): FileEditing {
+export function useFileEditing(path: string, read: FsReadText, plain: boolean, large: boolean, longLines = false): FileEditing {
     const endpointId = useEndpointId();
     const transport = useOptionalConnection()?.transport ?? null;
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -46,7 +46,7 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
         () => (folder === null ? [] : [folder, ...worktrees.filter((worktree) => worktree.missing !== true).map((worktree) => worktree.path)]),
         [folder, worktrees]
     );
-    const block = editBlockOf({ path, roots, large, plain, coarse: viewer });
+    const block = editBlockOf({ path, roots, large, plain, longLines, coarse: viewer });
 
     useEffect(() => textDrafts.hold(endpointId, path), [endpointId, path]);
 

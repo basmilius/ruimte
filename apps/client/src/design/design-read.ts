@@ -5,6 +5,7 @@ import { readLargeText } from '@/shell/panels/large-text';
 import { machineTransport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
+import { writeMachineText } from '@/transport/write-text';
 import { withDesignRuntime } from '@/design/design-runtime';
 import { DESIGN_FOLDERS } from '@/design/design-folder';
 import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
@@ -76,7 +77,7 @@ export async function rewriteDesignFile(endpointId: string, folder: string, file
         return false;
     }
 
-    await transport.request('fs.write', { path, text: changed, expectedMtime: read.mtime });
+    await writeMachineText(transport, path, changed, read.mtime);
 
     return true;
 }

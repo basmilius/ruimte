@@ -186,6 +186,8 @@
             "ruimteState": "Eigen staat van Ruimte, niet met de hand te bewerken",
             "large": "Groter dan {{size}}, getoond als platte tekst en alleen-lezen",
             "plain": "Meer dan {{lines}} regels, getoond als platte tekst en alleen-lezen",
+            "longLines": "Heel lange regels, getoond als platte tekst en alleen-lezen",
+            "tooLargeToSave": "Deze tekst is te groot om op deze machine te bewaren",
             "touch": "Bewerken vraagt om een muis of een trackpad",
             "loadFailed": "Kon de editor niet laden",
             "noMoreOccurrences": "Geen treffers meer",

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText, type FileLocation } from '@ruimte/contracts';
+import { useEndpointId } from '@/state/keys';
+import { useMachineAnswers } from '@/transport/features';
 import type { Editor } from '@adecore/editor';
 import { FindBar } from '@/find/FindBar';
 import { registerFocusedLanguage } from '@/language/focused-language';
@@ -56,6 +58,12 @@ const FLASH_MS = 1600;
 
 /* Past this a file is plain text and read only: nobody reads a generated file for its colors, and the editor would color all of it. */
 const HIGHLIGHT_MAX_LINES = 20000;
+
+// The most the editor takes. Past `FS_READ_MAX_TEXT_BYTES` it draws without colors, and a save goes in pieces.
+const EDIT_MAX_BYTES = 8 * 1024 * 1024;
+
+// Bytes per line past which a large file is minified or generated, which an editor stalls on whatever its size.
+const LONG_LINE_BYTES = 2000;
 
 interface ChunkProps {
     code: string;
@@ -213,6 +221,7 @@ const BLOCK_LABELS: Record<EditBlock, string> = {
     'ruimte-state': 'file.edit.ruimteState',
     large: 'file.edit.large',
     plain: 'file.edit.plain',
+    'long-lines': 'file.edit.longLines',
     touch: 'file.edit.touch'
 };
 
@@ -250,9 +259,10 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     const binding = useFiles((s) => (sqlTab === null ? undefined : fileTabOf(s, sqlTab)?.console));
 
     const { chunks, lineCount } = chunksOf(read.text);
-    // Text past what `fs.read` carries came as bytes, and a save of it would not fit `fs.write`.
-    const large = read.size > FS_READ_MAX_TEXT_BYTES;
-    const plain = large || lineCount > HIGHLIGHT_MAX_LINES;
+    const editLimit = useMachineAnswers(useEndpointId(), 'fs.writeStart') ? EDIT_MAX_BYTES : FS_READ_MAX_TEXT_BYTES;
+    const tooManyLines = lineCount > HIGHLIGHT_MAX_LINES;
+    const bulky = read.size > FS_READ_MAX_TEXT_BYTES;
+    const plain = bulky || tooManyLines;
     const language = plain ? null : (read.language ?? 'text');
     const highlight = useMemo(
         () =>
@@ -265,10 +275,10 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
                   ),
         [chunks, language, theme]
     );
-    const editing = useFileEditing(path, read, plain, large);
+    const editing = useFileEditing(path, read, tooManyLines, read.size > editLimit, bulky && read.size / lineCount > LONG_LINE_BYTES);
     const disk = { text: read.text, mtime: read.mtime };
     const readOnlyReason =
-        editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES), size: formatBytes(FS_READ_MAX_TEXT_BYTES) });
+        editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES), size: formatBytes(editLimit) });
     const [editor, setEditor] = useState<Editor | null>(null);
     const surface = useRef<HTMLDivElement>(null);
     // Only the editor can be searched; the viewer that stands in while it loads, and for a finger, cannot.

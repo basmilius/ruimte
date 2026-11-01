@@ -477,7 +477,18 @@ struct FileContentPage: View {
 
     private func load() async {
         await state.load {
-            let result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
+            var result = try await client.request("fs.read", payload: .object(["path": .string(path)]))
+            // Text past one frame comes as bytes, up to what a phone draws; bytes that are not UTF-8 stay too large.
+            if result.text("kind") == "too-large", (result["size"]?.numberValue ?? .infinity) <= largeTextMaxBytes {
+                let resource = try await client.readResource(.object(["kind": .string("file"), "path": .string(path)]))
+                if let text = String(data: resource.data, encoding: .utf8) {
+                    result = .object([
+                        "kind": .string("text"), "text": .string(text),
+                        "size": result["size"] ?? .number(Double(resource.data.count)),
+                        "mtime": result["mtime"] ?? .number(0),
+                    ])
+                }
+            }
             // A player starts with its page and keeps playing through a change elsewhere in the folder.
             if isMedia(result) { return result }
             let binary = result.text("kind") == "binary"
@@ -510,6 +521,8 @@ struct FileContentPage: View {
         }
     }
 }
+
+private let largeTextMaxBytes: Double = 8 * 1024 * 1024
 
 /// The hold on `fs.watch` that a folder's `fs.changed` events come under.
 @MainActor private func fsWatch(_ client: any MachineRequesting, path: String) -> MachineSubscription {

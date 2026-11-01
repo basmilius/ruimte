@@ -1,17 +1,8 @@
 import { BYTES_READ_MAX_BYTES, type FsReadResult, type FsReadText, type FsReadTooLarge } from '@ruimte/contracts';
-import { endpointById } from '@/state/endpoints';
 import { readMachineFile } from '@/transport/machine-url';
 
-// A file on this machine comes over loopback HTTP, so only what a page holds in memory limits it.
-const LOCAL_TEXT_MAX_BYTES = BYTES_READ_MAX_BYTES;
-
-// Another machine's file comes in pieces that never hold up a terminal, but over a slow line every megabyte is a wait.
-const REMOTE_TEXT_MAX_BYTES = 8 * 1024 * 1024;
-
-/* The largest text file this client opens from a machine. */
-export function textLimitFor(endpointId: string): number {
-    return endpointById(endpointId)?.reachability === 'loopback' ? LOCAL_TEXT_MAX_BYTES : REMOTE_TEXT_MAX_BYTES;
-}
+// Over loopback or in pieces that never hold up a terminal, so only what a page holds in memory limits it.
+export const TEXT_MAX_BYTES = BYTES_READ_MAX_BYTES;
 
 /*
  * A text file past `fs.read`'s cap, fetched as bytes and decoded the way the daemon decodes one:
@@ -24,7 +15,7 @@ export async function readLargeText(
     path: string,
     read: FsReadTooLarge,
     previous: FsReadText | null,
-    limit: number = textLimitFor(endpointId)
+    limit: number = TEXT_MAX_BYTES
 ): Promise<FsReadResult> {
     const { mtime, size } = read;
     if (mtime === undefined || size > limit) {
