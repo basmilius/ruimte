@@ -58,6 +58,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { runCanvasAction } from '@/extensions/run-canvas-action';
 import { useContributions } from '@/extensions/registry';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
 import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
@@ -114,6 +115,10 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const extensionItems = useContributions((state) => state.nodeMenuItems).filter((item) => item.when(id));
+    const selection = useCanvas((s) => s.selection);
+    const canvasActions = useContributions((state) => state.canvasActions);
+    // Right on a node that is part of the selection means the selection, as for delete.
+    const selectionActions = selection.includes(id) ? canvasActions.filter((action) => action.when(selection)) : [];
     const endpointId = useEndpointId();
     // A design's conversation is the one of the chat it shows.
     const chatId = useShownChatOfNode(node) ?? id;
@@ -275,6 +280,11 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                     <ContextMenu.Separator />
                 </>
             )}
+            {selectionActions.map((action) => (
+                <ContextMenu.Item key={action.id} onClick={() => runCanvasAction(action, selection)}>
+                    {action.title}
+                </ContextMenu.Item>
+            ))}
             {extensionItems.map((item) => (
                 <ContextMenu.Item key={item.id} onClick={() => item.run(id)}>
                     {item.title}

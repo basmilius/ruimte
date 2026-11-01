@@ -103,6 +103,14 @@ export interface NodeMenuItemContribution {
     run: (nodeId: string) => void;
 }
 
+export interface CanvasActionContribution {
+    id: string;
+    title: string;
+    icon?: LucideIcon;
+    when: (selection: readonly string[]) => boolean;
+    run: (selection: readonly string[]) => void | Promise<void>;
+}
+
 export interface ExtensionSettingsContribution {
     id: string;
     component: ComponentType;
@@ -121,6 +129,7 @@ export interface Contributions {
     panels: readonly PanelContribution[];
     settingsSections: readonly SettingsSectionContribution[];
     canvasLayers: readonly CanvasLayerContribution[];
+    canvasActions: readonly CanvasActionContribution[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
@@ -139,6 +148,7 @@ export const useContributions = create<Contributions>(() => ({
     panels: [],
     settingsSections: [],
     canvasLayers: [],
+    canvasActions: [],
     viewAccessories: [],
     sharedStorage: [],
     sidebarCards: [],

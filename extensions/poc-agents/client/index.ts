@@ -3,7 +3,8 @@ import { agents, canvas, context, defineCanvasAction, defineSidebarCard, host } 
 defineSidebarCard({ id: 'agents', title: 'POC agents', component: () => import('./AgentsCard') });
 defineCanvasAction({
     id: 'summarize',
-    title: 'POC: summarize the selection',
+    title: 'Summarize',
+    icon: 'sparkles',
     when: ({ selection }) => selection.length > 0,
     run: async ({ selection }) => {
         const sources = await context.read({ nodes: selection });

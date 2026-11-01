@@ -281,9 +281,20 @@ export function clientApiFor(extension: LoadedExtension) {
         defineCanvasAction(action: {
             id: string;
             title: string;
-            run: (target: { selection: { id: string }[] }) => void;
+            icon?: string;
+            run: (target: { selection: { id: string }[] }) => void | Promise<void>;
             when?: (target: { selection: { id: string }[] }) => boolean;
         }) {
+            const refs = (ids: readonly string[]) => ({ selection: ids.map((nodeId) => ({ id: nodeId })) });
+
+            add('canvasActions', {
+                id: `${id}/${action.id}`,
+                title: action.title,
+                ...(action.icon === undefined ? {} : { icon: iconOf(action.icon, extension) }),
+                when: (ids) => action.when?.(refs(ids)) ?? true,
+                run: (ids) => action.run(refs(ids))
+            });
+
             const selection = () =>
                 focusedCanvas()
                     .getState()

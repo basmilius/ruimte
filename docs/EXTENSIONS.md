@@ -37,7 +37,7 @@ ruimte extension logs           what server/ wrote
 | --- | --- |
 | `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay, settings detail, commands, canvas action and node menu item. The node's count survives a reload through the project file, the card's through storage. |
 | `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. A line from its node to a chat gives the chat the fact. |
-| `poc-agents` | With nodes selected, "POC: summarize the selection" writes a linked note. The card lists agents. |
+| `poc-agents` | With nodes selected, Summarize in the bar over the canvas, the node's menu or the command palette writes a linked note. The card lists agents. |
 | `poc-frame` | Shows an opaque origin, refused storage and refused fetch, and still gets an answer from its server. |
 | `poc-themes` | Paper is tokens alone. Midnight adds an image and outlines through `data-surface`. Your accent stays on top. |
 | `poc-broken` | Each panel fails inside its own rectangle. A throwing command leaves the app alone. Three calls to the dead server turn it to crashed in Settings. |
