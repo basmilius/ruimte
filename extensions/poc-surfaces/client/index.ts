@@ -10,6 +10,7 @@ import {
     defineWidget,
     definePanel,
     defineSidebarCard,
+    defineToolResult,
     defineView,
     host,
     type NodeInfo,
@@ -84,6 +85,8 @@ const OTHER_SLOTS = [
     'viewMenu',
     'panelHeader',
     'composer',
+    'messageActions',
+    'lineMenu',
     'fileMenu',
     'editorToolbar',
     'editorMenu',
@@ -106,4 +109,5 @@ for (const word of OTHER_SLOTS) {
 defineWidget({ id: 'tag', slots: { nodeHeader: ({ node }) => node.kind === 'note' }, component: () => import('./HeaderTag') });
 defineFileViewer({ id: 'csv', title: 'Table', extensions: ['csv'], component: () => import('./CsvTable') });
 defineMarkdownBlock({ language: 'poc', component: () => import('./PocFence') });
+defineToolResult({ id: 'read', tools: ['Read'], component: () => import('./ReadResult') });
 console.info('poc-surfaces loaded');

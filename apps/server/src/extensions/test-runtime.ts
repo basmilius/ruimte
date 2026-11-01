@@ -28,6 +28,7 @@ const client: Record<string, unknown> = {
     defineNode: recording('node'),
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
+    defineToolResult: recording('toolResult'),
     defineOverlay: (definition: unknown) => {
         defined.push({ kind: 'overlay', definition });
 
@@ -71,8 +72,8 @@ const client: Record<string, unknown> = {
     host: { busy: (_work: unknown, run: () => unknown) => run(), notify: () => undefined, confirm: async () => true, openUrl: () => undefined },
     context: { read: async () => [] },
     agents: { run: async () => ({ text: '' }), start: async () => ({ id: 'chat' }) },
-    files: { readText: async () => '', write: async () => undefined, list: async () => [], open: () => undefined },
-    git: { status: async () => ({}), log: async () => ({}) },
+    files: { readText: async () => '', write: async () => undefined, list: async () => [], watch: () => () => undefined, open: () => undefined },
+    git: { status: async () => ({}), diff: async () => ({}), log: async () => ({}) },
     chats: { list: async () => [], read: async () => '', send: async () => undefined },
     views: { open: () => undefined, createCanvas: () => ({ id: 'view' }), rename: () => undefined },
     canvas: { createNote: () => ({ id: 'note' }), link: () => undefined, reveal: () => undefined }

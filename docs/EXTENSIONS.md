@@ -33,7 +33,7 @@ ruimte extension logs           what server/ wrote
 
 A slot is a place, with a function that gets what is true there and answers `false`, `true` or changes (`title`, `icon`, `disabled`, `badge`, `order`). `defineAction`, `defineMenu` and `defineWidget` all go in slots: a button or menu item, a menu of the extension's own, and its own React. An action without slots only shows where a menu puts it.
 
-The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `composer`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. In a menu an extension always comes below Ruimte's own items.
+The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `composer`, `messageActions`, `lineMenu`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. In a menu an extension always comes below Ruimte's own items.
 
 While `run` is pending, the nodes it is about show a spinner that also stops it through `signal`, and its button is disabled for those nodes. A throw reaches the person as a toast. Work that is no action uses `host.busy`.
 
@@ -55,7 +55,7 @@ Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `
 
 | Folder | What to look for |
 | --- | --- |
-| `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay and settings detail. An action in every slot, a menu of its own, a widget in a note's header, a viewer for `.csv` and a `poc` fence in a chat. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
+| `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay and settings detail. An action in every slot, a menu of its own, a widget in a note's header, a viewer for `.csv`, a `poc` fence in a chat and its own view of a `Read` call. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
 | `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. Add its node from Extensions in the canvas menu, or the palette; a line from it to a chat gives the chat the fact. |
 | `poc-workspace` | Its menu writes to the canvas and the project, reads git, opens an overlay and asks through dialogs. Its panel hears events, shows params, keeps storage per project and machine, and speaks Dutch and English. A chat's composer gets a button that sends, and a chat's menu starts a second opinion. |
 | `poc-agents` | Summarize in the bar, a node's header, its menu or the palette writes a linked note, with a spinner on the nodes meanwhile. The card lists agents. |
@@ -96,4 +96,4 @@ Opening a window with `?safe-mode` loads no extension and no theme, so a person 
 
 ## Not built yet
 
-From [the API report](reports/2026-11-01-extension-api.html): `defineToolResult`, `defineMessageBlock`, `defineReference`, `defineSlashCommand`, `defineTemplate`, `defineStatusItem`, `defineVoiceAction`, `defineNotificationAction`, `defineDiffViewer`, `defineFileIcon`, the slots `messageMenu`, `lineMenu` and `projectMenu`, `database`, `agents.stream`, `files.watch`, `defineSettings` with a schema, `agents.start` from `server/`, `hosts` and `activation` in the manifest, a `--safe-mode` flag on the launcher, and webhooks, which stay out by choice.
+From [the API report](reports/2026-11-01-extension-api.html): `defineReference`, `defineSlashCommand`, `defineTemplate`, `defineStatusItem`, `defineVoiceAction`, `defineNotificationAction`, `defineDiffViewer`, `defineFileIcon`, the slot `projectMenu`, `database`, `agents.stream`, `defineSettings` with a schema, `agents.start` from `server/`, `hosts` and `activation` in the manifest, a `--safe-mode` flag on the launcher, and webhooks, which stay out by choice.

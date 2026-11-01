@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { renderMessageActions, renderToolResult } from '@/extensions/chat-seams';
 import { renderCodeFence } from '@/extensions/code-fences';
 import { siClaude } from 'simple-icons';
 import i18next from 'i18next';
@@ -126,6 +127,8 @@ export const CHAT_HOST: Partial<ChatHost> = {
     },
     isApplePlatform,
     renderCodeFence,
+    renderMessageActions,
+    renderToolResult,
     // Named here, in the app's own source, so Vite serves the worker while it pre-bundles the chat package.
     maps: { useSource: useMapSource, workerUrl: new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href },
     notify: (toast) => void useToasts.getState().show(toast),

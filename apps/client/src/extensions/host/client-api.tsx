@@ -413,6 +413,14 @@ export function clientApiFor(extension: LoadedExtension) {
                 close: () => closers.forEach((close) => close())
             };
         },
+        defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: object }> }) {
+            assertLazy(result, `defineToolResult ${result.id}`);
+            add('toolResults', {
+                id: `${id}/${result.id}`,
+                tools: result.tools,
+                component: surfaceOf(extension, result) as ComponentType<{ call: { name: string; input: unknown; output: string | null; state: string } }>
+            });
+        },
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
             add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run });
         },
@@ -684,6 +692,23 @@ export function clientApiFor(extension: LoadedExtension) {
 
                 return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
             },
+            watch(path: string, listener: () => void) {
+                requiresPermission(extension, 'files.read');
+
+                const full = inProject(path);
+                const stop = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
+                    if (root === full || changedPaths?.some((changed) => changed === full || changed.startsWith(`${full}/`))) {
+                        listener();
+                    }
+                });
+
+                void activeTransport.request('fs.watch', { path: full }).catch(() => undefined);
+
+                return () => {
+                    stop();
+                    void activeTransport.request('fs.unwatch', { path: full }).catch(() => undefined);
+                };
+            },
             open(path: string) {
                 void openFileLink(useProject.getState().current?.folder ?? null, { path, directory: false }, currentEndpointId());
             }
@@ -693,6 +718,15 @@ export function clientApiFor(extension: LoadedExtension) {
                 requiresPermission(extension, 'git.read');
 
                 return activeTransport.request('git.status', { cwd: repository ?? inProject('.') });
+            },
+            async diff(options?: { repository?: string; path?: string }) {
+                requiresPermission(extension, 'git.read');
+
+                return activeTransport.request('git.diff', {
+                    cwd: options?.repository ?? inProject('.'),
+                    scope: 'worktree',
+                    ...(options?.path === undefined ? {} : { path: options.path })
+                });
             },
             log(options?: { repository?: string; limit?: number }) {
                 requiresPermission(extension, 'git.read');

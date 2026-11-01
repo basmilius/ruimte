@@ -49,6 +49,8 @@ export function defineOverlay<Params = void, Result = void>(overlay: {
     size?: 'sm';
     component: LazyComponent<{ params: Params; close(result?: Result): void }>;
 }): { open(params: Params): Promise<Result | null>; close(): void };
+/** Draws these tools' calls in a chat, by their exact name, instead of the thread's own view. */
+export function defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: { name: string; input: unknown; output: string | null; state: string } }> }): void;
 export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;
 export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] }): void;
 
@@ -107,6 +109,8 @@ export interface SlotContexts {
     panelHeader: { panel: string };
     commandPalette: { nodes: NodeInfo[] };
     composer: { chat: { id: string }; node: NodeInfo };
+    messageActions: { chat: { id: string }; message: { id: string; kind: 'user' | 'assistant'; text: string } };
+    lineMenu: { from: NodeInfo; to: NodeInfo };
     fileMenu: { file: FileInfo; files: FileInfo[] };
     editorToolbar: { file: FileInfo };
     editorMenu: { file: FileInfo; files: FileInfo[] };
@@ -207,12 +211,15 @@ export const files: {
     readText(path: string): Promise<string>;
     write(path: string, text: string): Promise<void>;
     list(folder: string): Promise<{ path: string; name: string; kind: string }[]>;
+    /** Calls back when the file or anything under the folder changes. Answers how to stop. */
+    watch(path: string, listener: () => void): () => void;
     open(path: string): void;
 };
 
 /** Needs `git.read`. */
 export const git: {
     status(repository?: string): Promise<unknown>;
+    diff(options?: { repository?: string; path?: string }): Promise<unknown>;
     log(options?: { repository?: string; limit?: number }): Promise<unknown>;
 };
 

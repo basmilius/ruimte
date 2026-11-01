@@ -109,6 +109,7 @@ export type SlotName =
     | 'panelHeader'
     | 'commandPalette'
     | 'composer'
+    | 'messageActions'
     | 'fileMenu'
     | 'editorToolbar'
     | 'editorMenu'
@@ -137,6 +138,12 @@ export interface SlotEntry {
     onFailure?: (text: string) => void;
     // Adds a node of an extension, so a menu lists it with the others of its kind.
     addsNode?: boolean;
+}
+
+export interface ToolResultContribution {
+    id: string;
+    tools: readonly string[];
+    component: ComponentType<{ call: { name: string; input: unknown; output: string | null; state: string } }>;
 }
 
 export interface MarkdownBlockContribution {
@@ -173,6 +180,7 @@ export interface Contributions {
     slotEntries: readonly SlotEntry[];
     fileViewers: readonly FileViewerContribution[];
     markdownBlocks: readonly MarkdownBlockContribution[];
+    toolResults: readonly ToolResultContribution[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
@@ -193,6 +201,7 @@ export const useContributions = create<Contributions>(() => ({
     slotEntries: [],
     fileViewers: [],
     markdownBlocks: [],
+    toolResults: [],
     viewAccessories: [],
     sharedStorage: [],
     sidebarCards: [],

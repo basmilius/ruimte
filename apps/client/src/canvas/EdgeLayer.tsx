@@ -4,6 +4,8 @@ import { Pencil, Trash, X } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { isAgentKind, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { edgeLook, lineMeaning } from '@/canvas/edge-look';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { routeDraft, SIDE_NORMAL, type EdgeRoute, type Obstacle, type Side } from '@/canvas/edge-route';
 import type { EdgeLine } from '@/canvas/edge-lines';
 import { lineRoutes } from '@/canvas/line-routes';
@@ -211,6 +213,7 @@ const EdgeRow = memo(function EdgeRow({ layer, line, route, label, stroke, width
                 <ContextMenu.Item onClick={remove}>
                     <Icon icon={Trash} size={14} /> {t('common:action.remove')}
                 </ContextMenu.Item>
+                <SlotMenuItems place="lineMenu" context={{ from: nodeInfoOf(line.edge.from), to: nodeInfoOf(line.edge.to) }} />
             </ContextMenu.Popup>
         </ContextMenu.Root>
     );
