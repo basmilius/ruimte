@@ -157,6 +157,9 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
     const endpointId = useEndpointId();
     const [changing, setChanging] = useState<'boot' | 'shutdown' | null>(null);
     const canOpen = device.capabilities.stream;
+    const canStart = device.state === 'shutdown' && device.capabilities.boot;
+    const canShutDown = device.state === 'booted' && device.capabilities.shutdown;
+    const hasActions = canOpen || canStart || canShutDown;
     const control = (action: 'boot' | 'shutdown'): void => {
         const client = deviceClientFor(endpointId);
         if (!client) {
@@ -167,52 +170,57 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
     };
     return (
         <ContextMenu.Root>
-            <ContextMenu.Trigger render={<article />} className="flex min-w-0 items-center gap-3 px-3 py-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-raised text-text-muted">
-                    <Icon icon={Smartphone} size={20} />
+            <ContextMenu.Trigger
+                render={<ListRow variant="inset" />}
+                className="group relative min-w-0 gap-2 hover:bg-surface-hover focus-within:bg-surface-hover"
+            >
+                <span className="grid size-4 shrink-0 place-items-center">
+                    {device.state === 'transitioning' || changing !== null ? (
+                        <Icon icon={LoaderCircle} size={14} className="animate-spin text-text-muted" />
+                    ) : (
+                        <span className={clsx('size-1.5 rounded-full', device.state === 'booted' ? 'bg-positive' : 'border border-text-faint')} />
+                    )}
+                    <span className="sr-only">{deviceStateText(device)}</span>
                 </span>
-                <div className="min-w-0 grow">
-                    <h3 className="truncate text-sm font-medium text-text">{device.name}</h3>
-                    <p className="mt-0.5 truncate text-xs text-text-muted">
-                        {displayRuntime(device)} · {deviceStateText(device)}
-                    </p>
-                </div>
-                <ButtonGroup>
-                    {device.state === 'shutdown' && device.capabilities.boot && (
+                {canOpen ? (
+                    <button
+                        type="button"
+                        disabled={changing !== null}
+                        onClick={() => onOpen(device)}
+                        className="min-w-0 grow truncate text-left text-sm text-text before:absolute before:inset-0 before:rounded-md focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-accent"
+                    >
+                        {device.name}
+                    </button>
+                ) : (
+                    <span className="min-w-0 grow truncate text-sm text-text">{device.name}</span>
+                )}
+                {device.reason !== undefined ? (
+                    <span className="min-w-0 shrink truncate text-xs text-text-muted">{deviceStateText(device)}</span>
+                ) : (
+                    <span className={clsx('shrink-0 text-xs text-text-faint tabular-nums', hasActions && 'group-hover:hidden group-focus-within:hidden')}>
+                        {displayRuntime(device)}
+                    </span>
+                )}
+                {/* Out of the flow instead of `hidden` while the row is at rest, so the keyboard still reaches a button on a row that has nothing else to focus. */}
+                <span className="pointer-events-none absolute right-2 flex shrink-0 items-center gap-0.5 opacity-0 group-hover:pointer-events-auto group-hover:relative group-hover:right-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:relative group-focus-within:right-0 group-focus-within:opacity-100">
+                    {canStart && (
                         <IconButton
                             icon={Power}
-                            busy={changing === 'boot'}
                             size="sm"
                             label={changing === 'boot' ? t('devices.starting') : t('devices.start')}
                             disabled={changing !== null}
                             onClick={() => control('boot')}
                         />
                     )}
-                    {device.state === 'booted' && device.capabilities.shutdown && (
-                        <IconButton
-                            icon={PowerOff}
-                            busy={changing === 'shutdown'}
-                            size="sm"
-                            label={t('devices.shutdown')}
-                            disabled={changing !== null}
-                            onClick={() => control('shutdown')}
-                        />
-                    )}
-                    {device.state === 'transitioning' && (
-                        <span className="grid size-7 place-items-center text-text-muted">
-                            <Icon icon={LoaderCircle} size={14} className="animate-spin" />
-                        </span>
+                    {canShutDown && (
+                        <IconButton icon={PowerOff} size="sm" label={t('devices.shutdown')} disabled={changing !== null} onClick={() => control('shutdown')} />
                     )}
                     {canOpen && (
-                        <IconButton
-                            icon={ChevronRight}
-                            size="sm"
-                            label={device.capabilities.input ? t('devices.openInPanel') : t('devices.openPreview')}
-                            disabled={changing !== null}
-                            onClick={() => onOpen(device)}
-                        />
+                        <span className="pointer-events-none grid size-6 place-items-center text-text-muted">
+                            <Icon icon={ChevronRight} size={14} />
+                        </span>
                     )}
-                </ButtonGroup>
+                </span>
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
                 <DeviceMenuItems device={device} onOpen={onOpen} />
@@ -234,7 +242,7 @@ function DeviceSection({
 }) {
     return (
         <section>
-            <h2 className={clsx('-mx-1 flex', !collapsed && 'mb-1')}>
+            <h2 className={clsx('-mx-1 flex', !collapsed && 'mb-0.5')}>
                 <ListRow
                     variant="inset"
                     render={<button type="button" />}
@@ -256,7 +264,7 @@ function DeviceSection({
                 </ListRow>
             </h2>
             {!collapsed && (
-                <div className="min-w-0 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+                <div className="-mx-1 flex min-w-0 flex-col">
                     {group.devices.map((device) => (
                         <DeviceRow key={`${device.backendId}:${device.deviceId}`} device={device} onOpen={onOpen} />
                     ))}
@@ -278,7 +286,7 @@ function DeviceList({
     onOpen: (device: DeviceInfo) => void;
 }) {
     return (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
             {groupDevices(devices).map((group) => (
                 <DeviceSection
                     key={group.key}
