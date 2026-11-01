@@ -20,6 +20,20 @@ export function storageMovePage(): Response {
     return new Response('<!doctype html><title>Ruimte</title>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
+/*
+ * Under `bun dev` a window is on Vite's origin, which has no extension files: they sit beside the shell, or
+ * in a dev link only the shell knows. So those paths are answered here, and the rest goes on to Vite.
+ */
+export function devExtensionFiles(devUrl: string, extensions: Pick<ClientExtensions, 'answer'>, pass: (request: Request) => Promise<Response>) {
+    const { origin } = new URL(devUrl);
+
+    return (request: Request): Promise<Response> => {
+        const url = new URL(request.url);
+
+        return url.origin === origin && url.pathname.startsWith(EXTENSION_FILES_PATH) ? extensions.answer(url.pathname, origin) : pass(request);
+    };
+}
+
 export function answerAppRequest(scheme: AppScheme, request: Request, extensions?: Pick<ClientExtensions, 'answer'>): Promise<Response> | Response {
     if (scheme.originOf(request.url) === DESKTOP_APP_ORIGIN) {
         const { pathname } = new URL(request.url);

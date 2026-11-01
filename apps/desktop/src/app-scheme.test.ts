@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DESKTOP_APP_ORIGIN, VISUAL_HOST_PAGE } from '@ruimte/contracts';
 import { VISUAL_HOST_CSP, VISUAL_HOST_PATH } from '@ruimte/csp';
-import { answerAppRequest, createDesktopAppScheme, STORAGE_MOVE_PATH } from './app-scheme';
+import { answerAppRequest, createDesktopAppScheme, devExtensionFiles, STORAGE_MOVE_PATH } from './app-scheme';
 
 let root: string;
 let scheme: ReturnType<typeof createDesktopAppScheme>;
@@ -25,6 +25,28 @@ afterEach(async () => {
 async function request(url: string): Promise<Response> {
     return answerAppRequest(scheme, new Request(url));
 }
+
+describe('extension files under bun dev', () => {
+    const answered: string[] = [];
+    const handle = devExtensionFiles(
+        'http://localhost:4212/',
+        {
+            answer: async (pathname) => {
+                answered.push(pathname);
+
+                return new Response('file');
+            }
+        },
+        async () => new Response('vite')
+    );
+
+    test('come from the shell on the dev origin, and everything else from Vite', async () => {
+        expect(await (await handle(new Request('http://localhost:4212/__extensions/a.b/dev-1/client/index.js'))).text()).toBe('file');
+        expect(answered).toEqual(['/__extensions/a.b/dev-1/client/index.js']);
+        expect(await (await handle(new Request('http://localhost:4212/src/main.tsx'))).text()).toBe('vite');
+        expect(await (await handle(new Request('http://example.com/__extensions/a.b/dev-1/x.js'))).text()).toBe('vite');
+    });
+});
 
 describe('the shared app scheme in Ruimte', () => {
     test('serves the page at the root and at routes without an extension', async () => {

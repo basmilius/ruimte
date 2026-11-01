@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
+import { answerAppRequest, createDesktopAppScheme, devExtensionFiles } from './app-scheme';
 import { ClientExtensions } from './main/extensions';
 import { installBrowserRoutes } from './browser-routes';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
@@ -878,6 +878,12 @@ if (!app.requestSingleInstanceLock()) {
     void app.whenReady().then(async () => {
         menu.setStatic();
         protocol.handle(scheme.scheme, (request) => answerAppRequest(scheme, request, clientExtensions));
+        if (devUrl !== null) {
+            protocol.handle(
+                'http',
+                devExtensionFiles(devUrl, clientExtensions, (request) => net.fetch(request, { bypassCustomProtocolHandlers: true }))
+            );
+        }
         sealAppSession();
         sealPreviewSession();
         browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
