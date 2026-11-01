@@ -297,6 +297,10 @@
         "noFolder": "Een design heeft de map van het project op deze machine nodig.",
         "failed": "Het design kon niet worden getoond.",
         "failedAction": "Het design kon dat niet doen",
+        "pageFailed": "{{name}} kan niet worden getoond. {{reason}}",
+        "pageTooLarge": "Het bestand is {{size}}, en een pagina mag hooguit {{limit}} zijn.",
+        "pageNotText": "{{name}} is geen tekstbestand.",
+        "readAgain": "Opnieuw lezen",
         "deletePage": {
             "action": "{{name}} verwijderen",
             "title": "{{name}} naar prullenbak verplaatsen?",

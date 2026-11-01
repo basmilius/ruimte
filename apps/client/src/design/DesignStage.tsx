@@ -1,8 +1,7 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
-import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
 import { Button, EmptyState, Icon, Menu, PromptDialog, Segmented, Separator, ZoomControls, useNow } from '@adecore/ui';
 import { formatAgo } from '@adecore/ui/format';
 import { perform } from '@/actions/client-actions';
@@ -26,7 +25,8 @@ import {
     type TweakValue
 } from '@/design/design-protocol';
 import { runtimeAssets } from '@/design/design-inline';
-import { listDesignFolder, readDesignAsset, readDesignPage, rewriteDesignFile } from '@/design/design-read';
+import { listDesignFolder, readDesignAsset, readDesignText, rewriteDesignFile } from '@/design/design-read';
+import { DesignPageFrame } from '@/design/DesignPageFrame';
 import { useFolderWatch } from '@/state/fs-watch';
 import { useToasts } from '@/state/toasts';
 import { useEndpointId } from '@/state/keys';
@@ -67,11 +67,6 @@ function heldTweakValues(declared: Tweaks | null, held: Readonly<Record<string, 
     );
 
     return { values, changed };
-}
-
-/* One reader per page: the frame opens its bridge again for every new one, so a fresh one each render never finishes loading. */
-function usePageReader(endpointId: string, folder: string, file: string | null): (() => Promise<string>) | null {
-    return useMemo(() => (file === null ? null : () => readDesignPage(endpointId, folder, file)), [endpointId, folder, file]);
 }
 
 interface StageProps {
@@ -153,7 +148,6 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const latest = recent[0]?.file ?? null;
     const active = chosen !== null && files?.includes(chosen) ? chosen : pinned === undefined ? latest : null;
     const mtime = active === null || entries === null ? null : pageMtime(entries, active);
-    const page = usePageReader(endpointId, folder, active);
     const opened = `${active}:${mtime}:${reloads}`;
 
     // What a person tweaked or edited and did not save belongs to the page it was done on.
@@ -312,8 +306,8 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         }
 
         try {
-            const read = await transport.request('fs.read', { path: `${folder}/${active}` });
-            const css = read.kind === 'text' ? editsCss(editsOf(read.text)) : '';
+            const read = await readDesignText(endpointId, folder, active);
+            const css = editsCss(editsOf(read.text));
 
             if (css !== '') {
                 await tell(bakePrompt(active, css));
@@ -376,7 +370,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
         );
     }
 
-    if (files === null || files.length === 0 || active === null || page === null) {
+    if (files === null || files.length === 0 || active === null) {
         return (
             <EmptyState icon={SwatchBook} className="grow">
                 {t('design.empty')}
@@ -458,7 +452,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             </div>
             <div ref={frameBox} className="relative min-h-0 grow overflow-hidden">
                 {/* Keyed on the page and when it was written: the frame takes a page only as it opens, so another page or a write of this one opens it again, and nothing else in the folder does. */}
-                <VisualPageFrame key={opened} page={page} title={active} fill />
+                <DesignPageFrame key={opened} endpointId={endpointId} folder={folder} file={active} />
                 {tool === 'comment' && picked !== null && (
                     <DesignCommentPopover
                         element={picked}

@@ -19,9 +19,14 @@ export function textLimitFor(endpointId: string): number {
  * last text of this path read this way, kept while the file is unchanged, since a change anywhere in
  * its folder reads it again.
  */
-export async function readLargeText(endpointId: string, path: string, read: FsReadTooLarge, previous: FsReadText | null): Promise<FsReadResult> {
+export async function readLargeText(
+    endpointId: string,
+    path: string,
+    read: FsReadTooLarge,
+    previous: FsReadText | null,
+    limit: number = textLimitFor(endpointId)
+): Promise<FsReadResult> {
     const { mtime, size } = read;
-    const limit = textLimitFor(endpointId);
     if (mtime === undefined || size > limit) {
         return read;
     }

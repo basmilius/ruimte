@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { act } from 'react';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
 import { useDesignChat } from '@/design/design-chat';
@@ -93,6 +93,55 @@ describe('a design view', () => {
         await say(DESIGN_METHODS.ready, { canvas: true, tweaks: null });
 
         expect(posted.find((message) => message.method === DESIGN_METHODS.camera)?.params).toEqual(camera);
+    });
+
+    test('says why a page larger than a page may be does not show', async () => {
+        machine.answer('fs.read', () => ({ kind: 'too-large' as const, size: 17 * 1024 * 1024, mtime: 300 }));
+        await mounted.unmount();
+        mounted = mount();
+        await mounted.renderApp();
+
+        await until(() => mounted.host.textContent?.includes('a page holds at most') === true);
+
+        expect(mounted.host.textContent).toContain('Could not show 2a Dense.html');
+    });
+
+    test('reads a page past what one frame carries as bytes', async () => {
+        const html = `<!doctype html><title>Large</title>${'x'.repeat(16)}`;
+        const fetched = spyOn(globalThis, 'fetch').mockImplementation((async () => new Response(html)) as unknown as typeof fetch);
+
+        machine.answer('fs.read', () => ({ kind: 'too-large' as const, size: 3 * 1024 * 1024, mtime: 300 }));
+        await mounted.unmount();
+        mounted = mount();
+        await mounted.renderApp();
+
+        await until(() => fetched.mock.calls.length > 0 && mounted.host.querySelector('[role="progressbar"]') === null);
+
+        expect(mounted.host.textContent).not.toContain('Could not show');
+        fetched.mockRestore();
+    });
+
+    test('reads a page again after it failed, from the button that says so', async () => {
+        let reads = 0;
+
+        machine.answer('fs.read', () => {
+            reads += 1;
+
+            if (reads === 1) {
+                throw new Error('The line dropped');
+            }
+
+            return { kind: 'text' as const, text: '<p>a page</p>', encoding: 'utf-8' as const, size: 13, mtime: 300 };
+        });
+        await mounted.unmount();
+        mounted = mount();
+        await mounted.renderApp();
+
+        await until(() => mounted.host.textContent?.includes('The line dropped') === true);
+        await clickOn(button('Read again')!);
+        await until(() => reads === 2 && mounted.host.textContent?.includes('The line dropped') === false);
+
+        expect(reads).toBe(2);
     });
 
     test('opens the page last worked on', async () => {

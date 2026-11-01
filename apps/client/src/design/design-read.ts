@@ -1,10 +1,13 @@
-import { injectVisualBootstrap, type FsEntry } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { injectVisualBootstrap, type FsEntry, type FsReadText } from '@ruimte/contracts';
+import { formatBytes } from '@adecore/ui/format';
+import { readLargeText } from '@/shell/panels/large-text';
 import { machineTransport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
 import { withDesignRuntime } from '@/design/design-runtime';
 import { DESIGN_FOLDERS } from '@/design/design-folder';
-import { DESIGN_ASSET_MAX_BYTES } from '@/design/design-page';
+import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES } from '@/design/design-page';
 import { inlineDesignPage } from '@/design/design-inline';
 
 /* What the design folder holds, or null while the folder is not there yet: the chat makes it with its first file. */
@@ -39,6 +42,26 @@ export async function designFoldersOnDisk(endpointId: string, projectFolder: str
 }
 
 /*
+ * One file of the design folder as text, past `fs.read`'s cap as well: that cap is what one frame carries,
+ * and a page may be as large as a visual. Throws what a person can read when it is larger or not text.
+ */
+export async function readDesignText(endpointId: string, folder: string, file: string): Promise<FsReadText> {
+    const path = `${folder}/${file}`;
+    const first = await machineTransport(endpointId).request('fs.read', { path });
+    const read = first.kind === 'too-large' ? await readLargeText(endpointId, path, first, null, DESIGN_PAGE_MAX_BYTES) : first;
+
+    if (read.kind === 'too-large') {
+        throw new Error(i18next.t('shell:design.pageTooLarge', { name: file, size: formatBytes(read.size), limit: formatBytes(DESIGN_PAGE_MAX_BYTES) }));
+    }
+
+    if (read.kind !== 'text') {
+        throw new Error(i18next.t('shell:design.pageNotText', { name: file }));
+    }
+
+    return read;
+}
+
+/*
  * Changes one page of the design as text, against the version it read: a write of the chat in between
  * is refused as stale by the machine, and nothing of the chat's work is overwritten. False when the
  * change had nothing to do.
@@ -46,12 +69,7 @@ export async function designFoldersOnDisk(endpointId: string, projectFolder: str
 export async function rewriteDesignFile(endpointId: string, folder: string, file: string, change: (html: string) => string | null): Promise<boolean> {
     const transport = machineTransport(endpointId);
     const path = `${folder}/${file}`;
-    const read = await transport.request('fs.read', { path });
-
-    if (read.kind !== 'text') {
-        throw new Error(`${file} is not a text file`);
-    }
-
+    const read = await readDesignText(endpointId, folder, file);
     const changed = change(read.text);
 
     if (changed === null || changed === read.text) {
@@ -86,16 +104,10 @@ export function readDesignAsset(endpointId: string, folder: string, path: string
 
 /* One page as a file that stands on its own (`inlineDesignPage`). Export hands this out. */
 export async function standaloneDesignPage(endpointId: string, folder: string, file: string): Promise<string> {
-    const transport = machineTransport(endpointId);
-
     return inlineDesignPage(
         {
             readPage: async (path) => {
-                const read = await transport.request('fs.read', { path: `${folder}/${path}` });
-
-                if (read.kind !== 'text') {
-                    throw new Error(`${path} is not a text file`);
-                }
+                const read = await readDesignText(endpointId, folder, path);
 
                 return { text: read.text, size: read.size };
             },
