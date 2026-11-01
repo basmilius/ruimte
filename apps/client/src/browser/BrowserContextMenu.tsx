@@ -1,3 +1,4 @@
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuAction, type BrowserMenuItem } from '@/browser/browser-menu';
 import { menuPointFor } from '@/browser/menu-point';
@@ -120,6 +121,7 @@ export function BrowserContextMenu() {
                             ))}
                         </Fragment>
                     ))}
+                    <SlotMenuItems place="browserMenu" context={{}} />
                 </ContextMenu.Popup>
             )}
         </ContextMenu.Root>

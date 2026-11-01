@@ -3,6 +3,7 @@ import { Blocks, Package, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button, ContextMenu, Icon, IconButton, Menu, Pill, Spinner } from '@adecore/ui';
 import { isRunning, nodeIdsOf, runAction, useActionRuns } from '@/extensions/action-runs';
+import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { useContributions, type SlotEntry, type SlotMenuItem, type SlotName } from '@/extensions/registry';
 import { nodeInfoOf, useSlot, type ResolvedEntry } from '@/extensions/slots';
 import { useCanvas } from '@/state/canvas';
@@ -118,15 +119,35 @@ function RowEntry({ resolved, context, slot, words }: { resolved: ResolvedEntry;
     return words ? <BarButton resolved={resolved} context={context} slot={slot} /> : <IconAction resolved={resolved} context={context} slot={slot} />;
 }
 
+function SlotLabel({ place, context }: { place: SlotName; context: object }) {
+    return (
+        <span
+            data-slot-outline={place}
+            title={Object.keys(context).join(', ')}
+            className="inline-flex shrink-0 items-center rounded-sm border border-dashed border-accent px-1 text-xs text-accent"
+        >
+            {place}
+        </span>
+    );
+}
+
 /* What extensions put in a bar: icons only in a tight one, words where there is room. */
 export function SlotRow({ place, context, words = false, wrap }: { place: SlotName; context: object; words?: boolean; wrap?: (row: ReactNode) => ReactNode }) {
     const { resolved, full } = useSlot(place, context);
+    const outlined = useSlotOutlines((state) => state.on);
 
-    if (resolved.length === 0) {
+    if (resolved.length === 0 && !outlined) {
         return null;
     }
 
-    const row = resolved.map((each) => <RowEntry key={each.entry.id} resolved={each} context={full} slot={place} words={words} />);
+    const row = (
+        <>
+            {outlined && <SlotLabel place={place} context={full} />}
+            {resolved.map((each) => (
+                <RowEntry key={each.entry.id} resolved={each} context={full} slot={place} words={words} />
+            ))}
+        </>
+    );
 
     return wrap === undefined ? row : wrap(row);
 }
@@ -135,17 +156,28 @@ export function SlotRow({ place, context, words = false, wrap }: { place: SlotNa
 export function SlotMenuItems({ place, context, kit: Kit = ContextMenu }: { place: SlotName; context: object; kit?: MenuKit }) {
     const { resolved: all, full } = useSlot(place, context);
     const resolved = all.filter(({ entry }) => entry.addsNode !== true);
+    const outlined = useSlotOutlines((state) => state.on);
 
-    if (resolved.length === 0) {
+    if (resolved.length === 0 && !outlined) {
         return null;
     }
 
     return (
         <>
             <Kit.Separator />
+            {outlined && (
+                <div className="px-2 py-1">
+                    <SlotLabel place={place} context={full} />
+                </div>
+            )}
             {resolved.map(({ entry, title, icon, disabled }) => {
                 if (entry.kind === 'widget') {
-                    return null;
+                    // Your own React is at home in a menu too: a row that is no item, so it stays open while you use it.
+                    return (
+                        <div key={entry.id} className="px-2 py-1">
+                            <Widget entry={entry} context={full} />
+                        </div>
+                    );
                 }
 
                 if (entry.kind === 'menu') {

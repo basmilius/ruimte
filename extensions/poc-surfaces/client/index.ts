@@ -84,6 +84,19 @@ const OTHER_SLOTS = [
     'viewToolbar',
     'viewMenu',
     'panelHeader',
+    'tabMenu',
+    'emptyCanvas',
+    'startScreen',
+    'projectBanner',
+    'threadHeader',
+    'emptyThread',
+    'toolActions',
+    'fileBreadcrumb',
+    'terminalMenu',
+    'browserMenu',
+    'textMenu',
+    'noteToolbar',
+    'routineMenu',
     'composer',
     'messageActions',
     'lineMenu',
@@ -106,6 +119,8 @@ for (const word of OTHER_SLOTS) {
     });
 }
 
+defineWidget({ id: 'row-dot', slots: { sidebarRow: true, fileRowBadge: ({ file }) => file.extension === 'md' }, component: () => import('./Dot') });
+defineWidget({ id: 'in-menu', slots: { canvasMenu: true }, component: () => import('./MenuWidget') });
 defineWidget({ id: 'tag', slots: { nodeHeader: ({ node }) => node.kind === 'note' }, component: () => import('./HeaderTag') });
 defineFileViewer({ id: 'csv', title: 'Table', extensions: ['csv'], component: () => import('./CsvTable') });
 defineMarkdownBlock({ language: 'poc', component: () => import('./PocFence') });

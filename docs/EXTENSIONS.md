@@ -33,7 +33,9 @@ ruimte extension logs           what server/ wrote
 
 A slot is a place, with a function that gets what is true there and answers `false`, `true` or changes (`title`, `icon`, `disabled`, `badge`, `order`). `defineAction`, `defineMenu` and `defineWidget` all go in slots: a button or menu item, a menu of the extension's own, and its own React. An action without slots only shows where a menu puts it.
 
-The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `projectMenu`, `sidebarFooter`, `editorStatusBar`, `composer`, `messageActions`, `lineMenu`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. In a menu an extension always comes below Ruimte's own items.
+The places are `selectionBar`, `nodeHeader`, `nodeMenu`, `canvasMenu`, `viewToolbar`, `viewMenu`, `panelHeader`, `commandPalette`, `projectMenu`, `sidebarFooter`, `editorStatusBar`, `composer`, `messageActions`, `lineMenu`, `fileMenu`, `editorToolbar`, `editorMenu`, `diffToolbar`, `terminalToolbar` and `browserToolbar`. `sidebarRow`, `tabMenu`, `emptyCanvas`, `startScreen`, `projectBanner`, `threadHeader`, `emptyThread`, `toolActions`, `fileRowBadge`, `fileBreadcrumb`, `terminalMenu`, `browserMenu`, `textMenu`, `noteToolbar` and `routineMenu` come on top. In a menu an extension always comes below Ruimte's own items. A widget works in every slot, also in a menu.
+
+While `extension dev` runs, "Show extension slots" in the command palette outlines every slot on its spot with its name, and its tooltip lists what the slot tells.
 
 While `run` is pending, the nodes it is about show a spinner that also stops it through `signal`, and its button is disabled for those nodes. A throw reaches the person as a toast. Work that is no action uses `host.busy`.
 

@@ -1,3 +1,4 @@
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, ArrowRightToLine, Columns3, ListX, PanelRight, Pin, PinOff, SquareX, X } from 'lucide-react';
 import { closeTabAction, closeTabsAction } from '@/actions/client-actions';
@@ -80,6 +81,7 @@ export function TabMenuItems({ viewId }: { viewId: string }) {
                 </Menu.Popup>
             </Menu.SubmenuRoot>
             <Menu.Separator />
+            <SlotMenuItems kit={Menu} place="tabMenu" context={{ target: { id: viewId } }} />
         </>
     );
 }

@@ -1,3 +1,4 @@
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { type ReactNode } from 'react';
 import { LayoutTemplate, Type } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -124,6 +125,7 @@ export function EmptyCanvas() {
                         </div>
                     </section>
                 ))}
+                <SlotRow place="emptyCanvas" context={{}} words wrap={(row) => <div className="flex flex-wrap justify-center gap-2">{row}</div>} />
                 <p className="text-center text-xs text-text-muted">
                     <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
                 </p>

@@ -1,3 +1,5 @@
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
 import clsx from 'clsx';
@@ -225,6 +227,7 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                     {node.task && showsTaskMark(node.task, node.work, node.finished === true) && <TaskMark task={node.task} />}
                     {node.finished && <UnseenMark />}
                     {node.alert && <ProcessWarningMark />}
+                    <SlotRow place="sidebarRow" context={{ node: nodeInfoOf(node.id) }} />
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
                     {snoozable && node.status === 'needs-you' ? (
                         <WaitLabel detail={node.wait} snoozed={Boolean(node.snoozedUntil)} />

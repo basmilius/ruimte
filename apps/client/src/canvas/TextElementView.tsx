@@ -1,3 +1,4 @@
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -131,6 +132,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                 <ContextMenu.Item className="text-status-error" onClick={() => deleteNodesAction(canvasStore, [id])}>
                     <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
                 </ContextMenu.Item>
+                <SlotMenuItems place="textMenu" context={{ text: { id } }} />
             </ContextMenu.Popup>
         </ContextMenu.Root>
     );

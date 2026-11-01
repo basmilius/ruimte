@@ -1,3 +1,5 @@
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import i18next from 'i18next';
 import clsx from 'clsx';
@@ -258,6 +260,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 <ContextMenu.Item onClick={() => clearTerminalAction(id)}>
                     <Icon icon={Eraser} size={14} /> {t('menu.clear')} <Kbd shortcut={platformShortcut(CLEAR_SHORTCUT, isApplePlatform())} />
                 </ContextMenu.Item>
+                <SlotMenuItems place="terminalMenu" context={{ node: nodeInfoOf(id) }} />
             </ContextMenu.Popup>
             {/* Outside the trigger, so a right click in the field is the field's own menu and not the terminal's. */}
             {find.open && (

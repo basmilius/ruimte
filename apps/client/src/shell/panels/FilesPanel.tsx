@@ -1,3 +1,5 @@
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FileTreeDropResult, FileTreeVisibleRow } from '@pierre/trees';
@@ -769,7 +771,13 @@ export function FilesPanel() {
     const decorate = (row: FileTreeVisibleRow): ReactNode => {
         const checkout = repoOfRow(row);
         const parts = checkout === undefined ? [] : repoParts(checkout.status);
-        return parts.length === 0 ? null : <GitTreeMarks parts={parts} />;
+
+        return (
+            <>
+                <SlotRow place="fileRowBadge" context={{ file: fileInfoOf(row.path) }} />
+                {parts.length > 0 && <GitTreeMarks parts={parts} />}
+            </>
+        );
     };
 
     /* What stands where the tree would be while it holds no rows: the first listing still on its

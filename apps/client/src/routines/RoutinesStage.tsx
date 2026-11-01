@@ -1,3 +1,4 @@
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import i18next from 'i18next';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -277,6 +278,7 @@ function DetailHeader({ endpointId, entry, rev }: { endpointId: string; entry: R
                     <Menu.Item className="text-status-error" onClick={() => setRemoving(true)}>
                         <Icon icon={Trash2} size={14} /> {t('actions.remove')}
                     </Menu.Item>
+                    <SlotMenuItems kit={Menu} place="routineMenu" context={{ routine: { id: entry.routine.id } }} />
                 </Menu.Popup>
             </Menu.Root>
             <PromptDialog

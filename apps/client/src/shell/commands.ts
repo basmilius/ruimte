@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 import { runAction } from '@/extensions/action-runs';
+import { useInstalledExtensions } from '@/extensions/loader';
+import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { useContributions } from '@/extensions/registry';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
 import {
@@ -306,9 +308,20 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
 
 function extensionCommands(): Command[] {
     const { commands, slotEntries } = useContributions.getState();
+    const developing = useInstalledExtensions.getState().installed.some((entry) => entry.dev);
+    const outlines: Command[] = developing
+        ? [
+              {
+                  id: 'extension:slots',
+                  label: useSlotOutlines.getState().on ? 'Hide extension slots' : 'Show extension slots',
+                  run: () => useSlotOutlines.setState(({ on }) => ({ on: !on }))
+              }
+          ]
+        : [];
     const context = { ...baseContext(), nodes: focusedCanvas().getState().selection.map(nodeInfoOf) };
 
     return [
+        ...outlines,
         ...commands.filter((command) => command.when?.() ?? true).map((command) => ({ id: command.id, label: command.title, run: () => void command.run() })),
         ...resolveSlot(slotEntries, 'commandPalette', context).flatMap(({ entry, title }) =>
             entry.kind === 'action'

@@ -1,3 +1,4 @@
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useEffect, useState, type ComponentType } from 'react';
 import { refreshPrRepos } from '@/state/pr-repos';
 import { shownFolderOf, useProject } from '@/state/project';
@@ -274,6 +275,12 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         </ErrorBoundary>
                         <ErrorBoundary label={failed('projectBanner')} resetKeys={[workspace]} compact className={FLOATING_FAILURE}>
                             <ProjectBanner />
+                            <SlotRow
+                                place="projectBanner"
+                                context={{}}
+                                words
+                                wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-1.5">{row}</div>}
+                            />
                         </ErrorBoundary>
                     </CoreWorkspace>
                 </FileToolbarSlotProvider>

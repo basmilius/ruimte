@@ -1,3 +1,4 @@
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { NewViewTiles } from '@/shell/NewViewMenu';
 import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
@@ -31,6 +32,7 @@ export function ProjectStartScreen() {
                     </div>
                 </div>
                 <NewViewTiles size="md" />
+                <SlotRow place="startScreen" context={{}} words wrap={(row) => <div className="flex flex-wrap justify-center gap-2">{row}</div>} />
             </section>
         </div>
     );

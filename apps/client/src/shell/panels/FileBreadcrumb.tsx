@@ -1,3 +1,5 @@
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Braces, ChevronRight, Hash, SquareFunction, Variable, type LucideIcon } from 'lucide-react';
@@ -59,6 +61,7 @@ export function FileBreadcrumb({ path, folder, scope, onSelect }: FileBreadcrumb
                     </button>
                 </Fragment>
             ))}
+            <SlotRow place="fileBreadcrumb" context={{ file: fileInfoOf(path) }} />
         </nav>
     );
 }

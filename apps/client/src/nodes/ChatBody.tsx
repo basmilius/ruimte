@@ -165,6 +165,12 @@ export function ChatBody({
                     {failure}
                 </NodeNotice>
             )}
+            <SlotRow
+                place="threadHeader"
+                context={{ chat: { id }, node: nodeInfoOf(id) }}
+                words
+                wrap={(row) => <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1">{row}</div>}
+            />
             <OutputChatContext value={id}>
                 <LazyBoundary fallback={<div className="grow" />}>
                     <Timeline

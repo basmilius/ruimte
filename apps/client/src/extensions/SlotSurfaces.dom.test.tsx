@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { useActionRuns } from '@/extensions/action-runs';
 import { contribute, type SlotEntry } from '@/extensions/registry';
-import { NodeHeaderSlot, SelectionBar, SlotRow } from '@/extensions/SlotSurfaces';
+import { act } from 'react';
+import { ContextMenu } from '@adecore/ui';
+import { useSlotOutlines } from '@/extensions/slot-outlines';
+import { NodeHeaderSlot, SelectionBar, SlotMenuItems, SlotRow } from '@/extensions/SlotSurfaces';
 import { focusedCanvas } from '@/state/canvas';
 import { useToasts } from '@/state/toasts';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
@@ -86,6 +89,37 @@ describe('a slot', () => {
 
         expect(reported).toEqual(['No agent']);
         expect(JSON.stringify(useToasts.getState())).toContain('No agent');
+    });
+});
+
+describe('every slot', () => {
+    test('takes a widget in a menu too, and shows itself under dev', async () => {
+        disposers.push(
+            contribute('slotEntries', { id: 'a/w', kind: 'widget', title: 'w', slots: { canvasMenu: true }, component: () => <span>A widget</span> })
+        );
+        mounted = mount();
+        await mounted.render(
+            <ContextMenu.Root open>
+                <ContextMenu.Popup>
+                    <SlotMenuItems place="canvasMenu" context={{}} />
+                </ContextMenu.Popup>
+            </ContextMenu.Root>
+        );
+
+        expect(document.body.textContent).toContain('A widget');
+    });
+
+    test('names itself while the outlines are on, also with nothing in it', async () => {
+        mounted = mount();
+        await mounted.render(<SlotRow place="emptyCanvas" context={{ at: 1 }} />);
+
+        expect(mounted.host.querySelector('[data-slot-outline]')).toBeNull();
+
+        await act(async () => useSlotOutlines.setState({ on: true }));
+
+        expect(mounted.host.querySelector('[data-slot-outline="emptyCanvas"]')?.getAttribute('title')).toContain('at');
+
+        useSlotOutlines.setState({ on: false });
     });
 });
 

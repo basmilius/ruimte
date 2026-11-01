@@ -40,7 +40,8 @@ import { accentColor, accentHeaderStyle, accentShades, notePaperClass } from '@/
 import { DeviceOperatedStrip } from '@/devices/DeviceOperatedStrip';
 import { ComputerIndicator } from '@/computer/ComputerIndicator';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
-import { NodeHeaderSlot } from '@/extensions/SlotSurfaces';
+import { nodeInfoOf } from '@/extensions/slots';
+import { NodeHeaderSlot, SlotRow } from '@/extensions/SlotSurfaces';
 import { FlagMarkOf } from '@/project/FlagMark';
 import { SnoozeMenuItems } from '@/shell/Snooze';
 import { useEndpointId, useEndpointOfNode } from '@/state/keys';
@@ -590,6 +591,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                     {(node.kind === 'routine' || node.kind === 'design') && <span ref={setFileControls} className="flex shrink-0 items-center gap-1.5" />}
                     {node.kind === 'device' && <DeviceToolbar id={id} narrow={node.w < MACHINE_PILL_MIN_WIDTH} />}
                     <NodeHeaderSlot nodeId={id} />
+                    {isNote && <SlotRow place="noteToolbar" context={{ node: nodeInfoOf(id) }} />}
                     <ButtonGroup className="shrink-0">
                         {isNote && <NotePreviewLock id={id} />}
                         {maximized ? (
