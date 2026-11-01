@@ -1,0 +1,144 @@
+import { ExtensionThemeSchema, extensionThemeCssProblem, type ExtensionTheme } from '@ruimte/contracts';
+import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import { z } from 'zod';
+import { storedJson } from '@/state/stored-json';
+import { useTheme } from '@/state/theme';
+
+const STORAGE_KEY = 'ruimte.extensionTheme';
+const TOKENS_ID = 'ruimte-extension-theme';
+const CSS_ID = 'ruimte-extension-theme-css';
+const PALETTE_ID = 'ruimte-palette';
+
+export interface ThemeChoice {
+    // The extension's id and the path in its manifest.
+    key: string;
+    extensionId: string;
+    path: string;
+    name: string;
+    theme: ExtensionTheme;
+    cssUrl: string | null;
+}
+
+const StoredThemeSchema = z.object({ key: z.string(), tokens: z.string(), cssUrl: z.string().nullable() });
+type StoredTheme = z.infer<typeof StoredThemeSchema>;
+
+const storedTheme = storedJson<StoredTheme>(STORAGE_KEY, StoredThemeSchema);
+
+function tokensCss(theme: ExtensionTheme): string {
+    const lines = Object.entries(theme.tokens).map(([token, value]) => `${token}: ${value};`);
+
+    return `[data-theme='${theme.side}'] { ${lines.join(' ')} }`;
+}
+
+/* Ahead of the palette's stylesheet, so a person's own accent and tint stay over a theme. */
+function place(element: HTMLElement): void {
+    const palette = document.getElementById(PALETTE_ID);
+
+    if (palette === null) {
+        document.head.append(element);
+    } else {
+        document.head.insertBefore(element, palette);
+    }
+}
+
+function paint(stored: StoredTheme | null): void {
+    document.getElementById(TOKENS_ID)?.remove();
+    document.getElementById(CSS_ID)?.remove();
+
+    if (stored === null) {
+        return;
+    }
+
+    const style = document.createElement('style');
+
+    style.id = TOKENS_ID;
+    style.textContent = stored.tokens;
+    place(style);
+
+    if (stored.cssUrl !== null) {
+        // A link rather than inline text, so a `url()` in it resolves inside the extension's own folder.
+        const link = document.createElement('link');
+
+        link.id = CSS_ID;
+        link.rel = 'stylesheet';
+        link.href = stored.cssUrl;
+        place(link);
+    }
+}
+
+/* Before the first render, so the first pixel is already the chosen theme. Safe mode starts without one. */
+export function applyStoredExtensionTheme(): void {
+    if (!new URLSearchParams(window.location.search).has('safe-mode')) {
+        paint(storedTheme.read());
+    }
+}
+
+export function activeExtensionTheme(): string | null {
+    return storedTheme.read()?.key ?? null;
+}
+
+async function loadTheme(extension: InstalledClientExtension, path: string): Promise<ThemeChoice> {
+    const response = await fetch(`${extension.base}${path}`);
+    const theme = ExtensionThemeSchema.parse(await response.json());
+    let cssUrl: string | null = null;
+
+    if (theme.css !== undefined) {
+        const url = `${extension.base}${theme.css}`;
+        const problem = extensionThemeCssProblem(await (await fetch(url)).text());
+
+        if (problem !== null) {
+            throw new Error(`${theme.css}: ${problem}`);
+        }
+
+        cssUrl = url;
+    }
+
+    return { key: `${extension.manifest.id}/${path}`, extensionId: extension.manifest.id, path, name: theme.name, theme, cssUrl };
+}
+
+/* Every theme of what is on. One that does not load is left out, and the others stay. */
+export async function listExtensionThemes(installed: readonly InstalledClientExtension[]): Promise<ThemeChoice[]> {
+    const paths = installed
+        .filter((extension) => extension.enabled)
+        .flatMap((extension) => (extension.manifest.themes ?? []).map((path) => ({ extension, path })));
+    const loaded = await Promise.allSettled(paths.map(({ extension, path }) => loadTheme(extension, path)));
+
+    return loaded.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+}
+
+export function chooseExtensionTheme(choice: ThemeChoice | null): void {
+    if (choice === null) {
+        storedTheme.remove();
+        paint(null);
+
+        return;
+    }
+
+    const stored: StoredTheme = { key: choice.key, tokens: tokensCss(choice.theme), cssUrl: choice.cssUrl };
+
+    storedTheme.write(stored);
+    paint(stored);
+    useTheme.getState().setTheme(choice.theme.side);
+}
+
+/* After an update the theme's files sit elsewhere, and after a removal or switching off it is gone. */
+export async function refreshExtensionTheme(installed: readonly InstalledClientExtension[]): Promise<void> {
+    const stored = storedTheme.read();
+
+    if (stored === null) {
+        return;
+    }
+
+    const choice = (await listExtensionThemes(installed)).find((each) => each.key === stored.key);
+
+    if (choice === undefined) {
+        chooseExtensionTheme(null);
+
+        return;
+    }
+
+    const next: StoredTheme = { key: choice.key, tokens: tokensCss(choice.theme), cssUrl: choice.cssUrl };
+
+    storedTheme.write(next);
+    paint(next);
+}

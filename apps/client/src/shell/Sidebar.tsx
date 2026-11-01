@@ -432,6 +432,7 @@ export function Sidebar() {
     return (
         <aside
             id="app-sidebar"
+            data-surface="sidebar"
             inert={!open}
             data-instant={instant ? '' : undefined}
             className="sliding-column h-full shrink-0 overflow-hidden"

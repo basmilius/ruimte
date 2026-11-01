@@ -1,5 +1,7 @@
 import { lazy, type ComponentType } from 'react';
 import type { ExtensionManifest } from '@ruimte/contracts';
+import { z } from 'zod';
+import { storedJson } from '@/state/stored-json';
 import {
     contribute,
     type CanvasLayerContribution,
@@ -54,20 +56,16 @@ export function defineBuiltIn(manifest: ExtensionManifest, setup: () => (() => v
 
 const DISABLED_KEY = 'ruimte.builtIns.disabled';
 
-export function readDisabled(): string[] {
-    try {
-        const stored: unknown = JSON.parse(localStorage.getItem(DISABLED_KEY) ?? '[]');
+const disabledBuiltIns = storedJson<string[]>(DISABLED_KEY, z.array(z.string()));
 
-        return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : [];
-    } catch {
-        return [];
-    }
+export function readDisabled(): string[] {
+    return disabledBuiltIns.read() ?? [];
 }
 
 function writeDisabled(id: string, disabled: boolean): void {
     const rest = readDisabled().filter((entry) => entry !== id);
 
-    localStorage.setItem(DISABLED_KEY, JSON.stringify(disabled ? [...rest, id] : rest));
+    disabledBuiltIns.write(disabled ? [...rest, id] : rest);
 }
 
 /* A storage key meant for the whole app, reread when another window writes it. */

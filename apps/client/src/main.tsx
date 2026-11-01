@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { applyStoredExtensionTheme } from '@/extensions/themes';
 import { App } from '@/App';
 import { CHAT_HOST, configureChat } from '@/chat/host';
 import { connectFormat } from '@/format/source';
@@ -150,6 +151,8 @@ if (import.meta.env.DEV) {
 
 /* The words come first: a screen drawn before its language is in would swap under a person. */
 await initI18n();
+
+applyStoredExtensionTheme();
 
 createRoot(document.getElementById('root')!, { onCaughtError: reportCaught }).render(
     <ChatHostProvider host={CHAT_HOST}>

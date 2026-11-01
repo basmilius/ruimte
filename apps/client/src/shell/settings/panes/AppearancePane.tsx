@@ -7,6 +7,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
 import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
+import { ExtensionThemeRow } from '@/shell/settings/panes/ExtensionThemeRow';
 import { useTheme, type Theme } from '@/state/theme';
 
 const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
@@ -91,6 +92,7 @@ export function AppearancePane() {
                     description={t('appearance.accent.description')}
                     control={<AccentRow />}
                 />
+                <ExtensionThemeRow />
             </SettingsSection>
             <SettingsSection title={t('appearance.interface.title')}>
                 <SettingsRow

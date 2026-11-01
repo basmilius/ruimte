@@ -1,6 +1,7 @@
 import type { ExtensionInfo } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
+import { refreshExtensionTheme } from '@/extensions/themes';
 import { create } from 'zustand';
 
 export interface ExtensionsState {
@@ -46,6 +47,8 @@ export async function syncExtensions(): Promise<void> {
     if (inSafeMode()) {
         return;
     }
+
+    await refreshExtensionTheme(installed);
 
     const wanted = installed.filter((entry) => entry.enabled && entry.hasClient);
 

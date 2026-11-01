@@ -22,6 +22,32 @@ export const ExtensionManifestSchema = z.object({
 });
 export type ExtensionManifest = z.infer<typeof ExtensionManifestSchema>;
 
+/* A theme is data, read before any extension code runs. Tokens override the base of one side. */
+export const ExtensionThemeSchema = z.object({
+    name: z.string().min(1).max(80),
+    side: z.enum(['light', 'dark']),
+    tokens: z.record(z.string().regex(/^--[a-z0-9-]+$/), z.string().regex(/^[^;{}]+$/)),
+    css: z.string().min(1).optional()
+});
+export type ExtensionTheme = z.infer<typeof ExtensionThemeSchema>;
+
+/* A theme's stylesheet reads only from its own pack, so a theme never phones home. */
+export function extensionThemeCssProblem(css: string): string | null {
+    if (/@import/i.test(css)) {
+        return '@import is not allowed';
+    }
+
+    for (const match of css.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi)) {
+        const target = match[2] ?? '';
+
+        if (/^([a-z][a-z0-9+.-]*:|\/|\.\.)/i.test(target) || target.includes('/../')) {
+            return `url(${target}) points outside the pack`;
+        }
+    }
+
+    return null;
+}
+
 /* A `.rex` is this object as gzipped JSON, with every file's bytes in base64. */
 export const ExtensionPackSchema = z.object({
     files: z.record(z.string().min(1), z.string())

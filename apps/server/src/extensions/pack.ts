@@ -2,7 +2,14 @@ import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { EXTENSION_API_VERSION, ExtensionManifestSchema, type ExtensionManifest, type ExtensionPack } from '@ruimte/contracts';
+import {
+    EXTENSION_API_VERSION,
+    ExtensionManifestSchema,
+    ExtensionThemeSchema,
+    extensionThemeCssProblem,
+    type ExtensionManifest,
+    type ExtensionPack
+} from '@ruimte/contracts';
 import type { BunPlugin } from 'bun';
 
 export const BUILD_FOLDER = '.ruimte-build';
@@ -39,6 +46,30 @@ export function readManifest(folder: string): ExtensionManifest {
     }
 
     return parsed.data;
+}
+
+function checkThemes(root: string, manifest: ExtensionManifest): void {
+    for (const path of manifest.themes ?? []) {
+        const file = join(root, path);
+
+        if (!existsSync(file)) {
+            throw new ExtensionBuildError(`manifest.json names ${path}, which does not exist`);
+        }
+
+        const theme = ExtensionThemeSchema.safeParse(JSON.parse(readFileSync(file, 'utf8')));
+
+        if (!theme.success) {
+            throw new ExtensionBuildError(`${path}: ${theme.error.issues.map((issue) => `${issue.path.join('.')} ${issue.message}`).join(', ')}`);
+        }
+
+        if (theme.data.css !== undefined) {
+            const problem = extensionThemeCssProblem(readFileSync(join(root, theme.data.css), 'utf8'));
+
+            if (problem !== null) {
+                throw new ExtensionBuildError(`${theme.data.css}: ${problem}`);
+            }
+        }
+    }
 }
 
 function entryIn(folder: string): string | null {
@@ -140,6 +171,7 @@ export async function buildExtension(folder: string): Promise<{ manifest: Extens
         );
     }
 
+    checkThemes(root, manifest);
     cpSync(join(root, 'manifest.json'), join(outdir, 'manifest.json'));
 
     for (const name of COPIED_FOLDERS) {

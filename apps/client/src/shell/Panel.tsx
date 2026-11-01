@@ -67,6 +67,8 @@ export function Panel() {
 
     return (
         <SlidingColumn
+            // SlidingColumn draws the element, so a theme's hook is set on it from here.
+            ref={(element) => element?.setAttribute('data-surface', 'panel')}
             open={open}
             gap={gap}
             // Beside the sheet its edge is the sheet's; beside an open plan it draws its own line.

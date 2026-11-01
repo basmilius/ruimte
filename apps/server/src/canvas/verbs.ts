@@ -99,6 +99,7 @@ const readVerb: ContextVerb = {
         'kind\tcanvas\tOnly one a person pointed you at with #: every node with its id, kind, title, place and size, what each group frames, every text and every line between nodes; each id then reads on its own\t--tail does nothing here',
         'kind\tdatabase\tOnly one a person pointed you at with #: its connection, schema, table, mode and filter, and the ruimte-context database command that reads that table; a connection this machine does not have is said, and nothing is refused\t--tail does nothing here',
         'own\tAn agent you opened yourself, with agent or team, reads by its id with no line from it into you and without showing up in ruimte-context list, --tail and --subagent included; an agent it opened in turn is its to read, not yours',
+        'kind\textension\tWhat the extension that owns the node says it holds, or nothing without a reader\t--tail counts lines of the result',
         'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
         'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',

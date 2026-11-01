@@ -1,8 +1,9 @@
-import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useSyncExternalStore, type ComponentType } from 'react';
+import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { icons, Package, type LucideIcon } from 'lucide-react';
+import { z } from 'zod';
 import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
-import type { ExtensionManifest } from '@ruimte/contracts';
+import type { ExtensionManifest, RequestMap } from '@ruimte/contracts';
 import { revealNode } from '@/project/views';
 import { contribute, type ExtensionSurfaceProps } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
@@ -12,6 +13,7 @@ import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { storedJson, storedText } from '@/state/stored-json';
 import { useFocusedMachine } from '@/transport/connections';
 import { transport as activeTransport, type Transport } from '@/transport';
 
@@ -23,6 +25,7 @@ export interface LoadedExtension {
     settings: ComponentType | null;
 }
 
+type UsageLimitsResult = RequestMap['usage.limits']['result'];
 type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;
 type Surface<Props = {}> = { component: LazyComponent<Props> } | { frame: string };
 
@@ -156,6 +159,7 @@ function serverClient(extension: LoadedExtension, transport: Pick<Transport, 're
 
 export function clientApiFor(extension: LoadedExtension) {
     const { id } = extension.manifest;
+    const servers = new WeakMap<object, unknown>();
     const add = <Kind extends Parameters<typeof contribute>[0]>(kind: Kind, item: Parameters<typeof contribute<Kind>>[1]): (() => void) => {
         const dispose = contribute(kind, item);
 
@@ -280,8 +284,44 @@ export function clientApiFor(extension: LoadedExtension) {
         useServer<Server>(): Server {
             const extensionNow = useExtension();
             const { transport } = useFocusedMachine();
+            // Kept per machine, or `.use()` would ask again on every render and never settle.
+            let server = servers.get(transport);
 
-            return serverClient(extensionNow, transport) as Server;
+            if (server === undefined) {
+                server = serverClient(extensionNow, transport);
+                servers.set(transport, server);
+            }
+
+            return server as Server;
+        },
+        useUsageLimits() {
+            requiresPermission(useExtension(), 'usage.read');
+
+            const { transport } = useFocusedMachine();
+            const [limits, setLimits] = useState<UsageLimitsResult | null>(null);
+
+            useEffect(() => {
+                let current = true;
+
+                void transport.request('usage.limits', {}).then((next) => {
+                    if (current) {
+                        setLimits(next);
+                    }
+                });
+
+                const stop = transport.on('usage.limitsChanged', setLimits);
+
+                return () => {
+                    current = false;
+                    stop();
+                };
+            }, [transport]);
+
+            return (limits?.providers ?? []).map((provider) => ({
+                provider: provider.kind,
+                plan: provider.plan,
+                windows: provider.windows.map((window) => ({ label: window.label, used: window.used, resetsAt: window.resetsAt }))
+            }));
         },
         useNodeData<Data>(): [Data, (next: Data) => void] {
             const nodeId = useContext(NodeContext);
@@ -303,10 +343,13 @@ export function clientApiFor(extension: LoadedExtension) {
             return [value, (next) => writeExtensionStorage(full, next)];
         },
         useProject() {
-            return useProject((state) => ({ id: state.current?.projectId ?? '', name: state.current?.name ?? '' }));
+            const projectId = useProject((state) => state.current?.projectId ?? '');
+            const name = useProject((state) => state.current?.name ?? '');
+
+            return { id: projectId, name };
         },
         useActiveView() {
-            return useDocument((state) => ({ id: state.activeViewId ?? '' }));
+            return { id: useDocument((state) => state.activeViewId ?? '') };
         },
         useSelection() {
             return useCanvas((state) => state.selection).map((nodeId) => ({ id: nodeId }));
@@ -405,7 +448,7 @@ export function clientApiFor(extension: LoadedExtension) {
 const storageListeners = new Set<() => void>();
 
 function writeExtensionStorage(key: string, value: unknown): void {
-    localStorage.setItem(key, JSON.stringify(value));
+    storedJson(key, z.unknown()).write(value);
 
     for (const listener of storageListeners) {
         listener();
@@ -421,7 +464,7 @@ function subscribeStorage(listener: () => void): () => void {
 }
 
 function useExtensionStorage<Value>(key: string, initial: Value): Value {
-    const stored = useSyncExternalStore(subscribeStorage, () => localStorage.getItem(key));
+    const stored = useSyncExternalStore(subscribeStorage, () => storedText(key).read());
 
     return stored === null ? initial : (JSON.parse(stored) as Value);
 }

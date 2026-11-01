@@ -425,6 +425,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
             <ContextMenu.Trigger
                 render={<div />}
                 data-node-id={id}
+                data-surface="node"
                 data-paper={isNote ? (notePaperOf(node) ?? 'yellow') : undefined}
                 className={clsx(
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
