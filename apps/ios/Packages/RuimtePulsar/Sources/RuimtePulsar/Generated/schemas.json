@@ -7167,6 +7167,29 @@
     "type": "object",
     "properties": {}
   },
+  "request.extension.log.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "text": {
+        "type": "string",
+        "maxLength": 16000
+      }
+    },
+    "required": [
+      "id",
+      "text"
+    ]
+  },
+  "request.extension.log.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.extension.call.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

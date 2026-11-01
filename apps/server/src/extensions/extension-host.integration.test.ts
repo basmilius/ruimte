@@ -123,5 +123,9 @@ describe('an extension with a server part', () => {
 
         expect((await host.list())[0]?.revision).toBe((first ?? 0) + 1);
         expect((await host.list())[0]?.devFolder).toBe(folder);
+
+        await host.appendDevLog('acme.linked', '[client] hello');
+
+        expect(readFileSync(new ExtensionStore(join(root, 'link')).logFile('acme.linked'), 'utf8')).toContain('[client] hello');
     });
 });

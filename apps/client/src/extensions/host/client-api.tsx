@@ -6,7 +6,10 @@ import { useChats } from '@adecore/agents-react/state';
 import type { ExtensionManifest, RequestMap } from '@ruimte/contracts';
 import { revealNode } from '@/project/views';
 import { ExtensionGlyph } from '@/extensions/ExtensionTile';
-import { contribute, type ExtensionSurfaceProps } from '@/extensions/registry';
+import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
+import { sendDevLog } from '@/extensions/dev-log';
+import { DevReport } from '@/extensions/DevReport';
+import { contribute, type ActionContribution, type ActionPlace, type ExtensionSurfaceProps } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
@@ -24,6 +27,8 @@ export interface LoadedExtension {
     base: string;
     // Its `assets/icon.svg`, for a surface that names no Lucide icon of its own.
     iconUrl?: string | null;
+    // Linked by `ruimte extension dev`, so what it says also goes to that terminal.
+    dev?: boolean;
     disposers: (() => void)[];
     settings: ComponentType | null;
 }
@@ -117,12 +122,26 @@ function surfaceOf<Props extends object>(extension: LoadedExtension, surface: Su
             <ExtensionContext value={extension}>
                 <NodeContext value={props.nodeId ?? null}>
                     <ErrorBoundary label={`${extension.manifest.name} could not be shown`} resetKeys={[extension.base]} compact>
-                        <Suspense fallback={null}>{createElement(Body as ComponentType<object>, props)}</Suspense>
+                        <DevReport id={extension.manifest.id} dev={extension.dev === true}>
+                            <Suspense fallback={null}>{createElement(Body as ComponentType<object>, props)}</Suspense>
+                        </DevReport>
                     </ErrorBoundary>
                 </NodeContext>
             </ExtensionContext>
         );
     };
+}
+
+interface ActionTarget {
+    nodes: { id: string; kind: string }[];
+}
+
+function nodeRefOf(nodeId: string): { id: string; kind: string } {
+    return { id: nodeId, kind: canvasOfNode(nodeId)?.getState().nodes[nodeId]?.kind ?? 'unknown' };
+}
+
+function targetOf(nodeIds: readonly string[]): ActionTarget {
+    return { nodes: nodeIds.map(nodeRefOf) };
 }
 
 function assertLazy(surface: { component?: unknown; frame?: unknown }, what: string): void {
@@ -265,46 +284,57 @@ export function clientApiFor(extension: LoadedExtension) {
             assertLazy(settings, `defineExtensionSettings ${id}`);
             add('extensionSettings', { id, component: surfaceOf(extension, settings) as ComponentType, keywords: settings.keywords ?? [] });
         },
-        defineNodeMenuItem(action: {
-            id: string;
-            title: string;
-            run: (target: { node: { id: string } }) => void;
-            when?: (target: { node: { id: string } }) => boolean;
-        }) {
-            add('nodeMenuItems', {
-                id: `${id}/${action.id}`,
-                title: action.title,
-                run: (nodeId) => action.run({ node: { id: nodeId } }),
-                when: (nodeId) => action.when?.({ node: { id: nodeId } }) ?? true
-            });
-        },
-        defineCanvasAction(action: {
+        defineAction(action: {
             id: string;
             title: string;
             icon?: string;
-            run: (target: { selection: { id: string }[] }) => void | Promise<void>;
-            when?: (target: { selection: { id: string }[] }) => boolean;
+            show?: (ActionPlace | 'commands')[];
+            when?: (target: ActionTarget) => boolean;
+            run: (target: ActionTarget) => void | Promise<void>;
         }) {
-            const refs = (ids: readonly string[]) => ({ selection: ids.map((nodeId) => ({ id: nodeId })) });
-
-            add('canvasActions', {
+            const show = action.show ?? ['commands'];
+            const contribution: ActionContribution = {
                 id: `${id}/${action.id}`,
                 title: action.title,
                 ...(action.icon === undefined ? {} : { icon: iconOf(action.icon, extension) }),
-                when: (ids) => action.when?.(refs(ids)) ?? true,
-                run: (ids) => action.run(refs(ids))
+                show: show.filter((place): place is ActionPlace => place !== 'commands'),
+                when: (nodeIds) => action.when?.(targetOf(nodeIds)) ?? true,
+                run: (nodeIds) => action.run(targetOf(nodeIds)),
+                onFailure: (text) => {
+                    if (extension.dev === true) {
+                        sendDevLog(id, 'error', [`${action.id}: ${text}`]);
+                    }
+                }
+            };
+
+            add('actions', contribution);
+
+            if (show.includes('commands')) {
+                const selection = () => focusedCanvas().getState().selection;
+
+                add('commands', {
+                    id: `extension:${id}/action/${action.id}`,
+                    title: action.title,
+                    when: () => contribution.when(selection()),
+                    run: () => runAction(contribution, selection())
+                });
+            }
+        },
+        defineMenu(menu: { id: string; title: string; icon?: string; show: ActionPlace[]; items: string[] }) {
+            add('actionMenus', {
+                id: `${id}/${menu.id}`,
+                title: menu.title,
+                ...(menu.icon === undefined ? {} : { icon: iconOf(menu.icon, extension) }),
+                show: menu.show,
+                items: menu.items.map((item) => `${id}/${item}`)
             });
-
-            const selection = () =>
-                focusedCanvas()
-                    .getState()
-                    .selection.map((nodeId) => ({ id: nodeId }));
-
-            add('commands', {
-                id: `extension:${id}/selection/${action.id}`,
-                title: action.title,
-                when: () => action.when?.({ selection: selection() }) ?? true,
-                run: () => action.run({ selection: selection() })
+        },
+        defineNodeHeader(header: { id: string; when?: (node: { id: string; kind: string }) => boolean; component: LazyComponent<{ nodeId: string }> }) {
+            assertLazy(header, `defineNodeHeader ${header.id}`);
+            add('nodeHeaders', {
+                id: `${id}/${header.id}`,
+                when: (nodeId) => header.when?.(nodeRefOf(nodeId)) ?? true,
+                component: surfaceOf(extension, header) as ComponentType<{ nodeId: string }>
             });
         },
         useServer<Server>(): Server {
@@ -424,7 +454,15 @@ export function clientApiFor(extension: LoadedExtension) {
                     needsYou: nodeWaitAsk(node, sessions, chats, endpointId) !== null
                 }));
         },
+        useActionRunning(actionId: string) {
+            const full = `${useExtension().manifest.id}/${actionId}`;
+
+            return useActionRuns((state) => state.runs.some((run) => run.actionId === full));
+        },
         host: {
+            busy<Result>(work: { title: string; nodes?: { id: string }[] }, run: () => Result | Promise<Result>) {
+                return trackRun({ actionId: null, title: work.title, nodeIds: (work.nodes ?? []).map((node) => node.id) }, run);
+            },
             notify(text: string, options?: { tone?: 'neutral' | 'error' }) {
                 useToasts.getState().show({ kind: options?.tone === 'error' ? 'error' : 'success', title: text });
             },

@@ -125,7 +125,14 @@ function hostPlugin(id: string, hosted: Readonly<Record<string, string>>, forbid
     };
 }
 
-async function bundle(entry: string, outdir: string, target: 'browser' | 'bun', plugin: BunPlugin, violations: readonly string[]): Promise<void> {
+async function bundle(
+    entry: string,
+    outdir: string,
+    target: 'browser' | 'bun',
+    plugin: BunPlugin,
+    violations: readonly string[],
+    banner?: string
+): Promise<void> {
     const result = await Bun.build({
         entrypoints: [entry],
         outdir,
@@ -138,6 +145,7 @@ async function bundle(entry: string, outdir: string, target: 'browser' | 'bun', 
         define: { 'process.env.NODE_ENV': '"production"' },
         jsx: { runtime: 'automatic', development: false },
         plugins: [plugin],
+        ...(banner === undefined ? {} : { banner }),
         throw: false
     });
 
@@ -175,7 +183,9 @@ export async function buildExtension(folder: string): Promise<{ manifest: Extens
             join(outdir, 'client'),
             'browser',
             hostPlugin(manifest.id, CLIENT_HOSTED, join(root, 'server'), 'client/', violations),
-            violations
+            violations,
+            // Shadows the page's, so what an extension in development logs also reaches its terminal.
+            `const console = globalThis.__ruimteExtension.for(${JSON.stringify(manifest.id)}).console;`
         );
     }
 

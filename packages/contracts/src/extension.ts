@@ -104,6 +104,9 @@ export type ExtensionCallPayload = z.infer<typeof ExtensionCallPayloadSchema>;
 export const ExtensionCallResultSchema = z.object({ result: z.unknown() });
 export type ExtensionCallResult = z.infer<typeof ExtensionCallResultSchema>;
 
+/* One line for the terminal of `ruimte extension dev`. */
+export const ExtensionLogPayloadSchema = z.object({ id: ExtensionIdSchema, text: z.string().max(16_000) });
+
 export const ExtensionMessageEventSchema = z.object({
     id: ExtensionIdSchema,
     name: z.string().min(1).max(120),
@@ -140,6 +143,7 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.install': { payload: ExtensionInstallPayloadSchema, result: ExtensionInfoSchema },
     'extension.remove': { payload: ExtensionIdPayloadSchema, result: EmptySchema },
     'extension.setEnabled': { payload: ExtensionSetEnabledPayloadSchema, result: EmptySchema },
+    'extension.log': { payload: ExtensionLogPayloadSchema, result: EmptySchema },
     'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema }
 } as const;
 

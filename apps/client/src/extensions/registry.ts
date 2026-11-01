@@ -96,19 +96,32 @@ export interface CommandContribution {
     run: () => void | Promise<void>;
 }
 
-export interface NodeMenuItemContribution {
-    id: string;
-    title: string;
-    when: (nodeId: string) => boolean;
-    run: (nodeId: string) => void;
-}
+/* Where an extension shows an action or a menu. It chooses; Ruimte only gives each place its spot. */
+export type ActionPlace = 'selectionBar' | 'nodeHeader' | 'nodeMenu';
 
-export interface CanvasActionContribution {
+export interface ActionMenuContribution {
     id: string;
     title: string;
     icon?: LucideIcon;
-    when: (selection: readonly string[]) => boolean;
-    run: (selection: readonly string[]) => void | Promise<void>;
+    show: readonly ActionPlace[];
+    // Ids of actions, in order.
+    items: readonly string[];
+}
+
+export interface NodeHeaderContribution {
+    id: string;
+    when: (nodeId: string) => boolean;
+    component: ComponentType<{ nodeId: string }>;
+}
+
+export interface ActionContribution {
+    id: string;
+    title: string;
+    icon?: LucideIcon;
+    show: readonly ActionPlace[];
+    when: (nodeIds: readonly string[]) => boolean;
+    run: (nodeIds: readonly string[]) => void | Promise<void>;
+    onFailure?: (text: string) => void;
 }
 
 export interface ExtensionSettingsContribution {
@@ -129,14 +142,15 @@ export interface Contributions {
     panels: readonly PanelContribution[];
     settingsSections: readonly SettingsSectionContribution[];
     canvasLayers: readonly CanvasLayerContribution[];
-    canvasActions: readonly CanvasActionContribution[];
+    actions: readonly ActionContribution[];
+    actionMenus: readonly ActionMenuContribution[];
+    nodeHeaders: readonly NodeHeaderContribution[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
     extensionNodes: readonly ExtensionNodeContribution[];
     extensionViews: readonly ExtensionViewContribution[];
     commands: readonly CommandContribution[];
-    nodeMenuItems: readonly NodeMenuItemContribution[];
     extensionSettings: readonly ExtensionSettingsContribution[];
 }
 
@@ -148,14 +162,15 @@ export const useContributions = create<Contributions>(() => ({
     panels: [],
     settingsSections: [],
     canvasLayers: [],
-    canvasActions: [],
+    actions: [],
+    actionMenus: [],
+    nodeHeaders: [],
     viewAccessories: [],
     sharedStorage: [],
     sidebarCards: [],
     extensionNodes: [],
     extensionViews: [],
     commands: [],
-    nodeMenuItems: [],
     extensionSettings: []
 }));
 

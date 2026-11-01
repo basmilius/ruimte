@@ -29,8 +29,10 @@ const client: Record<string, unknown> = {
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
     defineExtensionSettings: recording('settings'),
-    defineNodeMenuItem: recording('nodeMenuItem'),
-    defineCanvasAction: recording('canvasAction'),
+    defineAction: recording('action'),
+    defineMenu: recording('menu'),
+    defineNodeHeader: recording('nodeHeader'),
+    useActionRunning: () => false,
     useServer: () =>
         new Proxy(
             {},
@@ -51,7 +53,7 @@ const client: Record<string, unknown> = {
     useAgents: () => [],
     useUsageLimits: () => [],
     useServerEvent: () => undefined,
-    host: { notify: () => undefined, confirm: async () => true, openUrl: () => undefined },
+    host: { busy: (_work: unknown, run: () => unknown) => run(), notify: () => undefined, confirm: async () => true, openUrl: () => undefined },
     context: { read: async () => [] },
     agents: { run: async () => ({ text: '' }) },
     canvas: { createNote: () => ({ id: 'note' }), link: () => undefined, reveal: () => undefined }

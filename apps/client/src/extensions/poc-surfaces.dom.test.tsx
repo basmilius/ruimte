@@ -35,7 +35,9 @@ describe('poc-surfaces', () => {
         expect(state.extensionViews.map((entry) => entry.id)).toContain('poc.surfaces/view');
         expect(state.canvasLayers.map((entry) => entry.id)).toContain('poc.surfaces/overlay');
         expect(state.extensionSettings.map((entry) => entry.id)).toContain('poc.surfaces');
-        expect(state.nodeMenuItems.map((entry) => entry.id)).toContain('poc.surfaces/id');
+        expect(state.actions.map((entry) => entry.id)).toContain('poc.surfaces/count');
+        expect(state.actionMenus.map((entry) => entry.id)).toContain('poc.surfaces/menu');
+        expect(state.nodeHeaders.map((entry) => entry.id)).toContain('poc.surfaces/kind');
     });
 
     test('draws a panel with the hooks that read the app', async () => {

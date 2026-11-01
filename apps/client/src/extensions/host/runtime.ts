@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import * as reactDom from 'react-dom';
 import * as ui from '@adecore/ui';
+import { consoleFor } from '@/extensions/dev-log';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 
 /*
@@ -28,7 +29,7 @@ const apis = new Map<string, ReturnType<typeof clientApiFor>>();
             apis.set(id, client);
         }
 
-        return { react: React, jsxRuntime, reactDom, ui, client };
+        return { react: React, jsxRuntime, reactDom, ui, client, console: consoleFor(id, extension.dev === true) };
     }
 };
 

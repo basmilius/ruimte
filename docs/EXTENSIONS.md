@@ -29,15 +29,27 @@ ruimte extension logs           what server/ wrote
 
 `extensions/limits` is a worked example on the public API alone. Try it with `bun run dev` in that folder while Ruimte runs.
 
+## Actions
+
+`defineAction` holds what happens, and `show` says where: `selectionBar`, `nodeHeader`, `nodeMenu` or `commands`. `defineMenu` groups actions into a menu of the extension's own, as a submenu in a node's menu and a dropdown elsewhere. `defineNodeHeader` draws its own UI in a node's header.
+
+In a node's menu an extension always comes below Ruimte's own items, above removing the node.
+
+While `run` is pending, the nodes it is about show a spinner with its title and its button is disabled. A throw reaches the person as a toast. Work that is no action uses `host.busy`, and `useActionRunning` draws a state of your own.
+
+## Logging
+
+`ruimte extension dev` prints what the extension says while it runs. That is `console.*` and `log` in `server/`, and `console.*` in `client/` marked `[client]`, with failed actions, failed surfaces and a failed load. An installed extension's client logs only to the page's own console.
+
 ## Proof-of-concept extensions
 
 `extensions/poc-*` exist to try the API by hand and in tests. They are never shipped: the client imports only what `apps/client/src/extensions/built-in.ts` names, and neither the desktop app nor npm packs that folder. Run `bun run dev` in one, beside `bun dev`.
 
 | Folder | What to look for |
 | --- | --- |
-| `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay, settings detail, commands, canvas action and node menu item. The node's count survives a reload through the project file, the card's through storage. |
+| `poc-surfaces` | A panel, view, node (with `migrate`), sidebar card, overlay, settings detail, commands, actions at each place, a menu of its own and a tag in a note's header. Its logs reach the terminal. The node's count survives a reload through the project file, the card's through storage. |
 | `poc-server` | `.use()` shows pong, storage counts on across a restart, a secret is kept, an event comes back, machine events are counted, Throw reports an error and goes on, Crash restarts on the next call. A line from its node to a chat gives the chat the fact. |
-| `poc-agents` | With nodes selected, Summarize in the bar over the canvas, the node's menu or the command palette writes a linked note. The card lists agents. |
+| `poc-agents` | Summarize in the bar, a node's header, its menu or the palette writes a linked note, with a spinner on the nodes meanwhile. The card lists agents. |
 | `poc-frame` | Shows an opaque origin, refused storage and refused fetch, and still gets an answer from its server. |
 | `poc-themes` | Paper is tokens alone. Midnight adds an image and outlines through `data-surface`. Your accent stays on top. |
 | `poc-broken` | Each panel fails inside its own rectangle. A throwing command leaves the app alone. Three calls to the dead server turn it to crashed in Settings. |

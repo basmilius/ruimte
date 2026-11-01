@@ -38,16 +38,36 @@ export function defineCanvasOverlay(overlay: { id: string; component: LazyCompon
 export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;
 export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] }): void;
 
-export interface Action<Target> {
-    id: string;
-    title: string;
-    icon?: string;
-    when?: (target: Target) => boolean;
-    run: (target: Target) => void | Promise<void>;
+/** A place an action or menu shows. Yours to choose, and an action in a menu needs none of its own. */
+export type ActionPlace = 'selectionBar' | 'nodeHeader' | 'nodeMenu';
+
+export interface ActionTarget {
+    /** In a bar or a command the selection, in a header that node, in a node's menu the selection if the node is in it. */
+    nodes: { id: string; kind: string }[];
 }
 
-export function defineCanvasAction(action: Action<{ selection: NodeRef[] }>): void;
-export function defineNodeMenuItem(action: Action<{ node: NodeRef }>): void;
+/**
+ * While `run` is pending its nodes show a spinner and its button is disabled, and a throw is shown to the person.
+ * Without `show` it is only in the command palette.
+ */
+export function defineAction(action: {
+    id: string;
+    title: string;
+    /** A Lucide icon. */
+    icon?: string;
+    show?: (ActionPlace | 'commands')[];
+    when?: (target: ActionTarget) => boolean;
+    run: (target: ActionTarget) => void | Promise<void>;
+}): void;
+
+/** A menu of your own: a submenu in a node's menu, a dropdown in a bar or header. `items` are ids of actions. */
+export function defineMenu(menu: { id: string; title: string; icon?: string; show: ActionPlace[]; items: string[] }): void;
+
+/** Your own UI in a node's header, beside its buttons. Keep it small. */
+export function defineNodeHeader(header: { id: string; when?: (node: { id: string; kind: string }) => boolean; component: LazyComponent<{ nodeId: string }> }): void;
+
+/** For drawing your own loading state of an action. */
+export function useActionRunning(actionId: string): boolean;
 
 /** Each method calls `server/` on the machine in front; `.use()` suspends until it answers. */
 export type ServerClient<Server> = {
@@ -72,6 +92,8 @@ export function useAgents(): { id: string; title: string; status: string | undef
 export function useUsageLimits(): { provider: string; plan: string | null; windows: { label: string; used: number; resetsAt: number | null }[] }[];
 
 export const host: {
+    /** Marks work that is no action as busy: a spinner on `nodes` until it is done. */
+    busy<Result>(work: { title: string; nodes?: NodeRef[] }, run: () => Result | Promise<Result>): Promise<Result>;
     notify(text: string, options?: { tone?: 'neutral' | 'error' }): void;
     confirm(options: { title: string; body: string }): Promise<boolean>;
     openUrl(url: string): void;

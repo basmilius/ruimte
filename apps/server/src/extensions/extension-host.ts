@@ -173,6 +173,20 @@ export class ExtensionHost {
         this.changed();
     }
 
+    /* What a client of an extension in development says. Nothing keeps it for one that is installed. */
+    async appendDevLog(id: string, text: string): Promise<void> {
+        const extension = await this.options.store.get(id);
+
+        if (extension?.devFolder === undefined) {
+            return;
+        }
+
+        const file = this.options.store.logFile(id);
+
+        await mkdir(dirname(file), { recursive: true });
+        await appendFile(file, `${text}\n`);
+    }
+
     stopAll(): void {
         for (const id of [...this.running.keys()]) {
             this.stop(id);

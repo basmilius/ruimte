@@ -1,10 +1,11 @@
 import {
-    defineCanvasAction,
+    defineAction,
     defineCanvasOverlay,
     defineCommand,
     defineExtensionSettings,
     defineNode,
-    defineNodeMenuItem,
+    defineMenu,
+    defineNodeHeader,
     definePanel,
     defineSidebarCard,
     defineView,
@@ -39,10 +40,22 @@ defineCommand({
     title: 'POC: ask to confirm',
     run: async () => host.notify((await host.confirm({ title: 'POC', body: 'Say yes or no' })) ? 'Yes' : 'No')
 });
-defineCanvasAction({
+defineAction({
     id: 'count',
-    title: 'POC: count the selection',
-    when: ({ selection }) => selection.length > 0,
-    run: ({ selection }) => host.notify(`${selection.length} selected`)
+    title: 'Count',
+    icon: 'hash',
+    show: ['selectionBar', 'commands'],
+    when: ({ nodes }) => nodes.length > 0,
+    run: ({ nodes }) => host.notify(`${nodes.length} selected`)
 });
-defineNodeMenuItem({ id: 'id', title: 'POC: show the id', run: ({ node }) => host.notify(node.id) });
+defineAction({ id: 'show-id', title: 'Show the id', run: ({ nodes }) => host.notify(nodes.map((node) => node.id).join(', ')) });
+defineAction({
+    id: 'wait',
+    title: 'Wait three seconds',
+    icon: 'hourglass',
+    show: ['nodeHeader'],
+    run: () => new Promise((done) => setTimeout(done, 3000))
+});
+defineMenu({ id: 'menu', title: 'POC surfaces', icon: 'flask-conical', show: ['nodeMenu'], items: ['count', 'show-id', 'wait'] });
+defineNodeHeader({ id: 'kind', when: ({ kind }) => kind === 'note', component: () => import('./HeaderTag') });
+console.info('poc-surfaces loaded');

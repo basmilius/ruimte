@@ -74,7 +74,7 @@ export async function syncExtensions(): Promise<void> {
             continue;
         }
 
-        registerExtension({ manifest: entry.manifest, base: entry.base, iconUrl: extensionIconUrl(entry), disposers: [], settings: null });
+        registerExtension({ manifest: entry.manifest, base: entry.base, iconUrl: extensionIconUrl(entry), dev: entry.dev, disposers: [], settings: null });
         loaded.set(entry.manifest.id, entry.base);
 
         try {
@@ -84,6 +84,12 @@ export async function syncExtensions(): Promise<void> {
             forgetExtension(entry.manifest.id);
             loaded.delete(entry.manifest.id);
             failed(entry.manifest.id, e);
+
+            if (entry.dev) {
+                const { sendDevLog } = await import('@/extensions/dev-log');
+
+                sendDevLog(entry.manifest.id, 'error', [e]);
+            }
         }
     }
 }

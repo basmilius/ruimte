@@ -7,6 +7,7 @@ import * as prompts from '@clack/prompts';
 import { Command } from 'commander';
 import { bunRuntime } from '../language/runtime.ts';
 import { BUILD_FOLDER, buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
+import { logTail } from '../extensions/log-tail.ts';
 import { scaffoldFiles, type ScaffoldAnswers } from '../extensions/scaffold.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/test-runtime.ts' with { type: 'text' };
@@ -14,6 +15,7 @@ import { commandIo, homeSecret, startFirst, type LocalDaemonOptions } from './lo
 
 const STORE_REPOSITORY = 'ruimte-app/extensions';
 const WATCH_DEBOUNCE_MS = 150;
+const LOG_POLL_MS = 250;
 
 async function askDaemon(options: LocalDaemonOptions, path: string, body: object): Promise<Record<string, unknown>> {
     const { fetcher } = commandIo(options);
@@ -169,6 +171,10 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
             .catch(() => undefined)
             .finally(() => process.exit(0));
     });
+    // What `server/` wrote and what the client said, together.
+    const readLog = logTail(join(options.home, 'extensions', manifest.id, 'server.log'));
+
+    setInterval(() => process.stdout.write(readLog()), LOG_POLL_MS);
     console.log('Watching for changes. Ctrl-C takes it out of Ruimte again.');
     await new Promise(() => undefined);
 }

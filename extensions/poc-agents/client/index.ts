@@ -1,12 +1,13 @@
-import { agents, canvas, context, defineCanvasAction, defineSidebarCard, host } from '@ruimte/extension/client';
+import { agents, canvas, context, defineAction, defineSidebarCard, host } from '@ruimte/extension/client';
 
 defineSidebarCard({ id: 'agents', title: 'POC agents', component: () => import('./AgentsCard') });
-defineCanvasAction({
+defineAction({
     id: 'summarize',
     title: 'Summarize',
     icon: 'sparkles',
-    when: ({ selection }) => selection.length > 0,
-    run: async ({ selection }) => {
+    show: ['selectionBar', 'nodeHeader', 'nodeMenu', 'commands'],
+    when: ({ nodes }) => nodes.length > 0,
+    run: async ({ nodes: selection }) => {
         const sources = await context.read({ nodes: selection });
         const { text } = await agents.run({
             prompt: 'Summarize what follows in three lines.',
