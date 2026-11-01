@@ -49,6 +49,7 @@ const client: Record<string, unknown> = {
     useSelection: () => [],
     useCanvasNodes: () => [],
     useAgents: () => [],
+    useUsageLimits: () => [],
     host: { notify: () => undefined, confirm: async () => true, openUrl: () => undefined },
     context: { read: async () => [] },
     agents: { run: async () => ({ text: '' }) },

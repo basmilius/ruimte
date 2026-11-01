@@ -65,6 +65,9 @@ export function useCanvasNodes(): { id: string; kind: string; title: string; x: 
 /** Needs the permission `agents.status`. */
 export function useAgents(): { id: string; title: string; status: string | undefined; needsYou: boolean }[];
 
+/** Needs the permission `usage.read`. `used` runs from 0 to 1. */
+export function useUsageLimits(): { provider: string; plan: string | null; windows: { label: string; used: number; resetsAt: number | null }[] }[];
+
 export const host: {
     notify(text: string, options?: { tone?: 'neutral' | 'error' }): void;
     confirm(options: { title: string; body: string }): Promise<boolean>;

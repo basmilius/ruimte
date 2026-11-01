@@ -256,6 +256,17 @@
         "wrangler": "^4.156.0",
       },
     },
+    "extensions/limits": {
+      "name": "@ruimte/extension-limits",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@types/react": "^19.3.0",
+      },
+    },
     "extensions/pets": {
       "name": "@ruimte/extension-pets",
       "version": "0.0.0",
@@ -1125,6 +1136,8 @@
     "@ruimte/desktop-bridge": ["@ruimte/desktop-bridge@workspace:packages/desktop-bridge"],
 
     "@ruimte/extension": ["@ruimte/extension@workspace:packages/extension"],
+
+    "@ruimte/extension-limits": ["@ruimte/extension-limits@workspace:extensions/limits"],
 
     "@ruimte/extension-pets": ["@ruimte/extension-pets@workspace:extensions/pets"],
 

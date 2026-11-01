@@ -1,0 +1,11 @@
+{
+    "id": "ruimte.limits",
+    "name": "Limits",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Shows how much of your plan windows you have used, in the sidebar.",
+    "permissions": {
+        "usage.read": "Reads how much of each plan window you have used"
+    }
+}
