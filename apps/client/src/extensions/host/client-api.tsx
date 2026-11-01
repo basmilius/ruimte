@@ -11,7 +11,7 @@ import { useTheme as useUiTheme } from '@/state/theme';
 import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
-import type { AgentKind, ExtensionManifest, NodeAccent, RequestMap } from '@ruimte/contracts';
+import type { ExtensionManifest, NodeAccent, RequestMap } from '@ruimte/contracts';
 import { revealNode } from '@/project/views';
 import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
@@ -953,26 +953,24 @@ export function clientApiFor(extension: LoadedExtension) {
                     stop();
                 }
             },
-            // A chat a person can see, follow and stop, as if they had opened it themselves.
-            async start(options: { prompt?: string; provider?: AgentKind; title?: string; near?: { id: string }[] }) {
+            // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
+            async start(options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) {
                 requiresPermission(extension, 'agents.start');
 
-                const store = focusedCanvas().getState();
-                const chatId = store.addNode('chat', besideNode(options.near?.[0]?.id), {
+                const { views, activeViewId } = useDocument.getState();
+                const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
+                const beside = options.near?.[0]?.id;
+                const { nodeId } = await activeTransport.request('extension.agentStart', {
+                    id,
+                    projectId: useProject.getState().current?.projectId ?? '',
+                    ...(onCanvas && activeViewId !== null ? { viewId: activeViewId } : {}),
+                    ...(onCanvas && beside !== undefined ? { beside } : {}),
                     ...(options.provider === undefined ? {} : { provider: options.provider }),
-                    ...(options.title === undefined ? {} : { title: options.title })
+                    ...(options.title === undefined ? {} : { title: options.title }),
+                    ...(options.prompt === undefined ? {} : { prompt: options.prompt })
                 });
 
-                if (chatId === null) {
-                    throw new Error('No canvas to start a chat on');
-                }
-
-                if (options.prompt !== undefined) {
-                    await activeTransport.request('chat.create', { chatId, ...(options.provider === undefined ? {} : { provider: options.provider }) });
-                    await activeTransport.request('chat.send', { chatId, text: options.prompt });
-                }
-
-                return { id: chatId };
+                return { id: nodeId };
             }
         },
         canvas: {

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { host, useServer, useServerEvent } from '@ruimte/extension/client';
+import { host, useProject, useServer, useServerEvent } from '@ruimte/extension/client';
 import type { PocServer } from '../server/index';
 
 export default function ServerPanel() {
     const server = useServer<PocServer>();
+    const project = useProject();
     const answer = server.ping.use();
     const [heard, setHeard] = useState<unknown>(null);
 
@@ -31,6 +32,9 @@ export default function ServerPanel() {
             </button>
             <button type="button" onClick={report(() => server.eventsSeen())}>
                 Machine events seen
+            </button>
+            <button type="button" onClick={report(() => server.startChat(project.id))}>
+                Start a chat from server/
             </button>
             <button type="button" onClick={report(() => server.fail())}>
                 Throw

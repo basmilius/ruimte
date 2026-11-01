@@ -103,7 +103,7 @@ const server: Record<string, unknown> = {
     defineNodeContext: () => undefined,
     schedule: () => undefined,
     defineAgentTool: () => undefined,
-    agents: { run: async () => ({ text: '' }) },
+    agents: { run: async () => ({ text: '' }), start: async () => ({ nodeId: 'chat' }) },
     chats: { list: async () => [], send: async () => undefined },
     machine: { platform: 'test', dataFolder: '' },
     storage: { get: async () => undefined, set: async () => undefined, delete: async () => undefined },

@@ -113,6 +113,8 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
         return {};
     });
 
+    dispatcher.register('extension.agentStart', async ({ id, ...start }) => host.startAgent(id, start));
+
     dispatcher.register('extension.agentStop', async (payload) => {
         streams.get(payload.runId)?.kill();
 

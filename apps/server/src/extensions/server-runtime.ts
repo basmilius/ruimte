@@ -89,7 +89,9 @@ function everyMs(every: string): number {
 const server = {
     machine: { platform: process.platform, dataFolder },
     agents: {
-        run: (options: { prompt: string; context?: string[]; provider?: string }) => ask('agents.run', [options])
+        run: (options: { prompt: string; context?: string[]; provider?: string }) => ask('agents.run', [options]),
+        start: (options: { projectId: string; prompt?: string; provider?: string; title?: string; viewId?: string; beside?: string }) =>
+            ask('agents.start', [options])
     },
     chats: {
         send: (chatId: string, text: string) => ask('chats.send', [chatId, text]),

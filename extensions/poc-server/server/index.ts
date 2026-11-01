@@ -53,6 +53,9 @@ const api = defineServer({
     async ask(prompt: string) {
         return agents.run({ prompt });
     },
+    async startChat(projectId: string) {
+        return agents.start({ projectId, title: 'From poc-server', prompt: 'Say hello from poc-server.' });
+    },
     async chatCount() {
         return (await chats.list()).length;
     },

@@ -23,7 +23,9 @@ import { repairChatMoves } from './wiring/chat-move.ts';
 import { ExtensionHost } from './extensions/extension-host.ts';
 import { ExtensionStore } from './extensions/store.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
-import type { ExtensionAsks } from './extensions/extension-host.ts';
+import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
+import { voiceActionCall } from './actions/context.ts';
+import { serverActions } from './actions/server-actions.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
 import { createComputer, wireDevices } from './wiring/devices.ts';
@@ -65,7 +67,12 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     };
     const { home } = config;
     let extensionAsks: ExtensionAsks = {};
-    const extensions = new ExtensionHost({ store: new ExtensionStore(home), asks: () => extensionAsks });
+    let startExtensionChat: NonNullable<ExtensionHostOptions['startChat']> = () => Promise.reject(new Error('The machine is still starting'));
+    const extensions = new ExtensionHost({
+        store: new ExtensionStore(home),
+        asks: () => extensionAsks,
+        startChat: (id, start) => startExtensionChat(id, start)
+    });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
     const codexProbe = probeCodexNoDaemon();
@@ -224,6 +231,47 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
 
         return Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text ?? '').join('\n') : typeof parts === 'string' ? parts : null;
     });
+    // As Voice starts one: under the person's own CLI, an AI Chat and no wider than supervised, and with no canvas a view of its own.
+    startExtensionChat = async (id, { projectId, viewId, beside, provider, title, prompt }) => {
+        const folder = projects.store.index.folderOf(projectId);
+
+        if (folder === null) {
+            throw new Error(`No project ${projectId} on this machine`);
+        }
+
+        const kind = provider ?? (await canvasHost.starts.installedAgents())[0];
+
+        if (kind === undefined) {
+            throw new Error('No agent is set up on this machine');
+        }
+
+        const result = await serverActions.execute(
+            'agent.start',
+            {
+                provider: kind,
+                ...(prompt === undefined ? {} : { prompt }),
+                ...(title === undefined ? {} : { title }),
+                ...(viewId === undefined ? {} : { viewId }),
+                ...(beside === undefined ? {} : { beside })
+            },
+            voiceActionCall(
+                canvasHost,
+                { projectId, folder, canvasId: viewId ?? null },
+                {
+                    sessionId: `extension-${id}`,
+                    owner: { clientId: 'extension', sceneId: id },
+                    projectId,
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                }
+            )
+        );
+
+        if (result.status !== 'completed') {
+            throw new Error(result.status === 'failed' ? result.error.message : 'Starting this chat needs a confirmation');
+        }
+
+        return { nodeId: (result.output as { nodeId: string }).nodeId };
+    };
     extensionAsks = {
         'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),
         'chats.send': (chatId: string, text: string) => chats.send(chatId, text),

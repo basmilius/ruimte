@@ -22,6 +22,8 @@ export function schedule(task: { id: string; every: string; run(): void | Promis
 export const agents: {
     /** Needs `agents.run`. */
     run(options: { prompt: string; context?: string[]; provider?: string }): Promise<{ text: string }>;
+    /** Needs `agents.start`. A chat a person sees, supervised at most: on the canvas of `viewId`, or a view of its own in the sidebar without one. */
+    start(options: { projectId: string; prompt?: string; provider?: string; title?: string; viewId?: string; beside?: string }): Promise<{ nodeId: string }>;
 };
 
 export const chats: {

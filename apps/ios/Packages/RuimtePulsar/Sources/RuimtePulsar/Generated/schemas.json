@@ -7268,6 +7268,54 @@
     "type": "object",
     "properties": {}
   },
+  "request.extension.agentStart.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "beside": {
+        "type": "string",
+        "minLength": 1
+      },
+      "provider": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "prompt": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "projectId"
+    ]
+  },
+  "request.extension.agentStart.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodeId"
+    ]
+  },
   "request.extension.agentStop.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

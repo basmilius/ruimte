@@ -121,6 +121,18 @@ export const ExtensionAgentStreamPayloadSchema = z.object({
 export const ExtensionAgentStopPayloadSchema = z.object({ runId: z.string().min(1).max(64) });
 export const ExtensionAgentChunkEventSchema = z.object({ runId: z.string(), text: z.string() });
 
+/* A chat a person sees: on the canvas it names, or a view of its own in the sidebar without one. */
+export const ExtensionAgentStartPayloadSchema = z.object({
+    id: ExtensionIdSchema,
+    projectId: z.string().min(1),
+    viewId: z.string().min(1).optional(),
+    beside: z.string().min(1).optional(),
+    provider: z.string().optional(),
+    title: z.string().max(200).optional(),
+    prompt: z.string().optional()
+});
+export const ExtensionAgentStartResultSchema = z.object({ nodeId: z.string() });
+
 /* One read-only statement, as an agent may run it. */
 export const ExtensionDatabaseQueryPayloadSchema = z.object({ projectId: z.string().min(1), connection: z.string().min(1), sql: z.string().min(1) });
 export const ExtensionDatabaseQueryResultSchema = z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), hasMore: z.boolean() });
@@ -167,6 +179,7 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.storageGet': { payload: ExtensionStorageGetPayloadSchema, result: ExtensionStorageGetResultSchema },
     'extension.storageSet': { payload: ExtensionStorageSetPayloadSchema, result: EmptySchema },
     'extension.agentStream': { payload: ExtensionAgentStreamPayloadSchema, result: EmptySchema },
+    'extension.agentStart': { payload: ExtensionAgentStartPayloadSchema, result: ExtensionAgentStartResultSchema },
     'extension.agentStop': { payload: ExtensionAgentStopPayloadSchema, result: EmptySchema },
     'extension.databaseQuery': { payload: ExtensionDatabaseQueryPayloadSchema, result: ExtensionDatabaseQueryResultSchema },
     'extension.log': { payload: ExtensionLogPayloadSchema, result: EmptySchema },

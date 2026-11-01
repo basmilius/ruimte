@@ -294,7 +294,7 @@ export const agents: {
     run(options: { prompt: string; context?: string[]; provider?: string }): Promise<{ text: string }>;
     /** Needs `agents.run`. The same, in pieces as the CLI writes them. */
     stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncIterable<{ text: string }>;
-    /** Needs `agents.start`. A chat a person sees on the canvas, follows and can stop. */
+    /** Needs `agents.start`. A chat a person sees and can stop, supervised at most: on the canvas in front, or a view of its own in the sidebar with none there. */
     start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Promise<NodeRef>;
 };
 

@@ -9,6 +9,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `extensionStorageGet` = "extension.storageGet"
     case `extensionStorageSet` = "extension.storageSet"
     case `extensionAgentStream` = "extension.agentStream"
+    case `extensionAgentStart` = "extension.agentStart"
     case `extensionAgentStop` = "extension.agentStop"
     case `extensionDatabaseQuery` = "extension.databaseQuery"
     case `extensionLog` = "extension.log"

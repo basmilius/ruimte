@@ -101,6 +101,7 @@
     "extension.storageGet",
     "extension.storageSet",
     "extension.agentStream",
+    "extension.agentStart",
     "extension.agentStop",
     "extension.databaseQuery",
     "extension.log",

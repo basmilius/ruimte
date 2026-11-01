@@ -122,6 +122,26 @@ describe('the proof-of-concept extensions', () => {
         expect(host.agentTools()).toEqual([]);
     });
 
+    test('poc-server starts a chat through the machine, and one without the permission is refused', async () => {
+        const started: unknown[] = [];
+        const home = join(root, 'starts');
+        const host = new ExtensionHost({
+            store: new ExtensionStore(home),
+            startChat: async (id, start) => {
+                started.push({ id, ...start });
+
+                return { nodeId: 'chat-1' };
+            }
+        });
+
+        hosts.push(host);
+        await host.install(await packOf('server'));
+
+        expect(await host.call('poc.server', 'startChat', ['project-1'])).toEqual({ nodeId: 'chat-1' });
+        expect(started[0]).toMatchObject({ id: 'poc.server', projectId: 'project-1' });
+        await expect(host.startAgent('poc.none', { projectId: 'project-1' })).rejects.toThrow('agents.start');
+    });
+
     test('poc-broken fails at load, and stays off after three tries', async () => {
         const { host } = hostIn('broken');
 

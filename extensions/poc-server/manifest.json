@@ -11,6 +11,7 @@
         "agents.run": "Asks one of your agents when you press the button",
         "chats.read": "Counts your chats",
         "chats.send": "Pokes a chat when you ask",
-        "agents.tools": "Offers your agents a tool that answers a fact"
+        "agents.tools": "Offers your agents a tool that answers a fact",
+        "agents.start": "Starts a chat when you press the button"
     }
 }

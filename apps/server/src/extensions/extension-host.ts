@@ -40,9 +40,19 @@ export type ExtensionAsks = Readonly<Record<string, (...args: never[]) => Promis
 const MAX_SENDS_PER_HOUR = 20;
 const HOUR_MS = 3_600_000;
 
+export interface ExtensionChatStart {
+    projectId: string;
+    viewId?: string | undefined;
+    beside?: string | undefined;
+    provider?: string | undefined;
+    title?: string | undefined;
+    prompt?: string | undefined;
+}
+
 export interface ExtensionHostOptions {
     store: ExtensionStore;
     asks?: () => ExtensionAsks;
+    startChat?: (extensionId: string, start: ExtensionChatStart) => Promise<{ nodeId: string }>;
     now?: () => number;
     spawnProcess?: typeof spawn;
 }
@@ -425,7 +435,26 @@ export class ExtensionHost {
         }
     }
 
+    /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */
+    async startAgent(id: string, start: ExtensionChatStart): Promise<{ nodeId: string }> {
+        const extension = await this.options.store.get(id);
+
+        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, 'agents.start')) {
+            throw new Error(`${id} did not ask for the permission agents.start in its manifest`);
+        }
+
+        if (this.options.startChat === undefined) {
+            throw new Error('This machine does not start chats for an extension');
+        }
+
+        return this.options.startChat(id, start);
+    }
+
     private async answerAsk(id: string, method: string, args: unknown[]): Promise<unknown> {
+        if (method === 'agents.start') {
+            return this.startAgent(id, args[0] as ExtensionChatStart);
+        }
+
         const extension = await this.options.store.get(id);
         const permission = method === 'chats.list' ? 'chats.read' : method;
 
