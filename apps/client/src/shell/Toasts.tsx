@@ -27,5 +27,6 @@ function footerOf(toast: Toast) {
  * say about a view is not here but in the banner over the views, where a person looks for a decision.
  */
 export function Toasts() {
-    return <ToastStack store={toastStore} footer={footerOf} />;
+    // The stack sits outside the workspace, so it steps left of the rail (48 pixels) by looking for it.
+    return <ToastStack store={toastStore} footer={footerOf} className="[body:has(.ade-workspace[data-rail])_&]:right-16" />;
 }
