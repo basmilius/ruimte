@@ -285,6 +285,7 @@ export function clientApiFor(extension: LoadedExtension) {
                 toolbar: true,
                 group: 'extensions',
                 label: () => (badge === null ? title : `${title} (${badge})`),
+                badge: () => badge,
                 component: function ExtensionPanel() {
                     const params = usePanelParams((state) => state.params[kind]) as Params | undefined;
 

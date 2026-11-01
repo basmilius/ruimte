@@ -69,7 +69,14 @@ defineMenu({
     title: 'POC surfaces',
     icon: 'flask-conical',
     slots: { nodeMenu: true, canvasMenu: true },
-    items: () => [count, showId, 'separator', wait, { title: 'A plain item', run: () => host.notify('Plain') }, { title: 'A submenu', items: [wait] }]
+    items: (context) => [
+        count,
+        ...('node' in context ? [showId] : []),
+        'separator',
+        wait,
+        { title: 'A plain item', run: () => host.notify('Plain') },
+        { title: 'A submenu', items: [wait] }
+    ]
 });
 
 const OTHER_SLOTS = [

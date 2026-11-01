@@ -40,6 +40,7 @@ export function PanelControls() {
                     {index > 0 && <WorkspaceRailSeparator />}
                     {group.entries.map((entry) => {
                         const dirty = entry.kind === 'git' && changes > 0;
+                        const badge = 'badge' in entry ? (entry.badge?.() ?? null) : null;
 
                         return (
                             <IconButton
@@ -48,10 +49,18 @@ export function PanelControls() {
                                 label={dirty ? t('panel.gitChanges', { count: changes }) : 'label' in entry ? entry.label() : t(`panel.names.${entry.kind}`)}
                                 tooltipSide="left"
                                 active={panel.open && panel.kind === entry.kind}
-                                className={dirty ? 'relative' : undefined}
+                                className={dirty || badge !== null ? 'relative' : undefined}
                                 onClick={() => useUi.getState().togglePanel(entry.kind)}
                             >
                                 {/* Gray as the unsaved dot is: it says there is something to commit, not that something is wrong. */}
+                                {badge !== null && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-xs text-accent-text"
+                                    >
+                                        {badge}
+                                    </span>
+                                )}
                                 {dirty && (
                                     <span aria-hidden="true" className="pointer-events-none absolute top-1 right-1 size-1.5 rounded-full bg-text-faint" />
                                 )}

@@ -12,6 +12,7 @@ export interface PanelContribution {
     toolbar: boolean;
     group: PanelGroup;
     label: () => string;
+    badge?: () => string | null;
     component: ComponentType;
 }
 

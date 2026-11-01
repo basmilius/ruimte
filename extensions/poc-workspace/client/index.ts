@@ -16,11 +16,11 @@ import {
 
 const panel = definePanel<{ from: string }>({ id: 'workspace', title: 'POC workspace', icon: 'layers', component: () => import('./WorkspacePanel') });
 
-const picker = defineOverlay<{ title: string }, string>({ id: 'picker', title: 'POC overlay', size: 'sm', component: () => import('./PickerOverlay') });
+const picker = defineOverlay<{ question: string }, string>({ id: 'picker', title: 'POC overlay', size: 'sm', component: () => import('./PickerOverlay') });
 const fromOverlay = defineAction({
     id: 'overlay',
     title: 'Open an overlay',
-    run: async () => host.notify((await picker.open({ title: 'Which one?' })) ?? 'Dismissed')
+    run: async () => host.notify((await picker.open({ question: 'Which one?' })) ?? 'Dismissed')
 });
 
 defineNode({ id: 'stamp', title: 'POC stamp', icon: 'stamp', initialData: { at: '' }, component: () => import('./StampNode') });
@@ -78,7 +78,8 @@ defineMenu({
     title: 'POC workspace',
     icon: 'layers',
     slots: { canvasMenu: true, nodeMenu: true },
-    items: [openPanel, badge, fromOverlay, 'separator', stamp, note, log, newView, pick, rename]
+    // Only with a node under the menu: an item for one would fail on the empty canvas.
+    items: (context) => [openPanel, badge, fromOverlay, 'separator', stamp, note, log, newView, pick, ...('node' in context ? [rename] : [])]
 });
 
 defineAction({

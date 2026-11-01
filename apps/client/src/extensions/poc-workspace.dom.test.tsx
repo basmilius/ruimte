@@ -41,6 +41,7 @@ describe('poc-workspace', () => {
         await runAction(action('badge'), baseContext(), 'test');
 
         expect(entry()?.label()).toBe('POC workspace (3)');
+        expect(entry()?.badge?.()).toBe('3');
 
         await runAction(action('open-panel'), baseContext(), 'commandPalette');
         mounted = mount();
@@ -68,6 +69,10 @@ describe('poc-workspace', () => {
         const pending = runAction(action('overlay'), baseContext(), 'test');
 
         await until(() => document.body.textContent?.includes('Which one?') ?? false);
+
+        // In Ruimte's own format, around what the extension draws.
+        expect(document.querySelector('[role="dialog"] header')?.textContent).toContain('POC overlay');
+
         await clickOn([...document.querySelectorAll('button')].find((button) => button.textContent === 'The second') ?? null);
         await pending;
 

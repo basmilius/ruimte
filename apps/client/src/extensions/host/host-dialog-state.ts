@@ -42,12 +42,18 @@ export interface OpenOverlay {
     size: 'sm' | undefined;
     component: ComponentType<{ params: unknown; close: (result?: unknown) => void }>;
     params: unknown;
+    // Still drawn while its closing animation plays, so a close is not the moment it leaves.
+    closing: boolean;
     close(result?: unknown): void;
 }
 
 export const useOverlays = create<{ open: readonly OpenOverlay[] }>(() => ({ open: [] }));
 
 let nextOverlay = 1;
+
+export function removeOverlay(key: number): void {
+    useOverlays.setState(({ open }) => ({ open: open.filter((each) => each.key !== key) }));
+}
 
 /* Answers what the overlay closed with, or null when a person dismissed it. Several may stand on each other. */
 export function openOverlay(overlay: Pick<OpenOverlay, 'title' | 'size' | 'component' | 'params'>): {
@@ -61,12 +67,12 @@ export function openOverlay(overlay: Pick<OpenOverlay, 'title' | 'size' | 'compo
     let close = (_result?: unknown): void => undefined;
     const result = new Promise<unknown>((resolve) => {
         close = (value) => {
-            useOverlays.setState(({ open }) => ({ open: open.filter((each) => each.key !== key) }));
+            useOverlays.setState(({ open }) => ({ open: open.map((each) => (each.key === key ? { ...each, closing: true } : each)) }));
             resolve(value ?? null);
         };
     });
 
-    useOverlays.setState(({ open }) => ({ open: [...open, { ...overlay, key, close }] }));
+    useOverlays.setState(({ open }) => ({ open: [...open, { ...overlay, key, closing: false, close }] }));
 
     return { result, close };
 }

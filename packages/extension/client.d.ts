@@ -42,7 +42,7 @@ export function defineCanvasOverlay(overlay: { id: string; component: LazyCompon
 export function defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo & { text: string | null } }> }): void;
 /** Draws a fenced block of this language in a chat and in markdown, on this client. Elsewhere it stays code. */
 export function defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }): void;
-/** Your own UI over the app. `open` answers what `close` was given, or null when a person dismissed it. */
+/** Your own UI over the app: Ruimte draws the header with `title` and a close button, and animates it; you draw the body. `open` answers what `close` was given, or null when a person dismissed it. */
 export function defineOverlay<Params = void, Result = void>(overlay: {
     id: string;
     title: string;
@@ -145,7 +145,7 @@ export function defineAction<Context = {}>(action: {
 export type MenuItem = ActionHandle | 'separator' | { title: string; run(): void; checked?: boolean } | { title: string; items: MenuItem[] };
 
 /** A menu of your own: a submenu in a menu, a dropdown in a bar. */
-export function defineMenu(menu: { id: string; title: string; icon?: string; slots: Partial<Slots>; items: MenuItem[] | ((context: BaseContext) => MenuItem[]) }): void;
+export function defineMenu<Place extends SlotName>(menu: { id: string; title: string; icon?: string; slots: Slots<Place>; items: MenuItem[] | ((context: ContextOf<Place>) => MenuItem[]) }): void;
 
 /** Your own React in a slot. */
 export function defineWidget<Place extends SlotName>(widget: { id: string; slots: Slots<Place>; component: LazyComponent<{ context: ContextOf<Place> }> }): void;
