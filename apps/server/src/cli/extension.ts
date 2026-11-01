@@ -8,6 +8,7 @@ import { Command } from 'commander';
 import { bunRuntime } from '../language/runtime.ts';
 import { BUILD_FOLDER, buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
 import { logTail } from '../extensions/log-tail.ts';
+import { sourceSignature } from '../extensions/source-signature.ts';
 import { scaffoldFiles, type ScaffoldAnswers } from '../extensions/scaffold.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/test-runtime.ts' with { type: 'text' };
@@ -154,6 +155,8 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
         }
     };
 
+    let built = sourceSignature(folder);
+
     await rebuild();
     watch(folder, { recursive: true }, (_event, name) => {
         if (name === null || name.startsWith(BUILD_FOLDER) || name.startsWith('node_modules') || name.startsWith('.git')) {
@@ -164,7 +167,14 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
             clearTimeout(timer);
         }
 
-        timer = setTimeout(() => void rebuild(), WATCH_DEBOUNCE_MS);
+        timer = setTimeout(() => {
+            const now = sourceSignature(folder);
+
+            if (now !== built) {
+                built = now;
+                void rebuild();
+            }
+        }, WATCH_DEBOUNCE_MS);
     });
     process.on('SIGINT', () => {
         void askDaemon(options, '/extensions/unlink', { id: manifest.id })
