@@ -37,6 +37,11 @@ describe('the language servers of a person', () => {
         expect(servers.ownedBy('poc.machine')).toEqual([first.id]);
         expect(servers.list().every((server) => server.held === true)).toBe(true);
 
+        const reloaded = store();
+        await reloaded.load();
+
+        expect(reloaded.list().map((server) => server.held)).toEqual([true, true]);
+
         await servers.save({ ...zig, id: first.id });
 
         expect(servers.ownedBy('poc.machine')).toEqual([]);
