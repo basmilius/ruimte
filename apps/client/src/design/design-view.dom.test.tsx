@@ -3,6 +3,7 @@ import { act } from 'react';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
 import { useDesignChat } from '@/design/design-chat';
 import { DESIGN_METHODS } from '@/design/design-protocol';
+import { useDocument } from '@/state/document';
 import { chatInfoOf } from '../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -93,6 +94,24 @@ describe('a design view', () => {
         await say(DESIGN_METHODS.ready, { canvas: true, tweaks: null });
 
         expect(posted.find((message) => message.method === DESIGN_METHODS.camera)?.params).toEqual(camera);
+    });
+
+    test('a press in the page focuses its cell and leaves the keyboard in the page', async () => {
+        await until(() => shownPage() !== null);
+
+        const frame = { postMessage: () => undefined };
+        const stand = document.createElement('iframe');
+
+        Object.defineProperty(stand, 'contentWindow', { value: frame });
+        mounted.host.querySelector('button[aria-label^="Page: "]')?.parentElement?.nextElementSibling?.prepend(stand);
+        act(() => useDocument.getState().setBodyFocused(false));
+
+        await act(async () => {
+            window.dispatchEvent(new MessageEvent('message', { source: frame as never, data: { jsonrpc: '2.0', method: DESIGN_METHODS.press, params: {} } }));
+        });
+
+        expect(useDocument.getState().bodyFocused).toBe(true);
+        expect(document.activeElement).toBe(stand);
     });
 
     test('says why a page larger than a page may be does not show', async () => {

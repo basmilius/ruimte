@@ -1,4 +1,5 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, FileCode2, MessageSquarePlus, MousePointer2, PenLine, Send, SquareMousePointer, SwatchBook, Trash2 } from 'lucide-react';
 import type { ChatAttachmentUpload, FsEntry } from '@ruimte/contracts';
@@ -27,6 +28,8 @@ import {
 import { runtimeAssets } from '@/design/design-inline';
 import { listDesignFolder, readDesignAsset, readDesignText, rewriteDesignFile } from '@/design/design-read';
 import { DesignPageFrame } from '@/design/DesignPageFrame';
+import { focusCellOfView } from '@/browser/guest-focus';
+import { CellViewContext } from '@/state/workspace-stores';
 import { useFolderWatch } from '@/state/fs-watch';
 import { useToasts } from '@/state/toasts';
 import { useEndpointId } from '@/state/keys';
@@ -89,6 +92,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const { t } = useTranslation('shell');
     const endpointId = useEndpointId();
     const transport = useTransport();
+    const cellView = useContext(CellViewContext);
     const [entries, setEntries] = useState<FsEntry[] | null>(null);
     const [listed, setListed] = useState(false);
     const shownPage = useDesignChat((state) => state.pages[designId] ?? null);
@@ -225,6 +229,14 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             case DESIGN_METHODS.camera:
                 useDesignChat.getState().keepCamera(designCameraKey(designId, active), message.params);
                 setZoom(message.params.zoom);
+                return;
+            case DESIGN_METHODS.press:
+                if (cellView !== null) {
+                    // The composer beside the page takes the keyboard as its cell gains the focus, and the press meant the page.
+                    flushSync(() => focusCellOfView(cellView));
+                    frameBox.current?.querySelector('iframe')?.focus();
+                }
+
                 return;
             case DESIGN_METHODS.pick:
                 setPicked(message.params.element);

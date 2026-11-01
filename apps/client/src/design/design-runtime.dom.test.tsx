@@ -2,6 +2,24 @@ import { expect, test } from 'bun:test';
 import { DESIGN_METHODS } from './design-protocol';
 import { DESIGN_RUNTIME } from './design-runtime';
 
+test('a press anywhere in a page tells the stage before the page can stop it', () => {
+    const posted: { method: string }[] = [];
+    const stand = { parent: { postMessage: (message: { method: string }) => posted.push(message) } };
+    const capturing: Record<string, () => void> = {};
+
+    new Function('window', 'addEventListener', DESIGN_RUNTIME)(stand, (type: string, listener: () => void, capture?: boolean) => {
+        if (capture === true) {
+            capturing[type] = listener;
+        }
+    });
+    document.head.innerHTML = '';
+    document.body.innerHTML = '';
+
+    capturing.pointerdown();
+
+    expect(posted.map((message) => message.method)).toContain(DESIGN_METHODS.press);
+});
+
 test('a canvas page opens at its top left at 100%, and tells the stage only that it is ready', () => {
     const posted: { method: string }[] = [];
     const stand = { parent: { postMessage: (message: { method: string }) => posted.push(message) } };

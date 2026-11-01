@@ -7,6 +7,8 @@ export const DESIGN_METHODS = {
     ready: 'ruimte/design/ready',
     // Both ways: where the camera of a canvas stands. The stage keeps it per page, so a write of the chat does not move it.
     camera: 'ruimte/design/camera',
+    // From the page: a person pressed in it, which never reaches the cell around the frame.
+    press: 'ruimte/design/press',
     // From the stage: a zoom a person asked for.
     zoom: 'ruimte/design/zoom',
     // From the stage: the tool a person holds.
@@ -82,6 +84,7 @@ const message = <Method extends string, Params extends z.ZodType>(method: Method
 const PageMessageSchema = z.discriminatedUnion('method', [
     message(DESIGN_METHODS.ready, z.object({ canvas: z.boolean(), tweaks: z.unknown() })),
     message(DESIGN_METHODS.camera, DesignCameraSchema),
+    message(DESIGN_METHODS.press, z.object({})),
     message(DESIGN_METHODS.pick, z.object({ tool: z.enum(['comment', 'edit']), element: DesignElementSchema })),
     message(DESIGN_METHODS.text, z.object({ element: DesignElementSchema, before: z.string().max(2000), after: z.string().max(2000) })),
     message(DESIGN_METHODS.located, z.object({ elements: z.array(DesignElementSchema).max(4) })),

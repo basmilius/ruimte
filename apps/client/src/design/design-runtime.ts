@@ -105,6 +105,8 @@ const RUNTIME = String.raw`(function () {
         place();
     }
 
+    addEventListener('pointerdown', function () { post(M.press, {}); }, true);
+
     // A link to an option flies to it on the canvas and scrolls to it on a page.
     addEventListener('click', function (event) {
         var link = event.target && event.target.closest && event.target.closest('a[href^="#"]');
