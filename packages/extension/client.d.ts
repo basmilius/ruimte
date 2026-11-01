@@ -36,6 +36,7 @@ export function defineNode<Data = unknown>(
         addFrom?: Partial<Slots>;
     } & Surface
 ): void;
+/** Over the whole canvas, under Ruimte's own controls such as the minimap in the bottom right. It lets clicks through; set `pointer-events: auto` on what takes them. */
 export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;
 /** Opens every file with these extensions in your component, with Ruimte's own view one click away. */
 export function defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo & { text: string | null } }> }): void;
