@@ -69,8 +69,8 @@ export const PAINT_COLUMNS = BUBBLE_BESIDE + BUBBLE_SIZE.columns;
 export const PAINT_ROWS = BUBBLE_ROWS + JUMP_ROWS + SPRITE_ROWS;
 
 /*
- * Every pose of a built-in figure repeats after this many frames (its steps are 2, 3, 4, 6 and 8 long,
- * a slow walk 16), so a frame and the one this far on look the same.
+ * Every pose of a built-in figure repeats after this many frames (its steps are 2, 3, 4, 6 and 8 long),
+ * so a frame and the one this far on look the same.
  */
 export const DRAWN_CYCLE = 48;
 

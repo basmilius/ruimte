@@ -697,11 +697,10 @@ function sketchPartsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
 
 type MotionKind = 'step' | 'hop' | 'waddle' | 'fly' | 'hover' | 'paddle' | 'ripple' | 'glide' | 'roll' | 'pot-hop' | 'scuttle';
 
-/* How a shape moves: its walk, where its eyes are to close or cross, how many ticks a walk cycle takes, and where its bow sits. */
+/* How a shape moves: its walk, where its eyes are to close or cross, and where its bow sits. */
 interface MotionRig {
     kind: MotionKind;
     eyes: [number, number][];
-    ticks: number;
     anchor: [number, number];
 }
 
@@ -709,7 +708,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
     rabbit: {
         kind: 'hop',
         eyes: [[18, 8]],
-        ticks: 8,
         anchor: [16, 5]
     },
     ufo: {
@@ -718,7 +716,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [11, 8],
             [15, 8]
         ],
-        ticks: 16,
         anchor: [12, 5]
     },
     visor: {
@@ -727,7 +724,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 8],
             [14, 8]
         ],
-        ticks: 8,
         anchor: [12, 4]
     },
     robot: {
@@ -736,7 +732,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 8],
             [14, 8]
         ],
-        ticks: 8,
         anchor: [12, 4]
     },
     nanobot: {
@@ -745,7 +740,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 8],
             [14, 8]
         ],
-        ticks: 8,
         anchor: [12, 4]
     },
     relay: {
@@ -754,13 +748,11 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 8],
             [14, 8]
         ],
-        ticks: 8,
         anchor: [12, 4]
     },
     cyclops: {
         kind: 'step',
         eyes: [[11, 8]],
-        ticks: 8,
         anchor: [13, 4]
     },
     seedbot: {
@@ -769,19 +761,16 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [8, 8],
             [13, 8]
         ],
-        ticks: 8,
         anchor: [10, 4]
     },
     bee: {
         kind: 'fly',
         eyes: [[17, 9]],
-        ticks: 8,
         anchor: [16, 7]
     },
     firefly: {
         kind: 'fly',
         eyes: [[17, 9]],
-        ticks: 16,
         anchor: [16, 7]
     },
     penguin: {
@@ -790,7 +779,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 7],
             [14, 7]
         ],
-        ticks: 16,
         anchor: [12, 4]
     },
     owl: {
@@ -799,7 +787,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 7],
             [13, 7]
         ],
-        ticks: 16,
         anchor: [12, 4]
     },
     hamster: {
@@ -808,97 +795,81 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 7],
             [14, 7]
         ],
-        ticks: 8,
         anchor: [12, 4]
     },
     astronaut: {
         kind: 'step',
         eyes: [],
-        ticks: 16,
         anchor: [12, 4]
     },
     cat: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 8,
         anchor: [16, 5]
     },
     fox: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 8,
         anchor: [16, 5]
     },
     raccoon: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 16,
         anchor: [16, 5]
     },
     redpanda: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 16,
         anchor: [16, 5]
     },
     dog: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 8,
         anchor: [16, 5]
     },
     deer: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 16,
         anchor: [16, 5]
     },
     llama: {
         kind: 'step',
         eyes: [[18, 4]],
-        ticks: 16,
         anchor: [16, 3]
     },
     beaver: {
         kind: 'step',
         eyes: [[17, 8]],
-        ticks: 16,
         anchor: [16, 5]
     },
     squirrel: {
         kind: 'hop',
         eyes: [[16, 7]],
-        ticks: 8,
         anchor: [15, 5]
     },
     hedgehog: {
         kind: 'step',
         eyes: [[17, 11]],
-        ticks: 16,
         anchor: [16, 9]
     },
     hummingbird: {
         kind: 'fly',
         eyes: [[16, 6]],
-        ticks: 8,
         anchor: [15, 5]
     },
     raven: {
         kind: 'hop',
         eyes: [[16, 6]],
-        ticks: 16,
         anchor: [15, 5]
     },
     parakeet: {
         kind: 'hop',
         eyes: [[16, 6]],
-        ticks: 8,
         anchor: [15, 5]
     },
     windbird: {
         kind: 'fly',
         eyes: [[16, 6]],
-        ticks: 16,
         anchor: [15, 5]
     },
     octopus: {
@@ -907,7 +878,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [10, 8],
             [15, 8]
         ],
-        ticks: 16,
         anchor: [12, 4]
     },
     axolotl: {
@@ -916,13 +886,11 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 8],
             [14, 8]
         ],
-        ticks: 16,
         anchor: [12, 6]
     },
     turtle: {
         kind: 'step',
         eyes: [[20, 11]],
-        ticks: 16,
         anchor: [18, 9]
     },
     ray: {
@@ -931,7 +899,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 9],
             [14, 9]
         ],
-        ticks: 16,
         anchor: [12, 7]
     },
     alien: {
@@ -940,7 +907,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [8, 3],
             [16, 3]
         ],
-        ticks: 16,
         anchor: [12, 6]
     },
     comet: {
@@ -949,13 +915,11 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [14, 11],
             [18, 11]
         ],
-        ticks: 16,
         anchor: [16, 8]
     },
     rover: {
         kind: 'roll',
         eyes: [],
-        ticks: 16,
         anchor: [14, 3]
     },
     snail: {
@@ -964,7 +928,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [16, 6],
             [20, 6]
         ],
-        ticks: 16,
         anchor: [9, 6]
     },
     crab: {
@@ -973,7 +936,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 7],
             [15, 7]
         ],
-        ticks: 8,
         anchor: [12, 10]
     },
     mushroom: {
@@ -982,7 +944,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [10, 12],
             [14, 12]
         ],
-        ticks: 16,
         anchor: [12, 3]
     },
     sprout: {
@@ -991,7 +952,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 13],
             [15, 13]
         ],
-        ticks: 16,
         anchor: [12, 6]
     },
     cactus: {
@@ -1000,7 +960,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 13],
             [15, 13]
         ],
-        ticks: 16,
         anchor: [12, 4]
     },
     sunflower: {
@@ -1009,7 +968,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [10, 4],
             [14, 4]
         ],
-        ticks: 16,
         anchor: [12, 2]
     },
     bat: {
@@ -1018,7 +976,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [11, 7],
             [14, 7]
         ],
-        ticks: 16,
         anchor: [12, 5]
     },
     moth: {
@@ -1027,13 +984,11 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [11, 7],
             [14, 7]
         ],
-        ticks: 16,
         anchor: [12, 5]
     },
     whale: {
         kind: 'paddle',
         eyes: [[18, 10]],
-        ticks: 16,
         anchor: [16, 7]
     },
     moonrabbit: {
@@ -1042,7 +997,6 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [9, 7],
             [14, 7]
         ],
-        ticks: 16,
         anchor: [12, 5]
     },
     twinstar: {
@@ -1053,19 +1007,16 @@ const MOTION_RIGS: Record<string, MotionRig> = {
             [16, 9],
             [19, 9]
         ],
-        ticks: 16,
         anchor: [12, 7]
     },
     'fluffy-cat': {
         kind: 'step',
         eyes: [[18, 7]],
-        ticks: 16,
         anchor: [17, 4]
     },
     'tabby-cat': {
         kind: 'step',
         eyes: [[18, 7]],
-        ticks: 8,
         anchor: [17, 4]
     }
 };
@@ -1075,7 +1026,6 @@ function rigOf(pet: PetDesign): MotionRig {
         MOTION_RIGS[pet.shape] ?? {
             kind: 'step',
             eyes: [],
-            ticks: 16,
             anchor: [12, 4]
         }
     );
@@ -1135,7 +1085,7 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
     const rig = rigOf(pet);
     const phase = frame % 8;
     const wave = [0, -1, -1, 0, 1, 1, 0, 0][phase];
-    const hop = [0, 0, -1, -2, -2, -1, 0, 0][phase];
+    const hop = [0, -1, -2, -1][phase % 4];
     const plants = ['sprout', 'cactus', 'sunflower'].includes(pet.shape);
     const machines = ['visor', 'robot', 'nanobot', 'relay', 'cyclops', 'seedbot', 'astronaut'].includes(pet.shape);
     const birds = ['raven', 'hummingbird', 'parakeet', 'windbird'].includes(pet.shape);
@@ -1144,7 +1094,7 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
     const parts =
         pet.shape === 'whale'
             ? whaleParts(pet, pose === 'stopped' ? 'stand' : pose, pose === 'stopped' ? 4 : frame)
-            : sketchPartsOf(pet, ownSleep ? 'sleep' : 'stand', ownSleep && phase >= 4 ? 1 : 0);
+            : sketchPartsOf(pet, ownSleep ? 'sleep' : 'stand', ownSleep ? frame % 2 : 0);
     parts.props = pet.shape === 'whale' ? parts.props : [];
 
     if (nativeBuddy) {
@@ -1182,11 +1132,11 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
             transform((part) => {
                 if (part.y >= 14) {
                     const front = part.x >= 12;
-                    const raised = phase < 4 === front;
+                    const raised = (phase % 2 === 0) === front;
                     return { ...part, x: part.x + (raised ? 1 : -1), y: part.y - (raised ? 1 : 0), h: Math.max(1, part.h - (raised ? 1 : 0)) };
                 }
 
-                const sway = rig.kind === 'waddle' ? (phase < 4 ? -1 : 1) : 0;
+                const sway = rig.kind === 'waddle' ? (phase % 4 < 2 ? -1 : 1) : 0;
                 const tail = part.x < 6 && part.y < 14 ? wave : 0;
 
                 return { ...part, x: part.x + sway, y: part.y + tail };
@@ -1194,13 +1144,13 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
         } else if (rig.kind === 'hop' || rig.kind === 'pot-hop') {
             transform((part) => ({
                 ...part,
-                y: part.y + hop + (part.y < 8 && phase === 5 ? 1 : 0),
+                y: part.y + hop + (part.y < 8 && phase % 4 === 3 ? 1 : 0),
                 h: part.y >= 14 && hop < 0 ? Math.max(1, part.h - 1) : part.h
             }));
         } else if (rig.kind === 'fly') {
             parts.silhouette = parts.silhouette.filter((part) => part.y < 14);
             parts.details = parts.details.filter((part) => part.y < 15);
-            const wings = [0, -2, -3, -1, 1, 2, 1, 0][phase];
+            const wings = [0, -3, -1, 2][phase % 4];
 
             transform((part) => {
                 const wing = ['bee', 'firefly'].includes(pet.shape)
@@ -1211,7 +1161,7 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
                         ? part.x === 4 || part.x === 17
                         : part.x < 10 || part.x > 15;
 
-                return { ...part, y: part.y + (wing ? wings : Math.min(0, wave)), h: wing ? Math.max(1, part.h + (phase < 4 ? -1 : 1)) : part.h };
+                return { ...part, y: part.y + (wing ? wings : Math.min(0, wave)), h: wing ? Math.max(1, part.h + (phase % 4 < 2 ? -1 : 1)) : part.h };
             });
         } else if (rig.kind === 'ripple' || rig.kind === 'paddle') {
             transform((part) => {
@@ -1284,17 +1234,17 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
 
     if (pose === 'wait' && pet.shape !== 'whale') {
         if (machines) {
-            parts.details.push({ x: 5, y: 9, w: 1, h: 1, color: phase < 4 ? pet.palette.accent : pet.palette.shade });
+            parts.details.push({ x: 5, y: 9, w: 1, h: 1, color: phase % 4 < 2 ? pet.palette.accent : pet.palette.shade });
         } else if (plants) {
-            transform((part) => ({ ...part, x: part.y < 10 && phase >= 4 ? part.x + 1 : part.x }));
+            transform((part) => ({ ...part, x: part.y < 10 && phase % 4 >= 2 ? part.x + 1 : part.x }));
         } else {
-            transform((part) => ({ ...part, y: part.x >= 12 && part.y < 12 && phase >= 4 ? part.y - 1 : part.y }));
+            transform((part) => ({ ...part, y: part.x >= 12 && part.y < 12 && phase % 4 >= 2 ? part.y - 1 : part.y }));
         }
     }
 
     if (pose === 'sleep') {
         if (pet.shape !== 'whale' && !ownSleep) {
-            const breath = phase < 4 ? 0 : -1;
+            const breath = frame % 2 === 0 ? 0 : -1;
 
             transform((part) => {
                 if (nativeBuddy) {
@@ -1343,14 +1293,14 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
     }
 
     if (pose === 'walk' && rig.kind === 'waddle' && !nativeBuddy) {
-        anchorX += phase < 4 ? -1 : 1;
+        anchorX += phase % 4 < 2 ? -1 : 1;
     }
 
     if (pose === 'walk' && rig.kind === 'fly') {
         anchorY += Math.min(0, wave);
     }
 
-    if (pose === 'wait' && pet.shape !== 'whale' && !machines && !plants && anchorX >= 12 && phase >= 4) {
+    if (pose === 'wait' && pet.shape !== 'whale' && !machines && !plants && anchorX >= 12 && phase % 4 >= 2) {
         anchorY--;
     }
 
@@ -1358,7 +1308,7 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
         anchorX += phase % 2;
     }
 
-    if (pose === 'sleep' && !ownSleep && !nativeBuddy && !plants && pet.shape !== 'whale' && phase >= 4) {
+    if (pose === 'sleep' && !ownSleep && !nativeBuddy && !plants && pet.shape !== 'whale' && frame % 2 === 1) {
         anchorY--;
     }
 
@@ -1410,16 +1360,17 @@ function partsOf(pet: PetDesign, pose: Pose, frame: number): Parts {
     return parts;
 }
 
-/* A figure of the catalog. Its walk runs at its rig's pace, so a hop takes as long as it should on the shared clock. */
+/*
+ * A figure of the catalog. Its legs change every beat, as the buddies' do, since along the bottom of the
+ * screen it moves four pixels a beat and a slower step slides over the floor.
+ */
 export function sketchedSprite(pet: PetDesign): DrawnSprite {
-    const rig = rigOf(pet);
-
     return {
         id: pet.id,
         outline: pet.palette.outline,
         poses: {
             stand: (frame) => partsOf(pet, 'stand', frame),
-            walk: (frame) => partsOf(pet, 'walk', Math.floor(frame / (rig.ticks / 8))),
+            walk: (frame) => partsOf(pet, 'walk', frame),
             work: (frame) => partsOf(pet, 'work', frame),
             wait: (frame) => partsOf(pet, 'wait', frame),
             sleep: (frame) => partsOf(pet, 'sleep', frame),
