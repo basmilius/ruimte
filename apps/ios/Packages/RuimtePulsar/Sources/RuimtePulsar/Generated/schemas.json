@@ -7167,6 +7167,61 @@
     "type": "object",
     "properties": {}
   },
+  "request.extension.storageGet.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "key": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "id",
+      "key"
+    ]
+  },
+  "request.extension.storageGet.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "value": {}
+    },
+    "required": [
+      "value"
+    ]
+  },
+  "request.extension.storageSet.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "key": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "value": {}
+    },
+    "required": [
+      "id",
+      "key",
+      "value"
+    ]
+  },
+  "request.extension.storageSet.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.extension.log.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

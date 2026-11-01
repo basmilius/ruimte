@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { appendFile, mkdir, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
@@ -171,6 +171,27 @@ export class ExtensionHost {
         this.stop(id);
         await this.options.store.unlink(id);
         this.changed();
+    }
+
+    /* The same file `storage` in `server/` writes, so both ends of an extension read one truth. */
+    private async storageOf(id: string): Promise<{ file: string; values: Record<string, unknown> }> {
+        const file = join(this.options.store.dataFolder(id), 'storage.json');
+        const values = await readFile(file, 'utf8')
+            .then((text) => JSON.parse(text) as Record<string, unknown>)
+            .catch(() => ({}));
+
+        return { file, values };
+    }
+
+    async storageGet(id: string, key: string): Promise<unknown> {
+        return (await this.storageOf(id)).values[key];
+    }
+
+    async storageSet(id: string, key: string, value: unknown): Promise<void> {
+        const { file, values } = await this.storageOf(id);
+
+        await mkdir(dirname(file), { recursive: true });
+        await writeFile(file, JSON.stringify({ ...values, [key]: value }), { mode: 0o600 });
     }
 
     /* What a client of an extension in development says. Nothing keeps it for one that is installed. */

@@ -7,7 +7,7 @@ import { packExtension } from './pack.ts';
 import { ExtensionStore } from './store.ts';
 
 const EXTENSIONS = join(import.meta.dir, '../../../../extensions');
-const POCS = ['surfaces', 'server', 'agents', 'frame', 'themes', 'broken', 'broken-load'];
+const POCS = ['surfaces', 'workspace', 'server', 'agents', 'frame', 'themes', 'broken', 'broken-load'];
 const root = mkdtempSync(join(tmpdir(), 'ruimte-extension-poc-'));
 const hosts: ExtensionHost[] = [];
 

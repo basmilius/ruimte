@@ -65,6 +65,13 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
 
     dispatcher.register('extension.call', async (payload) => ({ result: await host.call(payload.id, payload.method, payload.args) }));
 
+    dispatcher.register('extension.storageGet', async (payload) => ({ value: await host.storageGet(payload.id, payload.key) }));
+    dispatcher.register('extension.storageSet', async (payload) => {
+        await host.storageSet(payload.id, payload.key, payload.value);
+
+        return {};
+    });
+
     dispatcher.register(
         'extension.log',
         async (payload) => {

@@ -1,0 +1,19 @@
+{
+    "id": "poc.workspace",
+    "name": "POC workspace",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "Writes to the canvas and the project, reads git, hears events, asks through dialogs and speaks two languages.",
+    "color": "#2563eb",
+    "permissions": {
+        "canvas.write": "Makes and changes nodes",
+        "views.write": "Makes a canvas",
+        "files.read": "Reads the project",
+        "files.write": "Writes one file in the project",
+        "git.read": "Reads the git log",
+        "chats.read": "Reads chats",
+        "chats.send": "Sends a chat a message when you ask",
+        "agents.start": "Starts a chat when you ask"
+    }
+}

@@ -6,6 +6,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `extensionInstall` = "extension.install"
     case `extensionRemove` = "extension.remove"
     case `extensionSetEnabled` = "extension.setEnabled"
+    case `extensionStorageGet` = "extension.storageGet"
+    case `extensionStorageSet` = "extension.storageSet"
     case `extensionLog` = "extension.log"
     case `extensionCall` = "extension.call"
     case `serverHello` = "server.hello"

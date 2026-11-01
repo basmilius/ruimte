@@ -367,6 +367,17 @@
         "@types/react": "^19.3.0",
       },
     },
+    "extensions/poc-workspace": {
+      "name": "@ruimte/extension-poc-workspace",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@types/react": "^19.3.0",
+      },
+    },
     "packages/actions": {
       "name": "@ruimte/actions",
       "version": "0.0.0",
@@ -1235,6 +1246,8 @@
     "@ruimte/extension-poc-surfaces": ["@ruimte/extension-poc-surfaces@workspace:extensions/poc-surfaces"],
 
     "@ruimte/extension-poc-themes": ["@ruimte/extension-poc-themes@workspace:extensions/poc-themes"],
+
+    "@ruimte/extension-poc-workspace": ["@ruimte/extension-poc-workspace@workspace:extensions/poc-workspace"],
 
     "@ruimte/maps-worker": ["@ruimte/maps-worker@workspace:apps/maps-worker"],
 

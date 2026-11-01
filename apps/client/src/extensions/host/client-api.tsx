@@ -1,16 +1,23 @@
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import { icons, Package, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
+import { create } from 'zustand';
+import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
-import type { ExtensionManifest, RequestMap } from '@ruimte/contracts';
+import type { AgentKind, ExtensionManifest, RequestMap } from '@ruimte/contracts';
 import { revealNode } from '@/project/views';
 import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
-import { contribute, type ExtensionSurfaceProps, type SlotEntry, type SlotName } from '@/extensions/registry';
-import { baseContext } from '@/extensions/slots';
+import { contribute, useContributions, type ExtensionSurfaceProps, type SlotEntry, type SlotName } from '@/extensions/registry';
+import { baseContext, nodeInfoOf, type NodeInfo } from '@/extensions/slots';
+import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
+import { askHost } from '@/extensions/host/host-dialog-state';
+import { openFileLink } from '@/shell/panels/file-links';
+import { currentEndpointId } from '@/state/keys';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
@@ -33,6 +40,8 @@ export interface LoadedExtension {
     disposers: (() => void)[];
     settings: ComponentType | null;
 }
+
+const usePanelParams = create<{ params: Record<string, unknown> }>(() => ({ params: {} }));
 
 type UsageLimitsResult = RequestMap['usage.limits']['result'];
 type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;
@@ -146,6 +155,50 @@ function assertLazy(surface: { component?: unknown; frame?: unknown }, what: str
     }
 }
 
+/* Where a new node goes: right of the one it is about, as a person would drag it. */
+function besideNode(nodeId: string | undefined): { x: number; y: number } {
+    const canvas = focusedCanvas().getState();
+    const anchor = nodeId === undefined ? undefined : canvas.nodes[nodeId];
+
+    return anchor === undefined ? { x: 0, y: 0 } : { x: anchor.x + anchor.w + 240, y: anchor.y + anchor.h / 2 };
+}
+
+/* A file request stays inside the project folder, whatever an extension asks for. */
+function inProject(path: string): string {
+    const folder = useProject.getState().current?.folder;
+
+    if (folder === undefined) {
+        throw new Error('This needs a project with a folder');
+    }
+
+    const full = path.startsWith('/') ? path : path === '.' ? folder : `${folder}/${path}`;
+
+    if (full !== folder && (!full.startsWith(`${folder}/`) || full.split('/').includes('..'))) {
+        throw new Error(`${path} is outside the project folder`);
+    }
+
+    return full;
+}
+
+const wordsCache = new Map<string, Promise<Record<string, string>>>();
+
+function wordsOf(extension: LoadedExtension, language: string): Promise<Record<string, string>> {
+    const key = `${extension.base}${language}`;
+    let words = wordsCache.get(key);
+
+    if (words === undefined) {
+        const read = (name: string) =>
+            fetch(`${extension.base}locales/${name}.json`)
+                .then((answer) => (answer.ok ? (answer.json() as Promise<Record<string, string>>) : {}))
+                .catch(() => ({}));
+
+        words = Promise.all([read('en'), read(language)]).then(([english, own]) => ({ ...english, ...own }));
+        wordsCache.set(key, words);
+    }
+
+    return words;
+}
+
 function requiresPermission(extension: LoadedExtension, permission: string): void {
     if (!Object.hasOwn(extension.manifest.permissions ?? {}, permission)) {
         throw new Error(`${extension.manifest.name} did not ask for the permission ${permission} in its manifest`);
@@ -213,17 +266,17 @@ export function clientApiFor(extension: LoadedExtension) {
 
         return dispose;
     };
-    const handleFor = (kind: `extension:${string}`) => ({
-        open: () => useUi.getState().setPanel({ open: true, kind }),
-        close: () => useUi.getState().setPanel({ open: false }),
-        setBadge: () => undefined
-    });
 
     return {
-        definePanel(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface) {
+        definePanel<Params>(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface<{ params: Params }>) {
             assertLazy(panel, `definePanel ${panel.id}`);
 
             const kind = `extension:${id}/${panel.id}` as const;
+            const Body = surfaceOf(extension, panel) as ComponentType<{ params: Params | undefined }>;
+            let title = panel.title;
+            let badge: string | null = null;
+            // A panel's label is read when it draws, so a change has to make the rail draw again.
+            const relabel = (): void => useContributions.setState(({ panels }) => ({ panels: [...panels] }));
 
             add('panels', {
                 kind,
@@ -231,17 +284,33 @@ export function clientApiFor(extension: LoadedExtension) {
                 minWidth: panel.minWidth ?? 280,
                 toolbar: true,
                 group: 'extensions',
-                label: () => panel.title,
-                component: surfaceOf(extension, panel) as ComponentType
+                label: () => (badge === null ? title : `${title} (${badge})`),
+                component: function ExtensionPanel() {
+                    const params = usePanelParams((state) => state.params[kind]) as Params | undefined;
+
+                    return createElement(Body, { params });
+                }
             });
 
-            return handleFor(kind);
+            return {
+                open: (params?: Params) => {
+                    usePanelParams.setState(({ params: all }) => ({ params: { ...all, [kind]: params } }));
+                    useUi.getState().setPanel({ open: true, kind });
+                },
+                close: () => useUi.getState().setPanel({ open: false }),
+                setBadge: (text: string | null) => {
+                    badge = text;
+                    relabel();
+                },
+                setTitle: (next: string) => {
+                    title = next;
+                    relabel();
+                }
+            };
         },
         defineSidebarCard(card: { id: string; title: string; component: LazyComponent }) {
             assertLazy(card, `defineSidebarCard ${card.id}`);
             add('sidebarCards', { id: `${id}/${card.id}`, title: card.title, component: surfaceOf(extension, card) as ComponentType });
-
-            return { open: () => undefined, close: () => undefined, setBadge: () => undefined };
         },
         defineView(view: { id: string; title: string; icon?: string } & Surface<{ params: unknown }>) {
             assertLazy(view, `defineView ${view.id}`);
@@ -253,7 +322,7 @@ export function clientApiFor(extension: LoadedExtension) {
             add('extensionViews', { id: `${id}/${view.id}`, title: view.title, component: surfaceOf(extension, view) as ComponentType<{ params: unknown }> });
             add('commands', { id: `extension:${id}/view/${view.id}`, title: `New ${view.title}`, run: open });
 
-            return { open, close: () => undefined, setBadge: () => undefined };
+            return { open };
         },
         defineNode(
             node: {
@@ -264,7 +333,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 initialData?: unknown;
                 dataVersion?: number;
                 migrate?: (stored: unknown, from: number) => unknown;
-                plate?: string;
             } & Surface
         ) {
             assertLazy(node, `defineNode ${node.id}`);
@@ -405,12 +473,48 @@ export function clientApiFor(extension: LoadedExtension) {
 
             return [data, (next) => store.getState().updateExtensionNode(nodeId, { data: next })];
         },
-        useStorage<Value>(key: string, initial: Value): [Value, (next: Value) => void] {
+        useStorage<Value>(key: string, initial: Value, scope: 'computer' | 'project' | 'machine' = 'computer'): [Value, (next: Value) => void] {
             const extensionNow = useExtension();
             const full = `ruimte.extension.${extensionNow.manifest.id}.${key}`;
-            const value = useExtensionStorage(full, initial);
+            const local = useExtensionStorage(full, initial);
+            const { transport } = useFocusedMachine();
+            const projectId = useProject((state) => state.current?.projectId ?? '');
+            const remoteKey = scope === 'project' ? `project:${projectId}:${key}` : key;
+            const [remote, setRemote] = useState<Value>(initial);
 
-            return [value, (next) => writeExtensionStorage(full, next)];
+            useEffect(() => {
+                if (scope === 'computer') {
+                    return undefined;
+                }
+
+                let current = true;
+
+                void transport.request('extension.storageGet', { id: extensionNow.manifest.id, key: remoteKey }).then(
+                    ({ value }) => {
+                        if (current && value !== undefined) {
+                            setRemote(value as Value);
+                        }
+                    },
+                    // Without a machine it starts from the initial value, as for a key never written.
+                    () => undefined
+                );
+
+                return () => {
+                    current = false;
+                };
+            }, [transport, extensionNow, scope, remoteKey]);
+
+            if (scope === 'computer') {
+                return [local, (next) => writeExtensionStorage(full, next)];
+            }
+
+            return [
+                remote,
+                (next) => {
+                    setRemote(next);
+                    void transport.request('extension.storageSet', { id: extensionNow.manifest.id, key: remoteKey, value: next }).catch(() => undefined);
+                }
+            ];
         },
         useProject() {
             const projectId = useProject((state) => state.current?.projectId ?? '');
@@ -422,21 +526,37 @@ export function clientApiFor(extension: LoadedExtension) {
             return { id: useDocument((state) => state.activeViewId ?? '') };
         },
         useSelection() {
-            return useCanvas((state) => state.selection).map((nodeId) => ({ id: nodeId }));
+            return useCanvas((state) => state.selection).map(nodeInfoOf);
         },
-        useCanvasNodes() {
-            const nodes = useCanvas((state) => state.nodes);
+        useNode(nodeId: string) {
+            useCanvas((state) => state.nodes[nodeId]);
 
-            return Object.values(nodes).map((node) => ({
-                id: node.id,
-                kind: node.kind,
-                title: node.title,
-                x: node.x,
-                y: node.y,
-                width: node.w,
-                height: node.h
-            }));
+            return nodeInfoOf(nodeId);
         },
+        useNodes(filter?: (node: NodeInfo) => boolean) {
+            const nodes = Object.keys(useCanvas((state) => state.nodes)).map(nodeInfoOf);
+
+            return filter === undefined ? nodes : nodes.filter(filter);
+        },
+        useViews() {
+            return useDocument((state) => state.views).map((view) => ({ id: view.id, kind: view.kind, name: view.name ?? '' }));
+        },
+        useLocale() {
+            const extensionNow = useExtension();
+            const { i18n } = useTranslation();
+            const words = use(wordsOf(extensionNow, i18n.language));
+
+            return {
+                language: i18n.language,
+                format,
+                t: (key: string, values?: Record<string, unknown>) =>
+                    Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
+            };
+        },
+        useEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void) {
+            useEffect(() => onClientEvent(name, listener), [name, listener]);
+        },
+        onEvent: onClientEvent,
         useAgents() {
             requiresPermission(useExtension(), 'agents.status');
 
@@ -455,15 +575,108 @@ export function clientApiFor(extension: LoadedExtension) {
                 }));
         },
         host: {
-            busy<Result>(work: { title: string; nodes?: { id: string }[] }, run: () => Result | Promise<Result>) {
+            busy<Result>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Result | Promise<Result>) {
                 return trackRun({ actionId: null, title: work.title, nodeIds: (work.nodes ?? []).map((node) => node.id) }, run);
             },
             notify(text: string, options?: { tone?: 'neutral' | 'error' }) {
                 useToasts.getState().show({ kind: options?.tone === 'error' ? 'error' : 'success', title: text });
             },
-            confirm: async ({ title, body }: { title: string; body: string }) => window.confirm(`${title}\n\n${body}`),
+            confirm: async ({ title, body, danger }: { title: string; body: string; danger?: boolean }) =>
+                (await askHost({ title, body, ...(danger === undefined ? {} : { danger }) })) !== null,
+            prompt: ({ title, placeholder, initial }: { title: string; placeholder?: string; initial?: string }) =>
+                askHost({ title, field: { ...(placeholder === undefined ? {} : { placeholder }), ...(initial === undefined ? {} : { initial }) } }),
+            async pick<Item>({ title, items, label }: { title: string; items: readonly Item[]; label: (item: Item) => string }) {
+                const words = items.map(label);
+                const answer = await askHost({ title, choices: words });
+
+                return answer === null ? null : (items[words.indexOf(answer)] ?? null);
+            },
             openUrl(url: string) {
                 window.open(url, '_blank', 'noopener');
+            },
+            copy(text: string) {
+                void navigator.clipboard.writeText(text);
+            }
+        },
+        files: {
+            async readText(path: string) {
+                requiresPermission(extension, 'files.read');
+
+                const answer = await activeTransport.request('fs.read', { path: inProject(path) });
+
+                if (answer.kind !== 'text') {
+                    throw new Error(`${path} is not a text file`);
+                }
+
+                return answer.text;
+            },
+            async write(path: string, text: string) {
+                requiresPermission(extension, 'files.write');
+                const full = inProject(path);
+                const existing = await activeTransport.request('fs.read', { path: full }).catch(() => null);
+
+                if (existing?.kind !== 'text') {
+                    await activeTransport.request('fs.create', { path: full, kind: 'file', text });
+                } else {
+                    await activeTransport.request('fs.write', { path: full, text, expectedMtime: existing.mtime });
+                }
+            },
+            async list(folder: string) {
+                requiresPermission(extension, 'files.read');
+
+                const { entries } = await activeTransport.request('fs.list', { path: inProject(folder) });
+
+                return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
+            },
+            open(path: string) {
+                void openFileLink(useProject.getState().current?.folder ?? null, { path, directory: false }, currentEndpointId());
+            }
+        },
+        git: {
+            status(repository?: string) {
+                requiresPermission(extension, 'git.read');
+
+                return activeTransport.request('git.status', { cwd: repository ?? inProject('.') });
+            },
+            log(options?: { repository?: string; limit?: number }) {
+                requiresPermission(extension, 'git.read');
+
+                return activeTransport.request('git.log', { cwd: options?.repository ?? inProject('.'), limit: options?.limit ?? 30 });
+            }
+        },
+        chats: {
+            list: () => {
+                requiresPermission(extension, 'chats.read');
+
+                return activeTransport.request('chat.list', {}).then(({ chats }) => chats);
+            },
+            async read(chatId: string) {
+                requiresPermission(extension, 'chats.read');
+
+                const { sources } = await activeTransport.request('extension.contextRead', {
+                    projectId: useProject.getState().current?.projectId ?? '',
+                    nodeIds: [chatId]
+                });
+
+                return sources[0]?.text ?? '';
+            },
+            async send(chatId: string, text: string) {
+                requiresPermission(extension, 'chats.send');
+                await activeTransport.request('chat.send', { chatId, text });
+            }
+        },
+        views: {
+            open(view: { id: string }) {
+                useDocument.getState().setActiveView(view.id);
+            },
+            createCanvas(name: string) {
+                requiresPermission(extension, 'views.write');
+
+                return { id: useDocument.getState().addCanvasView(name) };
+            },
+            rename(view: { id: string }, name: string) {
+                requiresPermission(extension, 'views.write');
+                useDocument.getState().renameView(view.id, name);
             }
         },
         context: {
@@ -490,16 +703,36 @@ export function clientApiFor(extension: LoadedExtension) {
                         projectId: useProject.getState().current?.projectId ?? ''
                     })
                     .then(({ text }) => ({ text }));
+            },
+            // A chat a person can see, follow and stop, as if they had opened it themselves.
+            async start(options: { prompt?: string; provider?: AgentKind; title?: string; near?: { id: string }[] }) {
+                requiresPermission(extension, 'agents.start');
+
+                const store = focusedCanvas().getState();
+                const chatId = store.addNode('chat', besideNode(options.near?.[0]?.id), {
+                    ...(options.provider === undefined ? {} : { provider: options.provider }),
+                    ...(options.title === undefined ? {} : { title: options.title })
+                });
+
+                if (chatId === null) {
+                    throw new Error('No canvas to start a chat on');
+                }
+
+                if (options.prompt !== undefined) {
+                    await activeTransport.request('chat.create', { chatId, ...(options.provider === undefined ? {} : { provider: options.provider }) });
+                    await activeTransport.request('chat.send', { chatId, text: options.prompt });
+                }
+
+                return { id: chatId };
             }
         },
         canvas: {
             createNote(note: { title?: string; text: string; near?: { id: string }[] }) {
                 requiresPermission(extension, 'canvas.write');
 
-                const canvas = focusedCanvas().getState();
-                const anchor = note.near?.[0] === undefined ? undefined : canvas.nodes[note.near[0].id];
-                const at = anchor === undefined ? { x: 0, y: 0 } : { x: anchor.x + anchor.w + 240, y: anchor.y + anchor.h / 2 };
-                const nodeId = canvas.addNode('note', at, note.title === undefined ? {} : { title: note.title });
+                const nodeId = focusedCanvas()
+                    .getState()
+                    .addNode('note', besideNode(note.near?.[0]?.id), note.title === undefined ? {} : { title: note.title });
 
                 if (nodeId !== null) {
                     focusedCanvas().getState().updateNode(nodeId, { body: note.text });
@@ -507,9 +740,83 @@ export function clientApiFor(extension: LoadedExtension) {
 
                 return nodeId === null ? null : { id: nodeId };
             },
+            createFile(path: string, options?: { near?: { id: string }[] }) {
+                requiresPermission(extension, 'canvas.write');
+
+                const nodeId = focusedCanvas().getState().addNode('file', besideNode(options?.near?.[0]?.id), { path });
+
+                return nodeId === null ? null : { id: nodeId };
+            },
+            createBrowser(url: string, options?: { near?: { id: string }[] }) {
+                requiresPermission(extension, 'canvas.write');
+
+                const nodeId = focusedCanvas().getState().addNode('browser', besideNode(options?.near?.[0]?.id), { url });
+
+                return nodeId === null ? null : { id: nodeId };
+            },
+            createNode(type: string, options?: { data?: unknown; title?: string }) {
+                requiresPermission(extension, 'canvas.write');
+
+                const contribution = useContributions.getState().extensionNodes.find((node) => node.id === `${id}/${type}`);
+
+                if (contribution === undefined) {
+                    throw new Error(`${extension.manifest.name} has no node ${type}`);
+                }
+
+                const nodeId = focusedCanvas()
+                    .getState()
+                    .addExtensionNode(id, type, options?.title ?? contribution.title, { width: 420, height: 300 }, options?.data ?? {});
+
+                return nodeId === null ? null : { id: nodeId };
+            },
+            update(node: { id: string }, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }) {
+                requiresPermission(extension, 'canvas.write');
+                const store = canvasOfNode(node.id)?.getState();
+                const current = store?.nodes[node.id];
+
+                if (store === undefined || current === undefined) {
+                    return;
+                }
+
+                if (patch.title !== undefined) {
+                    store.renameNode(node.id, patch.title);
+                }
+
+                store.resizeNode(node.id, { x: patch.x ?? current.x, y: patch.y ?? current.y, w: patch.width ?? current.w, h: patch.height ?? current.h });
+            },
+            writeNote(node: { id: string }, text: string) {
+                requiresPermission(extension, 'canvas.write');
+                canvasOfNode(node.id)?.getState().updateNode(node.id, { body: text });
+            },
+            group(nodes: { id: string }[]) {
+                requiresPermission(extension, 'canvas.write');
+
+                const store = focusedCanvas().getState();
+
+                store.select(nodes.map((node) => node.id));
+
+                const groupId = store.groupSelection();
+
+                return groupId === null ? null : { id: groupId };
+            },
             link(from: { id: string }, to: { id: string }) {
                 requiresPermission(extension, 'canvas.write');
                 canvasOfNode(from.id)?.getState().addEdge(from.id, to.id);
+            },
+            unlink(from: { id: string }, to: { id: string }) {
+                requiresPermission(extension, 'canvas.write');
+
+                const store = canvasOfNode(from.id)?.getState();
+                const edge = store?.edges.find((each) => (each.from === from.id && each.to === to.id) || (each.from === to.id && each.to === from.id));
+
+                if (edge !== undefined) {
+                    store?.removeEdge(edge.id);
+                }
+            },
+            select(nodes: { id: string }[]) {
+                focusedCanvas()
+                    .getState()
+                    .select(nodes.map((node) => node.id));
             },
             reveal(target: { id: string }) {
                 revealNode(target.id);

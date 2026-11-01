@@ -98,6 +98,8 @@
     "extension.install",
     "extension.remove",
     "extension.setEnabled",
+    "extension.storageGet",
+    "extension.storageSet",
     "extension.log",
     "extension.call",
     "server.hello",

@@ -104,6 +104,11 @@ export type ExtensionCallPayload = z.infer<typeof ExtensionCallPayloadSchema>;
 export const ExtensionCallResultSchema = z.object({ result: z.unknown() });
 export type ExtensionCallResult = z.infer<typeof ExtensionCallResultSchema>;
 
+/* What a client keeps of an extension on the machine, where its `server/` reads the same keys. */
+export const ExtensionStorageGetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256) });
+export const ExtensionStorageGetResultSchema = z.object({ value: z.unknown() });
+export const ExtensionStorageSetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256), value: z.unknown() });
+
 /* One line for the terminal of `ruimte extension dev`. */
 export const ExtensionLogPayloadSchema = z.object({ id: ExtensionIdSchema, text: z.string().max(16_000) });
 
@@ -143,6 +148,8 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.install': { payload: ExtensionInstallPayloadSchema, result: ExtensionInfoSchema },
     'extension.remove': { payload: ExtensionIdPayloadSchema, result: EmptySchema },
     'extension.setEnabled': { payload: ExtensionSetEnabledPayloadSchema, result: EmptySchema },
+    'extension.storageGet': { payload: ExtensionStorageGetPayloadSchema, result: ExtensionStorageGetResultSchema },
+    'extension.storageSet': { payload: ExtensionStorageSetPayloadSchema, result: EmptySchema },
     'extension.log': { payload: ExtensionLogPayloadSchema, result: EmptySchema },
     'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema }
 } as const;

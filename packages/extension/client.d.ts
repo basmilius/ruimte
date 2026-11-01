@@ -4,10 +4,11 @@ import type { ComponentType } from 'react';
 export type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;
 export type Surface<Props = {}> = { component: LazyComponent<Props> } | { frame: string };
 
-export interface Handle {
-    open(params?: unknown): void;
+export interface PanelHandle<Params = void> {
+    open(params: Params): void;
     close(): void;
     setBadge(text: string | null): void;
+    setTitle(title: string): void;
 }
 
 export interface NodeRef {
@@ -19,9 +20,9 @@ export interface ViewRef {
 }
 
 /** `icon` names a Lucide icon. Without one, a surface shows the extension's `assets/icon.svg`. */
-export function definePanel(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface): Handle;
-export function defineSidebarCard(card: { id: string; title: string; component: LazyComponent }): Handle;
-export function defineView<Params = unknown>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>): Handle;
+export function definePanel<Params = void>(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface<{ params: Params | undefined }>): PanelHandle<Params>;
+export function defineSidebarCard(card: { id: string; title: string; component: LazyComponent }): void;
+export function defineView<Params = unknown>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>): { open(params?: Params): void };
 export function defineNode<Data = unknown>(
     node: {
         id: string;
@@ -31,7 +32,6 @@ export function defineNode<Data = unknown>(
         initialData?: Data;
         dataVersion?: number;
         migrate?: (stored: unknown, fromVersion: number) => Data;
-        plate?: string;
     } & Surface
 ): void;
 export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;
@@ -147,11 +147,30 @@ export function useServer<Server>(): ServerClient<Server>;
 /** Hears what `emit` says in `server/`. */
 export function useServerEvent(name: string, listener: (payload: unknown) => void): void;
 export function useNodeData<Data>(): [Data, (next: Data) => void];
-export function useStorage<Value>(key: string, initial: Value): [Value, (next: Value) => void];
+/** `computer` stays on this computer. `project` and `machine` live on the machine, where `server/` reads `machine` keys too. */
+export function useStorage<Value>(key: string, initial: Value, scope?: 'computer' | 'project' | 'machine'): [Value, (next: Value) => void];
 export function useProject(): { id: string; name: string };
 export function useActiveView(): ViewRef;
-export function useSelection(): NodeRef[];
-export function useCanvasNodes(): { id: string; kind: string; title: string; x: number; y: number; width: number; height: number }[];
+export function useViews(): { id: string; kind: string; name: string }[];
+export function useSelection(): NodeInfo[];
+export function useNode(id: string): NodeInfo;
+export function useNodes(filter?: (node: NodeInfo) => boolean): NodeInfo[];
+/** Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`. */
+export function useLocale(): { language: string; t(key: string, values?: Record<string, unknown>): string; format: typeof import('@adecore/ui/format') };
+
+export interface ClientEvents {
+    'node.added': { node: NodeInfo };
+    'node.removed': { id: string };
+    'node.changed': { node: NodeInfo };
+    'selection.changed': { nodes: NodeInfo[] };
+    'view.changed': { viewId: string | null };
+    'project.opened': { projectId: string };
+    'agent.status': { nodeId: string; status: string | undefined };
+    'chat.turnFinished': { chatId: string };
+}
+
+export function useEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): void;
+export function onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void;
 /** Needs the permission `agents.status`. */
 export function useAgents(): { id: string; title: string; status: string | undefined; needsYou: boolean }[];
 
@@ -159,11 +178,42 @@ export function useAgents(): { id: string; title: string; status: string | undef
 export function useUsageLimits(): { provider: string; plan: string | null; windows: { label: string; used: number; resetsAt: number | null }[] }[];
 
 export const host: {
-    /** Marks work that is no action as busy: a spinner on `nodes` until it is done. */
-    busy<Result>(work: { title: string; nodes?: NodeRef[] }, run: () => Result | Promise<Result>): Promise<Result>;
+    /** Marks work that is no action as busy: a spinner on `nodes` until it is done, which also stops it through the signal. */
+    busy<Result>(work: { title: string; nodes?: NodeRef[] }, run: (signal: AbortSignal) => Result | Promise<Result>): Promise<Result>;
     notify(text: string, options?: { tone?: 'neutral' | 'error' }): void;
-    confirm(options: { title: string; body: string }): Promise<boolean>;
+    confirm(options: { title: string; body: string; danger?: boolean }): Promise<boolean>;
+    prompt(options: { title: string; placeholder?: string; initial?: string }): Promise<string | null>;
+    pick<Item>(options: { title: string; items: readonly Item[]; label(item: Item): string }): Promise<Item | null>;
     openUrl(url: string): void;
+    copy(text: string): void;
+};
+
+/** The project folder only. Needs `files.read` or `files.write`, except `open`. */
+export const files: {
+    readText(path: string): Promise<string>;
+    write(path: string, text: string): Promise<void>;
+    list(folder: string): Promise<{ path: string; name: string; kind: string }[]>;
+    open(path: string): void;
+};
+
+/** Needs `git.read`. */
+export const git: {
+    status(repository?: string): Promise<unknown>;
+    log(options?: { repository?: string; limit?: number }): Promise<unknown>;
+};
+
+/** `list` and `read` need `chats.read`, `send` needs `chats.send`. */
+export const chats: {
+    list(): Promise<unknown[]>;
+    read(chatId: string): Promise<string>;
+    send(chatId: string, text: string): Promise<void>;
+};
+
+/** Needs `views.write`, except `open`. */
+export const views: {
+    open(view: ViewRef): void;
+    createCanvas(name: string): ViewRef;
+    rename(view: ViewRef, name: string): void;
 };
 
 export interface ContextSource {
@@ -178,14 +228,25 @@ export const context: {
     read(of: { nodes?: NodeRef[]; view?: ViewRef }): Promise<ContextSource[]>;
 };
 
-/** Needs the permission `agents.run`. One prompt on a CLI of the person, with the answer whole. */
 export const agents: {
+    /** Needs `agents.run`. One hidden prompt on a CLI of the person, with the answer whole. */
     run(options: { prompt: string; context?: string[]; provider?: string }): Promise<{ text: string }>;
+    /** Needs `agents.start`. A chat a person sees on the canvas, follows and can stop. */
+    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Promise<NodeRef>;
 };
 
-/** Needs the permission `canvas.write`, except `reveal`. */
+/** Needs `canvas.write`, except `reveal` and `select`. */
 export const canvas: {
     createNote(note: { title?: string; text: string; near?: NodeRef[] }): NodeRef | null;
+    createFile(path: string, options?: { near?: NodeRef[] }): NodeRef | null;
+    createBrowser(url: string, options?: { near?: NodeRef[] }): NodeRef | null;
+    /** A node of this extension's own, by the id it gave `defineNode`. */
+    createNode(type: string, options?: { data?: unknown; title?: string }): NodeRef | null;
+    update(node: NodeRef, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }): void;
+    writeNote(node: NodeRef, text: string): void;
+    group(nodes: NodeRef[]): NodeRef | null;
     link(from: NodeRef, to: NodeRef): void;
+    unlink(from: NodeRef, to: NodeRef): void;
+    select(nodes: NodeRef[]): void;
     reveal(target: NodeRef): void;
 };
