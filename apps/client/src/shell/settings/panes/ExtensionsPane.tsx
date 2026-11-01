@@ -1,7 +1,7 @@
 import { createElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Store, type LucideIcon } from 'lucide-react';
-import { Button, Icon, SectionLabel, Separator, Switch } from '@adecore/ui';
+import { Button, Icon, SectionLabel, Switch } from '@adecore/ui';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
@@ -311,7 +311,6 @@ export function ExtensionsPane() {
                         </span>
                         {t('extensions.browse')}
                     </MasterItem>
-                    <Separator orientation="horizontal" className="my-1.5" />
                     <InstalledGroup title={t('extensions.groupDevelopment')} entries={developing} selected={selected} onSelect={setSelected} />
                     <InstalledGroup title={t('extensions.groupInstalled')} entries={fromStore} selected={selected} onSelect={setSelected} />
                     {builtIns.length > 0 && <SectionLabel className="px-3 pt-3 pb-1">{t('extensions.groupIncluded')}</SectionLabel>}
