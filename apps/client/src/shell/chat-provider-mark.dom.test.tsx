@@ -34,9 +34,9 @@ describe('the mark of a chat outside any project', () => {
         page = mount();
         await page.renderApp();
         await act(async () => machine.emit('chat.status', { chatId: CHAT.id, info: chatInfoOf(CHAT.id, { provider: 'grok' }) }));
-        await until(() => markIn(`[data-sidebar-row="view:${CHAT.id}"]`) !== null && markIn('[data-cell-title]') !== null);
+        await until(() => markIn(`[data-sidebar-row="view:${CHAT.id}"]`) !== null && markIn('[data-pane-title]') !== null);
 
         expect(markIn(`[data-sidebar-row="view:${CHAT.id}"]`)).toBe('Grok');
-        expect(markIn('[data-cell-title]')).toBe('Grok');
+        expect(markIn('[data-pane-title]')).toBe('Grok');
     });
 });

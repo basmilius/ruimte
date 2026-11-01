@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { ArrowDown, ArrowUp, CircleAlert, type LucideIcon } from 'lucide-react';
 import { FileTree, Icon, Pill } from '@adecore/ui';
 import type { DecorationPart } from './git-tree';
@@ -29,7 +30,14 @@ export function GitTreeMarks({ parts }: { parts: readonly DecorationPart[] }) {
                 }
                 if (part.kind === 'branch') {
                     return (
-                        <Pill key={index} mono size="sm" className="max-w-36">
+                        <Pill
+                            key={index}
+                            mono
+                            size="sm"
+                            /* At the end of the row it moves into the row's padding, so it stands as far from the row's
+                               right edge (3 pixels) as from its top and bottom: a 20 pixel pill in a 25 pixel row. */
+                            className={clsx('max-w-36', index === parts.length - 1 && 'translate-x-1.25')}
+                        >
                             <span className="min-w-0 truncate">{part.text}</span>
                         </Pill>
                     );

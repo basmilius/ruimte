@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ChartNoAxesColumn, Plus, Settings } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { usePanelGap } from '@/shell/panel-layout';
@@ -43,17 +43,15 @@ import { viewGlyphOf } from '@/shell/cell-view';
 import { childTask, useTasks } from '@/state/tasks';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Brand } from '@/ui/Brand';
-import { Icon, IconButton, Menu, SectionLabel } from '@adecore/ui';
+import { Icon, Menu, SectionLabel } from '@adecore/ui';
 import { hasLogoMenu } from '@/desktop/bridge';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { UsageLimitsCard } from '@adecore/agents-react/usage';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useSettings } from '@/state/settings';
 import { isScratchProject, useProject } from '@/state/project';
 import { newChat } from '@/project/new-chat';
@@ -710,16 +708,8 @@ export function Sidebar() {
                             </Menu.Popup>
                         </Menu.Root>
                     )}
+                    {/* Usage and Settings stand at the foot of the rail. */}
                     <ConnectionDot />
-                    <UsageLimitsCard>
-                        <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
-                    </UsageLimitsCard>
-                    <IconButton
-                        icon={Settings}
-                        label={t('settingsDialog.title')}
-                        kbd={APP_SHORTCUTS.settings}
-                        onClick={() => useUi.getState().setSettings({ open: true })}
-                    />
                 </div>
             </div>
             {projectMenu.dialogs}

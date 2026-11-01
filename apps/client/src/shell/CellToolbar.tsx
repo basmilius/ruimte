@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-import clsx from 'clsx';
+import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreHorizontal, Ungroup } from 'lucide-react';
+import { Ungroup } from 'lucide-react';
 import { closeCellAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { isLooseView, viewGlyphOf, type CellView } from '@/shell/cell-view';
@@ -10,6 +9,7 @@ import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { LooseGlyph } from '@/shell/panels/LooseGlyph';
 import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
 import { TabStrip } from '@/shell/TabStrip';
+import { useCellBarSlot } from '@/shell/top-row-slot';
 import { SubagentTitleCrumb } from '@adecore/agents-react/chat/ui';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { ViewToolbar } from '@/shell/ViewToolbar';
@@ -18,54 +18,65 @@ import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab } from '@/state/files';
 import { cellAt, type CellAt } from '@/shell/split';
-import { CloseButton, Icon, IconButton, Menu, Separator, ContextMenu, Popover, Tooltip } from '@adecore/ui';
+import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { TerminalViewPetMount } from '@/pets/ViewPetMounts';
 
-/* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
-const CONTROLS = 'input, textarea, select, button, a, [contenteditable=""], [contenteditable="true"], [role="button"]';
+/* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
+function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
+    if (tabs !== undefined) {
+        return <TabStrip at={at} ids={tabs} active={view.id} />;
+    }
 
-/* Without this margin, a bar right at the fold point would fold and unfold on every pixel of a splitter drag. */
-const UNFOLD_MARGIN = 24;
+    if (isLooseView(view)) {
+        return (
+            <>
+                <LooseGlyph tab={view.tab} />
+                <span className="min-w-0 truncate text-sm font-medium">{title}</span>
+            </>
+        );
+    }
 
-/*
- * Whether the view's actions are folded into the overflow menu: only once the title has shrunk to
- * its glyph and the actions still do not fit. The width where that happened is remembered, since a
- * folded bar fits by definition and can no longer tell by overflowing when there is room again.
- */
-function useFolded(bar: React.RefObject<HTMLElement | null>, actions: React.RefObject<HTMLElement | null>, enabled: boolean): boolean {
-    const [foldedAt, setFoldedAt] = useState<number | null>(null);
+    // The address field beside it already says where the page is, so the title would only take its room.
+    if (view.kind === 'browser') {
+        return (
+            <Tooltip label={title}>
+                <span className="inline-flex shrink-0">
+                    <ViewGlyph {...viewGlyphOf(view)} />
+                </span>
+            </Tooltip>
+        );
+    }
 
-    useEffect(() => {
-        const element = bar.current;
-        if (!enabled || element === null || typeof ResizeObserver === 'undefined') {
-            return;
-        }
-        const measure = (): void => {
-            const width = element.clientWidth;
-            setFoldedAt((current) => {
-                if (current !== null) {
-                    return width > current + UNFOLD_MARGIN ? null : current;
-                }
-                return element.scrollWidth > width + 1 ? width : null;
-            });
-        };
-        const observer = new ResizeObserver(measure);
-        observer.observe(element);
-        // The actions change size on their own as well: an agent starting in a terminal adds its mode.
-        if (actions.current) {
-            observer.observe(actions.current);
-        }
-        measure();
-        return () => observer.disconnect();
-        // Again on every fold: the actions are a new element each time they come back.
-    }, [bar, actions, enabled, foldedAt]);
-
-    // A view that brings no actions has nothing to fold, whatever the bar measured before it changed.
-    return enabled && foldedAt !== null;
+    return (
+        <>
+            <ViewGlyph {...viewGlyphOf(view)} />
+            <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
+                <span className="min-w-0 truncate text-sm font-medium">{title}</span>
+            </SubagentTitleCrumb>
+        </>
+    );
 }
 
-export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: CellView; focused: boolean; children: ReactElement }) {
+/*
+ * The bar of a cell: what the cell holds, the view's own controls, its menu and its close button. The bar
+ * is ADE CORE's `PaneBar`; the cell supplies the words, the controls and what a drag carries. The bar of
+ * the only cell joins the project in the top row.
+ */
+export function CellToolbar({
+    at,
+    view,
+    focused,
+    hidden = false,
+    children
+}: {
+    at: CellAt;
+    view: CellView;
+    focused: boolean;
+    /* A tab in the back of its host, whose bar stays with its hidden body rather than in the top row. */
+    hidden?: boolean;
+    children: ReactElement;
+}) {
     const { t } = useTranslation('shell');
     /* The file's controls are portaled up into this bar, so every cell holds a host of its own:
        one shared host would put the controls of one file over the bar of another. */
@@ -76,18 +87,11 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
         if (element === null) {
             return undefined;
         }
+
         setHost(element);
+
         return () => setHost((current) => (current === element ? null : current));
     };
-    /* Whether the pointer came down on the bar itself. A drag starts on the nearest draggable
-       ancestor, so `draggable` on a child does not hold it back: the attribute itself has to go
-       while the pointer is in something that controls the view, or selecting text in a browser's
-       address field would drag the cell away instead. */
-    const [grabbable, setGrabbable] = useState(true);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const bar = useRef<HTMLDivElement>(null);
-    const viewBar = useRef<HTMLDivElement>(null);
-    const actions = useRef<HTMLSpanElement>(null);
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const maximized = useDocument((s) => s.maximized === view.id);
     const closable = useDocument((s) => s.layout !== null);
@@ -96,116 +100,37 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const hosted = tabs !== undefined;
     const hasViewToolbar = useHasViewToolbar(view);
     const compactToolbar = view.kind === 'file' || view.kind === 'terminal' || (isLooseView(view) && !isDatabaseTab(view.tab));
-    const separateToolbar = hosted && !compactToolbar;
-    const folded = useFolded(separateToolbar ? viewBar : bar, actions, hasViewToolbar);
     const leads = useViewToolbarLeads(view);
     /* A lone cell with nothing to do takes no bar. The wrapper stays, so the body keeps its place
        in the tree and a session inside it survives the bar coming and going. */
     const bare = !hosted && !closable && !hasViewToolbar;
+    const slot = useCellBarSlot();
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
     const visibleTitle = view.kind === 'browser' ? title : view.name;
 
-    /* `display: contents` so the wrapper changes no layout. It is here for the right-click alone: the
-       view's own controls hold a browser's address field and menus of their own, and the bar's menu
-       is about the cell, so a press inside them never reaches it. */
-    const controls = (
-        <span className="contents" onContextMenu={(event) => event.stopPropagation()}>
-            <ViewToolbar view={view} focused={focused && bodyFocused} />
-        </span>
-    );
-    const toolbarActions = hasViewToolbar && (
-        <>
-            {!folded && (
-                <>
-                    {!hosted && leads && <Separator />}
-                    {/* The controls keep their minimum width so overflow can trigger folding. */}
-                    <span ref={actions} className={clsx('flex min-w-min items-center', hosted && compactToolbar ? 'shrink-0' : 'grow')}>
-                        {controls}
-                    </span>
-                </>
-            )}
-            {folded && (
-                <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-                    <IconButton icon={MoreHorizontal} size="sm" label={t('cellToolbar.moreActions')} className="cursor-default" render={<Popover.Trigger />} />
-                    {/* A popover preserves the keys of controls such as the browser's address field. */}
-                    <Popover.Popup sideOffset={6} align="end" className="flex min-w-72 items-center gap-2 p-2 text-xs">
-                        {controls}
-                    </Popover.Popup>
-                </Popover.Root>
-            )}
-            {/* Keep the portal host mounted while folded, or file renderers draw their own toolbar. */}
-            {folded && !menuOpen && (
-                <span hidden className="hidden">
-                    {controls}
-                </span>
-            )}
-        </>
-    );
     return (
         <FileToolbarSlotProvider value={{ host, mount: mountHost }}>
             {!bare && (
-                <ContextMenu.Root>
-                    {/* The size of the toolbar under a panel's header (`FILE_TOOLBAR`): a cell is a body
-                    with a bar over it, the way the files and the git panel are. Written out rather
-                    than reused, because that bar has one background and this one has two. */}
-                    <ContextMenu.Trigger
-                        render={<header />}
-                        ref={bar}
-                        data-cell-bar=""
-                        draggable={grabbable}
-                        aria-label={t('cellToolbar.drag', {
-                            name: visibleTitle ?? t('cellToolbar.view')
-                        })}
-                        className={clsx(
-                            'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 text-xs active:cursor-grabbing',
-                            !hosted && 'pl-2',
-                            focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
-                        )}
-                        onPointerDown={(event) => setGrabbable(!(event.target as HTMLElement | null)?.closest(CONTROLS))}
-                        onPointerUp={() => setGrabbable(true)}
-                        onDragStart={(event) => {
-                            event.dataTransfer.setData(VIEW_DRAG_TYPE, view.id);
-                            event.dataTransfer.effectAllowed = 'move';
-                            setDragging(view.id, hosted);
-                        }}
-                        onDragEnd={() => setDragging(null)}
-                    >
-                        {/* The title gives way first, down to its glyph. A host has its tabs in its place. */}
-                        <span
-                            data-cell-title=""
-                            className={clsx(
-                                'flex items-center gap-2',
-                                hosted ? 'min-w-24 self-stretch' : 'min-w-5 pl-1',
-                                // A weight rather than `shrink`, since controls whose labels truncate shrink as well.
-                                hosted || folded || !hasViewToolbar ? 'grow' : 'shrink-100'
-                            )}
-                        >
-                            {tabs !== undefined ? (
-                                <TabStrip at={at} ids={tabs} active={view.id} />
-                            ) : isLooseView(view) ? (
-                                <>
-                                    <LooseGlyph tab={view.tab} />
-                                    <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
-                                </>
-                            ) : view.kind === 'browser' ? (
-                                /* The address field beside it already says where the page is, so the
-                                   title would only take its room. */
-                                <Tooltip label={visibleTitle}>
-                                    <span className="inline-flex shrink-0">
-                                        <ViewGlyph {...viewGlyphOf(view)} />
-                                    </span>
-                                </Tooltip>
-                            ) : (
-                                <>
-                                    <ViewGlyph {...viewGlyphOf(view)} />
-                                    <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
-                                        <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
-                                    </SubagentTitleCrumb>
-                                </>
-                            )}
-                        </span>
-                        {/* A terminal's text takes every pixel of its body, so its pet stands in the bar, on the line over the text. */}
-                        {view.kind === 'terminal' && (
+                <PaneBar
+                    data-cell-bar=""
+                    aria-label={t('cellToolbar.drag', { name: visibleTitle ?? t('cellToolbar.view') })}
+                    title={<CellTitle at={at} view={view} tabs={tabs} title={visibleTitle} />}
+                    tabs={hosted}
+                    actions={
+                        hasViewToolbar && (
+                            /* `display: contents` so the wrapper changes no layout. It is here for the right-click alone: the
+                               view's own controls hold a browser's address field and menus of their own, and the bar's menu is
+                               about the cell, so a press inside them never reaches it. */
+                            <span className="contents" onContextMenu={(event) => event.stopPropagation()}>
+                                <ViewToolbar view={view} focused={focused && bodyFocused} />
+                            </span>
+                        )
+                    }
+                    compactActions={compactToolbar}
+                    separated={leads}
+                    accessory={
+                        // A terminal's text takes every pixel of its body, so its pet stands in the bar, on the line over the text.
+                        view.kind === 'terminal' && (
                             <TerminalViewPetMount
                                 id={view.id}
                                 title={visibleTitle}
@@ -214,40 +139,37 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                                     useDocument.getState().setBodyFocused(true);
                                 }}
                             />
-                        )}
-                        {!separateToolbar && toolbarActions}
-                        {maximized && <MaximizedIndicator at={at} />}
-                        {closable && (
-                            <CloseButton label={t('cellToolbar.closeCell')} size="sm" className="cursor-default" onClick={() => closeCellAction(view.id)} />
-                        )}
-                    </ContextMenu.Trigger>
-                    <ContextMenu.Popup>
-                        {tabs?.length === 1 && (
-                            <>
-                                <Menu.Item onClick={() => useDocument.getState().ungroupCell(at)}>
-                                    <Icon icon={Ungroup} size={14} /> {t('viewMenu.ungroup')}
-                                </Menu.Item>
-                                <Menu.Separator />
-                            </>
-                        )}
-                        <SplitItems at={at} separated />
-                        {/* A loose view is no view of the project: nothing to rename, share or delete. */}
-                        {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}
-                    </ContextMenu.Popup>
-                </ContextMenu.Root>
-            )}
-            {separateToolbar && hasViewToolbar && (
-                <div
-                    ref={viewBar}
-                    data-view-bar=""
-                    className={clsx(
-                        'flex h-10 shrink-0 items-center gap-2 overflow-hidden border-b border-border px-2 text-xs',
-                        folded && 'justify-end',
-                        focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
-                    )}
-                >
-                    {toolbarActions}
-                </div>
+                        )
+                    }
+                    trailing={maximized && <MaximizedIndicator at={at} />}
+                    focused={focused}
+                    onClose={closable ? () => closeCellAction(view.id) : undefined}
+                    closeLabel={t('cellToolbar.closeCell')}
+                    moreActionsLabel={t('cellToolbar.moreActions')}
+                    // A tab in the back keeps its bar on its hidden body, so the top row holds the one in front.
+                    container={hidden ? null : slot}
+                    onDragStart={(event) => {
+                        event.dataTransfer.setData(VIEW_DRAG_TYPE, view.id);
+                        event.dataTransfer.effectAllowed = 'move';
+                        setDragging(view.id, hosted);
+                    }}
+                    onDragEnd={() => setDragging(null)}
+                    menu={
+                        <>
+                            {tabs?.length === 1 && (
+                                <>
+                                    <Menu.Item onClick={() => useDocument.getState().ungroupCell(at)}>
+                                        <Icon icon={Ungroup} size={14} /> {t('viewMenu.ungroup')}
+                                    </Menu.Item>
+                                    <Menu.Separator />
+                                </>
+                            )}
+                            <SplitItems at={at} separated />
+                            {/* A loose view is no view of the project: nothing to rename, share or delete. */}
+                            {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}
+                        </>
+                    }
+                />
             )}
             {children}
         </FileToolbarSlotProvider>

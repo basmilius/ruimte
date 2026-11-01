@@ -87,6 +87,7 @@ export function PlanPanel() {
         <SlidingColumn
             open={open}
             gap={gap}
+            edge={false}
             width={width}
             bounds={bounds}
             instant={instant}

@@ -90,10 +90,15 @@ function previewZone(cell: HTMLElement, zone: SplitZone, filling: boolean): void
     showDropPreview(rectDropPreview(shapeRect(shapeOf(zone), column, boxInGrid(cell, grid))));
 }
 
-function previewTab(cell: HTMLElement, drop: TabDrop): void {
+/* A bar in the top row stands `lift` pixels above its cell, so the tab grows out of the top row and the body is the cell. */
+function previewTab(cell: HTMLElement, drop: LiftedTabDrop): void {
     const grid = cell.closest('[data-split-grid]')!.getBoundingClientRect();
-    showDropPreview(tabDropPreview(drop, boxInGrid(cell, grid)));
+    const box = boxInGrid(cell, grid);
+    showDropPreview(tabDropPreview(drop, { x: box.x, y: box.y - drop.lift }));
 }
+
+/* How far above its cell the cell's bar stands: none on the cell, the top row's height and what lies between in the top row. */
+type LiftedTabDrop = TabDrop & { lift: number };
 
 /* The gap between a cell's title and the tab that would stand after it, the same as the bar's own spacing. */
 const TITLE_GAP = 8;
@@ -157,7 +162,7 @@ function Cell({
 
     /* Where the pointer would put a tab, or null when the bar cannot take this drag. A whole cell
        is not a tab, and a view that fills this cell alone has nowhere to go in it. */
-    const tabDropFor = (event: ReactDragEvent<HTMLElement>): TabDrop | null => {
+    const tabDropFor = (event: ReactDragEvent<HTMLElement>): LiftedTabDrop | null => {
         const layout = useDocument.getState().layout;
         if (layout === null) {
             return null;
@@ -176,16 +181,19 @@ function Cell({
         const bounds = strip === null ? barBox : strip.getBoundingClientRect();
         const tabWidth = Math.min(draggingTabWidth() ?? DEFAULT_TAB_WIDTH, Math.round(bounds.right - bounds.left));
         // A plain cell becomes a host of its view and this one, so the tab goes after the title.
-        const titleEnd = bar.querySelector('[data-cell-title]')?.lastElementChild?.getBoundingClientRect().right ?? barBox.left;
+        const titleEnd = bar.querySelector('[data-pane-title]')?.lastElementChild?.getBoundingClientRect().right ?? barBox.left;
         const wanted = strip === null ? titleEnd + TITLE_GAP : gapLeft(rects, gap, bounds.left);
         const cellBox = event.currentTarget.getBoundingClientRect();
+        // The bar of a lone cell stands in the top row, outside the cell, whose events still reach it through the portal.
+        const lift = event.currentTarget.contains(bar) ? 0 : Math.round(cellBox.top - barBox.top);
         return {
             gap,
             left: Math.round(clampTabLeft(wanted, tabWidth, bounds) - cellBox.left),
             tabWidth,
             width: Math.round(cellBox.width),
-            height: Math.round(cellBox.height),
-            barHeight: Math.round(barBox.height)
+            height: Math.round(cellBox.height) + lift,
+            barHeight: lift > 0 ? lift : Math.round(barBox.height),
+            lift
         };
     };
 
@@ -394,7 +402,7 @@ function Cell({
                 }}
                 onDrop={(event) => (overBar(event) ? dropOnBar(event) : dropInZone(event))}
             >
-                <CellToolbar at={at} view={view} focused={focused}>
+                <CellToolbar at={at} view={view} focused={focused} hidden={hidden}>
                     {body}
                 </CellToolbar>
             </div>

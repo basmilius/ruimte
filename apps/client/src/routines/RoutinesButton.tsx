@@ -7,7 +7,7 @@ import { useRoutineList } from '@/routines/routine-list';
 import { toggleRoutines, useRoutinesStage } from '@/routines/stage';
 import { useEndpointId } from '@/state/keys';
 
-/* The clock in the toolbar, with a dot while a routine waits for approval or a run waits for a person. Absent on a machine without routines. */
+/* The clock in the rail, with a dot while a routine waits for approval or a run waits for a person. Absent on a machine without routines. */
 export function RoutinesButton() {
     const { t } = useTranslation('routines');
     const endpointId = useEndpointId();
@@ -23,6 +23,7 @@ export function RoutinesButton() {
             icon={Clock}
             label={attention > 0 ? t('toolbar.attention', { count: attention }) : t('toolbar.routines')}
             kbd={COMMANDS.routines.shortcut}
+            tooltipSide="left"
             active={open}
             className={attention > 0 ? 'relative' : undefined}
             onClick={toggleRoutines}

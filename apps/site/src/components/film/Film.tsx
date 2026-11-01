@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { Frame, GitBranch, Globe, PanelsTopLeft, PenTool, StickyNote, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AppWindow, Sidebar, type SidebarRow, Toolbar } from '../app/chrome.tsx';
+import { AppWindow, Rail, Sidebar, type SidebarRow, TopRow } from '../app/chrome.tsx';
 import { CanvasChapter } from './CanvasChapter.tsx';
 import { DelegateChapter } from './DelegateChapter.tsx';
 import { GridChapter } from './GridChapter.tsx';
@@ -110,7 +110,7 @@ function FilmBody() {
                 height={800}
                 label="The Ruimte app window. On a canvas an agent linked to a terminal, a note and a browser fixes a form and asks to commit; the person allows it. Then four views open side by side in a grid, and finally an agent starts three agents in their own worktrees and merges their work."
             >
-                <AppWindow sidebar={<Sidebar waiting={waiting} rows={rows} />} toolbar={<Toolbar />}>
+                <AppWindow sidebar={<Sidebar waiting={waiting} rows={rows} />} toolbar={<TopRow />} rail={<Rail />}>
                     <AnimatePresence initial={false}>
                         <motion.div
                             key={chapter}

@@ -3,15 +3,15 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { usePanelGap } from '@/shell/panel-layout';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { PANELS } from '@/shell/panels';
+import { closesFromRail, PANELS } from '@/shell/panels';
 import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
+import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useShownPanel, useUi, type PanelKind } from '@/state/ui';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
 const ProblemsPanel = lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel');
@@ -57,6 +57,7 @@ export function Panel() {
     const [titleSignal, setTitleSignal] = useState<HTMLElement | null>(null);
     const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
     const stored = useUi((s) => s.panelWidth);
+    const planOpen = useUi((s) => s.planOpen);
     const entry = PANELS.find((candidate) => candidate.kind === panel.kind);
     const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
@@ -67,7 +68,16 @@ export function Panel() {
     const label = entry === undefined ? t('panel.fallback') : t(`panel.names.${entry.kind}`);
 
     return (
-        <SlidingColumn open={open} gap={gap} width={width} bounds={bounds} instant={instant} onWidthChange={(next) => useUi.getState().setPanelWidth(next)}>
+        <SlidingColumn
+            open={open}
+            gap={gap}
+            // Beside the sheet its edge is the sheet's; beside an open plan it draws its own line.
+            edge={planOpen}
+            width={width}
+            bounds={bounds}
+            instant={instant}
+            onWidthChange={(next) => useUi.getState().setPanelWidth(next)}
+        >
             {/* An open panel is the rightmost column, so on Windows and Linux the close button would
                 land under the native window controls; the inset keeps their width free. */}
             <PanelHeader className={clsx('app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
@@ -76,12 +86,17 @@ export function Panel() {
                 <SectionLabel className="panel-title shrink-0">{label}</SectionLabel>
                 {/* The panel's own controls, between its name and the close button. */}
                 <div ref={setHeaderSlot} className="peer flex grow shrink-0 items-center gap-2" />
-                <Separator className="peer-empty:hidden" />
-                <CloseButton
-                    label={t('panel.close', { name: label })}
-                    kbd={CANVAS_SHORTCUTS.togglePanel}
-                    onClick={() => useUi.getState().setPanel({ open: false })}
-                />
+                {/* A panel with a toggle in the rail closes there; one without keeps a close button of its own. */}
+                {entry !== undefined && !closesFromRail(entry.kind) && (
+                    <>
+                        <Separator className="peer-empty:hidden" />
+                        <CloseButton
+                            label={t('panel.close', { name: label })}
+                            kbd={CANVAS_SHORTCUTS.togglePanel}
+                            onClick={() => useUi.getState().setPanel({ open: false })}
+                        />
+                    </>
+                )}
             </PanelHeader>
             <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
                 <ErrorBoundary label={t('panel.failed')} resetKeys={[panel.kind]} className="min-h-0 grow">

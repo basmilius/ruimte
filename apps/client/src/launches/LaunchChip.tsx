@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, GitBranch, Pencil, Play, Plus, Search, ShieldCheck, SquareTerminal } from 'lucide-react';
+import { GitBranch, Pencil, Play, Plus, Search, ShieldCheck, SquareTerminal } from 'lucide-react';
 import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
 import { Button, Icon, IconButton, Menu, Popover, PromptDialog, useNow } from '@adecore/ui';
 import { formatAgo } from '@adecore/ui/format';
@@ -12,7 +12,7 @@ import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launche
 import { useProjectRepos } from '@/state/git-repos';
 import { useUi } from '@/state/ui';
 
-/* Launches belong to the project, so the button lives in the application bar. */
+/* Launches belong to the project, so the button lives in the rail, and its menu opens beside it. */
 export function LaunchChip() {
     const { t } = useTranslation('launches');
     const anchor = useRef<HTMLDivElement>(null);
@@ -36,8 +36,9 @@ export function LaunchChip() {
                 <IconButton
                     render={<Menu.Trigger />}
                     label={t('menu.open')}
+                    tooltipSide="left"
                     active={pressed}
-                    className="w-auto gap-1 px-2 aria-expanded:bg-surface-active aria-expanded:text-text"
+                    className="aria-expanded:bg-surface-active aria-expanded:text-text"
                 >
                     <span className="relative flex">
                         <Icon icon={Play} size={16} />
@@ -45,9 +46,8 @@ export function LaunchChip() {
                             <LaunchDot view={view} className="pointer-events-none absolute -top-0.5 -right-1" />
                         )}
                     </span>
-                    <Icon icon={ChevronDown} size={12} />
                 </IconButton>
-                <Menu.Popup className="min-w-72">
+                <Menu.Popup side="left" className="min-w-72">
                     <LaunchMenu repos={repos} />
                 </Menu.Popup>
             </Menu.Root>

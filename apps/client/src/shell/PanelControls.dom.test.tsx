@@ -36,7 +36,7 @@ function status(files: GitFile[]): GitStatus {
 }
 
 function gitButton(): HTMLButtonElement | null {
-    return document.querySelector<HTMLButtonElement>('header button[aria-label^="Git"]');
+    return document.querySelector<HTMLButtonElement>('nav[aria-label="Tools"] button[aria-label^="Git"]');
 }
 
 function dotOn(button: HTMLButtonElement | null): boolean {

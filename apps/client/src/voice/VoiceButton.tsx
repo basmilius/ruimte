@@ -24,6 +24,7 @@ export function VoiceButton() {
             icon={Mic}
             label={t('shortcut')}
             kbd={CANVAS_SHORTCUTS.voiceControl}
+            tooltipSide="left"
             aria-pressed={open}
             active={active}
             onClick={() => useUi.getState().togglePanel('voice')}

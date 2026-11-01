@@ -52,7 +52,7 @@ test('the linked workspace preserves grid gestures, tabs and view bodies', async
                             await view.evaluate<string[]>(
                                 '(() => {const css=getComputedStyle(document.querySelector(".ade-workspace-toolbar"));return [css.borderBottomLeftRadius,css.borderBottomRightRadius]})()'
                             )
-                        ).toEqual([`${left ? gap : 0}px`, `${right ? gap : 0}px`]);
+                        ).toEqual([`${gap}px`, `${gap}px`]);
                     }
                 }
                 const divider = 'document.querySelector(".ade-split-divider[aria-orientation=vertical]")';

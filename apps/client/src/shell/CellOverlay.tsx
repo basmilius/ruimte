@@ -114,7 +114,7 @@ export function CellOverlayLayer() {
             {ids.map((viewId) => (
                 <OverlayBox key={viewId} viewId={viewId} />
             ))}
-            {/* The layer is the grid's box, so the preview is drawn in the grid's coordinates, over every cell's chrome. */}
+            {/* Mounted with the grid's layer, though it draws on the body: the tab of a lone cell reaches into the top row. */}
             <DropPreview />
         </div>
     );

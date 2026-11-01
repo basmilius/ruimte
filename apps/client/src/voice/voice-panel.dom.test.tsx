@@ -63,21 +63,25 @@ afterEach(async () => {
     window.matchMedia = matchMedia;
 });
 
+/* The rail toggles both panels, so neither has a close button: the open one is the one whose title shows. */
+function panelTitle(): string | null {
+    return document.querySelector('.panel-title')?.textContent ?? null;
+}
+
 describe('Voice Control as a panel', () => {
     test('takes the place of the panel that was open, and the other way round', async () => {
         await clickOn(button(VOICE_BUTTON));
         await until(() => voiceLog() !== null);
-        expect(button('Close Voice Control')).not.toBeNull();
+        expect(panelTitle()).toBe('Voice Control');
         expect(button(VOICE_BUTTON)!.getAttribute('aria-pressed')).toBe('true');
 
         await clickOn(button('Files'));
         await until(() => voiceLog() === null);
-        expect(button('Close Files')).not.toBeNull();
-        expect(button('Close Voice Control')).toBeNull();
+        expect(panelTitle()).toBe('Files');
         expect(button(VOICE_BUTTON)!.getAttribute('aria-pressed')).toBe('false');
 
         await clickOn(button(VOICE_BUTTON));
         await until(() => voiceLog() !== null);
-        expect(button('Close Files')).toBeNull();
+        expect(panelTitle()).toBe('Voice Control');
     });
 });

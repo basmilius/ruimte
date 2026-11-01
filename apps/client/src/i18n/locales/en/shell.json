@@ -217,6 +217,9 @@
     "viewHost": {
         "failed": "This view could not be shown"
     },
+    "rail": {
+        "label": "Tools"
+    },
     "toolbar": {
         "unsaved": "Unsaved changes",
         "saved": "Everything saved",

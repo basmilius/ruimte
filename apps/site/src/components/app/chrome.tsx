@@ -7,17 +7,18 @@ import {
     CircleCheck,
     Folder,
     GitBranch,
+    Clock,
+    Database,
     LayoutTemplate,
     LockOpen,
     Maximize,
     Minus,
     PanelLeftClose,
+    Package,
+    Play,
     Plus,
-    Rocket,
-    RotateCw,
     Search,
     Settings,
-    Square,
     TabletSmartphone,
     Laptop,
     X,
@@ -145,51 +146,66 @@ export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarR
                 <span className="flex h-8 w-5 items-center justify-center">
                     <span className="size-2 rounded-full bg-status-idle" />
                 </span>
-                <IconButton icon={ChartNoAxesColumn} />
-                <IconButton icon={Settings} />
             </div>
         </aside>
     );
 }
 
-/** `launches/LaunchChip.tsx`: the chosen launch, running on its port, with restart and stop beside it. */
-function LaunchChip() {
+/** `shell/TopRow.tsx`: the project, and beside it the title of the view when it is the only one on screen. */
+export function TopRow({
+    project = 'acme-web',
+    view
+}: {
+    readonly project?: string;
+    readonly view?: { readonly icon: SidebarRow['icon']; readonly name: string };
+}) {
     return (
-        <span className="flex h-8 shrink-0 items-center rounded-md border border-border bg-clip-padding">
-            <span className="flex h-full items-center gap-2 px-2">
-                <Rocket size={14} strokeWidth={1.75} />
-                <span className="size-2 shrink-0 rounded-full bg-status-idle" />
-                <span className="text-text">dev</span>
-                <span className="text-text-faint">:5173</span>
-            </span>
-            <span className="inline-flex items-center gap-px pr-0.5">
-                <IconButton icon={RotateCw} size="sm" />
-                <IconButton icon={Square} size="sm" />
-            </span>
-        </span>
-    );
-}
-
-/** `shell/Toolbar.tsx`: the project menu, then the launch chip, the panel toggles and search. */
-export function Toolbar({ project = 'acme-web', panel }: { readonly project?: string; readonly panel?: 'git' | 'files' }) {
-    return (
-        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-2 pl-2 text-[13px] text-text-muted">
+        <div className="flex h-[47px] shrink-0 items-center gap-2 border-b border-border bg-surface pr-1.5 pl-2 text-[13px] text-text-muted">
             <span className="flex h-8 items-center gap-2 rounded-md px-2">
                 <Laptop size={14} strokeWidth={1.75} />
                 <ProjectGlyph letter="A" color="#f54900" />
                 <span className="text-[14px] font-medium text-text">{project}</span>
                 <ChevronDown size={14} strokeWidth={1.75} />
             </span>
-            <span className="grow" />
-            <LaunchChip />
-            <span className="inline-flex items-center gap-px">
-                <IconButton icon={Folder} active={panel === 'files'} />
-                <IconButton icon={GitBranch} active={panel === 'git'} />
-                <IconButton icon={TabletSmartphone} />
-            </span>
-            <Separator />
-            <IconButton icon={Search} />
+            {view && (
+                <>
+                    <Separator />
+                    <span className="flex min-w-0 items-center gap-2 pl-2 text-text">
+                        <RowIcon icon={view.icon} />
+                        <span className="truncate text-[14px] font-medium">{view.name}</span>
+                    </span>
+                    <span className="grow" />
+                    <IconButton icon={X} size="sm" />
+                </>
+            )}
         </div>
+    );
+}
+
+function RailSeparator() {
+    return <span className="my-1 h-px w-5 shrink-0 bg-border" />;
+}
+
+/** `shell/ShellRail.tsx`: search, the launches, the panels and Routines, and at the foot Usage and Settings. */
+export function Rail({ panel }: { readonly panel?: 'git' | 'files' }) {
+    return (
+        <nav className="flex w-12 shrink-0 flex-col items-center gap-1 bg-[color-mix(in_srgb,var(--surface)_70%,var(--surface-sunken))] pt-[7px] pb-2">
+            <IconButton icon={Search} />
+            <span className="mt-[3px] mb-1 h-px w-5 shrink-0 bg-border" />
+            <IconButton icon={Play} />
+            <RailSeparator />
+            <IconButton icon={Folder} active={panel === 'files'} />
+            <IconButton icon={GitBranch} active={panel === 'git'} />
+            <RailSeparator />
+            <IconButton icon={Database} />
+            <IconButton icon={TabletSmartphone} />
+            <RailSeparator />
+            <IconButton icon={Package} />
+            <IconButton icon={Clock} />
+            <span className="grow" />
+            <IconButton icon={ChartNoAxesColumn} />
+            <IconButton icon={Settings} />
+        </nav>
     );
 }
 
@@ -279,17 +295,31 @@ export function WindowBar() {
 }
 
 /**
- * The desktop window around it all: the sidebar, the toolbar above the view and whatever floats over
- * the view (the dock, the prompt stack).
+ * The desktop window around it all: the sidebar and the work on one sheet with the top row above the view
+ * and whatever floats over it (the dock, the prompt stack), and the rail behind the sheet at the right.
  */
-export function AppWindow({ sidebar, toolbar, children }: { readonly sidebar: ReactNode; readonly toolbar: ReactNode; readonly children: ReactNode }) {
+export function AppWindow({
+    sidebar,
+    toolbar,
+    rail,
+    children
+}: {
+    readonly sidebar: ReactNode;
+    readonly toolbar: ReactNode;
+    readonly rail: ReactNode;
+    readonly children: ReactNode;
+}) {
     return (
-        <div className="flex h-full w-full overflow-hidden rounded-[12px] border border-white/10 bg-bg text-[14px] text-text shadow-[0_40px_120px_-20px_rgb(0_0_0/0.8),0_0_0_1px_rgb(0_0_0/0.6)]">
-            {sidebar}
-            <main className="flex min-w-0 grow flex-col">
-                {toolbar}
-                <div className="relative min-h-0 grow">{children}</div>
-            </main>
+        <div className="flex h-full w-full overflow-hidden rounded-[12px] border border-white/10 bg-[color-mix(in_srgb,var(--surface)_70%,var(--surface-sunken))] text-[14px] text-text shadow-[0_40px_120px_-20px_rgb(0_0_0/0.8),0_0_0_1px_rgb(0_0_0/0.6)]">
+            {/* `.ade-workspace-sheet`: a rounded right edge, its hairline and its shadow over the rail. */}
+            <div className="relative z-1 flex min-w-0 grow overflow-hidden rounded-tr-[12px] bg-surface shadow-[0_0_0_1px_var(--border),0_0_14px_rgb(0_0_0/0.3)]">
+                {sidebar}
+                <main className="flex min-w-0 grow flex-col">
+                    {toolbar}
+                    <div className="relative min-h-0 grow">{children}</div>
+                </main>
+            </div>
+            {rail}
         </div>
     );
 }

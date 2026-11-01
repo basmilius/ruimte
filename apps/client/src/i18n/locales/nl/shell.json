@@ -217,6 +217,9 @@
     "viewHost": {
         "failed": "Deze weergave kon niet worden getoond"
     },
+    "rail": {
+        "label": "Gereedschappen"
+    },
     "toolbar": {
         "unsaved": "Niet-opgeslagen wijzigingen",
         "saved": "Alles opgeslagen",

@@ -31,7 +31,8 @@ import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { RemoveWorktreeDialog } from '@/shell/RemoveWorktreeDialog';
 import { Sidebar } from '@/shell/Sidebar';
 import { FLOATING_FAILURE, failed } from '@/shell/surface-failure';
-import { Toolbar } from '@/shell/Toolbar';
+import { ShellRail } from '@/shell/ShellRail';
+import { TopRow } from '@/shell/TopRow';
 import { ViewDialogs } from '@/shell/ViewDialogs';
 import { useFileChoice } from '@/shell/panels/file-links';
 import { ViewHost } from '@/shell/ViewHost';
@@ -237,7 +238,12 @@ export function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         }
                         toolbar={
                             <ErrorBoundary label={failed('toolbar')} resetKeys={[workspace]} compact className="shrink-0">
-                                <Toolbar />
+                                <TopRow />
+                            </ErrorBoundary>
+                        }
+                        rail={
+                            <ErrorBoundary label={failed('toolbar')} resetKeys={[workspace]} compact className="w-12 shrink-0">
+                                <ShellRail />
                             </ErrorBoundary>
                         }
                         sidePanelWidth="auto"

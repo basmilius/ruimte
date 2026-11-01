@@ -87,7 +87,7 @@ function stage(): HTMLElement | null {
 }
 
 function clock(): HTMLElement | null {
-    return page.host.querySelector<HTMLElement>('header button[aria-label^="Routines"]');
+    return page.host.querySelector<HTMLElement>('nav[aria-label="Tools"] button[aria-label^="Routines"]');
 }
 
 /* The prompt of the routine form, an editor rather than a text field. */
@@ -440,7 +440,7 @@ describe('Routines', () => {
 
     test('a machine without routines shows no clock', async () => {
         machine.answersOnly((Object.keys(REQUEST_SCHEMAS) as RequestType[]).filter((type) => !type.startsWith('routine.')));
-        await until(() => page.host.querySelector('header button[aria-label="Search"]') !== null);
+        await until(() => page.host.querySelector('nav[aria-label="Tools"] button[aria-label="Search"]') !== null);
         await act(async () => {
             await new Promise((resolve) => setTimeout(resolve, 0));
         });

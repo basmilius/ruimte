@@ -22,7 +22,7 @@ function waitingSince(chatId: string, createdAt: number): ChatInfo {
 }
 
 function cellTitles(): string {
-    return [...document.querySelectorAll('[data-cell-title]')].map((title) => title.textContent ?? '').join(' | ');
+    return [...document.querySelectorAll('[data-pane-title]')].map((title) => title.textContent ?? '').join(' | ');
 }
 
 async function pressNextNeedsYou(): Promise<void> {
