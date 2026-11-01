@@ -38,36 +38,103 @@ export function defineCanvasOverlay(overlay: { id: string; component: LazyCompon
 export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;
 export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] }): void;
 
-/** A place an action or menu shows. Yours to choose, and an action in a menu needs none of its own. */
-export type ActionPlace = 'selectionBar' | 'nodeHeader' | 'nodeMenu';
+export interface AgentInfo {
+    provider: string;
+    account: string | null;
+    status: 'idle' | 'running' | 'needsYou' | 'stopped';
+    cwd: string | null;
+    branch: string | null;
+    worktree: string | null;
+}
 
-export interface ActionTarget {
-    /** In a bar or a command the selection, in a header that node, in a node's menu the selection if the node is in it. */
-    nodes: { id: string; kind: string }[];
+export interface NodeInfo {
+    id: string;
+    kind: string;
+    title: string;
+    color: string | null;
+    bounds: { x: number; y: number; width: number; height: number };
+    groupId: string | null;
+    viewId: string;
+    machine: string | null;
+    linkedTo: string[];
+    agent?: AgentInfo;
+    path?: string;
+    url?: string;
+    extension?: { id: string; type: string };
+}
+
+export interface FileInfo {
+    path: string;
+    name: string;
+    extension: string;
+}
+
+/** What every slot, action and widget is told. */
+export interface BaseContext {
+    project: { id: string; name: string; folder: string | null };
+    view: { id: string; kind: string; name: string } | null;
+    machine: { id: string };
+    theme: 'light' | 'dark';
+}
+
+/** `false` hides it, `true` shows it, an object also changes what it shows there. */
+export type SlotAnswer = boolean | { title?: string; icon?: string; disabled?: boolean | string; badge?: string; order?: number };
+export type Slot<Context> = true | ((context: BaseContext & Context) => SlotAnswer);
+
+/** What each place tells. */
+export interface SlotContexts {
+    selectionBar: { nodes: NodeInfo[] };
+    nodeHeader: { node: NodeInfo };
+    /** `nodes` is the selection if the node is in it. */
+    nodeMenu: { node: NodeInfo; nodes: NodeInfo[] };
+    canvasMenu: { at: { x: number; y: number } };
+    viewToolbar: {};
+    viewMenu: { target: { id: string; kind: string } };
+    panelHeader: { panel: string };
+    commandPalette: { nodes: NodeInfo[] };
+    composer: { chat: { id: string }; node: NodeInfo };
+    fileMenu: { file: FileInfo; files: FileInfo[] };
+    editorToolbar: { file: FileInfo };
+    editorMenu: { file: FileInfo; files: FileInfo[] };
+    diffToolbar: { repository: string };
+    terminalToolbar: { node: NodeInfo };
+    browserToolbar: { node: NodeInfo; url: string };
+}
+
+export type SlotName = keyof SlotContexts;
+export type Slots<Place extends SlotName = SlotName> = { [Key in Place]: Slot<SlotContexts[Key]> };
+export type ContextOf<Place extends SlotName> = { [Key in Place]: BaseContext & SlotContexts[Key] }[Place];
+
+export interface ActionHandle {
+    run(context?: Partial<BaseContext> & Record<string, unknown>): Promise<void>;
+    useRunning(): boolean;
 }
 
 /**
- * While `run` is pending its nodes show a spinner and its button is disabled, and a throw is shown to the person.
- * Without `show` it is only in the command palette.
+ * While `run` is pending, its nodes show a spinner that also stops it through `signal`, and a throw reaches the person.
+ * Without `slots` it only shows where a menu puts it, and gets that menu's context. Type it with `defineAction<Context>`.
  */
-export function defineAction(action: {
+export function defineAction<Place extends SlotName>(action: {
     id: string;
     title: string;
-    /** A Lucide icon. */
     icon?: string;
-    show?: (ActionPlace | 'commands')[];
-    when?: (target: ActionTarget) => boolean;
-    run: (target: ActionTarget) => void | Promise<void>;
-}): void;
+    slots: Slots<Place>;
+    run(context: ContextOf<Place> & { slot: Place; signal: AbortSignal }): void | Promise<void>;
+}): ActionHandle;
+export function defineAction<Context = {}>(action: {
+    id: string;
+    title: string;
+    icon?: string;
+    run(context: BaseContext & Context & { slot: string; signal: AbortSignal }): void | Promise<void>;
+}): ActionHandle;
 
-/** A menu of your own: a submenu in a node's menu, a dropdown in a bar or header. `items` are ids of actions. */
-export function defineMenu(menu: { id: string; title: string; icon?: string; show: ActionPlace[]; items: string[] }): void;
+export type MenuItem = ActionHandle | 'separator' | { title: string; run(): void; checked?: boolean } | { title: string; items: MenuItem[] };
 
-/** Your own UI in a node's header, beside its buttons. Keep it small. */
-export function defineNodeHeader(header: { id: string; when?: (node: { id: string; kind: string }) => boolean; component: LazyComponent<{ nodeId: string }> }): void;
+/** A menu of your own: a submenu in a menu, a dropdown in a bar. */
+export function defineMenu(menu: { id: string; title: string; icon?: string; slots: Partial<Slots>; items: MenuItem[] | ((context: BaseContext) => MenuItem[]) }): void;
 
-/** For drawing your own loading state of an action. */
-export function useActionRunning(actionId: string): boolean;
+/** Your own React in a slot. */
+export function defineWidget<Place extends SlotName>(widget: { id: string; slots: Slots<Place>; component: LazyComponent<{ context: ContextOf<Place> }> }): void;
 
 /** Each method calls `server/` on the machine in front; `.use()` suspends until it answers. */
 export type ServerClient<Server> = {

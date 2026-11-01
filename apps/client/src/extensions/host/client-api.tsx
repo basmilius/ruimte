@@ -9,7 +9,8 @@ import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
-import { contribute, type ActionContribution, type ActionPlace, type ExtensionSurfaceProps } from '@/extensions/registry';
+import { contribute, type ExtensionSurfaceProps, type SlotEntry, type SlotName } from '@/extensions/registry';
+import { baseContext } from '@/extensions/slots';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
@@ -132,17 +133,9 @@ function surfaceOf<Props extends object>(extension: LoadedExtension, surface: Su
     };
 }
 
-interface ActionTarget {
-    nodes: { id: string; kind: string }[];
-}
-
-function nodeRefOf(nodeId: string): { id: string; kind: string } {
-    return { id: nodeId, kind: canvasOfNode(nodeId)?.getState().nodes[nodeId]?.kind ?? 'unknown' };
-}
-
-function targetOf(nodeIds: readonly string[]): ActionTarget {
-    return { nodes: nodeIds.map(nodeRefOf) };
-}
+type PublicSlots = Partial<
+    Record<SlotName, true | ((context: never) => boolean | { title?: string; icon?: string; disabled?: boolean | string; badge?: string; order?: number })>
+>;
 
 function assertLazy(surface: { component?: unknown; frame?: unknown }, what: string): void {
     if (
@@ -194,6 +187,25 @@ function serverClient(extension: LoadedExtension, transport: Pick<Transport, 're
 export function clientApiFor(extension: LoadedExtension) {
     const { id } = extension.manifest;
     const servers = new WeakMap<object, unknown>();
+    const reportFailure = (what: string) => (text: string) => {
+        if (extension.dev === true) {
+            sendDevLog(id, 'error', [`${what}: ${text}`]);
+        }
+    };
+    /* A slot names its icon by a word; what a host draws is the icon itself. */
+    const slotsOf = (slots: PublicSlots): SlotEntry['slots'] =>
+        Object.fromEntries(
+            Object.entries(slots).map(([place, slot]) => [
+                place,
+                slot === true
+                    ? true
+                    : (context: object) => {
+                          const answer = (slot as (context: object) => boolean | { icon?: string })(context);
+
+                          return typeof answer === 'object' && answer.icon !== undefined ? { ...answer, icon: iconOf(answer.icon, extension) } : answer;
+                      }
+            ])
+        ) as SlotEntry['slots'];
     const add = <Kind extends Parameters<typeof contribute>[0]>(kind: Kind, item: Parameters<typeof contribute<Kind>>[1]): (() => void) => {
         const dispose = contribute(kind, item);
 
@@ -284,57 +296,45 @@ export function clientApiFor(extension: LoadedExtension) {
             assertLazy(settings, `defineExtensionSettings ${id}`);
             add('extensionSettings', { id, component: surfaceOf(extension, settings) as ComponentType, keywords: settings.keywords ?? [] });
         },
-        defineAction(action: {
-            id: string;
-            title: string;
-            icon?: string;
-            show?: (ActionPlace | 'commands')[];
-            when?: (target: ActionTarget) => boolean;
-            run: (target: ActionTarget) => void | Promise<void>;
-        }) {
-            const show = action.show ?? ['commands'];
-            const contribution: ActionContribution = {
+        defineAction(action: { id: string; title: string; icon?: string; slots?: PublicSlots; run: (context: never) => void | Promise<void> }) {
+            const entry: SlotEntry = {
                 id: `${id}/${action.id}`,
+                kind: 'action',
                 title: action.title,
                 ...(action.icon === undefined ? {} : { icon: iconOf(action.icon, extension) }),
-                show: show.filter((place): place is ActionPlace => place !== 'commands'),
-                when: (nodeIds) => action.when?.(targetOf(nodeIds)) ?? true,
-                run: (nodeIds) => action.run(targetOf(nodeIds)),
-                onFailure: (text) => {
-                    if (extension.dev === true) {
-                        sendDevLog(id, 'error', [`${action.id}: ${text}`]);
-                    }
-                }
+                slots: slotsOf(action.slots ?? {}),
+                run: action.run as (context: object) => void | Promise<void>,
+                onFailure: reportFailure(action.id)
             };
 
-            add('actions', contribution);
+            add('slotEntries', entry);
 
-            if (show.includes('commands')) {
-                const selection = () => focusedCanvas().getState().selection;
-
-                add('commands', {
-                    id: `extension:${id}/action/${action.id}`,
-                    title: action.title,
-                    when: () => contribution.when(selection()),
-                    run: () => runAction(contribution, selection())
-                });
-            }
+            return {
+                actionId: entry.id,
+                run: (context?: object) => runAction(entry, { ...baseContext(), ...context }, 'code'),
+                useRunning: () => useActionRuns((state) => state.runs.some((run) => run.actionId === entry.id))
+            };
         },
-        defineMenu(menu: { id: string; title: string; icon?: string; show: ActionPlace[]; items: string[] }) {
-            add('actionMenus', {
+        defineMenu(menu: { id: string; title: string; icon?: string; slots: PublicSlots; items: SlotEntry['items'] }) {
+            add('slotEntries', {
                 id: `${id}/${menu.id}`,
+                kind: 'menu',
                 title: menu.title,
                 ...(menu.icon === undefined ? {} : { icon: iconOf(menu.icon, extension) }),
-                show: menu.show,
-                items: menu.items.map((item) => `${id}/${item}`)
+                slots: slotsOf(menu.slots),
+                ...(menu.items === undefined ? {} : { items: menu.items }),
+                onFailure: reportFailure(menu.id)
             });
         },
-        defineNodeHeader(header: { id: string; when?: (node: { id: string; kind: string }) => boolean; component: LazyComponent<{ nodeId: string }> }) {
-            assertLazy(header, `defineNodeHeader ${header.id}`);
-            add('nodeHeaders', {
-                id: `${id}/${header.id}`,
-                when: (nodeId) => header.when?.(nodeRefOf(nodeId)) ?? true,
-                component: surfaceOf(extension, header) as ComponentType<{ nodeId: string }>
+        defineWidget(widget: { id: string; slots: PublicSlots; component: LazyComponent<{ context: object }> }) {
+            assertLazy(widget, `defineWidget ${widget.id}`);
+            add('slotEntries', {
+                id: `${id}/${widget.id}`,
+                kind: 'widget',
+                title: widget.id,
+                slots: slotsOf(widget.slots),
+                component: surfaceOf(extension, widget) as ComponentType<{ context: object; nodeId?: string | undefined }>,
+                onFailure: reportFailure(widget.id)
             });
         },
         useServer<Server>(): Server {
@@ -453,11 +453,6 @@ export function clientApiFor(extension: LoadedExtension) {
                     status: nodeStatus(node, sessions, chats, endpointId),
                     needsYou: nodeWaitAsk(node, sessions, chats, endpointId) !== null
                 }));
-        },
-        useActionRunning(actionId: string) {
-            const full = `${useExtension().manifest.id}/${actionId}`;
-
-            return useActionRuns((state) => state.runs.some((run) => run.actionId === full));
         },
         host: {
             busy<Result>(work: { title: string; nodes?: { id: string }[] }, run: () => Result | Promise<Result>) {

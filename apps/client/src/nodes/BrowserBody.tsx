@@ -19,6 +19,8 @@ import { endpointKey, useEndpointId } from '@/state/keys';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { useNodeHost } from '@/nodes/node-host';
 import { useLocalDaemonId, usePage } from '@/nodes/use-page';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
@@ -143,6 +145,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 />
                 {native && <IconButton icon={Code} size="sm" label={t('browser.inspect')} disabled={!hasPage} onClick={() => browserRegistry.inspect(key)} />}
             </ButtonGroup>
+            <SlotRow place="browserToolbar" context={{ node: nodeInfoOf(id), url: state?.url ?? saved ?? '' }} />
             {/* The bar is the one piece a browser node and a browser view both mount, and the plate
                 it draws lands in the parked host either way, never in the bar itself. */}
             <BrowserErrorPlate id={id} />

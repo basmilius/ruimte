@@ -8,6 +8,7 @@ import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useInstantWidth } from '@/shell/useInstantWidth';
@@ -85,6 +86,7 @@ export function Panel() {
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />
                 <SectionLabel className="panel-title shrink-0">{label}</SectionLabel>
                 {/* The panel's own controls, between its name and the close button. */}
+                <SlotRow place="panelHeader" context={{ panel: panel.kind }} />
                 <div ref={setHeaderSlot} className="peer flex grow shrink-0 items-center gap-2" />
                 {/* A panel with a toggle in the rail closes there; one without keeps a close button of its own. */}
                 {entry !== undefined && !closesFromRail(entry.kind) && (

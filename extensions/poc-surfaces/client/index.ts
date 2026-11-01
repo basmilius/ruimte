@@ -5,11 +5,13 @@ import {
     defineExtensionSettings,
     defineNode,
     defineMenu,
-    defineNodeHeader,
+    defineWidget,
     definePanel,
     defineSidebarCard,
     defineView,
-    host
+    host,
+    type NodeInfo,
+    type Slots
 } from '@ruimte/extension/client';
 
 const panel = // No icon, so it shows assets/icon.svg.
@@ -40,22 +42,57 @@ defineCommand({
     title: 'POC: ask to confirm',
     run: async () => host.notify((await host.confirm({ title: 'POC', body: 'Say yes or no' })) ? 'Yes' : 'No')
 });
-defineAction({
+const count = defineAction({
     id: 'count',
     title: 'Count',
     icon: 'hash',
-    show: ['selectionBar', 'commands'],
-    when: ({ nodes }) => nodes.length > 0,
+    slots: {
+        selectionBar: ({ nodes }) => nodes.length > 0,
+        commandPalette: ({ nodes }) => nodes.length > 0
+    },
     run: ({ nodes }) => host.notify(`${nodes.length} selected`)
 });
-defineAction({ id: 'show-id', title: 'Show the id', run: ({ nodes }) => host.notify(nodes.map((node) => node.id).join(', ')) });
-defineAction({
+// No slots: this only shows through the menu below.
+const showId = defineAction<{ node: NodeInfo }>({ id: 'show-id', title: 'Show the id', run: ({ node }) => host.notify(node.id) });
+const wait = defineAction({
     id: 'wait',
     title: 'Wait three seconds',
     icon: 'hourglass',
-    show: ['nodeHeader'],
+    slots: { nodeHeader: ({ node }) => node.kind === 'note' },
     run: () => new Promise((done) => setTimeout(done, 3000))
 });
-defineMenu({ id: 'menu', title: 'POC surfaces', icon: 'flask-conical', show: ['nodeMenu'], items: ['count', 'show-id', 'wait'] });
-defineNodeHeader({ id: 'kind', when: ({ kind }) => kind === 'note', component: () => import('./HeaderTag') });
+
+defineMenu({
+    id: 'menu',
+    title: 'POC surfaces',
+    icon: 'flask-conical',
+    slots: { nodeMenu: true, canvasMenu: true },
+    items: () => [count, showId, 'separator', wait, { title: 'A plain item', run: () => host.notify('Plain') }, { title: 'A submenu', items: [wait] }]
+});
+
+const OTHER_SLOTS = [
+    'viewToolbar',
+    'viewMenu',
+    'panelHeader',
+    'composer',
+    'fileMenu',
+    'editorToolbar',
+    'editorMenu',
+    'diffToolbar',
+    'terminalToolbar',
+    'browserToolbar'
+] as const;
+
+// One for each slot this one has no other use for, so each spot can be checked by eye.
+for (const word of OTHER_SLOTS) {
+    defineAction({
+        id: `in-${word}`,
+        title: `POC in ${word}`,
+        icon: 'flask-conical',
+        slots: { [word]: true } as Slots<typeof word>,
+        run: () => host.notify(`From ${word}`)
+    });
+}
+
+defineWidget({ id: 'tag', slots: { nodeHeader: ({ node }) => node.kind === 'note' }, component: () => import('./HeaderTag') });
 console.info('poc-surfaces loaded');

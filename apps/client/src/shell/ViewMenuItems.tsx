@@ -1,3 +1,4 @@
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useTranslation } from 'react-i18next';
 import {
     ArrowRightToLine,
@@ -210,6 +211,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
             <Menu.Item className="text-status-error" onClick={() => askDeleteView(viewId)}>
                 <Icon icon={Trash} size={14} /> {t('common:action.delete')}
             </Menu.Item>
+            <SlotMenuItems kit={Menu} place="viewMenu" context={{ target: { id: viewId, kind } }} />
         </>
     );
 }

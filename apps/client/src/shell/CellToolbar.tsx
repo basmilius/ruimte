@@ -21,6 +21,8 @@ import { cellAt, type CellAt } from '@/shell/split';
 import { Icon, Menu, PaneBar, Tooltip } from '@adecore/ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 
 /* What a cell is: its tabs when it hosts them, or the glyph and the name of the view. */
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
@@ -142,7 +144,13 @@ export function CellToolbar({
                             />
                         )
                     }
-                    trailing={maximized && <MaximizedIndicator at={at} />}
+                    trailing={
+                        <>
+                            <SlotRow place="viewToolbar" context={{}} />
+                            {view.kind === 'terminal' && <SlotRow place="terminalToolbar" context={{ node: nodeInfoOf(view.id) }} />}
+                            {maximized && <MaximizedIndicator at={at} />}
+                        </>
+                    }
                     focused={focused}
                     onClose={closable ? () => closeCellAction(view.id) : undefined}
                     closeLabel={t('cellToolbar.closeCell')}

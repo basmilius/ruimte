@@ -96,31 +96,43 @@ export interface CommandContribution {
     run: () => void | Promise<void>;
 }
 
-/* Where an extension shows an action or a menu. It chooses; Ruimte only gives each place its spot. */
-export type ActionPlace = 'selectionBar' | 'nodeHeader' | 'nodeMenu';
+/* A place an extension may put something. Ruimte gives each its spot; the extension decides when it shows. */
+export type SlotName =
+    | 'selectionBar'
+    | 'nodeHeader'
+    | 'nodeMenu'
+    | 'canvasMenu'
+    | 'lineMenu'
+    | 'viewToolbar'
+    | 'viewMenu'
+    | 'panelHeader'
+    | 'commandPalette'
+    | 'composer'
+    | 'fileMenu'
+    | 'editorToolbar'
+    | 'editorMenu'
+    | 'diffToolbar'
+    | 'terminalToolbar'
+    | 'browserToolbar';
 
-export interface ActionMenuContribution {
+export type SlotFunction = (context: never) => boolean | { title?: string; icon?: LucideIcon; disabled?: boolean | string; badge?: string; order?: number };
+
+export type SlotMenuItem =
+    | 'separator'
+    | { actionId: string }
+    | { title: string; run: () => void; checked?: boolean }
+    | { title: string; items: readonly SlotMenuItem[] };
+
+/* An action, a menu or a widget: what goes in a slot. An action without slots only shows where a menu puts it. */
+export interface SlotEntry {
     id: string;
+    kind: 'action' | 'menu' | 'widget';
     title: string;
     icon?: LucideIcon;
-    show: readonly ActionPlace[];
-    // Ids of actions, in order.
-    items: readonly string[];
-}
-
-export interface NodeHeaderContribution {
-    id: string;
-    when: (nodeId: string) => boolean;
-    component: ComponentType<{ nodeId: string }>;
-}
-
-export interface ActionContribution {
-    id: string;
-    title: string;
-    icon?: LucideIcon;
-    show: readonly ActionPlace[];
-    when: (nodeIds: readonly string[]) => boolean;
-    run: (nodeIds: readonly string[]) => void | Promise<void>;
+    slots: Partial<Record<SlotName, true | ((context: object) => ReturnType<SlotFunction>)>>;
+    run?: (context: object) => void | Promise<void>;
+    items?: readonly SlotMenuItem[] | ((context: object) => readonly SlotMenuItem[]);
+    component?: ComponentType<{ context: object; nodeId?: string | undefined }>;
     onFailure?: (text: string) => void;
 }
 
@@ -142,9 +154,7 @@ export interface Contributions {
     panels: readonly PanelContribution[];
     settingsSections: readonly SettingsSectionContribution[];
     canvasLayers: readonly CanvasLayerContribution[];
-    actions: readonly ActionContribution[];
-    actionMenus: readonly ActionMenuContribution[];
-    nodeHeaders: readonly NodeHeaderContribution[];
+    slotEntries: readonly SlotEntry[];
     viewAccessories: readonly ViewAccessoryContribution[];
     sharedStorage: readonly SharedStorageContribution[];
     sidebarCards: readonly SidebarCardContribution[];
@@ -162,9 +172,7 @@ export const useContributions = create<Contributions>(() => ({
     panels: [],
     settingsSections: [],
     canvasLayers: [],
-    actions: [],
-    actionMenus: [],
-    nodeHeaders: [],
+    slotEntries: [],
     viewAccessories: [],
     sharedStorage: [],
     sidebarCards: [],

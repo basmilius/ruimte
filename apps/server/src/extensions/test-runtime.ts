@@ -29,10 +29,13 @@ const client: Record<string, unknown> = {
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
     defineExtensionSettings: recording('settings'),
-    defineAction: recording('action'),
+    defineAction: (definition: unknown) => {
+        defined.push({ kind: 'action', definition });
+
+        return { run: async () => undefined, useRunning: () => false };
+    },
     defineMenu: recording('menu'),
-    defineNodeHeader: recording('nodeHeader'),
-    useActionRunning: () => false,
+    defineWidget: recording('widget'),
     useServer: () =>
         new Proxy(
             {},

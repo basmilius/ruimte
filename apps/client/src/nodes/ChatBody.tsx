@@ -30,6 +30,8 @@ import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
+import { nodeInfoOf } from '@/extensions/slots';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 
 /*
  * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view what a built-in
@@ -168,15 +170,18 @@ export function ChatBody({
                     <Timeline
                         chatId={id}
                         composer={
-                            composer &&
-                            (accessories === undefined ? (
-                                composer
-                            ) : (
+                            composer && (
                                 <div className="relative">
-                                    <ViewAccessories on="chat" id={id} title={accessories.title} />
+                                    {accessories !== undefined && <ViewAccessories on="chat" id={id} title={accessories.title} />}
+                                    <SlotRow
+                                        place="composer"
+                                        words
+                                        context={{ chat: { id }, node: nodeInfoOf(id) }}
+                                        wrap={(row) => <div className="flex flex-wrap items-center gap-1 px-2 pb-1">{row}</div>}
+                                    />
                                     {composer}
                                 </div>
-                            ))
+                            )
                         }
                         overlay={
                             shown && (

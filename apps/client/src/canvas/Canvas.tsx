@@ -45,7 +45,7 @@ import { GroupHover } from '@/canvas/GroupHover';
 import { PortHints } from '@/canvas/PortHints';
 import { ResizeHandles } from '@/canvas/ResizeHandles';
 import { NodeFrame } from '@/canvas/NodeFrame';
-import { ActionBar } from '@/extensions/ActionSurfaces';
+import { SelectionBar } from '@/extensions/SlotSurfaces';
 import { CanvasLayers } from '@/extensions/ContributedSlots';
 import { DerivedCards } from '@/canvas/DerivedCards';
 import { cardHolds, derivedCardOf, derivedOwnerOf } from '@/canvas/node-body';
@@ -862,7 +862,7 @@ export function Canvas() {
                     <TextToolbar />
                     {maximizedId === null && <CanvasLineToolbar />}
                     {maximizedId === null && <CanvasLayers place="screen" z={0} />}
-                    {maximizedId === null && <ActionBar />}
+                    {maximizedId === null && <SelectionBar />}
                     <Minimap />
                     {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                     {box && (

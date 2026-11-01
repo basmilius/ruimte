@@ -21,6 +21,7 @@ import { useGitActions, type ActionOutcome, type ManyJob } from '@/shell/panels/
 import { useWorktreeInspection } from '@/shell/panels/use-worktree-inspection';
 import { WorktreeBar, WorktreeInspectDialog, type WorktreeActions } from '@/shell/panels/WorktreeMenu';
 import { nodeNames, nodesInWorktree, worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
@@ -553,6 +554,7 @@ export function GitPanel() {
                         of them sits on its row in the list and in its own level of the branch menu. */}
                         {!named && cwd !== null ? repoActions(cwd) : undefined}
                     </ActionsMenu>
+                    {cwd !== null && <SlotRow place="diffToolbar" context={{ repository: cwd }} />}
                 </PanelHeaderActions>
             </PanelHeaderSlot>
             {worktree !== null && (

@@ -1,3 +1,5 @@
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { useContext, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
@@ -19,6 +21,7 @@ export function FileToolbar({ children, menu, leading }: { children?: ReactNode;
     const controls = (
         <>
             {children}
+            <EditorSlot />
             {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
             {children !== undefined && <Separator />}
             <FileMenu extra={menu} />
@@ -97,6 +100,13 @@ function useMenuRows(): ReactNode {
         return standIn;
     }
     return actions ? <FileMenuRows actions={actions} /> : null;
+}
+
+/* The file this toolbar is about, when it is about one file. */
+function EditorSlot() {
+    const actions = useFileActions();
+
+    return actions ? <SlotRow place="editorToolbar" context={{ file: fileInfoOf(actions.path) }} /> : null;
 }
 
 function FileMenuRows({ actions }: { actions: FileActions }) {

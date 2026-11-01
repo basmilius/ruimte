@@ -58,7 +58,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { workFolderOf, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
-import { NodeMenuExtensions } from '@/extensions/ActionSurfaces';
+import { NodeMenuSlot } from '@/extensions/SlotSurfaces';
 import { setRunsHidden, useRunsHidden } from '@/routines/runs-hidden';
 import { workflowCandidates, type WorkflowCandidate } from '@/chat/workflow/beside-workflows';
 import { useWorkflowBesideSwitch } from '@/chat/workflow/workflow-beside-state';
@@ -113,7 +113,6 @@ const NO_WORKFLOWS: readonly WorkflowCandidate[] = [];
 function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, finalFocus, createAt }: NodeMenuProps & { node: CanvasNode | undefined }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
-    const selection = useCanvas((s) => s.selection);
     const endpointId = useEndpointId();
     // A design's conversation is the one of the chat it shows.
     const chatId = useShownChatOfNode(node) ?? id;
@@ -449,8 +448,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
                 </ContextMenu.Item>
             )}
             {node.kind === 'file' && filePath !== null && <FileActionItems path={filePath} on="node" />}
-            {/* Right on a node in the selection means the selection, as for delete. */}
-            <NodeMenuExtensions nodeIds={selection.includes(id) ? selection : [id]} />
+            <NodeMenuSlot nodeId={id} />
             <ContextMenu.Separator />
             {isChat && (
                 <ContextMenu.Item onClick={clearChat}>

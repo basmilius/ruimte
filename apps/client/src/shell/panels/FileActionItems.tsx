@@ -1,3 +1,5 @@
+import { fileInfoOf } from '@/extensions/file-info';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useTranslation } from 'react-i18next';
 import { Columns2, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
 import { createNodeAction, createViewAction, ignoreRefusal, perform } from '@/actions/client-actions';
@@ -70,6 +72,7 @@ export function FileActionItems({ path, on, onRefresh, gone = false }: FileActio
             </Menu.Item>
             <Menu.Separator />
             <FileCopyRow targets={[{ absolute: path, relative: folder === null ? null : relativeTo(folder, path), gone }]} />
+            <SlotMenuItems kit={Menu} place={on === 'files' ? 'fileMenu' : 'editorMenu'} context={{ file: fileInfoOf(path), files: [fileInfoOf(path)] }} />
             {onRefresh !== undefined && (
                 <>
                     <Menu.Separator />

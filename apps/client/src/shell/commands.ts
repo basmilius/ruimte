@@ -1,5 +1,7 @@
 import i18next from 'i18next';
+import { runAction } from '@/extensions/action-runs';
 import { useContributions } from '@/extensions/registry';
+import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
 import {
     isCanvasView,
     isDiagramView,
@@ -303,10 +305,17 @@ export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Co
 }
 
 function extensionCommands(): Command[] {
-    return useContributions
-        .getState()
-        .commands.filter((command) => command.when?.() ?? true)
-        .map((command) => ({ id: command.id, label: command.title, run: () => void command.run() }));
+    const { commands, slotEntries } = useContributions.getState();
+    const context = { ...baseContext(), nodes: focusedCanvas().getState().selection.map(nodeInfoOf) };
+
+    return [
+        ...commands.filter((command) => command.when?.() ?? true).map((command) => ({ id: command.id, label: command.title, run: () => void command.run() })),
+        ...resolveSlot(slotEntries, 'commandPalette', context).flatMap(({ entry, title }) =>
+            entry.kind === 'action'
+                ? [{ id: `extension:${entry.id}`, label: title, run: () => void runAction({ ...entry, title }, context, 'commandPalette') }]
+                : []
+        )
+    ];
 }
 
 function coreCommands(prRepos: readonly PrRepo[]): Command[] {
