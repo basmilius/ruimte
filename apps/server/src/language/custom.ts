@@ -18,6 +18,16 @@ import type { KindProfile } from './profiles.ts';
 
 class CustomServerError extends CodedError<LanguageErrorCode> {}
 
+/* A removal of an extension's servers that the file did not take. They left the list all the same, and `ids` names them. */
+export class UnsavedRemoval extends Error {
+    readonly ids: readonly string[];
+
+    constructor(ids: readonly string[], cause: unknown) {
+        super(cause instanceof Error ? cause.message : String(cause), { cause });
+        this.ids = ids;
+    }
+}
+
 const StoredServerSchema = CustomLanguageServerSchema.omit({ held: true }).extend({ approval: z.string().min(1) });
 type StoredServer = z.infer<typeof StoredServerSchema>;
 
@@ -51,6 +61,8 @@ export class CustomLanguageServers {
     private unreadable: unknown[] = [];
     /* The file is there and is no JSON, which a write would destroy. */
     private damaged = false;
+    /* Extensions whose servers were removed while the file may still hold them. */
+    private readonly retired = new Set<string>();
     private writing: Promise<unknown> = Promise.resolve();
 
     constructor(options: { path: string; resolve?: ResolveCommand }) {
@@ -87,7 +99,7 @@ export class CustomLanguageServers {
     }
 
     list(): CustomLanguageServer[] {
-        return listed(this.servers);
+        return listed(this.active());
     }
 
     get(id: string): CustomLanguageServer | undefined {
@@ -115,10 +127,13 @@ export class CustomLanguageServers {
         });
     }
 
-    /* An extension's server, by its name, so loading it again changes the one it already added. */
+    /*
+     * An extension's server, by its name, so loading it again changes the one it already added. Who owns the name is
+     * decided in the queue, and only a registration that is saved has its command checked: one a person took over keeps
+     * their command, whatever the extension names.
+     */
     async saveFor(extension: string, input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
         this.assertWritable();
-        this.assertRunnable(input);
 
         const name = input.name.trim();
 
@@ -130,6 +145,8 @@ export class CustomLanguageServers {
                 return { next: null, result: approved };
             }
 
+            this.assertRunnable(input);
+
             const known = servers.find((server) => server.extension === extension && server.name === name);
             const server = serverOf(input, known?.id ?? newServerId(), extension);
 
@@ -138,7 +155,9 @@ export class CustomLanguageServers {
     }
 
     ownedBy(extension: string): string[] {
-        return this.servers.filter((server) => server.extension === extension).map((server) => server.id);
+        return this.active()
+            .filter((server) => server.extension === extension)
+            .map((server) => server.id);
     }
 
     /* Whether there was such a server. */
@@ -150,15 +169,35 @@ export class CustomLanguageServers {
         );
     }
 
-    /* Removes every server of the extension in one write, and gives the ids it removed. */
+    /*
+     * Removes every server of the extension in one write, and gives the ids it removed. They leave the list at once, also
+     * when the write fails, so none starts again for an extension that no longer runs; that failure is an `UnsavedRemoval`
+     * naming them, so their processes stop all the same.
+     */
     async removeOwnedBy(extension: string): Promise<string[]> {
-        this.assertWritable();
+        let owned: string[] = [];
 
-        return this.mutate((servers) => {
-            const owned = servers.filter((server) => server.extension === extension).map((server) => server.id);
+        try {
+            this.assertWritable();
 
-            return { next: owned.length === 0 ? null : servers.filter((server) => server.extension !== extension), result: owned };
-        });
+            return await this.mutate((servers) => {
+                owned = servers.filter((server) => server.extension === extension).map((server) => server.id);
+                this.retired.add(extension);
+
+                return { next: owned.length === 0 ? null : servers.filter((server) => server.extension !== extension), result: owned };
+            });
+        } catch (e) {
+            throw new UnsavedRemoval(owned, e);
+        }
+    }
+
+    /* The extensions that own a server on the list. */
+    owners(): string[] {
+        return [...new Set(this.active().flatMap((server) => server.extension ?? []))];
+    }
+
+    private active(): StoredServer[] {
+        return this.servers.filter((server) => server.extension === undefined || !this.retired.has(server.extension));
     }
 
     private assertRunnable(input: CustomLanguageServerInput): void {
@@ -184,16 +223,18 @@ export class CustomLanguageServers {
 
     /*
      * One change at a time, computed from the list the previous change left, so two saves or removes
-     * never write over each other. The list in memory only changes once the file has it.
+     * never write over each other. The list in memory only changes once the file has it, except that a
+     * retired server is gone from it at once; the next write that lands leaves it out of the file too.
      */
     private mutate<T>(change: (servers: StoredServer[]) => { next: StoredServer[] | null; result: T }): Promise<T> {
         const run = this.writing.then(async () => {
-            const { next, result } = change(this.servers);
+            const { next, result } = change(this.active());
 
             if (next !== null) {
                 await mkdir(dirname(this.path), { recursive: true });
                 await writeAtomic(this.path, `${JSON.stringify({ servers: [...next, ...this.unreadable] }, null, 2)}\n`, 0o600, { durable: true });
                 this.servers = next;
+                this.retired.clear();
             }
 
             return result;

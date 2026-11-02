@@ -64,7 +64,7 @@ import { isDirectory } from '../fs/browse.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { pinnedItem, tagHierarchy } from './hierarchy.ts';
 import { LanguageChoices } from './choices.ts';
-import { CustomLanguageServers, customProfile } from './custom.ts';
+import { CustomLanguageServers, customProfile, UnsavedRemoval } from './custom.ts';
 import { ProjectFileWatcher, type FileChange, type StatPath } from './file-watch.ts';
 import { LanguageInstaller, type CheckoutRevision } from './installer.ts';
 import { findManifests } from './manifests.ts';
@@ -512,10 +512,33 @@ export class LanguageHost {
         return saved;
     }
 
+    /* Its servers stop also when the file did not take their removal, which then rejects. */
     async customRemoveOwned(extension: string): Promise<void> {
-        for (const id of await this.custom.removeOwnedBy(extension)) {
+        let removed: readonly string[];
+        let unsaved: UnsavedRemoval | null = null;
+
+        try {
+            removed = await this.custom.removeOwnedBy(extension);
+        } catch (e) {
+            if (!(e instanceof UnsavedRemoval)) {
+                throw e;
+            }
+
+            removed = e.ids;
+            unsaved = e;
+        }
+
+        for (const id of removed) {
             await this.customChanged(id);
         }
+
+        if (unsaved !== null) {
+            throw unsaved;
+        }
+    }
+
+    customOwners(): string[] {
+        return this.custom.owners();
     }
 
     async customRemove(id: string): Promise<void> {
