@@ -9,6 +9,7 @@ import { desktop } from '@/desktop/bridge';
 import { assertShortcut } from '@/extensions/action-shortcuts';
 import { addFileIcons } from '@/extensions/file-icons';
 import { settingKey, useExtensionStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
+import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { useTheme as useUiTheme } from '@/state/theme';
 import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
@@ -894,46 +895,12 @@ export function clientApiFor(extension: LoadedExtension) {
             const extensionNow = useExtension();
             const full = `ruimte.extension.${extensionNow.manifest.id}.${key}`;
             const local = useExtensionStorage(full, initial);
-            const { transport } = useFocusedMachine();
+            const { transport, endpointId } = useFocusedMachine();
             const projectId = useProject((state) => state.current?.projectId ?? '');
-            const remoteKey = scope === 'project' ? `project:${projectId}:${key}` : key;
-            // Kept with the key it is for, so another project or machine starts from `initial` until it answers.
-            const [remote, setRemote] = useState<{ transport: Transport; key: string; value: Value | undefined } | null>(null);
-            const shown = remote?.transport === transport && remote.key === remoteKey && remote.value !== undefined ? remote.value : initial;
+            const remoteKey = scope === 'computer' ? null : scope === 'project' ? `project:${projectId}:${key}` : key;
+            const remote = useMachineStorage(transport, endpointId, extensionNow.manifest.id, remoteKey, initial);
 
-            useEffect(() => {
-                if (scope === 'computer') {
-                    return undefined;
-                }
-
-                let current = true;
-
-                void transport.request('extension.storageGet', { id: extensionNow.manifest.id, key: remoteKey }).then(
-                    ({ value }) => {
-                        if (current) {
-                            setRemote({ transport, key: remoteKey, value: value as Value | undefined });
-                        }
-                    },
-                    // Without a machine it starts from the initial value, as for a key never written.
-                    () => undefined
-                );
-
-                return () => {
-                    current = false;
-                };
-            }, [transport, extensionNow, scope, remoteKey]);
-
-            if (scope === 'computer') {
-                return [local, (next) => writeExtensionStorage(full, next)];
-            }
-
-            return [
-                shown,
-                (next) => {
-                    setRemote({ transport, key: remoteKey, value: next });
-                    void transport.request('extension.storageSet', { id: extensionNow.manifest.id, key: remoteKey, value: next }).catch(() => undefined);
-                }
-            ];
+            return scope === 'computer' ? [local, (next) => writeExtensionStorage(full, next)] : remote;
         },
         useProject() {
             const projectId = useProject((state) => state.current?.projectId ?? '');

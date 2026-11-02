@@ -13,7 +13,7 @@ import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
-import { mount, until, type Mounted } from '../../../testing/dom';
+import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 
 const PROJECT: ProjectSummary = {
     projectId: 'project-a',
@@ -252,6 +252,42 @@ describe('the client API', () => {
         await until(() => mounted?.host.textContent === 'count 5');
 
         expect(focusedCanvas().getState().nodes['node-1']?.raw).toMatchObject({ data: { count: 5 }, dataVersion: 2 });
+    });
+
+    test.each(['project', 'machine'] as const)('a write to %s storage shows in every surface already drawn that reads the key', async (scope) => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+
+        machine.answer('extension.storageGet', () => ({ value: 1 }));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        function Writer() {
+            const [count, setCount] = api.useStorage('count', 0, scope);
+
+            return <button onClick={() => setCount(count + 1)}>writer {count}</button>;
+        }
+
+        function Reader() {
+            const [count] = api.useStorage('count', 0, scope);
+
+            return <p>reader {count}</p>;
+        }
+
+        api.defineSidebarCard({ id: 'writer', title: 'Writer', component: async () => ({ default: Writer }) });
+        api.defineSidebarCard({ id: 'reader', title: 'Reader', component: async () => ({ default: Reader }) });
+
+        const cards = useContributions.getState().sidebarCards.filter((each) => each.id.startsWith('acme.probe/'));
+
+        mounted = mount();
+        await mounted.render(<>{cards.map((card) => createElement(card.component, { key: card.id }))}</>);
+        await until(() => mounted?.host.textContent === 'writer 1reader 1');
+        await clickOn(mounted.host.querySelector('button'));
+
+        expect(mounted.host.textContent).toBe('writer 2reader 2');
+        expect(machine.requests('extension.storageSet')).toEqual([
+            { id: 'acme.probe', key: scope === 'project' ? 'project:project-a:count' : 'count', value: 2 }
+        ]);
     });
 
     test("a project's storage starts over in another project that has none", async () => {
