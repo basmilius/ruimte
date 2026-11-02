@@ -1,0 +1,70 @@
+export const metadata = { title: 'Styling' };
+
+# Styling
+
+<p className="lead">Use Ruimte's components and color tokens, so your extension follows the theme a person picked. Add your own CSS where they fall short.</p>
+
+## Components
+
+`@ruimte/extension/ui` gives you the components Ruimte itself is built from: `Button`, `IconButton`, `Pill`, `Switch`, `Select`, `Input`, `Tooltip`, `Banner`, `ListRow`, `Spinner` and more. They follow light and dark, the person's accent and every theme.
+
+```tsx
+import { Button, Pill } from '@ruimte/extension/ui';
+
+export default function Header() {
+    return (
+        <div>
+            <Pill tone="accent">3 open</Pill>
+            <Button variant="primary">Review</Button>
+        </div>
+    );
+}
+```
+
+The [reference](/docs/extensions/reference/ui) lists them. You can use any other React library too, but it will not follow the theme by itself.
+
+## Color tokens
+
+Ruimte's colors are CSS variables on the page. Use them instead of fixed colors:
+
+| Token | For |
+| --- | --- |
+| `--bg` | The ground behind everything |
+| `--surface`, `--surface-raised`, `--surface-sunken` | A panel, something on top of it, something set into it |
+| `--surface-hover`, `--surface-active` | A row under the pointer, a pressed or chosen one |
+| `--text`, `--text-muted`, `--text-faint` | Main text, secondary text, hints |
+| `--border`, `--border-strong` | Lines, as an alpha over what is behind them |
+| `--accent` | The person's accent color |
+| `--status-running`, `--status-needs-you`, `--status-idle`, `--status-error` | Agent states |
+
+```tsx
+<div style={{ background: 'var(--surface-raised)', color: 'var(--text-muted)' }}>Two notes</div>
+```
+
+`useTheme()` tells you whether the page is light or dark, for the rare case a token is not enough, such as picking an image.
+
+## Your own CSS
+
+Import a stylesheet from any file in `client/`:
+
+```tsx
+import './panel.css';
+
+export default function Panel() {
+    return <div className="standup-panel">...</div>;
+}
+```
+
+`pack` bundles every stylesheet you import, also those of lazy components, into one `client/index.css`. Ruimte links it before your code runs, and removes it when the extension is turned off.
+
+Your CSS shares the page with Ruimte. Start every class name with your extension's name, and never style Ruimte's own elements; their classes can change in any release. To change how Ruimte itself looks, write a [theme](/docs/extensions/themes).
+
+Ruimte's utility classes are not part of the API. A class that works today may be gone tomorrow.
+
+## Icons
+
+Wherever a definition takes `icon`, give the name of a [Lucide](https://lucide.dev/icons) icon, such as `'calendar'`. Inside your own components, import icons from any library you like.
+
+## In a frame
+
+A `frame` surface is a page of its own. It gets none of the above, so it brings its own styles.
