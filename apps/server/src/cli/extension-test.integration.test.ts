@@ -31,12 +31,15 @@ function scaffolded(name: string): string {
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 describe('ruimte extension test', () => {
-    test.each(['limits', 'poc-server', 'poc-agents', 'poc-workspace'])('runs the tests of extensions/%s against the test host', async (name) => {
-        const { code, output } = await extensionTest(join(import.meta.dir, '../../../../extensions', name));
+    test.each(['limits', 'poc-server', 'poc-agents', 'poc-workspace', 'poc-contract'])(
+        'runs the tests of extensions/%s against the test host',
+        async (name) => {
+            const { code, output } = await extensionTest(join(import.meta.dir, '../../../../extensions', name));
 
-        expect(output).toContain(' 0 fail');
-        expect(code).toBe(0);
-    });
+            expect(output).toContain(' 0 fail');
+            expect(code).toBe(0);
+        }
+    );
 
     test('passes the example test a new project starts with, before anything is installed', async () => {
         const folder = scaffolded('builds');

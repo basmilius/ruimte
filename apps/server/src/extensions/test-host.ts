@@ -112,7 +112,7 @@ export class TestHost {
     readonly createdIds: string[] = [];
     readonly notes: string[] = [];
     readonly revealed: string[] = [];
-    readonly definitions: { kind: string; definition: object }[] = [];
+    readonly definitions: { kind: string; definition: PublicTesting.TestDefinition }[] = [];
     readonly entries: Entry[] = [];
     readonly entryOf = new WeakMap<object, Entry>();
     readonly notifications: PublicTesting.TestHost['notifications'] = [];
@@ -235,7 +235,7 @@ export class TestHost {
     }
 
     record(kind: string, definition: object): void {
-        this.definitions.push({ kind, definition });
+        this.definitions.push({ kind, definition: definition as PublicTesting.TestDefinition });
     }
 
     addEntry(definition: object, entry: Entry): void {
@@ -250,7 +250,7 @@ export class TestHost {
     }
 
     /* The definition of this kind and id, or a throw that lists what there is. */
-    defined(kind: string, id: string): object {
+    defined(kind: string, id: string): PublicTesting.TestDefinition {
         const ofKind = this.definitions.filter((each) => each.kind === kind);
         const found = ofKind.find((each) => (each.definition as { id?: string }).id === id);
 

@@ -146,21 +146,27 @@ export interface TestScreen {
     unmount(): void;
 }
 
-/** A definition of a surface, or a component of your own. */
-type Drawable = { component: () => Promise<{ default: ComponentType<never> }> } | { frame: string } | ComponentType<never>;
+/** What the extension gave a `define*`, as it gave it. */
+export interface TestDefinition {
+    id: string;
+    title?: string;
+    component?: () => Promise<{ default: ComponentType<never> }>;
+    frame?: string;
+    [key: string]: unknown;
+}
 
 export interface TestHost {
     /** What the extension defined, in order, with the object each `define*` was given. */
-    definitions: { kind: string; definition: object }[];
+    definitions: { kind: string; definition: TestDefinition }[];
     /** A definition by the id it gave, or a throw that lists the ids there are. */
-    action(id: string): object;
-    menu(id: string): object;
-    widget(id: string): object;
-    panel(id: string): object;
-    view(id: string): object;
-    node(id: string): object;
-    card(id: string): object;
-    overlay(id: string): object;
+    action(id: string): TestDefinition;
+    menu(id: string): TestDefinition;
+    widget(id: string): TestDefinition;
+    panel(id: string): TestDefinition;
+    view(id: string): TestDefinition;
+    node(id: string): TestDefinition;
+    card(id: string): TestDefinition;
+    overlay(id: string): TestDefinition;
     /** What every slot tells at this place, filled with the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node of the project becomes its `NodeInfo`. */
     context<Place extends SlotName>(place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): ContextOf<Place>;
     /** How an action, menu or widget shows at this place, or null where it does not. An unknown place throws. */
@@ -185,7 +191,10 @@ export interface TestHost {
      * whatever it suspends on. `node` is the node `useNodeData` reads, `params` what a panel or view gets, `context` a widget's.
      * A throw while it draws rejects. Needs a `*.dom.test.tsx` file.
      */
-    render(drawable: Drawable, options?: { node?: string; params?: unknown; context?: object; props?: object }): Promise<TestScreen>;
+    render(
+        drawable: TestDefinition | ComponentType<never>,
+        options?: { node?: string; params?: unknown; context?: object; props?: object }
+    ): Promise<TestScreen>;
     canvas: {
         /** Every node of the view in front. */
         nodes(): NodeInfo[];
