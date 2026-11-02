@@ -1,6 +1,16 @@
 import { randomBytes } from 'node:crypto';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
-import { withView, type AgentKind, type ModelSelection, type ProjectChatView, type ProjectEdge, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    withView,
+    type AgentKind,
+    type ModelSelection,
+    type ProjectChatView,
+    type ProjectContent,
+    type ProjectEdge,
+    type ProjectNode,
+    type RuntimeMode
+} from '@ruimte/contracts';
 import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
 import { depthForOpening } from '../canvas/depth.ts';
 import { modeForOpening } from '../canvas/mode.ts';
@@ -17,6 +27,7 @@ import { reachedPlace } from '../canvas/reach.ts';
 import { KeyedQueue } from '../keyed-queue.ts';
 import { MAX_PROJECT_VIEWS } from '../canvas/views.ts';
 import { branchSlug, makeWorktrees, requireRepository } from '../canvas/worktree.ts';
+import { errorText } from '../error-text.ts';
 import { untrustedStartProblem } from '../peering/untrusted.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { providerFor } from '../providers/registry.ts';
@@ -138,6 +149,25 @@ function looseChatView(node: ProjectNode, createdBy: string): ProjectChatView {
 }
 
 /*
+ * The project without an agent a start wrote: its node, the lines to it and its place in a group, or the chat view it
+ * opened. Its lineage and held prompt go with the node, as for any node deleted before it ran (`outbox/wiring.ts`).
+ */
+function withoutStarted(content: ProjectContent, id: string): ProjectContent {
+    const views = content.views
+        .filter((view) => view.id !== id)
+        .map((view) => {
+            if (!isCanvasView(view)) {
+                return view;
+            }
+            const nodes = view.nodes
+                .filter((node) => node.id !== id)
+                .map((node) => (node.memberIds?.includes(id) ? { ...node, memberIds: node.memberIds.filter((member) => member !== id) } : node));
+            return { ...view, nodes, edges: view.edges.filter((edge) => edge.from !== id && edge.to !== id) };
+        });
+    return { ...content, views };
+}
+
+/*
  * The worktrees a start asks for. One on another machine is made there from this checkout when its
  * task starts; one here is made now, before the lock, so a slow repository holds up no save.
  */
@@ -246,6 +276,8 @@ const startAgentNow: StartHandler = async (input, call) => {
         : null;
     const source = worktrees?.source;
     const cwd = worktrees?.paths[0] ?? checkedCwd;
+    // The node a refusal of `stillAllowed` found already on disk, which is taken away again before the refusal answers.
+    let withdrawn: string | null = null;
 
     return host.projects
         .mutate<{ output: ActionOutput<'agent.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
@@ -344,11 +376,23 @@ const startAgentNow: StartHandler = async (input, call) => {
                 taskId: null
             };
 
+            // Off a canvas the start runs before the write, so a refusal there leaves nothing in the project to take away.
+            const stillAllowed = (): void => {
+                try {
+                    context.stillAllowed?.();
+                } catch (e) {
+                    withdrawn = hidden ? null : id;
+                    throw e;
+                }
+            };
             const start = async (): Promise<void> => {
+                stillAllowed();
                 if (hidden) {
                     await host.hiddenAgents!.put({ projectId: place.projectId, openedBy: caller.caller, node: { ...node, kind: kindName } });
+                    stillAllowed();
                 }
                 await host.lineage.put({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true, ceiling });
+                stillAllowed();
                 if (remote !== null && input.task != null && prompt !== null) {
                     // The task first, then the entry that asks the machine to start it; the task is what the machine's answer settles.
                     const task = await host.tasks.open({
@@ -360,6 +404,7 @@ const startAgentNow: StartHandler = async (input, call) => {
                         machine: remote.machineId
                     });
                     output.taskId = task.id;
+                    stillAllowed();
                     await host.remote!.give(place.projectId, id, {
                         machineId: remote.machineId,
                         remoteProjectId: remote.remoteProjectId,
@@ -376,6 +421,7 @@ const startAgentNow: StartHandler = async (input, call) => {
                 }
                 if (input.worktree && cwd !== undefined) {
                     await host.checkouts.claim(place.folder, cwd, id);
+                    stillAllowed();
                 }
                 // Before the agent starts, so a child that is done at once finds its task open.
                 if (input.task != null && prompt !== null) {
@@ -387,10 +433,12 @@ const startAgentNow: StartHandler = async (input, call) => {
                         prompt
                     });
                     output.taskId = task.id;
+                    stillAllowed();
                 }
                 if (prompt !== null) {
                     const first: FirstPrompt = input.task == null ? { prompt } : taskFirstPrompt(prompt, chat);
                     await host.starts.holdPrompt(place.projectId, id, first.prompt, first.brief);
+                    stillAllowed();
                 }
                 await host.starts.startAgent({
                     projectId: place.projectId,
@@ -425,6 +473,13 @@ const startAgentNow: StartHandler = async (input, call) => {
             };
         })
         .catch(async (e: unknown) => {
+            // Outside the lock `landed` ran under. A node whose removal fails stays without an agent, and the refusal still answers.
+            const id = withdrawn;
+            if (id !== null) {
+                await host.projects
+                    .mutate(place.projectId, (content) => ({ content: withoutStarted(content, id), result: undefined }))
+                    .catch((failure: unknown) => console.warn(`The agent node ${id} stays without its agent: ${errorText(failure)}`));
+            }
             await worktrees?.undo();
             throw e;
         });

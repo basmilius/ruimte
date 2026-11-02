@@ -63,6 +63,7 @@ export interface TestDaemon {
     tasks: TaskStore;
     notices: NoticeStore;
     lineage: AgentLineageStore;
+    prompts: PendingPromptStore;
     outbox: OutboxStore;
     prWatches: PrWatchStore;
     worker: OutboxWorker<OutboxWork>;
@@ -472,6 +473,7 @@ export async function bootTestDaemon({
         tasks,
         notices,
         lineage,
+        prompts,
         outbox,
         worker,
         sessions,

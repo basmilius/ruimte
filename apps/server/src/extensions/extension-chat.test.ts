@@ -125,4 +125,63 @@ describe('an extension starts a chat', () => {
         expect(await nodesOnCanvas()).toEqual([]);
         expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toEqual([]);
     });
+
+    test.each(['the project write', 'the lineage write', 'the prompt hold'] as const)(
+        'takes its node away again once it is turned off during %s, with no lineage, no held prompt and no start',
+        async (step) => {
+            let reached = (): void => undefined;
+            let release = (): void => undefined;
+            const waiting = new Promise<void>((resolve) => (reached = resolve));
+            const held = new Promise<void>((resolve) => (release = resolve));
+            let nodeId = '';
+            // The step is under way, or for the project write done, when the extension is turned off.
+            const during = async (node: string, work: Promise<void>): Promise<void> => {
+                nodeId = node;
+                reached();
+                await held;
+                await work;
+            };
+            const { projects, lineage, starts } = daemon.host;
+            const gated: CanvasHost = {
+                ...daemon.host,
+                projects: withMethod(projects, 'mutate', (id: string, apply: Parameters<CanvasHost['projects']['mutate']>[1]) =>
+                    projects.mutate(id, async (content) => {
+                        const mutation = await apply(content);
+                        const { landed, result } = mutation;
+                        const node = (result as { output?: { nodeId?: string } } | undefined)?.output?.nodeId;
+
+                        return step !== 'the project write' || landed === undefined || node === undefined
+                            ? mutation
+                            : { ...mutation, landed: () => during(node, Promise.resolve()).then(landed) };
+                    })
+                ),
+                lineage: withMethod(lineage, 'put', (record: Parameters<CanvasHost['lineage']['put']>[0]) =>
+                    step === 'the lineage write' ? during(record.nodeId, lineage.put(record)) : lineage.put(record)
+                ),
+                starts: withMethod(starts, 'holdPrompt', (...args: Parameters<CanvasHost['starts']['holdPrompt']>) =>
+                    step === 'the prompt hold' ? during(args[1], starts.holdPrompt(...args)) : starts.holdPrompt(...args)
+                )
+            };
+            const extensions = await extensionOn(gated);
+            const starting = extensions.startAgent(ID, { projectId, viewId: 'main', prompt: 'Hello' });
+
+            await waiting;
+            await extensions.setEnabled(ID, false);
+            release();
+
+            await expect(starting).rejects.toMatchObject({ code: 'unavailable' });
+            expect(nodeId).not.toBe('');
+            expect(await nodesOnCanvas()).toEqual([]);
+            expect(daemon.lineage.projectOf(nodeId)).toBeNull();
+            expect(daemon.prompts.has(nodeId)).toBe(false);
+            expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toEqual([]);
+        }
+    );
 });
+
+/* `target` with one method in place of its own, the rest of it as it is. */
+function withMethod<Target extends object>(target: Target, name: keyof Target, method: unknown): Target {
+    return new Proxy(target, {
+        get: (object, property, receiver) => (property === name ? method : Reflect.get(object, property, receiver))
+    });
+}
