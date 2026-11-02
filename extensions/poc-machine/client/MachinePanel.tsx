@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useServer } from '@ruimte/extension/client';
+import { useServer, type Result } from '@ruimte/extension/client';
 import type { MachineServer } from '../server/index';
 import { LISTS } from './index';
 import './machine.css';
@@ -7,11 +7,8 @@ import './machine.css';
 export default function MachinePanel() {
     const server = useServer<MachineServer>();
     const [answer, setAnswer] = useState('');
-    const ask = (run: () => Promise<unknown>) => () => {
-        run().then(
-            (value) => setAnswer(JSON.stringify(value, null, 2)),
-            (e: unknown) => setAnswer(String(e))
-        );
+    const ask = (run: () => Promise<Result<object | string>>) => () => {
+        void run().then((answer) => setAnswer(answer.ok ? JSON.stringify(answer.value, null, 2) : `${answer.error.code}: ${answer.error.message}`));
     };
 
     return (

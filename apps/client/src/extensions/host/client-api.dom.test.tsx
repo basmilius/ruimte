@@ -5,8 +5,10 @@ import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
+import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { mount, until, type Mounted } from '../../../testing/dom';
 
@@ -57,16 +59,57 @@ describe('the client API', () => {
         expect(heard).toEqual(['one']);
     });
 
-    test('refuses a path that leaves the project with backslashes', async () => {
+    test('answers outside-project for a path that leaves the project with backslashes', async () => {
         const { api } = loaded({ 'files.read': 'Reads notes' });
 
         useProject.setState({ current: PROJECT });
 
-        await expect(api.files.readText('sub\\..\\..\\x')).rejects.toThrow('outside the project folder');
+        expect(await api.files.readText('sub\\..\\..\\x')).toEqual({
+            ok: false,
+            error: { code: 'outside-project', message: 'sub\\..\\..\\x is outside the project folder' }
+        });
     });
 
-    test('asks a person in their own words before it removes nodes', async () => {
+    test('answers permission-denied for a call its manifest does not ask for, before anything else', async () => {
+        const { api } = loaded();
+
+        expect(api.canvas.createNote({ text: 'Hello' })).toMatchObject({ ok: false, error: { code: 'permission-denied' } });
+        expect(await api.git.status()).toMatchObject({ ok: false, error: { code: 'permission-denied' } });
+    });
+
+    test('answers no-canvas for a node with no canvas in front, and makes it once there is one', () => {
+        const { api } = loaded({ 'canvas.write': 'Writes notes' });
+
+        expect(api.canvas.createNote({ text: 'Hello' })).toMatchObject({ ok: false, error: { code: 'no-canvas' } });
+
+        focusedCanvas().setState({ viewId: 'view-1' });
+
+        const note = api.canvas.createNote({ text: 'Hello' });
+
+        expect(note.ok).toBe(true);
+        expect(note.ok && focusedCanvas().getState().nodes[note.value.id]?.body).toBe('Hello');
+    });
+
+    test("hands on the machine's refusal under its code, says it in the dev terminal, and throws only for an argument of the wrong shape", async () => {
+        const machine = new FakeMachine();
+        const { extension, api } = loaded({ 'chats.send': 'Pokes a chat' });
+
+        extension.dev = true;
+        disconnect = connectFakeMachine(machine);
+        machine.answer('chat.send', ({ text }) => {
+            throw new TransportError(text === '' ? 'bad-request' : 'forbidden', 'No');
+        });
+
+        expect(await api.chats.send('chat-1', 'Hello')).toEqual({ ok: false, error: { code: 'permission-denied', message: 'No' } });
+        expect(machine.requests('extension.log').map(({ text }) => text)).toEqual(['[client] error: chats.send: permission-denied: No']);
+        await expect(api.chats.send('chat-1', '')).rejects.toThrow(TypeError);
+    });
+
+    test('asks a person in their own words before it removes nodes, and answers refused when they keep them', async () => {
         const { api } = loaded({ 'canvas.write': 'Tidies up' });
+
+        focusedCanvas().setState({ viewId: 'view-1' });
+
         const removing = api.canvas.remove([{ id: 'one' }]);
 
         await until(() => useHostDialog.getState().request !== null);
@@ -76,7 +119,7 @@ describe('the client API', () => {
 
         useHostDialog.getState().request?.answer(null);
 
-        expect(await removing).toBe(false);
+        expect(await removing).toMatchObject({ ok: false, error: { code: 'refused' } });
     });
 
     test("a project's storage starts over in another project that has none", async () => {

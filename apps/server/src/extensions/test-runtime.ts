@@ -13,6 +13,34 @@ const defined: { kind: string; definition: unknown }[] = [];
 let fakeServer: Record<string, (...args: unknown[]) => unknown> = {};
 let nodeData: unknown = {};
 
+type Result = { ok: true; value: unknown } | { ok: false; error: { code: string; message: string } };
+
+/* What a call of the API answers here: done, as a Result, with nothing behind it. */
+function done(value?: unknown): Result {
+    return { ok: true, value };
+}
+
+const answers = (value?: unknown) => async (): Promise<Result> => done(value);
+
+/* A fake method of `server/` answers as `useServer` would: its value, `failed` for a throw, `not-found` for none. */
+function serverAnswer(method: string, args: unknown[]): Result | Promise<Result> {
+    const handler = fakeServer[method];
+
+    if (handler === undefined) {
+        return { ok: false, error: { code: 'not-found', message: `No method ${method}` } };
+    }
+
+    const failed = (e: unknown): Result => ({ ok: false, error: { code: 'failed', message: e instanceof Error ? e.message : String(e) } });
+
+    try {
+        const value = handler(...args);
+
+        return value instanceof Promise ? value.then(done, failed) : done(value);
+    } catch (e) {
+        return failed(e);
+    }
+}
+
 function recording(kind: string) {
     return (definition: unknown) => {
         defined.push({ kind, definition });
@@ -29,12 +57,12 @@ const client: Record<string, unknown> = {
     defineCanvasOverlay: recording('canvasOverlay'),
     defineCommand: recording('command'),
     definePaletteSource: recording('paletteSource'),
-    launches: new Proxy({}, { get: () => async () => undefined }),
-    routines: new Proxy({}, { get: () => async () => undefined }),
-    artifacts: new Proxy({}, { get: () => async () => undefined }),
-    browser: new Proxy({}, { get: () => async () => undefined }),
-    devices: new Proxy({}, { get: () => async () => undefined }),
-    terminals: { read: async () => '', open: () => ({ id: 'terminal' }) },
+    launches: new Proxy({}, { get: () => answers({}) }),
+    routines: new Proxy({}, { get: () => answers({}) }),
+    artifacts: new Proxy({}, { get: () => answers({}) }),
+    browser: new Proxy({}, { get: () => answers({}) }),
+    devices: new Proxy({}, { get: () => answers({}) }),
+    terminals: { read: answers(''), open: () => done({ id: 'terminal' }) },
     defineSlashCommand: recording('slashCommand'),
     defineReference: recording('reference'),
     defineDiffViewer: recording('diffViewer'),
@@ -45,7 +73,7 @@ const client: Record<string, unknown> = {
     useMachine: () => ({ id: 'test-machine' }),
     useTheme: () => ({ side: 'dark' }),
     useChat: () => null,
-    database: { connections: async () => [], query: async () => ({ columns: [], rows: [], hasMore: false }) },
+    database: { connections: answers([]), query: answers({ columns: [], rows: [], hasMore: false }) },
     defineToolResult: recording('toolResult'),
     defineOverlay: (definition: unknown) => {
         defined.push({ kind: 'overlay', definition });
@@ -67,9 +95,9 @@ const client: Record<string, unknown> = {
             {},
             {
                 get: (_target, method: string) =>
-                    Object.assign(async (...args: unknown[]) => fakeServer[method]?.(...args), {
-                        // Answers at once here, since a string render does not wait for a promise.
-                        use: (...args: unknown[]) => fakeServer[method]?.(...args)
+                    Object.assign(async (...args: unknown[]) => serverAnswer(method, args), {
+                        // Answers at once here, since a string render does not wait for a promise; a fake for `.use()` answers without one.
+                        use: (...args: unknown[]) => serverAnswer(method, args)
                     })
             }
         ),
@@ -88,19 +116,27 @@ const client: Record<string, unknown> = {
     useUsageLimits: () => [],
     useServerEvent: () => undefined,
     host: { busy: (_work: unknown, run: () => unknown) => run(), notify: () => undefined, confirm: async () => true, openUrl: () => undefined },
-    context: { read: async () => [] },
+    context: { read: answers([]) },
     agents: {
-        run: async () => ({ text: '' }),
+        run: answers({ text: '' }),
         stream: async function* () {
-            yield { text: '' };
+            yield done({ text: '' });
         },
-        start: async () => ({ id: 'chat' })
+        start: answers({ id: 'chat' })
     },
-    files: { readText: async () => '', write: async () => undefined, list: async () => [], watch: () => () => undefined, open: () => undefined },
-    git: { status: async () => ({}), diff: async () => ({}), log: async () => ({}) },
-    chats: { list: async () => [], read: async () => '', send: async () => undefined },
-    views: { open: () => undefined, createCanvas: () => ({ id: 'view' }), rename: () => undefined },
-    canvas: { createNote: () => ({ id: 'note' }), link: () => undefined, reveal: () => undefined }
+    files: { readText: answers(''), write: answers(), list: answers([]), watch: () => done(() => undefined), open: () => undefined },
+    git: {
+        status: answers({ repository: false, root: null, branch: null, upstream: null, ahead: 0, behind: 0, files: [], truncated: false }),
+        diff: answers({ path: '', diff: '', added: 0, deleted: 0, binary: false, kind: null }),
+        log: answers([])
+    },
+    chats: { list: answers([]), read: answers(''), send: answers() },
+    views: { open: () => undefined, createCanvas: () => done({ id: 'view' }), rename: () => done() },
+    canvas: new Proxy(
+        { select: () => undefined, reveal: () => undefined, remove: answers() },
+        // Every other call makes or changes a node, and answers the node it is about.
+        { get: (target: Record<string, unknown>, name: string) => target[name] ?? (() => done({ id: 'node' })) }
+    )
 };
 
 const server: Record<string, unknown> = {
@@ -110,10 +146,10 @@ const server: Record<string, unknown> = {
     defineNodeContext: () => undefined,
     schedule: () => undefined,
     defineAgentTool: () => undefined,
-    agents: { run: async () => ({ text: '' }), start: async () => ({ nodeId: 'chat' }) },
-    chats: { list: async () => [], send: async () => undefined },
-    machine: { platform: 'test', dataFolder: '', run: async () => undefined },
-    defineLanguageServer: async () => undefined,
+    agents: { run: answers({ text: '' }), start: answers({ id: 'chat' }) },
+    chats: { list: answers([]), read: answers(''), send: answers() },
+    machine: { platform: 'test', dataFolder: '', run: answers({}) },
+    defineLanguageServer: answers(),
     storage: { get: async () => undefined, set: async () => undefined, delete: async () => undefined },
     secrets: { get: async () => undefined, set: async () => undefined },
     log: { info: () => undefined, error: () => undefined }

@@ -16,12 +16,20 @@ export default function ChatPanel() {
         stop.current = new AbortController();
         setAnswer('');
 
-        for await (const { text } of agents.stream({ prompt: 'Count slowly from one to twenty, one number per line.', signal: stop.current.signal })) {
-            setAnswer((current) => current + text);
+        for await (const piece of agents.stream({ prompt: 'Count slowly from one to twenty, one number per line.', signal: stop.current.signal })) {
+            setAnswer((current) => current + (piece.ok ? piece.value.text : `\n${piece.error.message}`));
         }
     };
     const query = async (): Promise<void> => {
-        const [connection] = await database.connections();
+        const connections = await database.connections();
+
+        if (!connections.ok) {
+            setRows(connections.error.message);
+
+            return;
+        }
+
+        const [connection] = connections.value;
 
         if (connection === undefined) {
             setRows('No connection in this project');
@@ -31,7 +39,7 @@ export default function ChatPanel() {
 
         const result = await database.query(connection.id, 'SELECT 1 AS one');
 
-        setRows(JSON.stringify(result));
+        setRows(result.ok ? JSON.stringify(result.value) : result.error.message);
     };
 
     return (

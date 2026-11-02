@@ -11,7 +11,7 @@ export default function AgentsCard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {agents.map((agent) => (
                 <button key={agent.id} type="button" style={{ textAlign: 'left' }} onClick={() => canvas.reveal({ id: agent.id })}>
-                    {agent.title}: {agent.needsYou ? 'needs you' : (agent.status ?? 'idle')}
+                    {agent.title}: {agent.status === 'needsYou' ? 'needs you' : agent.status}
                 </button>
             ))}
         </div>

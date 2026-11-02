@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EmptySchema } from '@adecore/agent-contracts';
+import type { ExtensionActionName } from './extension-actions.ts';
 
 /* What a person's Ruimte promises an extension. It moves only when an extension built for the old one stops working. */
 export const EXTENSION_API_VERSION = 1;
@@ -10,7 +11,7 @@ export const ExtensionIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*\.[a-z0-9]
 export const EXTENSION_ICON_PATH = 'assets/icon.svg';
 
 /* The permission each action of the machine needs. What is not here an extension cannot name. */
-export const EXTENSION_ACTIONS: Readonly<Record<string, string>> = {
+export const EXTENSION_ACTIONS: Readonly<Record<ExtensionActionName, string>> = {
     'launch.list': 'launches.read',
     'launch.read': 'launches.read',
     'launch.start': 'launches.run',
@@ -217,6 +218,17 @@ export const ExtensionClientFilesResultSchema = z.object({ hash: z.string(), fil
 
 /* One read-only statement, as an agent may run it. */
 export const ExtensionDatabaseQueryPayloadSchema = z.object({ projectId: z.string().min(1), connection: z.string().min(1), sql: z.string().min(1) });
+/*
+ * A cell as the database gave it; a large number, a decimal or a date is the text the server writes for it, and a long
+ * text arrives cut off. The wire leaves a cell open, so a kind of cell a newer machine sends never fails the whole reply.
+ */
+export type ExtensionDatabaseValue =
+    | string
+    | number
+    | boolean
+    | null
+    | { kind: 'binary'; hex: string; length: number }
+    | { kind: 'longText'; preview: string; length: number };
 export const ExtensionDatabaseQueryResultSchema = z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), hasMore: z.boolean() });
 
 /* One line for the terminal of `ruimte extension dev`. */

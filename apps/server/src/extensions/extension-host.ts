@@ -2,7 +2,17 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { EXTENSION_ACTIONS, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
+import {
+    EXTENSION_ACTIONS,
+    extensionAgentStatus,
+    extensionChatOf,
+    isExtensionActionName,
+    type AgentInfo,
+    type ChatInfo,
+    type ExtensionActionName,
+    type ExtensionInfo,
+    type ExtensionStatus
+} from '@ruimte/contracts';
 import { VerbRefusal } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
@@ -10,13 +20,18 @@ import { bunRuntime } from '../language/runtime.ts';
 import runtimeSource from './server-runtime.ts' with { type: 'text' };
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { ExtensionPackError, type ExtensionStore, type StoredExtension } from './store.ts';
+import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
+import type { ExtensionStore, StoredExtension } from './store.ts';
 
 // Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
 const CALL_TIMEOUT_MS = 50_000;
 const MAX_CRASHES = 3;
 const CLIENT_FOLDERS = new Set(['client', 'assets', 'locales', 'themes', 'views']);
 const RUNTIME_FILE = 'runtime.ts';
+
+function stopped(): ExtensionRefusal {
+    return new ExtensionRefusal('unavailable', 'The extension stopped');
+}
 
 interface Pending {
     resolve(value: unknown): void;
@@ -42,16 +57,30 @@ interface Starting {
     attempt: { cancelled: boolean };
 }
 
-/* The permission that covers each area of machine events `server/` may follow. Another area stays out. */
-const EVENT_PERMISSIONS: Readonly<Record<string, string>> = {
-    chat: 'chats.read',
-    session: 'terminals.read'
+/*
+ * The machine events `server/` may follow, the `ServerEvents` of `@ruimte/extension`: the permission each takes, and
+ * what of the event it hears. A chat's thread or a terminal's state says as much as reading it, so it takes that permission.
+ */
+const SERVER_EVENTS: Readonly<Record<string, { permission: string; payload(payload: never): object }>> = {
+    'chat.status': {
+        permission: 'chats.read',
+        payload: ({ info }: { info: ChatInfo }) => ({ chat: extensionChatOf(info) })
+    },
+    'chat.event': {
+        permission: 'chats.read',
+        payload: ({ chatId }: { chatId: string }) => ({ chatId })
+    },
+    'session.status': {
+        permission: 'terminals.read',
+        payload: ({ sessionId, agent }: { sessionId: string; agent: AgentInfo | null }) => ({
+            nodeId: sessionId,
+            status: extensionAgentStatus(agent?.status, (agent?.requests?.length ?? 0) > 0)
+        })
+    }
 };
 
-function eventPermission(name: string): string | null {
-    const area = name.split('.')[0] ?? '';
-
-    return Object.hasOwn(EVENT_PERMISSIONS, area) ? (EVENT_PERMISSIONS[area] ?? null) : null;
+function serverEvent(name: string): (typeof SERVER_EVENTS)[string] | null {
+    return Object.hasOwn(SERVER_EVENTS, name) ? (SERVER_EVENTS[name] ?? null) : null;
 }
 
 /* What `server/` may ask the daemon, each behind the permission of the same name. */
@@ -74,7 +103,7 @@ export interface ExtensionHostOptions {
     store: ExtensionStore;
     asks?: () => ExtensionAsks;
     startChat?: (extensionId: string, start: ExtensionChatStart) => Promise<{ nodeId: string }>;
-    runAction?: (extensionId: string, projectId: string, action: string, input: unknown) => Promise<unknown>;
+    runAction?: (extensionId: string, projectId: string, action: ExtensionActionName, input: unknown) => Promise<unknown>;
     addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
     removeLanguageServers?: (extensionId: string) => Promise<void>;
     now?: () => number;
@@ -166,12 +195,19 @@ export class ExtensionHost {
         return this.send(running, { type: 'nodeContext', node, data }, `${id} context`);
     }
 
-    /* Hands a machine event to every running extension that asked for it. */
+    /* Hands a machine event to every running extension that asked for it, as much of it as `ServerEvents` says. */
     forwardEvent(name: string, payload: unknown): void {
-        for (const running of this.running.values()) {
-            if (running.subscriptions.has(name)) {
-                running.child.stdin.write(`${JSON.stringify({ type: 'event', name, payload })}\n`);
-            }
+        const event = serverEvent(name);
+        const listeners = [...this.running.values()].filter((running) => running.subscriptions.has(name));
+
+        if (event === null || listeners.length === 0) {
+            return;
+        }
+
+        const line = `${JSON.stringify({ type: 'event', name, payload: event.payload(payload as never) })}\n`;
+
+        for (const running of listeners) {
+            running.child.stdin.write(line);
         }
     }
 
@@ -350,7 +386,7 @@ export class ExtensionHost {
         running.child.kill();
         this.running.delete(id);
         this.forgetTools(id);
-        this.failPending(running, new Error('The extension stopped'));
+        this.failPending(running, stopped());
     }
 
     private async runningFor(id: string): Promise<Running> {
@@ -365,15 +401,15 @@ export class ExtensionHost {
         const extension = await this.options.store.get(id);
 
         if (extension === null) {
-            throw new ExtensionPackError('extension-unknown', `No extension ${id} on this machine`);
+            throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
         }
 
         if (!extension.enabled) {
-            throw new ExtensionPackError('extension-unknown', `${id} is turned off`);
+            throw new ExtensionRefusal('unavailable', `${id} is turned off`);
         }
 
         if ((this.crashes.get(id) ?? 0) >= MAX_CRASHES) {
-            throw new Error(`${id} crashed ${MAX_CRASHES} times in a row and stays off until a person turns it on again`);
+            throw new ExtensionRefusal('unavailable', `${id} crashed ${MAX_CRASHES} times in a row and stays off until a person turns it on again`);
         }
 
         return this.start(extension);
@@ -412,7 +448,7 @@ export class ExtensionHost {
         const entry = store.serverEntry(extension);
 
         if (entry === null) {
-            throw new ExtensionPackError('extension-unknown', `${id} has no server part`);
+            throw new ExtensionRefusal('not-found', `${id} has no server part`);
         }
 
         const dataFolder = store.dataFolder(id);
@@ -422,7 +458,7 @@ export class ExtensionHost {
         await writeFile(runtimePath, runtimeSource);
 
         if (attempt.cancelled) {
-            throw new Error('The extension stopped');
+            throw stopped();
         }
 
         const runtime = bunRuntime();
@@ -468,8 +504,8 @@ export class ExtensionHost {
         });
         // A pipe that breaks with the process says so here; the exit below is what acts on it.
         child.stdin.on('error', () => undefined);
-        child.on('error', (e) => this.exited(id, running, e));
-        child.on('exit', () => this.exited(id, running, new Error('The extension stopped')));
+        child.on('error', (e) => this.exited(id, running, new ExtensionRefusal('unavailable', errorText(e))));
+        child.on('exit', () => this.exited(id, running, stopped()));
         this.changed();
         await running.ready;
 
@@ -488,7 +524,7 @@ export class ExtensionHost {
     }
 
     private handle(id: string, running: Running, line: string, markReady: () => void): void {
-        let message: { type?: string; id?: number; result?: unknown; error?: string; name?: string; payload?: unknown };
+        let message: { type?: string; id?: number; result?: unknown; error?: string; code?: string; name?: string; payload?: unknown };
 
         try {
             message = JSON.parse(line) as typeof message;
@@ -501,7 +537,13 @@ export class ExtensionHost {
 
             void this.answerAsk(id, asked.method, asked.args).then(
                 (result) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, result: result ?? null })}\n`),
-                (e: unknown) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, error: errorText(e) })}\n`)
+                (e: unknown) => {
+                    const { code, message: reason } = extensionFailureOf(e);
+
+                    // A refusal answers as a Result, so the terminal of `extension dev` is where a person still sees it.
+                    void appendFile(this.options.store.logFile(id), `${asked.method} answered ${code}: ${reason}\n`).catch(() => undefined);
+                    running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, error: reason, code })}\n`);
+                }
             );
         } else if (message.type === 'tool') {
             const tool = message as unknown as { name: string; description: string; parameters: unknown };
@@ -528,37 +570,32 @@ export class ExtensionHost {
                 if (message.error === undefined) {
                     pending.resolve(message.result);
                 } else {
-                    pending.reject(new Error(message.error));
+                    pending.reject(new ExtensionRefusal(message.code === 'not-found' ? 'not-found' : 'failed', message.error));
                 }
             }
         }
     }
 
-    /* A chat's thread or a terminal's output says as much as reading it, so it takes the same permission. */
     private followEvent(id: string, running: Running, name: string): void {
-        const permission = eventPermission(name);
+        const event = serverEvent(name);
 
-        if (permission !== null && running.permissions.has(permission)) {
+        if (event !== null && running.permissions.has(event.permission)) {
             running.subscriptions.add(name);
 
             return;
         }
 
-        const reason = permission === null ? `${name} is no event an extension can follow` : `${name} needs the permission ${permission} in manifest.json`;
+        const reason = event === null ? `${name} is no event an extension can follow` : `${name} needs the permission ${event.permission} in manifest.json`;
 
         void appendFile(this.options.store.logFile(id), `${reason}\n`).catch(() => undefined);
     }
 
     /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */
     async startAgent(id: string, start: ExtensionChatStart): Promise<{ nodeId: string }> {
-        const extension = await this.options.store.get(id);
-
-        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, 'agents.start')) {
-            throw new Error(`${id} did not ask for the permission agents.start in its manifest`);
-        }
+        await this.requirePermission(id, 'agents.start');
 
         if (this.options.startChat === undefined) {
-            throw new Error('This machine does not start chats for an extension');
+            throw new ExtensionRefusal('unavailable', 'This machine does not start chats for an extension');
         }
 
         return this.options.startChat(id, start);
@@ -566,23 +603,25 @@ export class ExtensionHost {
 
     /* An action of the machine, within the list and the manifest. Both checked here, so the client's own check is only a courtesy. */
     async runAction(id: string, projectId: string, action: string, input: unknown): Promise<unknown> {
-        const permission = EXTENSION_ACTIONS[action];
-
-        if (permission === undefined) {
-            throw new Error(`An extension cannot ask for ${action}`);
+        if (!isExtensionActionName(action)) {
+            throw new ExtensionRefusal('not-found', `An extension cannot ask for ${action}`);
         }
 
-        const extension = await this.options.store.get(id);
-
-        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, permission)) {
-            throw new Error(`${id} did not ask for the permission ${permission} in its manifest`);
-        }
+        await this.requirePermission(id, EXTENSION_ACTIONS[action]);
 
         if (this.options.runAction === undefined) {
-            throw new Error('This machine does not run actions for an extension');
+            throw new ExtensionRefusal('unavailable', 'This machine does not run actions for an extension');
         }
 
         return this.options.runAction(id, projectId, action, input);
+    }
+
+    private async requirePermission(id: string, permission: string): Promise<void> {
+        const extension = await this.options.store.get(id);
+
+        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, permission)) {
+            throw new ExtensionRefusal('permission-denied', `${id} did not ask for the permission ${permission} in its manifest`);
+        }
     }
 
     /* What a client with no shell of its own loads. Not its server part, which only runs here. */
@@ -590,7 +629,7 @@ export class ExtensionHost {
         const extension = await this.options.store.get(id);
 
         if (extension === null) {
-            throw new ExtensionPackError('extension-unknown', `No extension ${id} on this machine`);
+            throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
         }
 
         const files: Record<string, string> = {};
@@ -621,30 +660,25 @@ export class ExtensionHost {
         }
 
         if (method === 'languages.add') {
-            const extension = await this.options.store.get(id);
+            await this.requirePermission(id, 'languages.servers');
 
-            if (!Object.hasOwn(extension?.manifest.permissions ?? {}, 'languages.servers')) {
-                throw new Error(`${id} did not ask for the permission languages.servers in its manifest`);
+            if (this.options.addLanguageServer === undefined) {
+                throw new ExtensionRefusal('unavailable', 'This machine does not add language servers for an extension');
             }
 
-            return this.options.addLanguageServer?.(id, args[0] as object);
+            return this.options.addLanguageServer(id, args[0] as object);
         }
 
         if (method === 'agents.start') {
             return this.startAgent(id, args[0] as ExtensionChatStart);
         }
 
-        const extension = await this.options.store.get(id);
-        const permission = method === 'chats.list' ? 'chats.read' : method;
-
-        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, permission)) {
-            throw new Error(`${id} did not ask for the permission ${permission} in its manifest`);
-        }
+        await this.requirePermission(id, method === 'chats.list' || method === 'chats.read' ? 'chats.read' : method);
 
         const run = this.options.asks?.()[method];
 
         if (run === undefined) {
-            throw new Error(`This machine does not answer ${method}`);
+            throw new ExtensionRefusal('unavailable', `This machine does not answer ${method}`);
         }
 
         if (method === 'chats.send') {
@@ -660,7 +694,7 @@ export class ExtensionHost {
         const recent = (this.sends.get(key) ?? []).filter((at) => now - at < HOUR_MS);
 
         if (recent.length >= MAX_SENDS_PER_HOUR) {
-            throw new Error(`${id} sent ${chatId} ${MAX_SENDS_PER_HOUR} messages this hour and has to wait`);
+            throw new ExtensionRefusal('limit', `${id} sent ${chatId} ${MAX_SENDS_PER_HOUR} messages this hour and has to wait`);
         }
 
         this.sends.set(key, [...recent, now]);
@@ -674,7 +708,7 @@ export class ExtensionHost {
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 running.pending.delete(id);
-                reject(new Error(`${label} did not answer in time`));
+                reject(new ExtensionRefusal('timeout', `${label} did not answer in time`));
             }, CALL_TIMEOUT_MS);
 
             running.pending.set(id, { resolve, reject, timer });

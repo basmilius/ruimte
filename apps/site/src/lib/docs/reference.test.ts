@@ -11,6 +11,15 @@ describe('the reference', () => {
         expect(committed).toEqual(referenceModules());
     });
 
+    test('declares the types client/ and server/ share alike in both', () => {
+        const [client, server] = ['client', 'server'].map((name) => referenceModules().find((module) => module.module === name)?.entries ?? []);
+        const shared = ['ExtensionErrorCode', 'Result', 'Json', 'NodeRef', 'ViewRef', 'ProjectRef', 'AgentStatus', 'ChatSummary'];
+
+        for (const name of shared) {
+            expect({ name, entry: server?.find((entry) => entry.name === name) }).toEqual({ name, entry: client?.find((entry) => entry.name === name) });
+        }
+    });
+
     test('keeps the doc above a declaration, joins overloads and ignores brackets in comments', () => {
         const entries = parseDeclarations(`import type { X } from 'x';
 

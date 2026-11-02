@@ -1,7 +1,7 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import type { LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
-import type { ProjectNode, ProjectSummary, ProjectView } from '@ruimte/contracts';
+import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';
@@ -13,7 +13,7 @@ import { nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/stat
 export interface AgentInfo {
     provider: string;
     account: string | null;
-    status: 'idle' | 'running' | 'needsYou' | 'stopped';
+    status: ExtensionAgentStatus;
     cwd: string | null;
     branch: string | null;
     worktree: string | null;
@@ -65,7 +65,7 @@ function agentOf(node: ProjectNode, group: ProjectNode | undefined, sources: Nod
     return {
         provider: node.provider ?? 'claude',
         account: node.account ?? null,
-        status: needsYou ? 'needsYou' : status === 'running' ? 'running' : status === undefined ? 'stopped' : 'idle',
+        status: extensionAgentStatus(status, needsYou),
         cwd: node.cwd ?? group?.worktree?.path ?? null,
         branch: group?.worktree?.branch ?? null,
         worktree: group?.worktree?.path ?? null

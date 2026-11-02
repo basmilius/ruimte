@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { ExtensionManifest } from '@ruimte/contracts';
-import { ExtensionHost } from './extension-host.ts';
+import { ExtensionHost, type ExtensionHostOptions } from './extension-host.ts';
 import type { ExtensionStore, StoredExtension } from './store.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'ruimte-extension-host-unit-'));
@@ -16,7 +16,7 @@ class FakeChild extends EventEmitter {
     readonly stdin = new PassThrough();
     readonly stdout = new PassThrough();
     readonly stderr = new PassThrough();
-    readonly told: { type: string; id?: number; name?: string }[] = [];
+    readonly told: { type: string; id?: number; name?: string; payload?: unknown; code?: string; result?: unknown }[] = [];
     killed = false;
 
     constructor() {
@@ -47,7 +47,7 @@ interface Hosted {
     log: () => string;
 }
 
-function hostWith(manifest: Partial<ExtensionManifest>, options: { removeLanguageServers?: (id: string) => Promise<void> } = {}): Hosted {
+function hostWith(manifest: Partial<ExtensionManifest>, options: Partial<Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now'>> = {}): Hosted {
     const folder = mkdtempSync(join(root, 'extension-'));
     const children: FakeChild[] = [];
     const extension: StoredExtension = {
@@ -95,6 +95,23 @@ async function until(condition: () => boolean): Promise<void> {
     }
 }
 
+/* Starts the process with a first call and answers it, so what the test sends next meets one that runs. */
+async function runningChild({ host, children }: Hosted, whileReady: (child: FakeChild) => void = () => undefined): Promise<FakeChild> {
+    const call = host.call('acme.builds', 'add', []);
+
+    await until(() => children.length > 0);
+
+    const child = children[0] as FakeChild;
+
+    child.say({ type: 'ready' });
+    whileReady(child);
+    await until(() => child.told.length === 1);
+    child.say({ type: 'result', id: child.told[0]?.id, result: 1 });
+    await call;
+
+    return child;
+}
+
 afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -124,29 +141,78 @@ describe('ExtensionHost', () => {
         expect(children.every((child) => child.killed)).toBe(true);
     });
 
-    test('hands on only the events its permissions cover', async () => {
-        const { host, children, log } = hostWith({ permissions: { 'chats.read': 'Counts your chats' } });
-        const call = host.call('acme.builds', 'add', []);
+    test('hands on only the events its permissions cover, as much of them as the API names', async () => {
+        const hosted = hostWith({ permissions: { 'chats.read': 'Counts your chats' } });
+        const child = await runningChild(hosted, (ready) => {
+            ready.say({ type: 'subscribe', name: 'chat.status' });
+            ready.say({ type: 'subscribe', name: 'session.status' });
+            ready.say({ type: 'subscribe', name: 'session.output' });
+        });
+        const info = { chatId: 'chat-1', provider: 'claude', status: 'needs-you', model: 'opus', cwd: '/work', requests: [], agentSessionId: 'secret' };
 
-        await until(() => children.length > 0);
+        hosted.host.forwardEvent('chat.status', { chatId: 'chat-1', info });
+        hosted.host.forwardEvent('session.status', { sessionId: 'term-1', agent: null });
+        hosted.host.forwardEvent('session.output', { sessionId: 'term-1', data: 'ls' });
+        await until(() => child.told.some((message) => message.type === 'event'));
 
-        const child = children[0] as FakeChild;
+        expect(child.told.filter((message) => message.type === 'event')).toEqual([
+            { type: 'event', name: 'chat.status', payload: { chat: { id: 'chat-1', provider: 'claude', status: 'needsYou', model: 'opus', cwd: '/work' } } }
+        ]);
+        await until(() => hosted.log().includes('session.output'));
+        expect(hosted.log()).toContain('session.status needs the permission terminals.read');
+        expect(hosted.log()).toContain('session.output is no event an extension can follow');
+    });
 
-        child.say({ type: 'ready' });
-        child.say({ type: 'subscribe', name: 'chat.status' });
-        child.say({ type: 'subscribe', name: 'session.output' });
-        child.say({ type: 'subscribe', name: 'project.changed' });
-        await until(() => child.told.length === 1);
-        child.say({ type: 'result', id: child.told[0]?.id, result: 1 });
-        await call;
-        host.forwardEvent('chat.status', {});
-        host.forwardEvent('session.output', {});
-        host.forwardEvent('project.changed', {});
-        await until(() => child.told.length > 1);
+    test('an ask without its permission answers permission-denied, and the log says so', async () => {
+        const hosted = hostWith({}, { asks: () => ({ 'chats.send': async () => undefined }) });
+        const child = await runningChild(hosted);
 
-        expect(child.told.filter((message) => message.type === 'event').map((message) => message.name)).toEqual(['chat.status']);
-        await until(() => log().includes('project.changed'));
-        expect(log()).toContain('session.output needs the permission terminals.read');
+        child.say({ type: 'ask', id: 7, method: 'chats.send', args: ['chat-1', 'Hello'] });
+        await until(() => child.told.some((message) => message.type === 'answer'));
+
+        expect(child.told.find((message) => message.type === 'answer')).toMatchObject({ id: 7, code: 'permission-denied' });
+        await until(() => hosted.log().includes('permission-denied'));
+    });
+
+    test('a chat past its sends of the hour answers limit', async () => {
+        const hosted = hostWith({ permissions: { 'chats.send': 'Pokes a chat' } }, { asks: () => ({ 'chats.send': async () => undefined }), now: () => 0 });
+        const child = await runningChild(hosted);
+
+        for (let id = 1; id <= 21; id++) {
+            child.say({ type: 'ask', id, method: 'chats.send', args: ['chat-1', 'Hello'] });
+        }
+
+        await until(() => child.told.filter((message) => message.type === 'answer').length === 21);
+
+        const answers = child.told.filter((message) => message.type === 'answer');
+
+        expect(answers.filter((answer) => answer.code === undefined)).toHaveLength(20);
+        expect(answers.find((answer) => answer.code !== undefined)).toMatchObject({ id: 21, code: 'limit' });
+    });
+
+    test('an action outside the list or the manifest is refused under its own code', async () => {
+        const { host } = hostWith({ permissions: { 'launches.read': 'Lists launches' } }, {});
+
+        await expect(host.runAction('acme.builds', 'project', 'launch.start', { launch: 'web' })).rejects.toMatchObject({ code: 'permission-denied' });
+        await expect(host.runAction('acme.builds', 'project', 'session.write', {})).rejects.toMatchObject({ code: 'not-found' });
+    });
+
+    test('a method that throws fails, and one it lacks is not found', async () => {
+        const hosted = hostWith({});
+        const child = await runningChild(hosted);
+        const calls = Promise.allSettled([hosted.host.call('acme.builds', 'fail', []), hosted.host.call('acme.builds', 'gone', [])]);
+
+        await until(() => child.told.filter((message) => message.type === 'call').length === 3);
+
+        const [, fail, gone] = child.told.filter((message) => message.type === 'call');
+
+        child.say({ type: 'result', id: fail?.id, error: 'On purpose' });
+        child.say({ type: 'result', id: gone?.id, error: 'No method gone', code: 'not-found' });
+
+        expect(await calls).toMatchObject([
+            { status: 'rejected', reason: { code: 'failed', message: 'On purpose' } },
+            { status: 'rejected', reason: { code: 'not-found' } }
+        ]);
     });
 
     test('turning it off takes its language servers away, and turning it on starts it to add them again', async () => {

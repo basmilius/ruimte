@@ -1,8 +1,9 @@
-import { isCanvasView, sourceOf, type ContextSource, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { ChatProvider } from '@adecore/agents/providers';
 import type { Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
+import { asExtensionRefusal, ExtensionRefusal } from '../extensions/refusal.ts';
 import { oneShotProvider, oneShotRun, runOneShot } from '../git/one-shot.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { homedir } from 'node:os';
@@ -14,7 +15,7 @@ export interface ExtensionHandlerDeps {
     folderOf(projectId: string): string | null;
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
-    databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: unknown[][]; hasMore: boolean }>;
+    databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
 }
 
 function nodesIn(views: readonly ProjectView[], nodeIds: readonly string[] | undefined, viewId: string | undefined): ProjectNode[] {
@@ -48,11 +49,46 @@ export async function runExtensionPrompt(
     return { text: result.stdout };
 }
 
-/* A list and a call are for any client let in. What changes what runs on this machine takes its owner. */
+/*
+ * A list and a call are for any client let in. What changes what runs on this machine takes its owner. A request an
+ * extension makes fails under an `ExtensionErrorCode`, which its client hands it as a Result.
+ */
 export function registerExtensionHandlers(dispatcher: Dispatcher, host: ExtensionHost, deps: ExtensionHandlerDeps): void {
+    const extensionDispatcher = forExtension(dispatcher);
+
+    registerExtensionCalls(extensionDispatcher, host, deps);
+    registerExtensionAdmin(dispatcher, host);
+}
+
+/* Registers on `dispatcher` with every failure turned into an `ExtensionRefusal`. */
+function forExtension(dispatcher: Dispatcher): Pick<Dispatcher, 'register'> {
+    return {
+        register(type, handler, options) {
+            dispatcher.register(
+                type,
+                async (payload, client) => {
+                    try {
+                        return await handler(payload, client);
+                    } catch (e) {
+                        throw asExtensionRefusal(e);
+                    }
+                },
+                options
+            );
+        }
+    };
+}
+
+function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: ExtensionHost, deps: ExtensionHandlerDeps): void {
     dispatcher.register('extension.contextRead', async (payload) => {
         const folder = deps.folderOf(payload.projectId);
-        const nodes = nodesIn(deps.viewsOf(payload.projectId) ?? [], payload.nodeIds, payload.viewId);
+        const views = deps.viewsOf(payload.projectId);
+
+        if (views === null) {
+            throw new ExtensionRefusal('not-found', `No project ${payload.projectId} on this machine`);
+        }
+
+        const nodes = nodesIn(views, payload.nodeIds, payload.viewId);
         const sources = nodes.flatMap((node) => sourceOf(node, undefined, folder) ?? []);
 
         return {
@@ -90,7 +126,7 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
         const run = oneShotRun(provider, payload.prompt);
 
         if (run === null) {
-            throw new Error(`${provider.name} cannot answer a single prompt`);
+            throw new ExtensionRefusal('unavailable', `${provider.name} cannot answer a single prompt`);
         }
 
         const child = Bun.spawn([provider.command[0] as string, ...run.args], {
@@ -126,7 +162,7 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
         }
 
         if (timedOut) {
-            throw new Error(`${provider.name} did not answer within ${AGENT_RUN_TIMEOUT_MS / 1000} seconds`);
+            throw new ExtensionRefusal('timeout', `${provider.name} did not answer within ${AGENT_RUN_TIMEOUT_MS / 1000} seconds`);
         }
 
         return {};
@@ -155,7 +191,9 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
 
         return {};
     });
+}
 
+function registerExtensionAdmin(dispatcher: Dispatcher, host: ExtensionHost): void {
     dispatcher.register(
         'extension.log',
         async (payload) => {

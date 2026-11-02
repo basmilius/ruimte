@@ -1,4 +1,5 @@
 import { useChats } from '@adecore/agents-react/state';
+import { extensionAgentStatus, extensionChatOf, type ExtensionAgentStatus } from '@ruimte/contracts';
 import { nodeInfoOf, type NodeInfo } from '@/extensions/slots';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -13,7 +14,7 @@ export interface ClientEvents {
     'selection.changed': { nodes: NodeInfo[] };
     'view.changed': { viewId: string | null };
     'project.opened': { projectId: string };
-    'agent.status': { nodeId: string; status: string | undefined };
+    'agent.status': { nodeId: string; status: ExtensionAgentStatus };
     'chat.turnFinished': { chatId: string };
 }
 
@@ -89,7 +90,7 @@ function start(): void {
             if (row.info.status !== before) {
                 const { id } = splitKey(key);
 
-                emit('agent.status', { nodeId: id, status: row.info.status });
+                emit('agent.status', { nodeId: id, status: extensionChatOf(row.info).status });
 
                 if (before === 'running') {
                     emit('chat.turnFinished', { chatId: id });
@@ -102,7 +103,7 @@ function start(): void {
             const status = sessionStatus(row);
 
             if (status !== sessionStatus(previous.byKey[key])) {
-                emit('agent.status', { nodeId: splitKey(key).id, status });
+                emit('agent.status', { nodeId: splitKey(key).id, status: extensionAgentStatus(status) });
             }
         }
     });

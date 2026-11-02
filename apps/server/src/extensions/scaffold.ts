@@ -52,7 +52,7 @@ import type server from '../server';
 export default function Main() {
     const greeting = useServer<typeof server>().greeting.use();
 
-    return <p>{greeting}</p>;
+    return <p>{greeting.ok ? greeting.value : greeting.error.message}</p>;
 }
 `;
     }

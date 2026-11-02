@@ -25,8 +25,9 @@ import { ExtensionStore } from './extensions/store.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
 import { serverActionCall, voiceActionCall } from './actions/context.ts';
-import type { ActionName } from '@ruimte/actions';
-import { CustomLanguageServerInputSchema } from '@ruimte/contracts';
+import { runMachineAction, outputOf } from './extensions/machine-actions.ts';
+import { ExtensionRefusal } from './extensions/refusal.ts';
+import { CustomLanguageServerInputSchema, extensionChatOf } from '@ruimte/contracts';
 import { serverActions } from './actions/server-actions.ts';
 import { wireClients } from './wiring/clients.ts';
 import { wireDatabases } from './wiring/databases.ts';
@@ -243,13 +244,13 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         const folder = projects.store.index.folderOf(projectId);
 
         if (folder === null) {
-            throw new Error(`No project ${projectId} on this machine`);
+            throw new ExtensionRefusal('not-found', `No project ${projectId} on this machine`);
         }
 
         const kind = provider ?? (await canvasHost.starts.installedAgents())[0];
 
         if (kind === undefined) {
-            throw new Error('No agent is set up on this machine');
+            throw new ExtensionRefusal('unavailable', 'No agent is set up on this machine');
         }
 
         const result = await serverActions.execute(
@@ -273,39 +274,39 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             )
         );
 
-        if (result.status !== 'completed') {
-            throw new Error(result.status === 'failed' ? result.error.message : 'Starting this chat needs a confirmation');
-        }
-
-        return { nodeId: (result.output as { nodeId: string }).nodeId };
+        return { nodeId: outputOf(result).nodeId };
     };
     runExtensionAction = async (id, projectId, action, input) => {
         const folder = projects.store.index.folderOf(projectId);
 
         if (folder === null) {
-            throw new Error(`No project ${projectId} on this machine`);
+            throw new ExtensionRefusal('not-found', `No project ${projectId} on this machine`);
         }
 
         const call = serverActionCall(canvasHost, { projectId, folder, canvasId: null }, `extension:${id}`);
 
         call.context.extension = true;
 
-        const result = await serverActions.execute(action as ActionName, input as never, call);
-
-        if (result.status !== 'completed') {
-            throw new Error(result.status === 'failed' ? result.error.message : `${action} needs a confirmation`);
-        }
-
-        return result.output;
+        return runMachineAction(action, input, async (name, translated) => outputOf(await serverActions.execute(name, translated, call)));
     };
     // Saved like one a person added, so it is listed in Settings and held when its file changes.
     addExtensionLanguageServer = async (id, server) => {
-        await language.host.customSaveFor(id, CustomLanguageServerInputSchema.parse({ args: [], ...server, id: undefined }));
+        const input = CustomLanguageServerInputSchema.safeParse({ args: [], ...server, id: undefined });
+
+        if (!input.success) {
+            throw new ExtensionRefusal('invalid-input', `defineLanguageServer takes another shape: ${input.error.issues[0]?.message ?? 'invalid'}`);
+        }
+
+        await language.host.customSaveFor(id, input.data);
     };
     extensionAsks = {
         'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),
-        'chats.send': (chatId: string, text: string) => chats.send(chatId, text),
-        'chats.list': async () => chats.list()
+        'chats.send': async (chatId: string, text: string) => {
+            await chats.send(chatId, text);
+        },
+        'chats.list': async () => (await chats.list()).map(extensionChatOf),
+        'chats.read': async (chatId: string) =>
+            (await agents.context.answerSource('extension', { id: chatId, kind: 'chat', title: chatId }, null, null)).text ?? ''
     };
     registerExtensionHandlers(dispatcher, extensions, {
         viewsOf: (projectId) => projects.store.index.viewsOf(projectId),
@@ -316,14 +317,14 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
             const folder = projects.store.index.folderOf(projectId);
 
             if (folder === null) {
-                throw new Error('This project has no folder');
+                throw new ExtensionRefusal('not-found', `No project ${projectId} on this machine`);
             }
 
             const { result } = await databases.agents.query({ projectId, folder }, 'extension', connection, sql, { schema: null, limit: EXTENSION_QUERY_ROWS });
 
             return {
                 columns: result.columns.map((column) => (typeof column === 'string' ? column : column.name)),
-                rows: result.rows as unknown[][],
+                rows: result.rows.map((row) => [...row]),
                 hasMore: result.hasMore
             };
         }

@@ -47,7 +47,15 @@ defineSlashCommand({
     description: 'Asks for a review of what you name',
     run: (args) => `Review ${args || 'the last change'} and list what could break.`
 });
-defineSlashCommand({ name: 'readme', description: 'Puts the README in the prompt', run: () => files.readText('README.md') });
+defineSlashCommand({
+    name: 'readme',
+    description: 'Puts the README in the prompt',
+    run: async () => {
+        const readme = await files.readText('README.md');
+
+        return readme.ok ? readme.value : `(No README: ${readme.error.message})`;
+    }
+});
 
 const ISSUES = [
     { id: '1', name: 'POC issue: login fails' },
@@ -70,7 +78,11 @@ defineTemplate({
     title: 'Three notes',
     icon: 'layout-grid',
     create: ({ at }) => {
-        const notes = ['One', 'Two', 'Three'].flatMap((text) => canvas.createNote({ text }) ?? []);
+        const notes = ['One', 'Two', 'Three'].flatMap((text) => {
+            const note = canvas.createNote({ text });
+
+            return note.ok ? [note.value] : [];
+        });
 
         canvas.arrange(notes, 'row');
 
@@ -95,7 +107,13 @@ defineAction({
     title: 'Remove, after asking',
     icon: 'trash',
     slots: { nodeMenu: ({ node }) => node.kind === 'note' },
-    run: ({ nodes }: { nodes: NodeInfo[] }) => canvas.remove(nodes).then(() => undefined)
+    run: async ({ nodes }: { nodes: NodeInfo[] }) => {
+        const removed = await canvas.remove(nodes);
+
+        if (!removed.ok && removed.error.code !== 'refused') {
+            host.notify(removed.error.message, { tone: 'error' });
+        }
+    }
 });
 
 for (const slot of ['projectMenu', 'sidebarFooter', 'editorStatusBar'] as const) {

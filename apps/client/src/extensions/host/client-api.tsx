@@ -13,7 +13,23 @@ import { useTheme as useUiTheme } from '@/state/theme';
 import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
-import type { ExtensionManifest, NodeAccent, RequestMap } from '@ruimte/contracts';
+import {
+    EXTENSION_ACTIONS,
+    extensionAgentStatus,
+    extensionChatOf,
+    extensionErrorCodeOf,
+    isArgumentErrorCode,
+    type ExtensionActionInput,
+    type ExtensionActionName,
+    type ExtensionActionOutput,
+    type ExtensionDatabaseValue,
+    type ExtensionErrorCode,
+    type ExtensionManifest,
+    type ExtensionResult,
+    type NodeAccent,
+    type RequestMap
+} from '@ruimte/contracts';
+import type * as PublicClient from '../../../../../packages/extension/client';
 import { revealNode } from '@/project/views';
 import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
@@ -33,7 +49,7 @@ import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { openFileLink } from '@/shell/panels/file-links';
 import { currentEndpointId } from '@/state/keys';
-import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore } from '@/state/canvas';
+import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -41,7 +57,7 @@ import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useFocusedMachine } from '@/transport/connections';
-import { transport as activeTransport, type Transport } from '@/transport';
+import { transport as activeTransport, TransportError, type Transport } from '@/transport';
 
 export interface LoadedExtension {
     manifest: ExtensionManifest;
@@ -58,6 +74,15 @@ export interface LoadedExtension {
 const usePanelParams = create<{ params: Record<string, unknown> }>(() => ({ params: {} }));
 
 type UsageLimitsResult = RequestMap['usage.limits']['result'];
+type ExtensionRefusal = Extract<ExtensionResult<never>, { ok: false }>;
+type ServerClient<Server> = PublicClient.ServerClient<Server>;
+
+/* `launches.start` for `launch.start`: each action of one area, by its verb. */
+type MachineCalls<Name extends ExtensionActionName> = {
+    [Action in Name as Action extends `${string}.${infer Verb}` ? Verb : never]: (
+        input?: ExtensionActionInput<Action>
+    ) => Promise<ExtensionResult<ExtensionActionOutput<Action>>>;
+};
 type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;
 type Surface<Props = {}> = { component: LazyComponent<Props> } | { frame: string };
 
@@ -184,12 +209,32 @@ function besideNode(nodeId: string | undefined): { x: number; y: number } {
     return anchor === undefined ? { x: 0, y: 0 } : { x: anchor.x + anchor.w + 240, y: anchor.y + anchor.h / 2 };
 }
 
+/* Ends a call of the API with a Result of this code. Only the host throws it, and only the host catches it. */
+class Refused extends Error {
+    readonly code: ExtensionErrorCode;
+
+    constructor(code: ExtensionErrorCode, message: string) {
+        super(message);
+        this.code = code;
+    }
+}
+
+function currentProjectId(): string {
+    const projectId = useProject.getState().current?.projectId;
+
+    if (projectId === undefined) {
+        throw new Refused('no-project', 'This needs an open project');
+    }
+
+    return projectId;
+}
+
 /* A file request stays inside the project folder, whatever an extension asks for. */
 function inProject(path: string): string {
     const folder = useProject.getState().current?.folder;
 
     if (folder === undefined) {
-        throw new Error('This needs a project with a folder');
+        throw new Refused('no-project', 'This needs a project with a folder');
     }
 
     const full = path.startsWith('/') ? path : path === '.' ? folder : `${folder}/${path}`;
@@ -199,10 +244,51 @@ function inProject(path: string): string {
     const root = folder.split(/[\\/]/).join('/');
 
     if (inside !== root && (!inside.startsWith(`${root}/`) || parts.includes('..'))) {
-        throw new Error(`${path} is outside the project folder`);
+        throw new Refused('outside-project', `${path} is outside the project folder`);
     }
 
     return full;
+}
+
+/* The canvas a new node goes on. A view that is no canvas reads a blank store without a view, which saves nothing. */
+function canvasInFront(): CanvasState {
+    const canvas = focusedCanvas().getState();
+
+    if (canvas.viewId === null) {
+        throw new Refused('no-canvas', 'This needs a canvas in front');
+    }
+
+    return canvas;
+}
+
+function createdNode(nodeId: string | null): { id: string } {
+    if (nodeId === null) {
+        throw new Refused('no-canvas', 'This needs a canvas in front');
+    }
+
+    return { id: nodeId };
+}
+
+/* What an agent reads of one node of the project in front: a terminal's screen or a chat's thread. */
+async function readNodeText(nodeId: string): Promise<string> {
+    const { sources } = await activeTransport.request('extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId] });
+    const source = sources[0];
+
+    if (source === undefined) {
+        throw new Refused('not-found', `No node ${nodeId} in this project`);
+    }
+
+    return source.text;
+}
+
+function nodeStore(node: { id: string }): CanvasState {
+    const store = canvasOfNode(node.id)?.getState();
+
+    if (store === undefined) {
+        throw new Refused('not-found', `No node ${node.id} on a canvas of this window`);
+    }
+
+    return store;
 }
 
 const wordsCache = new Map<string, Promise<Record<string, string>>>();
@@ -226,17 +312,24 @@ function wordsOf(extension: LoadedExtension, language: string): Promise<Record<s
 
 const ARRANGE_GAP = 40;
 
-function requiresPermission(extension: LoadedExtension, permission: string): void {
-    if (!Object.hasOwn(extension.manifest.permissions ?? {}, permission)) {
+function hasPermission(extension: LoadedExtension, permission: string): boolean {
+    return Object.hasOwn(extension.manifest.permissions ?? {}, permission);
+}
+
+/* A hook has no Result to answer, so a missing permission fails the surface that draws it. */
+function hookPermission(extension: LoadedExtension, permission: string): void {
+    if (!hasPermission(extension, permission)) {
         throw new Error(`${extension.manifest.name} did not ask for the permission ${permission} in its manifest`);
     }
 }
 
+type Settle = <Value>(what: string, run: () => Promise<Value>) => Promise<ExtensionResult<Value>>;
+
 /* The `.use()` of a server method suspends, so its answers are kept by what was asked. */
-function serverClient(extension: LoadedExtension, transport: Pick<Transport, 'request'>): unknown {
-    const cache = new Map<string, Promise<unknown>>();
-    const call = (method: string, args: unknown[]): Promise<unknown> =>
-        transport.request('extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result);
+function serverClient(extension: LoadedExtension, transport: Pick<Transport, 'request'>, settle: Settle): unknown {
+    const cache = new Map<string, Promise<ExtensionResult<unknown>>>();
+    const call = (method: string, args: unknown[]): Promise<ExtensionResult<unknown>> =>
+        settle(`server ${method}`, () => transport.request('extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result));
 
     return new Proxy(
         {},
@@ -267,21 +360,69 @@ function serverClient(extension: LoadedExtension, transport: Pick<Transport, 're
 export function clientApiFor(extension: LoadedExtension) {
     const { id } = extension.manifest;
     const servers = new WeakMap<object, unknown>();
-    const machineActions = (area: string, verbs: readonly string[]) =>
-        Object.fromEntries(
-            verbs.map((verb) => [
-                verb,
-                (input: object = {}) =>
-                    activeTransport
-                        .request('extension.action', { id, projectId: useProject.getState().current?.projectId ?? '', action: `${area}.${verb}`, input })
-                        .then(({ output }) => output)
-            ])
-        );
     const reportFailure = (what: string) => (text: string) => {
         if (extension.dev === true) {
             sendDevLog(id, 'error', [`${what}: ${text}`]);
         }
     };
+    /*
+     * Why a call came back without its answer, under the code an extension reads. A refusal is no throw, so the terminal
+     * of `extension dev` is where a person still sees it. An argument of the wrong shape is the one thing that throws.
+     */
+    const refusalOf = (what: string, e: unknown): ExtensionRefusal => {
+        if (e instanceof TypeError) {
+            throw e;
+        }
+
+        if (e instanceof TransportError && isArgumentErrorCode(e.code)) {
+            throw new TypeError(`${what}: ${e.message}`);
+        }
+
+        const error =
+            e instanceof Refused
+                ? { code: e.code, message: e.message }
+                : e instanceof TransportError
+                  ? { code: extensionErrorCodeOf(e.code), message: e.message }
+                  : { code: 'failed' as const, message: e instanceof Error ? e.message : String(e) };
+
+        reportFailure(what)(`${error.code}: ${error.message}`);
+
+        return { ok: false, error };
+    };
+    const attempt = <Value,>(what: string, run: () => Value): ExtensionResult<Value> => {
+        try {
+            return { ok: true, value: run() };
+        } catch (e) {
+            return refusalOf(what, e);
+        }
+    };
+    const settle: Settle = async (what, run) => {
+        try {
+            return { ok: true, value: await run() };
+        } catch (e) {
+            return refusalOf(what, e);
+        }
+    };
+    const permit = (permission: string): void => {
+        if (!hasPermission(extension, permission)) {
+            throw new Refused('permission-denied', `${extension.manifest.name} did not ask for the permission ${permission} in its manifest`);
+        }
+    };
+    const machineActions = <Name extends ExtensionActionName>(names: readonly Name[]): MachineCalls<Name> =>
+        Object.fromEntries(
+            names.map((action) => [
+                action.slice(action.indexOf('.') + 1),
+                (input: object = {}) =>
+                    settle(action, async () => {
+                        // The machine checks it too; this one only saves the trip.
+                        permit(EXTENSION_ACTIONS[action]);
+
+                        const { output } = await activeTransport.request('extension.action', { id, projectId: currentProjectId(), action, input });
+
+                        return output;
+                    })
+            ])
+        ) as MachineCalls<Name>;
     /* A slot names its icon by a word; what a host draws is the icon itself. */
     const slotsOf = (slots: PublicSlots): SlotEntry['slots'] =>
         Object.fromEntries(
@@ -350,10 +491,10 @@ export function clientApiFor(extension: LoadedExtension) {
             assertLazy(card, `defineSidebarCard ${card.id}`);
             add('sidebarCards', { id: `${id}/${card.id}`, title: card.title, component: surfaceOf(extension, card) as ComponentType });
         },
-        defineView(view: { id: string; title: string; icon?: string } & Surface<{ params: unknown }>) {
+        defineView<Params>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>) {
             assertLazy(view, `defineView ${view.id}`);
 
-            const open = (params?: unknown) => {
+            const open = (params?: Params) => {
                 useDocument.getState().addExtensionView(view.title, id, view.id, params);
             };
 
@@ -362,15 +503,15 @@ export function clientApiFor(extension: LoadedExtension) {
 
             return { open };
         },
-        defineNode(
+        defineNode<Data>(
             node: {
                 id: string;
                 title: string;
                 icon?: string;
                 size?: { width: number; height: number };
-                initialData?: unknown;
+                initialData?: Data;
                 dataVersion?: number;
-                migrate?: (stored: unknown, from: number) => unknown;
+                migrate?: (stored: PublicClient.Json, from: number) => Data;
                 addFrom?: PublicSlots;
             } & Surface
         ) {
@@ -380,7 +521,10 @@ export function clientApiFor(extension: LoadedExtension) {
                 title: node.title,
                 icon: iconOf(node.icon, extension),
                 component: surfaceOf(extension, node) as ComponentType<ExtensionSurfaceProps>,
-                ...(node.migrate === undefined || node.dataVersion === undefined ? {} : { migrate: node.migrate, dataVersion: node.dataVersion })
+                // What an older version stored came out of the project file, so it is JSON.
+                ...(node.migrate === undefined || node.dataVersion === undefined
+                    ? {}
+                    : { migrate: node.migrate as (stored: unknown, from: number) => unknown, dataVersion: node.dataVersion })
             });
             // Adding is an action like any other, so an extension chooses where it shows; by default where a person adds nodes.
             add('slotEntries', {
@@ -409,7 +553,12 @@ export function clientApiFor(extension: LoadedExtension) {
             assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
             add('canvasLayers', { id: `${id}/${overlay.id}`, place: 'screen', component: surfaceOf(extension, overlay) as ComponentType<{ z: number }> });
         },
-        defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: object }> }) {
+        defineFileViewer(viewer: {
+            id: string;
+            title: string;
+            extensions: string[];
+            component: LazyComponent<{ file: PublicClient.FileInfo & { text: string | null } }>;
+        }) {
             assertLazy(viewer, `defineFileViewer ${viewer.id}`);
             add('fileViewers', {
                 id: `${id}/${viewer.id}`,
@@ -450,7 +599,7 @@ export function clientApiFor(extension: LoadedExtension) {
                 close: () => closers.forEach((close) => close())
             };
         },
-        defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: object }> }) {
+        defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: PublicClient.ToolCall }> }) {
             assertLazy(result, `defineToolResult ${result.id}`);
             add('toolResults', {
                 id: `${id}/${result.id}`,
@@ -481,7 +630,7 @@ export function clientApiFor(extension: LoadedExtension) {
         }) {
             add('references', { id: `${id}/${reference.id}`, title: reference.title, list: reference.list, read: reference.read });
         },
-        defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: object; diff: string }> }) {
+        defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: PublicClient.FileInfo; diff: string }> }) {
             assertLazy(viewer, `defineDiffViewer ${viewer.id}`);
             add('diffViewers', {
                 id: `${id}/${viewer.id}`,
@@ -493,15 +642,26 @@ export function clientApiFor(extension: LoadedExtension) {
         defineFileIcon(icon: { extensions: string[]; path: string }) {
             extension.disposers.push(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));
         },
-        defineVoiceAction(action: { id: string; description: string; parameters?: object; run: (input: unknown) => string | Promise<string> }) {
+        defineVoiceAction<Input extends object>(action: {
+            id: string;
+            description: string;
+            parameters?: object;
+            run: (input: Input) => string | Promise<string>;
+        }) {
             add('voiceActions', {
                 id: `${id}/${action.id}`,
                 description: action.description,
                 parameters: action.parameters ?? { type: 'object', properties: {} },
-                run: async (input) => action.run(input)
+                // Filled by the model after `parameters`, the shape the extension typed `Input` by.
+                run: async (input) => action.run(input as Input)
             });
         },
-        defineTemplate(template: { id: string; title: string; icon?: string; create: (context: object) => void | Promise<void> }) {
+        defineTemplate(template: {
+            id: string;
+            title: string;
+            icon?: string;
+            create: (context: PublicClient.BaseContext & { at: { x: number; y: number } }) => void | Promise<void>;
+        }) {
             add('slotEntries', {
                 id: `${id}/template/${template.id}`,
                 kind: 'action',
@@ -509,7 +669,8 @@ export function clientApiFor(extension: LoadedExtension) {
                 title: template.title,
                 ...(template.icon === undefined ? {} : { icon: iconOf(template.icon, extension) }),
                 slots: { canvasMenu: true },
-                run: template.create,
+                // The canvas menu tells a template where it was opened.
+                run: template.create as (context: object) => void | Promise<void>,
                 onFailure: reportFailure(template.id)
             });
         },
@@ -559,42 +720,53 @@ export function clientApiFor(extension: LoadedExtension) {
                 useRunning: () => useActionRuns((state) => state.runs.some((run) => run.actionId === entry.id))
             };
         },
-        defineMenu(menu: { id: string; title: string; icon?: string; slots: PublicSlots; items: SlotEntry['items'] }) {
+        defineMenu<Place extends PublicClient.SlotName>(menu: {
+            id: string;
+            title: string;
+            icon?: string;
+            slots: PublicClient.Slots<Place>;
+            items: PublicClient.MenuItem[] | ((context: PublicClient.ContextOf<Place>) => PublicClient.MenuItem[]);
+        }) {
             add('slotEntries', {
                 id: `${id}/${menu.id}`,
                 kind: 'menu',
                 title: menu.title,
                 ...(menu.icon === undefined ? {} : { icon: iconOf(menu.icon, extension) }),
-                slots: slotsOf(menu.slots),
-                ...(menu.items === undefined ? {} : { items: menu.items }),
+                slots: slotsOf(menu.slots as PublicSlots),
+                // An item is a handle this host made, a separator or a plain row, whatever the slot.
+                items: menu.items as SlotEntry['items'],
                 onFailure: reportFailure(menu.id)
             });
         },
-        defineWidget(widget: { id: string; slots: PublicSlots; component: LazyComponent<{ context: object }> }) {
+        defineWidget<Place extends PublicClient.SlotName>(widget: {
+            id: string;
+            slots: PublicClient.Slots<Place>;
+            component: LazyComponent<{ context: PublicClient.ContextOf<Place> }>;
+        }) {
             assertLazy(widget, `defineWidget ${widget.id}`);
             add('slotEntries', {
                 id: `${id}/${widget.id}`,
                 kind: 'widget',
                 title: widget.id,
-                slots: slotsOf(widget.slots),
+                slots: slotsOf(widget.slots as PublicSlots),
                 component: surfaceOf(extension, widget) as ComponentType<{ context: object; nodeId?: string | undefined }>,
                 onFailure: reportFailure(widget.id)
             });
         },
-        useServer<Server>(): Server {
+        useServer<Server>(): ServerClient<Server> {
             const extensionNow = useExtension();
             const { transport } = useFocusedMachine();
             // Kept per machine, or `.use()` would ask again on every render and never settle.
             let server = servers.get(transport);
 
             if (server === undefined) {
-                server = serverClient(extensionNow, transport);
+                server = serverClient(extensionNow, transport, settle);
                 servers.set(transport, server);
             }
 
-            return server as Server;
+            return server as ServerClient<Server>;
         },
-        useServerEvent(name: string, listener: (payload: unknown) => void) {
+        useServerEvent<Payload>(name: string, listener: (payload: Payload) => void) {
             const extensionNow = useExtension();
             const { transport } = useFocusedMachine();
 
@@ -602,14 +774,15 @@ export function clientApiFor(extension: LoadedExtension) {
                 () =>
                     transport.on('extension.message', (message) => {
                         if (message.id === extensionNow.manifest.id && message.name === name) {
-                            listener(message.payload);
+                            // What `emit` was given in `server/`, which only the extension knows the shape of.
+                            listener(message.payload as Payload);
                         }
                     }),
                 [extensionNow, transport, name, listener]
             );
         },
         useUsageLimits() {
-            requiresPermission(useExtension(), 'usage.read');
+            hookPermission(useExtension(), 'usage.read');
 
             const { transport } = useFocusedMachine();
             const [limits, setLimits] = useState<UsageLimitsResult | null>(null);
@@ -726,7 +899,7 @@ export function clientApiFor(extension: LoadedExtension) {
             const endpointId = useEndpointId();
             const info = useChats((state) => state.statusByKey[endpointKey(endpointId, chatId)]?.info);
 
-            return info === undefined ? null : { id: chatId, status: info.status, provider: info.provider };
+            return info === undefined ? null : extensionChatOf(info);
         },
         useNode(nodeId: string) {
             return nodeInfoIn(useNodeSources(), nodeId);
@@ -748,7 +921,7 @@ export function clientApiFor(extension: LoadedExtension) {
             return {
                 language: i18n.language,
                 format,
-                t: (key: string, values?: Record<string, unknown>) =>
+                t: (key: string, values?: Record<string, string | number>) =>
                     Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
             };
         },
@@ -764,7 +937,7 @@ export function clientApiFor(extension: LoadedExtension) {
             return stop;
         },
         useAgents() {
-            requiresPermission(useExtension(), 'agents.status');
+            hookPermission(useExtension(), 'agents.status');
 
             const nodes = useCanvas((state) => state.nodes);
             const sessions = useSessions((state) => state.byKey);
@@ -776,12 +949,11 @@ export function clientApiFor(extension: LoadedExtension) {
                 .map((node) => ({
                     id: node.id,
                     title: node.title,
-                    status: nodeStatus(node, sessions, chats, endpointId),
-                    needsYou: nodeWaitAsk(node, sessions, chats, endpointId) !== null
+                    status: extensionAgentStatus(nodeStatus(node, sessions, chats, endpointId), nodeWaitAsk(node, sessions, chats, endpointId) !== null)
                 }));
         },
         host: {
-            busy<Result>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Result | Promise<Result>) {
+            busy<Value>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Value | Promise<Value>) {
                 return trackRun({ actionId: null, title: work.title, nodeIds: (work.nodes ?? []).map((node) => node.id) }, run);
             },
             notify(text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run: () => void } }) {
@@ -813,184 +985,253 @@ export function clientApiFor(extension: LoadedExtension) {
             }
         },
         files: {
-            async readText(path: string) {
-                requiresPermission(extension, 'files.read');
+            readText: (path: string) =>
+                settle('files.readText', async () => {
+                    permit('files.read');
 
-                const answer = await activeTransport.request('fs.read', { path: inProject(path) });
+                    const answer = await activeTransport.request('fs.read', { path: inProject(path) });
 
-                if (answer.kind !== 'text') {
-                    throw new Error(`${path} is not a text file`);
-                }
-
-                return answer.text;
-            },
-            async write(path: string, text: string) {
-                requiresPermission(extension, 'files.write');
-                const full = inProject(path);
-                const existing = await activeTransport.request('fs.read', { path: full }).catch(() => null);
-
-                if (existing?.kind !== 'text') {
-                    await activeTransport.request('fs.create', { path: full, kind: 'file', text });
-                } else {
-                    await activeTransport.request('fs.write', { path: full, text, expectedMtime: existing.mtime });
-                }
-            },
-            async list(folder: string) {
-                requiresPermission(extension, 'files.read');
-
-                const { entries } = await activeTransport.request('fs.list', { path: inProject(folder) });
-
-                return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
-            },
-            watch(path: string, listener: () => void) {
-                requiresPermission(extension, 'files.read');
-
-                const full = inProject(path);
-                const stop = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
-                    if (root === full || changedPaths?.some((changed) => changed === full || changed.startsWith(`${full}/`))) {
-                        listener();
+                    if (answer.kind !== 'text') {
+                        throw new Refused('refused', `${path} is not a text file`);
                     }
-                });
 
-                void activeTransport.request('fs.watch', { path: full }).catch(() => undefined);
+                    return answer.text;
+                }),
+            write: (path: string, text: string) =>
+                settle('files.write', async () => {
+                    permit('files.write');
 
-                return () => {
-                    stop();
-                    void activeTransport.request('fs.unwatch', { path: full }).catch(() => undefined);
-                };
-            },
+                    const full = inProject(path);
+                    const existing = await activeTransport.request('fs.read', { path: full }).catch(() => null);
+
+                    if (existing?.kind !== 'text') {
+                        await activeTransport.request('fs.create', { path: full, kind: 'file', text });
+                    } else {
+                        await activeTransport.request('fs.write', { path: full, text, expectedMtime: existing.mtime });
+                    }
+                }),
+            list: (folder: string) =>
+                settle('files.list', async () => {
+                    permit('files.read');
+
+                    const { entries } = await activeTransport.request('fs.list', { path: inProject(folder) });
+
+                    return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
+                }),
+            watch: (path: string, listener: () => void) =>
+                attempt('files.watch', () => {
+                    permit('files.read');
+
+                    const full = inProject(path);
+                    const stop = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
+                        if (root === full || changedPaths?.some((changed) => changed === full || changed.startsWith(`${full}/`))) {
+                            listener();
+                        }
+                    });
+
+                    void activeTransport.request('fs.watch', { path: full }).catch(() => undefined);
+
+                    return () => {
+                        stop();
+                        void activeTransport.request('fs.unwatch', { path: full }).catch(() => undefined);
+                    };
+                }),
             open(path: string) {
                 void openFileLink(useProject.getState().current?.folder ?? null, { path, directory: false }, currentEndpointId());
             }
         },
         git: {
-            status(repository?: string) {
-                requiresPermission(extension, 'git.read');
+            status: (options?: { repository?: string }) =>
+                settle('git.status', async () => {
+                    permit('git.read');
 
-                return activeTransport.request('git.status', { cwd: repository ?? inProject('.') });
-            },
-            async diff(options?: { repository?: string; path?: string }) {
-                requiresPermission(extension, 'git.read');
+                    const status = await activeTransport.request('git.status', { cwd: inProject(options?.repository ?? '.') });
 
-                return activeTransport.request('git.diff', {
-                    cwd: options?.repository ?? inProject('.'),
-                    scope: 'worktree',
-                    ...(options?.path === undefined ? {} : { path: options.path })
-                });
-            },
-            log(options?: { repository?: string; limit?: number }) {
-                requiresPermission(extension, 'git.read');
+                    return {
+                        repository: status.repo,
+                        root: status.root,
+                        branch: status.branch,
+                        upstream: status.upstream,
+                        ahead: status.ahead,
+                        behind: status.behind,
+                        files: status.files.map((file) => ({
+                            path: file.path,
+                            state: file.state,
+                            status: file.status,
+                            added: file.added,
+                            deleted: file.deleted,
+                            binary: file.binary
+                        })),
+                        truncated: status.truncated
+                    };
+                }),
+            diff: (options: { path: string; repository?: string; staged?: boolean }) =>
+                settle('git.diff', async () => {
+                    permit('git.read');
 
-                return activeTransport.request('git.log', { cwd: options?.repository ?? inProject('.'), limit: options?.limit ?? 30 });
-            }
-        },
-        launches: machineActions('launch', ['list', 'read', 'start', 'restart', 'stop']),
-        routines: machineActions('routine', ['list', 'run', 'pause', 'resume']),
-        artifacts: machineActions('artifact', ['list', 'read', 'publish']),
-        browser: machineActions('browser', ['inspect', 'navigate', 'back', 'forward', 'reload', 'screenshot']),
-        devices: machineActions('device', ['list', 'inspect', 'screenshot', 'tap', 'launch']),
-        terminals: {
-            async read(terminal: { id: string }) {
-                requiresPermission(extension, 'terminals.read');
-
-                const { sources } = await activeTransport.request('extension.contextRead', {
-                    projectId: useProject.getState().current?.projectId ?? '',
-                    nodeIds: [terminal.id]
-                });
-
-                return sources[0]?.text ?? '';
-            },
-            // Opens a shell and types nothing: only a person types in a terminal.
-            open(options?: { title?: string; cwd?: string; near?: { id: string }[] }) {
-                requiresPermission(extension, 'canvas.write');
-
-                const nodeId = focusedCanvas()
-                    .getState()
-                    .addNode('terminal', besideNode(options?.near?.[0]?.id), {
-                        ...(options?.title === undefined ? {} : { title: options.title }),
-                        ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                    const diff = await activeTransport.request('git.diff', {
+                        cwd: inProject(options.repository ?? '.'),
+                        scope: 'worktree',
+                        path: options.path,
+                        ...(options.staged === undefined ? {} : { staged: options.staged })
                     });
 
-                return nodeId === null ? null : { id: nodeId };
-            }
+                    return { path: diff.path, diff: diff.diff, added: diff.added, deleted: diff.deleted, binary: diff.binary, kind: diff.kind ?? null };
+                }),
+            log: (options?: { repository?: string; limit?: number }) =>
+                settle('git.log', async () => {
+                    permit('git.read');
+
+                    const { commits } = await activeTransport.request('git.log', { cwd: inProject(options?.repository ?? '.'), limit: options?.limit ?? 30 });
+
+                    // Git writes an author date in seconds; everything else an extension reads is in milliseconds.
+                    return commits.map((commit) => ({
+                        hash: commit.hash,
+                        shortHash: commit.shortHash,
+                        subject: commit.subject,
+                        author: commit.author,
+                        at: commit.at * 1000,
+                        refs: commit.refs
+                    }));
+                })
+        },
+        launches: machineActions(['launch.list', 'launch.read', 'launch.start', 'launch.restart', 'launch.stop']),
+        routines: machineActions(['routine.list', 'routine.run', 'routine.pause', 'routine.resume']),
+        artifacts: machineActions(['artifact.list', 'artifact.read', 'artifact.publish']),
+        browser: machineActions(['browser.inspect', 'browser.navigate', 'browser.back', 'browser.forward', 'browser.reload', 'browser.screenshot']),
+        devices: machineActions(['device.list', 'device.inspect', 'device.screenshot', 'device.tap', 'device.launch']),
+        terminals: {
+            read: (terminal: { id: string }) =>
+                settle('terminals.read', () => {
+                    permit('terminals.read');
+
+                    return readNodeText(terminal.id);
+                }),
+            // Opens a shell and types nothing: only a person types in a terminal.
+            open: (options?: { title?: string; cwd?: string; near?: { id: string }[] }) =>
+                attempt('terminals.open', () => {
+                    permit('canvas.write');
+
+                    return createdNode(
+                        canvasInFront().addNode('terminal', besideNode(options?.near?.[0]?.id), {
+                            ...(options?.title === undefined ? {} : { title: options.title }),
+                            ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                        })
+                    );
+                })
         },
         database: {
-            async connections() {
-                requiresPermission(extension, 'database.read');
+            connections: () =>
+                settle('database.connections', async () => {
+                    permit('database.read');
 
-                return ((await databaseConnections.ready()) ?? []).map((connection: { id: string; name: string }) => ({
-                    id: connection.id,
-                    name: connection.name
-                }));
-            },
-            query(connection: string, sql: string) {
-                requiresPermission(extension, 'database.read');
+                    return ((await databaseConnections.ready()) ?? []).map((connection: { id: string; name: string }) => ({
+                        id: connection.id,
+                        name: connection.name
+                    }));
+                }),
+            query: (connection: string, sql: string) =>
+                settle('database.query', async () => {
+                    permit('database.read');
 
-                return activeTransport.request('extension.databaseQuery', { projectId: useProject.getState().current?.projectId ?? '', connection, sql });
-            }
+                    const { columns, rows, hasMore } = await activeTransport.request('extension.databaseQuery', {
+                        projectId: currentProjectId(),
+                        connection,
+                        sql
+                    });
+
+                    // The machine sends the cells as its databases read them; the wire only leaves them open for a newer kind.
+                    return { columns, rows: rows as ExtensionDatabaseValue[][], hasMore };
+                })
         },
         chats: {
-            list: () => {
-                requiresPermission(extension, 'chats.read');
+            list: () =>
+                settle('chats.list', async () => {
+                    permit('chats.read');
 
-                return activeTransport.request('chat.list', {}).then(({ chats }) => chats);
-            },
-            async read(chatId: string) {
-                requiresPermission(extension, 'chats.read');
+                    const { chats } = await activeTransport.request('chat.list', {});
 
-                const { sources } = await activeTransport.request('extension.contextRead', {
-                    projectId: useProject.getState().current?.projectId ?? '',
-                    nodeIds: [chatId]
-                });
+                    return chats.filter((chat) => chat.hidden !== true).map(extensionChatOf);
+                }),
+            read: (chatId: string) =>
+                settle('chats.read', () => {
+                    permit('chats.read');
 
-                return sources[0]?.text ?? '';
-            },
-            async send(chatId: string, text: string) {
-                requiresPermission(extension, 'chats.send');
-                await activeTransport.request('chat.send', { chatId, text });
-            }
+                    return readNodeText(chatId);
+                }),
+            send: (chatId: string, text: string) =>
+                settle('chats.send', async () => {
+                    permit('chats.send');
+                    await activeTransport.request('chat.send', { chatId, text });
+                })
         },
         views: {
             open(view: { id: string }) {
                 useDocument.getState().setActiveView(view.id);
             },
-            createCanvas(name: string) {
-                requiresPermission(extension, 'views.write');
+            createCanvas: (name: string) =>
+                attempt('views.createCanvas', () => {
+                    permit('views.write');
+                    currentProjectId();
 
-                return { id: useDocument.getState().addCanvasView(name) };
-            },
-            rename(view: { id: string }, name: string) {
-                requiresPermission(extension, 'views.write');
-                useDocument.getState().renameView(view.id, name);
-            }
+                    return { id: useDocument.getState().addCanvasView(name) };
+                }),
+            rename: (view: { id: string }, name: string) =>
+                attempt('views.rename', () => {
+                    permit('views.write');
+
+                    if (!useDocument.getState().views.some((each) => each.id === view.id)) {
+                        throw new Refused('not-found', `No view ${view.id} in this project`);
+                    }
+
+                    useDocument.getState().renameView(view.id, name);
+                })
         },
         context: {
-            read: (of: { nodes?: { id: string }[]; view?: { id: string } }) => {
-                requiresPermission(extension, 'context.read');
+            read: (of: { nodes?: { id: string }[]; view?: { id: string } }) =>
+                settle('context.read', async () => {
+                    permit('context.read');
 
-                return activeTransport
-                    .request('extension.contextRead', {
-                        projectId: useProject.getState().current?.projectId ?? '',
+                    const { sources } = await activeTransport.request('extension.contextRead', {
+                        projectId: currentProjectId(),
                         ...(of.nodes === undefined ? {} : { nodeIds: of.nodes.map((node) => node.id) }),
                         ...(of.view === undefined ? {} : { viewId: of.view.id })
-                    })
-                    .then(({ sources }) => sources);
-            }
+                    });
+
+                    return sources;
+                })
         },
         agents: {
-            run: (options: { prompt: string; context?: string[]; provider?: string }) => {
-                requiresPermission(extension, 'agents.run');
+            run: (options: { prompt: string; context?: string[]; provider?: string }) =>
+                settle('agents.run', async () => {
+                    permit('agents.run');
 
-                return activeTransport
-                    .request('extension.agentRun', {
+                    const { text } = await activeTransport.request('extension.agentRun', {
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
-                        projectId: useProject.getState().current?.projectId ?? ''
-                    })
-                    .then(({ text }) => ({ text }));
-            },
-            async *stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncGenerator<{ text: string }> {
-                requiresPermission(extension, 'agents.run');
+                        projectId: currentProjectId()
+                    });
+
+                    return { text };
+                }),
+            // Each piece is a Result, so a run that fails ends with its reason rather than a throw out of the loop.
+            async *stream(options: {
+                prompt: string;
+                context?: string[];
+                provider?: string;
+                signal?: AbortSignal;
+            }): AsyncGenerator<ExtensionResult<{ text: string }>> {
+                const ready = attempt('agents.stream', () => {
+                    permit('agents.run');
+
+                    return currentProjectId();
+                });
+
+                if (!ready.ok) {
+                    yield ready;
+
+                    return;
+                }
 
                 const runId = crypto.randomUUID();
                 const pieces: string[] = [];
@@ -1002,17 +1243,17 @@ export function clientApiFor(extension: LoadedExtension) {
                         wake();
                     }
                 });
-                const finished = activeTransport
-                    .request('extension.agentStream', {
+                const finished = settle('agents.stream', () =>
+                    activeTransport.request('extension.agentStream', {
                         runId,
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
-                        projectId: useProject.getState().current?.projectId ?? ''
+                        projectId: ready.value
                     })
-                    .finally(() => {
-                        done = true;
-                        wake();
-                    });
+                ).finally(() => {
+                    done = true;
+                    wake();
+                });
 
                 options.signal?.addEventListener('abort', () => void activeTransport.request('extension.agentStop', { runId }).catch(() => undefined));
 
@@ -1021,7 +1262,7 @@ export function clientApiFor(extension: LoadedExtension) {
                         const text = pieces.shift();
 
                         if (text !== undefined) {
-                            yield { text };
+                            yield { ok: true, value: { text } };
                         } else if (!done) {
                             await new Promise<void>((resolve) => {
                                 wake = resolve;
@@ -1029,172 +1270,191 @@ export function clientApiFor(extension: LoadedExtension) {
                         }
                     }
 
-                    await finished;
+                    const outcome = await finished;
+
+                    if (!outcome.ok) {
+                        yield outcome;
+                    }
                 } finally {
                     stop();
                 }
             },
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
-            async start(options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) {
-                requiresPermission(extension, 'agents.start');
+            start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) =>
+                settle('agents.start', async () => {
+                    permit('agents.start');
 
-                const { views, activeViewId } = useDocument.getState();
-                const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
-                const beside = options.near?.[0]?.id;
-                const { nodeId } = await activeTransport.request('extension.agentStart', {
-                    id,
-                    projectId: useProject.getState().current?.projectId ?? '',
-                    ...(onCanvas && activeViewId !== null ? { viewId: activeViewId } : {}),
-                    ...(onCanvas && beside !== undefined ? { beside } : {}),
-                    ...(options.provider === undefined ? {} : { provider: options.provider }),
-                    ...(options.title === undefined ? {} : { title: options.title }),
-                    ...(options.prompt === undefined ? {} : { prompt: options.prompt })
-                });
+                    const { views, activeViewId } = useDocument.getState();
+                    const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
+                    const beside = options.near?.[0]?.id;
+                    const { nodeId } = await activeTransport.request('extension.agentStart', {
+                        id,
+                        projectId: currentProjectId(),
+                        ...(onCanvas && activeViewId !== null ? { viewId: activeViewId } : {}),
+                        ...(onCanvas && beside !== undefined ? { beside } : {}),
+                        ...(options.provider === undefined ? {} : { provider: options.provider }),
+                        ...(options.title === undefined ? {} : { title: options.title }),
+                        ...(options.prompt === undefined ? {} : { prompt: options.prompt })
+                    });
 
-                return { id: nodeId };
-            }
+                    return { id: nodeId };
+                })
         },
         canvas: {
-            createNote(note: { title?: string; text: string; near?: { id: string }[]; color?: NodeAccent }) {
-                requiresPermission(extension, 'canvas.write');
+            createNote: (note: { title?: string; text: string; near?: { id: string }[]; color?: NodeAccent }) =>
+                attempt('canvas.createNote', () => {
+                    permit('canvas.write');
 
-                const nodeId = focusedCanvas()
-                    .getState()
-                    .addNode('note', besideNode(note.near?.[0]?.id), note.title === undefined ? {} : { title: note.title });
+                    const canvas = canvasInFront();
+                    const created = createdNode(canvas.addNode('note', besideNode(note.near?.[0]?.id), note.title === undefined ? {} : { title: note.title }));
 
-                if (nodeId !== null) {
-                    focusedCanvas().getState().updateNode(nodeId, { body: note.text });
+                    canvas.updateNode(created.id, { body: note.text });
 
                     if (note.color !== undefined) {
-                        focusedCanvas().getState().setNodeColor(nodeId, note.color);
+                        canvas.setNodeColor(created.id, note.color);
                     }
-                }
 
-                return nodeId === null ? null : { id: nodeId };
-            },
-            createFile(path: string, options?: { near?: { id: string }[] }) {
-                requiresPermission(extension, 'canvas.write');
+                    return created;
+                }),
+            createFile: (path: string, options?: { near?: { id: string }[] }) =>
+                attempt('canvas.createFile', () => {
+                    permit('canvas.write');
 
-                const nodeId = focusedCanvas().getState().addNode('file', besideNode(options?.near?.[0]?.id), { path });
+                    return createdNode(canvasInFront().addNode('file', besideNode(options?.near?.[0]?.id), { path }));
+                }),
+            createBrowser: (url: string, options?: { near?: { id: string }[] }) =>
+                attempt('canvas.createBrowser', () => {
+                    permit('canvas.write');
 
-                return nodeId === null ? null : { id: nodeId };
-            },
-            createBrowser(url: string, options?: { near?: { id: string }[] }) {
-                requiresPermission(extension, 'canvas.write');
-
-                const nodeId = focusedCanvas().getState().addNode('browser', besideNode(options?.near?.[0]?.id), { url });
-
-                return nodeId === null ? null : { id: nodeId };
-            },
-            createNode(type: string, options?: { data?: unknown; title?: string }) {
-                requiresPermission(extension, 'canvas.write');
-
+                    return createdNode(canvasInFront().addNode('browser', besideNode(options?.near?.[0]?.id), { url }));
+                }),
+            createNode: <Data,>(type: string, options?: { data?: Data; title?: string; near?: { id: string }[] }) => {
                 const contribution = useContributions.getState().extensionNodes.find((node) => node.id === `${id}/${type}`);
 
+                // A type the extension never defined is its own mistake, as a wrong argument is.
                 if (contribution === undefined) {
-                    throw new Error(`${extension.manifest.name} has no node ${type}`);
+                    throw new TypeError(`${extension.manifest.name} has no node ${type}`);
                 }
 
-                const nodeId = focusedCanvas()
-                    .getState()
-                    .addExtensionNode(id, type, options?.title ?? contribution.title, { width: 420, height: 300 }, options?.data ?? {});
+                return attempt('canvas.createNode', () => {
+                    permit('canvas.write');
 
-                return nodeId === null ? null : { id: nodeId };
+                    return createdNode(
+                        canvasInFront().addExtensionNode(
+                            id,
+                            type,
+                            options?.title ?? contribution.title,
+                            { width: 420, height: 300 },
+                            options?.data ?? {},
+                            undefined,
+                            options?.near === undefined ? undefined : besideNode(options.near[0]?.id)
+                        )
+                    );
+                });
             },
-            update(node: { id: string }, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }) {
-                requiresPermission(extension, 'canvas.write');
-                const store = canvasOfNode(node.id)?.getState();
-                const current = store?.nodes[node.id];
+            update: (node: { id: string }, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }) =>
+                attempt('canvas.update', () => {
+                    permit('canvas.write');
 
-                if (store === undefined || current === undefined) {
-                    return;
-                }
-
-                if (patch.title !== undefined) {
-                    store.renameNode(node.id, patch.title);
-                }
-
-                store.resizeNode(node.id, { x: patch.x ?? current.x, y: patch.y ?? current.y, w: patch.width ?? current.w, h: patch.height ?? current.h });
-            },
-            writeNote(node: { id: string }, text: string) {
-                requiresPermission(extension, 'canvas.write');
-                canvasOfNode(node.id)?.getState().updateNode(node.id, { body: text });
-            },
-            arrange(nodes: { id: string }[], layout: 'row' | 'column' | 'grid') {
-                requiresPermission(extension, 'canvas.write');
-
-                const store = focusedCanvas().getState();
-                const placed = nodes.flatMap((node) => {
+                    const store = nodeStore(node);
                     const current = store.nodes[node.id];
 
-                    return current === undefined ? [] : [current];
-                });
-                const first = placed[0];
+                    if (current === undefined) {
+                        throw new Refused('not-found', `No node ${node.id} on a canvas of this window`);
+                    }
 
-                if (first === undefined) {
-                    return;
-                }
+                    if (patch.title !== undefined) {
+                        store.renameNode(node.id, patch.title);
+                    }
 
-                const columns = layout === 'row' ? placed.length : layout === 'column' ? 1 : Math.ceil(Math.sqrt(placed.length));
-                const width = Math.max(...placed.map((node) => node.w));
-                const height = Math.max(...placed.map((node) => node.h));
+                    store.resizeNode(node.id, { x: patch.x ?? current.x, y: patch.y ?? current.y, w: patch.width ?? current.w, h: patch.height ?? current.h });
+                }),
+            writeNote: (node: { id: string }, text: string) =>
+                attempt('canvas.writeNote', () => {
+                    permit('canvas.write');
+                    nodeStore(node).updateNode(node.id, { body: text });
+                }),
+            arrange: (nodes: { id: string }[], layout: 'row' | 'column' | 'grid') =>
+                attempt('canvas.arrange', () => {
+                    permit('canvas.write');
 
-                placed.forEach((node, index) => {
-                    store.resizeNode(node.id, {
-                        x: first.x + (index % columns) * (width + ARRANGE_GAP),
-                        y: first.y + Math.floor(index / columns) * (height + ARRANGE_GAP),
-                        w: node.w,
-                        h: node.h
+                    const store = canvasInFront();
+                    const placed = nodes.flatMap((node) => {
+                        const current = store.nodes[node.id];
+
+                        return current === undefined ? [] : [current];
                     });
-                });
-            },
+                    const first = placed[0];
+
+                    if (first === undefined) {
+                        throw new Refused('not-found', 'None of these nodes is on the canvas in front');
+                    }
+
+                    const columns = layout === 'row' ? placed.length : layout === 'column' ? 1 : Math.ceil(Math.sqrt(placed.length));
+                    const width = Math.max(...placed.map((node) => node.w));
+                    const height = Math.max(...placed.map((node) => node.h));
+
+                    placed.forEach((node, index) => {
+                        store.resizeNode(node.id, {
+                            x: first.x + (index % columns) * (width + ARRANGE_GAP),
+                            y: first.y + Math.floor(index / columns) * (height + ARRANGE_GAP),
+                            w: node.w,
+                            h: node.h
+                        });
+                    });
+                }),
             // A person confirms, as anywhere a node goes away.
-            async remove(nodes: { id: string }[]) {
-                requiresPermission(extension, 'canvas.write');
+            remove: (nodes: { id: string }[]) =>
+                settle('canvas.remove', async () => {
+                    permit('canvas.write');
 
-                const words = { count: nodes.length, extension: extension.manifest.name };
-                const asked = await askHost({
-                    title: i18next.t('shell:extensions.removeNodes.title', words),
-                    body: i18next.t('shell:extensions.removeNodes.body', words),
-                    danger: true
-                });
+                    const store = canvasInFront();
+                    const words = { count: nodes.length, extension: extension.manifest.name };
+                    const asked = await askHost({
+                        title: i18next.t('shell:extensions.removeNodes.title', words),
+                        body: i18next.t('shell:extensions.removeNodes.body', words),
+                        danger: true
+                    });
 
-                if (asked === null) {
-                    return false;
-                }
+                    if (asked === null) {
+                        throw new Refused('refused', 'The person kept them');
+                    }
 
-                const store = focusedCanvas().getState();
+                    store.select(nodes.map((node) => node.id));
+                    store.deleteSelected();
+                }),
+            group: (nodes: { id: string }[]) =>
+                attempt('canvas.group', () => {
+                    permit('canvas.write');
 
-                store.select(nodes.map((node) => node.id));
-                store.deleteSelected();
+                    const store = canvasInFront();
 
-                return true;
-            },
-            group(nodes: { id: string }[]) {
-                requiresPermission(extension, 'canvas.write');
+                    store.select(nodes.map((node) => node.id));
 
-                const store = focusedCanvas().getState();
+                    const groupId = store.groupSelection();
 
-                store.select(nodes.map((node) => node.id));
+                    if (groupId === null) {
+                        throw new Refused('refused', 'These nodes make no group on the canvas in front');
+                    }
 
-                const groupId = store.groupSelection();
+                    return { id: groupId };
+                }),
+            link: (from: { id: string }, to: { id: string }) =>
+                attempt('canvas.link', () => {
+                    permit('canvas.write');
+                    nodeStore(from).addEdge(from.id, to.id);
+                }),
+            unlink: (from: { id: string }, to: { id: string }) =>
+                attempt('canvas.unlink', () => {
+                    permit('canvas.write');
 
-                return groupId === null ? null : { id: groupId };
-            },
-            link(from: { id: string }, to: { id: string }) {
-                requiresPermission(extension, 'canvas.write');
-                canvasOfNode(from.id)?.getState().addEdge(from.id, to.id);
-            },
-            unlink(from: { id: string }, to: { id: string }) {
-                requiresPermission(extension, 'canvas.write');
+                    const store = nodeStore(from);
+                    const edge = store.edges.find((each) => (each.from === from.id && each.to === to.id) || (each.from === to.id && each.to === from.id));
 
-                const store = canvasOfNode(from.id)?.getState();
-                const edge = store?.edges.find((each) => (each.from === from.id && each.to === to.id) || (each.from === to.id && each.to === from.id));
-
-                if (edge !== undefined) {
-                    store?.removeEdge(edge.id);
-                }
-            },
+                    if (edge !== undefined) {
+                        store.removeEdge(edge.id);
+                    }
+                }),
             select(nodes: { id: string }[]) {
                 focusedCanvas()
                     .getState()
@@ -1204,5 +1464,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 revealNode(target.id);
             }
         }
-    };
+        // Held to the public types, so a change to one side breaks the check rather than an extension.
+    } satisfies typeof PublicClient;
 }

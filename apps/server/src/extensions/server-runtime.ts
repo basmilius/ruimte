@@ -5,6 +5,7 @@
  */
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type * as PublicServer from '../../../../packages/extension/server';
 
 type Listener = (payload: unknown) => void;
 type Handlers = Record<string, (...args: unknown[]) => unknown>;
@@ -47,10 +48,11 @@ function writeJsonFile(name: string, value: object): void {
 
 function keyValues(name: string) {
     return {
-        async get(key: string): Promise<unknown> {
-            return jsonFile(name)[key];
+        // What was set under the key, which only the extension knows the shape of.
+        async get<Value>(key: string): Promise<Value | undefined> {
+            return jsonFile(name)[key] as Value | undefined;
         },
-        async set(key: string, value: unknown): Promise<void> {
+        async set<Value>(key: string, value: Value): Promise<void> {
             writeJsonFile(name, { ...jsonFile(name), [key]: value });
         },
         async delete(key: string): Promise<void> {
@@ -61,20 +63,33 @@ function keyValues(name: string) {
     };
 }
 
+type Result<Value> = PublicServer.Result<Value>;
+
 const permissions = new Set<string>(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? '[]') as string[]);
-const asked = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+const asked = new Map<number, { resolve(value: Result<unknown>): void; reject(error: Error): void }>();
 let nextAsk = 1;
 
-/* The daemon holds what this process does not: the person's agents and chats. It checks the permission too. */
-function ask(method: string, args: unknown[]): Promise<unknown> {
+/*
+ * The daemon holds what this process does not: the person's agents and chats. It checks the permission too, and
+ * its refusal answers as a Result. Only an argument of the wrong shape throws, as the extension's own mistake.
+ */
+function ask<Value>(method: string, args: unknown[]): Promise<Result<Value>> {
     const id = nextAsk;
 
     nextAsk += 1;
 
     return new Promise((resolve, reject) => {
-        asked.set(id, { resolve, reject });
+        asked.set(id, { resolve: resolve as (value: Result<unknown>) => void, reject });
         send({ type: 'ask', id, method, args });
     });
+}
+
+function mapResult<Value, Next>(result: Result<Value>, next: (value: Value) => Next): Result<Next> {
+    return result.ok ? { ok: true, value: next(result.value) } : result;
+}
+
+interface Ref {
+    id: string;
 }
 
 const UNITS: Readonly<Record<string, number>> = { s: 1000, m: 60_000, h: 3_600_000 };
@@ -96,17 +111,45 @@ const server = {
         platform: process.platform,
         dataFolder,
         // An action of the machine in a project, within what the manifest asks for.
-        run: (projectId: string, action: string, input: unknown = {}) => ask('action', [projectId, action, input])
+        run: (project: Ref, action: string, input: object = {}) => ask('action', [project.id, action, input])
     },
-    defineLanguageServer: (languageServer: object) => ask('languages.add', [languageServer]),
+    defineLanguageServer: async (languageServer: object) => mapResult(await ask('languages.add', [languageServer]), () => undefined),
     agents: {
-        run: (options: { prompt: string; context?: string[]; provider?: string }) => ask('agents.run', [options]),
-        start: (options: { projectId: string; prompt?: string; provider?: string; title?: string; viewId?: string; beside?: string }) =>
-            ask('agents.start', [options])
+        run: (options: { prompt: string; context?: string[]; provider?: string }) => ask<{ text: string }>('agents.run', [options]),
+        async start({
+            project,
+            view,
+            near,
+            prompt,
+            provider,
+            title
+        }: {
+            project: Ref;
+            view?: Ref;
+            near?: Ref[];
+            prompt?: string;
+            provider?: string;
+            title?: string;
+        }) {
+            const beside = near?.[0]?.id;
+            const started = await ask<{ nodeId: string }>('agents.start', [
+                {
+                    projectId: project.id,
+                    ...(view === undefined ? {} : { viewId: view.id }),
+                    ...(beside === undefined ? {} : { beside }),
+                    ...(prompt === undefined ? {} : { prompt }),
+                    ...(provider === undefined ? {} : { provider }),
+                    ...(title === undefined ? {} : { title })
+                }
+            ]);
+
+            return mapResult(started, ({ nodeId }) => ({ id: nodeId }));
+        }
     },
     chats: {
-        send: (chatId: string, text: string) => ask('chats.send', [chatId, text]),
-        list: () => ask('chats.list', [])
+        list: () => ask('chats.list', []),
+        read: (chatId: string) => ask<string>('chats.read', [chatId]),
+        send: async (chatId: string, text: string) => mapResult(await ask('chats.send', [chatId, text]), () => undefined)
     },
     defineAgentTool(tool: { id: string; description: string; parameters?: unknown; run(input: unknown, context: { caller: string }): unknown }): void {
         tools.set(tool.id, tool);
@@ -121,23 +164,25 @@ const server = {
             void (async () => task.run())().catch((e: unknown) => console.error(`${task.id} failed:`, e));
         }, everyMs(task.every));
     },
-    defineServer: <Api extends Handlers>(api: Api): Api => api,
-    onEvent(name: string, listener: Listener): () => void {
+    defineServer: <Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api => api,
+    onEvent<Name extends keyof PublicServer.ServerEvents>(name: Name, listener: (event: PublicServer.ServerEvents[Name]) => void): () => void {
         const group = listeners.get(name) ?? new Set();
+        // The daemon hands on only the payload `ServerEvents` names for this event.
+        const heard = listener as Listener;
 
-        group.add(listener);
+        group.add(heard);
         listeners.set(name, group);
         send({ type: 'subscribe', name });
 
         return () => {
-            group.delete(listener);
+            group.delete(heard);
         };
     },
-    emit(name: string, payload: unknown): void {
+    emit<Payload>(name: string, payload: Payload): void {
         send({ type: 'emit', name, payload });
     },
-    defineNodeContext(nodeId: string, read: (node: { data: unknown }) => unknown): void {
-        nodeContexts.set(nodeId, read);
+    defineNodeContext<Data>(nodeId: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void {
+        nodeContexts.set(nodeId, read as (node: { data: unknown }) => unknown);
     },
     storage: keyValues('storage.json'),
     secrets: keyValues('secrets.json'),
@@ -145,7 +190,8 @@ const server = {
         info: (message: string) => console.error(message),
         error: (message: string, error?: unknown) => console.error(message, error ?? '')
     }
-};
+    // Held to the public types, so a change to one side breaks the check rather than an extension.
+} satisfies typeof PublicServer;
 
 (globalThis as Record<string, unknown>).__ruimteExtension = {
     for: () => ({ server })
@@ -154,11 +200,14 @@ const server = {
 const module = (await import(entry)) as { default?: Handlers };
 const handlers = module.default ?? {};
 
+/* Thrown for a method or tool the extension does not have, which the client reads as `not-found`. */
+class Missing extends Error {}
+
 async function answer(id: number, run: () => unknown): Promise<void> {
     try {
         send({ type: 'result', id, result: (await run()) ?? null });
     } catch (e) {
-        send({ type: 'result', id, error: e instanceof Error ? e.message : String(e) });
+        send({ type: 'result', id, error: e instanceof Error ? e.message : String(e), ...(e instanceof Missing ? { code: 'not-found' } : {}) });
     }
 }
 
@@ -186,21 +235,28 @@ process.stdin.on('data', (chunk: string) => {
 
         if (message.type === 'answer') {
             const waiting = asked.get(message.id);
-            const { result, error } = message as { result?: unknown; error?: string };
+            // The daemon answers under a code of `ExtensionErrorCode`, or `invalid-input` for an argument of the wrong shape.
+            const {
+                result,
+                error,
+                code = 'failed'
+            } = message as { result?: unknown; error?: string; code?: PublicServer.ExtensionErrorCode | 'invalid-input' };
 
             asked.delete(message.id);
 
             if (error === undefined) {
-                waiting?.resolve(result);
+                waiting?.resolve({ ok: true, value: result });
+            } else if (code === 'invalid-input') {
+                waiting?.reject(new TypeError(error));
             } else {
-                waiting?.reject(new Error(error));
+                waiting?.resolve({ ok: false, error: { code, message: error } });
             }
         } else if (message.type === 'call') {
             void answer(message.id, () => {
                 const handler = handlers[message.method];
 
                 if (handler === undefined) {
-                    throw new Error(`No method ${message.method}`);
+                    throw new Missing(`No method ${message.method}`);
                 }
 
                 return handler(...message.args);
@@ -216,7 +272,7 @@ process.stdin.on('data', (chunk: string) => {
                 const tool = tools.get(message.method);
 
                 if (tool === undefined) {
-                    throw new Error(`No tool ${message.method}`);
+                    throw new Missing(`No tool ${message.method}`);
                 }
 
                 return tool.run(payload, context);

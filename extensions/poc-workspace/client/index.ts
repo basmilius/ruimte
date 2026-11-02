@@ -11,8 +11,18 @@ import {
     git,
     host,
     views,
-    type NodeInfo
+    type NodeInfo,
+    type Result
 } from '@ruimte/extension/client';
+
+/* An action that throws shows the person why, so a refusal ends one that way. */
+function valueOf<Value>(result: Result<Value>): Value {
+    if (!result.ok) {
+        throw new Error(result.error.message);
+    }
+
+    return result.value;
+}
 
 const panel = definePanel<{ from: string }>({ id: 'workspace', title: 'POC workspace', icon: 'layers', component: () => import('./WorkspacePanel') });
 
@@ -27,19 +37,23 @@ defineNode({ id: 'stamp', title: 'POC stamp', icon: 'stamp', initialData: { at: 
 
 const openPanel = defineAction({ id: 'open-panel', title: 'Open with params', slots: { commandPalette: true }, run: ({ slot }) => panel.open({ from: slot }) });
 const badge = defineAction({ id: 'badge', title: 'Set a badge', run: () => panel.setBadge('3') });
-const stamp = defineAction({ id: 'stamp', title: 'Add a stamp', run: () => void canvas.createNode('stamp', { data: { at: new Date().toISOString() } }) });
+const stamp = defineAction({
+    id: 'stamp',
+    title: 'Add a stamp',
+    run: () => void valueOf(canvas.createNode('stamp', { data: { at: new Date().toISOString() } }))
+});
 const note = defineAction({
     id: 'readme',
     title: 'README as a file node',
-    run: () => void canvas.createFile('README.md')
+    run: () => void valueOf(canvas.createFile('README.md'))
 });
 const log = defineAction({
     id: 'log',
     title: 'Write the git log to poc-log.json',
     run: async () => {
-        const entries = await git.log({ limit: 5 });
+        const commits = valueOf(await git.log({ limit: 5 }));
 
-        await files.write('poc-log.json', JSON.stringify(entries, null, 4));
+        valueOf(await files.write('poc-log.json', JSON.stringify(commits, null, 4)));
         files.open('poc-log.json');
     }
 });
@@ -50,7 +64,7 @@ const rename = defineAction<{ node: NodeInfo }>({
         const title = await host.prompt({ title: 'New title', initial: node.title });
 
         if (title !== null) {
-            canvas.update(node, { title });
+            valueOf(canvas.update(node, { title }));
         }
     }
 });
@@ -59,7 +73,7 @@ const newView = defineAction({
     title: 'Make a canvas, after asking',
     run: async () => {
         if (await host.confirm({ title: 'Make a canvas', body: 'Adds a view called POC.' })) {
-            views.open(views.createCanvas('POC'));
+            views.open(valueOf(views.createCanvas('POC')));
         }
     }
 });
@@ -87,7 +101,7 @@ defineAction({
     title: 'Ask for a test',
     icon: 'message-circle',
     slots: { composer: true },
-    run: ({ chat }) => chats.send(chat.id, 'Write a test for what you just did.')
+    run: async ({ chat }) => valueOf(await chats.send(chat.id, 'Write a test for what you just did.'))
 });
 
 defineAction({
@@ -96,10 +110,10 @@ defineAction({
     icon: 'users',
     slots: { nodeMenu: ({ node }) => node.kind === 'chat' && node.agent?.status === 'idle' },
     run: async ({ node }) => {
-        const text = await chats.read(node.id);
-        const chat = await agents.start({ title: 'Second opinion', prompt: `Review this conversation:\n\n${text}`, near: [node] });
+        const text = valueOf(await chats.read(node.id));
+        const chat = valueOf(await agents.start({ title: 'Second opinion', prompt: `Review this conversation:\n\n${text}`, near: [node] }));
 
-        canvas.link(node, chat);
+        valueOf(canvas.link(node, chat));
         canvas.reveal(chat);
     }
 });

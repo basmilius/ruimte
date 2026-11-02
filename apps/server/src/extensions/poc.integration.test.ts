@@ -74,7 +74,7 @@ describe('the proof-of-concept extensions', () => {
 
         expect(JSON.stringify(heard)).toContain('tick');
 
-        host.forwardEvent('chat.status', {});
+        host.forwardEvent('chat.status', { chatId: 'chat-1', info: { chatId: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' } });
 
         // The event goes down the same pipe ahead of this call, so it has been handled by the answer.
         expect(await host.call('poc.server', 'eventsSeen', [])).toBe(1);
@@ -96,14 +96,14 @@ describe('the proof-of-concept extensions', () => {
         hosts.push(host);
         await host.install(await packOf('server'));
 
-        expect(await host.call('poc.server', 'ask', ['hi'])).toEqual({ text: 'answered' });
+        expect(await host.call('poc.server', 'ask', ['hi'])).toEqual({ ok: true, value: { text: 'answered' } });
         expect(await host.call('poc.server', 'chatCount', [])).toBe(2);
 
         for (let count = 0; count < 20; count++) {
-            await host.call('poc.server', 'poke', ['chat']);
+            expect(await host.call('poc.server', 'poke', ['chat'])).toEqual({ ok: true });
         }
 
-        await expect(host.call('poc.server', 'poke', ['chat'])).rejects.toThrow('has to wait');
+        expect(await host.call('poc.server', 'poke', ['chat'])).toMatchObject({ ok: false, error: { code: 'limit' } });
         expect(sent).toHaveLength(20);
     });
 
@@ -137,9 +137,9 @@ describe('the proof-of-concept extensions', () => {
         hosts.push(host);
         await host.install(await packOf('server'));
 
-        expect(await host.call('poc.server', 'startChat', ['project-1'])).toEqual({ nodeId: 'chat-1' });
+        expect(await host.call('poc.server', 'startChat', ['project-1'])).toEqual({ ok: true, value: { id: 'chat-1' } });
         expect(started[0]).toMatchObject({ id: 'poc.server', projectId: 'project-1' });
-        await expect(host.startAgent('poc.none', { projectId: 'project-1' })).rejects.toThrow('agents.start');
+        await expect(host.startAgent('poc.none', { projectId: 'project-1' })).rejects.toMatchObject({ code: 'permission-denied' });
     });
 
     test('an action of the machine goes only through the list and the manifest', async () => {
@@ -154,8 +154,8 @@ describe('the proof-of-concept extensions', () => {
         await host.runAction('poc.machine', 'project', 'launch.list', {});
 
         expect(ran).toEqual(['launch.list']);
-        await expect(host.runAction('poc.machine', 'project', 'launch.start', {})).rejects.toThrow('launches.run');
-        await expect(host.runAction('poc.machine', 'project', 'node.delete', {})).rejects.toThrow('cannot ask for');
+        await expect(host.runAction('poc.machine', 'project', 'launch.start', {})).rejects.toMatchObject({ code: 'permission-denied' });
+        await expect(host.runAction('poc.machine', 'project', 'node.delete', {})).rejects.toMatchObject({ code: 'not-found' });
     });
 
     test('a language server of an extension goes through the manifest, and leaves with the extension', async () => {

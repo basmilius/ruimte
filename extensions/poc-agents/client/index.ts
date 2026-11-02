@@ -4,23 +4,37 @@ defineSidebarCard({ id: 'agents', title: 'POC agents', component: () => import('
 
 async function summarize(nodes: NodeInfo[]): Promise<void> {
     const sources = await context.read({ nodes });
-    const { text } = await agents.run({
-        prompt: 'Summarize what follows in three lines.',
-        context: sources.map((source) => `# ${source.title}\n${source.text}`)
-    });
-    const note = canvas.createNote({ title: 'Summary', text, near: nodes });
 
-    if (note === null) {
-        host.notify('No canvas to write on', { tone: 'error' });
+    if (!sources.ok) {
+        host.notify(sources.error.message, { tone: 'error' });
+
+        return;
+    }
+
+    const answer = await agents.run({
+        prompt: 'Summarize what follows in three lines.',
+        context: sources.value.map((source) => `# ${source.title}\n${source.text}`)
+    });
+
+    if (!answer.ok) {
+        host.notify(answer.error.message, { tone: 'error' });
+
+        return;
+    }
+
+    const note = canvas.createNote({ title: 'Summary', text: answer.value.text, near: nodes });
+
+    if (!note.ok) {
+        host.notify(note.error.code === 'no-canvas' ? 'No canvas to write on' : note.error.message, { tone: 'error' });
 
         return;
     }
 
     for (const source of nodes) {
-        canvas.link(source, note);
+        canvas.link(source, note.value);
     }
 
-    canvas.reveal(note);
+    canvas.reveal(note.value);
 }
 
 // Only on a chat that is done, or on a selection of several.
