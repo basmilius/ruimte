@@ -131,6 +131,7 @@ export interface TestCall {
 }
 
 /** Something drawn into the page of a `*.dom.test.tsx` file. Each step waits for what React does after it. */
+/** Each step lets React finish inside `act` and waits on no timer, so it works under `jest.useFakeTimers()` too. */
 export interface TestScreen {
     container: HTMLElement;
     /** What the page says, as a person reads it. */

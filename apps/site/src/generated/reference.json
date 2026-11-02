@@ -824,7 +824,7 @@
             {
                 "name": "TestScreen",
                 "kind": "interface",
-                "doc": "Something drawn into the page of a `*.dom.test.tsx` file. Each step waits for what React does after it.",
+                "doc": "Each step lets React finish inside `act` and waits on no timer, so it works under `jest.useFakeTimers()` too.",
                 "code": "export interface TestScreen {\n    container: HTMLElement;\n    /** What the page says, as a person reads it. */\n    text(): string;\n    /** The innermost element that says `text`, or null. */\n    find(text: string): HTMLElement | null;\n    /** Clicks the button, link or menu item that says `target`, or the element itself. */\n    click(target: string | Element): Promise<void>;\n    /** Types into the field whose label, placeholder or name is `target`, or the element itself. */\n    type(target: string | Element, text: string): Promise<void>;\n    /** Waits until `check` neither throws nor answers false, over turns of the event loop rather than a clock. */\n    until(check: () => unknown): Promise<void>;\n    unmount(): void;\n}"
             },
             {

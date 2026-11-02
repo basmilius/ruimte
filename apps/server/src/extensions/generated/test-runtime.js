@@ -37,10 +37,20 @@ var MAX_TURNS = 200;
 var SUSPENDED = "ruimte-suspended";
 var PRESSABLE = 'button, a, [role="button"], [role="menuitem"], [role="tab"], [role="option"], [role="checkbox"], [role="switch"], summary, label';
 var mounted = new Set;
-function turn() {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+async function step(module, work) {
+  const scope = globalThis;
+  const before = scope.IS_REACT_ACT_ENVIRONMENT;
+  scope.IS_REACT_ACT_ENVIRONMENT = true;
+  try {
+    await module.act(async () => {
+      await work();
+    });
+  } finally {
+    scope.IS_REACT_ACT_ENVIRONMENT = before;
+  }
+}
+function turn(module) {
+  return step(module, () => new Promise((resolve) => setImmediate(resolve)));
 }
 function unmountAll() {
   for (const unmount of [...mounted]) {
@@ -64,9 +74,9 @@ function fieldIn(container, name) {
   const labelled = fields.find((field) => field.placeholder === name || field.name === name || field.getAttribute("aria-label") === name || field.id !== "" && textOf(container.querySelector(`label[for="${field.id}"]`) ?? document.createElement("i")) === name || field.closest("label") !== null && textOf(field.closest("label")).includes(name));
   return labelled ?? null;
 }
-async function settle(check, failure) {
+async function settle(module, check, failure) {
   let last = null;
-  for (let step = 0;step < MAX_TURNS; step++) {
+  for (let turns = 0;turns < MAX_TURNS; turns++) {
     try {
       if (check() !== false) {
         return;
@@ -75,7 +85,7 @@ async function settle(check, failure) {
     } catch (e) {
       last = e;
     }
-    await turn();
+    await turn(module);
   }
   throw last instanceof Error ? last : new Error(failure());
 }
@@ -136,8 +146,8 @@ async function render(target, options = {}) {
     }
   };
   const after = async () => {
-    await turn();
-    await settle(() => failure.error === null && container.querySelector(SUSPENDED) === null, () => "It is still waiting for what it suspends on").catch(() => {
+    await turn(module);
+    await settle(module, () => failure.error === null && container.querySelector(SUSPENDED) === null, () => "It is still waiting for what it suspends on").catch(() => {
       return;
     });
     if (failure.error !== null) {
@@ -147,9 +157,9 @@ async function render(target, options = {}) {
     }
   };
   mounted.add(unmount);
-  root.render(module.createElement(Boundary, null, module.createElement(module.Suspense, { fallback: module.createElement(SUSPENDED) }, module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)), module.createElement(Committed))));
   try {
-    await settle(() => failure.error !== null || drawn.committed, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
+    await step(module, () => root.render(module.createElement(Boundary, null, module.createElement(module.Suspense, { fallback: module.createElement(SUSPENDED) }, module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)), module.createElement(Committed)))));
+    await settle(module, () => failure.error !== null || drawn.committed, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
     await after();
   } catch (e) {
     unmount();
@@ -164,7 +174,7 @@ async function render(target, options = {}) {
       if (element === null) {
         throw new Error(`Nothing says ${target} here. The page says: ${textOf(container)}`);
       }
-      element.click();
+      await step(module, () => element.click());
       await after();
     },
     async type(target, text) {
@@ -173,11 +183,13 @@ async function render(target, options = {}) {
         throw new Error(`No field ${String(target)} here`);
       }
       const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(field, text);
-      field.dispatchEvent(new Event("input", { bubbles: true }));
+      await step(module, () => {
+        Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(field, text);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      });
       await after();
     },
-    until: (check) => settle(check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
+    until: (check) => settle(module, check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
     unmount
   };
 }

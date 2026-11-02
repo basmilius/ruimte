@@ -15,6 +15,7 @@ export interface ReactModule {
     use<Value>(promise: Promise<Value>): Value;
     Suspense: unknown;
     Component: new (props: object) => { props: object; state: unknown };
+    act(callback: () => Promise<void>): Promise<void>;
     version: string;
 }
 

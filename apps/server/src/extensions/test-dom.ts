@@ -3,7 +3,7 @@
  * and waits for what React does after each step, over turns of the event loop rather than a clock.
  */
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { fromProject, nodeContextOf, react, type ReactDomClient } from './test-react.ts';
+import { fromProject, nodeContextOf, react, type ReactDomClient, type ReactModule } from './test-react.ts';
 
 type Screen = PublicTesting.TestScreen;
 
@@ -14,10 +14,28 @@ const PRESSABLE = 'button, a, [role="button"], [role="menuitem"], [role="tab"], 
 
 const mounted = new Set<() => void>();
 
-function turn(): Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(resolve, 0);
-    });
+/*
+ * A step inside React's `act`, which renders what it scheduled and shows what resolved without a timer of its own, so a
+ * test under fake timers moves on. The flag is on only for the step: an update a test makes itself draws unwarned.
+ */
+async function step(module: ReactModule, work: () => unknown): Promise<void> {
+    const scope = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const before = scope.IS_REACT_ACT_ENVIRONMENT;
+
+    scope.IS_REACT_ACT_ENVIRONMENT = true;
+
+    try {
+        await module.act(async () => {
+            await work();
+        });
+    } finally {
+        scope.IS_REACT_ACT_ENVIRONMENT = before;
+    }
+}
+
+/* One turn of the event loop: `setImmediate`, which the fake timers of `bun test` leave running, unlike `setTimeout`. */
+function turn(module: ReactModule): Promise<void> {
+    return step(module, () => new Promise((resolve) => setImmediate(resolve)));
 }
 
 /* Unmounts what every test drew, so the next one starts on an empty page. */
@@ -59,10 +77,10 @@ function fieldIn(container: HTMLElement, name: string): HTMLInputElement | HTMLT
     return labelled ?? null;
 }
 
-async function settle(check: () => unknown, failure: () => string): Promise<void> {
+async function settle(module: ReactModule, check: () => unknown, failure: () => string): Promise<void> {
     let last: unknown = null;
 
-    for (let step = 0; step < MAX_TURNS; step++) {
+    for (let turns = 0; turns < MAX_TURNS; turns++) {
         try {
             if (check() !== false) {
                 return;
@@ -73,7 +91,7 @@ async function settle(check: () => unknown, failure: () => string): Promise<void
             last = e;
         }
 
-        await turn();
+        await turn(module);
     }
 
     throw last instanceof Error ? last : new Error(failure());
@@ -150,8 +168,9 @@ export async function render(target: object, options: { node?: string; params?: 
         }
     };
     const after = async (): Promise<void> => {
-        await turn();
+        await turn(module);
         await settle(
+            module,
             () => failure.error === null && container.querySelector(SUSPENDED) === null,
             () => 'It is still waiting for what it suspends on'
         ).catch(() => undefined);
@@ -165,21 +184,24 @@ export async function render(target: object, options: { node?: string; params?: 
     };
 
     mounted.add(unmount);
-    root.render(
-        module.createElement(
-            Boundary,
-            null,
-            module.createElement(
-                module.Suspense,
-                { fallback: module.createElement(SUSPENDED) },
-                module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)),
-                module.createElement(Committed)
-            )
-        )
-    );
 
     try {
+        await step(module, () =>
+            root.render(
+                module.createElement(
+                    Boundary,
+                    null,
+                    module.createElement(
+                        module.Suspense,
+                        { fallback: module.createElement(SUSPENDED) },
+                        module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)),
+                        module.createElement(Committed)
+                    )
+                )
+            )
+        );
         await settle(
+            module,
             () => failure.error !== null || drawn.committed,
             () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`
         );
@@ -201,7 +223,7 @@ export async function render(target: object, options: { node?: string; params?: 
                 throw new Error(`Nothing says ${target} here. The page says: ${textOf(container)}`);
             }
 
-            (element as HTMLElement).click();
+            await step(module, () => (element as HTMLElement).click());
             await after();
         },
         async type(target, text) {
@@ -214,11 +236,13 @@ export async function render(target: object, options: { node?: string; params?: 
             // Through the element's own setter, so React sees a change as it does when a person types.
             const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
 
-            Object.getOwnPropertyDescriptor(prototype, 'value')?.set?.call(field, text);
-            field.dispatchEvent(new Event('input', { bubbles: true }));
+            await step(module, () => {
+                Object.getOwnPropertyDescriptor(prototype, 'value')?.set?.call(field, text);
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+            });
             await after();
         },
-        until: (check) => settle(check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
+        until: (check) => settle(module, check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
         unmount
     };
 }
