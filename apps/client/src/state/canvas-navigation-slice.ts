@@ -1,4 +1,4 @@
-import { cameraCenteredOn, cameraToFit, toWorld } from '@/canvas/math';
+import { cameraCenteredOn, cameraToFit, toWorld, ZOOM_MAX } from '@/canvas/math';
 import { cameraToReveal, neighboringNode, type NodeDirection } from '@/canvas/node-navigation';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, zoomNodeTargetOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
@@ -35,7 +35,7 @@ export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pic
             if (!node) {
                 return;
             }
-            const next = fit ? cameraToFit(node, viewport, 48, 1) : cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75));
+            const next = fit ? cameraToFit(node, viewport, 48, ZOOM_MAX) : cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75));
             /* Revealing a node on another view switches to it first, which makes the editor this
            runs on one frame old, so it waits for the size rather than landing in the corner. */
             set({
@@ -52,7 +52,7 @@ export function createCanvasNavigationSlice(set: CanvasSet, get: CanvasGet): Pic
             if (!node || state.hidden.has(node.id) || maximizedNodeOf(state) !== null || state.gesturing) {
                 return;
             }
-            const camera = cameraToFit(node, state.viewport, 48, 1);
+            const camera = cameraToFit(node, state.viewport, 48, ZOOM_MAX);
             if (camera !== null) {
                 set({ camera, pendingCamera: null });
             }

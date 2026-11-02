@@ -112,6 +112,25 @@ function blurActive(): void {
 
 type PointerCapture = { element: HTMLElement; pointerId: number };
 
+/* Where a press began and whether its node had the keyboard then, read again by the double-click it may start. */
+type Press = { nodeId: string | null; active: boolean };
+
+/* Parts of a node that keep their own double-click: a control or a port answers its own press. */
+const OWN_DOUBLE_CLICK = 'button, input, select, [data-port]';
+
+/*
+ * A double-click whose first press found a node without the keyboard zooms to that node, wherever on it,
+ * its title too: that press hands the keyboard to the body, which would take it from a rename field. The
+ * first press is the one that counts, since by the second the node has the keyboard already.
+ */
+function zoomPressOf(presses: [Press | null, Press | null], target: HTMLElement): string | null {
+    const [first, second] = presses;
+    if (first === null || first.nodeId === null || first.active || second?.nodeId !== first.nodeId || target.closest(OWN_DOUBLE_CLICK)) {
+        return null;
+    }
+    return first.nodeId;
+}
+
 function releaseCapture(captureRef: RefObject<PointerCapture | null>): void {
     const capture = captureRef.current;
     captureRef.current = null;
@@ -141,6 +160,8 @@ export function Canvas() {
     const worldRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
     const captureRef = useRef<PointerCapture | null>(null);
+    // The last two presses, so a double-click knows where its first one began.
+    const pressesRef = useRef<[Press | null, Press | null]>([null, null]);
     const wheelPanning = useRef(false);
     const spaceDown = useSyncExternalStore(subscribeSpacePan, isSpaceDown, () => false);
     const altDown = useSyncExternalStore(subscribeGapModifier, isGapModifierDown, () => false);
@@ -364,17 +385,23 @@ export function Canvas() {
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
-    /* A move only counts as a gesture once the pointer has moved: a plain click must not light the grid. */
+    // Capture on text itself so a click still targets it when the browser builds a double-click.
+    const capturePointer = (target: EventTarget, pointerId: number): void => {
+        const capture = (target as HTMLElement).closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? rootRef.current!;
+        captureRef.current = { element: capture, pointerId };
+        capture.setPointerCapture(pointerId);
+    };
+
+    /* A move only counts as a gesture once the pointer has moved: a plain click must not light the grid,
+       and must not be captured either. Chromium sends the click and the double-click of a captured
+       press to the canvas, so a double-click on a node's header would land on the empty canvas. */
     const startGesture = (g: Gesture, e: ReactPointerEvent): void => {
         gestureRef.current = g;
         if (g.kind !== 'move') {
             setActiveGesture(g.kind);
             canvasStore.getState().setGesturing(true);
+            capturePointer(e.target, e.pointerId);
         }
-        // Capture on text itself so a click still targets it when the browser builds a double-click.
-        const capture = (e.target as HTMLElement).closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? rootRef.current!;
-        captureRef.current = { element: capture, pointerId: e.pointerId };
-        capture.setPointerCapture(e.pointerId);
     };
 
     const startMove = (point: Point, e: ReactPointerEvent): void => {
@@ -382,6 +409,11 @@ export function Canvas() {
     };
 
     const onPointerDownCapture = (e: ReactPointerEvent): void => {
+        if (e.button === 0 && !isInFloatingLayer(e.target)) {
+            const nodeId = (e.target as HTMLElement).closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
+            const press = { nodeId, active: nodeId !== null && isNodeActive(canvasStore.getState().bodyFocusId, nodeId) };
+            pressesRef.current = [pressesRef.current[1], press];
+        }
         if (isInFloatingLayer(e.target) || (e.button !== 1 && (e.button !== 0 || !isSpaceDown()))) {
             return;
         }
@@ -626,6 +658,7 @@ export function Canvas() {
                     if (first) {
                         g.moved = true;
                         setActiveGesture('move');
+                        capturePointer(e.target, e.pointerId);
                     }
                     g.applied = wanted;
                     s.moveSelected(dx, dy, first);
@@ -778,9 +811,30 @@ export function Canvas() {
         }
     };
 
+    /* The second press of a double-click that will zoom: a terminal or an editor would select a word
+       on it, so it goes no further than the canvas. */
+    const onMouseDownCapture = (e: ReactMouseEvent): void => {
+        if (e.button === 0 && e.detail >= 2 && zoomPressOf(pressesRef.current, e.target as HTMLElement) !== null) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    };
+
+    const onDoubleClickCapture = (e: ReactMouseEvent): void => {
+        const nodeId = zoomPressOf(pressesRef.current, e.target as HTMLElement);
+        const s = canvasStore.getState();
+        if (nodeId === null || s.nodes[nodeId] === undefined || maximizedNodeOf(s) !== null) {
+            return;
+        }
+        e.stopPropagation();
+        s.goToNode(nodeId, { fit: true });
+    };
+
     const onDoubleClick = (e: React.MouseEvent): void => {
         const target = e.target as HTMLElement;
         if (
+            // A double-click that began on a node never places a text behind it, wherever the browser sent it.
+            (pressesRef.current[0]?.nodeId ?? null) !== null ||
             target.closest('[data-node-id]') ||
             derivedOwnerOf(target) !== null ||
             target.closest('[data-text-id]') ||
@@ -809,12 +863,14 @@ export function Canvas() {
                    and leaves the rest of the canvas to it (`shell/SplitGrid.tsx`). */
                 data-takes-drop="middle"
                 onMouseDown={onMouseDown}
+                onMouseDownCapture={onMouseDownCapture}
                 onPointerDownCapture={onPointerDownCapture}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerLeave={() => notePointer(canvasStore, null)}
                 onPointerCancel={onPointerUp}
+                onDoubleClickCapture={onDoubleClickCapture}
                 onDoubleClick={onDoubleClick}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}

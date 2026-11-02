@@ -26,6 +26,34 @@ async function doubleClick(element: Element): Promise<void> {
     });
 }
 
+function titleOf(id: string): HTMLElement {
+    return [...frameOf(id).querySelectorAll<HTMLElement>('header span')].findLast((span) => span.textContent === liveCanvas('main')!.nodes[id]!.title)!;
+}
+
+function surface(): HTMLElement {
+    return canvas.page.host.querySelector<HTMLElement>('[data-canvas-surface]')!;
+}
+
+function bodyOf(id: string): HTMLElement {
+    return frameOf(id).querySelector<HTMLElement>('[data-node-body]')!;
+}
+
+/* The events Chromium sends for a double-click: two presses, each a pointerdown and a mousedown that counts
+   the clicks, then the double-click itself. A captured press sends its clicks to `clicksTo` instead. */
+async function doubleClickAsChromium(element: Element, clicksTo: Element = element): Promise<void> {
+    const at = { bubbles: true, cancelable: true, button: 0, pointerId: 1, clientX: 10, clientY: 10 };
+    await act(async () => {
+        for (const detail of [1, 2]) {
+            element.dispatchEvent(new PointerEvent('pointerdown', at));
+            element.dispatchEvent(new MouseEvent('mousedown', { ...at, detail }));
+            element.dispatchEvent(new PointerEvent('pointerup', at));
+            element.dispatchEvent(new MouseEvent('mouseup', { ...at, detail }));
+            clicksTo.dispatchEvent(new MouseEvent('click', { ...at, detail }));
+        }
+        clicksTo.dispatchEvent(new MouseEvent('dblclick', { ...at, detail: 2 }));
+    });
+}
+
 beforeEach(async () => {
     canvas = await openCanvasPage(new FakeMachine(), [MAIN], SMALL.id);
     await act(async () => {
@@ -37,9 +65,9 @@ beforeEach(async () => {
 afterEach(() => canvas.close());
 
 describe('zoom to node', () => {
-    test('the button in the title bar zooms a small node in to 100% and selects it', async () => {
+    test('the button in the title bar zooms a small node in as far as the canvas goes and selects it', async () => {
         await clickOn(frameOf(SMALL.id).querySelector('header button[aria-label="Zoom to node"]'));
-        expect(zoom()).toBe(1);
+        expect(zoom()).toBe(4);
         expect(liveCanvas('main')!.selection).toEqual([SMALL.id]);
     });
 
@@ -52,11 +80,45 @@ describe('zoom to node', () => {
 
     test('a double-click on the empty title bar zooms, and one on the title still renames', async () => {
         await doubleClick(frameOf(SMALL.id).querySelector('[data-header-space]')!);
-        expect(zoom()).toBe(1);
+        expect(zoom()).toBe(4);
 
         await act(async () => liveCanvas('main')!.setCamera({ x: 0, y: 0, zoom: 0.3 }));
-        await doubleClick([...frameOf(SMALL.id).querySelectorAll('header span')].findLast((span) => span.textContent === 'Small')!);
+        await doubleClick(titleOf(SMALL.id));
         expect(zoom()).toBe(0.3);
         expect(frameOf(SMALL.id).querySelector('header input')).not.toBeNull();
+    });
+
+    test('a double-click anywhere on a node without the keyboard zooms until it fills the view', async () => {
+        await doubleClickAsChromium(bodyOf(LARGE.id));
+        expect(zoom()).toBeCloseTo((1280 - 96) / 1800);
+        expect(liveCanvas('main')!.selection).toEqual([LARGE.id]);
+    });
+
+    test('a double-click on a header the browser sends to the canvas zooms and places no text behind the node', async () => {
+        await doubleClickAsChromium(frameOf(SMALL.id).querySelector('[data-header-space]')!, surface());
+        expect(zoom()).toBe(4);
+        expect(Object.keys(liveCanvas('main')!.texts)).toEqual([]);
+    });
+
+    test('a double-click on the title of a node without the keyboard zooms too', async () => {
+        await doubleClickAsChromium(titleOf(SMALL.id));
+        expect(zoom()).toBe(4);
+        expect(frameOf(SMALL.id).querySelector('header input')).toBeNull();
+    });
+
+    test('a double-click in the node that has the keyboard stays its own, and one on its title renames', async () => {
+        await act(async () => liveCanvas('main')!.activateNode(LARGE.id));
+        await doubleClickAsChromium(bodyOf(LARGE.id));
+        expect(zoom()).toBe(0.3);
+
+        await doubleClickAsChromium(titleOf(LARGE.id));
+        expect(zoom()).toBe(0.3);
+        expect(frameOf(LARGE.id).querySelector('header input')).not.toBeNull();
+    });
+
+    test('a double-click on the empty canvas still places a text', async () => {
+        await doubleClickAsChromium(surface());
+        expect(Object.keys(liveCanvas('main')!.texts)).toHaveLength(1);
+        expect(zoom()).toBe(0.3);
     });
 });
