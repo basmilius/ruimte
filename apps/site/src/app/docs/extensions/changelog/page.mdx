@@ -1,0 +1,16 @@
+export const metadata = { title: 'Changes to the API' };
+
+# Changes to the API
+
+<p className="lead">What changed in the extension API, and what to change in an extension that was written before.</p>
+
+API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
+
+## 1, preview (November 2026)
+
+The first version shared with invited developers.
+
+- Every call that can fail for an expected reason answers a `Result`, so an extension checks `ok` instead of catching.
+- The client and the server part use the same shapes: `NodeRef`, `ViewRef`, `near`, and typed events on both sides.
+- `@ruimte/extension/testing` runs an extension's client and server part without Ruimte: `createTestHost`, `render` and `createTestServer`.
+- The store is not open yet. Share an extension as a `.rex` and install it with **Install from disk** in Settings, Extensions.
