@@ -3,6 +3,7 @@ import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
 import { storedJson } from '@/state/stored-json';
 import { useExtensionTheme } from '@/state/extension-theme';
+import { IS_STATION } from '@/station';
 import { previewColors } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 
@@ -136,7 +137,11 @@ export function chooseExtensionTheme(choice: ThemeChoice | null): void {
     useTheme.getState().setTheme(choice.theme.side);
 }
 
-/* After an update the theme's files sit elsewhere, and after a removal or switching off it is gone. */
+/*
+ * After an update the theme's files sit elsewhere. One that is off, failed to load or is not on this
+ * machine stops painting and stays chosen, so it comes back with its extension; only a removal from
+ * this computer forgets it. A Station's list is the machine's, so there nothing is removed for good.
+ */
 export async function refreshExtensionTheme(installed: readonly InstalledClientExtension[]): Promise<void> {
     const stored = storedTheme.read();
 
@@ -147,7 +152,14 @@ export async function refreshExtensionTheme(installed: readonly InstalledClientE
     const choice = (await listExtensionThemes(installed)).find((each) => each.key === stored.key);
 
     if (choice === undefined) {
-        chooseExtensionTheme(null);
+        const extensionId = stored.key.slice(0, stored.key.indexOf('/'));
+        const removed = !IS_STATION && !installed.some((extension) => extension.manifest.id === extensionId);
+
+        if (removed) {
+            chooseExtensionTheme(null);
+        } else {
+            paint(null);
+        }
 
         return;
     }

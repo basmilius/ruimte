@@ -69,6 +69,23 @@ describe('an extension theme', () => {
         useSettings.getState().update({ palette: 'default' });
     });
 
+    test('stops painting while its extension is off, and stays chosen', async () => {
+        const installed = {
+            manifest: { id: 'acme.midnight', name: 'Midnight', version: '0.1.0', api: 1 },
+            base: '/',
+            enabled: false,
+            hasClient: false,
+            dev: false
+        };
+
+        chooseExtensionTheme(CHOICE);
+
+        await refreshExtensionTheme([installed]);
+
+        expect(themeText()).toBeNull();
+        expect(activeExtensionTheme()).toBe(CHOICE.key);
+    });
+
     test('goes away with its extension', async () => {
         chooseExtensionTheme(CHOICE);
 
