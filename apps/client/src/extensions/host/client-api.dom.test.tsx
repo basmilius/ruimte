@@ -159,6 +159,8 @@ describe('the client API', () => {
         useProject.setState({ current: PROJECT });
 
         expect(await api.terminals.read({ id: 'chat-1' })).toEqual({ ok: false, error: { code: 'not-found', message: 'No terminal chat-1 in this project' } });
+        // The machine skips a chat before it reads; the check above holds for one from before `kind`.
+        expect(machine.requests('extension.contextRead').map(({ kind }) => kind)).toEqual(['terminal']);
     });
 
     test('reads a chat with chats.read the way server/ does, also one that is no node on a canvas', async () => {

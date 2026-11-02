@@ -216,7 +216,9 @@ export type ExtensionMessageEvent = z.infer<typeof ExtensionMessageEventSchema>;
 export const ExtensionContextReadPayloadSchema = z.object({
     projectId: z.string().min(1),
     nodeIds: z.array(z.string().min(1)).max(100).optional(),
-    viewId: z.string().min(1).optional()
+    viewId: z.string().min(1).optional(),
+    // Only nodes of this kind, checked before anything is read: `terminals.read` must never read a chat.
+    kind: z.string().min(1).optional()
 });
 export type ExtensionContextReadPayload = z.infer<typeof ExtensionContextReadPayloadSchema>;
 

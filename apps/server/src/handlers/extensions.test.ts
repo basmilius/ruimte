@@ -21,14 +21,35 @@ function canvas(id: string, ...nodeIds: string[]): ProjectView {
     return { kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] };
 }
 
-/* What `extension.contextRead` answers over two canvases, by source id. */
-function contextRead(): (of: { nodeIds?: string[]; viewId?: string }) => Promise<string[]> {
+function agentsCanvas(): ProjectView {
+    const at = { x: 0, y: 0, w: 100, h: 100 };
+
+    return {
+        kind: 'canvas',
+        id: 'agents',
+        name: 'agents',
+        nodes: [
+            { id: 'shell', kind: 'terminal', title: 'Shell', ...at },
+            { id: 'helper', kind: 'chat', title: 'Helper', ...at }
+        ],
+        texts: [],
+        edges: [],
+        layouts: []
+    } as ProjectView;
+}
+
+/* What `extension.contextRead` answers over three canvases, by source id, with every source it read in `reads`. */
+function contextRead(reads: string[] = []): (of: { nodeIds?: string[]; viewId?: string; kind?: string }) => Promise<string[]> {
     const handlers = new Map<string, Handler>();
     const dispatcher = { register: (type: string, handler: Handler) => void handlers.set(type, handler) } as unknown as Dispatcher;
     const deps = {
-        viewsOf: () => [canvas('plan', 'a1', 'a2'), canvas('notes', 'b1')],
+        viewsOf: () => [canvas('plan', 'a1', 'a2'), canvas('notes', 'b1'), agentsCanvas()],
         folderOf: () => '/work',
-        readSource: async (source: { text?: string }) => source.text ?? ''
+        readSource: async (source: { id: string; text?: string }) => {
+            reads.push(source.id);
+
+            return source.text ?? '';
+        }
     } as unknown as ExtensionHandlerDeps;
 
     registerExtensionHandlers(dispatcher, {} as ExtensionHost, deps);
@@ -48,5 +69,15 @@ describe('extension.contextRead', () => {
         expect(await read({ nodeIds: ['b1'] })).toEqual(['b1']);
         expect(await read({ viewId: 'plan' })).toEqual(['a1', 'a2']);
         expect(await read({ nodeIds: ['a1', 'b1'], viewId: 'plan' })).toEqual(['a1', 'a2', 'b1']);
+    });
+
+    test('never reads a node of another kind than the one asked, so a terminal read cannot reach a chat', async () => {
+        const reads: string[] = [];
+        const read = contextRead(reads);
+
+        expect(await read({ nodeIds: ['helper'], kind: 'terminal' })).toEqual([]);
+        expect(reads).toEqual([]);
+        expect(await read({ viewId: 'agents', kind: 'terminal' })).toEqual(['shell']);
+        expect(reads).toEqual(['shell']);
     });
 });

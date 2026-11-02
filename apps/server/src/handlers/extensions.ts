@@ -97,7 +97,9 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
         }
 
         const nodes = nodesIn(views, payload);
-        const sources = nodes.flatMap((node) => sourceOf(node, undefined, folder) ?? []);
+        const sources = nodes
+            .flatMap((node) => sourceOf(node, undefined, folder) ?? [])
+            .filter((source) => payload.kind === undefined || source.kind === payload.kind);
 
         return {
             sources: await Promise.all(

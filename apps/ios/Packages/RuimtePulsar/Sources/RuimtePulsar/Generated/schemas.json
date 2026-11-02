@@ -6809,6 +6809,10 @@
       "viewId": {
         "type": "string",
         "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [

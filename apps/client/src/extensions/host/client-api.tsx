@@ -312,10 +312,11 @@ function createdNode(nodeId: string | null): { id: string } {
 
 /*
  * What an agent reads of one node of the project in front, only when it is of this kind: each kind takes its own
- * permission, so a chat's id handed to `terminals.read` reads nothing.
+ * permission, so a chat's id handed to `terminals.read` reads nothing. The machine skips another kind before it reads;
+ * one from before `kind` reads it all the same, which the check here then drops.
  */
 async function readNodeText(nodeId: string, kind: 'terminal' | 'chat'): Promise<string> {
-    const { sources } = await activeTransport.request('extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId] });
+    const { sources } = await activeTransport.request('extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId], kind });
     const source = sources[0];
 
     if (source?.kind !== kind) {
