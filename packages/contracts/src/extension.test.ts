@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { ExtensionThemeSchema, extensionThemeCssProblem } from './extension.ts';
+import {
+    ExtensionMessageEventSchema,
+    ExtensionStorageChangedEventSchema,
+    ExtensionStorageGetResultSchema,
+    ExtensionStorageSetPayloadSchema,
+    ExtensionThemeSchema,
+    extensionThemeCssProblem
+} from './extension.ts';
 
 const theme = { name: 'Dusk', side: 'dark', thumbnail: 'themes/dusk.png' } as const;
 
@@ -26,5 +33,19 @@ describe('a theme stays inside its pack', () => {
         expect(ExtensionThemeSchema.safeParse({ ...theme, tokens: { '--surface': '#101014' } }).success).toBe(true);
         expect(ExtensionThemeSchema.safeParse({ ...theme, tokens: { '--surface': 'url(https://example.com/a.png)' } }).success).toBe(false);
         expect(ExtensionThemeSchema.safeParse({ ...theme, tokens: { '--surface': 'image-set("https://example.com/a.png" 1x)' } }).success).toBe(false);
+    });
+});
+
+describe('a value that is not there survives JSON', () => {
+    const throughJson = (value: object): unknown => JSON.parse(JSON.stringify(value));
+
+    test('reads a key never written, and deletes one', () => {
+        expect(ExtensionStorageGetResultSchema.safeParse(throughJson({ value: undefined })).success).toBe(true);
+        expect(ExtensionStorageSetPayloadSchema.safeParse(throughJson({ id: 'acme.notes', key: 'draft', value: undefined })).success).toBe(true);
+        expect(ExtensionStorageChangedEventSchema.safeParse(throughJson({ id: 'acme.notes', key: 'draft', value: undefined })).success).toBe(true);
+    });
+
+    test('hears an event emitted without a payload', () => {
+        expect(ExtensionMessageEventSchema.safeParse(throughJson({ id: 'acme.notes', name: 'done', payload: undefined })).success).toBe(true);
     });
 });

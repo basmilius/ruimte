@@ -7240,10 +7240,7 @@
     "type": "object",
     "properties": {
       "value": {}
-    },
-    "required": [
-      "value"
-    ]
+    }
   },
   "request.extension.storageSet.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7262,8 +7259,7 @@
     },
     "required": [
       "id",
-      "key",
-      "value"
+      "key"
     ]
   },
   "request.extension.storageSet.result": {
@@ -73832,8 +73828,7 @@
     },
     "required": [
       "id",
-      "name",
-      "payload"
+      "name"
     ]
   },
   "event.extension.agentChunk": {
@@ -73850,6 +73845,26 @@
     "required": [
       "runId",
       "text"
+    ]
+  },
+  "event.extension.storageChanged": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "key": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "value": {}
+    },
+    "required": [
+      "id",
+      "key"
     ]
   },
   "event.push.attention": {

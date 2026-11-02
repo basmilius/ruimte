@@ -369,6 +369,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `extensionChanged` = "extension.changed"
     case `extensionMessage` = "extension.message"
     case `extensionAgentChunk` = "extension.agentChunk"
+    case `extensionStorageChanged` = "extension.storageChanged"
     case `pushAttention` = "push.attention"
     case `snoozeChanged` = "snooze.changed"
     case `peerChanged` = "peer.changed"

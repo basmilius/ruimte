@@ -156,8 +156,13 @@ export type ExtensionCallResult = z.infer<typeof ExtensionCallResultSchema>;
 
 /* What a client keeps of an extension on the machine, where its `server/` reads the same keys. */
 export const ExtensionStorageGetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256) });
-export const ExtensionStorageGetResultSchema = z.object({ value: z.unknown() });
-export const ExtensionStorageSetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256), value: z.unknown() });
+// A key never written or deleted has no value, which JSON sends as no field at all.
+export const ExtensionStorageGetResultSchema = z.object({ value: z.unknown().optional() });
+export const ExtensionStorageSetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256), value: z.unknown().optional() });
+
+/* A key a client, another window or the extension's `server/` wrote, to every client, so a surface that reads it never keeps an older value. */
+export const ExtensionStorageChangedEventSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256), value: z.unknown().optional() });
+export type ExtensionStorageChangedEvent = z.infer<typeof ExtensionStorageChangedEventSchema>;
 
 /* A prompt whose answer comes in pieces, as `extension.agentChunk` for this client's own run id. It answers once the run is over. */
 export const ExtensionAgentStreamPayloadSchema = z.object({
@@ -209,7 +214,8 @@ export const ExtensionLogPayloadSchema = z.object({ id: ExtensionIdSchema, text:
 export const ExtensionMessageEventSchema = z.object({
     id: ExtensionIdSchema,
     name: z.string().min(1).max(120),
-    payload: z.unknown()
+    // `emit(name)` without a payload sends none over JSON.
+    payload: z.unknown().optional()
 });
 export type ExtensionMessageEvent = z.infer<typeof ExtensionMessageEventSchema>;
 
@@ -267,5 +273,6 @@ export const EXTENSION_REQUEST_SCHEMAS = {
 export const EXTENSION_EVENT_SCHEMAS = {
     'extension.changed': EmptySchema,
     'extension.message': ExtensionMessageEventSchema,
-    'extension.agentChunk': ExtensionAgentChunkEventSchema
+    'extension.agentChunk': ExtensionAgentChunkEventSchema,
+    'extension.storageChanged': ExtensionStorageChangedEventSchema
 } as const;

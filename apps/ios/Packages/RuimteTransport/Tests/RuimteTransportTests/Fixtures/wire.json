@@ -457,6 +457,7 @@
     "extension.changed",
     "extension.message",
     "extension.agentChunk",
+    "extension.storageChanged",
     "push.attention",
     "snooze.changed",
     "peer.changed",
