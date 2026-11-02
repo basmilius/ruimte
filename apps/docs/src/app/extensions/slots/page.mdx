@@ -1,10 +1,14 @@
 import { SlotTable } from '@/components/SlotTable';
+import { SlotMap } from '@/components/extension-mockups/SlotMap';
+import { ActionRun } from '@/components/extension-mockups/ActionRun';
 
 export const metadata = { title: 'Slots and actions' };
 
 # Slots and actions
 
 <p className="lead">A slot is a place in Ruimte where an extension can add something: a node's header, the canvas menu, the editor's status bar. You decide which places, and what shows in each.</p>
+
+<SlotMap />
 
 Three things go in slots:
 
@@ -43,6 +47,8 @@ slots: {
     }
 }
 ```
+
+<ActionRun />
 
 While `run` is pending, the nodes it is about show a spinner, which also stops the action through `signal`, and its button is disabled for those nodes. When `run` throws, the person sees the error. For work that is no action, `host.busy` shows the same spinner.
 

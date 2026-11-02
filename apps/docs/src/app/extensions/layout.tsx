@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { PageFooter } from '@/components/PageFooter';
 import { SECTIONS } from '@/lib/navigation';
+import '@/components/extension-mockups/mockups.css';
 
 export default function ExtensionsLayout({ children }: { readonly children: ReactNode }) {
     const section = SECTIONS.find((each) => each.href === '/extensions');

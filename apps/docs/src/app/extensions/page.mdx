@@ -1,3 +1,5 @@
+import { Surfaces } from '@/components/extension-mockups/Surfaces';
+
 export const metadata = { title: 'Extensions' };
 
 # Extensions
@@ -5,6 +7,8 @@ export const metadata = { title: 'Extensions' };
 <p className="lead">An extension adds to Ruimte what it does not do by itself: a panel, a node on the canvas, a button in a menu, a theme, a tool an agent can call.</p>
 
 An extension is a folder with a manifest, a client part that runs in Ruimte's page, and optionally a server part that runs as a process on the machine. You write both in TypeScript and React. The API comes from one package, `@ruimte/extension`, which holds only the types; Ruimte supplies the code when your extension loads.
+
+<Surfaces />
 
 ## What an extension can do
 

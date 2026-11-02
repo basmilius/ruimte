@@ -1,3 +1,5 @@
+import { ThemePicker } from '@/components/extension-mockups/ThemePicker';
+
 export const metadata = { title: 'Themes' };
 
 # Themes
@@ -30,6 +32,8 @@ List each theme file in the manifest:
 ```
 
 `side` says whether the theme builds on Ruimte's light or dark base. `tokens` overrides that base, token by token: a name starts with `--`, and a value holds no `;`, `{` or `}`.
+
+<ThemePicker />
 
 `thumbnail` is required: a PNG, JPEG, WebP or SVG in the pack of at most 256 KB, drawn at 16:10 beside System, Light and Dark in Settings, Appearance. Show the theme as a person would see Ruimte in it.
 

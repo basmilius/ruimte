@@ -1,8 +1,12 @@
+import { Surfaces } from '@/components/extension-mockups/Surfaces';
+
 export const metadata = { title: 'Surfaces' };
 
 # Surfaces
 
 <p className="lead">A surface is a rectangle an extension draws itself: a panel, a view, a node, a card, an overlay or a viewer.</p>
+
+<Surfaces />
 
 Every surface takes its component as a lazy import, `() => import('./Panel')`, so its code loads only when a person opens it. Each one sits inside an error boundary of its own: a surface that throws shows the error in its own rectangle, and the rest of Ruimte goes on.
 
