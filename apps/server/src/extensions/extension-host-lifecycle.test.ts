@@ -32,6 +32,7 @@ describe('ExtensionHost under forced orders', () => {
         const relinking = host.linked('acme.one');
 
         await gates.release('store.link', 'acme.one');
+        await gates.release('store.get', 'acme.one');
         await relinking;
 
         const second = outcome(host.call('acme.one', 'add', []));
@@ -179,5 +180,79 @@ describe('ExtensionHost under forced orders', () => {
         gates.open.add('fs.read');
 
         expect(await Promise.all(['one', 'two', 'three'].map((key) => host.storageGet('acme.one', key)))).toEqual(['one', 'two', 'three']);
+    });
+
+    test('a storage write its process asks for and one of a client both stay, the newest step let go first', async () => {
+        const gated = gatedHost();
+        const { host, gates } = gated;
+
+        void outcome(host.call('acme.one', 'add', []));
+        await gates.drain((hold) => hold.label === 'process.answer');
+
+        const [child] = gated.children;
+        const fromClient = host.storageSet('acme.one', 'client', 1);
+
+        child?.say({ type: 'ask', id: 7, method: 'storage.set', args: ['server', 2] });
+        await turnOver();
+
+        while (gates.held.some((hold) => hold.label !== 'process.answer')) {
+            gates.held.findLast((hold) => hold.label !== 'process.answer')?.release();
+            await turnOver();
+        }
+
+        await fromClient;
+        gates.open.add('fs.read');
+
+        expect(await host.storageGet('acme.one', 'client')).toBe(1);
+        expect(await host.storageGet('acme.one', 'server')).toBe(2);
+        expect(child?.told.filter((message) => message.type === 'answer')).toEqual([{ type: 'answer', id: 7, result: null }]);
+    });
+
+    test('a start after a stop waits until the stopped process is gone', async () => {
+        const gated = gatedHost();
+        const { host, gates } = gated;
+        const first = outcome(host.call('acme.one', 'add', []));
+
+        await gates.drain();
+        await first;
+
+        const relinking = host.linked('acme.one');
+
+        await gates.drain((hold) => hold.label === 'process.exit');
+        await relinking;
+
+        const second = outcome(host.call('acme.one', 'add', []));
+
+        await gates.drain((hold) => hold.label === 'process.exit');
+
+        expect(gated.children).toHaveLength(1);
+
+        await gates.release('process.exit', 'acme.one');
+        await gates.drain();
+
+        expect(await second).toEqual({ value: 1 });
+        expect(gated.children).toHaveLength(2);
+        expect(gated.overlaps).toEqual([]);
+    });
+
+    test('a save in dev starts again an extension that runs with the machine, with its tool', async () => {
+        const gated = gatedHost({
+            manifest: { id: 'acme.one', permissions: { 'agents.tools': 'Offers a tool' } },
+            onLoad: (child) => child.say({ type: 'tool', name: 'fact', description: 'A fact', parameters: {} })
+        });
+        const { host, gates } = gated;
+        const starting = host.startAutostarted();
+
+        await gates.drain();
+        await starting;
+
+        const relinking = host.linked('acme.one');
+
+        await gates.drain();
+        await relinking;
+
+        expect(gated.children).toHaveLength(2);
+        expect(gated.live('acme.one')).toEqual([gated.children[1]]);
+        expect(host.agentTools().map((tool) => tool.id)).toEqual(['acme.one/fact']);
     });
 });

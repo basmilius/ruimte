@@ -96,10 +96,14 @@ export class GatedChild extends EventEmitter {
     readonly toldAfterKill: string[] = [];
     readonly id: string;
     killed = false;
+    exited = false;
 
-    constructor(id: string) {
+    private readonly gates: Gates;
+
+    constructor(id: string, gates: Gates) {
         super();
         this.id = id;
+        this.gates = gates;
         this.stdin.setEncoding('utf8');
         this.stdin.on('data', (chunk: string) => {
             for (const line of chunk.split('\n').filter((each) => each !== '')) {
@@ -114,8 +118,9 @@ export class GatedChild extends EventEmitter {
         });
     }
 
+    /* Until it exited, which a process does a while after it was asked to, not as the kill returns. */
     get live(): boolean {
-        return !this.killed;
+        return !this.exited;
     }
 
     say(message: object): void {
@@ -123,8 +128,15 @@ export class GatedChild extends EventEmitter {
     }
 
     kill(): boolean {
+        if (this.killed) {
+            return true;
+        }
+
         this.killed = true;
-        this.emit('exit', null);
+        void this.gates.hold('process.exit', this.id, () => {
+            this.exited = true;
+            this.emit('exit', null);
+        });
 
         return true;
     }
@@ -284,7 +296,7 @@ export class GatedHost {
             this.overlaps.push(id);
         }
 
-        const child = new GatedChild(id);
+        const child = new GatedChild(id, this.gates);
 
         this.children.push(child);
         void this.gates.hold('process.ready', id, () => {

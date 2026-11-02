@@ -27,6 +27,7 @@ import type { ExtensionStore, StoredExtension } from './store.ts';
 // Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
 const CALL_TIMEOUT_MS = 50_000;
 const MAX_CRASHES = 3;
+const KILL_AFTER_MS = 5_000;
 const CLIENT_FOLDERS = new Set(['client', 'assets', 'locales', 'themes', 'views']);
 const RUNTIME_FILE = 'runtime.js';
 
@@ -56,6 +57,8 @@ interface Running {
     nextCall: number;
     buffered: string;
     stopping: boolean;
+    // Settles once the process is gone, which a kill only asks for.
+    ended: Promise<void>;
 }
 
 interface Starting {
@@ -123,6 +126,8 @@ export class ExtensionHost {
     private readonly lifecycles = new Map<string, Promise<void>>();
     // Moves with every stop, so a start that read the store before one knows to read it again.
     private readonly generations = new Map<string, number>();
+    // A process that was stopped and has not exited yet, which a new one of the same extension waits for.
+    private readonly exiting = new Map<string, Promise<void>>();
 
     private readonly options: ExtensionHostOptions;
     private readonly files: ExtensionHostFiles;
@@ -273,6 +278,14 @@ export class ExtensionHost {
             this.crashes.delete(id);
             this.stop(id);
         });
+
+        const extension = await this.options.store.get(id);
+
+        // As with the machine: one with a clock or a tool does nothing until it runs. Its log says why a build does not start.
+        if (extension?.enabled === true && startsWithMachine(extension.manifest)) {
+            await this.runningFor(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
+        }
+
         this.changed();
 
         return id;
@@ -318,18 +331,32 @@ export class ExtensionHost {
         return { file, values };
     }
 
+    /* After the writes asked for before it, so a read follows what its own side just set. */
     async storageGet(id: string, key: string): Promise<unknown> {
+        await this.storageWrites.get(id)?.catch(() => undefined);
+
         return (await this.storageOf(id)).values[key];
     }
 
-    /* One write per extension at a time, each over what the last one left, so two keys set at once both stay. */
     storageSet(id: string, key: string, value: unknown): Promise<void> {
+        return this.changeStorage(id, (values) => ({ ...values, [key]: value }));
+    }
+
+    storageDelete(id: string, key: string): Promise<void> {
+        return this.changeStorage(id, ({ [key]: _gone, ...rest }) => rest);
+    }
+
+    /*
+     * One write per extension at a time, each over what the last one left, so two keys set at once both stay. The only
+     * writer of `storage.json`: its process asks here too.
+     */
+    private changeStorage(id: string, change: (values: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
         const write = async (): Promise<void> => {
             const { file, values } = await this.storageOf(id);
             const temporary = `${file}.${process.pid}.tmp`;
 
             await this.files.mkdir(dirname(file));
-            await this.files.write(temporary, JSON.stringify({ ...values, [key]: value }), 0o600);
+            await this.files.write(temporary, JSON.stringify(change(values)), 0o600);
             await this.files.rename(temporary, file);
         };
         const next = (this.storageWrites.get(id) ?? Promise.resolve()).then(write, write);
@@ -418,6 +445,19 @@ export class ExtensionHost {
 
         running.stopping = true;
         running.child.kill();
+
+        // One that holds on to SIGTERM would keep every later start of it waiting.
+        const forced = setTimeout(() => running.child.kill('SIGKILL'), KILL_AFTER_MS);
+        const exiting = running.ended.then(() => {
+            clearTimeout(forced);
+
+            if (this.exiting.get(id) === exiting) {
+                this.exiting.delete(id);
+            }
+        });
+
+        forced.unref();
+        this.exiting.set(id, exiting);
         this.running.delete(id);
         this.forgetTools(id);
         this.failPending(running, stopped());
@@ -493,6 +533,15 @@ export class ExtensionHost {
             throw new ExtensionRefusal('not-found', `${id} has no server part`);
         }
 
+        // The last one is gone first, so two never share the data folder or answer as one.
+        for (let exiting = this.exiting.get(id); exiting !== undefined; exiting = this.exiting.get(id)) {
+            await exiting;
+        }
+
+        if (attempt.cancelled) {
+            throw stopped();
+        }
+
         const dataFolder = store.dataFolder(id);
         const runtimePath = join(dataFolder, '.runtime', RUNTIME_FILE);
 
@@ -515,6 +564,7 @@ export class ExtensionHost {
             stdio: 'pipe'
         }) as ChildProcessWithoutNullStreams;
         const { promise: ready, resolve: resolveReady, reject: rejectReady } = Promise.withResolvers<void>();
+        const { promise: ended, resolve: end } = Promise.withResolvers<void>();
         // One that hangs while it loads would otherwise hold every call to it for good.
         const startTimer = setTimeout(() => this.stop(id), CALL_TIMEOUT_MS);
         const markReady = (): void => {
@@ -533,7 +583,8 @@ export class ExtensionHost {
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
-            stopping: false
+            stopping: false,
+            ended
         };
 
         // A stop while nobody waits on the start is no failure of anyone's.
@@ -546,8 +597,15 @@ export class ExtensionHost {
         });
         // A pipe that breaks with the process says so here; the exit below is what acts on it.
         child.stdin.on('error', () => undefined);
-        child.on('error', (e) => this.exited(id, running, new ExtensionRefusal('unavailable', errorText(e))));
-        child.on('exit', () => this.exited(id, running, stopped()));
+        // A process that could not start ends with an error and no exit.
+        child.on('error', (e) => {
+            end();
+            this.exited(id, running, new ExtensionRefusal('unavailable', errorText(e)));
+        });
+        child.on('exit', () => {
+            end();
+            this.exited(id, running, stopped());
+        });
         this.changed();
         await running.ready;
 
@@ -696,6 +754,18 @@ export class ExtensionHost {
 
     private async answerAsk(id: string, running: Running, method: string, args: unknown[]): Promise<unknown> {
         refuse(askRefusal(id, method, args, await this.permissionsOf(id)));
+
+        if (method === 'storage.get') {
+            return { value: await this.storageGet(id, String(args[0])) };
+        }
+
+        if (method === 'storage.set') {
+            return this.storageSet(id, String(args[0]), args[1]);
+        }
+
+        if (method === 'storage.delete') {
+            return this.storageDelete(id, String(args[0]));
+        }
 
         if (method === 'action') {
             const [projectId, action, input] = args as [string, string, unknown];

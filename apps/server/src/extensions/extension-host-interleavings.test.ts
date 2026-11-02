@@ -156,6 +156,10 @@ function check(run: Run): void {
 
     for (const child of gated.children) {
         problems.push(...child.toldAfterKill.map((line) => `a stopped process of ${child.id} was told ${line}`));
+
+        if (child.killed && !child.exited) {
+            problems.push(`a stopped process of ${child.id} never exited`);
+        }
     }
 
     for (const id of IDS) {

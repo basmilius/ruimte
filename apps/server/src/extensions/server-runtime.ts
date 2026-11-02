@@ -27,36 +27,6 @@ function send(message: object): void {
 console.log = (...args: unknown[]) => console.error(...args);
 console.info = console.log;
 
-function jsonFile(name: string): Record<string, unknown> {
-    try {
-        return JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>;
-    } catch {
-        return {};
-    }
-}
-
-/* Through a file of its own and a rename, so the daemon, which writes the same `storage.json`, never reads half of it. */
-function writeJsonFile(name: string, value: object): void {
-    const file = join(folder, name);
-    const temporary = `${file}.${process.pid}.tmp`;
-
-    mkdirSync(folder, { recursive: true });
-    writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
-    renameSync(temporary, file);
-}
-
-function keyValues(name: string): KeyValues {
-    return {
-        get: async (key) => jsonFile(name)[key],
-        set: async (key, value) => writeJsonFile(name, { ...jsonFile(name), [key]: value }),
-        async delete(key) {
-            const { [key]: _gone, ...rest } = jsonFile(name);
-
-            writeJsonFile(name, rest);
-        }
-    };
-}
-
 const asked = new Map<number, { resolve(value: Result<unknown>): void; reject(error: Error): void }>();
 let nextAsk = 1;
 
@@ -71,6 +41,59 @@ function ask(method: string, args: unknown[]): Promise<Result<unknown>> {
     });
 }
 
+function jsonFile(name: string): Record<string, unknown> {
+    try {
+        return JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>;
+    } catch {
+        return {};
+    }
+}
+
+/* Through a file of its own and a rename, so a read never meets half of it. */
+function writeJsonFile(name: string, value: object): void {
+    const file = join(folder, name);
+    const temporary = `${file}.${process.pid}.tmp`;
+
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
+    renameSync(temporary, file);
+}
+
+/* Only this process writes `secrets.json`, and each write is whole before the next begins. */
+function secretValues(): KeyValues {
+    const name = 'secrets.json';
+
+    return {
+        get: async (key) => jsonFile(name)[key],
+        set: async (key, value) => writeJsonFile(name, { ...jsonFile(name), [key]: value }),
+        async delete(key) {
+            const { [key]: _gone, ...rest } = jsonFile(name);
+
+            writeJsonFile(name, rest);
+        }
+    };
+}
+
+/* `storage.json` is the daemon's, which a client's `useStorage` writes too, so every change waits in its one queue there. */
+function storageValues(): KeyValues {
+    const asking = async (method: string, args: unknown[]): Promise<unknown> => {
+        const answer = await ask(method, args);
+
+        if (!answer.ok) {
+            throw new Error(answer.error.message);
+        }
+
+        return answer.value;
+    };
+
+    return {
+        // In an object, since a value that is not there crosses the pipe as nothing at all.
+        get: async (key) => ((await asking('storage.get', [key])) as { value?: unknown }).value,
+        set: async (key, value) => void (await asking('storage.set', [key, value])),
+        delete: async (key) => void (await asking('storage.delete', [key]))
+    };
+}
+
 const core = createServerApi({
     dataFolder: folder,
     platform: process.platform,
@@ -78,8 +101,8 @@ const core = createServerApi({
     ask,
     clock: { every: (ms, run) => void setInterval(run, ms) },
     send,
-    storage: keyValues('storage.json'),
-    secrets: keyValues('secrets.json'),
+    storage: storageValues(),
+    secrets: secretValues(),
     log: {
         info: (message) => console.error(message),
         error: (message, error) => console.error(message, error ?? '')
@@ -90,8 +113,7 @@ const core = createServerApi({
     for: () => ({ server: core.server })
 };
 
-const module = (await import(entry)) as { default?: Record<string, unknown> };
-const handlers = module.default ?? {};
+const { promise: loaded, resolve: resolveLoaded } = Promise.withResolvers<Readonly<Record<string, unknown>>>();
 
 async function answer(id: number, run: () => unknown): Promise<void> {
     try {
@@ -132,18 +154,27 @@ function handle(message: Incoming): void {
             waiting?.resolve({ ok: false, error: { code, message: error } });
         }
     } else if (message.type === 'call') {
-        void answer(message.id, () => callHandler(handlers, message.method, message.args));
+        void answer(message.id, async () => callHandler(await loaded, message.method, message.args));
     } else if (message.type === 'event') {
         core.deliver(message.name, message.payload);
     } else if (message.type === 'tool') {
-        void answer(message.id, () => core.runTool(message.method, message.payload, message.context));
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.runTool(message.method, message.payload, message.context);
+        });
     } else if (message.type === 'nodeContext') {
-        void answer(message.id, () => core.readNodeContext(message.node, message.data));
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.readNodeContext(message.node, message.data);
+        });
     }
 }
 
 let buffered = '';
 
+// Before the module loads, so a top-level `await` of something the daemon answers gets its answer.
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk: string) => {
     buffered += chunk;
@@ -156,4 +187,7 @@ process.stdin.on('data', (chunk: string) => {
     }
 });
 
+const module = (await import(entry)) as { default?: Record<string, unknown> };
+
+resolveLoaded(module.default ?? {});
 send({ type: 'ready' });

@@ -83,8 +83,15 @@ export function actionRefusal(id: string, action: string, permissions: ReadonlyS
     return missingPermission(id, permission, permissions);
 }
 
+/* The asks of an extension's own storage, which takes no permission, as `useStorage` takes none. */
+const STORAGE_ASKS: ReadonlySet<string> = new Set(['storage.get', 'storage.set', 'storage.delete']);
+
 /* What `server/` asks the host, each behind the permission it names: `action` takes the action's own. */
 export function askRefusal(id: string, method: string, args: readonly unknown[], permissions: ReadonlySet<string>): Refusal | null {
+    if (STORAGE_ASKS.has(method)) {
+        return null;
+    }
+
     if (method === 'action') {
         return actionRefusal(id, String(args[1]), permissions);
     }

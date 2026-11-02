@@ -40,6 +40,12 @@ export function serverContract(open: OpenServerWorld): void {
             expect(await refused.logs()).toContain('chat.event needs the permission chats.read in manifest.json');
         });
 
+        test('answers what its module awaits as it loads, and keeps what it stored then', async () => {
+            const world = await open({});
+
+            expect(await world.call('loads')).toEqual({ ok: true, value: [1, 1] });
+        });
+
         test('answers an agent through its tool, and has no tool without agents.tools', async () => {
             const offered = await open({ 'agents.tools': 'Offers' });
             const hidden = await open({});

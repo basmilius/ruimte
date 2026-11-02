@@ -1,5 +1,10 @@
-import { chats, defineAgentTool, defineServer, machine, onEvent } from '@ruimte/extension/server';
+import { chats, defineAgentTool, defineServer, machine, onEvent, storage } from '@ruimte/extension/server';
 import { hear, heard } from './heard';
+
+// As the module loads, as an extension that sets itself up from what it kept does.
+const loads = ((await storage.get<number>('loads')) ?? 0) + 1;
+
+await storage.set('loads', loads);
 
 onEvent('chat.event', ({ chatId }) => hear(chatId));
 
@@ -13,6 +18,9 @@ defineAgentTool<{ text: string }>({
 const api = defineServer({
     async heard() {
         return heard();
+    },
+    async loads() {
+        return [loads, await storage.get<number>('loads')];
     },
     // The keys go back too: a Result crosses as JSON, which drops a key set to undefined.
     async send(chatId: string) {
