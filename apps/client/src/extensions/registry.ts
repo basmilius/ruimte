@@ -90,6 +90,7 @@ export interface ExtensionNodeContribution {
 export interface ExtensionViewContribution {
     id: string;
     title: string;
+    icon?: LucideIcon;
     component: ComponentType<{ params: unknown }>;
 }
 

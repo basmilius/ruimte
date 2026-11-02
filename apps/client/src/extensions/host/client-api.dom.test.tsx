@@ -7,6 +7,7 @@ import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { nodeInfoOf } from '@/extensions/slots';
+import { ViewGlyph } from '@/project/ViewGlyph';
 import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
@@ -482,6 +483,24 @@ describe('the client API', () => {
             expect(canvas.getState().nodes['node-1']).toMatchObject({ title: 'Tally', raw: { title: 'Tally' } });
         } finally {
             defaultCanvases.release('view-rename');
+        }
+    });
+
+    test('marks a view of the extension in the lists with the icon its defineView names', async () => {
+        const { api } = loaded();
+
+        api.defineView({ id: 'dashboard', title: 'Dashboard', icon: 'gauge', component: async () => ({ default: () => null }) });
+        useDocument.setState({
+            views: [{ kind: 'unknown', id: 'view-9', name: 'Dashboard', raw: { kind: 'extension', id: 'view-9', extension: 'acme.probe', type: 'dashboard' } }]
+        });
+
+        mounted = mount();
+        await mounted.render(<ViewGlyph id="view-9" kind="unknown" />);
+
+        try {
+            expect(mounted.host.querySelector('svg')?.getAttribute('class')).toContain('lucide-gauge');
+        } finally {
+            useDocument.setState({ views: [] });
         }
     });
 

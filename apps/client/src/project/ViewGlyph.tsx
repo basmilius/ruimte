@@ -22,6 +22,8 @@ import { projectIconGlyphOf } from '@/project/project-icons';
 import { FileIcon, Icon } from '@adecore/ui';
 import { AgentIcon } from '@adecore/agents-react/providers';
 import { useChats } from '@adecore/agents-react/state';
+import { extensionKeyOf, useContributions } from '@/extensions/registry';
+import { useDocument } from '@/state/document';
 import { nodeProvider } from '@/state/sessions';
 import { useEndpointId } from '@/state/keys';
 
@@ -78,5 +80,20 @@ export function ViewGlyph({ id, kind, icon = null, provider: stored = null, path
     if (provider && (kind === 'chat' || kind === 'terminal')) {
         return <AgentIcon kind={provider} size={size} className={className} />;
     }
+    if (kind === 'unknown') {
+        return <ExtensionViewGlyph id={id} size={size} className={className} />;
+    }
     return <Icon icon={VIEW_KIND_GLYPHS[kind]} size={size} className={className} />;
+}
+
+/* A view of an extension is kept as `unknown`; the icon its `defineView` names is the one it wears. */
+function ExtensionViewGlyph({ id, size, className }: { id: string; size: number; className: string | undefined }) {
+    const key = useDocument((state) => {
+        const view = state.views.find((each) => each.id === id);
+
+        return view?.kind === 'unknown' ? extensionKeyOf(view.raw) : null;
+    });
+    const icon = useContributions((state) => (key === null ? undefined : state.extensionViews.find((entry) => entry.id === key)?.icon));
+
+    return <Icon icon={icon ?? VIEW_KIND_GLYPHS.unknown} size={size} className={className} />;
 }

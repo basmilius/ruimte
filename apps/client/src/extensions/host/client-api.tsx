@@ -681,7 +681,12 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 useDocument.getState().addExtensionView(view.title, id, view.id, params);
             });
 
-            add('extensionViews', { id: `${id}/${view.id}`, title: view.title, component: surfaceOf(extension, view) as ComponentType<{ params: unknown }> });
+            add('extensionViews', {
+                id: `${id}/${view.id}`,
+                title: view.title,
+                icon: iconOf(view.icon, extension),
+                component: surfaceOf(extension, view) as ComponentType<{ params: unknown }>
+            });
             add('commands', { id: `extension:${id}/view/${view.id}`, title: `New ${view.title}`, run: open });
 
             return { open };
