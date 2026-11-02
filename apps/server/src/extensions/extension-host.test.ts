@@ -158,7 +158,8 @@ describe('ExtensionHost', () => {
         expect(child.told.filter((message) => message.type === 'event')).toEqual([
             { type: 'event', name: 'chat.status', payload: { chat: { id: 'chat-1', provider: 'claude', status: 'needsYou', model: 'opus', cwd: '/work' } } }
         ]);
-        await until(() => hosted.log().includes('session.output'));
+        // The two refusals reach the log in either order, so wait for both.
+        await until(() => hosted.log().includes('session.output') && hosted.log().includes('session.status'));
         expect(hosted.log()).toContain('session.status needs the permission terminals.read');
         expect(hosted.log()).toContain('session.output is no event an extension can follow');
     });
