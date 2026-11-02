@@ -10,7 +10,7 @@
         "typecheck": "bun check --no-script"
     },
     "dependencies": {
-        "@adecore/shell": "0.50.7",
+        "@adecore/shell": "0.51.0",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*"
     },
