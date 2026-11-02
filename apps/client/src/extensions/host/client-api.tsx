@@ -10,6 +10,7 @@ import { assertShortcut } from '@/extensions/action-shortcuts';
 import { addFileIcons } from '@/extensions/file-icons';
 import { settingKey, useExtensionStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
+import { extensionRequest } from '@/extensions/machine-request';
 import { useTheme as useUiTheme } from '@/state/theme';
 import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
@@ -143,8 +144,7 @@ function frameHostFor(extension: LoadedExtension, path: string): ComponentType {
 
                 const { ruimte: callId, method, args = [] } = event.data;
 
-                void transport
-                    .request('extension.call', { id: extension.manifest.id, method, args })
+                void extensionRequest(transport, 'extension.call', { id: extension.manifest.id, method, args })
                     .then(({ result }) => frame.current?.contentWindow?.postMessage({ ruimte: callId, result }, '*'))
                     .catch((e: unknown) => frame.current?.contentWindow?.postMessage({ ruimte: callId, error: String(e) }, '*'));
             };
@@ -316,7 +316,7 @@ function createdNode(nodeId: string | null): { id: string } {
  * one from before `kind` reads it all the same, which the check here then drops.
  */
 async function readNodeText(nodeId: string, kind: 'terminal' | 'chat'): Promise<string> {
-    const { sources } = await activeTransport.request('extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId], kind });
+    const { sources } = await extensionRequest(activeTransport, 'extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId], kind });
     const source = sources[0];
 
     if (source?.kind !== kind) {
@@ -332,7 +332,7 @@ async function readChatText(chatId: string): Promise<string> {
         return readNodeText(chatId, 'chat');
     }
 
-    return (await activeTransport.request('extension.chatRead', { chatId })).text;
+    return (await extensionRequest(activeTransport, 'extension.chatRead', { chatId })).text;
 }
 
 function nodeStore(node: { id: string }): CanvasState {
@@ -393,12 +393,18 @@ interface KeptServer {
  * The `.use()` of a server method suspends, so its answers are kept by what was asked. `reload` drops one, and the link
  * coming back drops them all, a failure too, so every surface that read one asks again.
  */
-function serverClient(extension: LoadedExtension, transport: Pick<Transport, 'request' | 'status' | 'subscribeStatus'>, settle: Settle): KeptServer {
+function serverClient(
+    extension: LoadedExtension,
+    transport: Pick<Transport, 'request' | 'connection' | 'status' | 'subscribeStatus'>,
+    settle: Settle
+): KeptServer {
     const cache = new Map<string, Promise<ExtensionResult<unknown>>>();
     const listeners = new Set<() => void>();
     let version = 0;
     const call = (method: string, args: unknown[]): Promise<ExtensionResult<unknown>> =>
-        settle(`server ${method}`, () => transport.request('extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result));
+        settle(`server ${method}`, () =>
+            extensionRequest(transport, 'extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result)
+        );
     const dropped = (): void => {
         version += 1;
 
@@ -532,7 +538,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 (input: object = {}) =>
                     // The machine checks the permission too; this one only saves the trip.
                     settle(extensionActionCall(action), async () => {
-                        const { output } = await activeTransport.request('extension.action', { id, projectId: currentProjectId(), action, input });
+                        const { output } = await extensionRequest(activeTransport, 'extension.action', { id, projectId: currentProjectId(), action, input });
 
                         return output;
                     })
@@ -922,11 +928,15 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             useEffect(() => {
                 let current = true;
 
-                void transport.request('usage.limits', {}).then((next) => {
-                    if (current) {
-                        setLimits(next);
-                    }
-                });
+                // Without a machine there are no limits to show until `usage.limitsChanged` brings some.
+                void transport.request('usage.limits', {}).then(
+                    (next) => {
+                        if (current) {
+                            setLimits(next);
+                        }
+                    },
+                    () => undefined
+                );
 
                 const stop = transport.on('usage.limitsChanged', setLimits);
 
@@ -1217,7 +1227,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             query: (connection: string, sql: string) =>
                 settle('database.query', async () => {
-                    const { columns, rows, hasMore } = await activeTransport.request('extension.databaseQuery', {
+                    const { columns, rows, hasMore } = await extensionRequest(activeTransport, 'extension.databaseQuery', {
                         projectId: currentProjectId(),
                         connection,
                         sql
@@ -1265,7 +1275,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         context: {
             read: (of: { nodes?: { id: string }[]; view?: { id: string } }) =>
                 settle('context.read', async () => {
-                    const { sources } = await activeTransport.request('extension.contextRead', {
+                    const { sources } = await extensionRequest(activeTransport, 'extension.contextRead', {
                         projectId: currentProjectId(),
                         ...(of.nodes === undefined ? {} : { nodeIds: of.nodes.map((node) => node.id) }),
                         ...(of.view === undefined ? {} : { viewId: of.view.id })
@@ -1277,7 +1287,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         agents: {
             run: (options: { prompt: string; context?: string[]; provider?: string }) =>
                 settle('agents.run', async () => {
-                    const { text } = await activeTransport.request('extension.agentRun', {
+                    const { text } = await extensionRequest(activeTransport, 'extension.agentRun', {
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
                         projectId: currentProjectId()
@@ -1318,7 +1328,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     }
                 });
                 const finished = settle('agents.stream', () =>
-                    activeTransport.request('extension.agentStream', {
+                    extensionRequest(activeTransport, 'extension.agentStream', {
                         runId,
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
@@ -1329,7 +1339,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     wake();
                 });
 
-                const abort = (): void => void activeTransport.request('extension.agentStop', { runId }).catch(() => undefined);
+                const abort = (): void => void extensionRequest(activeTransport, 'extension.agentStop', { runId }).catch(() => undefined);
 
                 options.signal?.addEventListener('abort', abort);
 
@@ -1367,7 +1377,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     const { views, activeViewId } = useDocument.getState();
                     const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
                     const beside = options.near?.[0]?.id;
-                    const { nodeId } = await activeTransport.request('extension.agentStart', {
+                    const { nodeId } = await extensionRequest(activeTransport, 'extension.agentStart', {
                         id,
                         projectId: currentProjectId(),
                         ...(onCanvas && activeViewId !== null ? { viewId: activeViewId } : {}),

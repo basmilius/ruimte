@@ -1,6 +1,7 @@
 import { EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { ExtensionInfo } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import { extensionRequest } from '@/extensions/machine-request';
 import type { Transport } from '@/transport';
 import { machineAnswers } from '@/transport/features';
 
@@ -57,7 +58,7 @@ async function digestOf(files: Readonly<Record<string, string>>): Promise<string
  * already there is never fetched twice. A dev link counts its builds from 0 again when its machine restarts, so its
  * address is named by what it holds.
  */
-async function cached(link: Pick<Transport, 'request'>, info: ExtensionInfo, root: string): Promise<{ base: string; hasIcon: boolean }> {
+async function cached(link: Pick<Transport, 'request' | 'connection'>, info: ExtensionInfo, root: string): Promise<{ base: string; hasIcon: boolean }> {
     const cache = await caches.open(CACHE);
     const dev = info.hash.startsWith('dev-');
     const kept = `${root}${info.manifest.id}/${info.hash}/`;
@@ -66,7 +67,7 @@ async function cached(link: Pick<Transport, 'request'>, info: ExtensionInfo, roo
         return { base: kept, hasIcon: (await cache.match(`${kept}assets/icon.svg`)) !== undefined };
     }
 
-    const { files } = await link.request('extension.clientFiles', { id: info.manifest.id });
+    const { files } = await extensionRequest(link, 'extension.clientFiles', { id: info.manifest.id });
     const base = dev ? `${root}${info.manifest.id}/dev-${await digestOf(files)}/` : kept;
 
     await put(cache, base, files);
@@ -96,7 +97,7 @@ export async function machineExtensions(link: Pick<Transport, 'request' | 'conne
     await workerReady();
 
     const root = `${EXTENSION_FILES_PATH}${encodeURIComponent(endpointId)}/`;
-    const { extensions } = await link.request('extension.list', {});
+    const { extensions } = await extensionRequest(link, 'extension.list', {});
     const installed = await Promise.all(
         extensions.map(async (info) => {
             const { base, hasIcon } = await cached(link, info, root);

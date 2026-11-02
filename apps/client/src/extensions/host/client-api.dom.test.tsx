@@ -132,6 +132,39 @@ describe('the client API', () => {
         expect(heard).toBe(1);
     });
 
+    test('asks a machine from before the extension API nothing of it, and answers unavailable', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'launches.read': 'Lists launches', 'agents.run': 'Answers', 'context.read': 'Reads' });
+
+        disconnect = connectFakeMachine(machine);
+        machine.answersOnly(['chat.list', 'fs.read']);
+        useProject.setState({ current: PROJECT });
+
+        function Count() {
+            const count = api.useServer<{ count(): Promise<number> }>().count.use();
+            const [stored] = api.useStorage('count', 0, 'machine');
+
+            return (
+                <p>
+                    {count.ok ? count.value : count.error.code} {stored}
+                </p>
+            );
+        }
+
+        api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/count');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+        await until(() => mounted?.host.textContent === 'unavailable 0');
+
+        expect(await api.launches.list()).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(await api.agents.run({ prompt: 'Hi' })).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(await api.context.read({ nodes: [{ id: 'note-1' }] })).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(machine.sent.filter((request) => request.type.startsWith('extension.'))).toEqual([]);
+    });
+
     test('answers permission-denied for a call its manifest does not ask for, before anything else', async () => {
         const { api } = loaded();
 

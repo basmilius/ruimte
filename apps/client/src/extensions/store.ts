@@ -3,6 +3,7 @@ import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
+import { extensionRequest } from '@/extensions/machine-request';
 import { transport } from '@/transport';
 
 const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';
@@ -61,7 +62,7 @@ function base64Of(bytes: Uint8Array): string {
 export async function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
     await desktop()?.extensions?.install(bytes);
 
-    const onMachine = await transport.request('extension.install', { pack: base64Of(bytes) }).then(
+    const onMachine = await extensionRequest(transport, 'extension.install', { pack: base64Of(bytes) }).then(
         () => true,
         () => false
     );
@@ -114,12 +115,12 @@ export async function readPack(file: Blob): Promise<PackPreview> {
 
 export async function removeExtension(id: string): Promise<void> {
     await desktop()?.extensions?.remove(id);
-    await transport.request('extension.remove', { id }).catch(() => undefined);
+    await extensionRequest(transport, 'extension.remove', { id }).catch(() => undefined);
     await syncExtensions();
 }
 
 export async function setExtensionEnabled(id: string, enabled: boolean): Promise<void> {
     await desktop()?.extensions?.setEnabled(id, enabled);
-    await transport.request('extension.setEnabled', { id, enabled }).catch(() => undefined);
+    await extensionRequest(transport, 'extension.setEnabled', { id, enabled }).catch(() => undefined);
     await syncExtensions();
 }

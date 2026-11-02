@@ -1,4 +1,5 @@
 import { followDevLinks, syncExtensions } from '@/extensions/loader';
+import { extensionRequest } from '@/extensions/machine-request';
 import { IS_STATION } from '@/station';
 import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
@@ -24,7 +25,10 @@ export function startExtensions(): () => void {
                     void syncExtensions();
                 }
             } else if (isThisMachine(endpointId)) {
-                void link.request('extension.list', {}).then(({ extensions }) => followDevLinks(extensions));
+                // A machine without extensions links none, and a link that fails is tried again on the next change.
+                void extensionRequest(link, 'extension.list', {})
+                    .then(({ extensions }) => followDevLinks(extensions))
+                    .catch(() => undefined);
             }
         };
 

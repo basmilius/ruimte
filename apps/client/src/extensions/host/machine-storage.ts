@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { extensionRequest } from '@/extensions/machine-request';
 import type { Transport } from '@/transport';
 
 interface Entry {
@@ -27,7 +28,13 @@ function changed(entry: Entry): void {
  * The first reader asks the machine, and again each time the connection opens, since what it said before may have
  * failed or changed meanwhile. The last one lets the value go, so a surface drawn later reads it fresh.
  */
-function subscribe(transport: Pick<Transport, 'request' | 'subscribeStatus'>, full: string, id: string, key: string, listener: () => void): () => void {
+function subscribe(
+    transport: Pick<Transport, 'request' | 'connection' | 'subscribeStatus'>,
+    full: string,
+    id: string,
+    key: string,
+    listener: () => void
+): () => void {
     let entry = entries.get(full);
 
     if (entry === undefined) {
@@ -35,7 +42,7 @@ function subscribe(transport: Pick<Transport, 'request' | 'subscribeStatus'>, fu
         const read = (): void => {
             const writes = created.writes;
 
-            void transport.request('extension.storageGet', { id, key }).then(
+            void extensionRequest(transport, 'extension.storageGet', { id, key }).then(
                 ({ value }) => {
                     if (entries.get(full) === created && created.writes === writes) {
                         created.value = value;
@@ -78,7 +85,7 @@ function subscribe(transport: Pick<Transport, 'request' | 'subscribeStatus'>, fu
  * computer, which reads nothing here.
  */
 export function useMachineStorage<Value>(
-    transport: Pick<Transport, 'request' | 'subscribeStatus'>,
+    transport: Pick<Transport, 'request' | 'connection' | 'subscribeStatus'>,
     endpointId: string,
     id: string,
     key: string | null,
@@ -105,7 +112,7 @@ export function useMachineStorage<Value>(
                 changed(entry);
             }
 
-            void transport.request('extension.storageSet', { id, key, value: next }).catch(() => undefined);
+            void extensionRequest(transport, 'extension.storageSet', { id, key, value: next }).catch(() => undefined);
         }
     ];
 }
