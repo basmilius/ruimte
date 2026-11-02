@@ -126,8 +126,10 @@ for (const kind of ['drawing', 'diagram'] as const) {
             });
             await watch.settle();
             await Promise.all(peers.map((peer) => peer.request('server.hello', {})));
-            expect(writer.frames.filter((frame) => 'type' in frame)).toEqual([]);
-            expect(reader.frames.filter((frame) => 'type' in frame)).toHaveLength(1);
+            // Opening and saving the project publish its summary to every client without awaiting it, so it lands before or after the sockets connect.
+            const events = (peer: Peer) => peer.frames.filter((frame) => 'type' in frame && frame.event !== 'project.summary');
+            expect(events(writer)).toEqual([]);
+            expect(events(reader)).toHaveLength(1);
         } finally {
             peers.forEach((peer) => peer.socket.close());
             try {
