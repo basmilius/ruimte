@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -20,10 +20,10 @@ function pack(files: Record<string, string>): Uint8Array {
     );
 }
 
-function extensions(): ClientExtensions {
+function extensions(onChanged?: () => void): ClientExtensions {
     root = mkdtempSync(join(tmpdir(), 'ruimte-extensions-'));
 
-    return new ClientExtensions(root);
+    return new ClientExtensions(root, onChanged);
 }
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -145,5 +145,53 @@ describe('the client extensions of the shell', () => {
 
         expect(await store.list()).toEqual([]);
         expect((await store.answer(`${base}client/index.js`, ORIGIN)).status).toBe(404);
+    });
+
+    test('tell every window of each change it made, and of none it did not make', async () => {
+        const told: string[] = [];
+        const store = extensions(() => void told.push('changed'));
+        const folder = join(root, 'dev');
+
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.dev', name: 'Dev', version: '1.0.0', api: 1 }));
+
+        await store.install(pack({ 'client/index.js': 'export {};' }));
+        await store.setEnabled('acme.builds', false);
+        await store.link(folder, 1);
+        await store.unlink('acme.dev');
+        await store.unlink('acme.dev');
+        await expect(store.link(join(root, 'nothing'), 2)).rejects.toThrow('No valid manifest.json');
+
+        expect(told).toEqual(['changed', 'changed', 'changed', 'changed']);
+    });
+
+    test('tell every window of a change before the next one is done', async () => {
+        const order: string[] = [];
+        const store = extensions(() => void order.push(`told ${order.length}`));
+        const installing = store.install(pack({}));
+        const turningOff = store.setEnabled('acme.builds', false).then(() => void order.push('second done'));
+
+        await Promise.all([installing, turningOff]);
+
+        expect(order).toEqual(['told 0', 'told 1', 'second done']);
+    });
+
+    // Windows keeps a folder writable whatever its mode says, so the removal this test makes fail would succeed there.
+    test.skipIf(process.platform === 'win32')('tell every window of a removal whose files could not all go', async () => {
+        const told: string[] = [];
+        const store = extensions(() => void told.push('changed'));
+
+        await store.install(pack({ 'client/index.js': 'export {};' }));
+        told.length = 0;
+        chmodSync(join(root, 'acme.builds'), 0o555);
+
+        try {
+            await expect(store.remove('acme.builds')).rejects.toThrow();
+        } finally {
+            chmodSync(join(root, 'acme.builds'), 0o755);
+        }
+
+        expect(told).toEqual(['changed']);
+        expect(await store.list()).toEqual([]);
     });
 });

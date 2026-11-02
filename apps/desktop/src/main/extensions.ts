@@ -48,9 +48,12 @@ export class ClientExtensions {
     private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest }>();
     private changes: Promise<unknown> = Promise.resolve();
     private temporaryCounter = 0;
+    // Every window shares these installations, also one in machine mode `none` or on another machine, so each hears of a change.
+    private readonly onChanged: () => void;
 
-    constructor(root: string) {
+    constructor(root: string, onChanged: () => void = () => undefined) {
         this.root = root;
+        this.onChanged = onChanged;
     }
 
     /* Only an index that is not there is empty: one that cannot be read refuses, so no change writes over what it held. */
@@ -88,6 +91,24 @@ export class ClientExtensions {
         return next;
     }
 
+    /*
+     * `serial`, and word to every window as part of it once `work` called `touched`: what a window loads changed, also
+     * when a later step of the change failed, and the next change only begins after the word went out.
+     */
+    private change<T>(work: (touched: () => void) => Promise<T>): Promise<T> {
+        return this.serial(async () => {
+            let touched = false;
+
+            try {
+                return await work(() => (touched = true));
+            } finally {
+                if (touched) {
+                    this.onChanged();
+                }
+            }
+        });
+    }
+
     /* Inside `serial` only. */
     private async writeIndex(entries: IndexEntry[]): Promise<void> {
         await mkdir(this.root, { recursive: true });
@@ -104,10 +125,11 @@ export class ClientExtensions {
     }
 
     private changeIndex<T>(change: (entries: IndexEntry[]) => { entries: IndexEntry[]; result: T }): Promise<T> {
-        return this.serial(async () => {
+        return this.change(async (touched) => {
             const { entries, result } = change(await this.index());
 
             await this.writeIndex(entries);
+            touched();
 
             return result;
         });
@@ -171,7 +193,7 @@ export class ClientExtensions {
         const folder = join(this.root, manifest.id, hash);
 
         // Unpacked in the same change as the index, so a removal never meets half of it, and under a temporary name first.
-        const entry = await this.serial(async () => {
+        const entry = await this.change(async (touched) => {
             const entries = await this.index();
 
             if ((await this.manifestIn(folder)) === null) {
@@ -193,6 +215,7 @@ export class ClientExtensions {
             const added = { id: manifest.id, hash, enabled: entries.find((each) => each.id === manifest.id)?.enabled ?? true };
 
             await this.writeIndex([...entries.filter((each) => each.id !== manifest.id), added]);
+            touched();
 
             return added;
         });
@@ -201,8 +224,9 @@ export class ClientExtensions {
     }
 
     remove(id: string): Promise<void> {
-        return this.serial(async () => {
+        return this.change(async (touched) => {
             await this.writeIndex((await this.index()).filter((entry) => entry.id !== id));
+            touched();
             await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
@@ -213,7 +237,7 @@ export class ClientExtensions {
 
     /* In the order windows asked, so an unlink or a newer link while the manifest is read is never undone by it. */
     link(folder: string, revision: number): Promise<void> {
-        return this.serial(async () => {
+        return this.change(async (touched) => {
             const manifest = await this.manifestIn(folder);
 
             if (manifest === null) {
@@ -221,12 +245,15 @@ export class ClientExtensions {
             }
 
             this.links.set(manifest.id, { folder, revision, manifest });
+            touched();
         });
     }
 
     unlink(id: string): Promise<void> {
-        return this.serial(async () => {
-            this.links.delete(id);
+        return this.change(async (touched) => {
+            if (this.links.delete(id)) {
+                touched();
+            }
         });
     }
 
