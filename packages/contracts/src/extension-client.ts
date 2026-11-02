@@ -137,16 +137,27 @@ export function shortcutProblem(shortcut: string): string | null {
 
 const WINDOWS_ABSOLUTE = /^([A-Za-z]:[\\/]|[\\/]{2})/;
 
-/* The path with one separator throughout and no empty steps, except the leading ones of `/` and of `\\server`. */
-function joinedParts(path: string, separator: string): { parts: string[]; joined: string } {
-    const split = path.split(/[\\/]/);
-    const leading = Math.max(
-        split.findIndex((part) => part !== ''),
-        0
-    );
-    const parts = split.filter((part, index) => part !== '' || index < leading);
+interface SplitPath {
+    // `/`, `C:\`, `\\` of a UNC path or `\` of a drive's own root, so a folder at the root keeps it: `/` and `C:\` stay whole.
+    root: string;
+    parts: string[];
+}
 
-    return { parts, joined: parts.join(separator) };
+function splitPath(path: string, separator: string): SplitPath {
+    const drive = /^([A-Za-z]:)[\\/]/.exec(path)?.[1];
+    const root = drive !== undefined ? `${drive}${separator}` : /^[\\/]{2}/.test(path) ? `${separator}${separator}` : /^[\\/]/.test(path) ? separator : '';
+
+    return {
+        root,
+        parts: path
+            .slice(drive === undefined ? 0 : 2)
+            .split(/[\\/]/)
+            .filter((part) => part !== '' && part !== '.')
+    };
+}
+
+function joinedPath({ root, parts }: SplitPath, separator: string): string {
+    return `${root}${parts.join(separator)}`;
 }
 
 /*
@@ -158,11 +169,14 @@ export function extensionProjectPath(folder: string, path: string): string | nul
     const windows = WINDOWS_ABSOLUTE.test(folder);
     const separator = windows ? '\\' : '/';
     const absolute = path.startsWith('/') || path.startsWith('\\') || WINDOWS_ABSOLUTE.test(path);
-    const root = joinedParts(folder, separator).joined;
-    const { parts, joined } = joinedParts(absolute ? path : path === '.' ? folder : `${folder}/${path}`, separator);
+    const inFolder = splitPath(folder, separator);
+    const named = absolute ? splitPath(path, separator) : { root: inFolder.root, parts: [...inFolder.parts, ...splitPath(path, separator).parts] };
+    const root = joinedPath(inFolder, separator);
+    const joined = joinedPath(named, separator);
     const same = (text: string): string => (windows ? text.toLowerCase() : text);
+    const within = same(root.endsWith(separator) ? root : `${root}${separator}`);
 
-    if (parts.includes('..') || (same(joined) !== same(root) && !same(joined).startsWith(same(`${root}${separator}`)))) {
+    if (named.parts.includes('..') || (same(joined) !== same(root) && !same(joined).startsWith(within))) {
         return null;
     }
 
