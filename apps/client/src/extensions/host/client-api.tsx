@@ -1,4 +1,5 @@
 import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, type ComponentType } from 'react';
+import i18next from 'i18next';
 import { icons, Package, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IS_STATION } from '@/station';
@@ -27,7 +28,7 @@ import {
     type SlotEntry,
     type SlotName
 } from '@/extensions/registry';
-import { baseContext, nodeInfoOf, type NodeInfo } from '@/extensions/slots';
+import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { openFileLink } from '@/shell/panels/file-links';
@@ -190,8 +191,12 @@ function inProject(path: string): string {
     }
 
     const full = path.startsWith('/') ? path : path === '.' ? folder : `${folder}/${path}`;
+    // Either slash, since a Windows machine reads `sub\..\..\x` as two steps up.
+    const parts = full.split(/[\\/]/);
+    const inside = parts.join('/');
+    const root = folder.split(/[\\/]/).join('/');
 
-    if (full !== folder && (!full.startsWith(`${folder}/`) || full.split('/').includes('..'))) {
+    if (inside !== root && (!inside.startsWith(`${root}/`) || parts.includes('..'))) {
         throw new Error(`${path} is outside the project folder`);
     }
 
@@ -649,7 +654,9 @@ export function clientApiFor(extension: LoadedExtension) {
             const { transport } = useFocusedMachine();
             const projectId = useProject((state) => state.current?.projectId ?? '');
             const remoteKey = scope === 'project' ? `project:${projectId}:${key}` : key;
-            const [remote, setRemote] = useState<Value>(initial);
+            // Kept with the key it is for, so another project or machine starts from `initial` until it answers.
+            const [remote, setRemote] = useState<{ transport: Transport; key: string; value: Value | undefined } | null>(null);
+            const shown = remote?.transport === transport && remote.key === remoteKey && remote.value !== undefined ? remote.value : initial;
 
             useEffect(() => {
                 if (scope === 'computer') {
@@ -660,8 +667,8 @@ export function clientApiFor(extension: LoadedExtension) {
 
                 void transport.request('extension.storageGet', { id: extensionNow.manifest.id, key: remoteKey }).then(
                     ({ value }) => {
-                        if (current && value !== undefined) {
-                            setRemote(value as Value);
+                        if (current) {
+                            setRemote({ transport, key: remoteKey, value: value as Value | undefined });
                         }
                     },
                     // Without a machine it starts from the initial value, as for a key never written.
@@ -678,9 +685,9 @@ export function clientApiFor(extension: LoadedExtension) {
             }
 
             return [
-                remote,
+                shown,
                 (next) => {
-                    setRemote(next);
+                    setRemote({ transport, key: remoteKey, value: next });
                     void transport.request('extension.storageSet', { id: extensionNow.manifest.id, key: remoteKey, value: next }).catch(() => undefined);
                 }
             ];
@@ -695,7 +702,10 @@ export function clientApiFor(extension: LoadedExtension) {
             return { id: useDocument((state) => state.activeViewId ?? '') };
         },
         useSelection() {
-            return useCanvas((state) => state.selection).map(nodeInfoOf);
+            const selection = useCanvas((state) => state.selection);
+            const sources = useNodeSources();
+
+            return selection.map((id) => nodeInfoIn(sources, id));
         },
         useSetting<Value>(key: string): Value {
             const extensionNow = useExtension();
@@ -712,17 +722,16 @@ export function clientApiFor(extension: LoadedExtension) {
         },
         useChat(chatId: string) {
             const endpointId = useEndpointId();
-            const info = useChats((state) => state.byKey[endpointKey(endpointId, chatId)]?.info);
+            const info = useChats((state) => state.statusByKey[endpointKey(endpointId, chatId)]?.info);
 
             return info === undefined ? null : { id: chatId, status: info.status, provider: info.provider };
         },
         useNode(nodeId: string) {
-            useCanvas((state) => state.nodes[nodeId]);
-
-            return nodeInfoOf(nodeId);
+            return nodeInfoIn(useNodeSources(), nodeId);
         },
         useNodes(filter?: (node: NodeInfo) => boolean) {
-            const nodes = Object.keys(useCanvas((state) => state.nodes)).map(nodeInfoOf);
+            const sources = useNodeSources();
+            const nodes = Object.keys(sources.canvas.nodes).map((id) => nodeInfoIn(sources, id));
 
             return filter === undefined ? nodes : nodes.filter(filter);
         },
@@ -744,13 +753,20 @@ export function clientApiFor(extension: LoadedExtension) {
         useEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void) {
             useEffect(() => onClientEvent(name, listener), [name, listener]);
         },
-        onEvent: onClientEvent,
+        // Stopped with the extension too, or one turned off or built again keeps listening.
+        onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void {
+            const stop = onClientEvent(name, listener);
+
+            extension.disposers.push(stop);
+
+            return stop;
+        },
         useAgents() {
             requiresPermission(useExtension(), 'agents.status');
 
             const nodes = useCanvas((state) => state.nodes);
             const sessions = useSessions((state) => state.byKey);
-            const chats = useChats((state) => state.byKey);
+            const chats = useChats((state) => state.statusByKey);
             const endpointId = useEndpointId();
 
             return Object.values(nodes)
@@ -1134,7 +1150,12 @@ export function clientApiFor(extension: LoadedExtension) {
             async remove(nodes: { id: string }[]) {
                 requiresPermission(extension, 'canvas.write');
 
-                const asked = await askHost({ title: `Remove ${nodes.length} nodes?`, body: `${extension.manifest.name} asks to remove them.`, danger: true });
+                const words = { count: nodes.length, extension: extension.manifest.name };
+                const asked = await askHost({
+                    title: i18next.t('shell:extensions.removeNodes.title', words),
+                    body: i18next.t('shell:extensions.removeNodes.body', words),
+                    danger: true
+                });
 
                 if (asked === null) {
                     return false;
