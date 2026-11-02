@@ -158,6 +158,8 @@ export class ExtensionHost {
     private readonly exiting = new Map<string, Promise<void>>();
     // Extensions whose folder is on its way out, which no storage write may make again.
     private readonly removing = new Set<string>();
+    // The `extension dev` run that set each dev link, by the token it gave.
+    private readonly linkOwners = new Map<string, string>();
 
     private readonly options: ExtensionHostOptions;
     private readonly files: ExtensionHostFiles;
@@ -344,8 +346,14 @@ export class ExtensionHost {
     }
 
     /* A save in dev: a fresh process over what was just built, and word so a client loads it again. */
-    async linked(folder: string): Promise<string> {
+    async linked(folder: string, owner?: string): Promise<string> {
         const { id } = await this.options.store.link(folder);
+
+        if (owner === undefined) {
+            this.linkOwners.delete(id);
+        } else {
+            this.linkOwners.set(id, owner);
+        }
 
         await this.lifecycle(id, () => this.replace(id));
         // As with the machine: one with a clock or a tool does nothing until it runs. Its log says why a build does not start.
@@ -355,12 +363,29 @@ export class ExtensionHost {
         return id;
     }
 
-    /* What was installed under the link runs again as it would have without it. */
-    async unlink(id: string): Promise<void> {
-        await this.lifecycle(id, async () => {
+    /*
+     * What was installed under the link runs again as it would have without it. With `owner`, only while the link is
+     * still that run's: a later `extension dev` of the same extension took it over.
+     */
+    async unlink(id: string, owner?: string): Promise<void> {
+        const unlinked = await this.lifecycle(id, async () => {
+            const current = this.linkOwners.get(id);
+
+            if (owner !== undefined && current !== undefined && current !== owner) {
+                return false;
+            }
+
+            this.linkOwners.delete(id);
             await this.options.store.unlink(id);
             await this.replace(id);
+
+            return true;
         });
+
+        if (!unlinked) {
+            return;
+        }
+
         await this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
         this.changed();
     }

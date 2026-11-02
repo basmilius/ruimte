@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdtempSync, watch } from 'node:fs';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -6,9 +7,9 @@ import { basename, join, resolve } from 'node:path';
 import * as prompts from '@clack/prompts';
 import { Command } from 'commander';
 import { bunRuntime } from '../language/runtime.ts';
-import { BUILD_FOLDER, buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
+import { buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
 import { logTail } from '../extensions/log-tail.ts';
-import { sourceSignature } from '../extensions/source-signature.ts';
+import { isLeftOut, sourceSignature } from '../extensions/source-signature.ts';
 import { scaffoldFiles, type ScaffoldAnswers } from '../extensions/scaffold.ts';
 import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
@@ -171,10 +172,41 @@ export function oneAtATime(work: () => Promise<void>): () => Promise<void> {
     };
 }
 
+/*
+ * Builds once, and again for every save after the sources were read: the watcher is there before the first build, so a
+ * save while it runs is built after it. What a build writes or another tool keeps in the project is no save.
+ */
+export async function watchAndBuild(options: {
+    folder: string;
+    rebuild: () => Promise<void>;
+    watch: (listener: (name: string | null) => void) => void;
+    debounce: (run: () => void) => void;
+}): Promise<void> {
+    const { folder, rebuild } = options;
+    let built = sourceSignature(folder);
+
+    options.watch((name) => {
+        if (name === null || isLeftOut(name)) {
+            return;
+        }
+
+        options.debounce(() => {
+            const now = sourceSignature(folder);
+
+            if (now !== built) {
+                built = now;
+                void rebuild();
+            }
+        });
+    });
+    await rebuild();
+}
+
 /* Builds on every save and tells the machine, which restarts `server/` and has the client load the new build. */
 async function dev(options: LocalDaemonOptions): Promise<void> {
     const folder = resolve('.');
     const manifest = readManifest(folder);
+    const owner = randomUUID();
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     // A build is linked only once it finished, and the next one starts only after that.
@@ -182,36 +214,28 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
         try {
             const { outdir } = await buildExtension(folder);
 
-            await askDaemon(options, '/extensions/link', { folder: outdir });
+            await askDaemon(options, '/extensions/link', { folder: outdir, owner });
             console.log(`${new Date().toLocaleTimeString()} ${manifest.name} is loaded`);
         } catch (e) {
             console.error(e instanceof Error ? e.message : e);
         }
     });
 
-    let built = sourceSignature(folder);
-
-    await rebuild();
-    watch(folder, { recursive: true }, (_event, name) => {
-        if (name === null || name.startsWith(BUILD_FOLDER) || name.startsWith('node_modules') || name.startsWith('.git')) {
-            return;
-        }
-
-        if (timer !== null) {
-            clearTimeout(timer);
-        }
-
-        timer = setTimeout(() => {
-            const now = sourceSignature(folder);
-
-            if (now !== built) {
-                built = now;
-                void rebuild();
+    await watchAndBuild({
+        folder,
+        rebuild,
+        watch: (listener) => void watch(folder, { recursive: true }, (_event, name) => listener(name)),
+        debounce: (run) => {
+            if (timer !== null) {
+                clearTimeout(timer);
             }
-        }, WATCH_DEBOUNCE_MS);
+
+            timer = setTimeout(run, WATCH_DEBOUNCE_MS);
+        }
     });
     process.on('SIGINT', () => {
-        void askDaemon(options, '/extensions/unlink', { id: manifest.id })
+        // With this run's own token, so a later `extension dev` of the same extension keeps its link.
+        void askDaemon(options, '/extensions/unlink', { id: manifest.id, owner })
             .catch(() => undefined)
             .finally(() => process.exit(0));
     });

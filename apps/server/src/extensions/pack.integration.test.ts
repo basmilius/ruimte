@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -106,5 +106,52 @@ describe('building an extension', () => {
         expect(packed.path.endsWith('acme.builds-0.1.0.rex')).toBe(true);
         expect(Object.keys(files).toSorted()).toEqual(['client/index.js', 'locales/en.json', 'manifest.json']);
         expect(BUILD_FOLDER).toBe('dist');
+    });
+
+    test('a build that fails leaves the last one whole', async () => {
+        const folder = project('failing', { 'client/index.ts': `console.info('first');`, 'assets/logo.txt': 'logo' });
+
+        await buildExtension(folder);
+        writeFileSync(join(folder, 'client', 'index.ts'), 'this is no code {');
+
+        await expect(buildExtension(folder)).rejects.toThrow();
+        expect(readFileSync(join(folder, BUILD_FOLDER, 'client', 'index.js'), 'utf8')).toContain('first');
+        expect(readFileSync(join(folder, BUILD_FOLDER, 'assets', 'logo.txt'), 'utf8')).toBe('logo');
+        expect(readdirSync(folder).filter((name) => name.startsWith('.ruimte-build-'))).toEqual([]);
+    });
+
+    test('packs every file a theme names, wherever it is', async () => {
+        const theme = JSON.stringify({ name: 'Palette', side: 'dark', thumbnail: 'palette.svg', tokens: {}, css: 'palette.css' });
+        const folder = project('themed', {
+            'manifest.json': JSON.stringify({ id: 'acme.themed', name: 'Themed', version: '0.1.0', api: 1, themes: ['palette.json'] }),
+            'palette.json': theme,
+            'palette.svg': '<svg></svg>',
+            'palette.css': '.themed { color: red; }'
+        });
+        const packed = await packExtension(folder);
+        const { files } = JSON.parse(gunzipSync(readFileSync(packed.path)).toString('utf8')) as { files: Record<string, string> };
+
+        expect(Object.keys(files).toSorted()).toEqual(['manifest.json', 'palette.css', 'palette.json', 'palette.svg']);
+    });
+
+    test('copies what a link inside the project points at, and refuses a link outside it or back into itself', async () => {
+        const outside = mkdtempSync(join(tmpdir(), 'ruimte-pack-outside-'));
+        const inside = project('linked-assets', { 'client/index.ts': 'export {};', 'shared/logo.txt': 'logo' });
+        const leaking = project('leaking-assets', { 'client/index.ts': 'export {};', 'assets/.keep': '' });
+        const looping = project('looping-assets', { 'client/index.ts': 'export {};', 'assets/.keep': '' });
+
+        writeFileSync(join(outside, 'secret.txt'), 'secret');
+        mkdirSync(join(inside, 'assets'));
+        symlinkSync(join(inside, 'shared', 'logo.txt'), join(inside, 'assets', 'logo.txt'));
+        symlinkSync(join(outside, 'secret.txt'), join(leaking, 'assets', 'secret.txt'));
+        symlinkSync('..', join(looping, 'assets', 'again'));
+
+        const { outdir } = await buildExtension(inside);
+
+        expect(lstatSync(join(outdir, 'assets', 'logo.txt')).isSymbolicLink()).toBe(false);
+        expect(readFileSync(join(outdir, 'assets', 'logo.txt'), 'utf8')).toBe('logo');
+        await expect(buildExtension(leaking)).rejects.toThrow('outside the project');
+        await expect(buildExtension(looping)).rejects.toThrow('links back into a folder it is in');
+        rmSync(outside, { recursive: true, force: true });
     });
 });

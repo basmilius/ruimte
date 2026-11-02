@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
@@ -8,6 +8,7 @@ import {
     ExtensionManifestSchema,
     ExtensionThemeSchema,
     extensionThemeCssProblem,
+    isSafePackPath,
     MAX_THEME_THUMBNAIL_BYTES,
     type ExtensionManifest,
     type ExtensionPack
@@ -15,6 +16,8 @@ import {
 import type { BunPlugin } from 'bun';
 
 export const BUILD_FOLDER = 'dist';
+// A build on its way, and the one it replaced, which neither a watcher nor the source signature counts as a save.
+export const STAGING_PREFIX = '.ruimte-build-';
 
 // What Ruimte itself supplies, so ten extensions do not carry ten copies, and nothing of it reaches npm.
 const CLIENT_HOSTED: Readonly<Record<string, string>> = {
@@ -182,10 +185,35 @@ export async function buildExtension(folder: string): Promise<{ manifest: Extens
     const root = realpathSync(resolve(folder));
     const manifest = readManifest(root);
     const outdir = join(root, BUILD_FOLDER);
+    // Beside `dist`, which the version in use reads until this build is whole: a build that fails leaves it as it was.
+    const staging = join(root, `${STAGING_PREFIX}${randomUUID()}`);
+
+    try {
+        await buildInto(root, manifest, staging);
+        swapInto(root, staging, outdir);
+    } finally {
+        rmSync(staging, { recursive: true, force: true });
+    }
+
+    return { manifest, outdir };
+}
+
+/* Two renames, so `dist` is missing only between them and never half built. */
+function swapInto(root: string, staging: string, outdir: string): void {
+    const previous = join(root, `${STAGING_PREFIX}${randomUUID()}`);
+
+    if (existsSync(outdir)) {
+        renameSync(outdir, previous);
+    }
+
+    renameSync(staging, outdir);
+    rmSync(previous, { recursive: true, force: true });
+}
+
+async function buildInto(root: string, manifest: ExtensionManifest, outdir: string): Promise<void> {
     const clientEntry = entryIn(join(root, 'client'));
     const serverEntry = entryIn(join(root, 'server'));
 
-    rmSync(outdir, { recursive: true, force: true });
     mkdirSync(outdir, { recursive: true });
 
     if (clientEntry === null && serverEntry === null && (manifest.themes ?? []).length === 0) {
@@ -216,17 +244,79 @@ export async function buildExtension(folder: string): Promise<{ manifest: Extens
         );
     }
 
-    checkThemes(root, manifest);
-    checkIcon(root);
-    cpSync(join(root, 'manifest.json'), join(outdir, 'manifest.json'));
+    copyFileSync(join(root, 'manifest.json'), join(outdir, 'manifest.json'));
 
     for (const name of COPIED_FOLDERS) {
         if (existsSync(join(root, name))) {
-            cpSync(join(root, name), join(outdir, name), { recursive: true });
+            copyMaterialized(root, name, outdir);
         }
     }
 
-    return { manifest, outdir };
+    // Wherever the manifest names them, so what was checked is what the pack holds.
+    for (const path of declaredFiles(root, manifest)) {
+        if (!existsSync(join(outdir, path))) {
+            copyMaterialized(root, path, outdir);
+        }
+    }
+
+    checkThemes(outdir, manifest);
+    checkIcon(outdir);
+}
+
+/* Each theme the manifest names, its thumbnail and its stylesheet, as paths inside the project. */
+function declaredFiles(root: string, manifest: ExtensionManifest): string[] {
+    return (manifest.themes ?? []).flatMap((path) => {
+        if (!isSafePackPath(path) || !existsSync(join(root, path))) {
+            throw new ExtensionBuildError(`manifest.json names ${path}, which does not exist`);
+        }
+
+        const theme = ExtensionThemeSchema.safeParse(JSON.parse(readFileSync(join(root, path), 'utf8')));
+
+        if (!theme.success) {
+            throw new ExtensionBuildError(`${path}: ${theme.error.issues.map((issue) => `${issue.path.join('.')} ${issue.message}`).join(', ')}`);
+        }
+
+        const files = [path, theme.data.thumbnail, ...(theme.data.css === undefined ? [] : [theme.data.css])];
+        const outside = files.find((file) => !isSafePackPath(file));
+
+        if (outside !== undefined) {
+            throw new ExtensionBuildError(`${path} names ${outside}, which is outside the project`);
+        }
+
+        return files.filter((file) => existsSync(join(root, file)));
+    });
+}
+
+/*
+ * Copies `path` of the project into `outdir` as plain files, the way a pack holds them: a link becomes what it points
+ * at, which must be inside the project, and a link back into a folder it is in stops the build rather than the copy.
+ */
+function copyMaterialized(root: string, path: string, outdir: string, visiting: ReadonlySet<string> = new Set()): void {
+    const source = join(root, path);
+    const real = realpathSync(source);
+
+    if (real !== root && !real.startsWith(`${root}${sep}`)) {
+        throw new ExtensionBuildError(`${path} links to ${real}, outside the project`);
+    }
+
+    const target = join(outdir, path);
+
+    if (!statSync(real).isDirectory()) {
+        mkdirSync(dirname(target), { recursive: true });
+        copyFileSync(real, target);
+
+        return;
+    }
+
+    if ([...visiting].some((folder) => folder === real || folder.startsWith(`${real}${sep}`))) {
+        throw new ExtensionBuildError(`${path} links back into a folder it is in`);
+    }
+
+    mkdirSync(target, { recursive: true });
+
+    for (const name of readdirSync(source)) {
+        copyMaterialized(root, `${path}/${name}`, outdir, new Set([...visiting, real]));
+    }
 }
 
 function filesIn(folder: string, prefix = ''): string[] {

@@ -64,8 +64,9 @@ const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 const VoiceKeyRequestSchema = z.object({ key: z.string() });
-const ExtensionLinkSchema = z.object({ folder: z.string().min(1) });
-const ExtensionUnlinkSchema = z.object({ id: z.string().min(1) });
+// `owner` is the token of one `extension dev` run, so its Ctrl-C ends only the link it set itself.
+const ExtensionLinkSchema = z.object({ folder: z.string().min(1), owner: z.string().min(1).optional() });
+const ExtensionUnlinkSchema = z.object({ id: z.string().min(1), owner: z.string().min(1).optional() });
 
 // Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
 const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
@@ -215,14 +216,14 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     if (url.pathname === EXTENSION_LINK_PATH) {
                         const parsed = ExtensionLinkSchema.safeParse(body);
                         return parsed.success
-                            ? Response.json({ id: await extensions.linked(parsed.data.folder) })
+                            ? Response.json({ id: await extensions.linked(parsed.data.folder, parsed.data.owner) })
                             : new Response('Expected a folder', { status: 400 });
                     }
                     const parsed = ExtensionUnlinkSchema.safeParse(body);
                     if (!parsed.success) {
                         return new Response('Expected an id', { status: 400 });
                     }
-                    await extensions.unlink(parsed.data.id);
+                    await extensions.unlink(parsed.data.id, parsed.data.owner);
                     return Response.json({});
                 } catch (e) {
                     return Response.json({ message: errorText(e) }, { status: 422 });

@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { oneAtATime } from './extension.ts';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { oneAtATime, watchAndBuild } from './extension.ts';
 
 describe('oneAtATime', () => {
     test('never starts a build while one runs, and builds once more after it for the saves that came meanwhile', async () => {
@@ -49,5 +52,46 @@ describe('oneAtATime', () => {
         await rebuild();
 
         expect(runs).toBe(2);
+    });
+});
+
+describe('watchAndBuild', () => {
+    test('builds again for a save during the first build, and for no change of what a build or a tool keeps', async () => {
+        const folder = mkdtempSync(join(tmpdir(), 'ruimte-watch-and-build-'));
+        let listener: (name: string | null) => void = () => undefined;
+        let builds = 0;
+
+        mkdirSync(join(folder, 'client'));
+        writeFileSync(join(folder, 'client', 'index.ts'), 'export {};');
+
+        try {
+            await watchAndBuild({
+                folder,
+                rebuild: async () => {
+                    builds += 1;
+
+                    if (builds === 1) {
+                        writeFileSync(join(folder, 'client', 'index.ts'), 'export const saved = 1;');
+                        listener('client/index.ts');
+                    }
+                },
+                watch: (each) => {
+                    listener = each;
+                },
+                debounce: (run) => run()
+            });
+
+            expect(builds).toBe(2);
+
+            mkdirSync(join(folder, 'dist'));
+            writeFileSync(join(folder, 'dist', 'index.js'), '');
+            listener('dist/index.js');
+            writeFileSync(join(folder, 'distribution.ts'), 'export {};');
+            listener('distribution.ts');
+
+            expect(builds).toBe(3);
+        } finally {
+            rmSync(folder, { recursive: true, force: true });
+        }
     });
 });

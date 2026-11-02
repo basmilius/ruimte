@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from 'bun:test';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sourceSignature } from './source-signature.ts';
@@ -23,4 +23,18 @@ test('stays the same through a build, and moves with a save', () => {
     writeFileSync(join(folder, 'themes', 'paper.json'), '{"name":"Paper"}');
 
     expect(sourceSignature(folder)).not.toBe(before);
+});
+
+test('names a link to a folder by where it points and never follows it, so a link back into the project ends', () => {
+    const project = mkdtempSync(join(tmpdir(), 'ruimte-source-signature-loop-'));
+
+    try {
+        mkdirSync(join(project, 'fixtures'));
+        symlinkSync('..', join(project, 'fixtures', 'self'));
+        writeFileSync(join(project, 'index.ts'), 'export {};');
+
+        expect(sourceSignature(project)).toContain('fixtures/self->..');
+    } finally {
+        rmSync(project, { recursive: true, force: true });
+    }
 });

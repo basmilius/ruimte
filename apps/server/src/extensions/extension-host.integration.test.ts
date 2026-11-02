@@ -157,6 +157,25 @@ describe('an extension with a server part', () => {
         expect(dropped).toEqual(['acme.builds', 'acme.builds', 'acme.builds']);
     });
 
+    test('the end of one dev run leaves the link a later run of the same extension set', async () => {
+        const host = hostIn('owners');
+        const folder = join(root, 'owned');
+
+        mkdirSync(join(folder, 'server'), { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.owned', name: 'Owned', version: '0.1.0', api: 1 }));
+        writeFileSync(join(folder, 'server', 'index.js'), `export default { async ping() { return 'pong'; } };`);
+
+        await host.linked(folder, 'run-a');
+        await host.linked(folder, 'run-b');
+        await host.unlink('acme.owned', 'run-a');
+
+        expect((await host.list()).map((entry) => entry.devFolder)).toEqual([folder]);
+
+        await host.unlink('acme.owned', 'run-b');
+
+        expect(await host.list()).toEqual([]);
+    });
+
     test('a removal or a turn off of a linked one stops it', async () => {
         const host = hostIn('linked-off');
         const folder = join(root, 'linked-off-folder');

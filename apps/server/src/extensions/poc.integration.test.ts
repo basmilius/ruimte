@@ -173,6 +173,8 @@ describe('the proof-of-concept extensions', () => {
 
         expect(added).toMatchObject([{ name: 'POC language server', command: 'cat' }]);
 
+        // An install takes the servers of what ran before it too.
+        removed.length = 0;
         await host.remove('poc.machine');
 
         expect(removed).toEqual(['poc.machine']);
