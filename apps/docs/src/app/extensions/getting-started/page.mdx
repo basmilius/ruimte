@@ -14,7 +14,7 @@ bunx ruimte extension create
 
 It asks for a name, an id, which parts you want and which surface to start with, then writes a project that builds as it is. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
 
-The id is two parts joined by a dot, such as `acme.standup`: who made it, then what it is. It never changes once people install the extension.
+The id is two parts joined by a dot, such as `acme.standup`. The first part says who made it, the second what it is. Once people install the extension, the id never changes.
 
 ## Run it while you work
 
@@ -22,9 +22,9 @@ The id is two parts joined by a dot, such as `acme.standup`: who made it, then w
 bun run dev
 ```
 
-`dev` builds on every save and loads the result into the running Ruimte, which reloads the extension in place. It also prints what the extension logs: `console.*` and `log` from the server part, and `console.*` from the client part marked `[client]`, with every failed action and surface. Pass `--port` when your Ruimte listens on a port other than the default.
+`dev` builds on every save and loads the result into the running Ruimte, which reloads the extension in place. It also prints what the extension logs. That is `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on a port other than the default.
 
-Under Settings, Extensions, your extension shows in the Development group at the top. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
+Under Settings, Extensions, your extension shows in the In development group at the top. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
 
 ## The client part
 

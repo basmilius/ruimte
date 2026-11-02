@@ -78,7 +78,7 @@ for await (const piece of agents.stream({ prompt, signal })) {
 }
 ```
 
-`context` takes node ids: the agent reads those nodes as it would along a line.
+`context` takes node ids. The agent reads those nodes as it would along a line.
 
 `agents.start` starts a chat a person sees and can stop, supervised at most. It lands beside `near` on the canvas in front, or as a view of its own when no canvas is open. It needs `agents.start`.
 

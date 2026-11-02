@@ -31,17 +31,17 @@ List each theme file in the manifest:
 }
 ```
 
-`side` says whether the theme builds on Ruimte's light or dark base. `tokens` overrides that base, token by token: a name starts with `--`, and a value holds no `;`, `{` or `}`.
+`side` says whether the theme builds on Ruimte's light or dark base. `tokens` overrides that base, token by token. A name starts with `--`, and a value holds no `;`, `{` or `}`.
 
 <ThemePicker />
 
-`thumbnail` is required: a PNG, JPEG, WebP or SVG in the pack of at most 256 KB, drawn at 16:10 beside System, Light and Dark in Settings, Appearance. Show the theme as a person would see Ruimte in it.
+`thumbnail` is required. It is a PNG, JPEG, WebP or SVG in the pack of at most 256 KB, drawn at 16:10 beside System, Light and Dark in Settings, Appearance. Show the theme as a person would see Ruimte in it.
 
 A theme of an extension sets its own colors, so the Palette setting applies only to Ruimte's own themes and stays at its default under yours. The person's accent stays on top.
 
 ## A stylesheet
 
-`css` is optional, for what tokens cannot say. It reaches only files in the pack: `url()` must point inside it, and `@import` is refused, both when packing and when loading.
+`css` is optional, for what tokens cannot say. It reaches only files in the pack. A `url()` must point inside it, and `pack` and Ruimte both refuse `@import`.
 
 Style only what Ruimte promises to keep:
 
