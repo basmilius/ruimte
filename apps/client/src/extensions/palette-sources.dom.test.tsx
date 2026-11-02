@@ -20,6 +20,41 @@ function Rows({ query }: { query: string }) {
     return <p>{hits.map((hit) => hit.title).join(',') || 'nothing'}</p>;
 }
 
+test('shows none of the rows of a source that a new version replaced, also when the new one fails', async () => {
+    const stopOld = contribute('paletteSources', {
+        id: 'acme.notes/notes',
+        title: 'Notes',
+        search: async () => [{ id: 'one', title: 'Old note', run: () => undefined }]
+    });
+
+    jest.useFakeTimers();
+    mounted = mount();
+    await mounted.render(<Rows query="note" />);
+    await act(async () => {
+        jest.advanceTimersByTime(200);
+    });
+
+    expect(mounted.host.textContent).toBe('Old note');
+
+    await act(async () => {
+        stopOld();
+        stops.push(
+            contribute('paletteSources', {
+                id: 'acme.notes/notes',
+                title: 'Notes',
+                search: async () => {
+                    throw new Error('Broken');
+                }
+            })
+        );
+    });
+    await act(async () => {
+        jest.advanceTimersByTime(200);
+    });
+
+    expect(mounted.host.textContent).toBe('nothing');
+});
+
 test('shows the rows of a source that answered while another still searches, and adds those once it answers', async () => {
     let answerSlow = (): void => undefined;
 

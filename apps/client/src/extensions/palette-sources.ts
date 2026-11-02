@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useContributions } from '@/extensions/registry';
+import { useContributions, type PaletteSourceContribution as Source } from '@/extensions/registry';
 
 const SEARCH_WAIT_MS = 150;
 const NO_HITS: readonly PaletteHit[] = [];
@@ -18,7 +18,8 @@ export interface PaletteHit {
  */
 export function usePaletteHits(query: string, enabled: boolean): readonly PaletteHit[] {
     const sources = useContributions((state) => state.paletteSources);
-    const [found, setFound] = useState<{ query: string; bySource: Readonly<Record<string, readonly PaletteHit[]>> }>({ query: '', bySource: {} });
+    // By the source itself, not its id: a version that replaced it shows none of the old one's rows, whose runs are gone.
+    const [found, setFound] = useState<{ query: string; bySource: ReadonlyMap<Source, readonly PaletteHit[]> }>({ query: '', bySource: new Map() });
     const searching = enabled && sources.length > 0 && query.trim() !== '';
 
     useEffect(() => {
@@ -27,11 +28,11 @@ export function usePaletteHits(query: string, enabled: boolean): readonly Palett
         }
 
         let current = true;
-        const search = async (source: (typeof sources)[number]): Promise<void> => {
+        const search = async (source: Source): Promise<void> => {
             const hits = (await source.search(query)).map((hit) => ({ ...hit, id: `${source.id}/${hit.id}`, source: source.title }));
 
             if (current) {
-                setFound((before) => ({ query, bySource: { ...(before.query === query ? before.bySource : {}), [source.id]: hits } }));
+                setFound((before) => ({ query, bySource: new Map(before.query === query ? before.bySource : []).set(source, hits) }));
             }
         };
         const timer = setTimeout(() => {
@@ -50,7 +51,7 @@ export function usePaletteHits(query: string, enabled: boolean): readonly Palett
         return NO_HITS;
     }
 
-    const hits = sources.flatMap((source) => found.bySource[source.id] ?? []);
+    const hits = sources.flatMap((source) => found.bySource.get(source) ?? []);
 
     return hits.length === 0 ? NO_HITS : hits;
 }
