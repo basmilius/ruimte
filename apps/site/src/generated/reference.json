@@ -778,6 +778,115 @@
     },
     {
         "module": "testing",
-        "entries": []
+        "entries": [
+            {
+                "name": "Answer",
+                "kind": "type",
+                "doc": null,
+                "code": "type Answer<Value> = Value | Promise<Value>;"
+            },
+            {
+                "name": "TestNode",
+                "kind": "interface",
+                "doc": "A node of the project a test host starts with. Only `id` is needed: a node is a note on the first view unless it says otherwise.",
+                "code": "export interface TestNode {\n    id: string;\n    kind?: string;\n    title?: string;\n    /** What an agent reads of it: a note's text, a terminal's screen or a chat's thread. */\n    text?: string;\n    color?: string | null;\n    bounds?: { x: number; y: number; width: number; height: number };\n    /** The id of the view it is on. */\n    view?: string;\n    linkedTo?: string[];\n    agent?: Partial<AgentInfo>;\n    path?: string;\n    url?: string;\n    /** A node of this extension, by the id it gave `defineNode`, with what `useNodeData` reads. */\n    extension?: { type: string; data?: Json };\n}"
+            },
+            {
+                "name": "TestHostAnswers",
+                "kind": "interface",
+                "doc": "What the machine and the person answer the client in a test. A call that asks the machine gets what it was asked and returns the value; throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`, except where the test host keeps the state itself: the canvas, views, storage, settings, and what an agent reads of a node with `text`.",
+                "code": "export interface TestHostAnswers {\n    /** How the person answers `host.confirm` and the question before `canvas.remove`. Yes by default. */\n    confirm?: boolean | ((options: { title: string; body: string }) => boolean);\n    /** Null, by default, is a dismissed prompt. */\n    prompt?: string | null | ((options: { title: string; placeholder?: string; initial?: string }) => string | null);\n    /** The label of the item the person picks, as `label` wrote it. Null, by default, is a dismissed picker. */\n    pick?: string | null | ((options: { title: string; labels: string[] }) => string | null);\n    pickFolder?: string | null;\n    /** What an overlay closes with, by the id it gave `defineOverlay`. Null, by default, is a dismissed one. */\n    overlays?: Record<string, (params: never) => unknown>;\n    /** `server/` as `useServer` reaches it: methods that answer, or a test server from `createTestServer`. */\n    server?: Record<string, (...args: never[]) => unknown> | TestServer<unknown>;\n    'agents.run'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<{ text: string }>;\n    /** The pieces of the answer, in order. */\n    'agents.stream'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<string[]>;\n    /** A chat node on the canvas in front by default. */\n    'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Answer<NodeRef>;\n    'chats.list'?(): Answer<ChatSummary[]>;\n    'chats.send'?(chatId: string, text: string): Answer<void>;\n    'files.readText'?(path: string): Answer<string>;\n    'files.write'?(path: string, text: string): Answer<void>;\n    'files.list'?(folder: string): Answer<FileEntry[]>;\n    'git.status'?(options: { repository?: string }): Answer<GitStatus>;\n    'git.diff'?(options: { path: string; repository?: string; staged?: boolean }): Answer<GitFileDiff>;\n    'git.log'?(options: { repository?: string; limit?: number }): Answer<GitCommit[]>;\n    'database.connections'?(): Answer<{ id: string; name: string }[]>;\n    'database.query'?(connection: string, sql: string): Answer<{ columns: string[]; rows: DatabaseValue[][]; hasMore: boolean }>;\n    /** What `context.read` answers; by default the `text` of each node it names, or of every node on the view. */\n    'context.read'?(of: { nodes?: NodeRef[]; view?: ViewRef }): Answer<ContextSource[]>;\n    /** `launches`, `routines`, `artifacts`, `browser` and `devices`, by the action each call is: `launches.start` is `launch.start`. */\n    'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };\n    'usage.limits'?: ReturnType<typeof useUsageLimits>;\n}"
+            },
+            {
+                "name": "TestHostOptions",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestHostOptions {\n    /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */\n    manifest?: { id?: string; name?: string; permissions?: Record<string, string> };\n    /** `client/index.ts` by default, loaded afresh for this host. */\n    entry?: string;\n    /** The open project, with its views and nodes; the first view is in front. Null for no open project. */\n    project?: { id?: string; name?: string; folder?: string | null; views?: { id: string; kind?: string; name?: string }[]; nodes?: TestNode[] } | null;\n    /** The ids of the selected nodes. */\n    selection?: string[];\n    machine?: { id: string };\n    theme?: 'light' | 'dark';\n    /** Which `locales/<language>.json` `useLocale` reads, over `en.json`. English by default. */\n    language?: string;\n    /** What a person set, over the defaults of `defineExtensionSettings`. */\n    settings?: Record<string, boolean | string>;\n    storage?: { computer?: Record<string, Json>; project?: Record<string, Json>; machine?: Record<string, Json> };\n    answers?: TestHostAnswers;\n}"
+            },
+            {
+                "name": "TestSlotShown",
+                "kind": "interface",
+                "doc": "How a slot shows a definition at a place, after its function answered.",
+                "code": "export interface TestSlotShown {\n    title: string;\n    /** The Lucide name, or null for none. */\n    icon: string | null;\n    /** True, or the reason a person reads, when it shows but cannot be pressed. */\n    disabled: boolean | string;\n    badge: string | null;\n    order: number;\n}"
+            },
+            {
+                "name": "TestMenuItem",
+                "kind": "type",
+                "doc": "A row of a menu as a person sees it. `run` answers as `run` of the test host does.",
+                "code": "export type TestMenuItem = 'separator' | { title: string; checked?: boolean; run(): Promise<Result<void>> } | { title: string; items: TestMenuItem[] };"
+            },
+            {
+                "name": "TestCall",
+                "kind": "interface",
+                "doc": "What a test host recorded of a call of the API that answers a Result.",
+                "code": "export interface TestCall {\n    /** Its path, such as `canvas.createNote` or `launches.start`. */\n    method: string;\n    args: unknown[];\n    result: Result<unknown>;\n}"
+            },
+            {
+                "name": "TestScreen",
+                "kind": "interface",
+                "doc": "Something drawn into the page of a `*.dom.test.tsx` file. Each step waits for what React does after it.",
+                "code": "export interface TestScreen {\n    container: HTMLElement;\n    /** What the page says, as a person reads it. */\n    text(): string;\n    /** The innermost element that says `text`, or null. */\n    find(text: string): HTMLElement | null;\n    /** Clicks the button, link or menu item that says `target`, or the element itself. */\n    click(target: string | Element): Promise<void>;\n    /** Types into the field whose label, placeholder or name is `target`, or the element itself. */\n    type(target: string | Element, text: string): Promise<void>;\n    /** Waits until `check` neither throws nor answers false, over turns of the event loop rather than a clock. */\n    until(check: () => unknown): Promise<void>;\n    unmount(): void;\n}"
+            },
+            {
+                "name": "TestDefinition",
+                "kind": "interface",
+                "doc": "What the extension gave a `define*`, as it gave it.",
+                "code": "export interface TestDefinition {\n    id: string;\n    title?: string;\n    component?: () => Promise<{ default: ComponentType<never> }>;\n    frame?: string;\n    [key: string]: unknown;\n}"
+            },
+            {
+                "name": "TestHost",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestHost {\n    /** What the extension defined, in order, with the object each `define*` was given. */\n    definitions: { kind: string; definition: TestDefinition }[];\n    /** A definition by the id it gave, or a throw that lists the ids there are. */\n    action(id: string): TestDefinition;\n    menu(id: string): TestDefinition;\n    widget(id: string): TestDefinition;\n    panel(id: string): TestDefinition;\n    view(id: string): TestDefinition;\n    node(id: string): TestDefinition;\n    card(id: string): TestDefinition;\n    overlay(id: string): TestDefinition;\n    /** What every slot tells at this place, filled with the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node of the project becomes its `NodeInfo`. */\n    context<Place extends SlotName>(place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): ContextOf<Place>;\n    /** How an action, menu or widget shows at this place, or null where it does not. An unknown place throws. */\n    slot<Place extends SlotName>(definition: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): TestSlotShown | null;\n    /**\n     * Presses an action, or the node of a `defineNode`, at this place as a person would: `refused` where it does not show or is\n     * disabled, `failed` with what it threw, which also shows the person an error, as in Ruimte.\n     */\n    run<Place extends SlotName>(definition: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): Promise<Result<void>>;\n    /** A menu's rows at this place: `refused` where it does not show, `failed` with what its `items` threw. */\n    menuItems<Place extends SlotName>(menu: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): Result<TestMenuItem[]>;\n    /** Hands a client event to `useEvent` and `onEvent`. */\n    fire<Name extends keyof ClientEvents>(name: Name, payload: ClientEvents[Name]): void;\n    /** What `emit` in `server/` says, to `useServerEvent`. */\n    emit(name: string, payload: Json): void;\n    /** Selects these nodes, as a person would, which also fires `selection.changed`. */\n    select(ids: string[]): void;\n    /** Changes a setting, as a person would. */\n    setSetting(key: string, value: boolean | string): void;\n    /**\n     * Draws a panel, view, node, widget or card, or a component of your own, into the page, and waits for its lazy import and\n     * whatever it suspends on. `node` is the node `useNodeData` reads, `params` what a panel or view gets, `context` a widget's.\n     * A throw while it draws rejects. Needs a `*.dom.test.tsx` file.\n     */\n    render(\n        drawable: TestDefinition | ComponentType<never>,\n        options?: { node?: string; params?: unknown; context?: object; props?: object }\n    ): Promise<TestScreen>;\n    canvas: {\n        /** Every node of the view in front. */\n        nodes(): NodeInfo[];\n        /** Each note the extension made, in order. */\n        notes(): { id: string; title: string; text: string; color: string | null }[];\n        /** Each line between two nodes, in order. */\n        links(): { from: string; to: string }[];\n        /** Each node the extension made, of any kind, as it is now. */\n        created(): NodeInfo[];\n        selection(): string[];\n        revealed(): string[];\n    };\n    views(): { id: string; kind: string; name: string; active: boolean }[];\n    /** What `host.notify` said, and each failure a person was shown. */\n    notifications: { text: string; detail?: string; tone: 'neutral' | 'error'; action?: string }[];\n    /** Each question the person was asked, with their answer. */\n    dialogs: { kind: 'confirm' | 'prompt' | 'pick' | 'folder'; title: string; body?: string; answer: unknown }[];\n    /** What opened: a panel, view or overlay of the extension by its id, a file by its path, a url, or settings. */\n    opened: { kind: 'panel' | 'view' | 'overlay' | 'file' | 'url' | 'settings'; id?: string; params?: unknown }[];\n    /** Each panel's state, by the id it gave `definePanel`. */\n    panels: Record<string, { title: string; badge: string | null; open: boolean; params: unknown }>;\n    copied: string[];\n    server: { calls: TestCall[] };\n    agents: { calls: TestCall[] };\n    /** Every call that answered a Result, in order. */\n    calls: TestCall[];\n    /** What `useStorage` holds per scope now, changed in place. */\n    storage: { computer: Record<string, Json>; project: Record<string, Json>; machine: Record<string, Json> };\n    settings: Record<string, boolean | string>;\n    /** Each refusal and failure, as `ruimte extension dev` prints it. */\n    logs: string[];\n}"
+            },
+            {
+                "name": "createTestHost",
+                "kind": "function",
+                "doc": "A client of Ruimte in this process, with a project in memory you seed: it loads `client/index.ts` afresh, records what the extension defines and does, answers what you script and refuses with the permissions of your manifest, in the messages and codes Ruimte gives. What it loaded speaks for it, and a file your test imports itself speaks for the test host created last.",
+                "code": "export function createTestHost(options?: TestHostOptions): Promise<TestHost>;"
+            },
+            {
+                "name": "TestServerAnswers",
+                "kind": "interface",
+                "doc": "What the machine answers `server/` in a test. Each answer gets what `server/` asked and returns the value; throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`.",
+                "code": "export interface TestServerAnswers {\n    'agents.run'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<{ text: string }>;\n    /** `near` holds only the first node, as the machine only uses that one. */\n    'agents.start'?(options: { project: ProjectRef; view?: ViewRef; near?: NodeRef[]; prompt?: string; provider?: string; title?: string }): Answer<NodeRef>;\n    'chats.list'?(): Answer<ChatSummary[]>;\n    'chats.read'?(chatId: string): Answer<string>;\n    'chats.send'?(chatId: string, text: string): Answer<void>;\n    'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };\n}"
+            },
+            {
+                "name": "TestServerOptions",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestServerOptions {\n    /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */\n    manifest?: { id?: string; permissions?: Record<string, string> };\n    /** `server/index.ts` by default. */\n    entry?: string;\n    storage?: Record<string, Json>;\n    secrets?: Record<string, string>;\n    answers?: TestServerAnswers;\n}"
+            },
+            {
+                "name": "TestAsk",
+                "kind": "interface",
+                "doc": "A call of `server/` to the machine, with what it was answered.",
+                "code": "export interface TestAsk {\n    method: 'agents.run' | 'agents.start' | 'chats.list' | 'chats.read' | 'chats.send' | 'machine.run' | 'defineLanguageServer';\n    args: Json[];\n    result: Result<unknown>;\n}"
+            },
+            {
+                "name": "Method",
+                "kind": "type",
+                "doc": null,
+                "code": "type Method<Api, Name extends keyof Api> = Api[Name] extends (...args: infer Args) => Promise<infer Value>\n    ? (...args: Args) => Promise<Result<Returned<Value>>>\n    : never;"
+            },
+            {
+                "name": "TestServer",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface TestServer<Api> {\n    /** Calls a method of `server/index.ts` as the client does: its arguments and answer cross as JSON, a throw answers `failed`. */\n    call<Name extends keyof Api & string>(method: Name, ...args: Parameters<Method<Api, Name>>): ReturnType<Method<Api, Name>>;\n    /** What `storage` and `secrets` hold now, changed in place. */\n    storage: Record<string, Json>;\n    secrets: Record<string, string>;\n    /** A clock of its own, from 0: `advance('5m')` runs every `schedule` task that falls due on the way, in order, and waits for each. */\n    clock: { now(): number; advance(duration: string | number): Promise<void> };\n    /** Hands a machine event to `onEvent`, if the manifest has its permission, as the machine would. */\n    fire<Name extends keyof ServerEvents>(name: Name, payload: ServerEvents[Name]): void;\n    /** What `emit` said, in order. */\n    emitted: { name: string; payload: Json }[];\n    /** What `server/` asked the machine, in order. */\n    asked: TestAsk[];\n    /** What `defineLanguageServer` added. */\n    languageServers: object[];\n    /** What `log` wrote, and every refusal, as `ruimte extension dev` prints it. */\n    logs: string[];\n    /** An agent's call of a tool `defineAgentTool` named, by the id it gave, answered in text. */\n    tool(id: string): { run(input?: object, context?: { caller?: string }): Promise<string> };\n    /** What an agent reads of a node of this type along a line. */\n    nodeContext(nodeType: string, data: Json): Promise<{ text: string }[]>;\n}"
+            },
+            {
+                "name": "createTestServer",
+                "kind": "function",
+                "doc": "Loads `server/index.ts` in this process, against the machine of a test: storage in memory, answers you script and the permissions of your manifest, refused with the messages and codes Ruimte gives. Each test server loads `server/index.ts` afresh, with every file of your project it imports, so no state carries over; a package from `node_modules` loads once. What it loaded speaks for it, and a file your test imports itself speaks for the test server created last.",
+                "code": "export function createTestServer<Api = Record<string, (...args: never[]) => Promise<unknown>>>(options?: TestServerOptions): Promise<TestServer<Api>>;"
+            },
+            {
+                "name": "refusal",
+                "kind": "function",
+                "doc": "A failure for an answer to throw, which `server/` reads as a Result under `code`.",
+                "code": "export function refusal(code: ExtensionErrorCode, message: string): Error;"
+            }
+        ]
     }
 ]

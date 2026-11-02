@@ -74,6 +74,7 @@ export function parseDeclarations(source: string): ReferenceEntry[] {
     const entries: ReferenceEntry[] = [];
     let doc: string[] = [];
     let inDoc = false;
+    let inImport = false;
     let statement: string[] = [];
     let depth = 0;
 
@@ -91,7 +92,13 @@ export function parseDeclarations(source: string): ReferenceEntry[] {
                 continue;
             }
 
-            if (trimmed === '' || trimmed.startsWith('import ')) {
+            // An import that wraps runs on until its `from`, and holds no declaration of this module.
+            if (inImport || trimmed.startsWith('import ')) {
+                inImport = !trimmed.endsWith(';');
+                continue;
+            }
+
+            if (trimmed === '') {
                 continue;
             }
         }

@@ -12,7 +12,7 @@ const INTROS: Readonly<Record<string, string>> = {
     client: 'What `client/` imports. It runs in the page of every client that loads the extension.',
     server: 'What `server/` imports. It runs as one process on the machine, started on the first call.',
     ui: 'The components of Ruimte, from ADE CORE. Optional: any other React library works too.',
-    testing: 'What a test imports under `ruimte extension test`, against a fake host.'
+    testing: 'What a test imports under `ruimte extension test`: a test host for the client, a test server and a page to draw in.'
 };
 
 export const dynamicParams = false;

@@ -75,6 +75,24 @@ export default defineServer({
 
 `useServer().greeting()` returns a promise of a `Result`. `.use()` suspends the component until the answer arrives, so you need no loading state of your own. When the method throws, or the server part cannot run, `ok` is false and `error.message` says why.
 
+## Test it
+
+```bash
+bun run test
+```
+
+The project starts with a test in `test/extension.test.ts`. It loads your client part into `createTestHost` and your server part into `createTestServer`, so it runs without Ruimte:
+
+```ts
+const host = await createTestHost();
+const machine = await createTestServer<typeof server>();
+
+expect(host.panel('main')).toMatchObject({ title: 'Standup' });
+expect(await machine.call('greeting')).toEqual({ ok: true, value: 'Good morning' });
+```
+
+[Testing and packing](/docs/extensions/testing) shows how to press actions, draw a panel and script the machine.
+
 ## Pack it
 
 ```bash

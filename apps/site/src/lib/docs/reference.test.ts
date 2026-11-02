@@ -20,8 +20,12 @@ describe('the reference', () => {
         }
     });
 
-    test('keeps the doc above a declaration, joins overloads and ignores brackets in comments', () => {
+    test('keeps the doc above a declaration, joins overloads and ignores brackets in comments and wrapped imports', () => {
         const entries = parseDeclarations(`import type { X } from 'x';
+import type {
+    Y,
+    Z
+} from 'y';
 
 /** Opens a thing (the first one. */
 export function open(id: string): void;
