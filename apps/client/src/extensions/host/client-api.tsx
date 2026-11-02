@@ -413,7 +413,8 @@ function serverClient(extension: LoadedExtension, transport: Pick<Transport, 're
     );
 }
 
-export function clientApiFor(extension: LoadedExtension) {
+/* `live` says whether the load this API belongs to is still in place; once it is not, what the extension adds is let go at once. */
+export function clientApiFor(extension: LoadedExtension, live: () => boolean = () => true) {
     const { id } = extension.manifest;
     const servers = new WeakMap<object, unknown>();
     const reportFailure = (what: string) => (text: string) => {
@@ -503,7 +504,18 @@ export function clientApiFor(extension: LoadedExtension) {
                       }
             ])
         ) as SlotEntry['slots'];
+    const hold = (dispose: () => void): void => {
+        if (live()) {
+            extension.disposers.push(dispose);
+        } else {
+            dispose();
+        }
+    };
     const add = <Kind extends Parameters<typeof contribute>[0]>(kind: Kind, item: Parameters<typeof contribute<Kind>>[1]): (() => void) => {
+        if (!live()) {
+            return () => undefined;
+        }
+
         const dispose = contribute(kind, item);
 
         extension.disposers.push(dispose);
@@ -656,7 +668,7 @@ export function clientApiFor(extension: LoadedExtension) {
             const component = surfaceOf(extension, overlay) as unknown as OpenOverlay['component'];
             const closers = new Set<(result?: unknown) => void>();
 
-            extension.disposers.push(() => closers.forEach((close) => close()));
+            hold(() => closers.forEach((close) => close()));
 
             return {
                 open(params: Params): Promise<Result | null> {
@@ -710,7 +722,7 @@ export function clientApiFor(extension: LoadedExtension) {
             });
         },
         defineFileIcon(icon: { extensions: string[]; path: string }) {
-            extension.disposers.push(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));
+            hold(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));
         },
         defineVoiceAction<Input extends object>(action: {
             id: string;
@@ -968,7 +980,7 @@ export function clientApiFor(extension: LoadedExtension) {
         onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void {
             const stop = onClientEvent(name, listener);
 
-            extension.disposers.push(stop);
+            hold(stop);
 
             return stop;
         },
@@ -1064,7 +1076,7 @@ export function clientApiFor(extension: LoadedExtension) {
                         held.release();
                     };
 
-                    extension.disposers.push(stop);
+                    hold(stop);
 
                     return stop;
                 }),

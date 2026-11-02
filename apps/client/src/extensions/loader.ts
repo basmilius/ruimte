@@ -24,6 +24,8 @@ const loaded = new Map<string, string>();
  * kept from before still holds the client it was given then.
  */
 const versions = new Map<string, { extension: LoadedExtension; imports: number }>();
+// By id, while its stylesheet and module load.
+const loading = new Set<string>();
 let safeMode = false;
 let stopActivation: (() => void) | null = null;
 
@@ -87,7 +89,8 @@ export async function syncExtensions(): Promise<void> {
     }
 
     for (const entry of wanted) {
-        if (loaded.has(entry.manifest.id)) {
+        // A load still under way that was taken down settles first, and syncs again once it has.
+        if (loaded.has(entry.manifest.id) || loading.has(entry.manifest.id)) {
             continue;
         }
 
@@ -99,14 +102,31 @@ export async function syncExtensions(): Promise<void> {
 
         version.imports += 1;
         versions.set(entry.base, version);
-        registerExtension(version.extension);
+
+        const current = registerExtension(version.extension);
+
+        let failedToLoad = false;
+
         loaded.set(entry.manifest.id, entry.base);
+        loading.add(entry.manifest.id);
 
         try {
             await linkStylesheet(entry.manifest.id, entry.base);
+
+            if (!current()) {
+                dropStylesheet(entry.manifest.id);
+                continue;
+            }
+
             await import(/* @vite-ignore */ address);
             useInstalledExtensions.setState(({ failures: { [entry.manifest.id]: _cleared, ...failures } }) => ({ failures }));
         } catch (e) {
+            // Taken down while it loaded: what failed is a load nobody wants any more.
+            if (!current()) {
+                continue;
+            }
+
+            failedToLoad = true;
             forgetExtension(entry.manifest.id);
             dropStylesheet(entry.manifest.id);
             loaded.delete(entry.manifest.id);
@@ -116,6 +136,12 @@ export async function syncExtensions(): Promise<void> {
                 const { sendDevLog } = await import('@/extensions/dev-log');
 
                 sendDevLog(entry.manifest.id, 'error', [e]);
+            }
+        } finally {
+            loading.delete(entry.manifest.id);
+
+            if (!failedToLoad && !current()) {
+                void syncExtensions();
             }
         }
     }
