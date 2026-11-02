@@ -415,6 +415,47 @@ describe('the client API', () => {
         expect(await api.files.list('.')).toMatchObject({ ok: false, error: { code: 'unavailable' } });
     });
 
+    test('changes nothing after an await, and runs no handle, of a load that was taken down', async () => {
+        const machine = new FakeMachine();
+        const manifest: ExtensionManifest = {
+            id: 'acme.probe',
+            name: 'Probe',
+            version: '0.1.0',
+            api: 1,
+            permissions: { 'files.read': 'Reads', 'files.write': 'Writes', 'canvas.write': 'Tidies up' }
+        };
+        const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null };
+        const api = clientApiFor(extension, registerExtension(extension));
+        const node = { id: 'one', kind: 'note', title: 'One', x: 0, y: 0, w: 200, h: 120 } as CanvasNode;
+        let answerRead = (): void => undefined;
+        let runs = 0;
+
+        machine.answer('fs.read', () => new Promise((resolve) => (answerRead = () => resolve({ kind: 'text', text: 'Old', mtime: 1 } as never))));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+        focusedCanvas().setState({ viewId: 'view-1', nodes: { one: node }, selection: [] });
+
+        const action = api.defineAction({ id: 'tidy', title: 'Tidy', run: () => void (runs += 1) });
+        const write = api.files.write('notes.md', 'New');
+        const removing = api.canvas.remove([{ id: 'one' }]);
+
+        await until(() => machine.requests('fs.read').length === 1 && useHostDialog.getState().request !== null);
+        forgetExtension('acme.probe');
+        answerRead();
+        useHostDialog.getState().request?.answer('');
+        await action.run();
+        api.canvas.select([{ id: 'one' }]);
+
+        expect(await write).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(await removing).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(machine.requests('fs.write')).toEqual([]);
+        expect(machine.requests('fs.create')).toEqual([]);
+        expect(focusedCanvas().getState().nodes.one).toBeDefined();
+        expect(focusedCanvas().getState().selection).toEqual([]);
+        expect(runs).toBe(0);
+        await expect(api.host.busy({ title: 'Late' }, () => 'done')).rejects.toThrow('turned off or replaced');
+    });
+
     test('starts no run for a signal that was aborted already', async () => {
         const machine = new FakeMachine();
         const { api } = loaded({ 'agents.run': 'Answers' });

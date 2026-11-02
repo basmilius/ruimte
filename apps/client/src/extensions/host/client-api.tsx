@@ -554,9 +554,10 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         }
     };
     // A callback of a load that was taken down or replaced reads, writes and changes nothing any more.
+    const withdrawn = (): Refused => new Refused('unavailable', `${extension.manifest.name} was turned off or replaced`);
     const assertLive = (): void => {
         if (!live()) {
-            throw new Refused('unavailable', `${extension.manifest.name} was turned off or replaced`);
+            throw withdrawn();
         }
     };
     const whileLive =
@@ -918,7 +919,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
             return {
                 actionId: entry.id,
-                run: (context?: object) => runAction(entry, { ...baseContext(), ...context }, 'code'),
+                run: (context?: object) => (live() ? runAction(entry, { ...baseContext(), ...context }, 'code') : Promise.resolve()),
                 useRunning: () => useActionRuns((state) => state.runs.some((run) => run.actionId === entry.id))
             };
         },
@@ -1145,6 +1146,10 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         },
         host: {
             busy<Value>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Value | Promise<Value>) {
+                if (!live()) {
+                    return Promise.reject(withdrawn());
+                }
+
                 return trackRun({ actionId: null, title: work.title, nodeIds: (work.nodes ?? []).map((node) => node.id) }, run);
             },
             notify: whileLive((text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run: () => void } }) => {
@@ -1203,6 +1208,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
                     // The path and mtime are of the first machine's file; written on another, they could overwrite a file there.
                     assertScope(scope);
+                    assertLive();
 
                     if (existing?.kind !== 'text') {
                         await scope.link.request('fs.create', { path: full, kind: 'file', text, within });
@@ -1604,6 +1610,9 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         danger: true
                     });
 
+                    // A person who said yes to a load that went meanwhile removes nothing for it.
+                    assertLive();
+
                     if (asked === null) {
                         throw new Refused('refused', 'The person kept them');
                     }
@@ -1638,14 +1647,14 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         store.removeEdge(edge.id);
                     }
                 }),
-            select(nodes: { id: string }[]) {
+            select: whileLive((nodes: { id: string }[]) => {
                 focusedCanvas()
                     .getState()
                     .select(nodes.map((node) => node.id));
-            },
-            reveal(target: { id: string }) {
+            }),
+            reveal: whileLive((target: { id: string }) => {
                 revealNode(target.id);
-            }
+            })
         }
         // Held to the public types, so a change to one side breaks the check rather than an extension.
     } satisfies typeof PublicClient;
