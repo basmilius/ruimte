@@ -9,9 +9,7 @@ export const metadata = { title: 'Agents working together' };
 
 ## What an agent can do
 
-Every terminal and chat in Ruimte has a command named `ruimte-context`, and Ruimte tells the agent how to use it. You do not run it yourself. To see what it offers, run `ruimte-context help` in a terminal in Ruimte.
-
-An agent can:
+Agents in Ruimte use a command named `ruimte-context`. Run `ruimte-context help` in a Ruimte terminal to see what it offers. With it, an agent can:
 
 - read the nodes with a line into it, and the views and nodes you referenced with `#`
 - add notes, terminals, chats, browsers and groups to its canvas, and draw lines between them
@@ -25,11 +23,11 @@ An agent can:
 
 ## Delegate a task
 
-Ask an agent to split up the work. It opens a new agent for each part, beside itself on the canvas, with a line into the new agent. The line is dashed while the task is open.
+Ask an agent to split up the work. It opens an agent per part beside itself, with a line into each that stays dashed while the task is open.
 
 <Delegation />
 
-The parent wakes once with each result. When it gave several tasks in one go, it wakes once, after all of them finished.
+The parent wakes with each result. Tasks given in one go wake it once, after all of them finish.
 
 | Rule | Detail |
 | --- | --- |

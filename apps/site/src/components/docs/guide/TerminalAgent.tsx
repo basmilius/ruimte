@@ -71,7 +71,7 @@ function TerminalScene() {
             </CanvasNode>
             <Reveal shown={step === 1} className="absolute inset-x-0 bottom-16 flex justify-center px-6">
                 <div className="w-full max-w-[460px]">
-                    <PromptStack title="Claude Code" status="needs-you" meta="Claude · terminal · 12:05">
+                    <PromptStack title="Claude Code" status="needs-you" meta="Claude Code · terminal · 12:05">
                         {/* `RuimtePromptView.tsx`, a waiting terminal: the request, then the way to the terminal. */}
                         <div className="flex flex-col gap-2 p-3">
                             <div className="flex items-start gap-2">
@@ -88,7 +88,7 @@ function TerminalScene() {
                 </div>
             </Reveal>
             <div className="absolute inset-x-0 bottom-4 flex justify-center">
-                <Dock waiting={step === 1 ? 1 : 0} working={step === 0 ? 1 : 0} finished={step === 2 ? 1 : 0} />
+                <Dock waiting={step === 1 ? 1 : 0} working={step === 0 ? 1 : 0} />
             </div>
         </div>
     );

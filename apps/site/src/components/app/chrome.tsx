@@ -10,6 +10,7 @@ import {
     Clock,
     Database,
     LayoutTemplate,
+    ListChecks,
     LockOpen,
     Maximize,
     Minus,
@@ -42,6 +43,8 @@ export interface SidebarRow {
     readonly selected?: boolean;
     /** Open in another cell of the grid. */
     readonly beside?: boolean;
+    /** The view a node row stands on, in the faint text after its name, as a Needs you row shows it (`NodeRow` in `SidebarListRows.tsx`). */
+    readonly view?: string;
 }
 
 export function RowIcon({ icon: Icon }: { readonly icon: SidebarRow['icon'] }) {
@@ -61,6 +64,7 @@ function Row({ row }: { readonly row: SidebarRow }) {
         >
             <RowIcon icon={row.icon} />
             <span className="min-w-0 truncate">{row.name}</span>
+            {row.view && <span className="min-w-0 shrink truncate text-[13px] font-normal text-text-faint">{row.view}</span>}
             <span className="grow" />
             {row.done && <CircleCheck size={12} strokeWidth={1.75} className="text-status-idle" />}
             {row.status && <StatusDot status={row.status} />}
@@ -219,6 +223,8 @@ export function Dock({ waiting = 0, working = 0, finished = 0 }: { readonly wait
         <div className={`flex items-center gap-2 rounded-xl p-1 ${FLOAT}`}>
             {counts && (
                 <>
+                    {/* `StatusSummary.tsx` opens with the attention queue, then the counts. */}
+                    <IconButton icon={ListChecks} />
                     {waiting > 0 && (
                         <Button size="md" className="gap-1.5 text-text">
                             <StatusDot status="needs-you" />

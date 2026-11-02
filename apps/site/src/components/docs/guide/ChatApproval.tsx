@@ -36,7 +36,7 @@ function ChatScene() {
                         rows={[
                             { id: 'checkout', name: 'Checkout', icon: Hash },
                             { id: 'chat', name: 'Saved carts', icon: 'claude', status, selected: true },
-                            { id: 'dev', name: 'dev server', icon: Terminal, status: 'running' }
+                            { id: 'dev', name: 'dev server', icon: Terminal }
                         ]}
                     />
                 }

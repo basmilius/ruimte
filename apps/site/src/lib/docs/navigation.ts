@@ -29,6 +29,7 @@ export const SECTIONS: readonly NavigationSection[] = [
                 pages: [
                     { title: 'Projects and views', href: '/docs/guide/projects-and-views' },
                     { title: 'The canvas', href: '/docs/guide/canvas' },
+                    { title: 'Browsers and devices', href: '/docs/guide/browsers-and-devices' },
                     { title: 'Drawings and diagrams', href: '/docs/guide/drawings' }
                 ]
             },
@@ -37,9 +38,10 @@ export const SECTIONS: readonly NavigationSection[] = [
                 pages: [
                     { title: 'Terminals', href: '/docs/guide/terminals' },
                     { title: 'AI chats', href: '/docs/guide/chats' },
+                    { title: 'Needs you', href: '/docs/guide/attention' },
                     { title: 'Plans, forks and visuals', href: '/docs/guide/plans-and-forks' },
                     { title: 'Agents working together', href: '/docs/guide/delegation' },
-                    { title: 'Needs you', href: '/docs/guide/attention' }
+                    { title: 'Computer use', href: '/docs/guide/computer-use' }
                 ]
             },
             {
@@ -49,18 +51,16 @@ export const SECTIONS: readonly NavigationSection[] = [
                     { title: 'Git and worktrees', href: '/docs/guide/git' },
                     { title: 'Launches', href: '/docs/guide/launches' },
                     { title: 'Routines and Output', href: '/docs/guide/routines' },
-                    { title: 'Databases', href: '/docs/guide/databases' },
-                    { title: 'Browsers and devices', href: '/docs/guide/browsers-and-devices' },
-                    { title: 'Computer use', href: '/docs/guide/computer-use' }
+                    { title: 'Databases', href: '/docs/guide/databases' }
                 ]
             },
             {
                 title: 'Machines',
                 pages: [
                     { title: 'Your account and machines', href: '/docs/guide/machines' },
-                    { title: 'A machine without a screen', href: '/docs/guide/headless' },
+                    { title: 'Phone and web', href: '/docs/guide/phone-and-web' },
                     { title: 'Work on another machine', href: '/docs/guide/other-machines' },
-                    { title: 'Phone and web', href: '/docs/guide/phone-and-web' }
+                    { title: 'A machine without a screen', href: '/docs/guide/headless' }
                 ]
             },
             {

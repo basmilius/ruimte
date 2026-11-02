@@ -9,15 +9,13 @@ export const metadata = { title: 'Install and first project' };
 
 ## Install
 
-Download Ruimte from [ruimte.app](/#download).
+Download Ruimte from [ruimte.app](/#download). The app updates itself.
 
 | System | Download |
 | --- | --- |
 | macOS | Disk image, for Apple silicon |
 | Linux | AppImage, Debian or RPM package, for x64 and arm64 |
 | Windows | Installer, for x64 |
-
-The app updates itself.
 
 <Note>On Windows, agents and launches run in Git Bash. Install [Git for Windows](https://gitforwindows.org) first.</Note>
 
@@ -40,9 +38,9 @@ The **Set up Ruimte** list has three tasks. Do them in any order, or later from 
 2. **Connect providers.** Ruimte lists the agent CLIs it finds on this computer, such as Claude Code, Codex, GitHub Copilot, Grok and Antigravity. Logging in to a CLI opens a terminal where the CLI asks for your login. You need one logged-in CLI to start.
 3. **Computer use.** Optional, on a Mac. See [Computer use](/docs/guide/computer-use).
 
-Ruimte also asks to add a few lines to the settings of each CLI. With them, a terminal shows whether its agent works, is done or waits for you. The lines also apply when you use that CLI outside Ruimte. Choose **Allow** or **Don't allow** per CLI. Change it later under Settings, Agents, Agent status in terminals.
+Ruimte then asks to add a few lines to each CLI's settings, which also apply outside Ruimte. Choose **Allow** to see in a terminal whether its agent works, is done or waits for you. Change it later under Settings, Agents, Agent status in terminals.
 
-To install another CLI later, open Settings, Providers. Each CLI shows its install command and a button to run it in a terminal.
+To install another CLI, open Settings, Providers. It shows the install command and can run it in a terminal.
 
 ## Open a project
 
@@ -63,6 +61,4 @@ An empty canvas lists what you can add:
 | Add | A shell, a web page, a note or a group |
 | From project | A file, a drawing, a diagram or a saved layout |
 
-Click **Chat** under Agents to talk to an agent in a conversation Ruimte draws, or **Terminal** to run the CLI in its own interface. [Terminals](/docs/guide/terminals) and [AI chats](/docs/guide/chats) compare the two.
-
-You can also drop files on the canvas, right-click it for more, or press <Shortcut keys="Mod+K" />.
+Click **Chat** under Agents for a conversation Ruimte draws, or **Terminal** for the CLI's own interface. [AI chats](/docs/guide/chats#chat-or-terminal) compares the two.

@@ -85,7 +85,7 @@ function GridScene() {
                         rows={[
                             { id: 'checkout', name: 'Checkout', icon: Hash, beside: step === 2 },
                             { id: 'chat', name: 'Saved carts', icon: 'claude', status: 'running', selected: true },
-                            { id: 'dev', name: 'dev server', icon: Terminal, status: 'running', beside: many },
+                            { id: 'dev', name: 'dev server', icon: Terminal, beside: many },
                             { id: 'file', name: 'cart.ts', icon: FileText, beside: step === 2 }
                         ]}
                     />

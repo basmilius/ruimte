@@ -36,13 +36,13 @@ function WorkspaceScene() {
             <AppWindow
                 sidebar={
                     <Sidebar
-                        waiting={waiting ? [{ id: 'waiting', name: 'Saved carts', icon: 'claude', status: 'needs-you' }] : []}
+                        waiting={waiting ? [{ id: 'waiting', name: 'Saved carts', icon: 'claude', view: 'Checkout', status: 'needs-you' }] : []}
                         rows={[
                             { id: 'checkout', name: 'Checkout', icon: Hash, selected: true },
                             { id: 'brief', name: 'Brief', icon: StickyNote, nested: true },
                             { id: 'tests', name: 'tests', icon: Terminal, nested: true },
                             { id: 'chat', name: 'Saved carts', icon: 'claude', nested: true, status: waiting ? 'needs-you' : 'running' },
-                            { id: 'dev', name: 'dev server', icon: Terminal, status: 'running' }
+                            { id: 'dev', name: 'dev server', icon: Terminal }
                         ]}
                     />
                 }
@@ -87,8 +87,8 @@ function WorkspaceScene() {
                                 exit={{ opacity: 0, y: 10 }}
                                 transition={{ duration: 0.4, ease: EASE }}
                             >
-                                <div className="w-full max-w-[480px]">
-                                    <PromptStack title="Saved carts" status="needs-you" meta="Claude · chat · 12:05">
+                                <div className="w-full max-w-[576px]">
+                                    <PromptStack title="Saved carts" status="needs-you" meta="Claude Code · chat · 12:05">
                                         <ApprovalCard cwd="~/acme-web" command="git push origin saved-carts" />
                                     </PromptStack>
                                 </div>
@@ -96,7 +96,7 @@ function WorkspaceScene() {
                         )}
                     </AnimatePresence>
                     <div className="absolute inset-x-0 bottom-4 flex justify-center">
-                        <Dock waiting={waiting ? 1 : 0} working={waiting ? 1 : 2} />
+                        <Dock waiting={waiting ? 1 : 0} working={waiting ? 0 : 1} />
                     </div>
                 </div>
             </AppWindow>

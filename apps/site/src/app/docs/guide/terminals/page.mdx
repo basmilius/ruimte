@@ -10,13 +10,13 @@ export const metadata = { title: 'Terminals' };
 
 ## Open a terminal
 
-Press <Shortcut keys="Alt+T" /> on a canvas, or run **New terminal view** from the command palette. The terminal opens your login shell in the project folder, with 10,000 lines of scrollback.
+Press <Shortcut keys="Alt+T" /> on a canvas, or run **New terminal view** from the command palette. It opens your login shell in the project folder, with 10,000 lines of scrollback.
 
-When you close the window, reload it or open the project on another device, the terminal shows the same screen and scrollback. When the shell exits, click **Restart** to start a new one.
+Closing the window or opening the project on another device keeps the screen and scrollback. When the shell exits, click **Restart**.
 
 ## Run an agent in a terminal
 
-Choose **Terminal** for a CLI under Agents on an empty canvas, or run **New Claude Code terminal** (or another CLI) from the command palette. The CLI starts in its own interface. You type, approve and answer there.
+Choose **Terminal** for a CLI under Agents on an empty canvas, or run **New Claude Code terminal** (or another CLI) from the command palette. You type, approve and answer in the CLI's own interface.
 
 <TerminalAgent />
 
@@ -48,4 +48,4 @@ New terminal agents start in the permission mode set under Settings, Agents, Ter
 
 ## Approve a command from a shared view
 
-A terminal in a shared view can carry a start command, such as `bun dev`. On your machine it does not run until you approve it: the terminal shows **Run `bun dev`?**, and the command runs when you click **Run**. When someone changes the command, it asks again.
+A terminal in a shared view can carry a start command, such as `bun dev`. On your machine the terminal shows **Run `bun dev`?** and waits until you click **Run**. When someone changes the command, it asks again.
