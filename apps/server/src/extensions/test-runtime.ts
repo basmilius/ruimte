@@ -4,13 +4,13 @@
  * on the same API and policy as the machine. Each module is held to its public types.
  */
 import { plugin } from 'bun';
-import { afterEach } from 'bun:test';
+import { afterAll, afterEach } from 'bun:test';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { unmountAll } from './test-dom.ts';
 import { uiModule } from './test-react.ts';
 import { client, createTestHost } from './test-hosts.ts';
-import { createTestServer, currentServer, refusal } from './test-server.ts';
+import { createTestServer, currentServer, refusal, removeTestFolders } from './test-server.ts';
 
 type Server = typeof PublicServer;
 
@@ -51,6 +51,7 @@ const testing = { createTestHost, createTestServer, refusal } satisfies typeof P
 
 // What a test drew leaves the page with it.
 afterEach(unmountAll);
+afterAll(removeTestFolders);
 
 plugin({
     name: 'ruimte-extension-fakes',

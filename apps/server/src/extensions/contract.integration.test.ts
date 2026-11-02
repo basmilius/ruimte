@@ -2,6 +2,7 @@ import { afterAll, afterEach } from 'bun:test';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ExtensionMessageEventSchema } from '@ruimte/contracts';
 import { serverContract, ID } from '../../../../extensions/poc-contract/contract/server.ts';
 import { ExtensionHost } from './extension-host.ts';
 import { runMachineAction } from './machine-actions.ts';
@@ -50,7 +51,16 @@ serverContract(async (permissions) => {
             )
     });
     const { path } = await packExtension(folder);
+    const emitted: { name: string; payload?: unknown }[] = [];
 
+    // As a client hears it: the event crosses as JSON and is read by its schema.
+    host.subscribe(`contract-${worlds}`, ({ event, payload }) => {
+        if (event === 'extension.message') {
+            const { name, payload: said } = ExtensionMessageEventSchema.parse(JSON.parse(JSON.stringify(payload)));
+
+            emitted.push(said === undefined ? { name } : { name, payload: said });
+        }
+    });
     hosts.push(host);
     await host.install(readFileSync(path).toString('base64'));
 
@@ -73,6 +83,7 @@ serverContract(async (permissions) => {
 
             return host.runAgentTool(`${ID}/${id}`, input, { caller });
         },
+        emitted: async () => emitted,
         logs: async () =>
             readFileSync(store.logFile(ID), 'utf8')
                 .split('\n')

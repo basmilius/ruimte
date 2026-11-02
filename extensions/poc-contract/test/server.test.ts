@@ -16,7 +16,8 @@ serverContract(async (permissions) => {
         call: (method, ...args) => server.call(method as never, ...(args as [never])),
         fire: (name, payload) => server.fire(name as 'chat.event', payload as { chatId: string }),
         tool: (id, input, caller) => server.tool(id).run(input, { caller }),
-        logs: async () => server.logs
+        logs: async () => server.logs,
+        emitted: async () => server.emitted
     };
 });
 

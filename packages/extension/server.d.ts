@@ -69,8 +69,8 @@ export interface ServerEvents {
 /** Follows a machine event, behind its permission; any other name is refused. Set `"autostart": true` to follow them with no client open. */
 export function onEvent<Name extends keyof ServerEvents>(name: Name, listener: (event: ServerEvents[Name]) => void): () => void;
 
-/** Says something to every client of this machine, where `useServerEvent(name)` hears `payload`. */
-export function emit<Payload>(name: string, payload: Payload): void;
+/** Says something to every client of this machine, where `useServerEvent(name)` hears `payload`, or undefined without one. */
+export function emit<Payload>(name: string, payload?: Payload): void;
 
 /** What an agent reads of a node along a line, also with no client open. */
 export function defineNodeContext<Data>(nodeType: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void;

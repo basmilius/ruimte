@@ -17,6 +17,8 @@ export interface ServerWorld {
     /* An agent's call of a tool, by the id the extension gave it. */
     tool(id: string, input: object, caller: string): Promise<string>;
     logs(): Promise<string[]>;
+    /* What `emit` said, as a client hears it. */
+    emitted(): Promise<{ name: string; payload?: unknown }[]>;
 }
 
 export type OpenServerWorld = (permissions: Record<string, string>) => Promise<ServerWorld>;
@@ -76,6 +78,13 @@ export function serverContract(open: OpenServerWorld): void {
                 ok: true,
                 value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission chats.send in its manifest` } }
             });
+        });
+
+        test('says an event without a payload as one a client hears with none', async () => {
+            const world = await open({});
+
+            expect(await world.call('finish')).toEqual({ ok: true, value: null });
+            expect(await world.emitted()).toStrictEqual([{ name: 'done' }, { name: 'counted', payload: { count: 1 } }]);
         });
 
         test("checks a machine action's input, and throws for one of the wrong shape", async () => {

@@ -2,7 +2,7 @@
  * `createTestServer` of `@ruimte/extension/testing`: an extension's `server/index.ts` in the test's own process, on the
  * same `createServerApi` and policy as the machine, with memory for files, a clock the test turns and answers it scripts.
  */
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
@@ -63,17 +63,39 @@ function manifestIn(folder: string): { id?: string; permissions?: Record<string,
     }
 }
 
-function memory(values: Record<string, unknown>): KeyValues {
+function memory(values: Record<string, unknown>, changed: () => void = () => undefined): KeyValues {
     return {
         get: async (key) => (Object.hasOwn(values, key) ? wire(values[key]) : undefined),
         set: async (key, value) => {
-            values[key] = wire(value);
+            // A key set to undefined crosses as none, as on the machine.
+            if (value === undefined) {
+                delete values[key];
+            } else {
+                values[key] = wire(value);
+            }
+
+            changed();
         },
         delete: async (key) => {
             delete values[key];
+            changed();
         }
     };
 }
+
+const folders = new Set<string>();
+
+/* Removes the data folder of every test server, which the test runtime does once the tests are done. */
+export function removeTestFolders(): void {
+    for (const folder of folders) {
+        rmSync(folder, { recursive: true, force: true });
+    }
+
+    folders.clear();
+}
+
+/* What a test host reads of a test server it was handed, so the client's `machine` storage is the same keys `server/` keeps. */
+export const machineStorageOf = new WeakMap<object, { values: Record<string, Json>; subscribe(listener: () => void): () => void }>();
 
 /* The wire's `agents.start` back in the words of the API, as an answer reads it. */
 function startOptions(start: { projectId: string; viewId?: string; beside?: string; prompt?: string; provider?: string; title?: string }) {
@@ -98,7 +120,8 @@ class TestMachine {
     readonly id: string;
     readonly storage: Record<string, Json>;
     readonly secrets: Record<string, string>;
-    readonly emitted: { name: string; payload: Json }[] = [];
+    readonly emitted: { name: string; payload?: Json }[] = [];
+    readonly storageListeners = new Set<() => void>();
     readonly asked: Ask[] = [];
     readonly languageServers: object[] = [];
     readonly logs: string[] = [];
@@ -121,8 +144,12 @@ class TestMachine {
         this.storage = wire(options.storage ?? {});
         this.secrets = { ...options.secrets };
         this.sends = new SendLimit(() => this.now);
+        // A folder of its own that exists, as the machine gives each extension, so two test servers share nothing.
+        const dataFolder = mkdtempSync(join(tmpdir(), `ruimte-extension-test-${this.id}-`));
+
+        folders.add(dataFolder);
         this.core = createServerApi({
-            dataFolder: join(tmpdir(), `ruimte-extension-test-${this.id}`),
+            dataFolder,
             platform: process.platform,
             permissions: this.permissions,
             ask: (method, args) => this.ask(method, args),
@@ -132,7 +159,11 @@ class TestMachine {
                 }
             },
             send: (message) => this.said(message),
-            storage: memory(this.storage),
+            storage: memory(this.storage, () => {
+                for (const listener of [...this.storageListeners]) {
+                    listener();
+                }
+            }),
             secrets: memory(this.secrets),
             log: {
                 info: (message) => void this.logs.push(message),
@@ -184,7 +215,8 @@ class TestMachine {
 
     private said(message: ServerMessage): void {
         if (message.type === 'emit') {
-            this.emitted.push({ name: message.name, payload: wire(message.payload) });
+            // Without a payload it sends none, as over the pipe; a client hears undefined.
+            this.emitted.push(message.payload === undefined ? { name: message.name } : { name: message.name, payload: wire(message.payload) });
         } else if (message.type === 'tool') {
             // The machine lists a tool only with the permission, and says nothing of one without it.
             this.tools.set(message.name, this.permissions.has('agents.tools'));
@@ -337,7 +369,7 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
         }
     };
 
-    return {
+    const server: PublicTesting.TestServer<Api> = {
         // Typed by the author's `Api`, which only the default export of `server/index.ts` holds to.
         call: call as unknown as PublicTesting.TestServer<Api>['call'],
         storage: machine.storage,
@@ -351,4 +383,17 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
         tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? 'test') }),
         nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
     };
+
+    machineStorageOf.set(server, {
+        values: machine.storage,
+        subscribe: (listener) => {
+            machine.storageListeners.add(listener);
+
+            return () => {
+                machine.storageListeners.delete(listener);
+            };
+        }
+    });
+
+    return server;
 }
