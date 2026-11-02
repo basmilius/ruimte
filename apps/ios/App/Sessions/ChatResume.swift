@@ -118,7 +118,7 @@ struct ChatCompactionDock: View {
                                 ? String(localized: "The next message costs \(tokens) tokens at full price")
                                 : String(localized: "\(tokens) tokens from earlier")
                         )
-                        .font(.caption).monospacedDigit().foregroundStyle(MobileStyle.faint).lineLimit(2)
+                        .font(.caption).monospacedDigit().foregroundStyle(MobileStyle.muted).lineLimit(2)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)

@@ -346,7 +346,7 @@ struct LaunchImportSheet: View {
                         .foregroundStyle(MobileStyle.muted).lineLimit(2)
                 }
                 if let reason = suggestion.unsupported {
-                    Text("Not supported: \(reason)").font(.caption).foregroundStyle(MobileStyle.faint)
+                    Text("Not supported: \(reason)").font(.caption).foregroundStyle(MobileStyle.muted)
                 } else if suggestion.isPrivate {
                     Text("Stays on this machine. Its path is outside the project.").font(.caption)
                         .foregroundStyle(MobileStyle.faint)

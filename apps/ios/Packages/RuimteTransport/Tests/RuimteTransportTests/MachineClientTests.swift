@@ -176,6 +176,22 @@ import Testing
         await #expect(throws: MachineClientError.timeout("server.ping")) { try await ping.value }
     }
 
+    @Test func trafficForOthersDoesNotKeepAnUnansweredReadAlive() async {
+        let clock = FakeScheduler()
+        var sends = 0
+        let client = MachineClient(send: { _ in sends += 1 }, scheduler: clock, connected: true)
+        let status = Task { try await client.request("git.status", payload: .object(["cwd": .string("/work")])) }
+        while sends == 0 { await Task.yield() }
+        for _ in 0..<MachineClient.maxTimeoutRenewals {
+            client.heard()
+            clock.advance()
+        }
+        #expect(client.pendingRequestCount == 1)
+        client.heard()
+        clock.advance()
+        await #expect(throws: MachineClientError.timeout("git.status")) { try await status.value }
+    }
+
     @Test func aTimerThatFiresAtOnceTimesOutAfterSomethingWasHeard() async {
         var sends = 0
         let client = MachineClient(send: { _ in sends += 1 }, scheduler: ImmediateClock(), connected: true)

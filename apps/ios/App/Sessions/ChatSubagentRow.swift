@@ -208,7 +208,7 @@ private struct ChatTaskLine: View {
             // The time it waits for reads as today, tomorrow or a day, so it is said again once a minute.
             TimelineView(.everyMinute) { context in
                 Text(ChatSubagents.taskStateText(state, task: task, now: context.date))
-                    .foregroundStyle(MobileStyle.faint)
+                    .foregroundStyle(MobileStyle.muted)
             }
         default:
             Text(ChatSubagents.taskStateText(state, task: task, now: .now)).foregroundStyle(Self.tone(state))
@@ -219,7 +219,7 @@ private struct ChatTaskLine: View {
         switch state {
         case .waiting: MobileStyle.statusNeedsYou
         case .failed: MobileStyle.statusError
-        default: MobileStyle.faint
+        default: MobileStyle.muted
         }
     }
 
