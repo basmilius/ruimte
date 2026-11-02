@@ -72,7 +72,7 @@ defineAgentTool({
 });
 ```
 
-A tool answers in text, since an agent reads text. Anything else is sent as JSON. `caller` names the agent that called it. Write a failure as an answer the agent can act on, like the missing key above.
+A tool answers in text, since an agent reads text. Anything else is sent as JSON. `caller` is the node id of the terminal or chat whose agent called it. Write a failure as an answer the agent can act on, like the missing key above.
 
 ## How an agent finds it
 
