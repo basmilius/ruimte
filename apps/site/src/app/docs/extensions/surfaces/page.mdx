@@ -10,7 +10,9 @@ export const metadata = { title: 'Surfaces' };
 
 Every surface takes its component as a lazy import, `() => import('./Panel')`, so its code loads only when a person opens it. Each one sits inside an error boundary of its own. A surface that throws shows the error in its own rectangle, and the rest of Ruimte goes on.
 
-Instead of `component`, a surface can name a `frame`. That is an HTML file in your pack, which runs in a sandboxed frame with an origin of its own and no storage. It reaches the network only on the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS. Use it for code you would rather keep apart from the app's page. The frame works in the desktop app only.
+Instead of `component`, a surface can name a `frame`. That is an HTML file in your pack, which runs in a sandboxed frame with an origin of its own and no storage. It reaches the network only on the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS. Use it for code you would rather keep apart from the app's page.
+
+<Note>A `frame` surface works in the desktop app only.</Note>
 
 ```ts
 definePanel({

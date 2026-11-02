@@ -3,25 +3,31 @@ import Link from 'next/link';
 import { CodeBlock } from '@/components/docs/CodeBlock';
 import { slugOf, textOf } from '@/lib/docs/slug';
 
+interface HeadingProps {
+    /* Without one, the slug of the text. */
+    readonly id?: string;
+    readonly children?: ReactNode;
+}
+
 /* A heading links to itself, so a section can be shared. */
-function Heading({ Tag, children }: { readonly Tag: 'h2' | 'h3'; readonly children?: ReactNode }) {
-    const id = slugOf(textOf(children));
+function Heading({ Tag, id, children }: HeadingProps & { readonly Tag: 'h2' | 'h3' }) {
+    const anchor = id ?? slugOf(textOf(children));
 
     return (
-        <Tag id={id}>
-            <a href={`#${id}`} className="anchor">
+        <Tag id={anchor}>
+            <a href={`#${anchor}`} className="anchor">
                 {children}
             </a>
         </Tag>
     );
 }
 
-export function Heading2({ children }: { readonly children?: ReactNode }) {
-    return <Heading Tag="h2">{children}</Heading>;
+export function Heading2(props: HeadingProps) {
+    return <Heading Tag="h2" {...props} />;
 }
 
-export function Heading3({ children }: { readonly children?: ReactNode }) {
-    return <Heading Tag="h3">{children}</Heading>;
+export function Heading3(props: HeadingProps) {
+    return <Heading Tag="h3" {...props} />;
 }
 
 /* A fence arrives as <pre><code class="language-ts">; the highlighter takes it whole. */

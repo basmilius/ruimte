@@ -21,7 +21,9 @@ An extension is a folder with a manifest, a client part that runs in Ruimte's pa
 
 ## What an extension is trusted with
 
-An extension runs as trusted code, like a plugin in an IDE. Its client part runs in Ruimte's page, and its server part runs as the person who runs the machine. Permissions in the manifest tell a person what the extension does before they install it, and the API refuses what the manifest does not ask for. They are no sandbox: install only what you trust.
+An extension runs as trusted code, like a plugin in an IDE. Its client part runs in Ruimte's page, and its server part runs as the person who runs the machine. Permissions in the manifest tell a person what the extension does before they install it, and the API refuses what the manifest does not ask for.
+
+<Note tone="warning">Permissions are no sandbox. Install only extensions you trust.</Note>
 
 The one isolated place is a `frame` surface. It runs in a sandboxed frame with an origin of its own, and reaches the extension's server part only through Ruimte.
 
