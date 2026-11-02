@@ -383,25 +383,31 @@ export class ExtensionHost {
     }
 
     storageSet(id: string, key: string, value: unknown): Promise<void> {
-        return this.changeStorage(id, (values) => ({ ...values, [key]: value }));
+        return this.changeStorage(id, key, (values) => ({ ...values, [key]: value }));
     }
 
     storageDelete(id: string, key: string): Promise<void> {
-        return this.changeStorage(id, ({ [key]: _gone, ...rest }) => rest);
+        return this.changeStorage(id, key, ({ [key]: _gone, ...rest }) => rest);
     }
 
     /*
      * One write per extension at a time, each over what the last one left, so two keys set at once both stay. The only
-     * writer of `storage.json`: its process asks here too.
+     * writer of `storage.json`: its process asks here too. Every client hears the key once the file has it, so a window
+     * that read it before never keeps, or writes back, an older value.
      */
-    private changeStorage(id: string, change: (values: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
+    private changeStorage(id: string, key: string, change: (values: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
         const write = async (): Promise<void> => {
             const { file, values } = await this.storageOf(id);
             const temporary = `${file}.${process.pid}.tmp`;
+            const next = change(values);
 
             await this.files.mkdir(dirname(file));
-            await this.files.write(temporary, JSON.stringify(change(values)), 0o600);
+            await this.files.write(temporary, JSON.stringify(next), 0o600);
             await this.files.rename(temporary, file);
+
+            const value = ownValue(next, key);
+
+            this.sinks.emit({ event: 'extension.storageChanged', payload: value === undefined ? { id, key } : { id, key, value } });
         };
         const next = (this.storageWrites.get(id) ?? Promise.resolve()).then(write, write);
 

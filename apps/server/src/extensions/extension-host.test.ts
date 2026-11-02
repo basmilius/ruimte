@@ -312,6 +312,28 @@ describe('ExtensionHost', () => {
         expect(await Promise.all(['one', 'two', 'three'].map((key) => host.storageGet('acme.builds', key)))).toEqual(['one', 'two', 'three']);
     });
 
+    test('every client hears a key once it is written, from a client or from server/', async () => {
+        const hosted = hostWith({});
+        const heard: unknown[] = [];
+
+        hosted.host.subscribe('client-a', (event) => void heard.push(event));
+        hosted.host.subscribe('client-b', (event) => void heard.push(event));
+
+        const child = await runningChild(hosted);
+
+        heard.length = 0;
+        await hosted.host.storageSet('acme.builds', 'draft', { text: 'one' });
+        child.say({ type: 'ask', id: 5, method: 'storage.delete', args: ['draft'] });
+        await until(() => child.told.some((message) => message.type === 'answer'));
+
+        expect(heard.filter((event) => (event as { event: string }).event === 'extension.storageChanged')).toEqual([
+            { event: 'extension.storageChanged', payload: { id: 'acme.builds', key: 'draft', value: { text: 'one' } } },
+            { event: 'extension.storageChanged', payload: { id: 'acme.builds', key: 'draft', value: { text: 'one' } } },
+            { event: 'extension.storageChanged', payload: { id: 'acme.builds', key: 'draft' } },
+            { event: 'extension.storageChanged', payload: { id: 'acme.builds', key: 'draft' } }
+        ]);
+    });
+
     test('a storage file it cannot read is refused, never written over', async () => {
         const writes: string[] = [];
         let failure: Error = Object.assign(new Error('EIO: i/o error'), { code: 'EIO' });

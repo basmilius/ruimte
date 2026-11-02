@@ -19,8 +19,10 @@ function clientOf(id: string): Client {
         id,
         chunks,
         send: (frame: ServerFrame) => {
-            if (frame.type === 'event' && frame.event === 'extension.agentChunk') {
-                chunks.push((frame.payload as { text: string }).text);
+            const event = frame as { type: string; event?: string; payload?: { text?: string } };
+
+            if (event.type === 'event' && event.event === 'extension.agentChunk') {
+                chunks.push(event.payload?.text ?? '');
             }
         }
     };
