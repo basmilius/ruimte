@@ -20,35 +20,35 @@ Download Ruimte from [ruimte.app](/#download). The app updates itself.
 
 <Note>On Windows, agents and launches run in Git Bash. Install [Git for Windows](https://gitforwindows.org) first.</Note>
 
-To run Ruimte on a server without a screen, see [A machine without a screen](/docs/guide/headless).
+For a server without a screen, see [A machine without a screen](/docs/guide/headless).
 
 ## Choose how Ruimte runs
 
 At the first start, choose one:
 
-- **Run agents on this computer.** Projects, terminals and agents run here. You can open them from your other computers and your phone too.
+- **Run agents on this computer.** Projects, terminals and agents run here. You can also open them from your other computers and your phone.
 - **Only connect to my machines.** Sign in and open the machines on your account. No agents run on this computer.
 
-Ruimte restarts once. To change this later, open Settings, Account.
+Ruimte restarts once. Change it later under Settings, Account.
 
 ## Set up Ruimte
 
-The **Set up Ruimte** list has three tasks. Do them in any order, or later from Settings, About.
+**Set up Ruimte** lists three tasks. Do them in any order, or later from Settings, About.
 
 1. **How Ruimte works.** A one-minute introduction.
-2. **Connect providers.** Ruimte lists the agent CLIs it finds on this computer, such as Claude Code, Codex, GitHub Copilot, Grok and Antigravity. Logging in to a CLI opens a terminal where the CLI asks for your login. You need one logged-in CLI to start.
+2. **Connect providers.** Lists the agent CLIs Ruimte found, such as Claude Code, Codex, GitHub Copilot, Grok and Antigravity. Logging in opens a terminal where the CLI asks for your login. You need one logged-in CLI.
 3. **Computer use.** Optional, on a Mac. See [Computer use](/docs/guide/computer-use).
 
-Ruimte then asks to add a few lines to each CLI's settings, which also apply outside Ruimte. Choose **Allow** to see in a terminal whether its agent works, is done or waits for you. Change it later under Settings, Agents, Agent status in terminals.
+Ruimte then asks to add a few lines to each CLI's settings, which also apply outside Ruimte. Choose **Allow** to see whether a terminal agent works, is done or waits for you. Change it later under Settings, Agents, Agent status in terminals.
 
-To install another CLI, open Settings, Providers. It shows the install command and can run it in a terminal.
+To install another CLI, open Settings, Providers. A CLI that is not installed shows its install command and **Run in a terminal**.
 
 ## Open a project
 
 1. On the start screen, click **Open folder**.
 2. Pick the folder of something you work on.
 
-Or press <Shortcut keys="Mod+K" /> and type a path, such as `~/projects/shop`. A path that does not exist yet creates the folder.
+Or press <Shortcut keys="Mod+K" /> and type a path, such as `~/projects/shop`. For a folder that does not exist yet, **Create and open** creates it.
 
 Ruimte adds a `.ruimte` folder to the project and asks what you want to start with.
 
@@ -60,8 +60,9 @@ An empty canvas lists what you can add:
 
 | Section | What it adds |
 | --- | --- |
-| Agents | A chat or a terminal for each agent CLI on this machine |
-| Add | A shell, a web page, a note or a group |
-| From project | A file, a drawing, a diagram or a saved layout |
+| New chat | A chat with an agent CLI, on its default model |
+| Agents | A terminal for each agent CLI, or a chat with the model you pick |
+| Add | A shell, a web page, a file, a note, a group or text |
+| From project | A saved layout, or a drawing or diagram of the project |
 
-Click **Chat** under Agents for a conversation Ruimte draws, or **Terminal** for the CLI's own interface. [AI chats](/docs/guide/chats#chat-or-terminal) compares the two.
+Click a CLI under **New chat** for a conversation Ruimte draws, or its tile under Agents for the CLI's own interface in a terminal. [AI chats](/docs/guide/chats#chat-or-terminal) compares the two.

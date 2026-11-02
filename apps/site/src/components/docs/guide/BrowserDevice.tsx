@@ -34,8 +34,8 @@ function BrowserDeviceScene() {
             <CanvasNode rect={CHAT} kind="chat" agent title="Cart check" status={step === 2 ? 'idle' : 'running'}>
                 <div className="flex flex-col gap-3 px-4 pt-4">
                     <UserBubble>Check the cart on the web and on the phone.</UserBubble>
-                    <ToolRow tool="bash" label="Ran" detail="ruimte-context browser" />
-                    {step >= 1 && <ToolRow tool="bash" label="Ran" detail="ruimte-context device" live={step === 1} />}
+                    <ToolRow tool="bash" label="Browser" detail="go Cart --url localhost:5173/cart" />
+                    {step >= 1 && <ToolRow tool="bash" label="Device" detail="tap iPhone 17 --element 12" live={step === 1} />}
                     <AssistantText shown={step === 2} text="Both show the saved cart, and Checkout opens on the phone." />
                 </div>
             </CanvasNode>

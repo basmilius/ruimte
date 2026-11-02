@@ -64,7 +64,11 @@ const GROUPS: readonly { readonly label: string | null; readonly items: readonly
 const ROWS = [
     { label: 'Agents may delete any view or node', description: 'When off, an agent deletes only the views and nodes it created.', on: false },
     { label: 'Agents may reach all open projects', description: 'Agents in one project can read your other open projects and start agents there.', on: false },
-    { label: 'Continue after a usage limit', description: 'A chat stopped by a usage limit continues once it resets.', on: true },
+    {
+        label: 'Continue after a usage limit',
+        description: 'A chat stopped by a usage limit continues once it resets. A turn that failed on an overloaded model tries again later.',
+        on: true
+    },
     { label: 'Visual replies', description: 'A chart, table or mockup above a reply. When off, agents answer in text.', on: true }
 ] as const;
 

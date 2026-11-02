@@ -49,11 +49,11 @@ function ChatScene() {
                         <Reveal shown={step >= 1}>
                             <ToolRow tool="read" label="Read" detail="src/cart.ts" />
                             <ToolRow tool="edit" label="Edit" detail="src/cart.ts" />
-                            <ToolRow tool="bash" label="Ran" detail="bun test" />
+                            <ToolRow tool="bash" label="Bash" detail="bun test" />
                         </Reveal>
                         <AssistantText shown={step >= 2} text="Saved carts work and all 50 tests pass. I'll push the branch now." />
                         <Reveal shown={step === 4}>
-                            <ToolRow tool="bash" label="Ran" detail="git push origin saved-carts" />
+                            <ToolRow tool="bash" label="Bash" detail="git push origin saved-carts" />
                         </Reveal>
                         {status === 'running' && <WorkingRow seconds={step * 8 + 5} />}
                     </div>

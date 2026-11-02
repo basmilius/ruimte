@@ -51,7 +51,7 @@ function DelegationScene() {
             <CanvasNode rect={LEAD} kind="chat" agent title="Slow checkout" status={step === 3 ? 'idle' : 'running'}>
                 <div className="space-y-3 px-4 py-3">
                     <UserBubble>Checkout takes 4 seconds. Find out why.</UserBubble>
-                    <ToolRow tool="bash" label="Started" detail="2 agents" />
+                    <ToolRow tool="bash" label="Team" detail="--label Slow checkout --roles … --task" />
                     <AssistantText shown={step === 3} text="Load the cart once and batch the shipping request. Both agents found the same waste." />
                 </div>
             </CanvasNode>

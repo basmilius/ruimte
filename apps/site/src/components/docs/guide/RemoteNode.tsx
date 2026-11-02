@@ -45,13 +45,13 @@ function RemoteNodeScene() {
             <CanvasNode rect={CHAT} kind="chat" agent title="Saved carts" status="idle">
                 <div className="flex flex-col gap-3 px-4 pt-4">
                     <UserBubble>Run the full test suite on build-box, it is faster there.</UserBubble>
-                    <ToolRow tool="bash" label="Started" detail="1 agent on build-box" />
+                    <ToolRow tool="bash" label="Agent" detail="claude --machine build-box --task --prompt …" />
                     <AssistantText shown text="The tests run on build-box. I pick up the result when it is done." />
                 </div>
             </CanvasNode>
             <CanvasNode rect={REMOTE_CHAT} kind="chat" agent title="Full test suite" status={step === 0 ? 'running' : 'idle'} actions={<MachinePill />}>
                 <div className="flex flex-col gap-3 px-4 pt-4">
-                    <ToolRow tool="bash" label="Ran" detail="bun test" live={step === 0} />
+                    <ToolRow tool="bash" label="Bash" detail="bun test" live={step === 0} />
                     <AssistantText shown={step === 1} text="All 312 tests pass. The branch is ready to bring back." />
                 </div>
             </CanvasNode>

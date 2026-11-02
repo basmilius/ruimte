@@ -12,15 +12,15 @@ export const metadata = { title: 'Terminals' };
 
 Press <Shortcut keys="Alt+T" /> on a canvas, or run **New terminal view** from the command palette. It opens your login shell in the project folder, with 10,000 lines of scrollback.
 
-Closing the window or opening the project on another device keeps the screen and scrollback. When the shell exits, click **Restart**.
+The screen and scrollback stay when you close the window or open the project on another device. When the shell exits, click **Restart**.
 
 ## Run an agent in a terminal
 
-Choose **Terminal** for a CLI under Agents on an empty canvas, or run **New Claude Code terminal** (or another CLI) from the command palette. You type, approve and answer in the CLI's own interface.
+Click a CLI's tile under Agents on an empty canvas, or run **New Claude Code terminal** (or another CLI) from the command palette. You type, approve and answer in the CLI's own interface.
 
 <TerminalAgent />
 
-The header shows the status of the agent:
+The header shows the agent's status:
 
 | Status | Meaning |
 | --- | --- |
@@ -41,9 +41,9 @@ New terminal agents start in the permission mode set under Settings, Agents, Ter
 
 ## Links, ports and files
 
-- Hover a link to see its address. <Shortcut keys="Mod" />-click opens it. Settings, Terminal, Open terminal links in picks your system browser (the default) or a browser node beside the terminal.
-- A `localhost` link opens only when the terminal's machine is the computer in front of you.
-- On a Mac, a terminal shows a badge such as `:5173` for each port its programs listen on. Click the badge to open the page in a browser node beside the terminal.
+- Hover a link to see its address. <Shortcut keys="Mod" />-click opens it. Settings, Terminal, Open terminal links in chooses **External browser** (the default) or **Ruimte**, which opens a browser node beside the terminal.
+- A `localhost` link opens only when the terminal runs on the computer in front of you.
+- On macOS and Windows, a terminal shows a badge such as `:5173` for each port its programs listen on. Click it to open the page in a browser node beside the terminal.
 - Drop a file on a terminal to type its path.
 
 ## Approve a command from a shared view
