@@ -1,4 +1,5 @@
 import { usePaletteHits } from '@/extensions/palette-sources';
+import { useContributions } from '@/extensions/registry';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
@@ -47,6 +48,9 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
     const activeViewId = useDocument((s) => s.activeViewId);
     // The command rows read it with appCommands(); the list only needs to redraw when it moves.
     const prRepos = useCurrentPrRepos();
+    // The same for what extensions add, so a command that came or went while the palette is open shows at once.
+    const extensionCommands = useContributions((s) => s.commands);
+    const extensionActions = useContributions((s) => s.slotEntries);
     const projects = useProjectList((s) => s.projects);
     const currentProjectId = useProject((s) => s.current?.projectId ?? null);
     const currentEndpointId = useProject((s) => s.currentEndpointId);
@@ -121,9 +125,24 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
                     inNewWindow: () => openInNewWindow(endpointId, summary.projectId)
                 };
             });
-        const commands = appCommands(prRepos);
+        const commands = appCommands(prRepos, { commands: extensionCommands, slotEntries: extensionActions });
         return { jumps, viewSwitches, switches, commands };
-    }, [enabled, connected, endpoints, nodesByView, pages, views, activeViewId, projects, currentProjectId, currentEndpointId, prRepos, t]);
+    }, [
+        enabled,
+        connected,
+        endpoints,
+        nodesByView,
+        pages,
+        views,
+        activeViewId,
+        projects,
+        currentProjectId,
+        currentEndpointId,
+        prRepos,
+        extensionCommands,
+        extensionActions,
+        t
+    ]);
 
     const hits = usePaletteHits(query, enabled);
     const fromExtensions: readonly Entry[] = hits.map((hit) => ({

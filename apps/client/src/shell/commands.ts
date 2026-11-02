@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import { runAction } from '@/extensions/action-runs';
 import { useInstalledExtensions } from '@/extensions/loader';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
-import { useContributions } from '@/extensions/registry';
+import { useContributions, type Contributions } from '@/extensions/registry';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
 import {
     isCanvasView,
@@ -302,12 +302,13 @@ function measureCommands(): Command[] {
 }
 
 /* Every row the palette offers besides the jumps, each only while it can act. */
-export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent()): Command[] {
-    return [...coreCommands(prRepos), ...extensionCommands()];
+type ExtensionRows = Pick<Contributions, 'commands' | 'slotEntries'>;
+
+export function appCommands(prRepos: readonly PrRepo[] = prReposOfCurrent(), contributions: ExtensionRows = useContributions.getState()): Command[] {
+    return [...coreCommands(prRepos), ...extensionCommands(contributions)];
 }
 
-function extensionCommands(): Command[] {
-    const { commands, slotEntries } = useContributions.getState();
+function extensionCommands({ commands, slotEntries }: ExtensionRows): Command[] {
     const developing = useInstalledExtensions.getState().installed.some((entry) => entry.dev);
     const outlines: Command[] = developing
         ? [
@@ -322,9 +323,26 @@ function extensionCommands(): Command[] {
 
     return [
         ...outlines,
-        ...commands.filter((command) => command.when?.() ?? true).map((command) => ({ id: command.id, label: command.title, run: () => void command.run() })),
-        ...resolveSlot(slotEntries, 'commandPalette', context).flatMap(({ entry, title }) =>
-            entry.kind === 'action'
+        ...commands
+            .filter((command) => command.when?.() ?? true)
+            .map((command) => ({
+                id: command.id,
+                label: command.title,
+                // Someone else's code, so a throw reaches a person as an action's does.
+                run: () =>
+                    void runAction(
+                        {
+                            id: command.id,
+                            title: command.title,
+                            run: () => command.run(),
+                            ...(command.onFailure === undefined ? {} : { onFailure: command.onFailure })
+                        },
+                        {},
+                        'commandPalette'
+                    )
+            })),
+        ...resolveSlot(slotEntries, 'commandPalette', context).flatMap(({ entry, title, disabled }) =>
+            entry.kind === 'action' && !disabled
                 ? [
                       {
                           id: `extension:${entry.id}`,

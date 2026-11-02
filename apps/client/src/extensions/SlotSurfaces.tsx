@@ -5,7 +5,7 @@ import { Button, ContextMenu, Icon, IconButton, Menu, Pill, Spinner, Tooltip } f
 import { isRunning, nodeIdsOf, runAction, useActionRuns } from '@/extensions/action-runs';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { useContributions, type SlotEntry, type SlotMenuItem, type SlotName } from '@/extensions/registry';
-import { nodeInfoOf, useSlot, type ResolvedEntry } from '@/extensions/slots';
+import { nodeInfoOf, resolveSlot, useSlot, type ResolvedEntry } from '@/extensions/slots';
 import { useCanvas } from '@/state/canvas';
 
 type MenuKit = typeof Menu | typeof ContextMenu;
@@ -41,9 +41,11 @@ function MenuItems({ kit: Kit, items, context, slot }: { kit: MenuKit; items: re
 
         if ('actionId' in item) {
             const action = entries.find((entry) => entry.id === item.actionId);
+            // What the action's own slot here says, when it has one, also whether it can run.
+            const disabled = action === undefined ? false : (resolveSlot([action], slot, context)[0]?.disabled ?? false);
 
             return action === undefined ? null : (
-                <Kit.Item key={action.id} onClick={() => void runAction(action, context, slot)}>
+                <Kit.Item key={action.id} disabled={disabled} onClick={() => void runAction(action, context, slot)}>
                     {action.icon !== undefined && <Icon icon={action.icon} size={14} />} {action.title}
                 </Kit.Item>
             );
@@ -103,7 +105,7 @@ function Widget({ entry, context }: { entry: SlotEntry; context: object }) {
 
 /* One entry in a row of buttons, with words beside its icon or the icon alone. */
 function RowEntry({ resolved, context, slot, words }: { resolved: ResolvedEntry; context: object; slot: SlotName; words: boolean }) {
-    const { entry, title, icon } = resolved;
+    const { entry, title, icon, disabled } = resolved;
 
     if (entry.kind === 'widget') {
         return <Widget entry={entry} context={context} />;
@@ -111,7 +113,7 @@ function RowEntry({ resolved, context, slot, words }: { resolved: ResolvedEntry;
 
     if (entry.kind === 'menu') {
         return (
-            <Menu.Root>
+            <Menu.Root disabled={disabled}>
                 {words ? (
                     <Menu.Trigger render={<Button variant="ghost" size="sm" />}>
                         {icon !== undefined && <Icon icon={icon} size={14} />}
@@ -194,7 +196,7 @@ export function SlotMenuItems({ place, context, kit: Kit = ContextMenu }: { plac
 
                 if (entry.kind === 'menu') {
                     return (
-                        <Kit.SubmenuRoot key={entry.id}>
+                        <Kit.SubmenuRoot key={entry.id} disabled={disabled}>
                             <Kit.SubmenuTrigger>
                                 {icon !== undefined && <Icon icon={icon} size={14} />} {title}
                             </Kit.SubmenuTrigger>
@@ -231,8 +233,8 @@ export function ExtensionNodesSubmenu({ at }: { at: { x: number; y: number } }) 
                 <Icon icon={Blocks} size={14} /> {t('canvasMenu.extensions')}
             </ContextMenu.SubmenuTrigger>
             <ContextMenu.Popup className="min-w-44">
-                {nodes.map(({ entry, title, icon }) => (
-                    <ContextMenu.Item key={entry.id} onClick={() => void runAction(entry, full, 'canvasMenu')}>
+                {nodes.map(({ entry, title, icon, disabled }) => (
+                    <ContextMenu.Item key={entry.id} disabled={disabled} onClick={() => void runAction({ ...entry, title }, full, 'canvasMenu')}>
                         {icon !== undefined && <Icon icon={icon} size={14} />} {title}
                     </ContextMenu.Item>
                 ))}

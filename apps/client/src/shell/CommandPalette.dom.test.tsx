@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { contribute } from '@/extensions/registry';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useDocument } from '@/state/document';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
@@ -79,6 +80,50 @@ describe('the command palette with an extension', () => {
             expect(ran).toEqual(['zzzqqq']);
         } finally {
             remove();
+        }
+    });
+
+    test('lists a command an extension adds while it is open, leaves out an action that says it cannot run, and says when a command fails', async () => {
+        const failures: string[] = [];
+        const removes = [
+            contribute('slotEntries', {
+                id: 'poc/blocked',
+                kind: 'action',
+                title: 'Blocked qqzz',
+                slots: { commandPalette: () => ({ disabled: 'Not now' }) },
+                run: () => undefined
+            })
+        ];
+
+        try {
+            await openPalette(
+                () => useUi.getState().setPaletteOpen(true),
+                () => rows().length > 0
+            );
+            await act(async () => {
+                removes.push(
+                    contribute('commands', {
+                        id: 'extension:poc/late',
+                        title: 'Late qqzz',
+                        run: () => {
+                            throw new Error('It broke');
+                        },
+                        onFailure: (text) => failures.push(text)
+                    })
+                );
+            });
+            await type('qqzz');
+            await until(() => labels().some((label) => label.includes('Late qqzz')));
+
+            expect(labels().some((label) => label.includes('Blocked qqzz'))).toBe(false);
+
+            await pressKey(field()!, 'Enter');
+            await until(() => failures.length === 1);
+
+            expect(failures).toEqual(['It broke']);
+            expect(useToasts.getState().toasts.some((toast) => toast.title === 'Late qqzz' && toast.description === 'It broke')).toBe(true);
+        } finally {
+            removes.forEach((remove) => remove());
         }
     });
 });

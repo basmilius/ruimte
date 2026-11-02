@@ -814,7 +814,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             title: string;
             search: (query: string) => Promise<readonly { id: string; title: string; detail?: string; run: () => void }[]>;
         }) {
-            add('paletteSources', { id: `${id}/${source.id}`, title: source.title, search: source.search });
+            add('paletteSources', { id: `${id}/${source.id}`, title: source.title, search: source.search, onFailure: reportFailure(source.id) });
         },
         defineSlashCommand(command: { name: string; description: string; run: (args: string) => string | Promise<string> }) {
             add('slashCommands', {
@@ -877,7 +877,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             });
         },
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
-            add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run });
+            add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run, onFailure: reportFailure(command.id) });
         },
         defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }) {
             if ('fields' in settings || 'groups' in settings) {

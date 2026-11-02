@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { runAction } from '@/extensions/action-runs';
 import { useContributions, type PaletteSourceContribution as Source } from '@/extensions/registry';
 
 const SEARCH_WAIT_MS = 150;
@@ -29,7 +30,23 @@ export function usePaletteHits(query: string, enabled: boolean): readonly Palett
 
         let current = true;
         const search = async (source: Source): Promise<void> => {
-            const hits = (await source.search(query)).map((hit) => ({ ...hit, id: `${source.id}/${hit.id}`, source: source.title }));
+            const hits = (await source.search(query)).map((hit) => ({
+                ...hit,
+                id: `${source.id}/${hit.id}`,
+                source: source.title,
+                // Someone else's code, so a throw reaches a person as an action's does.
+                run: () =>
+                    void runAction(
+                        {
+                            id: `${source.id}/${hit.id}`,
+                            title: hit.title,
+                            run: () => hit.run(),
+                            ...(source.onFailure === undefined ? {} : { onFailure: source.onFailure })
+                        },
+                        {},
+                        'commandPalette'
+                    )
+            }));
 
             if (current) {
                 setFound((before) => ({ query, bySource: new Map(before.query === query ? before.bySource : []).set(source, hits) }));

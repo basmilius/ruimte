@@ -99,6 +99,8 @@ export interface CommandContribution {
     title: string;
     when?: () => boolean;
     run: () => void | Promise<void>;
+    // Tells the terminal of `extension dev` why a run failed.
+    onFailure?: (text: string) => void;
 }
 
 /* A place an extension may put something. Ruimte gives each its spot; the extension decides when it shows. */
@@ -133,6 +135,7 @@ export interface PaletteSourceContribution {
     id: string;
     title: string;
     search: (query: string) => Promise<readonly { id: string; title: string; detail?: string; run: () => void }[]>;
+    onFailure?: (text: string) => void;
 }
 
 export interface SlashCommandContribution {
