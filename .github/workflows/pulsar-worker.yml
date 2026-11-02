@@ -1,11 +1,12 @@
 name: Address book
 
-# Starts once CI finished on main, so a red CI starts no runner and sends no mail of its own.
+# CI's `deploys` job starts this once main is green and the address book changed; a person can start it by hand too.
 on:
-    workflow_run:
-        workflows: [CI]
-        types: [completed]
-        branches: [main]
+    workflow_dispatch:
+        inputs:
+            sha:
+                description: The commit to deploy; without one, the newest on main
+                required: false
 
 # One deploy at a time, so two pushes never apply migrations over each other.
 concurrency:
@@ -13,35 +14,7 @@ concurrency:
     cancel-in-progress: false
 
 jobs:
-    gate:
-        if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            actions: read
-            deployments: read
-        outputs:
-            deploy: ${{ steps.gate.outputs.deploy }}
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-              with:
-                  ref: ${{ github.event.workflow_run.head_sha }}
-                  fetch-depth: 0
-            - id: gate
-              uses: ./.github/actions/deploy-gate
-              with:
-                  environment: pulsar-worker
-                  paths: |
-                      .github/workflows/pulsar-worker.yml
-                      scripts/deploy-pulsar-worker*
-                      apps/pulsar-worker
-                      packages/pulsar
-                      packages/telemetry
-                      bun.lock
-
     deploy:
-        needs: gate
-        if: needs.gate.outputs.deploy == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -49,7 +22,7 @@ jobs:
         # The API token only reaches the steps that deploy, never the install, the typecheck or the tests.
         env:
             CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
-            DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+            DEPLOY_SHA: ${{ inputs.sha || github.sha }}
         defaults:
             run:
                 working-directory: apps/pulsar-worker

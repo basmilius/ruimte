@@ -230,3 +230,65 @@ jobs:
         env:
           RESULTS: ${{ toJSON(needs.*.result) }}
         run: jq -e 'all(.[]; . == "success" or . == "skipped")' <<< "$RESULTS"
+
+  # Once main is green, starts only the deploys whose files changed since they last shipped, so a deploy
+  # never waits on CI, a red CI starts none, and an unchanged service shows no run at all.
+  deploys:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+      deployments: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: site
+        uses: ./.github/actions/deploy-gate
+        with:
+          environment: site
+          sha: ${{ github.sha }}
+          paths: |
+            apps/site
+            packages/extension
+            bun.lock
+            .github/workflows/site.yml
+      - id: maps
+        uses: ./.github/actions/deploy-gate
+        with:
+          environment: maps-worker
+          sha: ${{ github.sha }}
+          paths: |
+            .github/workflows/maps-worker.yml
+            apps/maps-worker
+            packages/pulsar
+            bun.lock
+      - id: pulsar
+        uses: ./.github/actions/deploy-gate
+        with:
+          environment: pulsar-worker
+          sha: ${{ github.sha }}
+          paths: |
+            .github/workflows/pulsar-worker.yml
+            scripts/deploy-pulsar-worker*
+            apps/pulsar-worker
+            packages/pulsar
+            packages/telemetry
+            bun.lock
+      - name: Start the deploys that ship
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SITE: ${{ steps.site.outputs.deploy }}
+          MAPS: ${{ steps.maps.outputs.deploy }}
+          PULSAR: ${{ steps.pulsar.outputs.deploy }}
+        run: |
+          start() {
+            if [ "$1" = true ]; then
+              gh workflow run "$2" --ref main -f sha="$GITHUB_SHA"
+            fi
+          }
+          start "$SITE" site.yml
+          start "$MAPS" maps-worker.yml
+          start "$PULSAR" pulsar-worker.yml

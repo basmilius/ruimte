@@ -46,8 +46,12 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       full: true
+    # CI's `deploys` job asks for these; it runs only for a push to main, never for a tag, but a called
+    # workflow is refused outright when a job asks for more than its caller grants.
     permissions:
       contents: read
+      actions: write
+      deployments: read
 
   # The client is the same bundle on every platform, so it is built once: one set of debug ids and
   # source maps under `ruimte@<version>`, matching the page every build ships.
