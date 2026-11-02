@@ -485,6 +485,30 @@ describe('the client API', () => {
         }
     });
 
+    test('names the open group a node sits in, the innermost one, and each linked agent once', () => {
+        const node = (id: string, kind: string, x: number, y: number, w: number, h: number) => ({ id, kind, title: id, x, y, w, h }) as CanvasNode;
+
+        focusedCanvas().setState({
+            nodes: {
+                outer: node('outer', 'group', 0, 0, 1000, 1000),
+                inner: node('inner', 'group', 100, 100, 400, 400),
+                one: node('one', 'chat', 150, 150, 100, 100),
+                two: node('two', 'chat', 700, 700, 100, 100)
+            },
+            edges: [
+                { id: 'e1', from: 'one', to: 'two' },
+                { id: 'e2', from: 'two', to: 'one' }
+            ] as never
+        });
+
+        try {
+            expect(nodeInfoOf('one')).toMatchObject({ groupId: 'inner', linkedTo: ['two'] });
+            expect(nodeInfoOf('two')).toMatchObject({ groupId: 'outer', linkedTo: ['one'] });
+        } finally {
+            focusedCanvas().setState({ nodes: {}, edges: [] });
+        }
+    });
+
     test('names the CLI a chat runs on by its thread when the chat stores none', () => {
         const chat = { id: 'chat-1', kind: 'chat', title: 'Chat', x: 0, y: 0, w: 400, h: 300 } as CanvasNode;
 

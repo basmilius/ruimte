@@ -5,6 +5,7 @@ import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type
 import { useShallow } from 'zustand/react/shallow';
 import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';
+import { membersOf } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -125,7 +126,10 @@ function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
         };
     }
 
-    const group = Object.values(canvas.nodes).find((each) => each.kind === 'group' && each.memberIds?.includes(id));
+    // An open group keeps no members; what has its center inside the frame is in it, and of nested groups the innermost.
+    const group = Object.values(canvas.nodes)
+        .filter((each) => each.kind === 'group' && each.id !== id && membersOf(each, canvas.nodes, {}).includes(id))
+        .sort((one, other) => one.w * one.h - other.w * other.h)[0];
     const raw = node.raw as { kind?: unknown; extension?: unknown; type?: unknown } | undefined;
     const agent = agentOf(node, group, sources);
 
@@ -138,7 +142,8 @@ function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
         groupId: group?.id ?? null,
         viewId: canvas.viewId ?? '',
         machine: node.machine ?? null,
-        linkedTo: canvas.edges.flatMap((edge) => (edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : [])),
+        // Two agents linked both ways are two edges, and one link.
+        linkedTo: [...new Set(canvas.edges.flatMap((edge) => (edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : [])))],
         ...(agent === undefined ? {} : { agent }),
         ...(node.path === undefined ? {} : { path: node.path }),
         ...(node.url === undefined ? {} : { url: node.url }),
