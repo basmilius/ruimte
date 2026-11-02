@@ -7,6 +7,7 @@ import { transport } from '@/transport';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
 import { refreshExtensionTheme } from '@/extensions/themes';
 import { create } from 'zustand';
+import type { LoadedExtension } from '@/extensions/host/client-api';
 
 export interface ExtensionsState {
     installed: readonly InstalledClientExtension[];
@@ -17,6 +18,12 @@ export interface ExtensionsState {
 export const useInstalledExtensions = create<ExtensionsState>(() => ({ installed: [], failures: {} }));
 
 const loaded = new Map<string, string>();
+/*
+ * Each version as it was first loaded, by its base. A module the page already ran is never run again for the same
+ * address, so turning a version on again imports its entry under a new one and hands it the same extension: a chunk
+ * kept from before still holds the client it was given then.
+ */
+const versions = new Map<string, { extension: LoadedExtension; imports: number }>();
 let safeMode = false;
 let stopActivation: (() => void) | null = null;
 
@@ -82,12 +89,20 @@ export async function syncExtensions(): Promise<void> {
             continue;
         }
 
-        registerExtension({ manifest: entry.manifest, base: entry.base, iconUrl: extensionIconUrl(entry), dev: entry.dev, disposers: [], settings: null });
+        const version = versions.get(entry.base) ?? {
+            extension: { manifest: entry.manifest, base: entry.base, iconUrl: extensionIconUrl(entry), dev: entry.dev, disposers: [], settings: null },
+            imports: 0
+        };
+        const address = `${entry.base}client/index.js${version.imports === 0 ? '' : `?load=${version.imports}`}`;
+
+        version.imports += 1;
+        versions.set(entry.base, version);
+        registerExtension(version.extension);
         loaded.set(entry.manifest.id, entry.base);
 
         try {
             await linkStylesheet(entry.manifest.id, entry.base);
-            await import(/* @vite-ignore */ `${entry.base}client/index.js`);
+            await import(/* @vite-ignore */ address);
             useInstalledExtensions.setState(({ failures: { [entry.manifest.id]: _cleared, ...failures } }) => ({ failures }));
         } catch (e) {
             forgetExtension(entry.manifest.id);

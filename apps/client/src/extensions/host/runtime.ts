@@ -41,7 +41,8 @@ export function registerExtension(extension: LoadedExtension): void {
 export function forgetExtension(id: string): void {
     const extension = extensions.get(id);
 
-    for (const dispose of extension?.disposers ?? []) {
+    // Emptied, since the same extension comes back when it is turned on again.
+    for (const dispose of extension?.disposers.splice(0) ?? []) {
         dispose();
     }
 
