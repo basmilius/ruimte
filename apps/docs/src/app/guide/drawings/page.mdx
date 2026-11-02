@@ -1,0 +1,25 @@
+export const metadata = { title: 'Drawings and diagrams' };
+
+# Drawings and diagrams
+
+<p className="lead">Sketch boxes and arrows next to your code, or keep a diagram an agent can write and read.</p>
+
+## Drawings
+
+A drawing is a view of its own. Make one with **New drawing view** in the command palette, or from the new view menu (`Cmd+T`).
+
+The toolbar holds the tools: select, pan, rectangle, diamond, ellipse, arrow, line, freehand, text, sticky note and eraser. **Keep tool** keeps the chosen tool after you draw a shape. While you are not typing text, each tool also has a single key.
+
+Each shape has a stroke and fill color, a stroke width and style, a fill pattern and a sloppiness, from a neat architect's line to a loose cartoon. Text comes in a hand, sans or mono font.
+
+**Export** copies or saves the drawing, or the selection, as PNG or SVG, with or without its background.
+
+## Diagrams
+
+A diagram is a graph of labeled nodes and their connections. You can arrange it by hand, and an agent can write one for you. **Open JSON** shows the diagram as data, and you export it as PNG, SVG or JSON.
+
+## Show them to an agent
+
+**Show drawing on canvas** and **Show diagram on canvas** put a drawing or diagram on a canvas as a node. Draw a line from it into a chat or terminal, and the agent reads what you drew: the shapes, their text and the arrows between them, in the order you meant them.
+
+Like any view, a drawing or diagram is private until you share it. A shared one goes into the `.ruimte` folder you commit.

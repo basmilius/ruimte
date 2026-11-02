@@ -1,0 +1,66 @@
+import { GridMockup } from '@/components/mockups/GridMockup';
+
+export const metadata = { title: 'Projects and views' };
+
+# Projects and views
+
+<p className="lead">A project is a folder with a sidebar of views. You open views one at a time, or several at once in a grid.</p>
+
+## The sidebar
+
+The sidebar lists the views of the open project. A terminal or chat shows the status of its agent beside its name, and a dot tells you when it needs you. Below the views, **Needs you** lists what waits for an answer. See [Needs you](/guide/attention).
+
+Press `Cmd+B` to hide or show the sidebar. Drag a row to reorder it, or add a separator with an optional label to split the list into parts.
+
+## Kinds of view
+
+Press `Cmd+T` for a new view. A view is one of these:
+
+- **Canvas.** Nodes side by side. Most views are a canvas. See [The canvas](/guide/canvas).
+- **Terminal.** One shell or terminal agent, full size. See [Terminals](/guide/terminals).
+- **Chat.** One AI chat, full size. See [AI chats](/guide/chats).
+- **Browser.** One web page.
+- **File.** One file in the editor. See [Files and the editor](/guide/files).
+- **Drawing** and **Diagram.** See [Drawings and diagrams](/guide/drawings).
+- **Design.** Pages an agent designs for you. You comment on them, edit text and styles, draw on them or change their tweaks, and send the result back to the chat. **Implement** starts a chat that builds the page into the project.
+
+A node on a canvas can become a view of its own with **Open as view**, and its session keeps running. The other way around, **Show on canvas** puts a view on a canvas.
+
+View settings (right-click a row) change a view's name and icon. **Delete view** removes it.
+
+## Several views at once
+
+A window shows one view, or a grid of up to three by three cells.
+
+- `Cmd+\` splits the current cell to the right, `Cmd+Shift+\` splits it down.
+- `Cmd+Shift+Enter` maximizes a cell, and the same keys restore the split.
+- `Cmd+W` closes a cell.
+- Drag a cell's title to move it to another cell.
+
+A cell can also hold tabs. **Open in new tab** adds a view beside the active one, and `Ctrl+Tab` moves between tabs. Moving a tab keeps its session running. Opening a view that is already placed takes you to it.
+
+<GridMockup />
+
+`Cmd+1` to `Cmd+9` open the first nine views in the sidebar. `Cmd+Shift+[` and `Cmd+Shift+]` go to the previous and next view.
+
+## Share views with your team
+
+A new view is yours alone. **Share with team** moves it into the part of the `.ruimte` folder you commit, so everyone who clones the project gets it. **Make private** takes it back. Sharing works per view: the whole view goes, with everything on it.
+
+What you have open, where the camera of a canvas stands and how you arranged your grid stay on your computer. A teammate gets the shared views, never your layout.
+
+Ruimte notices when a shared file changes on disk, for example after a `git pull`. If you had unsaved changes at that moment, it asks whether to keep yours or take the file.
+
+## Projects and windows
+
+`Cmd+K` opens the command palette. Type to jump to a view or a node, run a command, or open another folder as a project. Settings, General, Projects shows the projects of a window as tabs in the toolbar, or in a menu.
+
+A project is open in one window at a time. `Cmd+Shift+N` opens a new window, and **Move project to new window** takes the current project along.
+
+Project settings (from the project menu) change its name, icon and color. They also pick which of your accounts per agent CLI the project offers, which only applies to you.
+
+**Close project** ends its terminals and agents, unless another window or device still has it open. The project then moves to Recent on the start screen. Closing a window is not closing its project.
+
+## Chats outside a project
+
+Not every question needs a folder. `Cmd+Option+N` starts a new chat in **Chats**, a place for questions and quick tasks. When a chat grows into real work, the agent may suggest it becomes a project, and **Make project from chat** moves it into a folder.

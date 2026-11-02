@@ -1,0 +1,32 @@
+export const metadata = { title: 'Voice' };
+
+# Voice
+
+<p className="lead">Speech to text dictates into any text field with a model on your computer. Voice Control is a conversation with your workspace, on a cloud model.</p>
+
+## Speech to text
+
+Dictate into a chat, a note, a field or a terminal. Recognition runs on your computer: Ruimte never uploads or saves audio, and you need no account or API key.
+
+Turn it on under Settings, Voice. The first time, Ruimte downloads a speech model of 2.6 GB. Turning Speech to text off keeps the model; **Remove model** deletes it.
+
+Press `Cmd+Shift+D` to start and stop dictation. You see a live transcript while you speak. In a terminal, the text waits for you to **Paste into terminal**, and it never presses `Enter` for you.
+
+Speech to text works in the desktop app. Settings, Voice also picks the microphone and the language it listens for.
+
+## Voice Control
+
+Voice Control talks with you about your workspace. Ask what is on screen, switch to another view, add a note, open a terminal, start a chat or send a message to one.
+
+It runs on OpenAI's live voice model, with your own OpenAI API key. Enter the key under Settings, Voice, Voice Control. The key stays on your machine and goes only to OpenAI.
+
+Press `Cmd+Shift+M` to start or end a conversation, or hold it to talk. The Voice Control panel shows what you said, what it answered and every action it took. A note it added can be undone from there.
+
+A few limits keep Voice Control in check:
+
+- It works in the current project of one machine.
+- A chat it starts runs in the Supervised mode at most.
+- It asks before it clears a chat, every time. **Confirm deletions** also makes it ask before it deletes views or nodes.
+- The machine never keeps the audio of a conversation.
+
+Settings, Voice also chooses its voice and the language it speaks.

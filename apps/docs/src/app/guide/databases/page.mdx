@@ -1,0 +1,36 @@
+export const metadata = { title: 'Databases' };
+
+# Databases
+
+<p className="lead">The Databases panel connects to SQLite and MySQL or MariaDB. You browse tables, edit rows and run SQL, and agents read the same connections.</p>
+
+## Connections
+
+Open the panel with **Toggle databases panel** in the command palette, then choose **Add connection**. The panel also lists database containers that run on the machine, which you add with one click.
+
+A connection is yours until you **Share with team**. A shared connection is saved with the project for everyone who works on it, without its password. A SQLite file outside the project folder cannot be shared.
+
+Ruimte keeps passwords encrypted on your computer where it can. Where it cannot, it says so and keeps them only until it quits.
+
+## Tables and SQL
+
+- Open a table to see its rows. Filter them, edit them, and submit your edits when you are done. Unsubmitted edits keep their tab open.
+- Open a table's structure, or design a new table.
+- **New console** opens a SQL console for a connection.
+- A table or structure can be a view of its own, saved in the sidebar. A shared view needs a shared connection.
+
+In a `.sql` file, and in SQL inside PHP strings, the editor checks your SQL against the schema of a connection. **SQL of this file**, in the editor, picks which connection a file reads, or sets one for the whole project. **Read schema again** picks up changes to the database.
+
+## What agents may do
+
+Agents use the same connections, through **Manage connections**:
+
+| Setting | What agents may do |
+| --- | --- |
+| Off | Nothing with this connection. |
+| Read only | Run one SELECT or WITH query at a time, on a read-only session. This is the default. |
+| Read and write | Change data as well. |
+
+Only someone at the machine itself can allow writing, and an agent in the Supervised mode never writes. An agent can show the rows it read as a table above its reply.
+
+The machine never stores a connection's password. Agents can use a connection with a password only while you have the project open somewhere.

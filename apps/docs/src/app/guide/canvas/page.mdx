@@ -1,0 +1,77 @@
+import { CanvasMockup } from '@/components/mockups/CanvasMockup';
+
+export const metadata = { title: 'The canvas' };
+
+# The canvas
+
+<p className="lead">A canvas holds nodes side by side. Lines between them decide what an agent may read and which page or device it works in.</p>
+
+<CanvasMockup />
+
+## Nodes
+
+Add a node from the empty canvas, by right-clicking the canvas, from the command palette (`Cmd+K`), or with a shortcut:
+
+| Shortcut | Node |
+| --- | --- |
+| `Option+T` | Terminal |
+| `Option+C` | Chat |
+| `Option+B` | Browser |
+| `Option+N` | Note |
+| `Option+G` | Group |
+
+Double-click the canvas to type text where you clicked.
+
+These are the kinds of node:
+
+- **Terminal.** A shell, or an agent CLI in its own interface. See [Terminals](/guide/terminals).
+- **Chat.** An AI chat. See [AI chats](/guide/chats).
+- **Browser.** A real web page. See [Browsers and devices](/guide/browsers-and-devices).
+- **Note.** Markdown you write. **Lock to preview** shows it rendered and keeps clicks from opening the editor. **Start agent from note** opens an agent with the note as its brief.
+- **Text.** A label on the canvas, in a sans, hand or mono font.
+- **File.** A file from the project, in the editor. Drop a file on the canvas to add one.
+- **Group.** A frame around nodes. Drag nodes in or out, collapse it, or use **Arrange group** to line up what it holds.
+- **Device.** A simulator, emulator or phone. See [Browsers and devices](/guide/browsers-and-devices).
+- **Drawing** and **Diagram.** A drawing or diagram view, shown on the canvas.
+- **Routine.** A routine of the project with its latest runs. See [Routines and Output](/guide/routines).
+
+Right-click a node for more: **Duplicate**, **Color**, **Open as view**, **Set as default size** and, for an agent, its conversation and worktree.
+
+## Lines
+
+A line is how an agent reaches another node. Without one, an agent cannot read or operate anything else on the canvas.
+
+To draw a line, move the pointer to the side of a node until a dot appears, then drag to another node. Hold `Shift` for a straight or diagonal line, and press `Escape` to cancel. You can also right-click a node, choose **Connect to…**, and click the other node.
+
+What a line does depends on what it joins:
+
+- **A line into an agent** gives it context. It is drawn in the accent color, with a dot at the end of the agent that reads. The agent can read the note, file, terminal output, chat or drawing at the other end whenever it needs to.
+- **A line between an agent and a browser or device** lets the agent work there. It is drawn in a neutral color, with a point at the page or device. The agent can send the page to an address and take a picture of it, or see and tap the device.
+- **A line from an agent to an agent it opened** carries a task. It is dashed while the task is open. See [Agents working together](/guide/delegation).
+
+Lines never let an agent type into another terminal or close another node. A terminal at the other end of a line stays read-only for the agent.
+
+In a chat you can also point at a node with `#`, followed by its name. The agent may then read and use that node as if a line ran to it. See [AI chats](/guide/chats).
+
+Select a line to change its style: arrows at either end, its direction and its color.
+
+## Moving around
+
+- Scroll with two fingers, hold `Space` and drag, or drag with the middle mouse button to pan.
+- Pinch or use `+` and `-` to zoom. `Cmd+0` goes to 100%.
+- `Shift+1` fits everything, `Shift+2` fits the selection and `Cmd+Shift+2` fits the selected node.
+- `Option` plus an arrow key selects the neighboring node. `Enter` gives it the keyboard, and `Escape` hands the keyboard back to the canvas.
+- `Cmd+Option+[` and `Cmd+Option+]` step back and forward through where the camera was.
+
+Nothing moves the camera behind your back. The canvas changes only what you change.
+
+## Arranging
+
+- Drag a node by its header. Resize it from the handles just outside its frame.
+- Drag across the background to select several nodes. `Cmd+A` selects all, `Cmd+G` groups the selection, and `Backspace` deletes it.
+- Hold `Option` to see handles in the gaps between neighboring nodes. Dragging one moves every equal gap at once.
+- `Cmd+Z` and `Cmd+Shift+Z` undo and redo.
+
+The dock under the canvas holds zoom and locks. A lock keeps the canvas from panning or zooming, or nodes from moving or resizing. Buttons and shortcuts still work while something is locked.
+
+**Save layout as** (in the dock, under Layouts) remembers where every node sits, so you can return to it later.

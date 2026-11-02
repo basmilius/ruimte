@@ -1,0 +1,35 @@
+export const metadata = { title: 'Computer use' };
+
+# Computer use
+
+<p className="lead">On a Mac, computer use lets an agent see and operate another app, with a cursor of its own. It only reaches the apps you let it into.</p>
+
+## Turn it on
+
+Computer use is off until you turn it on, per machine. Open Settings, Agents, Computer use and choose **Allow computer use on this Mac**. macOS then asks for two permissions:
+
+- **Accessibility** lets agents read and press what is on the screen.
+- **Screen Recording** lets agents see the window they work in.
+
+**Open System Settings** takes you there. Screen Recording takes effect when you come back to Ruimte.
+
+## Let an agent into an app
+
+The first time an agent wants an app, Ruimte asks: **Let an agent use Mail?** (or whichever app).
+
+- **Allow this time** lasts until the agent's turn ends.
+- **Always allow** lets every agent on this Mac use that app from then on.
+- **Deny** refuses.
+
+It asks in every permission mode, also Full access. Settings, Agents, Computer use lists the apps you always allow, and **Remove** takes one off the list.
+
+An agent never operates a terminal app, whatever you allowed, since a terminal runs commands. Letting an agent into Ruimte itself is possible, at your own risk. There it can do anything you can.
+
+## While it works
+
+The agent works with a cursor of its own, behind your windows where it can, so you can keep working. One agent operates the Mac at a time.
+
+- `Option+Space` pauses it, so you can take over.
+- `Option+Escape` stops it.
+
+While an agent operates the Mac, Ruimte shows it with **Pause**, **Resume** and **Stop session** buttons.

@@ -1,0 +1,43 @@
+export const metadata = { title: 'Launches' };
+
+# Launches
+
+<p className="lead">Launches are a project's commands, such as a dev server or a test suite. You start them with one key, and agents can start the ones you approved.</p>
+
+## Kinds of launch
+
+| Kind | What it is |
+| --- | --- |
+| Service | Keeps running, like a web server. With an address, it counts as running once that port answers. |
+| Task | Runs until done, like the tests or a build. |
+| Group | Starts the launches you check together. |
+
+## Make launches
+
+Run **Edit launches…** from the command palette. Each launch has a name, a kind, a command, the folder it runs in, an address for a service, and environment variables.
+
+Ruimte also looks for commands the project already has: the scripts in `package.json` and `composer.json`, and run configurations. **Review and import…** turns the ones you pick into launches.
+
+**Launch when the project opens** starts a launch as soon as you open the project. **Share with team** puts the launch in the project file your team commits. A shared launch should carry no secrets in its environment.
+
+## Secrets
+
+Mark an environment variable as **Secret, kept on this machine**. Its value stays on your machine and never goes into a project file.
+
+An agent that needs a secret for a launch, such as an API key, can ask you for it. A private card in its chat asks you to type the value. Only the launch gets it, never the agent.
+
+## Run and stop
+
+The Launches panel lists every launch with its state and its output. `Cmd+Option+R` runs the chosen launch, and `Cmd+Option+.` stops it. If a service's port is already in use by another launch, Ruimte offers to stop that one first. **Force stop** ends a launch that does not stop by itself.
+
+## Approval
+
+A command from a project file only runs on your machine after you approve it. The first run of a launch asks **Run a command from the project file?** and shows the command, its folder and its environment. Saving a launch in the editor approves it too.
+
+An approval holds for the launch as it stands. When someone changes its command, folder or environment, for example through a `git pull`, it asks again.
+
+Agents can add and change launches, but never approve them. An agent can start, restart and stop only a launch you approved. When it tries another one, its chat shows a card that asks you.
+
+## After a worktree chat finishes
+
+You can pick one task of the project to run in a chat's worktree each time that chat ends a turn, such as the tests. Choosing the task approves it for this project's worktrees. The chat gets a note with the result, and the run never wakes it.

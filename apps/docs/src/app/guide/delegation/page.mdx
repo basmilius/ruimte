@@ -1,0 +1,68 @@
+import { DelegationMockup } from '@/components/mockups/DelegationMockup';
+
+export const metadata = { title: 'Agents working together' };
+
+# Agents working together
+
+<p className="lead">Agents can open other agents, hand them tasks and wake up when the work is done. They work on the canvas where you can watch, within limits you set.</p>
+
+## What an agent can reach
+
+Every terminal and chat in Ruimte gets a command named `ruimte-context`, and Ruimte tells the agent how to use it. You never need to run it yourself. Run `ruimte-context help` in a terminal of Ruimte if you are curious what it offers.
+
+With it, an agent can:
+
+- read the nodes that have a line into it, or that you pointed at with `#`
+- add notes, terminals, chats, browsers and groups to its canvas, and draw lines between them
+- open other agents and give them tasks
+- send a message to another terminal or chat of the project
+- drive a browser or device it has a line to
+- publish results to Output
+- add launches and routines, which then wait for your approval
+
+An agent never types into another terminal, never closes another session, and never approves anything for you.
+
+## Delegating a task
+
+Ask an agent to split up work, and it can open new agents for the parts. Each one appears on the canvas beside it, with a line from the parent into the child. The line is dashed while the task is open.
+
+<DelegationMockup />
+
+The parent goes on with its own work, or waits. When a child finishes, the parent wakes up once with the result. A parent that gave several tasks at once wakes once, when they all finished.
+
+A few rules keep this in check:
+
+- A child never gets a wider permission mode than its parent.
+- Agents nest at most two levels below the one you started.
+- A task counts as done only when the child is really done, including any work it left running in the background.
+- A child that stops on a usage limit pauses its task. The parent sleeps on until the child finishes after the limit resets.
+- A child's question or permission request comes to you. Its parent may answer a question for it, but approvals always stay with you.
+- Stopping or deleting an agent also ends the agents it opened. Their nodes and work so far stay on the canvas.
+
+## What wakes a chat
+
+Three things wake an AI chat that is not working:
+
+- a task it gave that finished
+- a message another agent sent it
+- a pull request you asked it to watch, when its checks finish or a review comes in (see [Git and worktrees](/guide/git#pull-requests))
+
+Messages between agents stop waking each other after a few steps, so two agents cannot keep each other busy forever. A terminal is never woken, since that would mean typing into it. A terminal agent hears a message at the start of its next turn, or sees it printed on its screen.
+
+## Worktrees
+
+An agent can open a child in a worktree of its own. That is a separate checkout on a new branch, so two agents never edit the same files. The child's node shows its branch.
+
+When the child is done, the parent can merge its worktree into a branch that has no uncommitted changes. If the merge runs into a conflict, the parent gets it back to resolve. The worktree and its branch stay until you remove them. See [Git and worktrees](/guide/git#worktrees).
+
+## A chat that arranges a canvas
+
+A chat that is a view of its own, not a node, can lay out a canvas you name. Ask it to set up a canvas, and it adds nodes, draws lines and uses the browsers and devices there, as you would.
+
+## What you decide
+
+Under Settings, Agents, What agents may do, per machine:
+
+- **Agents may delete any view or node.** When off, an agent deletes only the views and nodes it created.
+- **Agents may reach all open projects.** When on, an agent can read your other open projects, message their terminals and chats, and start agents there.
+- **Continue after a usage limit** and **Visual replies**, described under [AI chats](/guide/chats#usage-limits) and [Plans, forks and visuals](/guide/plans-and-forks#visual-replies).

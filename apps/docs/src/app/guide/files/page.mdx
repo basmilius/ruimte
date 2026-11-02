@@ -1,0 +1,57 @@
+export const metadata = { title: 'Files and the editor' };
+
+# Files and the editor
+
+<p className="lead">The Files panel shows your project folder. Files open in an editor with language servers, and agents' changes show up right in the code.</p>
+
+## The Files panel
+
+Open it with **Toggle files panel** in the command palette, or from the rail at the edge of the window. It shows the project folder as a tree. Type to filter it, and show or hide hidden files.
+
+Right-click a file or folder to create, rename or delete, or to copy its name, path or relative path. **Copy mentions** copies files as `@` references to paste into a chat. On a Mac, `Space` opens Quick Look for the selected file.
+
+## Opening a file
+
+Click a file to open it in the editor, as a tab or a view. Drop it on a canvas to make it a node. `Cmd+K` finds a file by name, and `Cmd+Shift+F` searches the text of every file in the folder.
+
+Besides code, Ruimte shows images, PDFs, audio, video, Markdown, HTML pages, tables, 3D models and archives.
+
+## The editor
+
+The editor works with language servers for TypeScript, Vue, PHP, SQL, CSS, Python and more. You get completion, problems as you type, go to definition, find usages, rename, code actions, refactorings, organize imports and formatting. **Toggle problems panel** lists the problems of every open file.
+
+Code vision shows above each declaration how often it is used and who last changed it, from git. Lines you have not committed have no author yet. Both are settings under Settings, Editor.
+
+Settings, Editor also holds the font, line wrapping, folding per language, smart keys, live templates and the language servers, which you can restart or update there.
+
+A few keys you will use often:
+
+| Shortcut | What it does |
+| --- | --- |
+| `Cmd+F` | Find in the file |
+| `Cmd+Shift+H` | Find and replace in the file |
+| `Cmd+Option+L` | Format the document |
+| `Cmd+Option+K` | Add the selection to a chat |
+| `Cmd+I` | Inline edit |
+
+Settings, Keyboard lists every editor shortcut.
+
+## Working with agents in the editor
+
+**Add selection to chat** puts the selected code in the draft of a linked chat, or another chat you pick. Nothing is sent until you send it.
+
+**Inline edit** asks an agent to change the selection. It shows the proposal in place, and **Apply** makes the change as one undo step.
+
+When an agent edits a file you have open, Settings, Editor, Agent changes in open files decides what you see:
+
+- **Off** shows nothing extra.
+- **Gutter** marks the lines an agent changed.
+- **Review** lets you go through each change and **Keep** it, **Undo** it or **Comment** on it. An undo or comment becomes a draft for the chat.
+
+**Next agent change** and **Previous agent change** in the command palette step through them.
+
+On a Mac with Apple's on-device model, the editor can explain code, suggest names, and suggest code while you type. `Tab` accepts a suggestion, `Option+]` accepts one word and `Escape` dismisses it. This runs on the Mac and never changes files by itself.
+
+## When a file changes on disk
+
+If a file changes on disk while you have unsaved edits, Ruimte compares the two. Changes that do not overlap are merged. For changes that overlap, you choose **Keep yours**, **Keep theirs** or **Keep both**.
