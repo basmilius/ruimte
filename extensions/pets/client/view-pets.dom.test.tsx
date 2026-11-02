@@ -3,6 +3,7 @@ import { act } from 'react';
 import type { AgentInfo, AgentStatus, ProjectCanvasView, ProjectNode, ProjectView } from '@ruimte/contracts';
 import { startPageHolds } from '@/browser/page-hold';
 import { canvasOfNode } from '@/state/canvas';
+import { useSessions } from '@/state/sessions';
 import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import { chatInfoOf } from '../../../apps/client/testing/chat-info';
 import { FakeMachine } from '../../../apps/client/testing/fake-machine';
@@ -37,6 +38,11 @@ async function openViews(views: ProjectView[]): Promise<{ workspace: FakeWorkspa
     const workspace = await openFakeWorkspace(machine, { views } as never, { activeViewId: views[0].id, views: {} });
     const page = mount();
     await page.renderApp();
+    // A terminal hears its status only once its lazy view attached, which the first test of a run waits for.
+    const terminals = views.filter((view) => view.kind === 'terminal');
+    await until(() =>
+        terminals.every((view) => Object.entries(useSessions.getState().byKey).some(([key, session]) => key.endsWith(`:${view.id}`) && session.attached))
+    );
 
     return { workspace, page };
 }
