@@ -111,8 +111,15 @@ async function cached(link: Link, info: ExtensionInfo, root: string): Promise<{ 
  */
 const heldVersions = new Map<string, () => void>();
 
+// Only a page served over https has locks; without them every window keeps to what it runs itself.
+function pageLocks(): LockManager | null {
+    return (navigator.locks as LockManager | null | undefined) ?? null;
+}
+
 function holdVersions(bases: readonly string[]): void {
-    if (navigator.locks === undefined) {
+    const locks = pageLocks();
+
+    if (locks === null) {
         return;
     }
 
@@ -126,16 +133,18 @@ function holdVersions(bases: readonly string[]): void {
     for (const base of bases.filter((each) => !heldVersions.has(each))) {
         const held = new Promise<void>((resolve) => heldVersions.set(base, resolve));
 
-        void navigator.locks.request(`${LOCK_PREFIX}${base}`, { mode: 'shared' }, () => held);
+        void locks.request(`${LOCK_PREFIX}${base}`, { mode: 'shared' }, () => held);
     }
 }
 
 async function versionsInUse(): Promise<string[]> {
-    if (navigator.locks === undefined) {
+    const locks = pageLocks();
+
+    if (locks === null) {
         return [];
     }
 
-    const { held = [] } = await navigator.locks.query();
+    const { held = [] } = await locks.query();
 
     return held.flatMap((lock) => (lock.name?.startsWith(LOCK_PREFIX) === true ? [lock.name.slice(LOCK_PREFIX.length)] : []));
 }
