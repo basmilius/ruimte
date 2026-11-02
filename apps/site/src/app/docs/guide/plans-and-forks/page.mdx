@@ -1,51 +1,56 @@
-import { PlanMockup } from '@/components/docs/mockups/PlanMockup';
+import { PlanBeside } from '@/components/docs/guide/PlanBeside.tsx';
 
 export const metadata = { title: 'Plans, forks and visuals' };
 
 # Plans, forks and visuals
 
-<p className="lead">A chat keeps a plan you and the agent both edit. You can fork a conversation to try another way, and an agent can answer with a page instead of text.</p>
+<p className="lead">A chat keeps a plan you and the agent both edit. A fork continues a conversation in a new chat. An agent can answer with a page.</p>
 
-## Plans
+## Open a plan
 
-When an agent makes a plan, a pill above the composer says **New plan**. Open it to see the plan beside the chat, with the step the agent works on now.
+When an agent makes a plan, a **New plan** pill appears in the chat. Click it to open the plan in the panel at the right of the window.
 
-<PlanMockup />
+<PlanBeside />
 
-A plan is a list of steps, or a test plan with tests that pass or fail. You work in it alongside the agent:
+A plan is a list of steps, or a test plan with tests that pass or fail.
 
-- Mark a step as done, failed, skipped, blocked or any other state. The agent never overwrites a state you set.
-- Add a note to a step, such as what went wrong or what to change.
-- Filter on open steps or on issues, and collapse what is done.
-- **Send results to chat** hands the plan's results back to the agent as a message.
-- **Copy as Markdown** copies the whole plan.
+| To | Do |
+| --- | --- |
+| Set the state of a step | Right-click it, choose **Status**, then a state |
+| Add a note to a step | Right-click it and choose **Add note** |
+| Show only some steps | Choose **All**, **Open** or **Issues** |
+| Hide finished steps | Choose **Collapse done** |
+| Hand the results to the agent | Choose **Send results to chat** |
+| Copy the plan | Choose **Copy as Markdown** |
 
-An agent can lock a step so that only it checks that step. **Unlock** takes the lock off.
+The agent never overwrites a state you set. An agent can lock a step so only it checks that step; **Unlock** removes the lock.
 
-A plan belongs to its chat. Clearing the chat clears its plans too.
+A plan belongs to its chat. **Clear** on the chat removes its plans too.
 
-## Forks
+## Fork a conversation
 
-Open the menu of a turn and choose **Fork conversation…** to continue from that point in a new chat, while the original stays as it is. Ruimte sends nothing until you write the first message.
+1. Right-click a chat node, or open the menu of a chat view.
+2. Choose **Fork conversation…**. The fork starts after the last turn that finished.
+3. Pick the options below and click **Fork**.
 
-The fork dialog asks:
+| Option | Choices |
+| --- | --- |
+| Fork into | **A node beside it**, with a line from the original, or **A new view** |
+| Continue with | The same CLI and model, or another. Another CLI gets the last part of the conversation as text and can read the rest in the original. |
+| Account | Another account of the same CLI |
+| Work in a git worktree | A branch and checkout of its own. Choose to take uncommitted files along, or to undo the work after this turn. |
+| Machine | Another machine of your account. See [Work on another machine](/docs/guide/other-machines). |
 
-- **Fork into.** A node beside the original, with a line from it, or a new view.
-- **Continue with.** The same CLI and model, or another one. Another CLI gets the last part of the conversation as text, and can read the rest in the original.
-- **Account.** Another account of the same CLI.
-- **Work in a git worktree.** The fork gets its own branch and checkout, so its changes stay apart from the original's. You can take uncommitted files along, or start from the files as they were after that turn.
-- **Machine.** Fork onto another machine of your account. See [Work on another machine](/docs/guide/other-machines).
-
-A fork shows a **Fork** pill that leads back to the original. **Summarize for the original** sends a summary of what the fork found back to the chat it came from.
+Ruimte sends nothing until you write the first message. The fork shows a **Fork** pill that leads to the original. In the fork's menu, **Summarize for the original** sends what the fork found back to the original chat.
 
 ## Visual replies
 
-An agent can put a page above its reply: a chart, a table, a diagram or a mockup. **Open large** shows it full size. The page runs closed off from the rest of the app and cannot read your files.
+An agent can put a page above its reply: a chart, a table, a diagram or a mockup. Click **Open large** to see it full size. The page cannot read your files.
 
-Visual replies are on by default. Turn them off per machine under Settings, Agents, Visual replies, and agents answer in text.
+To have agents answer in text only, turn off Settings, Agents, Visual replies. The setting is per machine.
 
-A reply can also hold a map with places on it. Settings, Chats, Map tiles decides whether maps load their tiles from Ruimte's map service, which also needs you to be signed in. Without tiles, a map shows only an outline and its places.
+A reply can also hold a map. Map tiles load from Ruimte's map service while Settings, Chats, Map tiles is on and you are signed in. Otherwise the map shows only an outline and its places.
 
 ## Images and 3D models
 
-An agent can show an image or a 3D model (glTF, USDZ or STL) in the thread. Save an image it made into the project with **Save image to project**. A page or image you want to keep goes to Output. See [Routines and Output](/docs/guide/routines#output).
+An agent can show an image or a 3D model (glTF, USDZ or STL) in the thread. To keep an image the agent made, choose **Save image to project**. Pages and images you save from a chat go to [Output](/docs/guide/routines#output).

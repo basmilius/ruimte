@@ -302,11 +302,14 @@ export function AppWindow({
     sidebar,
     toolbar,
     rail,
+    sidePanel,
     children
 }: {
     readonly sidebar: ReactNode;
     readonly toolbar: ReactNode;
     readonly rail: ReactNode;
+    /** A panel opened from the rail, such as the plan: behind the sheet, between it and the rail (`ade-workspace-side-panel`). */
+    readonly sidePanel?: ReactNode;
     readonly children: ReactNode;
 }) {
     return (
@@ -319,6 +322,7 @@ export function AppWindow({
                     <div className="relative min-h-0 grow">{children}</div>
                 </main>
             </div>
+            {sidePanel}
             {rail}
         </div>
     );

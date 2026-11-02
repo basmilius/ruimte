@@ -20,7 +20,7 @@ export const SECTIONS: readonly NavigationSection[] = [
             {
                 title: 'Start',
                 pages: [
-                    { title: 'What Ruimte is', href: '/docs/guide' },
+                    { title: 'Introduction', href: '/docs/guide' },
                     { title: 'Install and first project', href: '/docs/guide/getting-started' }
                 ]
             },

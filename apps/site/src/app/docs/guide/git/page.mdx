@@ -1,52 +1,80 @@
+import { Note } from '@/components/docs/guide/ui.tsx';
+
 export const metadata = { title: 'Git and worktrees' };
 
 # Git and worktrees
 
-<p className="lead">The Git panel commits, pulls and pushes every repository in the project folder. Merge conflicts are solved in the app, and worktrees keep agents out of each other's way.</p>
+<p className="lead">The Git panel commits, pulls and pushes every repository in the project folder. You resolve merge conflicts in the app, and worktrees keep agents out of each other's files.</p>
 
 ## The Git panel
 
-Open it with **Toggle git panel** in the command palette. The panel covers every repository in the project folder: the folder's own repository, its submodules, and repositories one level down. With one repository you see that one; with several, each has its own row and branch menu.
+Click the branch icon in the rail, or run **Toggle git panel**. The panel covers every repository in the project folder: its own repository, its submodules and repositories one level down. With several repositories, each has a row and a branch menu of its own.
 
-- Stage files, or stage all, and write a commit message. **Let Claude Code write the message** (or another CLI) writes a suggestion from the staged changes.
-- **Commit** commits what is staged in every repository at once. **Commit and push** pushes right after. **Amend** changes the last commit.
-- **Pull**, **Push**, **Sync** (pull, then push) and **Fetch** work on every repository, with an "all" version for several.
-- The branch menu switches, creates, renames and deletes branches. Deleting a branch leaves its remote branch alone.
-- **Merge branch…**, **Rebase onto…**, **Stash changes…** and **Pop stash** sit in the actions menu of a repository.
+## Commit and push
 
-A pull only fast-forwards. When a branch moved both here and on the remote, Ruimte asks how to bring them together before it does anything.
+1. Stage the files, or let **Commit** stage all.
+2. Write a message, or click **Let Claude Code write the message** (or another CLI) for a suggestion based on the staged changes.
+3. Click **Commit**, or **Commit and push**.
 
-Changes are sorted into code, tests, mocks and generated files, so you see the real change first. Click a file to see its diff.
+**Commit** commits what is staged in every repository with one message. **Amend** changes the last commit instead.
 
-## Merge conflicts
+| Action | What it does |
+| --- | --- |
+| Pull | Fetches and fast-forwards |
+| Push | Pushes the current branch |
+| Sync | Pulls, then pushes |
+| Fetch | Fetches without changing your branch |
+| Merge branch… | Merges another branch into this one |
+| Rebase onto… | Rebases this branch |
+| Stash changes…, Pop stash | Puts changes aside and back |
 
-A merge, rebase, cherry-pick or revert that stops on a conflict opens the conflict view. You never edit conflict markers by hand. For each conflict you take one side, or both in the order you choose, and then mark the file resolved. Conflicts that need no choice resolve with one click.
+With several repositories, **Pull all**, **Sync all** and **Fetch all** act on all of them. The branch menu switches, creates, renames and deletes branches. **Delete branch** leaves the remote branch alone.
 
-**Ask AI for this file** and **Ask AI for all** let an agent propose resolutions. A proposal is only a suggestion in the view. Nothing is written, staged or committed until you accept it. When every file is resolved, finish or continue the operation from the bottom of the view, or abort it.
+<Note>A pull only fast-forwards. When your branch and the remote both moved, Ruimte asks how to combine them before it changes anything.</Note>
+
+Changes are grouped as code, tests, mocks and generated files. Click a file to see its diff.
+
+## Resolve a merge conflict
+
+A merge, rebase, cherry-pick or revert that stops on a conflict opens the conflict view. You never edit conflict markers.
+
+1. Pick a file.
+2. For each conflict, choose **Take this side**, or both sides in the order you want.
+3. Click **Mark resolved**.
+4. When every file is resolved, click **Finish merge** (or **Continue rebase**). **Abort merge** undoes the operation.
+
+The wand resolves conflicts that need no choice. **Ask AI for this file** and **Ask AI for all** let an agent propose resolutions. A proposal is only shown: nothing is written, staged or committed until you accept it.
 
 ## Pull requests
 
-With the GitHub CLI (`gh`) installed and logged in on the machine:
+These need the GitHub CLI (`gh`), installed and logged in on the machine.
 
-- **Create pull request…** opens one for the current branch.
-- **Show pull request** shows its state, checks and review threads. Bot and resolved threads can be hidden.
-- **Copy to chat…** adds a review thread to a chat's draft. Nothing is sent.
-- **Watch for chat…** wakes a chat each time the checks of the latest commit finish or a new review comes in. The watch never merges or pushes. It ends when you stop it, when the pull request is merged or closed, or after 7 days.
+| Action | What it does |
+| --- | --- |
+| Create pull request… | Opens a pull request for the current branch |
+| Show pull request | Shows its state, checks and review threads |
+| Copy to chat… | Adds a review thread to a chat's draft, without sending it |
+| Watch for chat… | Wakes a chat each time the checks of the latest commit finish or a review comes in |
 
-**Start from GitHub issue** in the command palette takes a link or `owner/repo#12`. It makes a worktree and starts a chat in it, with the issue as its first prompt.
+A watch never merges or pushes. It ends when you click **Stop watching**, when the pull request is merged or closed, or after 7 days.
+
+**Start from GitHub issue**, in the command palette, takes a link or `owner/repo#12`. It makes a worktree and starts a chat there with the issue as the first prompt.
 
 ## Worktrees
 
-A worktree is a second checkout of the same repository, on its own branch, in its own folder. Two agents in two worktrees never edit the same files.
+A worktree is a second checkout of the repository on its own branch, in its own folder. Two agents in two worktrees never edit the same files.
 
-- **New chat in worktree** makes a branch from the base you choose and starts a chat in its checkout.
-- **Bind to worktree** on a group gives it a checkout. Every terminal and chat you add to the group starts in it.
-- An agent can open another agent in a worktree of its own. See [Agents working together](/docs/guide/delegation#worktrees).
+| To | Do |
+| --- | --- |
+| Start a chat in a new worktree | Run **New chat in worktree**, name the branch and pick what to start from |
+| Give a group a worktree | Right-click the group, choose **Bind to worktree** and name the branch. Terminals and chats you add to the group start in it. |
+| Merge a worktree | Choose **Merge worktree…**, pick the target branch and click **Merge** |
+| Remove a worktree | Choose **Remove worktree…** |
+
+**Merge worktree…** can commit what is still uncommitted first, and remove the worktree and its branch afterwards. A conflict waits for you to resolve.
+
+**Remove worktree…** deletes the checkout, and its branch when Ruimte made it. If an agent still works there, Ruimte stops it first. Nothing removes a worktree by itself.
 
 New worktrees go in Ruimte's data folder, or in a folder you choose under Settings, Files and Git, Worktree folder.
 
-**Merge worktree…** brings a worktree's branch into another branch. It can commit what is still uncommitted first, choose a strategy, and remove the worktree and its branch afterwards. A conflict waits for you to resolve.
-
-**Remove worktree…** deletes the checkout, and its branch if Ruimte made it. If an agent still works there, Ruimte stops it first. Nothing removes a worktree on its own.
-
-You can run one task of the project each time a chat in a worktree finishes its turn, such as the tests. See [Launches](/docs/guide/launches#after-a-worktree-chat-finishes).
+To run a task, such as the tests, each time a chat in a worktree finishes, see [Launches](/docs/guide/launches#run-a-task-after-a-worktree-chat).

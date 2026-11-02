@@ -1,51 +1,49 @@
-import { NeedsYouMockup } from '@/components/docs/mockups/NeedsYouMockup';
+import { NeedsYou } from '@/components/docs/guide/NeedsYou.tsx';
+import { Shortcut } from '@/components/docs/guide/Shortcut.tsx';
 
 export const metadata = { title: 'Needs you' };
 
 # Needs you
 
-<p className="lead">With several agents at work, the hard part is knowing which one waits for you. Ruimte keeps that list for you, across views, projects and devices.</p>
+<p className="lead">Ruimte lists every agent that waits for an answer, across views, projects and devices.</p>
 
-## Status at a glance
+<NeedsYou />
 
-Every terminal and chat with an agent shows a status in its header and beside its row in the sidebar. **Needs you** means the agent waits on a question or a permission. A tab in a grid cell shows the same.
+## Where you see it
 
-The dock under a canvas shows how many agents are working and how many wait. Hover it to read what each one asks.
+- **Node and tab headers.** A terminal or chat that waits reads **Needs you**.
+- **The sidebar.** **Needs you**, above the views, lists what waits, oldest first. To include your other open projects, turn on Settings, General, Needs you across projects.
+- **The dock.** Under a canvas, the dock counts what waits and what works.
+- **The canvas.** Questions and approvals of the canvas's agents stack above the dock. Step through them, fold them, or click a title to go to its node.
 
-## The Needs you list
-
-The sidebar lists everything that waits, oldest first, with what each agent asks: a command it wants to run, a file it wants to edit, or its question. Settings, General, Needs you across projects adds what waits in your other open projects, grouped by project.
-
-<NeedsYouMockup />
-
-For an agent in a chat, answer right there in the list. For an agent in a terminal, the list takes you to the terminal, since you answer in its own interface.
+Answer a chat's request right in its card. For a terminal agent, the card has **Go to terminal**, since you answer in the terminal.
 
 ## Jump to what waits
 
-| Shortcut | What it does |
+| Shortcut | Action |
 | --- | --- |
-| `Cmd+Option+P` | Go to the next node that needs you, in any view, oldest first |
-| `Cmd+Option+Shift+P` | Open the attention queue: what waits on you, and turns that finished while you were away |
-| `Cmd+Shift+P` | Move the keyboard to the questions and approvals on this canvas |
+| <Shortcut keys="Mod+Alt+P" /> | Go to the next node that needs you, in any view, oldest first |
+| <Shortcut keys="Mod+Alt+Shift+P" /> | Open the attention queue: what waits, and turns that finished while you were away |
+| <Shortcut keys="Mod+Shift+P" /> | Move the keyboard to the questions and approvals on the canvas |
 
-On a canvas, waiting questions and approvals stack in a card you can step through, fold, or follow to their node with **Go to node**.
+## Snooze an agent
 
-## Snooze
-
-Not now? **Snooze** a waiting agent for 10 minutes, 1 hour or until tomorrow. It leaves the list and raises nothing until the snooze ends.
+Hover a waiting agent and click the snooze button. Choose **10 minutes**, **1 hour** or **Tomorrow**. The agent leaves the list and raises nothing until the snooze ends.
 
 ## Notifications
 
-Ruimte notifies you when an agent needs you or finishes, with a sound you choose under Settings, Agents, Notifications.
+Ruimte notifies you when an agent needs you or finishes. Pick the sound under Settings, Agents, Notifications.
 
-With the iPhone app, an alert goes to your phone, but only once you step away. While you use a computer with Ruimte, a question waits a minute and a permission request ten seconds before it reaches your phone. Answer it in that time and your phone stays quiet. See [Phone and web](/docs/guide/phone-and-web).
+With the iPhone app, a notification reaches your phone only once you step away from your computer. A question waits a minute and an approval ten seconds. If you answer in that time, your phone stays quiet. See [Phone and web](/docs/guide/phone-and-web).
 
 ## Keep the computer awake
 
-When a computer sleeps, every agent on it pauses. Settings, Agents, Keep awake chooses:
+A computer that sleeps pauses every agent on it. Set Settings, Agents, Keep awake:
 
-- **Off**
-- **While agents work**
-- **Always**
+| Choice | The computer stays awake |
+| --- | --- |
+| Off | Never; it follows your system settings |
+| While agents work | Only while an agent works |
+| Always | Also when no agent works |
 
-You can also let it stay awake on battery, keep the display on, and keep a Mac running with its lid closed. That last one needs a one-time permission from an administrator.
+Below it, choose whether this holds on battery, whether the display stays on, and, on a Mac, **Also with the lid closed**. The lid setting needs a one-time permission from an administrator.

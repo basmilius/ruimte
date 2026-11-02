@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Sidebar } from '@/components/docs/Sidebar';
 import { PageFooter } from '@/components/docs/PageFooter';
 import { SECTIONS } from '@/lib/docs/navigation';
-import '@/components/docs/mockups/mockups.css';
 
 export default function GuideLayout({ children }: { readonly children: ReactNode }) {
     const section = SECTIONS.find((each) => each.href === '/docs/guide');

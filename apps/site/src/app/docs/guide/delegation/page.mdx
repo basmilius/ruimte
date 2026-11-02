@@ -1,68 +1,72 @@
-import { DelegationMockup } from '@/components/docs/mockups/DelegationMockup';
+import { Delegation } from '@/components/docs/guide/Delegation.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
 
 export const metadata = { title: 'Agents working together' };
 
 # Agents working together
 
-<p className="lead">Agents can open other agents, hand them tasks and wake up when the work is done. They work on the canvas where you can watch, within limits you set.</p>
+<p className="lead">An agent can open other agents, give them tasks and wake up when they are done. It works on the canvas, within the limits you set.</p>
 
-## What an agent can reach
+## What an agent can do
 
-Every terminal and chat in Ruimte gets a command named `ruimte-context`, and Ruimte tells the agent how to use it. You never need to run it yourself. Run `ruimte-context help` in a terminal of Ruimte if you are curious what it offers.
+Every terminal and chat in Ruimte has a command named `ruimte-context`, and Ruimte tells the agent how to use it. You do not run it yourself. To see what it offers, run `ruimte-context help` in a terminal in Ruimte.
 
-With it, an agent can:
+An agent can:
 
-- read the nodes that have a line into it, or that you pointed at with `#`
+- read the nodes with a line into it, and the views and nodes you referenced with `#`
 - add notes, terminals, chats, browsers and groups to its canvas, and draw lines between them
 - open other agents and give them tasks
 - send a message to another terminal or chat of the project
 - drive a browser or device it has a line to
 - publish results to Output
-- add launches and routines, which then wait for your approval
+- add launches and routines, which wait for your approval
 
-An agent never types into another terminal, never closes another session, and never approves anything for you.
+<Note>An agent never types into another terminal, never closes another session and never approves anything for you.</Note>
 
-## Delegating a task
+## Delegate a task
 
-Ask an agent to split up work, and it can open new agents for the parts. Each one appears on the canvas beside it, with a line from the parent into the child. The line is dashed while the task is open.
+Ask an agent to split up the work. It opens a new agent for each part, beside itself on the canvas, with a line into the new agent. The line is dashed while the task is open.
 
-<DelegationMockup />
+<Delegation />
 
-The parent goes on with its own work, or waits. When a child finishes, the parent wakes up once with the result. A parent that gave several tasks at once wakes once, when they all finished.
+The parent wakes once with each result. When it gave several tasks in one go, it wakes once, after all of them finished.
 
-A few rules keep this in check:
-
-- A child never gets a wider permission mode than its parent.
-- Agents nest at most two levels below the one you started.
-- A task counts as done only when the child is really done, including any work it left running in the background.
-- A child that stops on a usage limit pauses its task. The parent sleeps on until the child finishes after the limit resets.
-- A child's question or permission request comes to you. Its parent may answer a question for it, but approvals always stay with you.
-- Stopping or deleting an agent also ends the agents it opened. Their nodes and work so far stay on the canvas.
+| Rule | Detail |
+| --- | --- |
+| Permission mode | A child never gets a wider mode than its parent. |
+| Depth | Agents nest at most two levels below the one you started. |
+| Done | A task is done only when the child finished everything, background work included. |
+| Usage limit | A child that stops on a usage limit pauses its task. The parent waits until the child finishes after the reset. |
+| Questions | A child's questions and approvals come to you. Its parent may answer a question, never an approval. |
+| Stopping | Stopping or deleting an agent ends the agents it opened. Their nodes and work stay on the canvas. |
 
 ## What wakes a chat
 
-Three things wake an AI chat that is not working:
+An AI chat that is not working wakes up for:
 
 - a task it gave that finished
-- a message another agent sent it
-- a pull request you asked it to watch, when its checks finish or a review comes in (see [Git and worktrees](/docs/guide/git#pull-requests))
+- a message from another agent
+- a pull request you asked it to watch, when checks finish or a review comes in; see [Pull requests](/docs/guide/git#pull-requests)
 
-Messages between agents stop waking each other after a few steps, so two agents cannot keep each other busy forever. A terminal is never woken, since that would mean typing into it. A terminal agent hears a message at the start of its next turn, or sees it printed on its screen.
+Messages between agents stop waking each other after a few steps. A terminal is never woken. A terminal agent hears a message at the start of its next turn, or sees it printed on its screen.
 
 ## Worktrees
 
-An agent can open a child in a worktree of its own. That is a separate checkout on a new branch, so two agents never edit the same files. The child's node shows its branch.
+An agent can open a child in a worktree: a separate checkout on a new branch. The child's node shows its branch. When the child is done, the parent can merge the worktree into a branch without uncommitted changes. A conflict goes back to the parent to resolve.
 
-When the child is done, the parent can merge its worktree into a branch that has no uncommitted changes. If the merge runs into a conflict, the parent gets it back to resolve. The worktree and its branch stay until you remove them. See [Git and worktrees](/docs/guide/git#worktrees).
+The worktree and its branch stay until you remove them. See [Worktrees](/docs/guide/git#worktrees).
 
-## A chat that arranges a canvas
+## Let a chat arrange a canvas
 
-A chat that is a view of its own, not a node, can lay out a canvas you name. Ask it to set up a canvas, and it adds nodes, draws lines and uses the browsers and devices there, as you would.
+A chat that is a view of its own can lay out a canvas you name. Ask it to set up a canvas; it adds nodes, draws lines and uses the browsers and devices there.
 
-## What you decide
+## Set what agents may do
 
-Under Settings, Agents, What agents may do, per machine:
+Settings, Agents, What agents may do, per machine:
 
-- **Agents may delete any view or node.** When off, an agent deletes only the views and nodes it created.
-- **Agents may reach all open projects.** When on, an agent can read your other open projects, message their terminals and chats, and start agents there.
-- **Continue after a usage limit** and **Visual replies**, described under [AI chats](/docs/guide/chats#usage-limits) and [Plans, forks and visuals](/docs/guide/plans-and-forks#visual-replies).
+| Setting | When on |
+| --- | --- |
+| Agents may delete any view or node | Agents can delete any view or node. When off, they delete only what they created. |
+| Agents may reach all open projects | Agents can read your other open projects, message their terminals and chats, and start agents there. |
+| Continue after a usage limit | See [Usage limits](/docs/guide/chats#usage-limits). |
+| Visual replies | See [Visual replies](/docs/guide/plans-and-forks#visual-replies). |

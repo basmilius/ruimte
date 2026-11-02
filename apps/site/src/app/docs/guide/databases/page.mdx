@@ -1,36 +1,45 @@
+import { Note } from '@/components/docs/guide/ui.tsx';
+
 export const metadata = { title: 'Databases' };
 
 # Databases
 
-<p className="lead">The Databases panel connects to SQLite and MySQL or MariaDB. You browse tables, edit rows and run SQL, and agents read the same connections.</p>
+<p className="lead">The Databases panel connects to SQLite and MySQL or MariaDB. Browse tables, edit rows and run SQL; agents read the same connections.</p>
 
-## Connections
+## Add a connection
 
-Open the panel with **Toggle databases panel** in the command palette, then choose **Add connection**. The panel also lists database containers that run on the machine, which you add with one click.
+1. Click the database icon in the rail, or run **Toggle databases panel**.
+2. Click **Add connection**, or click a database container the panel found running on the machine.
 
-A connection is yours until you **Share with team**. A shared connection is saved with the project for everyone who works on it, without its password. A SQLite file outside the project folder cannot be shared.
+A connection is yours until you choose **Share with team**. A shared connection is saved with the project, without its password. A SQLite file outside the project folder cannot be shared.
 
-Ruimte keeps passwords encrypted on your computer where it can. Where it cannot, it says so and keeps them only until it quits.
+Ruimte keeps passwords encrypted on your computer. Where your system offers no encryption, it says so and keeps them only until it quits.
 
-## Tables and SQL
+## Work with tables
 
-- Open a table to see its rows. Filter them, edit them, and submit your edits when you are done. Unsubmitted edits keep their tab open.
-- Open a table's structure, or design a new table.
-- **New console** opens a SQL console for a connection.
-- A table or structure can be a view of its own, saved in the sidebar. A shared view needs a shared connection.
+| To | Do |
+| --- | --- |
+| See rows | Open a table. Filter the rows, edit them, and submit your edits. |
+| See or change a table's structure | Open its structure, or design a new table |
+| Run SQL | Click **New console** |
+| Keep a table in the sidebar | Save it as a view. A shared view needs a shared connection. |
 
-In a `.sql` file, and in SQL inside PHP strings, the editor checks your SQL against the schema of a connection. **SQL of this file**, in the editor, picks which connection a file reads, or sets one for the whole project. **Read schema again** picks up changes to the database.
+Unsubmitted edits keep their tab open until you submit or discard them.
+
+## SQL in files
+
+In a `.sql` file, and in SQL inside PHP strings, the editor checks your SQL against a connection's schema. **SQL of this file** picks the connection for one file, or sets a default for the project. **Read schema again** picks up changes to the database.
 
 ## What agents may do
 
-Agents use the same connections, through **Manage connections**:
+Under **Manage connections**, set **Agents** per connection:
 
 | Setting | What agents may do |
 | --- | --- |
-| Off | Nothing with this connection. |
-| Read only | Run one SELECT or WITH query at a time, on a read-only session. This is the default. |
-| Read and write | Change data as well. |
+| Off | Nothing with this connection |
+| Read only | Run one SELECT or WITH query at a time, on a read-only session. The default. |
+| Read and write | Also change data |
 
-Only someone at the machine itself can allow writing, and an agent in the Supervised mode never writes. An agent can show the rows it read as a table above its reply.
+<Note>Only someone at the machine itself can allow writing. An agent in Supervised mode never writes.</Note>
 
-The machine never stores a connection's password. Agents can use a connection with a password only while you have the project open somewhere.
+An agent can show the rows it read as a table above its reply. A connection with a password works for agents only while you have the project open.

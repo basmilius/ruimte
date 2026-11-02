@@ -1,44 +1,55 @@
+import { Shortcut } from '@/components/docs/guide/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
 export const metadata = { title: 'Routines and Output' };
 
 # Routines and Output
 
-<p className="lead">A routine runs an agent, a command or a launch at a set time. What agents publish, and what you save from a chat, goes to Output.</p>
+<p className="lead">A routine runs an agent, a command or a launch at a set time. Output keeps what agents publish and what you save from a chat.</p>
 
 ## Routines
 
-Press `Cmd+Option+S` to open Routines. It shows the week: what ran, what waits and what comes next, for one project or all of them. Drag across the days to plan a new routine, or click **New routine**.
+Press <Shortcut keys="Mod+Alt+S" /> to open Routines. The week view shows what ran, what waits and what comes next, for one project or all of them.
 
-A routine has a name, a project and what it runs:
+### Add a routine
 
-- **Agent.** A prompt for an agent of your choice, with its model and permission mode. In the prompt, `/` opens a command, `$` a skill, `@` a file and `#` a view.
-- **Command.** A shell command, in a folder of the project.
-- **Launch.** One of the project's [launches](/docs/guide/launches).
+1. Drag across the days, or click **New routine**.
+2. Name it, pick the project and choose **What it runs**:
+   - **Agent**: a prompt, with the agent, its model and its mode. In the prompt, `/` opens a command, `$` a skill, `@` a file and `#` a view.
+   - **Command**: a shell command, in a folder of the project.
+   - **Launch**: one of the project's [launches](/docs/guide/launches).
+3. Choose **Repeat**: **Once**, **On days**, **Through the day** or **Cron**.
+4. Click **Create routine**.
 
-It runs once, on chosen days, several times through the day, or on a cron expression such as `0 9 * * 1-5` (weekdays at 09:00). Times follow the clock of the machine. Runs stay at least 15 minutes apart.
+Times follow the clock of the machine. A cron expression has five fields; `0 9 * * 1-5` runs on weekdays at 09:00. Runs stay at least 15 minutes apart.
 
-**Share with team** puts the routine in the project file your team commits. Otherwise it stays yours.
+**Share with team** puts the routine in the project file your team commits.
 
-### Approval
+### Approve a routine
 
-A routine runs only after you approve it as it stands now. When someone changes it, through a teammate's commit, by hand or by an agent, it asks again. Agents can add and change routines in their own project, but never approve one.
+A routine runs only after you approve it as it stands. When it changes, by a teammate's commit, by hand or by an agent, it asks again. Agents can add and change routines in their project but never approve them.
 
-### When it runs
+### When a routine runs
 
-- A routine runs on the machine, whether or not the project is open in a window. A computer that sleeps runs nothing; see [Keep the computer awake](/docs/guide/attention#keep-the-computer-awake).
+- The machine runs it, whether or not the project is open.
 - Times missed while the machine was off or asleep run once when it wakes.
 - A run is skipped while the previous run still goes on.
-- Pause a routine to stop it. Removing a routine keeps its past runs, their chats and its Output.
+- Pause a routine to stop it. Removing it keeps its past runs, their chats and its Output.
 
-An agent's run happens in a chat of its own, out of sight. It ends by publishing its result to Output. Put a routine on a canvas as a node to see its latest runs beside it.
+<Note>A computer that sleeps runs no routines. See [Keep the computer awake](/docs/guide/attention#keep-the-computer-awake).</Note>
+
+An agent's run happens in a chat of its own, out of sight, and publishes its result to Output. To see a routine's latest runs on a canvas, add it as a routine node.
 
 ## Output
 
-**Toggle output panel** in the command palette opens Output. It holds what agents published and the pages and images you saved from a chat: reports, images, builds, exports, recordings and pages.
+Run **Toggle output panel** from the command palette. Output holds what agents published and the pages and images you saved from a chat: reports, images, builds, exports, recordings and pages.
 
-Each item keeps its versions, newest first, with where it came from: the chat, the routine or the machine. Filter by project, kind, source or routine, or search.
+Each item keeps its versions, newest first, with where each came from. Filter by project, kind, source or routine, or search.
 
-- Open an item to view it. A page runs closed off, as in a chat.
-- **Copy to project** writes a version into the project folder, as a new file for git.
-- **Remove** deletes versions after you confirm. Nothing in Output is deleted on its own, and agents never remove anything.
+| Action | Result |
+| --- | --- |
+| Open an item | Shows the version. A page runs closed off, as in a chat. |
+| Copy to project | Writes the version into the project folder as a new file |
+| Remove | Deletes versions after you confirm |
 
-A design page can be kept here too, with **Save version**.
+Nothing in Output is deleted by itself, and agents never remove anything. A design page goes to Output with **Save version**.

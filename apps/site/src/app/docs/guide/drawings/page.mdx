@@ -1,25 +1,43 @@
+import { Shortcut } from '@/components/docs/guide/Shortcut.tsx';
+
 export const metadata = { title: 'Drawings and diagrams' };
 
 # Drawings and diagrams
 
-<p className="lead">Sketch boxes and arrows next to your code, or keep a diagram an agent can write and read.</p>
+<p className="lead">Draw boxes and arrows beside your code, or keep a diagram that you and an agent both edit.</p>
 
-## Drawings
+## Make a drawing
 
-A drawing is a view of its own. Make one with **New drawing view** in the command palette, or from the new view menu (`Cmd+T`).
+Press <Shortcut keys="Mod+T" /> and choose **Drawing**, or run **New drawing view** from the command palette.
 
-The toolbar holds the tools: select, pan, rectangle, diamond, ellipse, arrow, line, freehand, text, sticky note and eraser. **Keep tool** keeps the chosen tool after you draw a shape. While you are not typing text, each tool also has a single key.
+| Tool | What it draws |
+| --- | --- |
+| Select, Pan | Picks shapes, moves the view |
+| Rectangle, Diamond, Ellipse | Shapes |
+| Arrow, Line | Connections |
+| Draw | Freehand strokes |
+| Text, Sticky note | Words |
+| Eraser | Removes what you drag over |
 
-Each shape has a stroke and fill color, a stroke width and style, a fill pattern and a sloppiness, from a neat architect's line to a loose cartoon. Text comes in a hand, sans or mono font.
+**Keep tool** keeps the tool after you draw a shape. While you are not typing text, each tool also has a single key.
 
-**Export** copies or saves the drawing, or the selection, as PNG or SVG, with or without its background.
+Select a shape to set its stroke and fill color, stroke width and style, fill pattern, sloppiness (Architect, Artist or Cartoonist) and font (Hand, Sans or Mono).
 
-## Diagrams
+## Export a drawing
 
-A diagram is a graph of labeled nodes and their connections. You can arrange it by hand, and an agent can write one for you. **Open JSON** shows the diagram as data, and you export it as PNG, SVG or JSON.
+Choose **Export**, then **Copy as PNG**, **Save PNG**, **Copy as SVG** or **Save SVG**. Pick **Export selection** for part of the drawing, and **With background** to keep the background.
 
-## Show them to an agent
+## Make a diagram
 
-**Show drawing on canvas** and **Show diagram on canvas** put a drawing or diagram on a canvas as a node. Draw a line from it into a chat or terminal, and the agent reads what you drew: the shapes, their text and the arrows between them, in the order you meant them.
+Press <Shortcut keys="Mod+T" /> and choose **Diagram**, or run **New diagram view**. A diagram holds labeled nodes and their connections. Drag nodes to arrange them, or ask an agent to write the diagram.
 
-Like any view, a drawing or diagram is private until you share it. A shared one goes into the `.ruimte` folder you commit.
+**Open JSON** shows the diagram as data. Export it as PNG, SVG or JSON from the command palette.
+
+## Show a drawing to an agent
+
+1. Run **Show drawing on canvas** (or **Show diagram on canvas**). The drawing appears on a canvas as a node.
+2. Draw a line from the node into a chat or terminal.
+
+The agent reads the shapes, their text and the arrows between them.
+
+A drawing or diagram is private until you share its view. A shared one goes into the `.ruimte` folder you commit.

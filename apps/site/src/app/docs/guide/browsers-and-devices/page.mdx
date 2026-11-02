@@ -1,42 +1,49 @@
+import { Shortcut } from '@/components/docs/guide/Shortcut.tsx';
+import { Note } from '@/components/docs/guide/ui.tsx';
+
 export const metadata = { title: 'Browsers and devices' };
 
 # Browsers and devices
 
-<p className="lead">A browser node is a real web page next to your terminals. A device node shows a simulator, an emulator or a phone. Draw a line from an agent to either one, and the agent can work there.</p>
+<p className="lead">A browser node is a web page on the canvas. A device node shows a simulator, an emulator or a phone. Draw a line from an agent to either, and the agent works there.</p>
 
-## Browsers
+## Open a page
 
-Add a browser with `Option+B` on a canvas, or run **New browser view**. Type an address, such as `localhost:5173`. The page is a full browser: you click, type and scroll in it as usual.
+Press <Shortcut keys="Alt+B" /> on a canvas, or run **New browser view**, and type an address such as `localhost:5173`. Click, type and scroll in the page as in any browser.
 
-- `Cmd+[` and `Cmd+]` go back and forward.
-- **Inspect** opens the developer tools for the page.
-- **Open in system browser** opens the page in your own browser.
+| Control | Action |
+| --- | --- |
+| <Shortcut keys="Mod+[" />, <Shortcut keys="Mod+]" /> | Back, forward |
+| **Inspect** | Opens the developer tools of the page |
+| **Open in system browser** | Opens the page in your own browser |
 
-Browser pages run in the desktop app. In the web app and on a phone, the machine can show the page for you instead. Settings, Account, Browser and device streaming turns that on per machine.
+Pages run in the desktop app. In the web app and on a phone, the machine can show the page instead; turn on **Browser and device streaming** for that machine under Settings, Account.
 
-A page on `localhost` belongs to the machine of the project. Ruimte opens it only from that machine's own desktop app, so a project on another machine never shows you your own computer's local server by mistake.
+A `localhost` page belongs to the project's machine. It opens only in that machine's own desktop app.
 
 ### What an agent may do in a browser
 
-With a line from an agent to a browser, the agent can send the page to an address, go back and forward, and take a picture of the page. It cannot click, type or scroll. That stays with you.
+With a line from an agent to a browser, the agent can send the page to an address, go back and forward, and take a picture of the page. It cannot click, type or scroll.
 
-## Devices
+## Open a device
 
-The Devices panel lists the simulators, emulators and phones the machine can reach. **Add to canvas** puts one on the canvas, or open it as a view.
+Open the Devices panel from the rail. Click **Add to canvas** on a device, or open it as a view.
 
 | Device | What the machine needs |
 | --- | --- |
 | iOS simulator | macOS with Xcode |
 | Android emulator | The Android SDK, on macOS or Linux |
 | Android phone | USB or Wi-Fi debugging turned on |
-| iPhone | Connected to the Mac |
+| iPhone | A connection to the Mac |
 
-Start, stop and restart a simulator or emulator from its node. Use the screen with your pointer and keyboard. The tools panel sets the location, permissions, status bar, clipboard and biometrics, sends a push notification, installs an app, adds photos and videos, records the screen and feeds the camera of a simulator. **Erase** resets a device to new, after you confirm.
+Start, stop and restart a simulator or emulator from its node, and use its screen with your pointer and keyboard. The tools panel sets the location, permissions, status bar, clipboard and biometrics, sends a push notification, installs an app, adds photos and videos, records the screen, and feeds a simulator's camera.
+
+**Erase** resets a device to new, after you confirm.
 
 A phone does less than a simulator. An Android phone cannot be started, stopped or given a location. An iPhone takes touches, screenshots and app installs, but no typed text.
 
 ### What an agent may do on a device
 
-With a line from an agent to a device, the agent can see its screen and the elements on it, tap, swipe, press buttons, type, open apps, and use the tools panel. Ruimte asks no approval for this, since the device is a sandbox of its own.
+With a line from an agent to a device, the agent can see the screen and its elements, tap, swipe, press buttons, type, open apps and use the tools panel. Ruimte asks no approval: the device is a sandbox of its own.
 
-Starting, stopping, restarting and erasing a device stay with you, and so does its camera.
+<Note>Starting, stopping, restarting and erasing a device, and its camera, stay with you.</Note>

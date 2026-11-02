@@ -135,3 +135,26 @@
 .prose [role='img'] {
     margin-bottom: 1.5rem;
 }
+
+/*
+ * A scene draws the app in the app's own type, so the rules of a page's words stop at its edge. Tailwind's
+ * utilities sit in a layer and these rules do not, so a rule above would win over a scene's classes; this
+ * hands each of those properties back to the layers.
+ */
+.prose [role='img'] :is(h1, h2, h3, p, ul, ol, li, table, th, td, a, strong, code) {
+    margin: revert-layer;
+    padding: revert-layer;
+    font-size: revert-layer;
+    font-weight: revert-layer;
+    font-family: revert-layer;
+    line-height: revert-layer;
+    letter-spacing: revert-layer;
+    color: revert-layer;
+    background: revert-layer;
+    border: revert-layer;
+    border-radius: revert-layer;
+    list-style: revert-layer;
+    display: revert-layer;
+    overflow: revert-layer;
+    width: revert-layer;
+}

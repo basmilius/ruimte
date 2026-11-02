@@ -1,4 +1,6 @@
-import { TerminalMockup } from '@/components/docs/mockups/TerminalMockup';
+import { TerminalAgent } from '@/components/docs/guide/TerminalAgent.tsx';
+import { Shortcut } from '@/components/docs/guide/Shortcut.tsx';
+import { Note, StatusPill } from '@/components/docs/guide/ui.tsx';
 
 export const metadata = { title: 'Terminals' };
 
@@ -6,44 +8,44 @@ export const metadata = { title: 'Terminals' };
 
 <p className="lead">A terminal runs your shell, or an agent CLI in its own interface. It keeps running on the machine when you close the window.</p>
 
-## A shell
+## Open a terminal
 
-A new terminal (`Option+T` on a canvas) opens your usual shell in the project folder. It is a full terminal: colors, mouse, full-screen programs and 10,000 lines of scrollback.
+Press <Shortcut keys="Alt+T" /> on a canvas, or run **New terminal view** from the command palette. The terminal opens your login shell in the project folder, with 10,000 lines of scrollback.
 
-The session lives on the machine, not in the window. Close the window, reload it or open the project on another device, and the terminal is where you left it, with its scrollback. When a shell exits, the terminal says so and offers **Restart**.
+When you close the window, reload it or open the project on another device, the terminal shows the same screen and scrollback. When the shell exits, click **Restart** to start a new one.
 
-## An agent in a terminal
+## Run an agent in a terminal
 
-Pick an agent CLI under Agents on an empty canvas, or run **New Claude Code terminal** (or another CLI) from the command palette. The terminal starts the CLI in its own interface, as it would in any other terminal. You type, approve and answer in that interface.
+Choose **Terminal** for a CLI under Agents on an empty canvas, or run **New Claude Code terminal** (or another CLI) from the command palette. The CLI starts in its own interface. You type, approve and answer there.
 
-<TerminalMockup />
+<TerminalAgent />
 
-The header shows what the agent is doing:
+The header shows the status of the agent:
 
 | Status | Meaning |
 | --- | --- |
-| Running | The agent is working. |
-| Needs you | It asks a question or wants permission, in its own prompt. |
-| Idle | It finished its turn and waits for your next message. |
-| Error | Its turn ended with an error. |
-| Sub-agents working | Its turn is over, but agents it started still work. |
-| Session ended | The CLI or shell has exited. |
+| <StatusPill status="running" /> | The agent works. |
+| <StatusPill status="needs-you" /> | The agent asks a question or wants permission, in its own prompt. |
+| <StatusPill status="idle" /> | The turn is done. The agent waits for your next message. |
+| <StatusPill status="error" /> | The turn ended with an error. |
+| <StatusPill status="delegating" /> | The turn is done, but agents it started still work. |
+| <StatusPill status="exited" /> | The CLI or shell exited. |
 
-The status needs a few lines in the CLI's own settings, which Ruimte adds once you allow it (Settings, Agents, Agent status in terminals). Without them, a terminal agent shows no status and never asks for your attention. Antigravity only reports a finished turn.
+<Note>The status needs Ruimte's lines in the CLI's own settings. Allow them under Settings, Agents, Agent status in terminals. Without them, a terminal agent shows no status and never asks for your attention. Antigravity only reports a finished turn.</Note>
 
-Ruimte never answers a terminal agent's prompt for you. When one waits, Ruimte shows that it needs you, with a **Go to terminal** button, and you answer in the terminal.
+When a terminal agent waits, Ruimte shows a card with **Go to terminal**. You answer in the terminal; Ruimte never answers for you.
 
-If Ruimte or the machine restarts, an agent's terminal comes back with **Resume**, which picks up the conversation where the CLI left it.
+After Ruimte or the machine restarts, click **Resume** in an agent's terminal to continue the conversation.
 
-New terminal agents start in the permission mode under Settings, Agents, Terminal agents start in. See [AI chats](/docs/guide/chats#permissions) for what each mode allows.
+New terminal agents start in the permission mode set under Settings, Agents, Terminal agents start in. See [Permissions](/docs/guide/chats#permissions).
 
 ## Links, ports and files
 
-- Hover a link to see where it goes. `Cmd+click` opens it. Settings, Terminal decides whether links open in your system browser (the default) or in a browser node beside the terminal.
-- An address on `localhost` only means something on the terminal's own machine. Ruimte opens it only when that machine is the computer in front of you.
-- On a Mac, a terminal shows a badge such as `:5173` for each port its programs listen on. Click it to open that page in a browser node beside the terminal.
+- Hover a link to see its address. <Shortcut keys="Mod" />-click opens it. Settings, Terminal, Open terminal links in picks your system browser (the default) or a browser node beside the terminal.
+- A `localhost` link opens only when the terminal's machine is the computer in front of you.
+- On a Mac, a terminal shows a badge such as `:5173` for each port its programs listen on. Click the badge to open the page in a browser node beside the terminal.
 - Drop a file on a terminal to type its path.
 
-## Commands from the project file
+## Approve a command from a shared view
 
-A terminal saved in a shared view can carry a command to start with, such as `bun dev`. A teammate's command never runs on your machine by itself. The terminal shows **Run `bun dev`?** and waits until you press **Run**. Once you approve it, it starts on its own from then on, until the command changes.
+A terminal in a shared view can carry a start command, such as `bun dev`. On your machine it does not run until you approve it: the terminal shows **Run `bun dev`?**, and the command runs when you click **Run**. When someone changes the command, it asks again.
