@@ -12,10 +12,10 @@
         "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check && bun ../../apps/ios/Scripts/generate-visual.ts --check && bun ../../apps/ios/Scripts/generate-mermaid.ts --check && bun ../../apps/server/scripts/generate-native-ui.ts --check"
     },
     "dependencies": {
-        "@adecore/agent-contracts": "0.50.6",
-        "@adecore/diagram": "0.50.6",
-        "@adecore/drawing": "0.50.6",
-        "@adecore/plan": "0.50.6",
+        "@adecore/agent-contracts": "0.50.7",
+        "@adecore/diagram": "0.50.7",
+        "@adecore/drawing": "0.50.7",
+        "@adecore/plan": "0.50.7",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.7"
     },
