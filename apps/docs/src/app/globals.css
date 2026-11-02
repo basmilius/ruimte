@@ -42,7 +42,7 @@ html {
     color: var(--text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 5.5rem;
 }
 
 /* The words of a page. Written here once instead of on every element MDX makes. */
@@ -171,4 +171,10 @@ html {
 .prose .lead {
     font-size: 1.0625rem;
     color: var(--text);
+}
+
+/* A name in the first column stays whole; the description beside it wraps instead. */
+.prose td:first-child code {
+    overflow-wrap: normal;
+    white-space: nowrap;
 }

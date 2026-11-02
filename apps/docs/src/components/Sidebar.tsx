@@ -8,7 +8,7 @@ export function Sidebar({ section }: { readonly section: NavigationSection }) {
     const pathname = usePathname();
 
     return (
-        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 overflow-y-auto py-10 md:block">
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-60 shrink-0 overflow-y-auto py-10 md:block">
             {section.groups.map((group) => (
                 <div key={group.title} className="mb-6">
                     <p className="mb-2 px-3 text-xs font-medium tracking-wide text-text-faint uppercase">{group.title}</p>

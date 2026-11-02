@@ -11,4 +11,5 @@ const config: NextConfig = {
     typescript: { ignoreBuildErrors: true }
 };
 
-export default createMDX({})(config);
+// By name, so Turbopack can hand the plugin to its loader; GitHub's markdown gives the pages their tables.
+export default createMDX({ options: { remarkPlugins: [['remark-gfm']] } })(config);
