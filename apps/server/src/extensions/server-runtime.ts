@@ -3,7 +3,7 @@
  * file as text and writes it beside the extension's data, so a compiled daemon can run it. It speaks
  * one JSON line per message over stdin and stdout, so the extension's `console.log` goes to stderr.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 type Listener = (payload: unknown) => void;
@@ -35,9 +35,14 @@ function jsonFile(name: string): Record<string, unknown> {
     }
 }
 
+/* Through a file of its own and a rename, so the daemon, which writes the same `storage.json`, never reads half of it. */
 function writeJsonFile(name: string, value: object): void {
+    const file = join(dataFolder as string, name);
+    const temporary = `${file}.${process.pid}.tmp`;
+
     mkdirSync(dataFolder as string, { recursive: true });
-    writeFileSync(join(dataFolder as string, name), JSON.stringify(value), { mode: 0o600 });
+    writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
+    renameSync(temporary, file);
 }
 
 function keyValues(name: string) {

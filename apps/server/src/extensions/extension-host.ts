@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { appendFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { EXTENSION_ACTIONS, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { VerbRefusal } from '../canvas/verb.ts';
@@ -29,10 +29,29 @@ interface Running {
     ready: Promise<void>;
     failStart(reason: Error): void;
     pending: Map<number, Pending>;
+    permissions: ReadonlySet<string>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
     stopping: boolean;
+}
+
+interface Starting {
+    promise: Promise<Running>;
+    // Set by a stop that comes before the process is there, so the start ends without one.
+    attempt: { cancelled: boolean };
+}
+
+/* The permission that covers each area of machine events `server/` may follow. Another area stays out. */
+const EVENT_PERMISSIONS: Readonly<Record<string, string>> = {
+    chat: 'chats.read',
+    session: 'terminals.read'
+};
+
+function eventPermission(name: string): string | null {
+    const area = name.split('.')[0] ?? '';
+
+    return Object.hasOwn(EVENT_PERMISSIONS, area) ? (EVENT_PERMISSIONS[area] ?? null) : null;
 }
 
 /* What `server/` may ask the daemon, each behind the permission of the same name. */
@@ -76,6 +95,8 @@ function startsWithMachine(manifest: ExtensionInfo['manifest']): boolean {
 
 export class ExtensionHost {
     private readonly running = new Map<string, Running>();
+    private readonly starting = new Map<string, Starting>();
+    private readonly storageWrites = new Map<string, Promise<unknown>>();
     private readonly crashes = new Map<string, number>();
     private readonly sinks = new ClientSinks();
     private readonly sends = new Map<string, number[]>();
@@ -100,6 +121,9 @@ export class ExtensionHost {
             // A tool only exists once its process said so, and an agent cannot ask for what it does not see.
             if (extension.enabled && startsWithMachine(extension.manifest)) {
                 await this.start(extension).catch((e: unknown) => console.warn(`Extension ${extension.manifest.id} did not start: ${errorText(e)}`));
+            } else if (!extension.enabled) {
+                // Turned off by a Ruimte that still kept its language servers.
+                await this.dropLanguageServers(extension.manifest.id);
             }
         }
     }
@@ -156,15 +180,24 @@ export class ExtensionHost {
         this.crashes.delete(id);
         this.stop(id);
 
-        if (enabled) {
+        if (!enabled) {
+            await this.dropLanguageServers(id);
+        } else {
             const extension = await this.options.store.get(id);
 
             if (extension !== null && startsWithMachine(extension.manifest)) {
                 await this.start(extension);
+            } else if (extension !== null && Object.hasOwn(extension.manifest.permissions ?? {}, 'languages.servers')) {
+                // Its language servers left when it was turned off, and only its own process adds them again.
+                await this.start(extension).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
             }
         }
 
         this.changed();
+    }
+
+    private async dropLanguageServers(id: string): Promise<void> {
+        await this.options.removeLanguageServers?.(id).catch((e: unknown) => console.warn(`The language servers of ${id} stayed: ${errorText(e)}`));
     }
 
     async install(pack: string): Promise<ExtensionInfo> {
@@ -221,11 +254,31 @@ export class ExtensionHost {
         return (await this.storageOf(id)).values[key];
     }
 
-    async storageSet(id: string, key: string, value: unknown): Promise<void> {
-        const { file, values } = await this.storageOf(id);
+    /* One write per extension at a time, each over what the last one left, so two keys set at once both stay. */
+    storageSet(id: string, key: string, value: unknown): Promise<void> {
+        const write = async (): Promise<void> => {
+            const { file, values } = await this.storageOf(id);
+            const temporary = `${file}.${process.pid}.tmp`;
 
-        await mkdir(dirname(file), { recursive: true });
-        await writeFile(file, JSON.stringify({ ...values, [key]: value }), { mode: 0o600 });
+            await mkdir(dirname(file), { recursive: true });
+            await writeFile(temporary, JSON.stringify({ ...values, [key]: value }), { mode: 0o600 });
+            await rename(temporary, file);
+        };
+        const next = (this.storageWrites.get(id) ?? Promise.resolve()).then(write, write);
+
+        this.storageWrites.set(id, next);
+        void next.then(
+            () => this.forgetWrite(id, next),
+            () => this.forgetWrite(id, next)
+        );
+
+        return next;
+    }
+
+    private forgetWrite(id: string, write: Promise<unknown>): void {
+        if (this.storageWrites.get(id) === write) {
+            this.storageWrites.delete(id);
+        }
     }
 
     agentTools(): readonly { id: string; description: string; parameters: unknown }[] {
@@ -266,7 +319,7 @@ export class ExtensionHost {
     }
 
     stopAll(): void {
-        for (const id of [...this.running.keys()]) {
+        for (const id of new Set([...this.running.keys(), ...this.starting.keys()])) {
             this.stop(id);
         }
     }
@@ -280,6 +333,13 @@ export class ExtensionHost {
     }
 
     private stop(id: string): void {
+        const starting = this.starting.get(id);
+
+        if (starting !== undefined) {
+            starting.attempt.cancelled = true;
+            this.starting.delete(id);
+        }
+
         const running = this.running.get(id);
 
         if (running === undefined) {
@@ -319,7 +379,34 @@ export class ExtensionHost {
         return this.start(extension);
     }
 
-    private async start(extension: StoredExtension): Promise<Running> {
+    /* One process per extension: a second start while the first is on its way waits for that one. */
+    private start(extension: StoredExtension): Promise<Running> {
+        const { id } = extension.manifest;
+        const starting = this.starting.get(id);
+
+        if (starting !== undefined) {
+            return starting.promise;
+        }
+
+        const running = this.running.get(id);
+
+        if (running !== undefined) {
+            return running.ready.then(() => running);
+        }
+
+        const attempt = { cancelled: false };
+        const promise = this.spawnFor(extension, attempt).finally(() => {
+            if (this.starting.get(id)?.attempt === attempt) {
+                this.starting.delete(id);
+            }
+        });
+
+        this.starting.set(id, { promise, attempt });
+
+        return promise;
+    }
+
+    private async spawnFor(extension: StoredExtension, attempt: Starting['attempt']): Promise<Running> {
         const { store, spawnProcess = spawn } = this.options;
         const { id } = extension.manifest;
         const entry = store.serverEntry(extension);
@@ -333,6 +420,10 @@ export class ExtensionHost {
 
         await mkdir(dirname(runtimePath), { recursive: true });
         await writeFile(runtimePath, runtimeSource);
+
+        if (attempt.cancelled) {
+            throw new Error('The extension stopped');
+        }
 
         const runtime = bunRuntime();
         const child = spawnProcess(runtime.command, [...runtime.args, runtimePath, entry, dataFolder], {
@@ -360,6 +451,7 @@ export class ExtensionHost {
                 rejectReady(reason);
             },
             pending: new Map(),
+            permissions: new Set(Object.keys(extension.manifest.permissions ?? {})),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -423,7 +515,7 @@ export class ExtensionHost {
             this.crashes.delete(id);
             markReady();
         } else if (message.type === 'subscribe' && message.name !== undefined) {
-            running.subscriptions.add(message.name);
+            this.followEvent(id, running, message.name);
         } else if (message.type === 'emit' && message.name !== undefined) {
             this.sinks.emit({ event: 'extension.message', payload: { id, name: message.name, payload: message.payload } });
         } else if (message.type === 'result' && message.id !== undefined) {
@@ -440,6 +532,21 @@ export class ExtensionHost {
                 }
             }
         }
+    }
+
+    /* A chat's thread or a terminal's output says as much as reading it, so it takes the same permission. */
+    private followEvent(id: string, running: Running, name: string): void {
+        const permission = eventPermission(name);
+
+        if (permission !== null && running.permissions.has(permission)) {
+            running.subscriptions.add(name);
+
+            return;
+        }
+
+        const reason = permission === null ? `${name} is no event an extension can follow` : `${name} needs the permission ${permission} in manifest.json`;
+
+        void appendFile(this.options.store.logFile(id), `${reason}\n`).catch(() => undefined);
     }
 
     /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */
