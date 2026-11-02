@@ -32,6 +32,7 @@ describe('ExtensionHost under forced orders', () => {
         const relinking = host.linked('acme.one');
 
         await gates.release('store.link', 'acme.one');
+        await gates.release('languages.remove', 'acme.one');
         await gates.release('store.get', 'acme.one');
         await relinking;
 

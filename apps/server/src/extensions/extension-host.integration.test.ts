@@ -2,15 +2,15 @@ import { afterAll, afterEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ExtensionHost } from './extension-host.ts';
+import { ExtensionHost, type ExtensionHostOptions } from './extension-host.ts';
 import { packExtension } from './pack.ts';
 import { ExtensionStore } from './store.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'ruimte-extension-host-'));
 const hosts: ExtensionHost[] = [];
 
-function hostIn(name: string): ExtensionHost {
-    const host = new ExtensionHost({ store: new ExtensionStore(join(root, name)) });
+function hostIn(name: string, options: Partial<ExtensionHostOptions> = {}): ExtensionHost {
+    const host = new ExtensionHost({ store: new ExtensionStore(join(root, name)), ...options });
 
     hosts.push(host);
 
@@ -134,6 +134,45 @@ describe('an extension with a server part', () => {
 
         await expect(host.install(Buffer.from('nonsense').toString('base64'))).rejects.toThrow('not an extension pack');
         expect((await host.list())[0]?.manifest.version).toBe('0.1.0');
+    });
+
+    test('the end of a dev link starts the installed version again, and every change takes the language servers of what ran', async () => {
+        const dropped: string[] = [];
+        const host = hostIn('unlink', { removeLanguageServers: async (id) => void dropped.push(id) });
+        const folder = join(root, 'unlinked');
+
+        await host.install(await packOf('unlink', SERVER, { autostart: true }));
+        mkdirSync(join(folder, 'server'), { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.builds', name: 'Builds', version: '0.2.0', api: 1 }));
+        writeFileSync(join(folder, 'server', 'index.js'), `export default { async ping() { return 'pong'; } };`);
+
+        await host.linked(folder);
+
+        expect((await host.list())[0]?.status).toBe('idle');
+
+        await host.unlink('acme.builds');
+
+        expect((await host.list())[0]).toMatchObject({ status: 'running', manifest: { version: '0.1.0' } });
+        expect(await host.call('acme.builds', 'add', [1, 2])).toBe(3);
+        expect(dropped).toEqual(['acme.builds', 'acme.builds', 'acme.builds']);
+    });
+
+    test('a removal or a turn off of a linked one stops it', async () => {
+        const host = hostIn('linked-off');
+        const folder = join(root, 'linked-off-folder');
+
+        mkdirSync(join(folder, 'server'), { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.linked', name: 'Linked', version: '0.1.0', api: 1 }));
+        writeFileSync(join(folder, 'server', 'index.js'), `export default { async ping() { return 'pong'; } };`);
+
+        await host.linked(folder);
+        await host.setEnabled('acme.linked', false);
+
+        await expect(host.call('acme.linked', 'ping', [])).rejects.toThrow('turned off');
+
+        await host.remove('acme.linked');
+
+        expect(await host.list()).toEqual([]);
     });
 
     test('a dev link runs from its folder and reports a new revision on every save', async () => {

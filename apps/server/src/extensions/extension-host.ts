@@ -25,7 +25,7 @@ import {
 } from './policy.ts';
 import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
 import { ownValue, parseKeyValues } from './server-api.ts';
-import type { ExtensionStore, StoredExtension } from './store.ts';
+import { manifestOfPack, type ExtensionStore, type StoredExtension } from './store.ts';
 
 // Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
 const CALL_TIMEOUT_MS = 50_000;
@@ -156,6 +156,8 @@ export class ExtensionHost {
     private readonly generations = new Map<string, number>();
     // A process that was stopped and has not exited yet, which a new one of the same extension waits for.
     private readonly exiting = new Map<string, Promise<void>>();
+    // Extensions whose folder is on its way out, which no storage write may make again.
+    private readonly removing = new Set<string>();
 
     private readonly options: ExtensionHostOptions;
     private readonly files: ExtensionHostFiles;
@@ -176,7 +178,13 @@ export class ExtensionHost {
     }
 
     async startAutostarted(): Promise<void> {
-        for (const extension of await this.options.store.list()) {
+        const extensions = await this.options.store.list().catch((e: unknown) => {
+            console.warn(`No extension started with the machine: ${errorText(e)}`);
+
+            return [];
+        });
+
+        for (const extension of extensions) {
             // A tool only exists once its process said so, and an agent cannot ask for what it does not see.
             if (extension.enabled && startsWithMachine(extension.manifest)) {
                 await this.runningFor(extension.manifest.id).catch((e: unknown) =>
@@ -254,13 +262,8 @@ export class ExtensionHost {
             }
         });
 
-        const extension = enabled ? await this.options.store.get(id) : null;
-
-        if (extension !== null && startsWithMachine(extension.manifest)) {
-            await this.runningFor(id);
-        } else if (extension !== null && permissionsOf(extension.manifest).has('languages.servers')) {
-            // Its language servers left when it was turned off, and only its own process adds them again.
-            await this.runningFor(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
+        if (enabled) {
+            await this.startAfterChange(id);
         }
 
         this.changed();
@@ -270,30 +273,72 @@ export class ExtensionHost {
         await this.options.removeLanguageServers?.(id).catch((e: unknown) => console.warn(`The language servers of ${id} stayed: ${errorText(e)}`));
     }
 
-    async install(pack: string): Promise<ExtensionInfo> {
-        const extension = await this.options.store.install(pack);
-        const { id } = extension.manifest;
+    /*
+     * After what runs changed: one that runs with the machine starts again, and so does one with `languages.servers`,
+     * since its language servers left with the change and only its own process adds them again.
+     */
+    private async startAfterChange(id: string): Promise<void> {
+        const extension = await this.options.store.get(id);
 
-        await this.lifecycle(id, async () => {
-            this.crashes.delete(id);
-            this.stop(id);
-        });
-
-        if (extension.enabled && startsWithMachine(extension.manifest)) {
-            await this.runningFor(id);
+        if (extension === null || !extension.enabled) {
+            return;
         }
 
+        if (startsWithMachine(extension.manifest)) {
+            await this.runningFor(id);
+        } else if (permissionsOf(extension.manifest).has('languages.servers')) {
+            await this.runningFor(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
+        }
+    }
+
+    /* A stop, and the language servers of what ran: a new version or the installed one under a dev link may not add them. */
+    private async replace(id: string): Promise<void> {
+        this.crashes.delete(id);
+        this.stop(id);
+        await this.dropLanguageServers(id);
+    }
+
+    async install(pack: string): Promise<ExtensionInfo> {
+        const { id } = manifestOfPack(pack);
+
+        await this.lifecycle(id, async () => {
+            await this.options.store.install(pack);
+            await this.replace(id);
+        });
+        await this.startAfterChange(id);
         this.changed();
 
         return (await this.list()).find((entry) => entry.manifest.id === id) as ExtensionInfo;
     }
 
+    /*
+     * Its folder goes only once nothing can write into it again: no process of it, no start on its way, and no storage
+     * write, of which none begins while it goes.
+     */
     async remove(id: string): Promise<void> {
         await this.lifecycle(id, async () => {
-            this.stop(id);
-            await this.options.store.remove(id);
-            await this.options.removeLanguageServers?.(id);
-            this.crashes.delete(id);
+            const starting = this.starting.get(id)?.promise;
+
+            this.removing.add(id);
+
+            try {
+                this.stop(id);
+                await starting?.catch(() => undefined);
+
+                for (let exiting = this.exiting.get(id); exiting !== undefined; exiting = this.exiting.get(id)) {
+                    await exiting;
+                }
+
+                for (let write = this.storageWrites.get(id); write !== undefined; write = this.storageWrites.get(id)) {
+                    await write.catch(() => undefined);
+                }
+
+                await this.options.store.remove(id);
+                await this.options.removeLanguageServers?.(id);
+                this.crashes.delete(id);
+            } finally {
+                this.removing.delete(id);
+            }
         });
         this.changed();
     }
@@ -302,28 +347,21 @@ export class ExtensionHost {
     async linked(folder: string): Promise<string> {
         const { id } = await this.options.store.link(folder);
 
-        await this.lifecycle(id, async () => {
-            this.crashes.delete(id);
-            this.stop(id);
-        });
-
-        const extension = await this.options.store.get(id);
-
+        await this.lifecycle(id, () => this.replace(id));
         // As with the machine: one with a clock or a tool does nothing until it runs. Its log says why a build does not start.
-        if (extension?.enabled === true && startsWithMachine(extension.manifest)) {
-            await this.runningFor(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
-        }
-
+        await this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
         this.changed();
 
         return id;
     }
 
+    /* What was installed under the link runs again as it would have without it. */
     async unlink(id: string): Promise<void> {
         await this.lifecycle(id, async () => {
-            this.stop(id);
             await this.options.store.unlink(id);
+            await this.replace(id);
         });
+        await this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
         this.changed();
     }
 
@@ -396,6 +434,10 @@ export class ExtensionHost {
      * that read it before never keeps, or writes back, an older value.
      */
     private changeStorage(id: string, key: string, change: (values: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
+        if (this.removing.has(id)) {
+            return Promise.reject(new ExtensionRefusal('unavailable', `${id} is being removed`));
+        }
+
         const write = async (): Promise<void> => {
             const { file, values } = await this.storageOf(id);
             const temporary = `${file}.${process.pid}.tmp`;

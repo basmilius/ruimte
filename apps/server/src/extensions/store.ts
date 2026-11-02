@@ -3,11 +3,13 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { isNotFound } from '@adecore/agents';
 import { EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from '@ruimte/contracts';
 import { z } from 'zod';
+import { errorText } from '../error-text.ts';
 
 export class ExtensionPackError extends Error {
-    readonly code: 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path' | 'extension-unknown';
+    readonly code: 'pack-unreadable' | 'pack-manifest' | 'pack-api' | 'pack-path' | 'extension-unknown' | 'store-damaged';
 
     constructor(code: ExtensionPackError['code'], message: string) {
         super(message);
@@ -29,14 +31,42 @@ const CurrentSchema = z.object({ hash: z.string().min(1), enabled: z.boolean() }
 const LinksSchema = z.record(z.string(), z.string());
 const IDS_FILE = 'installed.json';
 const LINKS_FILE = 'dev-links.json';
+// Beside the links, so a Ruimte that only knows `dev-links.json` still reads that one as it is.
+const LINKS_OFF_FILE = 'dev-links-off.json';
 const IdsSchema = z.array(z.string());
 
+/*
+ * Only a file that is not there is the fallback. One that cannot be read or is damaged refuses, so a change never
+ * writes over it with only what it adds and loses every installation or link it held.
+ */
 async function readJson<T>(path: string, schema: z.ZodType<T>, fallback: T): Promise<T> {
+    let text: string;
+
     try {
-        return schema.parse(JSON.parse(await readFile(path, 'utf8')));
-    } catch {
-        return fallback;
+        text = await readFile(path, 'utf8');
+    } catch (e) {
+        if (isNotFound(e)) {
+            return fallback;
+        }
+
+        throw new ExtensionPackError('store-damaged', `${path} could not be read: ${errorText(e)}`);
     }
+
+    let value: unknown;
+
+    try {
+        value = JSON.parse(text);
+    } catch {
+        throw new ExtensionPackError('store-damaged', `${path} is no JSON. Fix or remove it first.`);
+    }
+
+    const parsed = schema.safeParse(value);
+
+    if (!parsed.success) {
+        throw new ExtensionPackError('store-damaged', `${path} is not what this Ruimte reads. Fix or remove it first.`);
+    }
+
+    return parsed.data;
 }
 
 async function writeJson(path: string, value: unknown): Promise<void> {
@@ -98,6 +128,17 @@ export class ExtensionStore {
         return readJson(join(this.root, LINKS_FILE), LinksSchema, {});
     }
 
+    /* The links a person turned off, which stay off over every save of `extension dev` until it ends. */
+    private linksOff(): Promise<string[]> {
+        return readJson(join(this.root, LINKS_OFF_FILE), IdsSchema, []);
+    }
+
+    private async writeLinksOff(id: string, off: boolean): Promise<void> {
+        const ids = (await this.linksOff()).filter((entry) => entry !== id);
+
+        await writeJson(join(this.root, LINKS_OFF_FILE), off ? [...ids, id] : ids);
+    }
+
     async list(): Promise<StoredExtension[]> {
         const [ids, links] = await Promise.all([this.installedIds(), this.links()]);
         const stored = await Promise.all([...new Set([...ids, ...Object.keys(links)])].map((id) => this.get(id)));
@@ -110,13 +151,14 @@ export class ExtensionStore {
 
         if (devFolder !== undefined) {
             const manifest = await this.manifestIn(devFolder);
+            const revision = this.revisions.get(id) ?? 0;
 
             return manifest === null
                 ? null
-                : { manifest, hash: `dev-${this.revisions.get(id) ?? 0}`, enabled: true, folder: devFolder, devFolder, revision: this.revisions.get(id) ?? 0 };
+                : { manifest, hash: `dev-${revision}`, enabled: !(await this.linksOff()).includes(id), folder: devFolder, devFolder, revision };
         }
 
-        const current = await readJson(this.currentFile(id), CurrentSchema, null as never).catch(() => null);
+        const current = await this.current(id);
 
         if (current === null) {
             return null;
@@ -128,54 +170,91 @@ export class ExtensionStore {
         return manifest === null ? null : { manifest, hash: current.hash, enabled: current.enabled, folder };
     }
 
+    /* A version or dev folder without a manifest it can read has nothing to run. */
     private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
-        return readJson<ExtensionManifest | null>(join(folder, 'manifest.json'), ExtensionManifestSchema as z.ZodType<ExtensionManifest | null>, null);
+        return readJson<ExtensionManifest | null>(join(folder, 'manifest.json'), ExtensionManifestSchema as z.ZodType<ExtensionManifest | null>, null).catch(
+            () => null
+        );
     }
 
-    /* A pack is checked whole before a byte is written, so a bad one leaves the version in use alone. */
+    private current(id: string): Promise<z.infer<typeof CurrentSchema> | null> {
+        return readJson(this.currentFile(id), CurrentSchema, null).catch(() => null);
+    }
+
+    /*
+     * A pack is checked whole before a byte is written, so a bad one leaves the version in use alone. Its files are
+     * unpacked in the same change as the rest, so a removal never meets half of them, and land under a temporary name
+     * first. `current.json` goes last: it is what makes the version the one in use.
+     */
     async install(pack: string): Promise<StoredExtension> {
-        const files = unpack(Buffer.from(pack, 'base64'));
+        const bytes = Buffer.from(pack, 'base64');
+        const files = unpack(bytes);
         const manifest = manifestOf(files);
-        const hash = createHash('sha256').update(Buffer.from(pack, 'base64')).digest('hex');
+        const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = this.versionFolder(manifest.id, hash);
 
-        for (const [path, content] of Object.entries(files)) {
-            const target = join(folder, path);
-
-            await mkdir(dirname(target), { recursive: true });
-            await writeFile(target, content);
-        }
-
         return this.change(async () => {
-            const previous = await readJson(this.currentFile(manifest.id), CurrentSchema, null as never).catch(() => null);
+            if ((await this.manifestIn(folder)) === null) {
+                const unpacking = `${folder}.${randomUUID()}.tmp`;
 
-            await writeJson(this.currentFile(manifest.id), { hash, enabled: previous?.enabled ?? true });
+                try {
+                    for (const [path, content] of Object.entries(files)) {
+                        const target = join(unpacking, path);
+
+                        await mkdir(dirname(target), { recursive: true });
+                        await writeFile(target, content);
+                    }
+
+                    await rm(folder, { recursive: true, force: true });
+                    await rename(unpacking, folder);
+                } finally {
+                    await rm(unpacking, { recursive: true, force: true });
+                }
+            }
+
+            const previous = await this.current(manifest.id);
+            const enabled = previous?.enabled ?? true;
+
             await writeJson(join(this.root, IDS_FILE), [...new Set([...(await this.installedIds()), manifest.id])]);
+            await writeJson(this.currentFile(manifest.id), { hash, enabled });
 
-            return { manifest, hash, enabled: previous?.enabled ?? true, folder };
+            return { manifest, hash, enabled, folder };
         });
     }
 
-    /* `data/` goes with it: a person who removes an extension means all of it. */
+    /* `data/` and a dev link go with it: a person who removes an extension means all of it. */
     remove(id: string): Promise<void> {
         return this.change(async () => {
-            await rm(join(this.root, id), { recursive: true, force: true });
+            const ids = await this.installedIds();
+            const { [id]: _gone, ...links } = await this.links();
+
+            await writeJson(join(this.root, LINKS_FILE), links);
+            await this.writeLinksOff(id, false);
             await writeJson(
                 join(this.root, IDS_FILE),
-                (await this.installedIds()).filter((entry) => entry !== id)
+                ids.filter((entry) => entry !== id)
             );
+            await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
 
+    /* Of what runs: the dev link while there is one, and the installed version beside it, so neither turns on when the other ends. */
     setEnabled(id: string, enabled: boolean): Promise<void> {
         return this.change(async () => {
-            const current = await readJson(this.currentFile(id), CurrentSchema, null as never).catch(() => null);
+            const linked = (await this.links())[id] !== undefined;
+            const current = await this.current(id);
 
-            if (current === null) {
+            if (current === null && !linked) {
                 throw new ExtensionPackError('extension-unknown', `No extension ${id} on this machine`);
             }
 
-            await writeJson(this.currentFile(id), { ...current, enabled });
+            if (linked) {
+                await this.writeLinksOff(id, !enabled);
+            }
+
+            if (current !== null) {
+                await writeJson(this.currentFile(id), { ...current, enabled });
+            }
         });
     }
 
@@ -204,6 +283,7 @@ export class ExtensionStore {
             const { [id]: _gone, ...rest } = await this.links();
 
             await writeJson(join(this.root, LINKS_FILE), rest);
+            await this.writeLinksOff(id, false);
         });
     }
 
@@ -238,6 +318,11 @@ function unpack(bytes: Buffer): Record<string, Buffer> {
             return [path, Buffer.from(content, 'base64')];
         })
     );
+}
+
+/* What a pack installs as, checked whole, so a caller can order the install among the other changes of that id. */
+export function manifestOfPack(pack: string): ExtensionManifest {
+    return manifestOf(unpack(Buffer.from(pack, 'base64')));
 }
 
 function manifestOf(files: Record<string, Buffer>): ExtensionManifest {

@@ -75,6 +75,9 @@ function hostWith(
         setEnabled: async (_id: string, enabled: boolean) => {
             extension.enabled = enabled;
         },
+        remove: async () => {
+            rmSync(folder, { recursive: true, force: true });
+        },
         serverEntry: () => {
             setups += 1;
 
@@ -332,6 +335,43 @@ describe('ExtensionHost', () => {
             { event: 'extension.storageChanged', payload: { id: 'acme.builds', key: 'draft' } },
             { event: 'extension.storageChanged', payload: { id: 'acme.builds', key: 'draft' } }
         ]);
+    });
+
+    test('a removal waits for the storage write under way, and refuses a new one, so nothing makes the folder again', async () => {
+        const { promise: writing, resolve: letWrite } = Promise.withResolvers<void>();
+        const written: string[] = [];
+        const hosted = hostWith(
+            {},
+            {
+                files: {
+                    mkdir: async () => undefined,
+                    readText: async () => {
+                        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+                    },
+                    write: async (file) => {
+                        await writing;
+                        written.push(file);
+                    },
+                    rename: async () => undefined,
+                    append: async () => undefined
+                }
+            }
+        );
+        const { host } = hosted;
+        const before = host.storageSet('acme.builds', 'key', 1);
+        let removed = false;
+        const removing = host.remove('acme.builds').then(() => (removed = true));
+
+        await new Promise((resolve) => setImmediate(resolve));
+
+        await expect(host.storageSet('acme.builds', 'key', 2)).rejects.toMatchObject({ code: 'unavailable' });
+        expect(removed).toBe(false);
+
+        letWrite();
+        await before;
+        await removing;
+
+        expect(written).toHaveLength(1);
     });
 
     test('a storage file it cannot read is refused, never written over', async () => {

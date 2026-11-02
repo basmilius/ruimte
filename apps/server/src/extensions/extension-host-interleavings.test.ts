@@ -101,8 +101,11 @@ function operate(run: Run, next: () => number, step: number, clients: Map<string
     } else if (kind === 'storage') {
         const key = pick(next, KEYS);
 
-        run.writes.set(`${id}/${key}`, step);
-        launch(run, `storage ${id} ${key}=${step}`, () => host.storageSet(id, key, step));
+        // Only a write that landed counts: one that comes while its extension is being removed is refused.
+        launch(run, `storage ${id} ${key}=${step}`, async () => {
+            await host.storageSet(id, key, step);
+            run.writes.set(`${id}/${key}`, step);
+        });
     } else if (kind === 'subscribe') {
         const client = `client-${Math.floor(next() * 2)}`;
         const forget = clients.get(client);
