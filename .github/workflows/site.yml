@@ -1,13 +1,11 @@
 name: Site
 
+# Starts once CI finished on main, so a red CI starts no runner and sends no mail of its own.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'apps/site/**'
-      - 'packages/extension/**'
-      - 'bun.lock'
-      - '.github/workflows/site.yml'
   workflow_dispatch:
 
 # One deploy at a time, so an older build never lands after a newer one.
@@ -16,23 +14,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  gate:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       actions: read
+      deployments: read
+    outputs:
+      deploy: ${{ steps.gate.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - id: gate
+        uses: ./.github/actions/deploy-gate
+        with:
+          environment: site
+          paths: |
+            apps/site
+            packages/extension
+            bun.lock
+            .github/workflows/site.yml
+
+  deploy:
+    needs: gate
+    if: always() && (github.event_name == 'workflow_dispatch' || needs.gate.outputs.deploy == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
     env:
       CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     defaults:
       run:
         working-directory: apps/site
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
       - uses: ./.github/actions/install
       - run: bun run typecheck
       - run: bun test
-      - uses: ./.github/actions/wait-for-ci
       - run: bun run deploy
         env:
           # The token the station deploys with; the Custom Domains `ruimte.app` and `www.ruimte.app` sit on the same zone.
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - uses: ./.github/actions/deploy-record
+        with:
+          environment: site
+          sha: ${{ env.SHA }}

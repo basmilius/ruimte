@@ -1,0 +1,50 @@
+name: Deploy gate
+description: Decide whether a CI run that passed on main ships this deploy, from what changed since the last deploy and whether it is still the newest commit
+# Runs after a checkout of the CI run's commit with `fetch-depth: 0`. The job needs `actions: read` and `deployments: read`.
+
+inputs:
+  environment:
+    description: The deployment environment that records what shipped, such as `site`
+    required: true
+  paths:
+    description: The paths of this deploy, one pathspec per line, as `git diff` reads them
+    required: true
+
+outputs:
+  deploy:
+    description: '`true` when this commit ships'
+    value: ${{ steps.gate.outputs.deploy }}
+
+runs:
+  using: composite
+  steps:
+    - id: gate
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        SHA: ${{ github.event.workflow_run.head_sha }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        PATHS: ${{ inputs.paths }}
+      run: |
+        # A newer commit on main has a CI run of its own that ships everything up to it, so an older run that
+        # finishes late never lands over a newer deploy.
+        tip=$(gh api "repos/$GH_REPO/commits/main" --jq .sha)
+        if [ "$tip" != "$SHA" ]; then
+          echo "::notice::$SHA is no longer the newest commit on main; the run of $tip deploys."
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Compared with what shipped last, so commits pushed while CI was red ship with this one.
+        base=$(gh api "repos/$GH_REPO/deployments?environment=$ENVIRONMENT&per_page=1" --jq '.[0].sha // empty')
+        mapfile -t pathspecs <<< "$PATHS"
+        if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+          echo "::notice::No earlier deploy of $ENVIRONMENT is known, so this commit ships."
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+        elif git diff --quiet "$base" "$SHA" -- "${pathspecs[@]}"; then
+          echo "::notice::Nothing of $ENVIRONMENT changed since ${base::12}."
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+        fi

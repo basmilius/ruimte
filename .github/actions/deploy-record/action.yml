@@ -1,0 +1,27 @@
+name: Deploy record
+description: Record the commit a deploy shipped, so the next deploy gate compares with it
+# The job needs `deployments: write`.
+
+inputs:
+  environment:
+    description: The deployment environment, the same as the gate's
+    required: true
+  sha:
+    description: The commit that shipped
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        SHA: ${{ inputs.sha }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        # CI already passed on this commit, so the deployment asks for no other status checks.
+        id=$(jq -n --arg ref "$SHA" --arg environment "$ENVIRONMENT" \
+          '{ ref: $ref, environment: $environment, auto_merge: false, required_contexts: [] }' |
+          gh api "repos/$GH_REPO/deployments" -X POST --input - --jq .id)
+        gh api "repos/$GH_REPO/deployments/$id/statuses" -X POST -f state=success > /dev/null
