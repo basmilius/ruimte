@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isNotFound } from '@adecore/agents';
 import type { ExtensionActionName, ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
@@ -12,6 +12,7 @@ import { bunRuntime } from '../language/runtime.ts';
 import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { clientFilesOf } from './client-files.ts';
 import {
     actionRefusal,
     askRefusal,
@@ -31,7 +32,6 @@ import { manifestOfPack, type ExtensionStore, type StoredExtension } from './sto
 const CALL_TIMEOUT_MS = 50_000;
 const MAX_CRASHES = 3;
 const KILL_AFTER_MS = 5_000;
-const CLIENT_FOLDERS = new Set(['client', 'assets', 'locales', 'themes', 'views']);
 const RUNTIME_FILE = 'runtime.js';
 
 function refuse(refusal: Refusal | null): void {
@@ -861,24 +861,7 @@ export class ExtensionHost {
             throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
         }
 
-        const files: Record<string, string> = {};
-        const walk = async (folder: string, prefix: string): Promise<void> => {
-            for (const entry of await readdir(folder, { withFileTypes: true })) {
-                const path = `${prefix}${entry.name}`;
-
-                if (entry.isDirectory()) {
-                    if (prefix !== '' || CLIENT_FOLDERS.has(entry.name)) {
-                        await walk(join(folder, entry.name), `${path}/`);
-                    }
-                } else if (prefix !== '' || entry.name === 'manifest.json') {
-                    files[path] = (await readFile(join(folder, entry.name))).toString('base64');
-                }
-            }
-        };
-
-        await walk(extension.folder, '');
-
-        return { hash: extension.hash, files };
+        return { hash: extension.hash, files: await clientFilesOf(extension.folder, extension.manifest) };
     }
 
     private async answerAsk(id: string, running: Running, method: string, args: unknown[]): Promise<unknown> {
