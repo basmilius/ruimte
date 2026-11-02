@@ -36,6 +36,6 @@ describe('a built extension', () => {
         expect(mounted.host.textContent).toContain('"selection"');
         await mounted.unmount();
 
-        expect(await Bun.file(join(OUTPUT, 'client/index.js')).text()).toContain('__ruimteExtension.for("poc.surfaces").console');
+        expect(await Bun.file(join(OUTPUT, 'client/index.js')).text()).toContain('__ruimteExtension.for("poc.surfaces", import.meta.url).console');
     });
 });

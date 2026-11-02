@@ -31,10 +31,10 @@ describe('building an extension', () => {
         const { outdir } = await buildExtension(folder);
         const index = readFileSync(join(outdir, 'client', 'index.js'), 'utf8');
 
-        expect(index).toContain('globalThis.__ruimteExtension.for("acme.builds").client');
+        expect(index).toContain('globalThis.__ruimteExtension.for("acme.builds", import.meta.url).client');
         expect(index).toContain('import(');
         expect(index).not.toContain('useState');
-        expect(readFileSync(join(outdir, 'server', 'index.js'), 'utf8')).toContain('globalThis.__ruimteExtension.for("acme.builds").server');
+        expect(readFileSync(join(outdir, 'server', 'index.js'), 'utf8')).toContain('globalThis.__ruimteExtension.for("acme.builds", import.meta.url).server');
     });
 
     test('gathers every stylesheet the client imports, also a lazy one, into index.css beside index.js', async () => {

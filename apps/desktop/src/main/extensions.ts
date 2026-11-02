@@ -18,6 +18,8 @@ import { z } from 'zod';
 const IndexSchema = z.array(z.object({ id: z.string(), hash: z.string(), enabled: z.boolean() }));
 type IndexEntry = z.infer<typeof IndexSchema>[number];
 
+const LOAD_MARK = /~\d+$/;
+
 const MIME: Readonly<Record<string, string>> = {
     '.js': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -255,7 +257,9 @@ export class ClientExtensions {
             return new Response('Bad request', { status: 400 });
         }
 
-        const [id, version, ...rest] = parts;
+        const [id, asked, ...rest] = parts;
+        // A window asks each load of a version under `<version>~<load>`, so its modules run anew; the files are the version's.
+        const version = asked?.replace(LOAD_MARK, '');
         const relative = rest.join('/');
 
         if (id === undefined || version === undefined || !isSafePackPath(relative)) {

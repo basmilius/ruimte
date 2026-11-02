@@ -136,8 +136,9 @@ function hostPlugin(id: string, hosted: Readonly<Record<string, string>>, forbid
                 return undefined;
             });
             build.onLoad({ filter: /.*/, namespace: 'ruimte-host' }, (args) => ({
-                // CommonJS, so a named import reads a property when it runs and no list of names is needed here.
-                contents: `module.exports = globalThis.__ruimteExtension.for(${JSON.stringify(id)}).${hosted[args.path]};`,
+                // CommonJS, so a named import reads a property when it runs and no list of names is needed here. The
+                // address names the load the chunk belongs to, which a client hands only what that load may do.
+                contents: `module.exports = globalThis.__ruimteExtension.for(${JSON.stringify(id)}, import.meta.url).${hosted[args.path]};`,
                 loader: 'js'
             }));
         }
@@ -230,7 +231,7 @@ async function buildInto(root: string, manifest: ExtensionManifest, outdir: stri
             hostPlugin(manifest.id, CLIENT_HOSTED, join(root, 'server'), 'client/', violations),
             violations,
             // Shadows the page's, so what an extension in development logs also reaches its terminal.
-            `const console = globalThis.__ruimteExtension.for(${JSON.stringify(manifest.id)}).console;`
+            `const console = globalThis.__ruimteExtension.for(${JSON.stringify(manifest.id)}, import.meta.url).console;`
         );
     }
 

@@ -23,11 +23,11 @@ type Runtime = typeof import('@/extensions/host/runtime');
 
 const loaded = new Map<string, string>();
 /*
- * Each version as it was first loaded, by its base. A module the page already ran is never run again for the same
- * address, so turning a version on again imports its entry under a new one and hands it the same extension, which is
- * how the runtime knows a chunk kept from before belongs to the load in place.
+ * Counts the loads begun. A page runs a module once per address, so each load asks for its whole module graph under
+ * `<version>~<load>/`, which the files' server answers as the version: turned on again, every chunk runs anew, and no
+ * chunk of an earlier load reaches the one in place.
  */
-const versions = new Map<string, { extension: LoadedExtension; imports: number }>();
+let loads = 0;
 // By id, while its stylesheet and module load.
 const loading = new Set<string>();
 let stopActivation: (() => void) | null = null;
@@ -119,16 +119,16 @@ export async function syncExtensions(): Promise<void> {
 
 async function load(entry: InstalledClientExtension, { registerExtension, forgetExtension }: Runtime): Promise<void> {
     const { id } = entry.manifest;
-    const version = versions.get(entry.base) ?? {
-        extension: { manifest: entry.manifest, base: entry.base, iconUrl: extensionIconUrl(entry), dev: entry.dev, disposers: [], settings: null },
-        imports: 0
+    const extension: LoadedExtension = {
+        manifest: entry.manifest,
+        base: entry.base,
+        iconUrl: extensionIconUrl(entry),
+        dev: entry.dev,
+        disposers: [],
+        settings: null
     };
-    const address = `${entry.base}client/index.js${version.imports === 0 ? '' : `?load=${version.imports}`}`;
-
-    version.imports += 1;
-    versions.set(entry.base, version);
-
-    const current = registerExtension(version.extension);
+    const root = `${entry.base.slice(0, -1)}~${++loads}/`;
+    const current = registerExtension(extension, root);
 
     let failedToLoad = false;
 
@@ -144,7 +144,7 @@ async function load(entry: InstalledClientExtension, { registerExtension, forget
             return;
         }
 
-        await import(/* @vite-ignore */ address);
+        await import(/* @vite-ignore */ `${root}client/index.js`);
         useInstalledExtensions.setState(({ failures: { [id]: _cleared, ...failures } }) => ({ failures }));
     } catch (e) {
         // Taken down while it loaded: what failed is a load nobody wants any more.

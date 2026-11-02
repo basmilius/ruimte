@@ -41,6 +41,16 @@ describe('the client extensions of the shell', () => {
         expect((await store.list()).map((entry) => entry.manifest.id)).toEqual(['acme.builds']);
     });
 
+    test('serve a load of a version, its chunks too, under the address of that load', async () => {
+        const store = extensions();
+        const { base } = await store.install(pack({ 'client/index.js': 'export {};', 'client/chunks/shared.js': 'export const shared = 1;' }));
+        const loaded = `${base.slice(0, -1)}~3/`;
+
+        expect(await (await store.answer(`${loaded}client/index.js`, ORIGIN)).text()).toBe('export {};');
+        expect(await (await store.answer(`${loaded}client/chunks/shared.js`, ORIGIN)).text()).toBe('export const shared = 1;');
+        expect((await store.answer(`${base.slice(0, -1)}~/client/index.js`, ORIGIN)).status).toBe(404);
+    });
+
     test('refuse a pack with a path outside itself, and leave nothing behind', async () => {
         const store = extensions();
 
@@ -70,6 +80,8 @@ describe('the client extensions of the shell', () => {
 
         expect((await store.answer('/__extensions/acme.dev/dev-1/client/secret.js', ORIGIN)).status).toBe(404);
         expect(await (await store.answer('/__extensions/acme.dev/dev-1/client/index.js', ORIGIN)).text()).toBe('export {};');
+        expect(await (await store.answer('/__extensions/acme.dev/dev-1~2/client/index.js', ORIGIN)).text()).toBe('export {};');
+        expect((await store.answer('/__extensions/acme.dev/dev-1~2/client/secret.js', ORIGIN)).status).toBe(404);
     });
 
     test('keep both of two changes to the index made at once', async () => {

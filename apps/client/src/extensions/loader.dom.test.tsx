@@ -1,16 +1,45 @@
 import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import type { ComponentType } from 'react';
+import type { ExtensionManifest } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
 import { startExtensions } from '@/extensions/watch';
-import { until } from '../../testing/dom';
+import { useToasts } from '@/state/toasts';
+import { mount, until } from '../../testing/dom';
 import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
+
+// By a path the types do not follow: the client's project never reaches into the daemon's, only this test does.
+const PACK = '../../../server/src/extensions/pack.ts';
+// What the shell strips from a version before it reads its files.
+const LOAD_MARK = /~\d+(?=\/)/;
+const LOAD_PREFIX = /^\/?load:/;
 
 let folder: string;
 let installed: InstalledClientExtension[] = [];
+
+/*
+ * Answers a load's address as the shell does, with the files of its version, while the page keeps a module for each
+ * address it was asked under. A relative import of such a module stays under its load.
+ */
+Bun.plugin({
+    name: 'extension-loads',
+    setup(build) {
+        build.onResolve({ filter: LOAD_MARK }, (args) => ({ path: args.path, namespace: 'load' }));
+        build.onResolve({ filter: /^\.\.?\// }, (args) => {
+            const importer = args.importer.replace(LOAD_PREFIX, '');
+
+            return LOAD_MARK.test(importer) ? { path: join(dirname(importer), args.path), namespace: 'load' } : undefined;
+        });
+        build.onLoad({ filter: /.*/, namespace: 'load' }, (args) => ({
+            contents: readFileSync(args.path.replace(LOAD_PREFIX, '').replace(LOAD_MARK, ''), 'utf8'),
+            loader: 'js'
+        }));
+    }
+});
 
 /* What a pack writes: the API comes from the page, and the module registers when it runs, or later through `later`. */
 function writeExtension(id: string, module: string): InstalledClientExtension {
@@ -48,8 +77,59 @@ afterAll(() => {
     rmSync(folder, { recursive: true, force: true });
 });
 
-function hasCommand(id: string): boolean {
-    return useContributions.getState().commands.some((command) => command.id === `extension:${id}/hello`);
+function hasCommand(id: string, command = 'hello'): boolean {
+    return useContributions.getState().commands.some((each) => each.id === `extension:${id}/${command}`);
+}
+
+/* An entry and a lazy panel that share a chunk, where the bundler puts the API and the top-level registration. */
+async function buildSplit(): Promise<InstalledClientExtension> {
+    const project = join(folder, 'acme.split');
+    const manifest: ExtensionManifest = { id: 'acme.split', name: 'Split', version: '0.1.0', api: 1, permissions: {} };
+    const files: Record<string, string> = {
+        'manifest.json': JSON.stringify(manifest),
+        'client/index.ts': [
+            "import { definePanel } from '@ruimte/extension/client';",
+            "import { name } from './shared';",
+            "definePanel({ id: 'side', title: name, component: () => import('./Side') });",
+            'const scope = globalThis as { __splitLate?: (() => Promise<unknown>)[] };',
+            "(scope.__splitLate ??= []).push(() => import('./Late'));"
+        ].join('\n'),
+        'client/Late.ts': "import { host } from '@ruimte/extension/client';\nhost.notify('Late chunk');\n",
+        'client/shared.ts': [
+            "import { defineCommand, host } from '@ruimte/extension/client';",
+            "defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });",
+            'const scope = globalThis as { __splitKept?: (() => void)[] };',
+            "(scope.__splitKept ??= []).push(() => { defineCommand({ id: 'late', title: 'Late', run: () => undefined }); host.notify('Late'); });",
+            "export const name = 'Split';"
+        ].join('\n'),
+        'client/Side.tsx': [
+            "import { host } from '@ruimte/extension/client';",
+            "import { name } from './shared';",
+            'const scope = globalThis as { __splitSides?: number };',
+            'scope.__splitSides = (scope.__splitSides ?? 0) + 1;',
+            "export default function Side() { return <p onClick={() => host.notify('Side')}>{name}</p>; }"
+        ].join('\n')
+    };
+
+    for (const [path, text] of Object.entries(files)) {
+        mkdirSync(dirname(join(project, path)), { recursive: true });
+        writeFileSync(join(project, path), text);
+    }
+
+    const { buildExtension } = (await import(PACK)) as { buildExtension(folder: string): Promise<{ outdir: string }> };
+    const { outdir } = await buildExtension(project);
+
+    return { manifest, base: `${outdir}/`, enabled: true, hasClient: true, dev: false };
+}
+
+/* Draws the side panel, which imports its lazy chunk under the load in place. */
+async function drawSide(): Promise<void> {
+    const Side = useContributions.getState().panels.find((panel) => panel.kind === 'extension:acme.split/side')?.component as ComponentType;
+    const mounted = mount();
+
+    await mounted.render(<Side />);
+    await until(() => mounted.host.textContent === 'Split');
+    await mounted.unmount();
 }
 
 describe('loading extensions', () => {
@@ -102,21 +182,50 @@ describe('loading extensions', () => {
         delete scope.__listenLater;
     });
 
-    test('registers again when turned back on, also when the API came in through a chunk the page ran before', async () => {
-        const entry = writeExtension(
-            'acme.chunked',
-            "import { client } from './shared.js';\nclient.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
-        );
+    test('runs a built bundle anew when turned back on, chunks too, and refuses what the load before it kept', async () => {
+        const scope = globalThis as { __splitKept?: (() => void)[]; __splitLate?: (() => Promise<unknown>)[]; __splitSides?: number };
 
-        writeFileSync(join(folder, 'acme.chunked', 'client', 'shared.js'), "export const { client } = globalThis.__ruimteExtension.for('acme.chunked');\n");
-        installed = [entry];
-        await syncExtensions();
-        turn('acme.chunked', false);
-        await syncExtensions();
-        turn('acme.chunked', true);
-        await syncExtensions();
+        installed = [await buildSplit()];
 
-        expect(hasCommand('acme.chunked')).toBe(true);
+        try {
+            await syncExtensions();
+            await drawSide();
+
+            expect(hasCommand('acme.split')).toBe(true);
+            expect(scope.__splitSides).toBe(1);
+
+            turn('acme.split', false);
+            await syncExtensions();
+
+            expect(hasCommand('acme.split')).toBe(false);
+
+            turn('acme.split', true);
+            await syncExtensions();
+            await drawSide();
+
+            expect(hasCommand('acme.split')).toBe(true);
+            expect(scope.__splitSides).toBe(2);
+
+            const toasts = useToasts.getState().toasts.length;
+            const [before, now] = scope.__splitKept ?? [];
+            const [importBefore, importNow] = scope.__splitLate ?? [];
+
+            before?.();
+
+            await expect(importBefore?.()).rejects.toThrow('turned off or replaced');
+            expect(hasCommand('acme.split', 'late')).toBe(false);
+            expect(useToasts.getState().toasts).toHaveLength(toasts);
+
+            now?.();
+            await importNow?.();
+
+            expect(hasCommand('acme.split', 'late')).toBe(true);
+            expect(useToasts.getState().toasts.map((toast) => toast.title)).toContain('Late chunk');
+        } finally {
+            delete scope.__splitKept;
+            delete scope.__splitLate;
+            delete scope.__splitSides;
+        }
     });
 
     test('takes down what another window turned off in the shell, without a machine to say so', async () => {
