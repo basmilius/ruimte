@@ -124,17 +124,6 @@ export class ClientExtensions {
         }
     }
 
-    private changeIndex<T>(change: (entries: IndexEntry[]) => { entries: IndexEntry[]; result: T }): Promise<T> {
-        return this.change(async (touched) => {
-            const { entries, result } = change(await this.index());
-
-            await this.writeIndex(entries);
-            touched();
-
-            return result;
-        });
-    }
-
     private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
         try {
             return ExtensionManifestSchema.parse(JSON.parse(await readFile(join(folder, 'manifest.json'), 'utf8')));
@@ -223,26 +212,34 @@ export class ClientExtensions {
         return this.installedOf(entry, manifest);
     }
 
-    /* A dev link of the id goes with it, or the folder it reads would run on as before. */
+    /*
+     * A dev link of the id goes with it, or the folder it reads would run on as before. Only once the index is written,
+     * so a write that fails leaves every window's list as it was.
+     */
     remove(id: string): Promise<void> {
         return this.change(async (touched) => {
-            this.links.delete(id);
             await this.writeIndex((await this.index()).filter((entry) => entry.id !== id));
+            this.links.delete(id);
             touched();
             await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
 
-    /* A dev link of the id is turned on or off with it, and keeps that through its next builds. */
-    async setEnabled(id: string, enabled: boolean): Promise<void> {
-        await this.changeIndex((entries) => {
+    /*
+     * A dev link of the id is turned on or off with it, and keeps that through its next builds. Only once the index is
+     * written, so a write that fails turns nothing a window was not told of.
+     */
+    setEnabled(id: string, enabled: boolean): Promise<void> {
+        return this.change(async (touched) => {
+            await this.writeIndex((await this.index()).map((entry) => (entry.id === id ? { ...entry, enabled } : entry)));
+
             const link = this.links.get(id);
 
             if (link !== undefined) {
                 this.links.set(id, { ...link, enabled });
             }
 
-            return { entries: entries.map((entry) => (entry.id === id ? { ...entry, enabled } : entry)), result: undefined };
+            touched();
         });
     }
 

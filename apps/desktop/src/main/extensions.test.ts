@@ -195,6 +195,34 @@ describe('the client extensions of the shell', () => {
         expect(order).toEqual(['told 0', 'told 1', 'second done']);
     });
 
+    // Windows keeps a folder writable whatever its mode says, so the write this test makes fail would succeed there.
+    test.skipIf(process.platform === 'win32')('change no dev link when the index cannot be written, and tell no window', async () => {
+        const told: string[] = [];
+        const store = extensions(() => void told.push('changed'));
+        const folder = join(root, 'dev');
+
+        mkdirSync(join(folder, 'client'), { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.dev', name: 'Dev', version: '1.0.0', api: 1 }));
+        writeFileSync(join(folder, 'client', 'index.js'), 'export {};');
+        await store.install(pack({}));
+        await store.link(folder, 1);
+        told.length = 0;
+        chmodSync(root, 0o555);
+
+        try {
+            await expect(store.setEnabled('acme.dev', false)).rejects.toThrow();
+            await expect(store.remove('acme.dev')).rejects.toThrow();
+        } finally {
+            chmodSync(root, 0o755);
+        }
+
+        expect(told).toEqual([]);
+        expect((await store.list()).map((entry) => [entry.manifest.id, entry.dev, entry.enabled])).toEqual([
+            ['acme.builds', false, true],
+            ['acme.dev', true, true]
+        ]);
+    });
+
     // Windows keeps a folder writable whatever its mode says, so the removal this test makes fail would succeed there.
     test.skipIf(process.platform === 'win32')('tell every window of a removal whose files could not all go', async () => {
         const told: string[] = [];
