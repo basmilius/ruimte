@@ -224,7 +224,7 @@ export class GatedHost {
                     this.extensions.delete(id);
                 }),
             link: (id: string) => gates.hold('store.link', id, () => this.stored(this.plans.get(id) as Plan).manifest),
-            unlink: (id: string) => gates.hold('store.unlink', id, () => undefined),
+            unlink: (id: string) => gates.hold('store.unlink', id, () => true),
             serverEntry: (extension: StoredExtension) => `/extensions/${extension.manifest.id}/server/index.js`,
             dataFolder: (id: string) => `/extensions/${id}/data`,
             logFile: (id: string) => `/extensions/${id}/server.log`

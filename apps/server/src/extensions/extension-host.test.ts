@@ -268,6 +268,82 @@ describe('ExtensionHost', () => {
         expect(hosted.log()).toContain('chats.send answered unavailable');
     });
 
+    test('an action or a chat asked before a turn off that lands while the store answers neither runs nor starts', async () => {
+        const ran: string[] = [];
+        const hosted = hostWith(
+            { permissions: { 'launches.run': 'Starts launches', 'agents.start': 'Starts chats' } },
+            {
+                runAction: async (_id, _project, action) => void ran.push(action),
+                startChat: async () => {
+                    ran.push('chat');
+
+                    return { nodeId: 'node-1' };
+                }
+            }
+        );
+        const release = hosted.holdReads();
+        const asked = Promise.allSettled([
+            hosted.host.runAction('acme.builds', 'project', 'launch.start', { launch: 'web' }),
+            hosted.host.startAgent('acme.builds', { projectId: 'project' })
+        ]);
+
+        await hosted.host.setEnabled('acme.builds', false);
+        release();
+
+        expect(await asked).toMatchObject([
+            { status: 'rejected', reason: { code: 'unavailable' } },
+            { status: 'rejected', reason: { code: 'unavailable' } }
+        ]);
+        expect(ran).toEqual([]);
+    });
+
+    test('a chat whose start waits on something of its own starts nothing once the extension was turned off meanwhile', async () => {
+        const started: string[] = [];
+        const { promise: lookedUp, resolve: lookUp } = Promise.withResolvers<void>();
+        const { promise: asked, resolve: ask } = Promise.withResolvers<void>();
+        const { host } = hostWith(
+            { permissions: { 'agents.start': 'Starts chats' } },
+            {
+                startChat: async (_id, _start, check) => {
+                    ask();
+                    await lookedUp;
+                    check();
+                    started.push('chat');
+
+                    return { nodeId: 'node-1' };
+                }
+            }
+        );
+        const chat = host.startAgent('acme.builds', { projectId: 'project' });
+
+        await asked;
+        await host.setEnabled('acme.builds', false);
+        lookUp();
+
+        await expect(chat).rejects.toMatchObject({ code: 'unavailable' });
+        expect(started).toEqual([]);
+    });
+
+    test('a turn off or a removal whose language servers stay saved says so, and every client hears of it all the same', async () => {
+        const heard: unknown[] = [];
+        const hosted = hostWith(
+            { permissions: { 'languages.servers': 'Adds one' } },
+            {
+                removeLanguageServers: async () => {
+                    throw new Error('custom.json is read-only');
+                }
+            }
+        );
+
+        hosted.host.subscribe('client-a', (event) => void heard.push(event));
+
+        await expect(hosted.host.setEnabled('acme.builds', false)).rejects.toThrow('stay saved: custom.json is read-only');
+        expect(heard).toEqual([{ event: 'extension.changed', payload: {} }]);
+
+        await expect(hosted.host.remove('acme.builds')).rejects.toThrow('stay saved');
+        expect(heard).toHaveLength(2);
+    });
+
     test('a method that throws fails, and one it lacks is not found', async () => {
         const hosted = hostWith({});
         const child = await runningChild(hosted);

@@ -77,10 +77,11 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     const extensions = new ExtensionHost({
         store: new ExtensionStore(home),
         asks: () => extensionAsks,
-        startChat: (id, start) => startExtensionChat(id, start),
+        startChat: (id, start, check) => startExtensionChat(id, start, check),
         runAction: (id, projectId, action, input) => runExtensionAction(id, projectId, action, input),
         addLanguageServer: (id, server) => addExtensionLanguageServer(id, server),
-        removeLanguageServers: (id) => language.host.customRemoveOwned(id)
+        removeLanguageServers: (id) => language.host.customRemoveOwned(id),
+        languageServerOwners: () => language.host.customOwners()
     });
 
     // Runs while the stores load; it never rejects, and the managers await it before any launch.
@@ -241,7 +242,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         return Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text ?? '').join('\n') : typeof parts === 'string' ? parts : null;
     });
     // As Voice starts one: under the person's own CLI, an AI Chat and no wider than supervised, and with no canvas a view of its own.
-    startExtensionChat = async (id, { projectId, viewId, beside, provider, title, prompt }) => {
+    startExtensionChat = async (id, { projectId, viewId, beside, provider, title, prompt }, check) => {
         const folder = projects.store.index.folderOf(projectId);
 
         if (folder === null) {
@@ -253,6 +254,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         if (kind === undefined) {
             throw new ExtensionRefusal('unavailable', 'No agent is set up on this machine');
         }
+
+        check();
 
         const result = await serverActions.execute(
             'agent.start',

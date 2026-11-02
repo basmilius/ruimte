@@ -95,6 +95,13 @@ interface Starting {
     attempt: { cancelled: boolean };
 }
 
+/* What an extension may do as the store held it once no change of what runs was under way. */
+interface Grant {
+    permissions: ReadonlySet<string>;
+    // Throws once a change of what runs came after the grant, for a side effect that follows an await of its own.
+    check(): void;
+}
+
 /* What `server/` may ask the daemon, each behind the permission of the same name. */
 export type ExtensionAsks = Readonly<Record<string, (...args: never[]) => Promise<unknown>>>;
 
@@ -110,10 +117,14 @@ export interface ExtensionChatStart {
 export interface ExtensionHostOptions {
     store: ExtensionStore;
     asks?: () => ExtensionAsks;
-    startChat?: (extensionId: string, start: ExtensionChatStart) => Promise<{ nodeId: string }>;
+    // `check` throws once the extension was turned off, changed or removed since it was granted, so call it after every await before the chat starts.
+    startChat?: (extensionId: string, start: ExtensionChatStart, check: () => void) => Promise<{ nodeId: string }>;
     runAction?: (extensionId: string, projectId: string, action: ExtensionActionName, input: unknown) => Promise<unknown>;
     addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
+    // Stops what runs of them also when the change cannot be saved, and then rejects.
     removeLanguageServers?: (extensionId: string) => Promise<void>;
+    // The extensions that own a saved language server, so one that is gone or turned off loses them at the next start.
+    languageServerOwners?: () => readonly string[];
     now?: () => number;
     spawnProcess?: typeof spawn;
     files?: ExtensionHostFiles;
@@ -158,8 +169,6 @@ export class ExtensionHost {
     private readonly exiting = new Map<string, Promise<void>>();
     // Extensions whose folder is on its way out, which no storage write may make again.
     private readonly removing = new Set<string>();
-    // The `extension dev` run that set each dev link, by the token it gave.
-    private readonly linkOwners = new Map<string, string>();
 
     private readonly options: ExtensionHostOptions;
     private readonly files: ExtensionHostFiles;
@@ -186,15 +195,21 @@ export class ExtensionHost {
             return [];
         });
 
+        const active = new Set(extensions.filter((extension) => extension.enabled).map((extension) => extension.manifest.id));
+
+        // Turned off or removed while its language servers could not be taken off the list, or by a Ruimte that kept them.
+        for (const owner of new Set(this.options.languageServerOwners?.() ?? [])) {
+            if (!active.has(owner)) {
+                await this.dropLanguageServers(owner).catch((e: unknown) => console.warn(errorText(e)));
+            }
+        }
+
         for (const extension of extensions) {
             // A tool only exists once its process said so, and an agent cannot ask for what it does not see.
             if (extension.enabled && startsWithMachine(extension.manifest)) {
                 await this.runningFor(extension.manifest.id).catch((e: unknown) =>
                     console.warn(`Extension ${extension.manifest.id} did not start: ${errorText(e)}`)
                 );
-            } else if (!extension.enabled) {
-                // Turned off by a Ruimte that still kept its language servers.
-                await this.dropLanguageServers(extension.manifest.id);
             }
         }
     }
@@ -253,26 +268,63 @@ export class ExtensionHost {
         }
     }
 
-    async setEnabled(id: string, enabled: boolean): Promise<void> {
-        await this.lifecycle(id, async () => {
-            await this.options.store.setEnabled(id, enabled);
-            this.crashes.delete(id);
-            this.stop(id);
+    setEnabled(id: string, enabled: boolean): Promise<void> {
+        return this.commit(
+            id,
+            async (saved) => {
+                await this.options.store.setEnabled(id, enabled);
+                saved();
+                this.crashes.delete(id);
+                this.stop(id);
 
-            if (!enabled) {
-                await this.dropLanguageServers(id);
-            }
-        });
-
-        if (enabled) {
-            await this.startAfterChange(id);
-        }
-
-        this.changed();
+                if (!enabled) {
+                    await this.dropLanguageServers(id);
+                }
+            },
+            enabled ? () => this.startAfterChange(id) : undefined
+        );
     }
 
+    /*
+     * `change` in the lifecycle of `id`, and once it called `saved` the store has it: `after` runs and every client hears
+     * of it, also when the cleanup between them failed. That failure is then the answer, so a person hears what stayed.
+     */
+    private async commit(id: string, change: (saved: () => void) => Promise<void>, after?: () => Promise<void>): Promise<void> {
+        let saved = false;
+        let failure: { error: unknown } | null = null;
+
+        try {
+            await this.lifecycle(id, () => change(() => (saved = true)));
+        } catch (e) {
+            if (!saved) {
+                throw e;
+            }
+
+            failure = { error: e };
+        }
+
+        if (!saved) {
+            return;
+        }
+
+        try {
+            await after?.();
+        } finally {
+            this.changed();
+        }
+
+        if (failure !== null) {
+            throw failure.error;
+        }
+    }
+
+    /* Their processes stop either way; a list that could not be saved without them rejects, so a person hears it. */
     private async dropLanguageServers(id: string): Promise<void> {
-        await this.options.removeLanguageServers?.(id).catch((e: unknown) => console.warn(`The language servers of ${id} stayed: ${errorText(e)}`));
+        try {
+            await this.options.removeLanguageServers?.(id);
+        } catch (e) {
+            throw new ExtensionRefusal('failed', `The language servers of ${id} stopped, but they stay saved: ${errorText(e)}`);
+        }
     }
 
     /*
@@ -303,12 +355,15 @@ export class ExtensionHost {
     async install(pack: string): Promise<ExtensionInfo> {
         const { id } = manifestOfPack(pack);
 
-        await this.lifecycle(id, async () => {
-            await this.options.store.install(pack);
-            await this.replace(id);
-        });
-        await this.startAfterChange(id);
-        this.changed();
+        await this.commit(
+            id,
+            async (saved) => {
+                await this.options.store.install(pack);
+                saved();
+                await this.replace(id);
+            },
+            () => this.startAfterChange(id)
+        );
 
         return (await this.list()).find((entry) => entry.manifest.id === id) as ExtensionInfo;
     }
@@ -317,8 +372,8 @@ export class ExtensionHost {
      * Its folder goes only once nothing can write into it again: no process of it, no start on its way, and no storage
      * write, of which none begins while it goes.
      */
-    async remove(id: string): Promise<void> {
-        await this.lifecycle(id, async () => {
+    remove(id: string): Promise<void> {
+        return this.commit(id, async (saved) => {
             const starting = this.starting.get(id)?.promise;
 
             this.removing.add(id);
@@ -336,29 +391,31 @@ export class ExtensionHost {
                 }
 
                 await this.options.store.remove(id);
-                await this.options.removeLanguageServers?.(id);
+                saved();
                 this.crashes.delete(id);
+                await this.dropLanguageServers(id);
             } finally {
                 this.removing.delete(id);
             }
         });
-        this.changed();
     }
 
-    /* A save in dev: a fresh process over what was just built, and word so a client loads it again. */
+    /*
+     * A save in dev: a fresh process over what was just built, and word so a client loads it again. The link and the
+     * run it is `owner`'s are one change of the store, so an unlink of another run never comes between them.
+     */
     async linked(folder: string, owner?: string): Promise<string> {
-        const { id } = await this.options.store.link(folder);
+        const { id } = await this.options.store.link(folder, owner);
 
-        if (owner === undefined) {
-            this.linkOwners.delete(id);
-        } else {
-            this.linkOwners.set(id, owner);
-        }
-
-        await this.lifecycle(id, () => this.replace(id));
-        // As with the machine: one with a clock or a tool does nothing until it runs. Its log says why a build does not start.
-        await this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
-        this.changed();
+        await this.commit(
+            id,
+            async (saved) => {
+                saved();
+                await this.replace(id);
+            },
+            // As with the machine: one with a clock or a tool does nothing until it runs. Its log says why a build does not start.
+            () => this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`))
+        );
 
         return id;
     }
@@ -367,27 +424,17 @@ export class ExtensionHost {
      * What was installed under the link runs again as it would have without it. With `owner`, only while the link is
      * still that run's: a later `extension dev` of the same extension took it over.
      */
-    async unlink(id: string, owner?: string): Promise<void> {
-        const unlinked = await this.lifecycle(id, async () => {
-            const current = this.linkOwners.get(id);
-
-            if (owner !== undefined && current !== undefined && current !== owner) {
-                return false;
-            }
-
-            this.linkOwners.delete(id);
-            await this.options.store.unlink(id);
-            await this.replace(id);
-
-            return true;
-        });
-
-        if (!unlinked) {
-            return;
-        }
-
-        await this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
-        this.changed();
+    unlink(id: string, owner?: string): Promise<void> {
+        return this.commit(
+            id,
+            async (saved) => {
+                if (await this.options.store.unlink(id, owner)) {
+                    saved();
+                    await this.replace(id);
+                }
+            },
+            () => this.startAfterChange(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`))
+        );
     }
 
     /*
@@ -808,14 +855,14 @@ export class ExtensionHost {
         return this.startChatWith(id, await this.grantedTo(id), start);
     }
 
-    private async startChatWith(id: string, permissions: ReadonlySet<string>, start: ExtensionChatStart): Promise<{ nodeId: string }> {
-        refuse(missingPermission(id, 'agents.start', permissions));
+    private async startChatWith(id: string, grant: Grant, start: ExtensionChatStart): Promise<{ nodeId: string }> {
+        refuse(missingPermission(id, 'agents.start', grant.permissions));
 
         if (this.options.startChat === undefined) {
             throw new ExtensionRefusal('unavailable', 'This machine does not start chats for an extension');
         }
 
-        return this.options.startChat(id, start);
+        return this.options.startChat(id, start, grant.check);
     }
 
     /* An action of the machine, within the list and the manifest. Both checked here, so the client's own check is only a courtesy. */
@@ -823,8 +870,8 @@ export class ExtensionHost {
         return this.runActionWith(id, await this.grantedTo(id), projectId, action, input);
     }
 
-    private async runActionWith(id: string, permissions: ReadonlySet<string>, projectId: string, action: string, input: unknown): Promise<unknown> {
-        refuse(actionRefusal(id, action, permissions));
+    private async runActionWith(id: string, grant: Grant, projectId: string, action: string, input: unknown): Promise<unknown> {
+        refuse(actionRefusal(id, action, grant.permissions));
 
         if (this.options.runAction === undefined) {
             throw new ExtensionRefusal('unavailable', 'This machine does not run actions for an extension');
@@ -835,22 +882,39 @@ export class ExtensionHost {
     }
 
     /*
-     * What the manifest asks for as it is stored now, so an update that drops a permission takes it away at once, and
-     * nothing for one that is turned off. With `running`, also nothing once that process is no longer the one that runs:
+     * What the manifest asks for as it is stored once no change of what runs is under way, so an update that drops a
+     * permission takes it away at once, and nothing for one that is turned off. A store read that a change came between
+     * is read again, as `runningFor` does. With `running`, also nothing once that process is no longer the one that runs:
      * an ask that came in before a turn off is not answered after it.
      */
-    private async grantedTo(id: string, running?: Running): Promise<ReadonlySet<string>> {
+    private async grantedTo(id: string, running?: Running): Promise<Grant> {
+        await this.lifecycles.get(id);
+
+        const generation = this.generations.get(id);
         const extension = await this.options.store.get(id);
 
-        if (running !== undefined && this.running.get(id) !== running) {
-            throw stopped();
+        if (this.generations.get(id) !== generation || this.lifecycles.has(id)) {
+            return this.grantedTo(id, running);
         }
+
+        const check = (): void => {
+            if (running !== undefined && this.running.get(id) !== running) {
+                throw stopped();
+            }
+
+            // Every change of what runs stops it, which moves the generation.
+            if (this.generations.get(id) !== generation) {
+                throw new ExtensionRefusal('unavailable', `${id} changed while it asked`);
+            }
+        };
+
+        check();
 
         if (extension?.enabled === false) {
             throw new ExtensionRefusal('unavailable', `${id} is turned off`);
         }
 
-        return permissionsOf(extension?.manifest);
+        return { permissions: permissionsOf(extension?.manifest), check };
     }
 
     /* What a client with no shell of its own loads. Not its server part, which only runs here. */
@@ -865,9 +929,9 @@ export class ExtensionHost {
     }
 
     private async answerAsk(id: string, running: Running, method: string, args: unknown[]): Promise<unknown> {
-        const permissions = await this.grantedTo(id, running);
+        const grant = await this.grantedTo(id, running);
 
-        refuse(askRefusal(id, method, args, permissions));
+        refuse(askRefusal(id, method, args, grant.permissions));
 
         if (method === 'storage.get') {
             return { value: await this.storageGet(id, String(args[0])) };
@@ -884,7 +948,7 @@ export class ExtensionHost {
         if (method === 'action') {
             const [projectId, action, input] = args as [string, string, unknown];
 
-            return this.runActionWith(id, permissions, projectId, action, input);
+            return this.runActionWith(id, grant, projectId, action, input);
         }
 
         if (method === 'languages.add') {
@@ -896,16 +960,14 @@ export class ExtensionHost {
 
             // Between the changes of what runs, so a turn off either waits for it and takes it away, or comes first and refuses it.
             return this.lifecycle(id, async () => {
-                if (this.running.get(id) !== running) {
-                    throw stopped();
-                }
+                grant.check();
 
                 return add(id, args[0] as object);
             });
         }
 
         if (method === 'agents.start') {
-            return this.startChatWith(id, permissions, args[0] as ExtensionChatStart);
+            return this.startChatWith(id, grant, args[0] as ExtensionChatStart);
         }
 
         const run = this.options.asks?.()[method];

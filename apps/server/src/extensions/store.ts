@@ -86,6 +86,8 @@ async function writeJson(path: string, value: unknown): Promise<void> {
 export class ExtensionStore {
     private readonly root: string;
     private readonly revisions = new Map<string, number>();
+    // The `extension dev` run that set each dev link, by the token it gave, changed only with the link itself.
+    private readonly linkOwners = new Map<string, string>();
     private changes: Promise<unknown> = Promise.resolve();
 
     constructor(home: string) {
@@ -170,15 +172,14 @@ export class ExtensionStore {
         return manifest === null ? null : { manifest, hash: current.hash, enabled: current.enabled, folder };
     }
 
-    /* A version or dev folder without a manifest it can read has nothing to run. */
-    private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
-        return readJson<ExtensionManifest | null>(join(folder, 'manifest.json'), ExtensionManifestSchema as z.ZodType<ExtensionManifest | null>, null).catch(
-            () => null
-        );
+    /* A version or dev folder without a manifest has nothing to run; one that cannot be read or is damaged refuses. */
+    private manifestIn(folder: string): Promise<ExtensionManifest | null> {
+        return readJson<ExtensionManifest | null>(join(folder, 'manifest.json'), ExtensionManifestSchema as z.ZodType<ExtensionManifest | null>, null);
     }
 
+    /* Refuses as the other files do, so an install never writes over a version in use, or its turn off, it could not read. */
     private current(id: string): Promise<z.infer<typeof CurrentSchema> | null> {
-        return readJson(this.currentFile(id), CurrentSchema, null).catch(() => null);
+        return readJson(this.currentFile(id), CurrentSchema, null);
     }
 
     /*
@@ -194,7 +195,8 @@ export class ExtensionStore {
         const folder = this.versionFolder(manifest.id, hash);
 
         return this.change(async () => {
-            if ((await this.manifestIn(folder)) === null) {
+            // A folder of this hash holds exactly this pack, so one that cannot be read is unpacked again rather than refused.
+            if ((await this.manifestIn(folder).catch(() => null)) === null) {
                 const unpacking = `${folder}.${randomUUID()}.tmp`;
 
                 try {
@@ -234,6 +236,7 @@ export class ExtensionStore {
                 join(this.root, IDS_FILE),
                 ids.filter((entry) => entry !== id)
             );
+            this.linkOwners.delete(id);
             await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
@@ -259,8 +262,8 @@ export class ExtensionStore {
     }
 
     /* A folder `ruimte extension dev` builds into. A save moves the revision, which is how a client knows to load it again. */
-    async link(folder: string): Promise<ExtensionManifest> {
-        const manifest = await this.manifestIn(folder);
+    async link(folder: string, owner?: string): Promise<ExtensionManifest> {
+        const manifest = await this.manifestIn(folder).catch(() => null);
 
         if (manifest === null) {
             throw new ExtensionPackError('pack-manifest', `No valid manifest.json in ${folder}`);
@@ -274,16 +277,35 @@ export class ExtensionStore {
             await writeJson(join(this.root, LINKS_FILE), { ...(await this.links()), [manifest.id]: folder });
             this.revisions.set(manifest.id, (this.revisions.get(manifest.id) ?? 0) + 1);
 
+            if (owner === undefined) {
+                this.linkOwners.delete(manifest.id);
+            } else {
+                this.linkOwners.set(manifest.id, owner);
+            }
+
             return manifest;
         });
     }
 
-    unlink(id: string): Promise<void> {
+    /*
+     * Whether it unlinked. With `owner`, only while the link is still that run's: a later `extension dev` of the same
+     * extension took it over. Checked in the same change as the write, so a link on its way lands before or after it.
+     */
+    unlink(id: string, owner?: string): Promise<boolean> {
         return this.change(async () => {
+            const current = this.linkOwners.get(id);
+
+            if (owner !== undefined && current !== undefined && current !== owner) {
+                return false;
+            }
+
             const { [id]: _gone, ...rest } = await this.links();
 
             await writeJson(join(this.root, LINKS_FILE), rest);
             await this.writeLinksOff(id, false);
+            this.linkOwners.delete(id);
+
+            return true;
         });
     }
 

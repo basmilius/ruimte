@@ -72,6 +72,41 @@ describe('ExtensionStore', () => {
         expect(readFileSync(join(home, 'extensions', 'dev-links.json'), 'utf8')).toBe('{ "acme.linked": 1 }');
     });
 
+    test('refuses to install over a current version it cannot read, and keeps it as it was', async () => {
+        const home = join(root, 'damaged-current');
+        const store = new ExtensionStore(home);
+        const id = 'acme.current';
+        const current = join(home, 'extensions', id, 'current.json');
+
+        await store.install(packOf(id));
+        writeFileSync(current, '{ "hash": ');
+
+        await expect(store.install(packOf(id, '0.2.0'))).rejects.toMatchObject({ code: 'store-damaged' });
+        await expect(store.setEnabled(id, false)).rejects.toMatchObject({ code: 'store-damaged' });
+        await expect(store.get(id)).rejects.toMatchObject({ code: 'store-damaged' });
+        expect(readFileSync(current, 'utf8')).toBe('{ "hash": ');
+    });
+
+    test('unlinks a dev link only for the run that set it last', async () => {
+        const store = new ExtensionStore(join(root, 'owned-links'));
+        const first = join(root, 'projects', 'owned-first');
+        const second = join(root, 'projects', 'owned-second');
+        const id = 'acme.owned';
+
+        for (const folder of [first, second]) {
+            mkdirSync(folder, { recursive: true });
+            writeFileSync(join(folder, 'manifest.json'), manifestOf(id));
+        }
+
+        await store.link(first, 'run-a');
+        await store.link(second, 'run-b');
+
+        expect(await store.unlink(id, 'run-a')).toBe(false);
+        expect((await store.get(id))?.devFolder).toBe(second);
+        expect(await store.unlink(id, 'run-b')).toBe(true);
+        expect(await store.get(id)).toBeNull();
+    });
+
     test('a removal after an install takes it away, also while the install still unpacks', async () => {
         const store = new ExtensionStore(join(root, 'install-remove'));
         const [id] = IDS as [string];
