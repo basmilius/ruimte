@@ -1,16 +1,22 @@
 import { createElement, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@adecore/ui';
+import { perform } from '@/actions/client-actions';
 import { fileInfoOf } from '@/extensions/file-info';
 import { useContributions } from '@/extensions/registry';
+import { relativeTo } from '@/shell/panels/files-tree';
+import type { FileTabView } from '@/state/files';
+import { useGitSignal } from '@/state/git-watch';
 import { useTransport } from '@/transport/context';
 
-/* A changed file an extension knows how to show, with Ruimte's own diff one click away. */
-export function ExtensionDiffViewer({ path, cwd, children }: { path: string; cwd: string; children: ReactNode }) {
+/* A changed file an extension knows how to show, with Ruimte's own diff one click away. It reads the diff that one shows. */
+export function ExtensionDiffViewer({ path, view, children }: { path: string; view: FileTabView; children: ReactNode }) {
     const { t } = useTranslation('panels');
     const info = fileInfoOf(path);
     const viewer = useContributions((state) => state.diffViewers.find((each) => each.extensions.includes(info.extension)));
     const transport = useTransport();
+    const signal = useGitSignal(viewer === undefined ? null : view.cwd);
+    const relative = relativeTo(view.cwd, path);
     const [own, setOwn] = useState(false);
     const [diff, setDiff] = useState('');
 
@@ -21,7 +27,15 @@ export function ExtensionDiffViewer({ path, cwd, children }: { path: string; cwd
 
         let current = true;
 
-        void transport.request('git.diff', { cwd, path, scope: 'worktree' }).then(
+        perform('git.diff', {
+            repository: view.cwd,
+            path: relative,
+            scope: view.scope,
+            commit: null,
+            staged: view.staged,
+            ignoreWhitespace: null,
+            base: view.base ?? null
+        }).then(
             (answer) => {
                 if (current) {
                     setDiff(answer.diff);
@@ -33,7 +47,7 @@ export function ExtensionDiffViewer({ path, cwd, children }: { path: string; cwd
         return () => {
             current = false;
         };
-    }, [viewer, transport, cwd, path]);
+    }, [viewer, transport, signal, relative, view.cwd, view.scope, view.staged, view.base]);
 
     if (viewer === undefined) {
         return children;

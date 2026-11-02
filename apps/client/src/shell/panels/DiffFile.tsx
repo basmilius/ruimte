@@ -56,7 +56,7 @@ export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: s
         return <CommitDiff tabKey={tabKey} cwd={view.cwd} base={view.base ?? null} />;
     }
     return (
-        <ExtensionDiffViewer path={path} cwd={view.cwd}>
+        <ExtensionDiffViewer path={path} view={view}>
             <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />
         </ExtensionDiffViewer>
     );
