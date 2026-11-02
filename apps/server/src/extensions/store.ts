@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -42,7 +42,7 @@ async function readJson<T>(path: string, schema: z.ZodType<T>, fallback: T): Pro
 async function writeJson(path: string, value: unknown): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
 
-    const temporary = `${path}.tmp`;
+    const temporary = `${path}.${randomUUID()}.tmp`;
 
     await writeFile(temporary, JSON.stringify(value, null, 2));
     await rename(temporary, path);
@@ -56,9 +56,22 @@ async function writeJson(path: string, value: unknown): Promise<void> {
 export class ExtensionStore {
     private readonly root: string;
     private readonly revisions = new Map<string, number>();
+    private changes: Promise<unknown> = Promise.resolve();
 
     constructor(home: string) {
         this.root = join(home, 'extensions');
+    }
+
+    /*
+     * One change at a time, from read to rename: two windows that install at once would otherwise both read the old
+     * `installed.json` and keep only one of them.
+     */
+    private change<Value>(work: () => Promise<Value>): Promise<Value> {
+        const next = this.changes.then(work, work);
+
+        this.changes = next.catch(() => undefined);
+
+        return next;
     }
 
     dataFolder(id: string): string {
@@ -133,31 +146,37 @@ export class ExtensionStore {
             await writeFile(target, content);
         }
 
-        const previous = await readJson(this.currentFile(manifest.id), CurrentSchema, null as never).catch(() => null);
+        return this.change(async () => {
+            const previous = await readJson(this.currentFile(manifest.id), CurrentSchema, null as never).catch(() => null);
 
-        await writeJson(this.currentFile(manifest.id), { hash, enabled: previous?.enabled ?? true });
-        await writeJson(join(this.root, IDS_FILE), [...new Set([...(await this.installedIds()), manifest.id])]);
+            await writeJson(this.currentFile(manifest.id), { hash, enabled: previous?.enabled ?? true });
+            await writeJson(join(this.root, IDS_FILE), [...new Set([...(await this.installedIds()), manifest.id])]);
 
-        return { manifest, hash, enabled: previous?.enabled ?? true, folder };
+            return { manifest, hash, enabled: previous?.enabled ?? true, folder };
+        });
     }
 
     /* `data/` goes with it: a person who removes an extension means all of it. */
-    async remove(id: string): Promise<void> {
-        await rm(join(this.root, id), { recursive: true, force: true });
-        await writeJson(
-            join(this.root, IDS_FILE),
-            (await this.installedIds()).filter((entry) => entry !== id)
-        );
+    remove(id: string): Promise<void> {
+        return this.change(async () => {
+            await rm(join(this.root, id), { recursive: true, force: true });
+            await writeJson(
+                join(this.root, IDS_FILE),
+                (await this.installedIds()).filter((entry) => entry !== id)
+            );
+        });
     }
 
-    async setEnabled(id: string, enabled: boolean): Promise<void> {
-        const current = await readJson(this.currentFile(id), CurrentSchema, null as never).catch(() => null);
+    setEnabled(id: string, enabled: boolean): Promise<void> {
+        return this.change(async () => {
+            const current = await readJson(this.currentFile(id), CurrentSchema, null as never).catch(() => null);
 
-        if (current === null) {
-            throw new ExtensionPackError('extension-unknown', `No extension ${id} on this machine`);
-        }
+            if (current === null) {
+                throw new ExtensionPackError('extension-unknown', `No extension ${id} on this machine`);
+            }
 
-        await writeJson(this.currentFile(id), { ...current, enabled });
+            await writeJson(this.currentFile(id), { ...current, enabled });
+        });
     }
 
     /* A folder `ruimte extension dev` builds into. A save moves the revision, which is how a client knows to load it again. */
@@ -172,16 +191,20 @@ export class ExtensionStore {
             throw new ExtensionPackError('pack-api', `${manifest.id} needs API ${manifest.api}; this machine has ${EXTENSION_API_VERSION}`);
         }
 
-        await writeJson(join(this.root, LINKS_FILE), { ...(await this.links()), [manifest.id]: folder });
-        this.revisions.set(manifest.id, (this.revisions.get(manifest.id) ?? 0) + 1);
+        return this.change(async () => {
+            await writeJson(join(this.root, LINKS_FILE), { ...(await this.links()), [manifest.id]: folder });
+            this.revisions.set(manifest.id, (this.revisions.get(manifest.id) ?? 0) + 1);
 
-        return manifest;
+            return manifest;
+        });
     }
 
-    async unlink(id: string): Promise<void> {
-        const { [id]: _gone, ...rest } = await this.links();
+    unlink(id: string): Promise<void> {
+        return this.change(async () => {
+            const { [id]: _gone, ...rest } = await this.links();
 
-        await writeJson(join(this.root, LINKS_FILE), rest);
+            await writeJson(join(this.root, LINKS_FILE), rest);
+        });
     }
 
     serverEntry(extension: StoredExtension): string | null {
