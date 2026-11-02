@@ -7541,6 +7541,9 @@ function ask(answer, options, fallback) {
   }
   return answer === undefined ? fallback : answer;
 }
+function iteratorOf(pieces) {
+  return Symbol.asyncIterator in pieces ? pieces[Symbol.asyncIterator]() : pieces[Symbol.iterator]();
+}
 function clientApi(host) {
   const fullId = (id) => `${host.id}/${id}`;
   const inFolder = (what, path, args) => host.settle(what, args, () => {
@@ -7967,24 +7970,41 @@ function clientApi(host) {
         }
         const stop = new AbortController;
         const stopRun = () => stop.abort(signal?.reason);
-        const answer = host.answers["agents.stream"];
-        const pieces = await host.settle("agents.stream", [asked], () => {
-          host.projectId();
-          if (typeof answer !== "function") {
-            return host.scripted("agents.stream", [asked]);
-          }
-          return answer({ ...wire2(asked), signal: stop.signal });
-        });
-        if (!pieces.ok) {
-          yield pieces;
-          return;
-        }
-        const source = Symbol.asyncIterator in pieces.value ? pieces.value[Symbol.asyncIterator]() : pieces.value[Symbol.iterator]();
         const stopped = new Promise((resolve) => {
-          stop.signal.addEventListener("abort", () => resolve({ done: true, value: undefined }));
+          stop.signal.addEventListener("abort", () => resolve("stopped"), { once: true });
         });
+        const answer = host.answers["agents.stream"];
+        const close = (iterator) => {
+          Promise.resolve(iterator.return?.()).catch(() => {
+            return;
+          });
+        };
+        let source = null;
         signal?.addEventListener("abort", stopRun);
         try {
+          const starting = host.settle("agents.stream", [asked], () => {
+            host.projectId();
+            if (typeof answer !== "function") {
+              return host.scripted("agents.stream", [asked]);
+            }
+            return answer({ ...wire2(asked), signal: stop.signal });
+          });
+          const pieces = await Promise.race([starting, stopped]);
+          if (pieces === "stopped") {
+            starting.then((late) => {
+              if (late.ok) {
+                close(iteratorOf(late.value));
+              }
+            }, () => {
+              return;
+            });
+            return;
+          }
+          if (!pieces.ok) {
+            yield pieces;
+            return;
+          }
+          source = iteratorOf(pieces.value);
           while (!stop.signal.aborted) {
             let next;
             try {
@@ -7993,7 +8013,7 @@ function clientApi(host) {
               yield host.failure("agents.stream", [asked], e);
               return;
             }
-            if (next.done === true || stop.signal.aborted) {
+            if (next === "stopped" || next.done === true || stop.signal.aborted) {
               return;
             }
             yield { ok: true, value: { text: String(next.value) } };
@@ -8001,9 +8021,9 @@ function clientApi(host) {
         } finally {
           signal?.removeEventListener("abort", stopRun);
           stop.abort();
-          Promise.resolve(source.return?.()).catch(() => {
-            return;
-          });
+          if (source !== null) {
+            close(source);
+          }
         }
       },
       start: (options) => host.settle("agents.start", [options], () => {
