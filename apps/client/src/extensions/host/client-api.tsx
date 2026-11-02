@@ -543,8 +543,23 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             permit(permission);
         }
     };
+    // A callback of a load that was taken down or replaced reads, writes and changes nothing any more.
+    const assertLive = (): void => {
+        if (!live()) {
+            throw new Refused('unavailable', `${extension.manifest.name} was turned off or replaced`);
+        }
+    };
+    const whileLive =
+        <Args extends unknown[]>(run: (...args: Args) => void) =>
+        (...args: Args): void => {
+            if (live()) {
+                run(...args);
+            }
+        };
+    const ask = (request: Parameters<typeof askHost>[0]): ReturnType<typeof askHost> => (live() ? askHost(request) : Promise.resolve(null));
     const attempt = <Value,>(what: string, run: () => Value): ExtensionResult<Value> => {
         try {
+            assertLive();
             permitCall(what);
 
             return { ok: true, value: run() };
@@ -554,9 +569,15 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
     };
     const settle: Settle = async (what, run) => {
         try {
+            assertLive();
             permitCall(what);
 
-            return { ok: true, value: await run() };
+            const value = await run();
+
+            // Its answer reaches no code of a load that went meanwhile.
+            assertLive();
+
+            return { ok: true, value };
         } catch (e) {
             return refusalOf(what, e);
         }
@@ -634,19 +655,19 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             });
 
             return {
-                open: (params?: Params) => {
+                open: whileLive((params?: Params) => {
                     usePanelParams.setState(({ params: all }) => ({ params: { ...all, [kind]: params } }));
                     useUi.getState().setPanel({ open: true, kind });
-                },
-                close: () => useUi.getState().setPanel({ open: false }),
-                setBadge: (text: string | null) => {
+                }),
+                close: whileLive(() => useUi.getState().setPanel({ open: false })),
+                setBadge: whileLive((text: string | null) => {
                     badge = text;
                     relabel();
-                },
-                setTitle: (next: string) => {
+                }),
+                setTitle: whileLive((next: string) => {
                     title = next;
                     relabel();
-                }
+                })
             };
         },
         defineSidebarCard(card: { id: string; title: string; component: LazyComponent }) {
@@ -656,9 +677,9 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         defineView<Params>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>) {
             assertLazy(view, `defineView ${view.id}`);
 
-            const open = (params?: Params) => {
+            const open = whileLive((params?: Params) => {
                 useDocument.getState().addExtensionView(view.title, id, view.id, params);
-            };
+            });
 
             add('extensionViews', { id: `${id}/${view.id}`, title: view.title, component: surfaceOf(extension, view) as ComponentType<{ params: unknown }> });
             add('commands', { id: `extension:${id}/view/${view.id}`, title: `New ${view.title}`, run: open });
@@ -752,6 +773,10 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
             return {
                 open(params: Params): Promise<Result | null> {
+                    if (!live()) {
+                        return Promise.resolve(null);
+                    }
+
                     const { result, close } = openOverlay({ title: overlay.title, size: overlay.size, component, params });
 
                     closers.add(close);
@@ -992,7 +1017,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             const data = useCanvas((state) => state.nodes[nodeId]?.raw?.data) as Data;
             const store = useCanvasStore();
 
-            return [data, (next) => store.getState().updateExtensionNode(nodeId, { data: next })];
+            return [data, whileLive((next: Data) => store.getState().updateExtensionNode(nodeId, { data: next }))];
         },
         useStorage<Value>(key: string, initial: Value, scope: 'computer' | 'project' | 'machine' = 'computer'): [Value, (next: Value) => void] {
             const extensionNow = useExtension();
@@ -1008,7 +1033,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }
             };
 
-            return scope === 'computer' ? [local, writeLocal] : remote;
+            return scope === 'computer' ? [local, whileLive(writeLocal)] : [remote[0], whileLive(remote[1])];
         },
         useProject() {
             const projectId = useProject((state) => state.current?.projectId ?? '');
@@ -1099,33 +1124,33 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             busy<Value>(work: { title: string; nodes?: { id: string }[] }, run: (signal: AbortSignal) => Value | Promise<Value>) {
                 return trackRun({ actionId: null, title: work.title, nodeIds: (work.nodes ?? []).map((node) => node.id) }, run);
             },
-            notify(text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run: () => void } }) {
+            notify: whileLive((text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run: () => void } }) => {
                 useToasts.getState().show({
                     kind: options?.tone === 'error' ? 'error' : 'success',
                     title: text,
                     ...(options?.action === undefined ? {} : { action: { label: options.action.title, run: options.action.run } })
                 });
-            },
-            pickFolder: (initial?: string) => desktop()?.pickFolder?.(initial) ?? Promise.resolve(null),
-            openSettings() {
+            }),
+            pickFolder: (initial?: string) => (live() ? (desktop()?.pickFolder?.(initial) ?? Promise.resolve(null)) : Promise.resolve(null)),
+            openSettings: whileLive(() => {
                 useUi.getState().setSettings({ open: true, section: 'extensions' });
-            },
+            }),
             confirm: async ({ title, body, danger }: { title: string; body: string; danger?: boolean }) =>
-                (await askHost({ title, body, ...(danger === undefined ? {} : { danger }) })) !== null,
+                (await ask({ title, body, ...(danger === undefined ? {} : { danger }) })) !== null,
             prompt: ({ title, placeholder, initial }: { title: string; placeholder?: string; initial?: string }) =>
-                askHost({ title, field: { ...(placeholder === undefined ? {} : { placeholder }), ...(initial === undefined ? {} : { initial }) } }),
+                ask({ title, field: { ...(placeholder === undefined ? {} : { placeholder }), ...(initial === undefined ? {} : { initial }) } }),
             async pick<Item>({ title, items, label }: { title: string; items: readonly Item[]; label: (item: Item) => string }) {
                 const words = items.map(label);
-                const answer = await askHost({ title, choices: words });
+                const answer = await ask({ title, choices: words });
 
                 return answer === null ? null : (items[words.indexOf(answer)] ?? null);
             },
-            openUrl(url: string) {
+            openUrl: whileLive((url: string) => {
                 window.open(url, '_blank', 'noopener');
-            },
-            copy(text: string) {
+            }),
+            copy: whileLive((text: string) => {
                 void navigator.clipboard.writeText(text);
-            }
+            })
         },
         files: {
             readText: (path: string) =>
@@ -1184,9 +1209,9 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
                     return stop;
                 }),
-            open(path: string) {
+            open: whileLive((path: string) => {
                 void openFileLink(useProject.getState().current?.folder ?? null, { path, directory: false }, currentEndpointId());
-            }
+            })
         },
         git: {
             status: (options?: { repository?: string }) =>
@@ -1295,9 +1320,9 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 })
         },
         views: {
-            open(view: { id: string }) {
+            open: whileLive((view: { id: string }) => {
                 useDocument.getState().setActiveView(view.id);
-            },
+            }),
             createCanvas: (name: string) =>
                 attempt('views.createCanvas', () => {
                     currentProjectId();
@@ -1385,9 +1410,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 const abort = (): void => void extensionRequest(link, 'extension.agentStop', { runId }).catch(() => undefined);
 
                 options.signal?.addEventListener('abort', abort);
+                // A load taken down stops reading, and the run behind it stops with the loop.
+                hold(() => wake());
 
                 try {
-                    while (!done || pieces.length > 0) {
+                    while ((!done || pieces.length > 0) && live()) {
                         const text = pieces.shift();
 
                         if (text !== undefined) {
@@ -1397,6 +1424,10 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                                 wake = resolve;
                             });
                         }
+                    }
+
+                    if (!live()) {
+                        return;
                     }
 
                     const outcome = await finished;

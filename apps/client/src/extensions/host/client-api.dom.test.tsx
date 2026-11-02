@@ -13,6 +13,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
+import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
@@ -357,6 +358,43 @@ describe('the client API', () => {
         expect(heard).toBe(1);
         expect(first.requests('fs.watch')).toEqual([{ path: '/work/a/notes.md' }]);
         expect(second.requests('fs.watch')).toEqual([]);
+    });
+
+    test('lets a callback of a load that was taken down read, change and stream nothing', async () => {
+        const machine = new FakeMachine();
+        const manifest: ExtensionManifest = {
+            id: 'acme.probe',
+            name: 'Probe',
+            version: '0.1.0',
+            api: 1,
+            permissions: { 'files.read': 'Reads', 'agents.run': 'Answers' }
+        };
+        const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null };
+        const api = clientApiFor(extension, registerExtension(extension));
+        let answerRead = (): void => undefined;
+
+        machine.answer('fs.read', () => new Promise((resolve) => (answerRead = () => resolve({ kind: 'text', text: 'Secret', mtime: 1 } as never))));
+        machine.answer('extension.agentStream', () => new Promise(() => undefined));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        const panel = api.definePanel({ id: 'side', title: 'Side', component: async () => ({ default: () => null }) });
+        const read = api.files.readText('notes.md');
+        const stream = api.agents.stream({ prompt: 'Hi' });
+        const next = stream.next();
+
+        await until(() => machine.requests('fs.read').length === 1 && machine.requests('extension.agentStream').length === 1);
+        forgetExtension('acme.probe');
+        answerRead();
+        panel.open();
+        api.host.notify('Late');
+
+        expect(await read).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(await next).toEqual({ done: true, value: undefined });
+        expect(machine.requests('extension.agentStop')).toHaveLength(1);
+        expect(useUi.getState().panel.kind).not.toBe('extension:acme.probe/side');
+        expect(useToasts.getState().toasts.map((toast) => toast.title)).not.toContain('Late');
+        expect(await api.files.list('.')).toMatchObject({ ok: false, error: { code: 'unavailable' } });
     });
 
     test('starts no run for a signal that was aborted already', async () => {
