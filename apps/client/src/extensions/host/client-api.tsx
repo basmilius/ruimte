@@ -1449,14 +1449,21 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     wake();
                 });
 
-                const abort = (): void => void extensionRequest(link, 'extension.agentStop', { runId }).catch(() => undefined);
+                let stopped = false;
+                const stopRun = (): void => void extensionRequest(link, 'extension.agentStop', { runId }).catch(() => undefined);
+                // A run stopped says no more, also of a piece the machine sent before it heard so.
+                const abort = (): void => {
+                    stopped = true;
+                    stopRun();
+                    wake();
+                };
 
                 options.signal?.addEventListener('abort', abort);
                 // A load taken down stops reading, and the run behind it stops with the loop.
                 hold(() => wake());
 
                 try {
-                    while ((!done || pieces.length > 0) && live()) {
+                    while ((!done || pieces.length > 0) && live() && !stopped) {
                         const text = pieces.shift();
 
                         if (text !== undefined) {
@@ -1468,7 +1475,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         }
                     }
 
-                    if (!live()) {
+                    if (!live() || stopped) {
                         return;
                     }
 
@@ -1482,8 +1489,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     options.signal?.removeEventListener('abort', abort);
 
                     // A loop that broke off leaves no one to read the rest, so the process stops with it.
-                    if (!done) {
-                        abort();
+                    if (!done && !stopped) {
+                        stopRun();
                     }
                 }
             },

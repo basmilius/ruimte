@@ -44,6 +44,8 @@ export interface WorldSeed {
     stream?: string[];
     /* What the run does after its pieces: fail with this message, or wait until it is stopped. It ends by default. */
     streamEnd?: { fails: string } | 'waits';
+    /* The run starts only once `letStreamStart` lets it, and gives its pieces even when it was stopped meanwhile. */
+    streamStart?: 'held';
 }
 
 export interface ClientWorld {
@@ -67,6 +69,10 @@ export interface ClientWorld {
     started(): ('canvas' | 'view')[];
     /* Whether the machine was told to stop a run of `agents.stream`. */
     streamStopped(): boolean;
+    /* Settles once a run of `agents.stream` was asked to start. */
+    streamAsked(): Promise<void>;
+    /* Lets a run held by `streamStart` start. */
+    letStreamStart(): void;
     /* The ids of the nodes on the canvas in front. */
     nodes(): string[];
     /* The title an action shows with at a place, or null where it does not show. */
@@ -454,6 +460,27 @@ export function clientContract(open: OpenClientWorld): void {
             }
 
             expect(pieces).toEqual(['First']);
+            expect(world.streamStopped()).toBe(true);
+        });
+
+        test('stops the run of a stream aborted while it starts, which then says nothing of what came late', async () => {
+            const world = await open({ 'agents.run': 'Answers' }, { stream: ['Late'], streamStart: 'held' });
+            const controller = new AbortController();
+            const reading = (async () => {
+                const pieces: string[] = [];
+
+                for await (const piece of world.api.agents.stream({ prompt: 'Hi', signal: controller.signal })) {
+                    pieces.push(piece.ok ? piece.value.text : piece.error.code);
+                }
+
+                return pieces;
+            })();
+
+            await world.streamAsked();
+            controller.abort();
+            world.letStreamStart();
+
+            expect(await reading).toEqual([]);
             expect(world.streamStopped()).toBe(true);
         });
 

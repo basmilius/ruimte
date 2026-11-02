@@ -187,6 +187,10 @@ function ask<Value>(answer: Value | ((options: never) => Value) | undefined, opt
     return answer === undefined ? fallback : answer;
 }
 
+function iteratorOf(pieces: string[] | AsyncIterable<string>): AsyncIterator<string> | Iterator<string> {
+    return Symbol.asyncIterator in pieces ? pieces[Symbol.asyncIterator]() : pieces[Symbol.iterator]();
+}
+
 export function clientApi(host: TestHost) {
     const fullId = (id: string): string => `${host.id}/${id}`;
     // A call that reads under a folder of the project, which the client host checks before it asks the machine.
@@ -716,42 +720,60 @@ export function clientApi(host: TestHost) {
                     return;
                 }
 
-                // The run sees the signal, so a fixture that waits on its own can end once it is stopped.
+                // The run sees the signal from before it starts, so a fixture that waits, also to start, ends once it is stopped.
                 const stop = new AbortController();
                 const stopRun = (): void => stop.abort(signal?.reason);
+                const stopped = new Promise<'stopped'>((resolve) => {
+                    stop.signal.addEventListener('abort', () => resolve('stopped'), { once: true });
+                });
                 const answer = (host.answers as Record<string, unknown>)['agents.stream'];
-                const pieces = await host.settle('agents.stream', [asked], () => {
-                    host.projectId();
-
-                    if (typeof answer !== 'function') {
-                        return host.scripted<string[] | AsyncIterable<string>>('agents.stream', [asked]);
-                    }
-
-                    // An iterable is read as it goes, so a fixture can give some pieces and then fail.
-                    return (answer as (options: object) => unknown)({ ...wire<object>(asked), signal: stop.signal }) as
-                        | string[]
-                        | AsyncIterable<string>
-                        | Promise<string[]>;
-                });
-
-                if (!pieces.ok) {
-                    yield pieces;
-
-                    return;
-                }
-
-                const source: AsyncIterator<string> | Iterator<string> =
-                    Symbol.asyncIterator in pieces.value ? pieces.value[Symbol.asyncIterator]() : pieces.value[Symbol.iterator]();
-
-                const stopped = new Promise<IteratorResult<string>>((resolve) => {
-                    stop.signal.addEventListener('abort', () => resolve({ done: true, value: undefined }));
-                });
+                const close = (iterator: AsyncIterator<string> | Iterator<string>): void => {
+                    void Promise.resolve(iterator.return?.()).catch(() => undefined);
+                };
+                let source: AsyncIterator<string> | Iterator<string> | null = null;
 
                 signal?.addEventListener('abort', stopRun);
 
                 try {
+                    const starting = host.settle('agents.stream', [asked], () => {
+                        host.projectId();
+
+                        if (typeof answer !== 'function') {
+                            return host.scripted<string[] | AsyncIterable<string>>('agents.stream', [asked]);
+                        }
+
+                        // An iterable is read as it goes, so a fixture can give some pieces and then fail.
+                        return (answer as (options: object) => unknown)({ ...wire<object>(asked), signal: stop.signal }) as
+                            | string[]
+                            | AsyncIterable<string>
+                            | Promise<string[]>;
+                    });
+                    const pieces = await Promise.race([starting, stopped]);
+
+                    // Stopped while it started: what the fixture hands over after that is closed unread.
+                    if (pieces === 'stopped') {
+                        void starting.then(
+                            (late) => {
+                                if (late.ok) {
+                                    close(iteratorOf(late.value));
+                                }
+                            },
+                            () => undefined
+                        );
+
+                        return;
+                    }
+
+                    if (!pieces.ok) {
+                        yield pieces;
+
+                        return;
+                    }
+
+                    source = iteratorOf(pieces.value);
+
                     while (!stop.signal.aborted) {
-                        let next: IteratorResult<string>;
+                        let next: IteratorResult<string> | 'stopped';
 
                         try {
                             next = await Promise.race([source.next(), stopped]);
@@ -762,7 +784,7 @@ export function clientApi(host: TestHost) {
                         }
 
                         // A run stopped while a piece was on its way says no more, and no error, as in Ruimte.
-                        if (next.done === true || stop.signal.aborted) {
+                        if (next === 'stopped' || next.done === true || stop.signal.aborted) {
                             return;
                         }
 
@@ -773,7 +795,10 @@ export function clientApi(host: TestHost) {
 
                     // A loop that broke off stops the run with it, without waiting on a fixture that never ends.
                     stop.abort();
-                    void Promise.resolve(source.return?.()).catch(() => undefined);
+
+                    if (source !== null) {
+                        close(source);
+                    }
                 }
             },
             // A chat a person can see, unless the test answers otherwise: beside the node it is about on the canvas in front, or a view of its own with none there.

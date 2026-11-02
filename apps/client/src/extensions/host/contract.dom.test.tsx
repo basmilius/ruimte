@@ -115,6 +115,8 @@ clientContract(async (permissions, seed = {}) => {
     const before = useToasts.getState().toasts.length;
     const nodes = [{ ...SEED.node, text: '' }, ...(seed.nodes ?? []).flatMap((node) => (node.kind === 'extension' ? [] : [node]))];
     const stops = new Map<string, () => void>();
+    const asked = Promise.withResolvers<void>();
+    const start = Promise.withResolvers<void>();
     // A chat the machine runs, with or without a node, as `extension.chatRead` finds it.
     const chats = new Map(nodes.flatMap((node) => (node.kind === 'chat' ? [[node.id, node.text] as const] : [])));
     // What a request carries and answers crosses as JSON and is checked against its schema, as over a real link.
@@ -178,6 +180,13 @@ clientContract(async (permissions, seed = {}) => {
         }
     });
     answer('extension.agentStream', async ({ runId }) => {
+        asked.resolve();
+
+        // A machine that was slow to start gives what it had even after it was told to stop.
+        if (seed.streamStart === 'held') {
+            await start.promise;
+        }
+
         for (const text of seed.stream ?? []) {
             machine.emit('extension.agentChunk', { runId, text });
         }
@@ -292,6 +301,8 @@ clientContract(async (permissions, seed = {}) => {
         },
         started: () => machine.requests('extension.agentStart').map(({ viewId }) => (viewId === undefined ? 'view' : 'canvas')),
         streamStopped: () => machine.requests('extension.agentStop').length > 0,
+        streamAsked: () => asked.promise,
+        letStreamStart: () => start.resolve(),
         nodes: () => Object.keys(focusedCanvas().getState().nodes),
         slot: (action, place, extra) => resolveSlot([entryOf(action)], place, contextOf(extra))[0]?.title ?? null,
         async run(action, place, extra) {

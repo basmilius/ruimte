@@ -29,6 +29,8 @@ clientContract(async (permissions, seed = {}) => {
         ...(seed.nodes ?? []).flatMap((node) => ('view' in node && node.view !== undefined ? [{ id: node.view, kind: 'canvas', name: node.view }] : []))
     ];
     let stopped = false;
+    const asked = Promise.withResolvers<void>();
+    const start = Promise.withResolvers<void>();
     const host = await createTestHost({
         manifest: { name: NAME, permissions },
         project: { ...SEED.project, views, nodes: [SEED.node, ...nodes] },
@@ -42,6 +44,12 @@ clientContract(async (permissions, seed = {}) => {
                           signal.addEventListener('abort', () => {
                               stopped = true;
                           });
+                          asked.resolve();
+
+                          // Its pieces once it may start, whether or not it was stopped meanwhile.
+                          if (seed.streamStart === 'held') {
+                              return start.promise.then(() => seed.stream ?? []);
+                          }
 
                           return streamOf(seed.stream ?? [], seed.streamEnd, signal);
                       }
@@ -66,6 +74,8 @@ clientContract(async (permissions, seed = {}) => {
         fromServer: async (write) => host.setStorage('machine', write.storage, write.value),
         fileChanged: async (path) => host.changeFile(path),
         streamStopped: () => stopped,
+        streamAsked: () => asked.promise,
+        letStreamStart: () => start.resolve(),
         nodes: () => host.canvas.nodes().map((node) => node.id),
         started: () => {
             const views = host.views();
