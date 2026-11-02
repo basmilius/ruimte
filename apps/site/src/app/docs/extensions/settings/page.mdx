@@ -105,6 +105,8 @@ defineExtensionSettings({
 
 <SettingsOwnPage />
 
+One call takes `component`, `fields` or `groups`, never two of them. With `fields` or `groups` beside it, Ruimte leaves `component` out and draws only the fields. For fields and a component of your own on one page, call `defineExtensionSettings` twice. Ruimte draws the fields first and your component below them.
+
 [Add a settings page](/docs/extensions/how-to/settings) builds both kinds of page.
 
 ## Storage

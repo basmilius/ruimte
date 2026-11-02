@@ -424,6 +424,18 @@ interface KeptServer {
     stop(): void;
 }
 
+function callServer(
+    extension: LoadedExtension,
+    transport: Pick<Transport, 'request' | 'connection'>,
+    settle: Settle,
+    method: string,
+    args: unknown[]
+): Promise<ExtensionResult<unknown>> {
+    return settle(`server ${method}`, () =>
+        extensionRequest(transport, 'extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result)
+    );
+}
+
 /*
  * The `.use()` of a server method suspends, so its answers are kept by what was asked. `reload` drops one, and the link
  * coming back drops them all, a failure too, so every surface that read one asks again.
@@ -436,10 +448,7 @@ function serverClient(
     const cache = new Map<string, Promise<ExtensionResult<unknown>>>();
     const listeners = new Set<() => void>();
     let version = 0;
-    const call = (method: string, args: unknown[]): Promise<ExtensionResult<unknown>> =>
-        settle(`server ${method}`, () =>
-            extensionRequest(transport, 'extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result)
-        );
+    const call = (method: string, args: unknown[]): Promise<ExtensionResult<unknown>> => callServer(extension, transport, settle, method, args);
     const dropped = (): void => {
         version += 1;
 
@@ -974,6 +983,23 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             useSyncExternalStore(server.subscribe, server.version);
 
             return server.methods as ServerClient<Server>;
+        },
+        getServer<Server>(): PublicClient.ServerCalls<Server> {
+            const methods = new Proxy(
+                {},
+                {
+                    get(_target, method) {
+                        if (typeof method !== 'string') {
+                            return undefined;
+                        }
+
+                        // The machine in front when it is called, not when `getServer` was.
+                        return (...args: unknown[]) => callServer(extension, callScope().link, settle, method, args);
+                    }
+                }
+            );
+
+            return methods as PublicClient.ServerCalls<Server>;
         },
         useServerEvent<Payload>(name: string, listener: (payload: Payload) => void) {
             const extensionNow = useExtension();

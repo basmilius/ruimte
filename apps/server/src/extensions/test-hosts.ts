@@ -139,7 +139,68 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
     };
 }
 
+const OPTIONS = Object.keys({
+    manifest: true,
+    entry: true,
+    project: true,
+    selection: true,
+    machine: true,
+    theme: true,
+    language: true,
+    settings: true,
+    storage: true,
+    answers: true
+} satisfies Record<keyof PublicTesting.TestHostOptions, true>);
+
+const ANSWERS = Object.keys({
+    confirm: true,
+    prompt: true,
+    pick: true,
+    pickFolder: true,
+    overlays: true,
+    server: true,
+    'agents.run': true,
+    'agents.stream': true,
+    'agents.start': true,
+    'chats.list': true,
+    'chats.send': true,
+    'files.readText': true,
+    'files.write': true,
+    'files.list': true,
+    'git.status': true,
+    'git.diff': true,
+    'git.log': true,
+    'database.connections': true,
+    'database.query': true,
+    'context.read': true,
+    'machine.run': true,
+    'usage.limits': true
+} satisfies Record<keyof PublicTesting.TestHostAnswers, true>);
+
+/* A key the test host would never read fails the test at once, rather than leave it on answers nobody gave. */
+function assertKnownOptions(options: PublicTesting.TestHostOptions): void {
+    const unknown = Object.keys(options).filter((key) => !OPTIONS.includes(key));
+
+    for (const key of unknown) {
+        if (ANSWERS.includes(key)) {
+            throw new TypeError(`createTestHost takes ${key} under answers, not beside it`);
+        }
+    }
+
+    if (unknown.length > 0) {
+        throw new TypeError(`createTestHost has no option ${unknown.join(', ')}. It takes ${OPTIONS.join(', ')}`);
+    }
+
+    const unanswered = Object.keys(options.answers ?? {}).filter((key) => !ANSWERS.includes(key));
+
+    if (unanswered.length > 0) {
+        throw new TypeError(`createTestHost answers nothing under ${unanswered.join(', ')}. It answers ${ANSWERS.join(', ')}`);
+    }
+}
+
 export async function createTestHost(options: PublicTesting.TestHostOptions = {}): Promise<PublicTesting.TestHost> {
+    assertKnownOptions(options);
+
     const folder = process.cwd();
     const host = new TestHost(options, folder);
     const api = clientApi(host);

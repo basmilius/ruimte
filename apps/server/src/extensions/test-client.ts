@@ -399,6 +399,7 @@ export function clientApi(host: TestHost) {
 
             return serverClient(host) as PublicClient.ServerClient<Server>;
         },
+        getServer: <Server>(): PublicClient.ServerCalls<Server> => serverClient(host) as PublicClient.ServerCalls<Server>,
         useServerEvent<Payload>(name: string, listener: (payload: Payload) => void): void {
             react().useEffect(() => host.listen(`server:${name}`, listener as (payload: never) => void), [name, listener]);
         },

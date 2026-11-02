@@ -185,7 +185,7 @@
             {
                 "name": "defineExtensionSettings",
                 "kind": "function",
-                "doc": "Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. Read a field with `useSetting`; keys are unique across groups.",
+                "doc": "Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. One call takes one of the three: with `fields` or `groups` beside it, `component` is left out. Read a field with `useSetting`; keys are unique across groups.",
                 "code": "export function defineExtensionSettings(\n    settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }\n): void;"
             },
             {
@@ -325,6 +325,18 @@
                 "kind": "function",
                 "doc": null,
                 "code": "export function useServer<Server>(): ServerClient<Server>;"
+            },
+            {
+                "name": "ServerCalls",
+                "kind": "type",
+                "doc": "Each method of `server/` as {@link ServerClient} calls it, without `.use()` and `.reload()`, which only a component has.",
+                "code": "export type ServerCalls<Server> = {\n    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value> ? (...args: Args) => Promise<Result<Returned<Value>>> : never;\n};"
+            },
+            {
+                "name": "getServer",
+                "kind": "function",
+                "doc": "`server/` outside a component, such as in the `run` of a command or an action. Each call goes to the machine in front when it is made.",
+                "code": "export function getServer<Server>(): ServerCalls<Server>;"
             },
             {
                 "name": "useServerEvent",

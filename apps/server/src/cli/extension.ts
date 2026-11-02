@@ -10,7 +10,7 @@ import { bunRuntime } from '../language/runtime.ts';
 import { buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
 import { logTail } from '../extensions/log-tail.ts';
 import { isLeftOut, sourceSignature } from '../extensions/source-signature.ts';
-import { scaffoldFiles, scaffoldProblem, type ScaffoldAnswers } from '../extensions/scaffold.ts';
+import { scaffoldFiles, scaffoldFolder, scaffoldProblem, type ScaffoldAnswers } from '../extensions/scaffold.ts';
 import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
@@ -124,7 +124,7 @@ async function create(values: {
         throw new Error(problem);
     }
 
-    const folder = resolve(answers.id.split('.').join('-'));
+    const folder = resolve(scaffoldFolder(answers));
 
     if (existsSync(folder)) {
         throw new Error(`${folder} already exists`);

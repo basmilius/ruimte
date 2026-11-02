@@ -1,4 +1,5 @@
 import { EXTENSION_API_VERSION, ExtensionManifestSchema } from '@ruimte/contracts';
+import { VERSION } from '../version.ts';
 
 export interface ScaffoldAnswers {
     name: string;
@@ -12,7 +13,17 @@ export interface ScaffoldAnswers {
 /* The major of React the client draws extensions with, which a test holds to `apps/client/package.json`. */
 export const CLIENT_REACT_MAJOR = 19;
 
-const GITIGNORE = 'node_modules\ndist\n';
+/*
+ * The types go out to npm with every release of Ruimte, at its version, so a project starts on those of the Ruimte that made
+ * it. A checkout says 0.0.0, which on npm is a placeholder without types.
+ */
+const EXTENSION_TYPES_VERSION = VERSION === '0.0.0' ? 'latest' : VERSION;
+
+// A build lands in `dist/`, and beside it in a `.ruimte-build-*` folder while it runs.
+const GITIGNORE = 'node_modules/\ndist/\n.ruimte-build-*/\n';
+
+// The ground of the mark until the author picks their own.
+const COLOR = '#0891b2';
 
 const TSCONFIG = `${JSON.stringify(
     {
@@ -33,11 +44,16 @@ const TSCONFIG = `${JSON.stringify(
     4
 )}\n`;
 
+/* Any text a person typed as a string literal in single quotes, the way the rest of the project writes one. */
+function quoted(text: string): string {
+    return `'${JSON.stringify(text).slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
+}
+
 const DEFINE: Readonly<Record<'panel' | 'node' | 'view' | 'card', (title: string) => string>> = {
-    panel: (title) => `definePanel({ id: 'main', title: ${JSON.stringify(title)}, icon: 'package', component: () => import('./Main') });`,
-    node: (title) => `defineNode({ id: 'main', title: ${JSON.stringify(title)}, icon: 'package', component: () => import('./Main') });`,
-    view: (title) => `defineView({ id: 'main', title: ${JSON.stringify(title)}, component: () => import('./Main') });`,
-    card: (title) => `defineSidebarCard({ id: 'main', title: ${JSON.stringify(title)}, component: () => import('./Main') });`
+    panel: (title) => `definePanel({ id: 'main', title: ${quoted(title)}, icon: 'package', component: () => import('./Main') });`,
+    node: (title) => `defineNode({ id: 'main', title: ${quoted(title)}, icon: 'package', component: () => import('./Main') });`,
+    view: (title) => `defineView({ id: 'main', title: ${quoted(title)}, component: () => import('./Main') });`,
+    card: (title) => `defineSidebarCard({ id: 'main', title: ${quoted(title)}, component: () => import('./Main') });`
 };
 
 const FUNCTION_OF: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
@@ -61,7 +77,7 @@ export default function Main() {
     }
 
     return `export default function Main() {
-    return <p>{${JSON.stringify(`Hello from ${name}`)}}</p>;
+    return <p>{${quoted(`Hello from ${name}`)}}</p>;
 }
 `;
 }
@@ -90,7 +106,7 @@ function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withSer
         tests.push(`    test('defines its ${KIND_OF[surface]}', async () => {
         const host = await createTestHost();
 
-        expect(host.${HOST_LOOKUP[surface]}('main')).toMatchObject({ title: ${JSON.stringify(name)} });
+        expect(host.${HOST_LOOKUP[surface]}('main')).toMatchObject({ title: ${quoted(name)} });
     });`);
     }
 
@@ -99,11 +115,11 @@ function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withSer
         tests.push(`    test('greets', async () => {
         const machine = await createTestServer<typeof server>();
 
-        expect(await machine.call('greeting')).toEqual({ ok: true, value: ${JSON.stringify(`Hello from ${name}`)} });
+        expect(await machine.call('greeting')).toEqual({ ok: true, value: ${quoted(`Hello from ${name}`)} });
     });`);
     }
 
-    return `${imports.join('\n')}\n\ndescribe(${JSON.stringify(name)}, () => {\n${tests.join('\n\n')}\n});\n`;
+    return `${imports.join('\n')}\n\ndescribe(${quoted(name)}, () => {\n${tests.join('\n\n')}\n});\n`;
 }
 
 const PARTS: readonly string[] = ['client', 'server', 'both'];
@@ -124,6 +140,11 @@ export function scaffoldProblem(answers: ScaffoldAnswers): string | null {
     return manifest.success ? null : manifest.error.issues.map((issue) => `${issue.path.join('.') || 'manifest'}: ${issue.message}`).join('; ');
 }
 
+/* The folder a new project goes in, named after what it is: `standup` for `acme.standup`. */
+export function scaffoldFolder(answers: ScaffoldAnswers): string {
+    return answers.id.slice(answers.id.indexOf('.') + 1);
+}
+
 /* A project that builds and runs as it is, with an example of what was asked for and a test of it. */
 export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> {
     const withClient = answers.parts !== 'server' && answers.surface !== 'none';
@@ -133,7 +154,19 @@ export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> 
         'tsconfig.json': TSCONFIG,
         'assets/icon.svg':
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="4"/></svg>\n',
-        'manifest.json': `${JSON.stringify({ id: answers.id, name: answers.name, version: '0.1.0', api: EXTENSION_API_VERSION, ...(answers.description === '' ? {} : { description: answers.description }), permissions: {} }, null, 4)}\n`,
+        'manifest.json': `${JSON.stringify(
+            {
+                id: answers.id,
+                name: answers.name,
+                version: '0.1.0',
+                api: EXTENSION_API_VERSION,
+                description: answers.description,
+                color: COLOR,
+                permissions: {}
+            },
+            null,
+            4
+        )}\n`,
         'package.json': `${JSON.stringify(
             {
                 name: answers.id.replace('.', '-'),
@@ -142,7 +175,7 @@ export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> 
                 devDependencies: {
                     // A `*.dom.test.tsx` file draws into the page this registers.
                     '@happy-dom/global-registrator': '^21.0.0',
-                    '@ruimte/extension': `^${EXTENSION_API_VERSION}.0.0`,
+                    '@ruimte/extension': EXTENSION_TYPES_VERSION,
                     '@types/bun': 'latest',
                     '@types/react': `^${CLIENT_REACT_MAJOR}.0.0`,
                     react: `^${CLIENT_REACT_MAJOR}.0.0`,
@@ -167,7 +200,7 @@ export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> 
 
 export default defineServer({
     async greeting() {
-        return ${JSON.stringify(`Hello from ${answers.name}`)};
+        return ${quoted(`Hello from ${answers.name}`)};
     }
 });
 `;

@@ -57,6 +57,29 @@ defineCommand({
 });
 ```
 
+## Call the server part
+
+`useServer` is a hook, so only a component can call it. A command's `run` calls `getServer` instead. It answers the same `Result` for each method, without `.use()` and `.reload()`. Here `server/index.ts` has a `sync` method, as in [Server and secrets](/docs/extensions/how-to/server):
+
+```ts
+import { defineCommand, getServer, host } from '@ruimte/extension/client';
+import type server from '../server';
+
+defineCommand({
+    id: 'sync',
+    title: 'Sync the standup',
+    async run() {
+        const synced = await getServer<typeof server>().sync();
+
+        host.notify(synced.ok ? 'Synced the standup' : synced.error.message, {
+            tone: synced.ok ? 'neutral' : 'error'
+        });
+    }
+});
+```
+
+Each call goes to the machine in front at the moment it is made. An action's `run`, a menu item and a palette source call `getServer` the same way.
+
 ## A command with a shortcut
 
 A shortcut belongs to an action. Give `defineAction` a `shortcut`, and the `commandPalette` slot to list it in the palette too:

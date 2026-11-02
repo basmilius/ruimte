@@ -510,6 +510,24 @@ export function clientContract(open: OpenClientWorld): void {
             expect(await server.toString()).toStrictEqual({ ok: false, error: { code: 'not-found', message: 'No method toString' } });
         });
 
+        test('calls server/ outside a component with getServer, answering as useServer does', async () => {
+            const world = await open(
+                {},
+                {
+                    server: {
+                        greet: (name: string) => `Hello ${name}`,
+                        breaks: () => {
+                            throw new Error('On purpose');
+                        }
+                    }
+                }
+            );
+            const server = world.api.getServer<{ greet(name: string): Promise<string>; breaks(): Promise<void> }>();
+
+            expect(await server.greet('Bas')).toStrictEqual({ ok: true, value: 'Hello Bas' });
+            expect(await server.breaks()).toStrictEqual({ ok: false, error: { code: 'failed', message: 'On purpose' } });
+        });
+
         test('reads its initial value for a key deleted with undefined, here or by server/, also after the connection comes back', async () => {
             const world = await open({});
             const { api, createElement: h } = world;

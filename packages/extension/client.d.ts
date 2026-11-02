@@ -156,7 +156,10 @@ export interface SettingGroup {
     fields: SettingField[];
 }
 
-/** Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. Read a field with `useSetting`; keys are unique across groups. */
+/**
+ * Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. One call takes one of the three:
+ * with `fields` or `groups` beside it, `component` is left out. Read a field with `useSetting`; keys are unique across groups.
+ */
 export function defineExtensionSettings(
     settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }
 ): void;
@@ -323,6 +326,14 @@ export type ServerClient<Server> = {
 };
 
 export function useServer<Server>(): ServerClient<Server>;
+
+/** Each method of `server/` as {@link ServerClient} calls it, without `.use()` and `.reload()`, which only a component has. */
+export type ServerCalls<Server> = {
+    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value> ? (...args: Args) => Promise<Result<Returned<Value>>> : never;
+};
+
+/** `server/` outside a component, such as in the `run` of a command or an action. Each call goes to the machine in front when it is made. */
+export function getServer<Server>(): ServerCalls<Server>;
 /** Hears what `emit` says in `server/`, with the payload it was given. */
 export function useServerEvent<Payload>(name: string, listener: (payload: Payload) => void): void;
 export function useNodeData<Data>(): [Data, (next: Data) => void];

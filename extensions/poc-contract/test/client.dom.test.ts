@@ -131,6 +131,16 @@ describe('a test host', () => {
         await expect(screen.click('Start')).rejects.toThrow('It is still waiting for what it suspends on');
     });
 
+    test('fails at once on an option or answer it would never read, and names where an answer goes', async () => {
+        const server = { greeting: () => 'Hello' };
+
+        await expect(createTestHost({ server } as never)).rejects.toThrow('createTestHost takes server under answers, not beside it');
+        await expect(createTestHost({ selected: ['a'] } as never)).rejects.toThrow('createTestHost has no option selected');
+        await expect(createTestHost({ answers: { 'launches.start': () => null } } as never)).rejects.toThrow(
+            'createTestHost answers nothing under launches.start'
+        );
+    });
+
     test("shares the machine's storage with a test server it is handed, both ways", async () => {
         const server = await createTestServer<ContractServer>();
         const host = await createTestHost({ answers: { server } });

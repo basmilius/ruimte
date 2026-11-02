@@ -15,7 +15,7 @@ You need [Bun](https://bun.sh) and Ruimte running on the same computer.
 bunx ruimte extension create
 ```
 
-It asks for a name, an id, the parts you want and a first surface, then writes a project that builds. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
+It asks for a name, an id, the parts you want and a first surface, then writes a project that builds into a new folder named after the second half of the id, such as `standup` for `acme.standup`. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
 
 The id is who made it and what it is, joined by a dot: `acme.standup`. Once people install the extension, the id never changes.
 
@@ -27,9 +27,11 @@ bun run dev
 
 `dev` builds on every save and reloads the extension in the running Ruimte. It prints `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on another port.
 
+`dev` loads into the machine whose home is in `RUIMTE_HOME`, `~/.ruimte` when it is not set. For a dev machine, give its home and port: `RUIMTE_HOME=~/.ruimte-dev bunx ruimte extension dev --port 4211`.
+
 <DevLog />
 
-Your extension shows under Settings, Extensions, in the In development group. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
+Your extension shows under Settings, Extensions, in the In development group. Its On switch is grayed out there. The extension stays on while `dev` runs, and Ctrl-C in the terminal of `dev` takes it out of Ruimte. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
 
 ## The client part
 

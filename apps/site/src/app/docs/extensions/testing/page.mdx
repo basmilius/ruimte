@@ -63,7 +63,9 @@ const host = await createTestHost({
 });
 ```
 
-A call that asks the machine, such as `git.log` or `launches.start`, answers what you put under its name in `answers`. Throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`, so a test never passes on a value it did not choose.
+A call that asks the machine, such as `git.log`, answers what you put under its name in `answers`. `launches`, `routines`, `artifacts`, `browser` and `devices` answer under `answers['machine.run']`, by the action each call is: `launches.start` is `launch.start`. Throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`, so a test never passes on a value it did not choose.
+
+`createTestHost` throws for an option or an answer it does not know, so a misspelled name fails the test at once instead of leaving a call unanswered.
 
 `agents.stream` takes a list of pieces, or an async generator for a stream that fails halfway or waits. A throw after some pieces ends the stream with that failure. The `signal` it gets aborts once your extension stops the stream:
 
@@ -108,7 +110,7 @@ test('the panel greets, and counts per project', async () => {
 
 `click` and `type` take the words a person reads, or an element. Each waits for what React does after it. `until(check)` waits until `check` neither throws nor answers false. Pass `node` for the node `useNodeData` reads, and `params` for what a panel or view gets. A surface that throws while it draws makes `render` reject, as a missing permission for `useAgents` does.
 
-`server` stands in for your server part as `useServer` reaches it. Give it methods, or a test server from `createTestServer`, so the client and the server part run together in one test. With a test server, its `storage` is the `machine` storage of `useStorage`, as on one machine.
+`answers.server` stands in for your server part as `useServer` and `getServer` reach it. It goes under `answers`, never beside it. Give it methods, or a test server from `createTestServer`, so the client and the server part run together in one test. With a test server, its `storage` is the `machine` storage of `useStorage`, as on one machine.
 
 The page needs `@happy-dom/global-registrator`, which a new project already has:
 
@@ -172,7 +174,12 @@ ruimte extension create    scaffold a project
 ruimte extension dev       build on save and load it into the running Ruimte
 ruimte extension test      bun test against a test host
 ruimte extension pack      build a .rex
+ruimte extension publish   pack and open a pull request on the store
 ruimte extension logs      what the server part wrote
 ```
+
+`dev` and `logs` use the machine whose home is in `RUIMTE_HOME`, `~/.ruimte` when it is not set. To work against another machine on this computer, such as a dev machine, give its home and port: `RUIMTE_HOME=~/.ruimte-dev ruimte extension dev --port 4211`, and `RUIMTE_HOME=~/.ruimte-dev ruimte extension logs`.
+
+`publish` packs, forks the store's repository and opens a pull request with your `.rex`. It needs the [GitHub CLI](https://cli.github.com), signed in. The store opens later, and until then a `.rex` you share by hand is the way to hand an extension on.
 
 `test` warns when your React has another major version than the one Ruimte draws extensions with, since what passes then can differ in Ruimte.

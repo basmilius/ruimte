@@ -27,7 +27,7 @@ export type Api = typeof api;
 export default api;
 ```
 
-In the client, `useServer<Api>()` makes those methods typed, each answering a `Result`. A method that throws answers `failed` with its message, so `throw` is how a method says no. [Server and secrets](/docs/extensions/how-to/server) builds a panel on a server part that calls an outside service with a stored key:
+In the client, `useServer<Api>()` makes those methods typed, each answering a `Result`. A method that throws answers `failed` with its message, so `throw` is how a method says no. Outside a component, such as in a command's `run`, `getServer<Api>()` calls the same methods; see [Add a command](/docs/extensions/how-to/command#call-the-server-part). [Server and secrets](/docs/extensions/how-to/server) builds a panel on a server part that calls an outside service with a stored key:
 
 <TicketsPanel />
 
