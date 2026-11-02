@@ -5,6 +5,7 @@
     "type": "module",
     "exports": {
         ".": "./src/index.ts",
+        "./extension-actions": "./src/extension-actions.ts",
         "./extension-permissions": "./src/extension-permissions.ts",
         "./extension-results": "./src/extension-results.ts"
     },

@@ -5,10 +5,12 @@
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { askRefusal, eventRefusal, permissionsOf, SendLimit, type Refusal } from './policy.ts';
 import { callHandler, createServerApi, MissingHandler, type KeyValues, type ServerCore, type ServerMessage } from './server-api.ts';
+import { loadFresh } from './test-loader.ts';
 
 type Result<Value> = PublicServer.Result<Value>;
 type Json = PublicServer.Json;
@@ -197,15 +199,35 @@ class TestMachine {
         }
     }
 
-    /* What the host answers an ask, in its order: the permission, an answer at all, the sends of the hour, then the answer. */
+    /*
+     * What the host answers an ask, in its order: the permission, the input of an action, an answer at all, the sends of the
+     * hour, then the answer. An input of the wrong shape throws, as the extension's own mistake.
+     */
     private async ask(method: string, args: unknown[]): Promise<Result<unknown>> {
         const refused = askRefusal(this.id, method, args, this.permissions);
+
+        if (refused === null && method === 'action') {
+            args = [args[0], args[1], this.actionInput(args[1] as PublicServer.MachineActionName, args[2])];
+        }
+
         const [name, recorded] = this.named(method, args);
         const result = refused === null ? await this.answer(method, args) : this.refused(method, refused);
 
         this.asked.push({ method: name, args: wire(recorded), result });
 
         return result;
+    }
+
+    private actionInput(action: PublicServer.MachineActionName, input: unknown): unknown {
+        const parsed = parseExtensionActionInput(action, wire(input));
+
+        if (!parsed.ok) {
+            this.logs.push(`action answered invalid-input: ${parsed.message}`);
+
+            throw new TypeError(parsed.message);
+        }
+
+        return parsed.input;
     }
 
     private refused(method: string, { code, message }: Refusal): Result<never> {
@@ -287,9 +309,11 @@ class TestMachine {
 }
 
 let current: TestMachine | null = null;
-let loads = 0;
 
-/* The machine `@ruimte/extension/server` speaks for: the test server created last, or one of the manifest alone outside of one. */
+/*
+ * The machine `@ruimte/extension/server` speaks for in a file a test imports itself: the test server created last, or one of
+ * the manifest alone outside of one. What a test server loaded speaks for that server.
+ */
 export function currentServer(): typeof PublicServer {
     current ??= new TestMachine({}, process.cwd());
 
@@ -300,14 +324,10 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
     const folder = process.cwd();
     const machine = new TestMachine(options, folder);
 
-    loads += 1;
     current = machine;
 
-    // A fresh copy of the entry each time, so what it defines at the top lands on this machine.
-    const module = (await import(`${resolve(folder, options.entry ?? join('server', 'index.ts'))}?ruimte-test=${loads}`)) as {
-        default?: Record<string, unknown>;
-    };
-    const handlers = module.default ?? {};
+    const module = await loadFresh(resolve(folder, options.entry ?? join('server', 'index.ts')), { '@ruimte/extension/server': machine.core.server });
+    const handlers = (module.default ?? {}) as Record<string, unknown>;
 
     const call = async (method: string, ...args: unknown[]): Promise<Result<unknown>> => {
         try {

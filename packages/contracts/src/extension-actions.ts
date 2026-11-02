@@ -50,6 +50,20 @@ export function isExtensionActionName(name: string): name is ExtensionActionName
     return Object.hasOwn(EXTENSION_ACTION_INPUTS, name);
 }
 
+/* The input of an action as the machine takes it, or why it takes another: the extension's mistake, which it hears as a throw. */
+export function parseExtensionActionInput<Name extends ExtensionActionName>(
+    name: Name,
+    input: unknown
+): { ok: true; input: ExtensionActionInput<Name> } | { ok: false; message: string } {
+    const parsed = EXTENSION_ACTION_INPUTS[name].safeParse(input ?? {});
+
+    if (!parsed.success) {
+        return { ok: false, message: `${name} takes another input: ${parsed.error.issues[0]?.message ?? 'invalid'}` };
+    }
+
+    return { ok: true, input: parsed.data as ExtensionActionInput<Name> };
+}
+
 interface NodeRef {
     id: string;
 }

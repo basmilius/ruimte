@@ -18,11 +18,17 @@ export type ExtensionErrorCode =
     | 'unavailable'
     | 'failed';
 
-/** What a call that can fail answers: its value, or why not. Only a wrong argument throws. */
+/**
+ * What a call that can fail answers: its value, or why not. Only a wrong argument throws. A call with nothing to answer,
+ * a `Result<void>`, answers `{ ok: true, value: undefined }` with the key `value` there.
+ */
 export type Result<Value, Code extends string = ExtensionErrorCode> = { ok: true; value: Value } | { ok: false; error: { code: Code; message: string } };
 
 /** A value as it crosses to the machine and back. */
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };
+
+/** What a method of `server/` answers once it crossed as JSON: `undefined`, and so a method that returns nothing, arrives as `null`. */
+export type Returned<Value> = Value extends undefined | void ? null : Value;
 
 /** A component is always handed over as a lazy import: `() => import('./Panel')`. */
 export type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;
@@ -269,11 +275,12 @@ export function defineWidget<Place extends SlotName>(widget: { id: string; slots
 
 /**
  * Each method calls `server/` on the machine in front and answers a Result: `failed` with the message of what it threw,
- * `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers.
+ * `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers. The value crosses
+ * as JSON, see {@link Returned}.
  */
 export type ServerClient<Server> = {
     [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>
-        ? ((...args: Args) => Promise<Result<Value>>) & { use(...args: Args): Result<Value> }
+        ? ((...args: Args) => Promise<Result<Returned<Value>>>) & { use(...args: Args): Result<Returned<Value>> }
         : never;
 };
 

@@ -1,8 +1,8 @@
 import { CodedError } from '@adecore/agents';
 import type { ActionInput, ActionName, ActionOutput, ActionResult } from '@ruimte/actions';
 import {
-    EXTENSION_ACTION_INPUTS,
     isExtensionActionName,
+    parseExtensionActionInput,
     type ArtifactSummary,
     type ExtensionActionInput,
     type ExtensionActionName,
@@ -178,13 +178,13 @@ export async function runMachineAction(name: string, input: unknown, execute: Ex
         throw new ExtensionRefusal('not-found', `An extension cannot ask for ${name}`);
     }
 
-    const parsed = EXTENSION_ACTION_INPUTS[name].safeParse(input ?? {});
+    const parsed = parseExtensionActionInput(name, input);
 
-    if (!parsed.success) {
-        throw new ExtensionRefusal('invalid-input', `${name} takes another input: ${parsed.error.issues[0]?.message ?? 'invalid'}`);
+    if (!parsed.ok) {
+        throw new ExtensionRefusal('invalid-input', parsed.message);
     }
 
     const translate = MACHINE_ACTIONS[name] as Entry<ExtensionActionName, ActionName>;
 
-    return translate.output(await execute(translate.action, translate.input(parsed.data as never)));
+    return translate.output(await execute(translate.action, translate.input(parsed.input as never)));
 }

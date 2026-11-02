@@ -11,7 +11,7 @@
             {
                 "name": "Result",
                 "kind": "type",
-                "doc": "What a call that can fail answers: its value, or why not. Only a wrong argument throws.",
+                "doc": "What a call that can fail answers: its value, or why not. Only a wrong argument throws. A call with nothing to answer, a `Result<void>`, answers `{ ok: true, value: undefined }` with the key `value` there.",
                 "code": "export type Result<Value, Code extends string = ExtensionErrorCode> = { ok: true; value: Value } | { ok: false; error: { code: Code; message: string } };"
             },
             {
@@ -19,6 +19,12 @@
                 "kind": "type",
                 "doc": "A value as it crosses to the machine and back.",
                 "code": "export type Json = string | number | boolean | null | Json[] | { [key: string]: Json | undefined };"
+            },
+            {
+                "name": "Returned",
+                "kind": "type",
+                "doc": "What a method of `server/` answers once it crossed as JSON: `undefined`, and so a method that returns nothing, arrives as `null`.",
+                "code": "export type Returned<Value> = Value extends undefined | void ? null : Value;"
             },
             {
                 "name": "LazyComponent",
@@ -311,8 +317,8 @@
             {
                 "name": "ServerClient",
                 "kind": "type",
-                "doc": "Each method calls `server/` on the machine in front and answers a Result: `failed` with the message of what it threw, `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers.",
-                "code": "export type ServerClient<Server> = {\n    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>\n        ? ((...args: Args) => Promise<Result<Value>>) & { use(...args: Args): Result<Value> }\n        : never;\n};"
+                "doc": "Each method calls `server/` on the machine in front and answers a Result: `failed` with the message of what it threw, `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers. The value crosses as JSON, see {@link Returned}.",
+                "code": "export type ServerClient<Server> = {\n    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>\n        ? ((...args: Args) => Promise<Result<Returned<Value>>>) & { use(...args: Args): Result<Returned<Value>> }\n        : never;\n};"
             },
             {
                 "name": "useServer",
@@ -634,7 +640,7 @@
             {
                 "name": "Result",
                 "kind": "type",
-                "doc": "What a call that can fail answers: its value, or why not. Only a wrong argument throws.",
+                "doc": "What a call that can fail answers: its value, or why not. Only a wrong argument throws. A call with nothing to answer, a `Result<void>`, answers `{ ok: true, value: undefined }` with the key `value` there.",
                 "code": "export type Result<Value, Code extends string = ExtensionErrorCode> = { ok: true; value: Value } | { ok: false; error: { code: Code; message: string } };"
             },
             {

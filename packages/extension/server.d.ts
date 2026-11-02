@@ -20,7 +20,10 @@ export type ExtensionErrorCode =
     | 'unavailable'
     | 'failed';
 
-/** What a call that can fail answers: its value, or why not. Only a wrong argument throws. */
+/**
+ * What a call that can fail answers: its value, or why not. Only a wrong argument throws. A call with nothing to answer,
+ * a `Result<void>`, answers `{ ok: true, value: undefined }` with the key `value` there.
+ */
 export type Result<Value, Code extends string = ExtensionErrorCode> = { ok: true; value: Value } | { ok: false; error: { code: Code; message: string } };
 
 /** A value as it crosses to the machine and back. */

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { SlotAnswer, SlotName } from './client';
+import type { Returned, SlotAnswer, SlotName } from './client';
 import type {
     ChatSummary,
     ExtensionErrorCode,
@@ -59,7 +59,9 @@ export interface TestAsk {
     result: Result<unknown>;
 }
 
-type Method<Api, Name extends keyof Api> = Api[Name] extends (...args: infer Args) => Promise<infer Value> ? (...args: Args) => Promise<Result<Value>> : never;
+type Method<Api, Name extends keyof Api> = Api[Name] extends (...args: infer Args) => Promise<infer Value>
+    ? (...args: Args) => Promise<Result<Returned<Value>>>
+    : never;
 
 export interface TestServer<Api> {
     /** Calls a method of `server/index.ts` as the client does: its arguments and answer cross as JSON, a throw answers `failed`. */
@@ -87,8 +89,9 @@ export interface TestServer<Api> {
 
 /**
  * Loads `server/index.ts` in this process, against the machine of a test: storage in memory, answers you script and the permissions of
- * your manifest, refused with the messages and codes Ruimte gives. `@ruimte/extension/server` speaks for the test server created last.
- * A file `server/index.ts` imports runs once, and keeps its state between test servers.
+ * your manifest, refused with the messages and codes Ruimte gives. Each test server loads `server/index.ts` afresh, with every file of
+ * your project it imports, so no state carries over; a package from `node_modules` loads once. What it loaded speaks for it, and a
+ * file your test imports itself speaks for the test server created last.
  */
 export function createTestServer<Api = Record<string, (...args: never[]) => Promise<unknown>>>(options?: TestServerOptions): Promise<TestServer<Api>>;
 
