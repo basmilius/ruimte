@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, jest, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import type { ChatSpawnOptions, SpawnChatProcess } from '@adecore/agents/chat';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { EditorAssistModel } from './model.ts';
@@ -95,7 +95,7 @@ describe('editor model generations', () => {
         await rig.started();
         expect(rig.launches[0]?.command).toContain('claude-haiku-5-5');
         expect(rig.launches[0]?.command).toContain('--tools');
-        expect(rig.launches[0]?.cwd).toEndWith('/editor-assist');
+        expect(rig.launches[0]?.cwd).toEndWith(`${sep}editor-assist`);
         expect(rig.launches[0]?.env).toEqual({ PATH: '/bin', CLAUDE_CONFIG_DIR: '/accounts/claude' });
         expect(rig.prompts[0]).toContain('You explain source code');
         expect(rig.prompts[0]).toContain('function add() {}');
