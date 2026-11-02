@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, test } from 'bun:test';
 import { EventEmitter } from 'node:events';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -85,7 +85,8 @@ function hostWith(manifest: Partial<ExtensionManifest>, options: { removeLanguag
 
     hosts.push(host);
 
-    return { host, children, setups: () => setups, log: () => readFileSync(store.logFile(), 'utf8') };
+    // The host appends without waiting, so the file may not be there yet.
+    return { host, children, setups: () => setups, log: () => (existsSync(store.logFile()) ? readFileSync(store.logFile(), 'utf8') : '') };
 }
 
 async function until(condition: () => boolean): Promise<void> {

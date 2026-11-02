@@ -1,5 +1,6 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import type { LucideIcon } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import type { ProjectNode, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
@@ -8,7 +9,6 @@ import { useDocument } from '@/state/document';
 import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
-import { useTheme } from '@/state/theme';
 
 export interface AgentInfo {
     provider: string;
@@ -162,11 +162,24 @@ function contextOf(
     };
 }
 
+// Read off the page, since the theme's store reaches for a document as it loads, and this module loads without one in tests.
+function pageTheme(): BaseContext['theme'] {
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+}
+
+function followPageTheme(listener: () => void): () => void {
+    const observer = new MutationObserver(listener);
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    return () => observer.disconnect();
+}
+
 /* For code outside a render, such as a shortcut or a command. */
 export function baseContext(): BaseContext {
     const { views, activeViewId } = useDocument.getState();
 
-    return contextOf(useProject.getState().current, views, activeViewId, currentEndpointId(), useTheme.getState().resolved);
+    return contextOf(useProject.getState().current, views, activeViewId, currentEndpointId(), pageTheme());
 }
 
 export function useBaseContext(): BaseContext {
@@ -174,7 +187,7 @@ export function useBaseContext(): BaseContext {
     const views = useDocument((state) => state.views);
     const activeViewId = useDocument((state) => state.activeViewId);
     const endpointId = useEndpointId();
-    const theme = useTheme((state) => state.resolved);
+    const theme = useSyncExternalStore(followPageTheme, pageTheme);
 
     return contextOf(current, views, activeViewId, endpointId, theme);
 }
