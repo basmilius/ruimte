@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import { siGithub } from 'simple-icons';
 import { Pill, Tooltip } from '@adecore/ui';
 import { AppIcon } from '@/components/AppIcon.tsx';
+import { MobileMenu } from '@/components/MobileMenu.tsx';
 import { SECTIONS } from '@/lib/docs/navigation';
 import { REPOSITORY_URL, STATION_URL } from '@/lib/release.ts';
 
@@ -51,6 +52,7 @@ export function SiteHeader() {
                 </span>
                 <nav aria-label={inDocs ? 'Documentation' : 'Site'} className="ml-auto flex items-center gap-1 text-xs">
                     {inDocs ? <DocsMenu pathname={pathname} /> : <SiteMenu pathname={pathname} />}
+                    <MobileMenu pathname={pathname} section={SECTIONS.find((section) => isWithin(pathname, section.href))} hiddenFrom={inDocs ? 'lg' : 'md'} />
                     <Tooltip label="GitHub" name side="bottom">
                         <a href={REPOSITORY_URL} className={clsx(ITEM, ITEM_IDLE, 'inline-flex px-2.5')}>
                             <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor" aria-hidden>
@@ -84,13 +86,13 @@ function SiteMenu({ pathname }: { readonly pathname: string }) {
             <Link href="/" onClick={(event) => toTopOfHome(event, pathname)} className={clsx(ITEM, ITEM_IDLE, 'hidden md:inline-flex')}>
                 Home
             </Link>
-            <a href="#features" className={clsx(ITEM, ITEM_IDLE, 'hidden sm:inline-flex')}>
+            <a href="#features" className={clsx(ITEM, ITEM_IDLE, 'hidden md:inline-flex')}>
                 Features
             </a>
-            <a href={STATION_URL} className={clsx(ITEM, ITEM_IDLE, 'inline-flex')}>
+            <a href={STATION_URL} className={clsx(ITEM, ITEM_IDLE, 'hidden md:inline-flex')}>
                 Station
             </a>
-            <Link href="/docs" className={clsx(ITEM, ITEM_IDLE, 'inline-flex')}>
+            <Link href="/docs" className={clsx(ITEM, ITEM_IDLE, 'hidden md:inline-flex')}>
                 Docs
             </Link>
         </>
@@ -100,7 +102,7 @@ function SiteMenu({ pathname }: { readonly pathname: string }) {
 function DocsMenu({ pathname }: { readonly pathname: string }) {
     return (
         <>
-            <Link href="/" className={clsx(ITEM, ITEM_IDLE, 'hidden sm:inline-flex')}>
+            <Link href="/" className={clsx(ITEM, ITEM_IDLE, 'hidden lg:inline-flex')}>
                 Home
             </Link>
             {SECTIONS.map((section) => {
@@ -111,7 +113,7 @@ function DocsMenu({ pathname }: { readonly pathname: string }) {
                         key={section.href}
                         href={section.href}
                         aria-current={current ? 'page' : undefined}
-                        className={clsx(ITEM, 'inline-flex', current ? ITEM_CURRENT : ITEM_IDLE)}
+                        className={clsx(ITEM, 'hidden lg:inline-flex', current ? ITEM_CURRENT : ITEM_IDLE)}
                     >
                         {section.title}
                     </Link>
