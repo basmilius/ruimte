@@ -1,7 +1,6 @@
 import { afterEach } from 'bun:test';
 import { createElement, type ComponentType } from 'react';
 import type { ExtensionManifest, ProjectView } from '@ruimte/contracts';
-import { clientContract, NAME, SEED } from '@extensions/poc-contract/contract/client';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
@@ -12,6 +11,7 @@ import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
+import { clientContract, NAME, SEED } from '../../../../../extensions/poc-contract/contract/client';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 
