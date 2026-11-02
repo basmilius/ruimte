@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { ComponentType } from 'react';
@@ -11,50 +11,17 @@ import { startExtensions } from '@/extensions/watch';
 import { useToasts } from '@/state/toasts';
 import { mount, until } from '../../testing/dom';
 import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
+import { serveExtensionLoads, writeExtension as writeFolderExtension } from '../../testing/extension-loads';
 
 // By a path the types do not follow: the client's project never reaches into the daemon's, only this test does.
 const PACK = '../../../server/src/extensions/pack.ts';
-// What the shell strips from a version before it reads its files.
-const LOAD_MARK = /~\d+(?=\/)/;
-const LOAD_PREFIX = /^\/?load:/;
-
 let folder: string;
 let installed: InstalledClientExtension[] = [];
 
-/*
- * Answers a load's address as the shell does, with the files of its version, while the page keeps a module for each
- * address it was asked under. A relative import of such a module stays under its load.
- */
-Bun.plugin({
-    name: 'extension-loads',
-    setup(build) {
-        build.onResolve({ filter: LOAD_MARK }, (args) => ({ path: args.path, namespace: 'load' }));
-        build.onResolve({ filter: /^\.\.?\// }, (args) => {
-            const importer = args.importer.replace(LOAD_PREFIX, '');
+serveExtensionLoads();
 
-            return LOAD_MARK.test(importer) ? { path: join(dirname(importer), args.path), namespace: 'load' } : undefined;
-        });
-        build.onLoad({ filter: /.*/, namespace: 'load' }, (args) => ({
-            contents: readFileSync(args.path.replace(LOAD_PREFIX, '').replace(LOAD_MARK, ''), 'utf8'),
-            loader: 'js'
-        }));
-    }
-});
-
-/* What a pack writes: the API comes from the page, and the module registers when it runs, or later through `later`. */
 function writeExtension(id: string, module: string): InstalledClientExtension {
-    const base = join(folder, id);
-
-    mkdirSync(join(base, 'client'), { recursive: true });
-    writeFileSync(join(base, 'client', 'index.js'), module);
-
-    return {
-        manifest: { id, name: id, version: '0.1.0', api: 1, permissions: {} },
-        base: `${base}/`,
-        enabled: true,
-        hasClient: true,
-        dev: false
-    };
+    return writeFolderExtension(folder, id, module);
 }
 
 function turn(id: string, enabled: boolean): void {

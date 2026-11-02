@@ -33,6 +33,8 @@ const loading = new Set<string>();
 let stopActivation: (() => void) | null = null;
 // Counts the syncs begun, so one whose list came in after a newer one began leaves the newer one's to apply.
 let syncs = 0;
+// On Station, the machine whose list this window runs, or null while it runs no machine's.
+let runningFor: string | null = null;
 
 export { extensionsInSafeMode };
 
@@ -48,29 +50,80 @@ function failed(id: string, e: unknown): void {
  * What this computer has. On Station that is what the machine in front has, over that machine's own link for the whole
  * read; an extension whose files did not come keeps the version it had of that machine, with why on its row.
  */
-async function installedNow(current: () => boolean): Promise<{ installed: readonly InstalledClientExtension[]; failures: Record<string, string> } | null> {
+async function installedNow(
+    endpointId: string,
+    current: () => boolean
+): Promise<{ installed: readonly InstalledClientExtension[]; failures: Record<string, string> } | null> {
     if (!IS_STATION) {
         const installed = (await desktop()?.extensions?.list()) ?? null;
 
         return installed === null ? null : { installed, failures: {} };
     }
 
-    const endpointId = useEndpoints.getState().activeId;
     const previous = useInstalledExtensions.getState().installed;
 
-    return machineExtensions(machineTransport(endpointId), endpointId, { previous, current }).catch(() => null);
+    try {
+        return await machineExtensions(machineTransport(endpointId), endpointId, { previous, current });
+    } catch {
+        return null;
+    }
+}
+
+function takeDown(runtime: Runtime, id: string): void {
+    runtime.forgetExtension(id);
+    dropStylesheet(id);
+    loaded.delete(id);
+}
+
+/*
+ * On Station, what the machine before had goes once another is in front, before that one's list is asked: its code
+ * would otherwise run on against the new machine while the list does not come, or never does.
+ */
+async function withdrawOtherMachine(endpointId: string): Promise<void> {
+    if (runningFor === null || runningFor === endpointId) {
+        return;
+    }
+
+    // Taken now, so a load of the new machine that begins while the runtime comes in stays.
+    const stale = [...loaded];
+
+    runningFor = null;
+    useInstalledExtensions.setState({ installed: [], failures: {} });
+    await refreshExtensionTheme([]);
+
+    if (stale.length === 0) {
+        return;
+    }
+
+    const runtime = await import('@/extensions/host/runtime');
+
+    for (const [id, base] of stale) {
+        if (loaded.get(id) === base) {
+            takeDown(runtime, id);
+        }
+    }
 }
 
 /* Loads what is on and new, and takes down what went or moved to another version. One extension failing leaves the others alone. */
 export async function syncExtensions(): Promise<void> {
     const sync = ++syncs;
-    const answer = await installedNow(() => sync === syncs);
+    const endpointId = useEndpoints.getState().activeId;
+
+    if (IS_STATION) {
+        await withdrawOtherMachine(endpointId);
+    }
+
+    const answer = await installedNow(endpointId, () => sync === syncs);
 
     if (answer === null || sync !== syncs) {
         return;
     }
 
     const { installed } = answer;
+
+    if (IS_STATION) {
+        runningFor = endpointId;
+    }
 
     useInstalledExtensions.setState({ installed });
 
@@ -104,9 +157,7 @@ export async function syncExtensions(): Promise<void> {
 
     for (const [id, base] of [...loaded]) {
         if (!wanted.some((entry) => entry.manifest.id === id && entry.base === base)) {
-            runtime.forgetExtension(id);
-            dropStylesheet(id);
-            loaded.delete(id);
+            takeDown(runtime, id);
         }
     }
 
