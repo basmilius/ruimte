@@ -9,7 +9,8 @@
         "./extension-client": "./src/extension-client.ts",
         "./extension-context": "./src/extension-context.ts",
         "./extension-permissions": "./src/extension-permissions.ts",
-        "./extension-results": "./src/extension-results.ts"
+        "./extension-results": "./src/extension-results.ts",
+        "./node-defaults": "./src/node-defaults.ts"
     },
     "scripts": {
         "typecheck": "bun check --no-script",

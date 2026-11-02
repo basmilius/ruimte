@@ -1,4 +1,5 @@
-import { NodeKindSchema, type NodeKind } from './project.ts';
+// Only a type from the project schema, so the test host of `@ruimte/extension/testing` takes these without zod.
+import type { NodeKind } from './project.ts';
 export { NODE_ACCENT_NAMES, type NodeAccent, type NotePaper, isNodeAccent, notePaperOf, nodeColorOf, nodeColorPatch } from './node-accents.ts';
 
 export interface NodeSize {
@@ -62,7 +63,7 @@ export function knownNodeSizes(raw: unknown): NodeSizes {
         return {};
     }
     const sizes: NodeSizes = {};
-    for (const kind of NodeKindSchema.options) {
+    for (const kind of Object.keys(NODE_SIZE) as NodeKind[]) {
         const size = (raw as Record<string, unknown>)[kind];
         if (isDefaultSize(size)) {
             sizes[kind] = { w: size.w, h: size.h };
