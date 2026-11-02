@@ -91,7 +91,7 @@ export class GatedChild extends EventEmitter {
     readonly stdin = new PassThrough();
     readonly stdout = new PassThrough();
     readonly stderr = new PassThrough();
-    readonly told: { type: string; id?: number; name?: string; method?: string }[] = [];
+    readonly told: { type: string; id?: number; name?: string; method?: string; result?: unknown }[] = [];
     // Events written to it after it was killed, which no process would read.
     readonly toldAfterKill: string[] = [];
     readonly id: string;
