@@ -1,26 +1,24 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { KeyCap, isApplePlatform, shortcut, shortcutParts } from '@adecore/ui';
+import { isApplePlatform, KeyCap, shortcut, shortcutParts } from '@adecore/ui';
 
-function subscribe() {
-    return () => {};
+function subscribe(): () => void {
+    return () => undefined;
 }
 
 /**
- * A shortcut as caps, written the way the reader's computer writes it. The page is prerendered without
- * a platform, so it starts as Ctrl and turns into ⌘ on a Mac once it hydrates. `Keys` reads the platform
- * while it renders, which would make the two disagree.
+ * A shortcut as ADE CORE's `Keys` draws it, in the keys of the reader's own keyboard. `Keys` reads the
+ * platform while it renders, which a prerendered page cannot: this one starts as Ctrl and turns into ⌘ on
+ * a Mac once it hydrates. `keys` is written as the app writes it, `Mod+Shift+K`, with `Mod` for Cmd or Ctrl.
  */
 export function Shortcut({ keys }: { readonly keys: string }) {
     const apple = useSyncExternalStore(subscribe, isApplePlatform, () => false);
 
     return (
-        <span className="inline-flex -translate-y-px items-center gap-0.5 align-middle">
-            {shortcutParts(shortcut(keys), apple).map((part) => (
-                <KeyCap key={part} size="sm">
-                    {part}
-                </KeyCap>
+        <span className="inline-flex items-center gap-1 align-middle whitespace-nowrap">
+            {shortcutParts(shortcut(keys), apple).map((part, index) => (
+                <KeyCap key={`${part}-${index}`}>{part}</KeyCap>
             ))}
         </span>
     );
