@@ -1,14 +1,15 @@
 /*
- * What runs inside an extension's own process, ahead of its `server/index.js`. The daemon carries this
- * file as text and writes it beside the extension's data, so a compiled daemon can run it. It speaks
- * one JSON line per message over stdin and stdout, so the extension's `console.log` goes to stderr.
+ * What runs inside an extension's own process, ahead of its `server/index.js`: the API of `server-api.ts` over pipes
+ * and files. It is bundled into `generated/server-runtime.js`, which the daemon carries as text and writes beside the
+ * extension's data, so a compiled daemon can run it. It speaks one JSON line per message over stdin and stdout, so the
+ * extension's `console.log` goes to stderr.
  */
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type * as PublicServer from '../../../../packages/extension/server';
+import { callHandler, createServerApi, MissingHandler, type KeyValues } from './server-api.ts';
 
-type Listener = (payload: unknown) => void;
-type Handlers = Record<string, (...args: unknown[]) => unknown>;
+type Result<Value> = PublicServer.Result<Value>;
 
 const [entry, dataFolder] = process.argv.slice(2);
 
@@ -16,10 +17,8 @@ if (entry === undefined || dataFolder === undefined) {
     throw new Error('Expected the extension entry and its data folder');
 }
 
+const folder = dataFolder;
 const protocol = process.stdout;
-const listeners = new Map<string, Set<Listener>>();
-const tools = new Map<string, { run(input: unknown, context: { caller: string }): unknown }>();
-const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
 
 function send(message: object): void {
     protocol.write(`${JSON.stringify(message)}\n`);
@@ -30,7 +29,7 @@ console.info = console.log;
 
 function jsonFile(name: string): Record<string, unknown> {
     try {
-        return JSON.parse(readFileSync(join(dataFolder as string, name), 'utf8')) as Record<string, unknown>;
+        return JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>;
     } catch {
         return {};
     }
@@ -38,24 +37,19 @@ function jsonFile(name: string): Record<string, unknown> {
 
 /* Through a file of its own and a rename, so the daemon, which writes the same `storage.json`, never reads half of it. */
 function writeJsonFile(name: string, value: object): void {
-    const file = join(dataFolder as string, name);
+    const file = join(folder, name);
     const temporary = `${file}.${process.pid}.tmp`;
 
-    mkdirSync(dataFolder as string, { recursive: true });
+    mkdirSync(folder, { recursive: true });
     writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
     renameSync(temporary, file);
 }
 
-function keyValues(name: string) {
+function keyValues(name: string): KeyValues {
     return {
-        // What was set under the key, which only the extension knows the shape of.
-        async get<Value>(key: string): Promise<Value | undefined> {
-            return jsonFile(name)[key] as Value | undefined;
-        },
-        async set<Value>(key: string, value: Value): Promise<void> {
-            writeJsonFile(name, { ...jsonFile(name), [key]: value });
-        },
-        async delete(key: string): Promise<void> {
+        get: async (key) => jsonFile(name)[key],
+        set: async (key, value) => writeJsonFile(name, { ...jsonFile(name), [key]: value }),
+        async delete(key) {
             const { [key]: _gone, ...rest } = jsonFile(name);
 
             writeJsonFile(name, rest);
@@ -63,151 +57,88 @@ function keyValues(name: string) {
     };
 }
 
-type Result<Value> = PublicServer.Result<Value>;
-
-const permissions = new Set<string>(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? '[]') as string[]);
 const asked = new Map<number, { resolve(value: Result<unknown>): void; reject(error: Error): void }>();
 let nextAsk = 1;
 
-/*
- * The daemon holds what this process does not: the person's agents and chats. It checks the permission too, and
- * its refusal answers as a Result. Only an argument of the wrong shape throws, as the extension's own mistake.
- */
-function ask<Value>(method: string, args: unknown[]): Promise<Result<Value>> {
+function ask(method: string, args: unknown[]): Promise<Result<unknown>> {
     const id = nextAsk;
 
     nextAsk += 1;
 
     return new Promise((resolve, reject) => {
-        asked.set(id, { resolve: resolve as (value: Result<unknown>) => void, reject });
+        asked.set(id, { resolve, reject });
         send({ type: 'ask', id, method, args });
     });
 }
 
-function mapResult<Value, Next>(result: Result<Value>, next: (value: Value) => Next): Result<Next> {
-    return result.ok ? { ok: true, value: next(result.value) } : result;
-}
-
-interface Ref {
-    id: string;
-}
-
-const UNITS: Readonly<Record<string, number>> = { s: 1000, m: 60_000, h: 3_600_000 };
-const MIN_EVERY_MS = 10_000;
-
-function everyMs(every: string): number {
-    const match = /^(\d+)([smh])$/.exec(every);
-    const ms = match === null ? 0 : Number(match[1]) * (UNITS[match[2] as string] as number);
-
-    if (ms < MIN_EVERY_MS) {
-        throw new Error(`schedule takes something like 30s, 5m or 1h, of at least 10 seconds, not ${every}`);
-    }
-
-    return ms;
-}
-
-const server = {
-    machine: {
-        platform: process.platform,
-        dataFolder,
-        // An action of the machine in a project, within what the manifest asks for.
-        run: (project: Ref, action: string, input: object = {}) => ask('action', [project.id, action, input])
-    },
-    defineLanguageServer: async (languageServer: object) => mapResult(await ask('languages.add', [languageServer]), () => undefined),
-    agents: {
-        run: (options: { prompt: string; context?: string[]; provider?: string }) => ask<{ text: string }>('agents.run', [options]),
-        async start({
-            project,
-            view,
-            near,
-            prompt,
-            provider,
-            title
-        }: {
-            project: Ref;
-            view?: Ref;
-            near?: Ref[];
-            prompt?: string;
-            provider?: string;
-            title?: string;
-        }) {
-            const beside = near?.[0]?.id;
-            const started = await ask<{ nodeId: string }>('agents.start', [
-                {
-                    projectId: project.id,
-                    ...(view === undefined ? {} : { viewId: view.id }),
-                    ...(beside === undefined ? {} : { beside }),
-                    ...(prompt === undefined ? {} : { prompt }),
-                    ...(provider === undefined ? {} : { provider }),
-                    ...(title === undefined ? {} : { title })
-                }
-            ]);
-
-            return mapResult(started, ({ nodeId }) => ({ id: nodeId }));
-        }
-    },
-    chats: {
-        list: () => ask('chats.list', []),
-        read: (chatId: string) => ask<string>('chats.read', [chatId]),
-        send: async (chatId: string, text: string) => mapResult(await ask('chats.send', [chatId, text]), () => undefined)
-    },
-    defineAgentTool(tool: { id: string; description: string; parameters?: unknown; run(input: unknown, context: { caller: string }): unknown }): void {
-        tools.set(tool.id, tool);
-        send({ type: 'tool', name: tool.id, description: tool.description, parameters: tool.parameters ?? { type: 'object', properties: {} } });
-    },
-    schedule(task: { id: string; every: string; run(): unknown }): void {
-        if (!permissions.has('clock')) {
-            throw new Error('schedule needs the permission clock in manifest.json');
-        }
-
-        setInterval(() => {
-            void (async () => task.run())().catch((e: unknown) => console.error(`${task.id} failed:`, e));
-        }, everyMs(task.every));
-    },
-    defineServer: <Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api => api,
-    onEvent<Name extends keyof PublicServer.ServerEvents>(name: Name, listener: (event: PublicServer.ServerEvents[Name]) => void): () => void {
-        const group = listeners.get(name) ?? new Set();
-        // The daemon hands on only the payload `ServerEvents` names for this event.
-        const heard = listener as Listener;
-
-        group.add(heard);
-        listeners.set(name, group);
-        send({ type: 'subscribe', name });
-
-        return () => {
-            group.delete(heard);
-        };
-    },
-    emit<Payload>(name: string, payload: Payload): void {
-        send({ type: 'emit', name, payload });
-    },
-    defineNodeContext<Data>(nodeId: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void {
-        nodeContexts.set(nodeId, read as (node: { data: unknown }) => unknown);
-    },
+const core = createServerApi({
+    dataFolder: folder,
+    platform: process.platform,
+    permissions: new Set<string>(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? '[]') as string[]),
+    ask,
+    clock: { every: (ms, run) => void setInterval(run, ms) },
+    send,
     storage: keyValues('storage.json'),
     secrets: keyValues('secrets.json'),
     log: {
-        info: (message: string) => console.error(message),
-        error: (message: string, error?: unknown) => console.error(message, error ?? '')
+        info: (message) => console.error(message),
+        error: (message, error) => console.error(message, error ?? '')
     }
-    // Held to the public types, so a change to one side breaks the check rather than an extension.
-} satisfies typeof PublicServer;
+});
 
 (globalThis as Record<string, unknown>).__ruimteExtension = {
-    for: () => ({ server })
+    for: () => ({ server: core.server })
 };
 
-const module = (await import(entry)) as { default?: Handlers };
+const module = (await import(entry)) as { default?: Record<string, unknown> };
 const handlers = module.default ?? {};
-
-/* Thrown for a method or tool the extension does not have, which the client reads as `not-found`. */
-class Missing extends Error {}
 
 async function answer(id: number, run: () => unknown): Promise<void> {
     try {
         send({ type: 'result', id, result: (await run()) ?? null });
     } catch (e) {
-        send({ type: 'result', id, error: e instanceof Error ? e.message : String(e), ...(e instanceof Missing ? { code: 'not-found' } : {}) });
+        send({ type: 'result', id, error: e instanceof Error ? e.message : String(e), ...(e instanceof MissingHandler ? { code: 'not-found' } : {}) });
+    }
+}
+
+interface Incoming {
+    type: string;
+    id: number;
+    method: string;
+    args: unknown[];
+    name: string;
+    payload: unknown;
+    node: string;
+    data: unknown;
+    context: { caller: string };
+    // The daemon answers under a code of `ExtensionErrorCode`, or `invalid-input` for an argument of the wrong shape.
+    result?: unknown;
+    error?: string;
+    code?: PublicServer.ExtensionErrorCode | 'invalid-input';
+}
+
+function handle(message: Incoming): void {
+    if (message.type === 'answer') {
+        const waiting = asked.get(message.id);
+        const { result, error, code = 'failed' } = message;
+
+        asked.delete(message.id);
+
+        if (error === undefined) {
+            waiting?.resolve({ ok: true, value: result });
+        } else if (code === 'invalid-input') {
+            waiting?.reject(new TypeError(error));
+        } else {
+            waiting?.resolve({ ok: false, error: { code, message: error } });
+        }
+    } else if (message.type === 'call') {
+        void answer(message.id, () => callHandler(handlers, message.method, message.args));
+    } else if (message.type === 'event') {
+        core.deliver(message.name, message.payload);
+    } else if (message.type === 'tool') {
+        void answer(message.id, () => core.runTool(message.method, message.payload, message.context));
+    } else if (message.type === 'nodeContext') {
+        void answer(message.id, () => core.readNodeContext(message.node, message.data));
     }
 }
 
@@ -221,65 +152,7 @@ process.stdin.on('data', (chunk: string) => {
         const line = buffered.slice(0, end);
 
         buffered = buffered.slice(end + 1);
-
-        const message = JSON.parse(line) as {
-            type: string;
-            id: number;
-            method: string;
-            args: unknown[];
-            name: string;
-            payload: unknown;
-            node: string;
-            data: unknown;
-        };
-
-        if (message.type === 'answer') {
-            const waiting = asked.get(message.id);
-            // The daemon answers under a code of `ExtensionErrorCode`, or `invalid-input` for an argument of the wrong shape.
-            const {
-                result,
-                error,
-                code = 'failed'
-            } = message as { result?: unknown; error?: string; code?: PublicServer.ExtensionErrorCode | 'invalid-input' };
-
-            asked.delete(message.id);
-
-            if (error === undefined) {
-                waiting?.resolve({ ok: true, value: result });
-            } else if (code === 'invalid-input') {
-                waiting?.reject(new TypeError(error));
-            } else {
-                waiting?.resolve({ ok: false, error: { code, message: error } });
-            }
-        } else if (message.type === 'call') {
-            void answer(message.id, () => {
-                const handler = handlers[message.method];
-
-                if (handler === undefined) {
-                    throw new Missing(`No method ${message.method}`);
-                }
-
-                return handler(...message.args);
-            });
-        } else if (message.type === 'event') {
-            for (const listener of listeners.get(message.name) ?? []) {
-                listener(message.payload);
-            }
-        } else if (message.type === 'tool') {
-            const { payload, context } = message as unknown as { payload: unknown; context: { caller: string } };
-
-            void answer(message.id, () => {
-                const tool = tools.get(message.method);
-
-                if (tool === undefined) {
-                    throw new Missing(`No tool ${message.method}`);
-                }
-
-                return tool.run(payload, context);
-            });
-        } else if (message.type === 'nodeContext') {
-            void answer(message.id, () => nodeContexts.get(message.node)?.({ data: message.data }) ?? []);
-        }
+        handle(JSON.parse(line) as Incoming);
     }
 });
 

@@ -9,5 +9,6 @@
   "rules": {
     "typescript/no-floating-promises": "error"
   },
-  "ignorePatterns": ["**/*.test.ts"]
+  // A bundle of source files this rule already held, which the bundler writes without their `void`.
+  "ignorePatterns": ["**/*.test.ts", "src/extensions/generated/**"]
 }

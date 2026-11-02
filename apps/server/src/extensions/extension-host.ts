@@ -2,24 +2,25 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import {
-    EXTENSION_ACTIONS,
-    extensionAgentStatus,
-    extensionChatOf,
-    isExtensionActionName,
-    type AgentInfo,
-    type ChatInfo,
-    type ExtensionActionName,
-    type ExtensionInfo,
-    type ExtensionStatus
-} from '@ruimte/contracts';
+import type { ExtensionActionName, ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
 import { VerbRefusal } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
-import runtimeSource from './server-runtime.ts' with { type: 'text' };
+import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import {
+    actionRefusal,
+    askRefusal,
+    eventPayload,
+    eventRefusal,
+    missingPermission,
+    permissionsOf,
+    SendLimit,
+    startsWithMachine,
+    type Refusal
+} from './policy.ts';
 import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
 import type { ExtensionStore, StoredExtension } from './store.ts';
 
@@ -27,7 +28,13 @@ import type { ExtensionStore, StoredExtension } from './store.ts';
 const CALL_TIMEOUT_MS = 50_000;
 const MAX_CRASHES = 3;
 const CLIENT_FOLDERS = new Set(['client', 'assets', 'locales', 'themes', 'views']);
-const RUNTIME_FILE = 'runtime.ts';
+const RUNTIME_FILE = 'runtime.js';
+
+function refuse(refusal: Refusal | null): void {
+    if (refusal !== null) {
+        throw new ExtensionRefusal(refusal.code, refusal.message);
+    }
+}
 
 function stopped(): ExtensionRefusal {
     return new ExtensionRefusal('unavailable', 'The extension stopped');
@@ -57,38 +64,8 @@ interface Starting {
     attempt: { cancelled: boolean };
 }
 
-/*
- * The machine events `server/` may follow, the `ServerEvents` of `@ruimte/extension`: the permission each takes, and
- * what of the event it hears. A chat's thread or a terminal's state says as much as reading it, so it takes that permission.
- */
-const SERVER_EVENTS: Readonly<Record<string, { permission: string; payload(payload: never): object }>> = {
-    'chat.status': {
-        permission: 'chats.read',
-        payload: ({ info }: { info: ChatInfo }) => ({ chat: extensionChatOf(info) })
-    },
-    'chat.event': {
-        permission: 'chats.read',
-        payload: ({ chatId }: { chatId: string }) => ({ chatId })
-    },
-    'session.status': {
-        permission: 'terminals.read',
-        payload: ({ sessionId, agent }: { sessionId: string; agent: AgentInfo | null }) => ({
-            nodeId: sessionId,
-            status: extensionAgentStatus(agent?.status, (agent?.requests?.length ?? 0) > 0)
-        })
-    }
-};
-
-function serverEvent(name: string): (typeof SERVER_EVENTS)[string] | null {
-    return Object.hasOwn(SERVER_EVENTS, name) ? (SERVER_EVENTS[name] ?? null) : null;
-}
-
 /* What `server/` may ask the daemon, each behind the permission of the same name. */
 export type ExtensionAsks = Readonly<Record<string, (...args: never[]) => Promise<unknown>>>;
-
-// A loop of an extension and a chat costs the person's plan, so a chat stops listening well before that hurts.
-const MAX_SENDS_PER_HOUR = 20;
-const HOUR_MS = 3_600_000;
 
 export interface ExtensionChatStart {
     projectId: string;
@@ -118,23 +95,20 @@ export interface ExtensionHostOptions {
  * Stopping one is the host's to do, unlike a person's own processes: it started this one and nothing
  * else depends on it.
  */
-function startsWithMachine(manifest: ExtensionInfo['manifest']): boolean {
-    return manifest.autostart === true || Object.hasOwn(manifest.permissions ?? {}, 'agents.tools');
-}
-
 export class ExtensionHost {
     private readonly running = new Map<string, Running>();
     private readonly starting = new Map<string, Starting>();
     private readonly storageWrites = new Map<string, Promise<unknown>>();
     private readonly crashes = new Map<string, number>();
     private readonly sinks = new ClientSinks();
-    private readonly sends = new Map<string, number[]>();
     private readonly tools = new Map<string, { description: string; parameters: unknown }>();
 
     private readonly options: ExtensionHostOptions;
+    private readonly sends: SendLimit;
 
     constructor(options: ExtensionHostOptions) {
         this.options = options;
+        this.sends = new SendLimit(() => (options.now ?? Date.now)());
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -197,14 +171,14 @@ export class ExtensionHost {
 
     /* Hands a machine event to every running extension that asked for it, as much of it as `ServerEvents` says. */
     forwardEvent(name: string, payload: unknown): void {
-        const event = serverEvent(name);
         const listeners = [...this.running.values()].filter((running) => running.subscriptions.has(name));
+        const heard = listeners.length === 0 ? null : eventPayload(name, payload);
 
-        if (event === null || listeners.length === 0) {
+        if (heard === null) {
             return;
         }
 
-        const line = `${JSON.stringify({ type: 'event', name, payload: event.payload(payload as never) })}\n`;
+        const line = `${JSON.stringify({ type: 'event', name, payload: heard })}\n`;
 
         for (const running of listeners) {
             running.child.stdin.write(line);
@@ -577,15 +551,13 @@ export class ExtensionHost {
     }
 
     private followEvent(id: string, running: Running, name: string): void {
-        const event = serverEvent(name);
+        const reason = eventRefusal(name, running.permissions);
 
-        if (event !== null && running.permissions.has(event.permission)) {
+        if (reason === null) {
             running.subscriptions.add(name);
 
             return;
         }
-
-        const reason = event === null ? `${name} is no event an extension can follow` : `${name} needs the permission ${event.permission} in manifest.json`;
 
         void appendFile(this.options.store.logFile(id), `${reason}\n`).catch(() => undefined);
     }
@@ -603,25 +575,23 @@ export class ExtensionHost {
 
     /* An action of the machine, within the list and the manifest. Both checked here, so the client's own check is only a courtesy. */
     async runAction(id: string, projectId: string, action: string, input: unknown): Promise<unknown> {
-        if (!isExtensionActionName(action)) {
-            throw new ExtensionRefusal('not-found', `An extension cannot ask for ${action}`);
-        }
-
-        await this.requirePermission(id, EXTENSION_ACTIONS[action]);
+        refuse(actionRefusal(id, action, await this.permissionsOf(id)));
 
         if (this.options.runAction === undefined) {
             throw new ExtensionRefusal('unavailable', 'This machine does not run actions for an extension');
         }
 
-        return this.options.runAction(id, projectId, action, input);
+        // `actionRefusal` let through only a name of `EXTENSION_ACTIONS`.
+        return this.options.runAction(id, projectId, action as ExtensionActionName, input);
+    }
+
+    /* What the manifest asks for as it is stored now, so an update that drops a permission takes it away at once. */
+    private async permissionsOf(id: string): Promise<ReadonlySet<string>> {
+        return permissionsOf((await this.options.store.get(id))?.manifest);
     }
 
     private async requirePermission(id: string, permission: string): Promise<void> {
-        const extension = await this.options.store.get(id);
-
-        if (!Object.hasOwn(extension?.manifest.permissions ?? {}, permission)) {
-            throw new ExtensionRefusal('permission-denied', `${id} did not ask for the permission ${permission} in its manifest`);
-        }
+        refuse(missingPermission(id, permission, await this.permissionsOf(id)));
     }
 
     /* What a client with no shell of its own loads. Not its server part, which only runs here. */
@@ -653,6 +623,8 @@ export class ExtensionHost {
     }
 
     private async answerAsk(id: string, method: string, args: unknown[]): Promise<unknown> {
+        refuse(askRefusal(id, method, args, await this.permissionsOf(id)));
+
         if (method === 'action') {
             const [projectId, action, input] = args as [string, string, unknown];
 
@@ -660,8 +632,6 @@ export class ExtensionHost {
         }
 
         if (method === 'languages.add') {
-            await this.requirePermission(id, 'languages.servers');
-
             if (this.options.addLanguageServer === undefined) {
                 throw new ExtensionRefusal('unavailable', 'This machine does not add language servers for an extension');
             }
@@ -673,8 +643,6 @@ export class ExtensionHost {
             return this.startAgent(id, args[0] as ExtensionChatStart);
         }
 
-        await this.requirePermission(id, method === 'chats.list' || method === 'chats.read' ? 'chats.read' : method);
-
         const run = this.options.asks?.()[method];
 
         if (run === undefined) {
@@ -682,22 +650,10 @@ export class ExtensionHost {
         }
 
         if (method === 'chats.send') {
-            this.countSend(id, String(args[0]));
+            refuse(this.sends.take(id, String(args[0])));
         }
 
         return (run as (...values: unknown[]) => Promise<unknown>)(...args);
-    }
-
-    private countSend(id: string, chatId: string): void {
-        const now = (this.options.now ?? Date.now)();
-        const key = `${id}:${chatId}`;
-        const recent = (this.sends.get(key) ?? []).filter((at) => now - at < HOUR_MS);
-
-        if (recent.length >= MAX_SENDS_PER_HOUR) {
-            throw new ExtensionRefusal('limit', `${id} sent ${chatId} ${MAX_SENDS_PER_HOUR} messages this hour and has to wait`);
-        }
-
-        this.sends.set(key, [...recent, now]);
     }
 
     private send(running: Running, message: object, label: string): Promise<unknown> {

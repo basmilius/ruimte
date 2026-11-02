@@ -565,6 +565,7 @@ export * from './usage.ts';
 export * from './visual.ts';
 export * from './extension.ts';
 export * from './extension-actions.ts';
+export * from './extension-permissions.ts';
 export * from './extension-results.ts';
 export * from './voice.ts';
 export * from './voice-languages.ts';

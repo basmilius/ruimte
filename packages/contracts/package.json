@@ -4,7 +4,9 @@
     "version": "0.0.0",
     "type": "module",
     "exports": {
-        ".": "./src/index.ts"
+        ".": "./src/index.ts",
+        "./extension-permissions": "./src/extension-permissions.ts",
+        "./extension-results": "./src/extension-results.ts"
     },
     "scripts": {
         "typecheck": "bun check --no-script",
