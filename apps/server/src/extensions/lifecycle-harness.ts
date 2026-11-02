@@ -136,12 +136,31 @@ export interface Plan {
     onLoad?: (child: GatedChild) => void;
 }
 
+/* Files by their `/` path on every platform: the host joins the store's paths with the separator of the one it runs on. */
+export class FileMap extends Map<string, string> {
+    override get(path: string): string | undefined {
+        return super.get(path.replaceAll('\\', '/'));
+    }
+
+    override has(path: string): boolean {
+        return super.has(path.replaceAll('\\', '/'));
+    }
+
+    override set(path: string, text: string): this {
+        return super.set(path.replaceAll('\\', '/'), text);
+    }
+
+    override delete(path: string): boolean {
+        return super.delete(path.replaceAll('\\', '/'));
+    }
+}
+
 /* The host and everything around it, each in memory and behind a gate. */
 export class GatedHost {
     readonly gates = new Gates();
     readonly host: ExtensionHost;
     readonly children: GatedChild[] = [];
-    readonly files = new Map<string, string>();
+    readonly files = new FileMap();
     readonly languageServers = new Map<string, Set<string>>();
     // A spawn while another process of the same extension still ran.
     readonly overlaps: string[] = [];
