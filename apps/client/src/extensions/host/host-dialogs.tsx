@@ -31,7 +31,12 @@ function HostOverlay({ overlay, nested }: { overlay: OpenOverlay; nested: boolea
                 }
             }}
         >
-            <Dialog.Popup {...(overlay.size === undefined ? {} : { size: overlay.size })} nested={nested} className="flex max-h-[80vh] flex-col">
+            {/* `Dialog.Popup` sizes only `sm`; any other popup is as wide as its class says, so the default overlay names its own. */}
+            <Dialog.Popup
+                {...(overlay.size === undefined ? {} : { size: overlay.size })}
+                nested={nested}
+                className={`flex max-h-[80vh] flex-col ${overlay.size === undefined ? 'w-[560px] max-w-[calc(100vw-48px)] p-5' : ''}`}
+            >
                 <header className="mb-3 flex shrink-0 items-center gap-2">
                     <Dialog.Title className="min-w-0 grow truncate">{overlay.title}</Dialog.Title>
                     <CloseButton label={t('action.close')} onClick={() => overlay.close()} />
