@@ -164,7 +164,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
     const streamAgent = async (
         payload: { runId: string; prompt: string; projectId: string; provider?: string | undefined },
         stop: StreamStop
-    ): Promise<object> => {
+    ): Promise<Record<string, never>> => {
         const options = payload.provider === undefined ? {} : { provider: payload.provider as ChatProvider['kind'] };
         const provider = await oneShotProvider(deps.providers, options, 'answer an extension');
         const run = oneShotRun(provider, payload.prompt);

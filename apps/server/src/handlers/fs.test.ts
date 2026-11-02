@@ -158,8 +158,7 @@ describe('a write within a folder', () => {
     });
 
     test('follows no symlink out of the folder, into the rest of the boundary', async () => {
-        const read = await request('fs.read', { path: join(project, 'sibling', 'notes.md') });
-        const mtime = read.ok ? (read.result as { mtime: number }).mtime : 0;
+        const mtime = Math.round((await stat(join(root, 'sibling', 'notes.md'))).mtimeMs);
 
         expect(await request('fs.write', { path: join(project, 'sibling', 'notes.md'), text: 'changed', expectedMtime: mtime, within: project })).toMatchObject(
             outside
@@ -182,8 +181,7 @@ describe('a write within a folder', () => {
     test('writes and creates what is really inside it', async () => {
         expect(await request('fs.create', { path: join(project, 'notes.md'), kind: 'file', text: 'a', within: project })).toMatchObject({ ok: true });
 
-        const read = await request('fs.read', { path: join(project, 'notes.md') });
-        const mtime = read.ok ? (read.result as { mtime: number }).mtime : 0;
+        const mtime = Math.round((await stat(join(project, 'notes.md'))).mtimeMs);
 
         expect(await request('fs.write', { path: join(project, 'notes.md'), text: 'b', expectedMtime: mtime, within: project })).toMatchObject({ ok: true });
         expect(await readFile(join(project, 'notes.md'), 'utf8')).toBe('b');
