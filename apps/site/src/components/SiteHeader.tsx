@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { type MouseEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
@@ -38,7 +38,7 @@ export function SiteHeader() {
         >
             <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-5 sm:px-8">
                 <span className="flex shrink-0 items-center gap-2.5">
-                    <Link href="/" className="flex items-center gap-2.5">
+                    <Link href="/" onClick={(event) => toTopOfHome(event, pathname)} className="flex items-center gap-2.5">
                         <AppIcon size={30} />
                         {/* On a phone the docs need the room for their sections, and the icon still says Ruimte. */}
                         <span className={clsx('font-brand text-lg font-semibold tracking-[-0.01em] text-text', inDocs && 'max-sm:sr-only')}>Ruimte</span>
@@ -50,7 +50,7 @@ export function SiteHeader() {
                     )}
                 </span>
                 <nav aria-label={inDocs ? 'Documentation' : 'Site'} className="ml-auto flex items-center gap-1 text-xs">
-                    {inDocs ? <DocsMenu pathname={pathname} /> : <SiteMenu />}
+                    {inDocs ? <DocsMenu pathname={pathname} /> : <SiteMenu pathname={pathname} />}
                     <Tooltip label="GitHub" name side="bottom">
                         <a href={REPOSITORY_URL} className={clsx(ITEM, ITEM_IDLE, 'inline-flex px-2.5')}>
                             <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor" aria-hidden>
@@ -64,10 +64,24 @@ export function SiteHeader() {
     );
 }
 
-function SiteMenu() {
+/*
+ * A link to the page you are on changes nothing, so on the homepage Home goes back to the top itself, and
+ * drops a section's hash such as #features. From any other page the link navigates and lands at the top.
+ */
+function toTopOfHome(event: MouseEvent<HTMLAnchorElement>, pathname: string): void {
+    if (pathname !== '/' || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
+        return;
+    }
+
+    event.preventDefault();
+    window.history.replaceState(window.history.state, '', '/');
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+
+function SiteMenu({ pathname }: { readonly pathname: string }) {
     return (
         <>
-            <Link href="/" className={clsx(ITEM, ITEM_IDLE, 'hidden md:inline-flex')}>
+            <Link href="/" onClick={(event) => toTopOfHome(event, pathname)} className={clsx(ITEM, ITEM_IDLE, 'hidden md:inline-flex')}>
                 Home
             </Link>
             <a href="#features" className={clsx(ITEM, ITEM_IDLE, 'hidden sm:inline-flex')}>
