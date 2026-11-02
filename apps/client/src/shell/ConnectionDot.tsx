@@ -5,8 +5,8 @@ import { Tooltip } from '@adecore/ui';
 import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from '@/shell/connection-info';
 import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { pingNow, useLatency } from '@/transport/ping';
-import { SLOW_PING_MS } from '@/transport/ping-monitor';
-import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { isSlowLine, useConnectionDotShown } from '@/shell/connection-dot';
+import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import type { ConnectionState, TransportStatus } from '@/transport';
 
@@ -91,17 +91,16 @@ export function ConnectionDot() {
     const connection = useConnection();
     const activeId = useEndpoints((s) => s.activeId);
     const latency = useLatency(activeId);
-    const slow = connection.status === 'open' && latency !== null && latency > SLOW_PING_MS;
+    const slow = isSlowLine(connection, latency);
 
-    // The machine this app runs on is up by definition, so the dot only speaks when something is wrong.
-    if (activeId === LOCAL_ENDPOINT_ID && connection.status === 'open' && connection.noLink !== true && !slow) {
+    if (!useConnectionDotShown()) {
         return null;
     }
 
     return (
-        <Tooltip label={<ConnectionDetails connection={connection} />}>
+        <Tooltip label={<ConnectionDetails connection={connection} />} side="left">
             <span
-                className="app-no-drag grid h-8 w-5 shrink-0 place-items-center"
+                className="app-no-drag grid size-8 shrink-0 place-items-center"
                 role="status"
                 aria-label={`${describeConnection(connection, null)}. ${describePing(latency)}`}
             >

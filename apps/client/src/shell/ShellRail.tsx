@@ -4,6 +4,8 @@ import { UsageLimitsCard } from '@adecore/agents-react/usage';
 import { IconButton, WorkspaceRail, WorkspaceRailSeparator, WorkspaceRailSpacer } from '@adecore/ui';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { LaunchChip } from '@/launches/LaunchChip';
+import { ConnectionDot } from '@/shell/ConnectionDot';
+import { useConnectionDotShown } from '@/shell/connection-dot';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -18,7 +20,7 @@ const OVERLAY_INSET_PX = 47;
 
 /*
  * The shell's tools, in one column at the window's right edge: the palette, the launches, the panels and
- * Routines, and at the foot Voice, Usage and Settings. A panel closes from its own button here.
+ * Routines, and at the foot the connection, Voice, Usage and Settings. A panel closes from its own button here.
  */
 export function ShellRail() {
     const { t } = useTranslation('shell');
@@ -26,9 +28,10 @@ export function ShellRail() {
     // The Chats project has no folder to show, so no files, git, devices or launches either.
     const scratch = useProject((s) => isScratchProject(s.current));
     const hasPanelButtons = useToolbarPanels(scratch).length > 0;
-    // Both buttons draw nothing while they have nothing to say, and their separator goes with them.
+    // These draw nothing while they have nothing to say, and their separator goes with them.
     const voice = useVoice((s) => s.credential?.configured === true);
     const update = hasUpdate(useUpdates());
+    const connectionDot = useConnectionDotShown();
 
     return (
         <WorkspaceRail aria-label={t('rail.label')} style={hasOverlayControls() ? { paddingTop: OVERLAY_INSET_PX + 7 } : undefined}>
@@ -54,8 +57,9 @@ export function ShellRail() {
             )}
             <WorkspaceRailSpacer />
             <UpdateButton />
+            <ConnectionDot />
             <VoiceButton />
-            {(voice || update) && <WorkspaceRailSeparator />}
+            {(voice || update || connectionDot) && <WorkspaceRailSeparator />}
             <UsageLimitsCard side="left">
                 <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
             </UsageLimitsCard>

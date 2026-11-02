@@ -52,7 +52,6 @@ import { IS_STATION } from '@/station';
 import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { SidebarCards } from '@/extensions/SidebarCards';
-import { ConnectionDot } from '@/shell/ConnectionDot';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { useSettings } from '@/state/settings';
 import { isScratchProject, useProject } from '@/state/project';
@@ -713,8 +712,6 @@ export function Sidebar() {
                             </Menu.Popup>
                         </Menu.Root>
                     )}
-                    {/* Usage and Settings stand at the foot of the rail. */}
-                    <ConnectionDot />
                 </div>
             </div>
             {projectMenu.dialogs}
