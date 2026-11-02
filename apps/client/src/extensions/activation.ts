@@ -1,7 +1,7 @@
 import { onClientEvent } from '@/extensions/client-events';
 import { extensionKeyOf } from '@/extensions/registry';
-import { nodeInfoOf } from '@/extensions/slots';
-import { focusedCanvas } from '@/state/canvas';
+import { shownViewIdsIn } from '@/shell/split';
+import { focusedCanvas, liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 
@@ -14,16 +14,17 @@ export function wantsLoading(extensionId: string, activation: readonly string[] 
         return true;
     }
 
-    const nodeKeys = Object.keys(focusedCanvas().getState().nodes).flatMap((id) => {
-        const { extension } = nodeInfoOf(id);
-
-        return extension === undefined ? [] : [`${extension.id}/${extension.type}`];
-    });
-    const { views, activeViewId } = useDocument.getState();
+    const { views, activeViewId, layout } = useDocument.getState();
+    // Every cell of the grid is on screen, not only the one with the focus.
+    const shownIds = new Set([...(layout === null ? [] : shownViewIdsIn(layout)), ...(activeViewId === null ? [] : [activeViewId])]);
+    const shown = views.filter((view) => shownIds.has(view.id));
+    const canvases = [focusedCanvas().getState(), ...shown.flatMap((view) => liveCanvas(view.id) ?? [])];
+    const nodeKeys = canvases.flatMap((canvas) => Object.values(canvas.nodes).flatMap((node) => extensionKeyOf(node.raw) ?? []));
     // A view of an extension is kept as `unknown`, with what the extension stored under `raw`.
-    const active = views.find((view) => view.id === activeViewId);
-    const viewKey = active?.kind === 'unknown' ? extensionKeyOf(active.raw) : null;
-    const files = useFiles.getState().tabs.map((tab) => tab.key.toLowerCase());
+    const viewKeys = shown.flatMap((view) => (view.kind === 'unknown' ? (extensionKeyOf(view.raw) ?? []) : []));
+    const files = [...useFiles.getState().tabs.map((tab) => tab.key), ...shown.flatMap((view) => (view.kind === 'file' ? [view.path] : []))].map((path) =>
+        path.toLowerCase()
+    );
 
     return activation.some((event) => {
         const [kind, value = ''] = event.split(':');
@@ -32,8 +33,8 @@ export function wantsLoading(extensionId: string, activation: readonly string[] 
         return kind === 'node'
             ? nodeKeys.includes(key)
             : kind === 'view'
-              ? viewKey === key
-              : kind === 'file' && files.some((tabKey) => tabKey.endsWith(`.${value.toLowerCase()}`));
+              ? viewKeys.includes(key)
+              : kind === 'file' && files.some((path) => path.endsWith(`.${value.toLowerCase()}`));
     });
 }
 
