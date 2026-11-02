@@ -42,6 +42,21 @@ export function serverContract(open: OpenServerWorld): void {
             expect(await refused.logs()).toContain('chat.event needs the permission chats.read in manifest.json');
         });
 
+        test('reads no key it never wrote, also one every object has', async () => {
+            const world = await open({});
+
+            expect(await world.call('kept', 'constructor')).toEqual({ ok: true, value: null });
+            expect(await world.call('kept', '__proto__')).toEqual({ ok: true, value: null });
+            expect(await world.call('kept', 'toString')).toEqual({ ok: true, value: null });
+        });
+
+        test('goes on after its own code prints, also what reads as a message', async () => {
+            const world = await open({});
+
+            expect(await world.call('prints')).toEqual({ ok: true, value: 'printed' });
+            expect(await world.call('loads')).toEqual({ ok: true, value: [1, 1] });
+        });
+
         test('answers what its module awaits as it loads, and keeps what it stored then', async () => {
             const world = await open({});
 

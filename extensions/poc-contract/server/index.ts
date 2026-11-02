@@ -32,6 +32,13 @@ const api = defineServer({
     async kept(key: string) {
         return (await storage.get<number>(key)) ?? null;
     },
+    // What an extension prints is its own, also a line that reads as JSON.
+    async prints() {
+        console.debug('null');
+        console.dir(42);
+
+        return 'printed';
+    },
     // The keys go back too: a Result crosses as JSON, which drops a key set to undefined.
     async send(chatId: string) {
         const sent = await chats.send(chatId, 'Hello');
