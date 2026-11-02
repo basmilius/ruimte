@@ -9,6 +9,7 @@ import type { ProviderRegistry } from '../providers/registry.ts';
 import { homedir } from 'node:os';
 
 const AGENT_RUN_TIMEOUT_MS = 180_000;
+const STDERR_TAIL_CHARS = 2_000;
 
 export interface ExtensionHandlerDeps {
     viewsOf(projectId: string): readonly ProjectView[] | null;
@@ -28,6 +29,18 @@ function nodesIn(views: readonly ProjectView[], nodeIds: readonly string[] | und
     const wanted = new Set(nodeIds ?? []);
 
     return canvases.flatMap((view) => view.nodes.filter((node) => wanted.has(node.id)));
+}
+
+/* The last `limit` characters of a stream, read to its end so the process never waits on a full pipe. */
+async function tailOf(stream: ReadableStream<Uint8Array>, limit: number): Promise<string> {
+    const decoder = new TextDecoder();
+    let tail = '';
+
+    for await (const piece of stream) {
+        tail = `${tail}${decoder.decode(piece, { stream: true })}`.slice(-limit);
+    }
+
+    return tail;
 }
 
 /* One process that reads a prompt and prints an answer, for `agents.run` in `server/`, with no project behind it. */
@@ -133,8 +146,9 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
             cwd: deps.folderOf(payload.projectId) ?? homedir(),
             stdin: run.stdin === undefined ? 'ignore' : new TextEncoder().encode(run.stdin),
             stdout: 'pipe',
-            stderr: 'ignore'
+            stderr: 'pipe'
         });
+        const stderr = tailOf(child.stderr, STDERR_TAIL_CHARS).catch(() => '');
         const decoder = new TextDecoder();
         let timedOut = false;
         // This request has no deadline on the client, so the run gets the one `extension.agentRun` has.
@@ -163,6 +177,11 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
 
         if (timedOut) {
             throw new ExtensionRefusal('timeout', `${provider.name} did not answer within ${AGENT_RUN_TIMEOUT_MS / 1000} seconds`);
+        }
+
+        // A CLI that is not signed in prints nothing and exits with a code. One stopped through `agentStop` has none.
+        if (child.exitCode !== null && child.exitCode !== 0) {
+            throw new ExtensionRefusal('failed', `${provider.name} did not answer: ${(await stderr).trim()}`);
         }
 
         return {};
