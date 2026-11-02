@@ -67,7 +67,7 @@ The component gets `params`, the value the panel was last opened with. The toggl
 
 ## Views
 
-A view fills the window and shows up in the sidebar beside canvases, chats and files. `open(params)` opens it.
+A view fills the window and shows up in the sidebar beside canvases, chats and files. `open(params)` opens it. Its component gets `params` as you passed them, and `undefined` when a person opens it with "New Dashboard" from the palette.
 
 ```ts
 const dashboard = defineView({

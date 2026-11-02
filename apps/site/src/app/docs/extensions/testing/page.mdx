@@ -65,6 +65,21 @@ const host = await createTestHost({
 
 A call that asks the machine, such as `git.log` or `launches.start`, answers what you put under its name in `answers`. Throw `refusal(code, message)` to answer a failure. A call nothing answers is `unavailable`, so a test never passes on a value it did not choose.
 
+`agents.stream` takes a list of pieces, or an async generator for a stream that fails halfway or waits. A throw after some pieces ends the stream with that failure. The `signal` it gets aborts once your extension stops the stream:
+
+```ts
+const host = await createTestHost({
+    answers: {
+        'agents.stream': async function* ({ signal }) {
+            yield 'First';
+            await new Promise((resolve) => signal.addEventListener('abort', resolve));
+        }
+    }
+});
+```
+
+`changeFile(path)` changes a file of the project as the machine sees it, which calls back every `files.watch` of that file or of a folder above it. `setStorage(scope, key, value)` writes a key as another window or your server part would, and `undefined` deletes it.
+
 ## A surface
 
 Name the test file `*.dom.test.tsx` and `ruimte extension test` gives it a page. `render` draws a panel, view, node, widget or card, or a component of your own, and waits for its lazy import and for what it suspends on:
@@ -93,7 +108,7 @@ test('the panel greets, and counts per project', async () => {
 
 `click` and `type` take the words a person reads, or an element. Each waits for what React does after it. `until(check)` waits until `check` neither throws nor answers false. Pass `node` for the node `useNodeData` reads, and `params` for what a panel or view gets. A surface that throws while it draws makes `render` reject, as a missing permission for `useAgents` does.
 
-`server` stands in for your server part as `useServer` reaches it. Give it methods, or a test server from `createTestServer`, so the client and the server part run together in one test.
+`server` stands in for your server part as `useServer` reaches it. Give it methods, or a test server from `createTestServer`, so the client and the server part run together in one test. With a test server, its `storage` is the `machine` storage of `useStorage`, as on one machine.
 
 The page needs `@happy-dom/global-registrator`, which a new project already has:
 
@@ -132,7 +147,7 @@ test('pokes a chat at most 20 times an hour', async () => {
 });
 ```
 
-Storage and secrets live in memory, `clock.advance('5m')` runs every `schedule` that falls due, and `fire` hands a machine event to `onEvent` only with its permission. `machine.run` checks its input as the machine does and throws for one of the wrong shape.
+Storage and secrets live in memory, `clock.advance('5m')` runs every `schedule` that falls due, and `fire` hands a machine event to `onEvent` only with its permission. `machine.run` checks its input as the machine does and throws for one of the wrong shape. `machine.dataFolder` is a fresh folder of each test server's own, removed once the tests are done. `emitted` lists what `emit` said; an `emit` without a payload has none there, as a client hears it.
 
 Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.
 

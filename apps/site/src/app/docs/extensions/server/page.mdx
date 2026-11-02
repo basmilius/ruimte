@@ -33,7 +33,7 @@ In the client, `useServer<Api>()` makes those methods typed, each answering a `R
 
 ## Events
 
-`emit(name, payload)` tells every client of the machine, where `useServerEvent(name, listener)` hears it. `onEvent(name, listener)` follows the machine's own events:
+`emit(name, payload)` tells every client of the machine, where `useServerEvent(name, listener)` hears it. Without a payload, the listener gets `undefined`. `onEvent(name, listener)` follows the machine's own events:
 
 ```ts
 onEvent('chat.status', ({ chat }) => {
