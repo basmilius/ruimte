@@ -38,7 +38,8 @@ runs:
 
         # Compared with what shipped last, so commits pushed while CI was red ship with this one.
         base=$(gh api "repos/$GH_REPO/deployments?environment=$ENVIRONMENT&per_page=1" --jq '.[0].sha // empty')
-        mapfile -t pathspecs <<< "$PATHS"
+        # An empty pathspec matches every file, so the blank line a YAML block ends with is left out.
+        mapfile -t pathspecs < <(grep -v '^[[:space:]]*$' <<< "$PATHS")
         if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
           echo "::notice::No earlier deploy of $ENVIRONMENT is known, so this commit ships."
           echo "deploy=true" >> "$GITHUB_OUTPUT"
