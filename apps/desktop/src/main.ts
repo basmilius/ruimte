@@ -602,12 +602,21 @@ ipc.handle('browser:capture', async (_event, id: number) => {
     return guest ? (await guest.capturePage()).toPNG() : null;
 });
 
+// Every window shares these installations, also one in machine mode `none` or on another machine, so each hears of a change.
+const extensionsChanged = async <Value>(change: Promise<Value>): Promise<Value> => {
+    const value = await change;
+
+    windows.send('extensions:changed');
+
+    return value;
+};
+
 ipc.handle('extensions:list', () => clientExtensions.list());
-ipc.handle('extensions:install', (_event, pack: Uint8Array) => clientExtensions.install(pack));
-ipc.handle('extensions:remove', (_event, id: string) => clientExtensions.remove(id));
-ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => clientExtensions.setEnabled(id, enabled));
-ipc.handle('extensions:link', (_event, folder: string, revision: number) => clientExtensions.link(folder, revision));
-ipc.handle('extensions:unlink', (_event, id: string) => clientExtensions.unlink(id));
+ipc.handle('extensions:install', (_event, pack: Uint8Array) => extensionsChanged(clientExtensions.install(pack)));
+ipc.handle('extensions:remove', (_event, id: string) => extensionsChanged(clientExtensions.remove(id)));
+ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => extensionsChanged(clientExtensions.setEnabled(id, enabled)));
+ipc.handle('extensions:link', (_event, folder: string, revision: number) => extensionsChanged(clientExtensions.link(folder, revision)));
+ipc.handle('extensions:unlink', (_event, id: string) => extensionsChanged(clientExtensions.unlink(id)));
 const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 const login = installLogin(ipc);

@@ -44,46 +44,71 @@ function hostsOf(manifest: ExtensionManifest): string[] {
 export class ClientExtensions {
     private readonly root: string;
     private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest }>();
-    private indexChanges: Promise<unknown> = Promise.resolve();
+    private changes: Promise<unknown> = Promise.resolve();
     private temporaryCounter = 0;
 
     constructor(root: string) {
         this.root = root;
     }
 
+    /* Only an index that is not there is empty: one that cannot be read refuses, so no change writes over what it held. */
     private async index(): Promise<IndexEntry[]> {
+        let text: string;
+
         try {
-            return IndexSchema.parse(JSON.parse(await readFile(join(this.root, 'index.json'), 'utf8')));
-        } catch {
-            return [];
+            text = await readFile(join(this.root, 'index.json'), 'utf8');
+        } catch (e) {
+            if ((e as { code?: unknown }).code === 'ENOENT') {
+                return [];
+            }
+
+            throw e;
+        }
+
+        const parsed = IndexSchema.safeParse(JSON.parse(text));
+
+        if (!parsed.success) {
+            throw new Error(`${join(this.root, 'index.json')} is not what this Ruimte reads. Fix or remove it first.`);
+        }
+
+        return parsed.data;
+    }
+
+    /*
+     * One change of the installations at a time, from the first file it unpacks to the last it removes, and links
+     * beside them: two windows that change one extension at once land in the order they asked.
+     */
+    private serial<T>(work: () => Promise<T>): Promise<T> {
+        const next = this.changes.then(work, work);
+
+        this.changes = next.catch(() => undefined);
+
+        return next;
+    }
+
+    /* Inside `serial` only. */
+    private async writeIndex(entries: IndexEntry[]): Promise<void> {
+        await mkdir(this.root, { recursive: true });
+
+        const temporary = join(this.root, `index.json.${process.pid}-${this.temporaryCounter++}.tmp`);
+
+        try {
+            await writeFile(temporary, JSON.stringify(entries));
+            await rename(temporary, join(this.root, 'index.json'));
+        } catch (e) {
+            await rm(temporary, { force: true });
+            throw e;
         }
     }
 
-    /* One read, change and write at a time, so two switches flipped together both land. */
     private changeIndex<T>(change: (entries: IndexEntry[]) => { entries: IndexEntry[]; result: T }): Promise<T> {
-        const run = async (): Promise<T> => {
+        return this.serial(async () => {
             const { entries, result } = change(await this.index());
 
-            await mkdir(this.root, { recursive: true });
-
-            const temporary = join(this.root, `index.json.${process.pid}-${this.temporaryCounter++}.tmp`);
-
-            try {
-                await writeFile(temporary, JSON.stringify(entries));
-                await rename(temporary, join(this.root, 'index.json'));
-            } catch (e) {
-                await rm(temporary, { force: true });
-                throw e;
-            }
+            await this.writeIndex(entries);
 
             return result;
-        };
-
-        const next = this.indexChanges.then(run, run);
-
-        this.indexChanges = next.catch(() => undefined);
-
-        return next;
+        });
     }
 
     private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
@@ -143,41 +168,64 @@ export class ClientExtensions {
         const hash = createHash('sha256').update(bytes).digest('hex');
         const folder = join(this.root, manifest.id, hash);
 
-        for (const path of paths) {
-            await mkdir(dirname(join(folder, path)), { recursive: true });
-            await writeFile(join(folder, path), Buffer.from(parsed.files[path] as string, 'base64'));
-        }
+        // Unpacked in the same change as the index, so a removal never meets half of it, and under a temporary name first.
+        const entry = await this.serial(async () => {
+            const entries = await this.index();
 
-        const entry = await this.changeIndex((entries) => {
+            if ((await this.manifestIn(folder)) === null) {
+                const unpacking = `${folder}.${process.pid}-${this.temporaryCounter++}.tmp`;
+
+                try {
+                    for (const path of paths) {
+                        await mkdir(dirname(join(unpacking, path)), { recursive: true });
+                        await writeFile(join(unpacking, path), Buffer.from(parsed.files[path] as string, 'base64'));
+                    }
+
+                    await rm(folder, { recursive: true, force: true });
+                    await rename(unpacking, folder);
+                } finally {
+                    await rm(unpacking, { recursive: true, force: true });
+                }
+            }
+
             const added = { id: manifest.id, hash, enabled: entries.find((each) => each.id === manifest.id)?.enabled ?? true };
 
-            return { entries: [...entries.filter((each) => each.id !== manifest.id), added], result: added };
+            await this.writeIndex([...entries.filter((each) => each.id !== manifest.id), added]);
+
+            return added;
         });
 
         return this.installedOf(entry, manifest);
     }
 
-    async remove(id: string): Promise<void> {
-        await this.changeIndex((entries) => ({ entries: entries.filter((entry) => entry.id !== id), result: undefined }));
-        await rm(join(this.root, id), { recursive: true, force: true });
+    remove(id: string): Promise<void> {
+        return this.serial(async () => {
+            await this.writeIndex((await this.index()).filter((entry) => entry.id !== id));
+            await rm(join(this.root, id), { recursive: true, force: true });
+        });
     }
 
     async setEnabled(id: string, enabled: boolean): Promise<void> {
         await this.changeIndex((entries) => ({ entries: entries.map((entry) => (entry.id === id ? { ...entry, enabled } : entry)), result: undefined }));
     }
 
-    async link(folder: string, revision: number): Promise<void> {
-        const manifest = await this.manifestIn(folder);
+    /* In the order windows asked, so an unlink or a newer link while the manifest is read is never undone by it. */
+    link(folder: string, revision: number): Promise<void> {
+        return this.serial(async () => {
+            const manifest = await this.manifestIn(folder);
 
-        if (manifest === null) {
-            throw new Error(`No valid manifest.json in ${folder}`);
-        }
+            if (manifest === null) {
+                throw new Error(`No valid manifest.json in ${folder}`);
+            }
 
-        this.links.set(manifest.id, { folder, revision, manifest });
+            this.links.set(manifest.id, { folder, revision, manifest });
+        });
     }
 
-    unlink(id: string): void {
-        this.links.delete(id);
+    unlink(id: string): Promise<void> {
+        return this.serial(async () => {
+            this.links.delete(id);
+        });
     }
 
     private async folderOf(id: string, version: string): Promise<{ folder: string; manifest: ExtensionManifest } | null> {
@@ -199,14 +247,22 @@ export class ClientExtensions {
 
     /* A file of an extension, for the app scheme. An html file is a frame, with the policy its manifest allows. */
     async answer(pathname: string, origin: string): Promise<Response> {
-        const [id, version, ...rest] = pathname.slice(EXTENSION_FILES_PATH.length).split('/').map(decodeURIComponent);
+        let parts: string[];
+
+        try {
+            parts = pathname.slice(EXTENSION_FILES_PATH.length).split('/').map(decodeURIComponent);
+        } catch {
+            return new Response('Bad request', { status: 400 });
+        }
+
+        const [id, version, ...rest] = parts;
         const relative = rest.join('/');
 
         if (id === undefined || version === undefined || !isSafePackPath(relative)) {
             return new Response('Not found', { status: 404 });
         }
 
-        const found = await this.folderOf(id, version);
+        const found = await this.folderOf(id, version).catch(() => null);
 
         if (found === null) {
             return new Response('Not found', { status: 404 });

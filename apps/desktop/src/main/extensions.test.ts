@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -86,6 +86,43 @@ describe('the client extensions of the shell', () => {
             ['acme.builds', false],
             ['acme.other', false]
         ]);
+    });
+
+    test('refuse to change an index it cannot read, and leave it as it was', async () => {
+        const store = extensions();
+
+        writeFileSync(join(root, 'index.json'), '[{ "id": "acme.kept"');
+
+        await expect(store.install(pack({}))).rejects.toThrow();
+        await expect(store.setEnabled('acme.kept', false)).rejects.toThrow();
+        expect(readFileSync(join(root, 'index.json'), 'utf8')).toBe('[{ "id": "acme.kept"');
+    });
+
+    test('a removal after an install takes it away, also while the install still unpacks', async () => {
+        const store = extensions();
+
+        await Promise.all([store.install(pack({ 'client/index.js': 'export {};' })), store.remove('acme.builds')]);
+
+        expect(await store.list()).toEqual([]);
+        expect(existsSync(join(root, 'acme.builds'))).toBe(false);
+    });
+
+    test('a link and an unlink land in the order they were asked', async () => {
+        const store = extensions();
+        const folder = join(root, 'dev');
+
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.dev', name: 'Dev', version: '1.0.0', api: 1 }));
+
+        await Promise.all([store.link(folder, 1), store.unlink('acme.dev')]);
+
+        expect(await store.list()).toEqual([]);
+    });
+
+    test('answer a path that is no valid encoding as a bad request', async () => {
+        const store = extensions();
+
+        expect((await store.answer('/__extensions/acme.builds/%ZZ/client/index.js', ORIGIN)).status).toBe(400);
     });
 
     test('forget an extension that is removed', async () => {

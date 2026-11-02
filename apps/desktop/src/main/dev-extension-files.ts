@@ -21,10 +21,22 @@ export function serveDevExtensionFiles(devUrl: string, extensions: Pick<ClientEx
             return;
         }
 
-        void extensions.answer(pathname, origin).then(async (answer) => {
-            response.writeHead(answer.status, Object.fromEntries(answer.headers));
-            response.end(Buffer.from(await answer.arrayBuffer()));
-        });
+        // Every request gets an answer, also one whose file could not be read.
+        void extensions
+            .answer(pathname, origin)
+            .then(async (answer) => {
+                const body = Buffer.from(await answer.arrayBuffer());
+
+                response.writeHead(answer.status, Object.fromEntries(answer.headers));
+                response.end(body);
+            })
+            .catch(() => {
+                if (!response.headersSent) {
+                    response.writeHead(500);
+                }
+
+                response.end();
+            });
     });
 
     server.on('error', (e) => console.warn(`Extension files are not served under bun dev: ${e.message}`));

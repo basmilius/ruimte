@@ -20,4 +20,7 @@ export interface ExtensionsBridge {
     /* The folder `ruimte extension dev` builds into, on this computer. A new revision is a new `base`. */
     link(folder: string, revision: number): Promise<void>;
     unlink(id: string): Promise<void>;
+
+    /* After any window installed, removed, turned on or off, linked or unlinked one, so every window loads what is there now. */
+    onChanged?(listener: () => void): () => void;
 }

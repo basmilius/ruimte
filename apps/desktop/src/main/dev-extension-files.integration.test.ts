@@ -22,3 +22,27 @@ test('answers extension files for the dev origin, and nothing else', async () =>
     expect(await file.text()).toBe('http://localhost:4212 /__extensions/a.b/dev-1/client/index.js');
     expect((await fetch(`http://127.0.0.1:${port}/src/main.tsx`)).status).toBe(404);
 });
+
+test('answers a request whose file could not be read, rather than leaving it open', async () => {
+    const failing = serveDevExtensionFiles(
+        'http://localhost:4212/',
+        {
+            answer: async () => {
+                throw new Error('On purpose');
+            }
+        },
+        0
+    );
+
+    try {
+        if (!failing.listening) {
+            await new Promise((resolve) => failing.once('listening', resolve));
+        }
+
+        const { port } = failing.address() as { port: number };
+
+        expect((await fetch(`http://127.0.0.1:${port}/__extensions/a.b/dev-1/client/index.js`)).status).toBe(500);
+    } finally {
+        failing.close();
+    }
+});

@@ -70,7 +70,8 @@ const bridge = {
         remove: (id: string) => ipcRenderer.invoke('extensions:remove', id),
         setEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('extensions:set-enabled', id, enabled),
         link: (folder: string, revision: number) => ipcRenderer.invoke('extensions:link', folder, revision),
-        unlink: (id: string) => ipcRenderer.invoke('extensions:unlink', id)
+        unlink: (id: string) => ipcRenderer.invoke('extensions:unlink', id),
+        onChanged: subscribe<[]>('extensions:changed')
     },
     platform: process.platform,
     bindBrowserRoute: (binding: BrowserRouteBinding): Promise<boolean> => ipcRenderer.invoke('browser:bind-route', binding),
