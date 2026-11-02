@@ -65,7 +65,7 @@ import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useFocusedMachine } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
-import { transport as activeTransport, TransportError, type Transport } from '@/transport';
+import { machineTransport, TransportError, type Transport } from '@/transport';
 
 export interface LoadedExtension {
     manifest: ExtensionManifest;
@@ -255,6 +255,29 @@ class Refused extends Error {
     }
 }
 
+/*
+ * The machine and project a call began on, taken before its first await. Every later step goes over this one link,
+ * never the facade that follows the window, and a step after an await is refused once the window shows another.
+ */
+interface CallScope {
+    readonly endpointId: string;
+    readonly link: Transport;
+    readonly projectId: string | null;
+}
+
+function callScope(): CallScope {
+    const endpointId = currentEndpointId();
+
+    return { endpointId, link: machineTransport(endpointId), projectId: useProject.getState().current?.projectId ?? null };
+}
+
+// The transport, not the id, says which machine: a row that learns its daemon id keeps its transport under the new name.
+function assertScope(scope: CallScope): void {
+    if (machineTransport(currentEndpointId()) !== scope.link || (useProject.getState().current?.projectId ?? null) !== scope.projectId) {
+        throw new Refused('unavailable', 'The window moved to another machine or project during this call');
+    }
+}
+
 function currentProjectId(): string {
     const projectId = useProject.getState().current?.projectId;
 
@@ -316,7 +339,7 @@ function createdNode(nodeId: string | null): { id: string } {
  * one from before `kind` reads it all the same, which the check here then drops.
  */
 async function readNodeText(nodeId: string, kind: 'terminal' | 'chat'): Promise<string> {
-    const { sources } = await extensionRequest(activeTransport, 'extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId], kind });
+    const { sources } = await extensionRequest(callScope().link, 'extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId], kind });
     const source = sources[0];
 
     if (source?.kind !== kind) {
@@ -328,11 +351,13 @@ async function readNodeText(nodeId: string, kind: 'terminal' | 'chat'): Promise<
 
 /* A chat as `server/` reads it, also one in a view of its own. A machine from before that request only reads one on a canvas. */
 async function readChatText(chatId: string): Promise<string> {
-    if (!machineAnswers(activeTransport.connection, 'extension.chatRead')) {
+    const { link } = callScope();
+
+    if (!machineAnswers(link.connection, 'extension.chatRead')) {
         return readNodeText(chatId, 'chat');
     }
 
-    return (await extensionRequest(activeTransport, 'extension.chatRead', { chatId })).text;
+    return (await extensionRequest(link, 'extension.chatRead', { chatId })).text;
 }
 
 function nodeStore(node: { id: string }): CanvasState {
@@ -538,7 +563,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 (input: object = {}) =>
                     // The machine checks the permission too; this one only saves the trip.
                     settle(extensionActionCall(action), async () => {
-                        const { output } = await extensionRequest(activeTransport, 'extension.action', { id, projectId: currentProjectId(), action, input });
+                        const { output } = await extensionRequest(callScope().link, 'extension.action', { id, projectId: currentProjectId(), action, input });
 
                         return output;
                     })
@@ -1095,7 +1120,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         files: {
             readText: (path: string) =>
                 settle('files.readText', async () => {
-                    const answer = await activeTransport.request('fs.read', readInProject(path));
+                    const answer = await callScope().link.request('fs.read', readInProject(path));
 
                     if (answer.kind !== 'text') {
                         throw new Refused('refused', `${path} is not a text file`);
@@ -1105,26 +1130,32 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             write: (path: string, text: string) =>
                 settle('files.write', async () => {
+                    const scope = callScope();
                     const full = inProject(path);
                     const within = projectFolder();
-                    const existing = await activeTransport.request('fs.read', { path: full, within }).catch(() => null);
+                    const existing = await scope.link.request('fs.read', { path: full, within }).catch(() => null);
+
+                    // The path and mtime are of the first machine's file; written on another, they could overwrite a file there.
+                    assertScope(scope);
 
                     if (existing?.kind !== 'text') {
-                        await activeTransport.request('fs.create', { path: full, kind: 'file', text, within });
+                        await scope.link.request('fs.create', { path: full, kind: 'file', text, within });
                     } else {
-                        await activeTransport.request('fs.write', { path: full, text, expectedMtime: existing.mtime, within });
+                        await scope.link.request('fs.write', { path: full, text, expectedMtime: existing.mtime, within });
                     }
                 }),
             list: (folder: string) =>
                 settle('files.list', async () => {
-                    const { entries } = await activeTransport.request('fs.list', readInProject(folder));
+                    const { entries } = await callScope().link.request('fs.list', readInProject(folder));
 
                     return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
                 }),
             watch: (path: string, listener: () => void) =>
                 attempt('files.watch', () => {
+                    const scope = callScope();
                     const full = inProject(path);
-                    const stopListening = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
+                    // On the machine that holds the watch, so a path of the same name on another never wakes it.
+                    const stopListening = scope.link.on('fs.changed', ({ root, changedPaths }) => {
                         // A watcher above it that could not name every change may have changed it too.
                         const unnamed = changedPaths === undefined && isUnderFolder(full, root);
 
@@ -1133,7 +1164,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         }
                     });
                     // Counted with every other reader of the folder, so letting go of it leaves the files panel's watch alone.
-                    const held = folderWatches.watch(currentEndpointId(), full, listener);
+                    const held = folderWatches.watch(scope.endpointId, full, listener);
                     const stop = (): void => {
                         stopListening();
                         held.release();
@@ -1150,7 +1181,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         git: {
             status: (options?: { repository?: string }) =>
                 settle('git.status', async () => {
-                    const status = await activeTransport.request('git.status', { cwd: inProject(options?.repository ?? '.') });
+                    const status = await callScope().link.request('git.status', { cwd: inProject(options?.repository ?? '.') });
 
                     return {
                         repository: status.repo,
@@ -1172,7 +1203,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             diff: (options: { path: string; repository?: string; staged?: boolean }) =>
                 settle('git.diff', async () => {
-                    const diff = await activeTransport.request('git.diff', {
+                    const diff = await callScope().link.request('git.diff', {
                         cwd: inProject(options.repository ?? '.'),
                         scope: 'worktree',
                         path: options.path,
@@ -1183,7 +1214,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             log: (options?: { repository?: string; limit?: number }) =>
                 settle('git.log', async () => {
-                    const { commits } = await activeTransport.request('git.log', { cwd: inProject(options?.repository ?? '.'), limit: options?.limit ?? 30 });
+                    const { commits } = await callScope().link.request('git.log', { cwd: inProject(options?.repository ?? '.'), limit: options?.limit ?? 30 });
 
                     // Git writes an author date in seconds; everything else an extension reads is in milliseconds.
                     return commits.map((commit) => ({
@@ -1227,7 +1258,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             query: (connection: string, sql: string) =>
                 settle('database.query', async () => {
-                    const { columns, rows, hasMore } = await extensionRequest(activeTransport, 'extension.databaseQuery', {
+                    const { columns, rows, hasMore } = await extensionRequest(callScope().link, 'extension.databaseQuery', {
                         projectId: currentProjectId(),
                         connection,
                         sql
@@ -1240,7 +1271,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         chats: {
             list: () =>
                 settle('chats.list', async () => {
-                    const { chats } = await activeTransport.request('chat.list', {});
+                    const { chats } = await callScope().link.request('chat.list', {});
 
                     return chats.filter((chat) => chat.hidden !== true).map(extensionChatOf);
                 }),
@@ -1250,7 +1281,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             send: (chatId: string, text: string) =>
                 settle('chats.send', async () => {
-                    await activeTransport.request('chat.send', { chatId, text });
+                    await callScope().link.request('chat.send', { chatId, text });
                 })
         },
         views: {
@@ -1275,7 +1306,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         context: {
             read: (of: { nodes?: { id: string }[]; view?: { id: string } }) =>
                 settle('context.read', async () => {
-                    const { sources } = await extensionRequest(activeTransport, 'extension.contextRead', {
+                    const { sources } = await extensionRequest(callScope().link, 'extension.contextRead', {
                         projectId: currentProjectId(),
                         ...(of.nodes === undefined ? {} : { nodeIds: of.nodes.map((node) => node.id) }),
                         ...(of.view === undefined ? {} : { viewId: of.view.id })
@@ -1287,7 +1318,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         agents: {
             run: (options: { prompt: string; context?: string[]; provider?: string }) =>
                 settle('agents.run', async () => {
-                    const { text } = await extensionRequest(activeTransport, 'extension.agentRun', {
+                    const { text } = await extensionRequest(callScope().link, 'extension.agentRun', {
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
                         projectId: currentProjectId()
@@ -1317,18 +1348,20 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     return;
                 }
 
+                // The run, its chunks and its stop stay on the machine it began on, whatever the window shows next.
+                const { link } = callScope();
                 const runId = crypto.randomUUID();
                 const pieces: string[] = [];
                 let wake = (): void => undefined;
                 let done = false;
-                const stop = activeTransport.on('extension.agentChunk', (chunk) => {
+                const stop = link.on('extension.agentChunk', (chunk) => {
                     if (chunk.runId === runId) {
                         pieces.push(chunk.text);
                         wake();
                     }
                 });
                 const finished = settle('agents.stream', () =>
-                    extensionRequest(activeTransport, 'extension.agentStream', {
+                    extensionRequest(link, 'extension.agentStream', {
                         runId,
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
@@ -1339,7 +1372,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     wake();
                 });
 
-                const abort = (): void => void extensionRequest(activeTransport, 'extension.agentStop', { runId }).catch(() => undefined);
+                const abort = (): void => void extensionRequest(link, 'extension.agentStop', { runId }).catch(() => undefined);
 
                 options.signal?.addEventListener('abort', abort);
 
@@ -1377,7 +1410,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     const { views, activeViewId } = useDocument.getState();
                     const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
                     const beside = options.near?.[0]?.id;
-                    const { nodeId } = await extensionRequest(activeTransport, 'extension.agentStart', {
+                    const { nodeId } = await extensionRequest(callScope().link, 'extension.agentStart', {
                         id,
                         projectId: currentProjectId(),
                         ...(onCanvas && activeViewId !== null ? { viewId: activeViewId } : {}),

@@ -9,6 +9,7 @@ import { focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { folderWatches } from '@/state/fs-watch';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { TransportError } from '@/transport';
@@ -27,8 +28,33 @@ const PROJECT: ProjectSummary = {
     nameSource: 'chosen'
 };
 
+const SECOND: Endpoint = {
+    id: 'second-machine',
+    label: 'Second',
+    httpBaseUrl: 'http://127.0.0.1:2',
+    wsBaseUrl: 'ws://127.0.0.1:2',
+    reachability: 'lan',
+    daemonId: null,
+    daemonPublicKey: null
+};
+
 let mounted: Mounted | null = null;
 let disconnect: (() => void) | null = null;
+
+/* This machine in front with `first`, and a second row behind `second` for the window to move to. */
+function twoMachines(first: FakeMachine, second: FakeMachine): () => void {
+    useEndpoints.getState().add(SECOND);
+
+    const releaseFirst = connectFakeMachine(first);
+    const releaseSecond = connectFakeMachine(second, SECOND.id);
+
+    return () => {
+        releaseSecond();
+        releaseFirst();
+        useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().remove(SECOND.id);
+    };
+}
 
 function loaded(permissions: Record<string, string> = {}): { extension: LoadedExtension; api: ReturnType<typeof clientApiFor> } {
     const manifest: ExtensionManifest = { id: 'acme.probe', name: 'Probe', version: '0.1.0', api: 1, permissions };
@@ -256,6 +282,80 @@ describe('the client API', () => {
         expect(pieces).toEqual(['First']);
         expect(stopped).toEqual([{ runId: machine.requests('extension.agentStream')[0]?.runId ?? '' }]);
         expect(machine.requests('extension.agentStop')).toHaveLength(1);
+    });
+
+    test('writes nothing once the window moves to another machine between reading the file and writing it', async () => {
+        const first = new FakeMachine();
+        const second = new FakeMachine();
+        const { api } = loaded({ 'files.write': 'Writes notes' });
+        let answerRead = (): void => undefined;
+
+        first.answer('fs.read', () => new Promise((resolve) => (answerRead = () => resolve({ kind: 'text', text: 'Old', mtime: 7 } as never))));
+        disconnect = twoMachines(first, second);
+        useProject.setState({ current: PROJECT });
+
+        const written = api.files.write('notes.md', 'New');
+
+        await until(() => first.requests('fs.read').length === 1);
+        useEndpoints.getState().setActive(SECOND.id);
+        answerRead();
+
+        expect(await written).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(first.sent.filter((request) => request.type === 'fs.write' || request.type === 'fs.create')).toEqual([]);
+        expect(second.sent.filter((request) => request.type.startsWith('fs.'))).toEqual([]);
+    });
+
+    test('keeps a stream on the machine it began on: its chunks still come and its stop goes there after a switch', async () => {
+        const first = new FakeMachine();
+        const second = new FakeMachine();
+        const { api } = loaded({ 'agents.run': 'Answers' });
+
+        first.answer('extension.agentStream', () => new Promise(() => undefined));
+        disconnect = twoMachines(first, second);
+        useProject.setState({ current: PROJECT });
+
+        const signal = new AbortController();
+        const stream = api.agents.stream({ prompt: 'Hi', signal: signal.signal });
+        const next = stream.next();
+
+        await until(() => first.requests('extension.agentStream').length === 1);
+
+        const runId = first.requests('extension.agentStream')[0]?.runId ?? '';
+
+        useEndpoints.getState().setActive(SECOND.id);
+        first.emit('extension.agentChunk', { runId, text: 'From the first' });
+
+        expect(await next).toEqual({ done: false, value: { ok: true, value: { text: 'From the first' } } });
+
+        signal.abort();
+
+        expect(first.requests('extension.agentStop')).toEqual([{ runId }]);
+        expect(second.requests('extension.agentStop')).toEqual([]);
+        await stream.return(undefined);
+    });
+
+    test("hears a watched file's changes from the machine that holds the watch, not from a path of the same name on another", async () => {
+        const first = new FakeMachine();
+        const second = new FakeMachine();
+        const { api } = loaded({ 'files.read': 'Follows notes' });
+        let heard = 0;
+
+        disconnect = twoMachines(first, second);
+        useProject.setState({ current: PROJECT });
+        api.files.watch('notes.md', () => {
+            heard += 1;
+        });
+        useEndpoints.getState().setActive(SECOND.id);
+        second.emit('fs.changed', { root: '/work/a/notes.md', paths: ['/work/a/notes.md'] });
+
+        const fromSecond = heard;
+
+        first.emit('fs.changed', { root: '/work/a/notes.md', paths: ['/work/a/notes.md'] });
+
+        expect(fromSecond).toBe(0);
+        expect(heard).toBe(1);
+        expect(first.requests('fs.watch')).toEqual([{ path: '/work/a/notes.md' }]);
+        expect(second.requests('fs.watch')).toEqual([]);
     });
 
     test('starts no run for a signal that was aborted already', async () => {
