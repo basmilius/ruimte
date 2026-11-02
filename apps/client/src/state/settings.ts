@@ -24,6 +24,7 @@ import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { storedJson, switchesFrom } from '@/state/stored-json';
 import { applyPalette } from '@/state/palette';
+import { useExtensionTheme } from '@/state/extension-theme';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
@@ -493,8 +494,10 @@ function read(): Settings {
     }
 }
 
-function applyColors(palette: PalettePreset, accentId: AccentId, preview = false): void {
+function applyColors(chosen: PalettePreset, accentId: AccentId, preview = false): void {
     const accent = accentColor(accentId);
+    // A theme of an extension sets its own colors, which a palette would only paint over. The choice stays for Ruimte's own.
+    const palette = useExtensionTheme.getState().key === null ? chosen : 'default';
     applyPalette(
         {
             light: { ...presetTokens(palette, 'light'), accent },

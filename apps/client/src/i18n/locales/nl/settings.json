@@ -4,11 +4,6 @@
             "title": "Thema",
             "label": "Thema",
             "description": "Systeem volgt je besturingssysteem.",
-            "extension": {
-                "label": "Thema uit extensie",
-                "description": "Komt over het gekozen thema heen. Je accent blijft van jou.",
-                "none": "Geen"
-            },
             "options": {
                 "system": "Systeem",
                 "light": "Licht",

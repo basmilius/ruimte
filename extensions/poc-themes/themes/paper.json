@@ -1,6 +1,7 @@
 {
     "name": "POC paper",
     "side": "light",
+    "thumbnail": "themes/paper.svg",
     "tokens": {
         "--bg": "#f3e9cf",
         "--surface": "#fbf3dc",

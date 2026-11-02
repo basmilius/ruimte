@@ -72,7 +72,7 @@ Reading what is on screen needs none. These do: `canvas.write`, `views.write`, `
 
 ## Themes
 
-A theme is data. It needs no `client/` and applies before the first render.
+A theme is data. It needs no `client/` and applies before the first render. It sits in the picker beside System, Light and Dark with its required `thumbnail`, and Palette is only there for Ruimte's own themes.
 
 ```json
 {

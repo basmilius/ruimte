@@ -59,10 +59,16 @@ export const ExtensionManifestSchema = z.object({
 });
 export type ExtensionManifest = z.infer<typeof ExtensionManifestSchema>;
 
+/* The picture of a theme, a file in its pack. */
+export const EXTENSION_THEME_THUMBNAIL = /^[^/.][^:]*\.(png|jpe?g|webp|svg)$/i;
+export const MAX_THEME_THUMBNAIL_BYTES = 256 * 1024;
+
 /* A theme is data, read before any extension code runs. Tokens override the base of one side. */
 export const ExtensionThemeSchema = z.object({
     name: z.string().min(1).max(80),
     side: z.enum(['light', 'dark']),
+    // What the picker shows beside System, Light and Dark: a picture in the pack, 16:10.
+    thumbnail: z.string().regex(EXTENSION_THEME_THUMBNAIL),
     tokens: z.record(z.string().regex(/^--[a-z0-9-]+$/), z.string().regex(/^[^;{}]+$/)),
     css: z.string().min(1).optional()
 });

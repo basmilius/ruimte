@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
+import { useSettings } from '@/state/settings';
+import { mount } from '../../testing/dom';
 import { activeExtensionTheme, applyStoredExtensionTheme, chooseExtensionTheme, refreshExtensionTheme, type ThemeChoice } from '@/extensions/themes';
 
 const CHOICE: ThemeChoice = {
@@ -6,8 +9,9 @@ const CHOICE: ThemeChoice = {
     extensionId: 'acme.midnight',
     path: 'themes/midnight.json',
     name: 'Midnight',
-    theme: { name: 'Midnight', side: 'dark', tokens: { '--surface': '#000' } },
-    cssUrl: null
+    theme: { name: 'Midnight', side: 'dark', thumbnail: 'themes/midnight.png', tokens: { '--surface': '#000' } },
+    cssUrl: null,
+    thumbnailUrl: '/themes/midnight.png'
 };
 
 function themeText(): string | null {
@@ -40,6 +44,29 @@ describe('an extension theme', () => {
 
         expect(theme.compareDocumentPosition(palette) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         palette.remove();
+    });
+
+    test('keeps the palette at its default while it is on, and gives back the chosen one after', async () => {
+        useSettings.getState().update({ palette: 'stone' });
+        const palette = () => document.getElementById('ruimte-palette')?.textContent ?? '';
+        const withStone = palette();
+
+        chooseExtensionTheme(CHOICE);
+
+        expect(palette()).not.toBe(withStone);
+
+        const page = mount();
+
+        await page.render(<AppearancePane />);
+
+        expect(page.host.textContent).toContain('Accent');
+        expect(page.host.textContent).not.toContain('Palette');
+        await page.unmount();
+
+        chooseExtensionTheme(null);
+
+        expect(palette()).toBe(withStone);
+        useSettings.getState().update({ palette: 'default' });
     });
 
     test('goes away with its extension', async () => {

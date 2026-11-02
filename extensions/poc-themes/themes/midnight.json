@@ -1,6 +1,7 @@
 {
     "name": "POC midnight",
     "side": "dark",
+    "thumbnail": "themes/midnight.svg",
     "tokens": {
         "--bg": "#050a1f",
         "--surface": "#0b1538",

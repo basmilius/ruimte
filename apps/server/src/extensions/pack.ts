@@ -8,6 +8,7 @@ import {
     ExtensionManifestSchema,
     ExtensionThemeSchema,
     extensionThemeCssProblem,
+    MAX_THEME_THUMBNAIL_BYTES,
     type ExtensionManifest,
     type ExtensionPack
 } from '@ruimte/contracts';
@@ -78,6 +79,16 @@ function checkThemes(root: string, manifest: ExtensionManifest): void {
 
         if (!theme.success) {
             throw new ExtensionBuildError(`${path}: ${theme.error.issues.map((issue) => `${issue.path.join('.')} ${issue.message}`).join(', ')}`);
+        }
+
+        const thumbnail = join(root, theme.data.thumbnail);
+
+        if (!existsSync(thumbnail)) {
+            throw new ExtensionBuildError(`${path} names the thumbnail ${theme.data.thumbnail}, which does not exist`);
+        }
+
+        if (statSync(thumbnail).size > MAX_THEME_THUMBNAIL_BYTES) {
+            throw new ExtensionBuildError(`${theme.data.thumbnail} is over ${MAX_THEME_THUMBNAIL_BYTES / 1024} KB`);
         }
 
         if (theme.data.css !== undefined) {

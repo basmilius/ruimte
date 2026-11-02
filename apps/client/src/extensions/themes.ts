@@ -2,6 +2,8 @@ import { ExtensionThemeSchema, extensionThemeCssProblem, type ExtensionTheme } f
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
 import { storedJson } from '@/state/stored-json';
+import { useExtensionTheme } from '@/state/extension-theme';
+import { previewColors } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 
 const STORAGE_KEY = 'ruimte.extensionTheme';
@@ -17,6 +19,7 @@ export interface ThemeChoice {
     name: string;
     theme: ExtensionTheme;
     cssUrl: string | null;
+    thumbnailUrl: string;
 }
 
 const StoredThemeSchema = z.object({ key: z.string(), tokens: z.string(), cssUrl: z.string().nullable() });
@@ -43,6 +46,9 @@ function place(element: HTMLElement): void {
 }
 
 function paint(stored: StoredTheme | null): void {
+    // Before the colors, so the palette that follows sees whether a theme of an extension is on.
+    useExtensionTheme.setState({ key: stored?.key ?? null });
+    previewColors(null);
     document.getElementById(TOKENS_ID)?.remove();
     document.getElementById(CSS_ID)?.remove();
 
@@ -94,7 +100,15 @@ async function loadTheme(extension: InstalledClientExtension, path: string): Pro
         cssUrl = url;
     }
 
-    return { key: `${extension.manifest.id}/${path}`, extensionId: extension.manifest.id, path, name: theme.name, theme, cssUrl };
+    return {
+        key: `${extension.manifest.id}/${path}`,
+        extensionId: extension.manifest.id,
+        path,
+        name: theme.name,
+        theme,
+        cssUrl,
+        thumbnailUrl: `${extension.base}${theme.thumbnail}`
+    };
 }
 
 /* Every theme of what is on. One that does not load is left out, and the others stay. */

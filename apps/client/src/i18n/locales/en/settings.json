@@ -4,11 +4,6 @@
             "title": "Theme",
             "label": "Theme",
             "description": "System follows your OS.",
-            "extension": {
-                "label": "Extension theme",
-                "description": "Comes on top of the theme you chose. Your accent stays yours.",
-                "none": "None"
-            },
             "options": {
                 "system": "System",
                 "light": "Light",
