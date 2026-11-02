@@ -135,19 +135,36 @@ export function shortcutProblem(shortcut: string): string | null {
     return parts.some((part) => part === 'mod' || part === 'alt') ? null : `${shortcut} has no modifier: a shortcut needs mod or alt`;
 }
 
+const WINDOWS_ABSOLUTE = /^([A-Za-z]:[\\/]|[\\/]{2})/;
+
+/* The path with one separator throughout and no empty steps, except the leading ones of `/` and of `\\server`. */
+function joinedParts(path: string, separator: string): { parts: string[]; joined: string } {
+    const split = path.split(/[\\/]/);
+    const leading = Math.max(
+        split.findIndex((part) => part !== ''),
+        0
+    );
+    const parts = split.filter((part, index) => part !== '' || index < leading);
+
+    return { parts, joined: parts.join(separator) };
+}
+
 /*
- * A path an extension names, inside the project folder: relative to it, or absolute. Null for one that leaves it,
- * through either slash, since a Windows machine reads `sub\..\..\x` as two steps up.
+ * A path an extension names, inside the project folder: relative to it, or absolute, also with a drive letter or as a
+ * UNC path. Written with the separator of the folder. Null for one that leaves it, through either slash, since a
+ * Windows machine reads `sub\..\..\x` as two steps up, and compared without case there, as Windows names files.
  */
 export function extensionProjectPath(folder: string, path: string): string | null {
-    const full = path.startsWith('/') ? path : path === '.' ? folder : `${folder}/${path}`;
-    const parts = full.split(/[\\/]/);
-    const inside = parts.join('/');
-    const root = folder.split(/[\\/]/).join('/');
+    const windows = WINDOWS_ABSOLUTE.test(folder);
+    const separator = windows ? '\\' : '/';
+    const absolute = path.startsWith('/') || path.startsWith('\\') || WINDOWS_ABSOLUTE.test(path);
+    const root = joinedParts(folder, separator).joined;
+    const { parts, joined } = joinedParts(absolute ? path : path === '.' ? folder : `${folder}/${path}`, separator);
+    const same = (text: string): string => (windows ? text.toLowerCase() : text);
 
-    if (inside !== root && (!inside.startsWith(`${root}/`) || parts.includes('..'))) {
+    if (parts.includes('..') || (same(joined) !== same(root) && !same(joined).startsWith(same(`${root}${separator}`)))) {
         return null;
     }
 
-    return full;
+    return joined;
 }
