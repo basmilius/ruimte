@@ -435,7 +435,7 @@ export class RemoteTasks {
         if (taken.path !== undefined) {
             await worktrees.claim(folder, taken.path, entry.target).catch(() => undefined);
         }
-        return `The work came back as the branch ${taken.branch}${taken.path === undefined ? '' : ` in the worktree ${taken.path}`}; ruimte-context worktree merge ${taken.branch} brings it into your branch.`;
+        return `The work came back as the branch ${taken.branch}${taken.path === undefined ? '' : ` in the worktree ${taken.path}`}; worktree_merge ${taken.branch} brings it into your branch.`;
     }
 
     /*

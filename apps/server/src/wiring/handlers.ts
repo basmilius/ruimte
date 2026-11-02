@@ -183,6 +183,7 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
     });
     const beforeChatKill = (chatId: string): Promise<unknown> => {
         devices.computer.nodeClosed(chatId);
+        devices.deviceDriver.nodeClosed(chatId);
         launches.secrets.nodeClosed(chatId);
         agents.proposals.forget(chatId);
         return work.endChildren.owe(chatId);

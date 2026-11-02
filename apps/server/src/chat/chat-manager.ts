@@ -24,7 +24,7 @@ import type {
     Task
 } from '@ruimte/contracts';
 import { HOST_TASK_ORIGIN } from '@ruimte/contracts';
-import { ChatCore, type ChatCoreOptions, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
+import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
 import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import { attachedReferences, type Reference } from '../context/references.ts';
@@ -48,7 +48,9 @@ import { InlineEditNotes } from './inline-edit.ts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
-import { prependPath } from '../env-path.ts';
+import { claudeProvider } from '../providers/claude-provider.ts';
+import { codexProvider } from '../providers/codex-provider.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, claudeMcpArgs, codexMcpArgs, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
 
@@ -59,7 +61,7 @@ export const STOPPED_TASK_REASON = 'a person stopped it';
 export const RESUME_PROMPT = 'The machine restarted while you were working on the previous message. Continue where you left off.';
 
 // Said in front of a resume when the chat keeps a plan with steps left.
-export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: ruimte-context plan read shows where you were.';
+export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: plan_read shows where you were.';
 
 /* The plans kept beside a chat's record, which live and die with the chat. */
 export interface ChatPlans {
@@ -69,10 +71,8 @@ export interface ChatPlans {
 }
 
 interface ChatManagerOptions extends ChatCoreOptions {
-    // Where an agent reads its linked context.
+    // Where an agent reads its linked context, with Ruimte's MCP server beside it.
     contextUrl?: string;
-    // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
-    binDir?: string;
     // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
     depthOf?: (chatId: string) => number;
     standalone?: (chatId: string) => boolean;
@@ -122,8 +122,8 @@ interface ChatManagerOptions extends ChatCoreOptions {
     projectAccount?: ProjectAccountChooser;
 }
 
-/* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables, with `ruimte-context` on the PATH. */
-function chatEnvOf(env: Record<string, string | undefined>, binDir: string | undefined): Record<string, string> {
+/* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables. */
+function chatEnvOf(env: Record<string, string | undefined>): Record<string, string> {
     const chat: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
         // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -131,10 +131,23 @@ function chatEnvOf(env: Record<string, string | undefined>, binDir: string | und
             chat[key] = value;
         }
     }
-    if (binDir) {
-        prependPath(chat, binDir);
-    }
     return chat;
+}
+
+/*
+ * The CLIs a chat runs with Ruimte's MCP server on their line, each reading the chat's token from its environment.
+ * A command a caller passes (a test's fake CLI) gets the server too.
+ */
+function mcpCommands(options: ChatManagerOptions): Pick<ChatCoreOptions, 'command' | 'codexCommand'> {
+    if (options.contextUrl === undefined) {
+        return {};
+    }
+    const endpoint: McpEndpoint = { url: mcpUrlOf(options.contextUrl), tokenVariable: CHAT_TOKEN_VARIABLE };
+
+    return {
+        command: [...(options.command ?? claudeProvider.command), ...claudeMcpArgs(endpoint)],
+        codexCommand: [...(options.codexCommand ?? codexProvider.command), ...codexMcpArgs(endpoint)]
+    };
 }
 
 export const BRIEF_TITLE = 'Instructions from Ruimte';
@@ -282,6 +295,7 @@ export class ChatManager extends ChatCore {
     private readonly endChildren: (chatId: string) => Promise<unknown>;
     private readonly plans: ChatPlans | null;
     private readonly agentImages: AgentImages;
+    private readonly sideCodexCommand: string[];
     private readonly tokens = new Map<string, string>();
     // The tasks whose rows a clear hid, per chat.
     private readonly clearedTasks = new Map<string, Set<string>>();
@@ -299,7 +313,8 @@ export class ChatManager extends ChatCore {
             codexClient: RUIMTE_CODEX_CLIENT,
             uiFenceLanguage: RUIMTE_UI_FENCE,
             ...options,
-            env: chatEnvOf(options.env ?? process.env, options.binDir),
+            ...mcpCommands(options),
+            env: chatEnvOf(options.env ?? process.env),
             hooks: {
                 instructionsFor: (chatId) => this.instructionsFor(chatId),
                 resumeNoteFor: (chatId) => this.resumeNoteFor(chatId),
@@ -357,10 +372,19 @@ export class ChatManager extends ChatCore {
         this.endChildren = options.endChildren ?? (() => Promise.resolve());
         this.plans = options.plans ?? null;
         this.agentImages = new AgentImages(options.attachments);
+        this.sideCodexCommand = options.codexCommand ?? options.providers.get('codex').command;
     }
 
     chatIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
+    }
+
+    /*
+     * The app-server opened beside a chat to read or fork one of its threads runs no turn, so it starts
+     * without Ruimte's MCP server, for which it holds no token.
+     */
+    override codexProcess(info: Pick<ChatInfo, 'cwd' | 'account'>): CodexProcessSpec {
+        return { ...super.codexProcess(info), command: this.sideCodexCommand };
     }
 
     override create(payload: ChatCreatePayload): Promise<ChatInfo> {
@@ -689,14 +713,14 @@ export class ChatManager extends ChatCore {
         return (attached) => attachedReferences(attached, (id: string): Reference | null => this.reference(chatId, id));
     }
 
-    /* A token per load of the chat, which the CLI's `ruimte-context` presents to the daemon. */
+    /* A token per load of the chat, which the CLI presents to the daemon's MCP server as its bearer. */
     private envFor(chatId: string, base: Record<string, string>): Record<string, string> {
         if (this.contextUrl === null) {
             return base;
         }
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, chatId);
-        return { ...base, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token };
+        return { ...base, RUIMTE_CONTEXT_URL: this.contextUrl, [MCP_URL_VARIABLE]: mcpUrlOf(this.contextUrl), [CHAT_TOKEN_VARIABLE]: token };
     }
 
     private runtimeModeFor(chatId: string, mode: RuntimeMode): RuntimeMode {

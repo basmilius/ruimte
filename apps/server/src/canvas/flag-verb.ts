@@ -18,7 +18,7 @@ export const flagVerb = defineStandaloneActionVerb({
             syntax: '<id>[,<id>...]',
             need: 'required',
             text: `The views and nodes to flag, by id, separated by commas; at most ${MAX_PER_CALL}`,
-            more: 'ruimte-context view list and node list list them'
+            more: 'view_list and node list list them'
         },
         { syntax: '<color>', need: 'required', field: 'color', more: `one of ${NODE_ACCENT_NAMES.join(', ')}; ${NO_FLAG} takes the flag off` }
     ],
@@ -27,7 +27,7 @@ export const flagVerb = defineStandaloneActionVerb({
         `many\tTo flag several views and nodes, name them all in one call, as a,b,c, with the one color they all get, instead of calling once per id: ${ONE_WRITE}`,
         'many\tAn id that is no view or node refuses the whole call and is named',
         "note\tA flag is the person's own mark: it never reaches the shared project file, so flag what they asked you to flag and nothing more",
-        'see\truimte-context view list\tthe flag column says what each view wears; node list says the same for the nodes of a canvas'
+        'see\tview_list\tthe flag column says what each view wears; node list says the same for the nodes of a canvas'
     ],
     positionals: z.tuple([z.string().min(1, 'flag needs the id of a view or a node'), z.enum([...NODE_ACCENT_NAMES, NO_FLAG], { error: COLOR_MESSAGE })], {
         error: (issue) =>

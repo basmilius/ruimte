@@ -5,7 +5,7 @@ import type { RuntimeMode } from '@ruimte/contracts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from '@adecore/agents/chat';
 import { NANOGPT_URL, nanoHttpError, type NanoGptService } from '../providers/nanogpt-service.ts';
 import { ApiTools, CONTINUE_MESSAGE, INTERRUPTED, apiInstructions, endTurn, readThread, writeThread, type ToolRounds } from './api-chat.ts';
-import { executeNanoTool, NANOGPT_TOOLS, nanoEffectiveMode } from './nanogpt-tools.ts';
+import { executeNanoTool, nanoEffectiveMode } from './nanogpt-tools.ts';
 import { readNanoStream, type NanoAnswer, type NanoUsage } from './nanogpt-stream.ts';
 
 const MessageSchema = z.object({
@@ -173,7 +173,9 @@ export class NanoGptBackend implements ChatBackend {
                 // The API sends the counts of a streamed request only when asked, and both the context meter and the usage page read them.
                 stream_options: { include_usage: true },
                 messages: [{ role: 'system', content: apiInstructions(this.launch) }, ...this.messages],
-                ...(this.service.supportsTools(this.launch.selection.model) ? { tools: NANOGPT_TOOLS } : {})
+                ...(this.service.supportsTools(this.launch.selection.model)
+                    ? { tools: (await this.tools.definitions()).map((tool) => ({ type: 'function', function: tool })) }
+                    : {})
             })
         });
         if (!response.ok) {
@@ -260,6 +262,7 @@ export class NanoGptBackend implements ChatBackend {
     async dispose(): Promise<void> {
         this.interrupt();
         await this.work;
+        await this.tools.close();
         this.opened = false;
         this.host.onEvent({ type: 'exit', exitCode: 0 });
     }

@@ -4,10 +4,9 @@ import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { field } from '@adecore/agents/context';
 
 /*
- * A visual's page may name a local image by its absolute path, and the CLI puts that image in the page
- * as a data: URI before the page leaves, so it shows on every client and outlives the file. This runs
- * in the agent's own process, inside whatever sandbox its CLI gives it: the daemon never reads a path
- * an agent names, since that would hand the agent what its own sandbox withholds.
+ * A visual's page may name a local image by its absolute path, and the MCP tool puts that image in the
+ * page as a data: URI before the visual is kept, so it shows on every client and outlives the file. The
+ * `files` it is given read only inside the folders an agent's files may come from (`files.ts`).
  */
 
 const MIB = 1024 * 1024;

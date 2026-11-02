@@ -11,7 +11,7 @@ export const openAction = defineActionVerb('view', {
     name: 'open',
     action: 'view.focus',
     usage: '<viewId>',
-    params: [{ syntax: '<viewId>', need: 'required', field: 'viewId', text: 'The view to show, by id', more: 'ruimte-context view list lists them' }],
+    params: [{ syntax: '<viewId>', need: 'required', field: 'viewId', text: 'The view to show, by id', more: 'view_list lists them' }],
     detail: [
         'prints\tshowing\tid\tkind\tname\tthe view you asked for',
         'prints\tsent\tyes|no\tsentence\twhether anyone had this project on screen to show it to, and the same in words',
@@ -19,7 +19,7 @@ export const openAction = defineActionVerb('view', {
         'note\tThis writes nothing, so it is the one verb a person can turn off: a client may be set to only mention the view and stay where it is',
         'note\tNobody watching is not a failure; nothing waits, and the same call later shows it to whoever is there then',
         'note\tA separator and a subheader divide the sidebar and hold nothing to show',
-        'see\truimte-context view list\tthe views of the project, which is where the id comes from'
+        'see\tview_list\tthe views of the project, which is where the id comes from'
     ],
     positionals: oneArgument('view open needs the id of a view', 'view open takes one view id and nothing else'),
     flags: z.object({}),

@@ -1363,11 +1363,11 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
         expect(theirs.entries.map((entry) => entry.name)).not.toContain('mine.txt');
     });
 
-    test('a note linked on a canvas of the container is read back inside that container', async () => {
+    test('a note linked on a canvas of the container is read back inside that container over its MCP server', async () => {
         const sessionId = `scope-context-${Date.now()}`;
         startedSessions.push(sessionId);
         /* A folder of its own, so the project file it writes stays out of the checkouts the git tests read. */
-        const opened = await there.request<ProjectOpenResult>('project.open', { folder: `/tmp/ruimte-context-${Date.now()}`, createFolder: true });
+        const opened = await there.request<ProjectOpenResult>('project.open', { folder: `/tmp/ruimte-mcp-${Date.now()}`, createFolder: true });
         // The daemon derives the links from the document it saved, so no client has to tell it.
         await there.request<ProjectSaveResult>('project.save', {
             projectId: opened.summary.projectId,
@@ -1396,15 +1396,22 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
 
         there.takeOutput();
         /*
-         * By its path in the image, not by its name. Debian's `/etc/profile` writes PATH from
-         * scratch, so the directory the daemon puts in front of it is gone by the first prompt of a
-         * login shell. The script itself is what this is about, and it reads the address and the
-         * token out of the session's environment either way.
+         * What an agent's CLI does over `/mcp`, from inside the shell, with the address and the token
+         * the session's environment carries: `initialize`, then a `tools/call` of `context_list` and
+         * of `context_read`. The typed line names neither the title nor the body, so only the answers do.
          */
-        await there.request('session.write', {
-            sessionId,
-            data: '/app/apps/server/bin/ruimte-context && /app/apps/server/bin/ruimte-context read note-1\n'
-        });
+        const client = [
+            'const url = new URL("/mcp", process.env.RUIMTE_CONTEXT_URL).href;',
+            'const headers = { authorization: "Bearer " + process.env.RUIMTE_HOOK_TOKEN, "content-type": "application/json", accept: "application/json, text/event-stream" };',
+            'const post = async (body) => (await fetch(url, { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, ...body }) })).json();',
+            'const started = await post({ method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "remote-test", version: "1" } } });',
+            'headers["mcp-protocol-version"] = started.result.protocolVersion;',
+            'for (const [name, args] of [["context_list", {}], ["context_read", { id: "note-1" }]]) {',
+            'const called = await post({ method: "tools/call", params: { name, arguments: args } });',
+            'console.log(called.result.content[0].text);',
+            '}'
+        ].join(' ');
+        await there.request('session.write', { sessionId, data: `bun -e '${client}'\n` });
         let said = '';
         await waitUntil('the shell in the container to read its own context', () => {
             said += there.takeOutput();

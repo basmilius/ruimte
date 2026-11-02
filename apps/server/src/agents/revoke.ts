@@ -134,7 +134,7 @@ export function revokeHooks(link: string, kind: AgentKind, entry: LedgerEntry): 
     });
 }
 
-/* Takes Ruimte's rules out of `agy`'s settings; a rule a person added themselves reads the same and goes too. */
+/* Takes the `ruimte-context` rules of an earlier release out of `agy`'s settings, and every other rule stays. */
 export function revokeAntigravityRules(link: string, entry: LedgerEntry): Promise<AgentIntegrationReport> {
     return removeFromSettings(link, 'rules', entry, (config) => ({ ...removeAntigravityRules(config, entry.createdHooksKey), keptEdited: 0 }));
 }
@@ -189,7 +189,7 @@ async function removeFromSettings(
     }
 }
 
-/* The rules file is Ruimte's whole: it goes only while it still says what Ruimte wrote. */
+/* The rules file is Ruimte's whole: it goes only while it still says what an earlier release wrote. */
 export async function revokeCodexRules(path: string): Promise<AgentIntegrationReport> {
     try {
         const text = await readFile(path, 'utf8');

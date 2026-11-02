@@ -278,7 +278,7 @@ describe('ruimte-context computer', () => {
         expect((await run(setup, ['drag', 'TextEdit', '--from', '3', '--to-x', '4']))[0]).toStartWith('refused\tbad-arguments\tcomputer drag ends at --to N');
         setup.helper.error = 'element 3 is no longer at (10, 20); the point now hits Button "OK". Run `cu state` again';
         expect((await run(setup, ['drag', 'TextEdit', '--from', '3', '--to', '7']))[0]).toBe(
-            'refused\tapp-refused\telement 3 is no longer at (10, 20); the point now hits Button "OK". Run `ruimte-context computer state` again'
+            'refused\tapp-refused\telement 3 is no longer at (10, 20); the point now hits Button "OK". Run `computer_state` again'
         );
         expect((await run(setup, ['drag', 'Shells', '--from', '3', '--to', '7']))[0]).toStartWith('refused\tterminal\t');
     });

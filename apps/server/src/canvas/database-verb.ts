@@ -9,7 +9,7 @@ import { defineActionVerb, runAction } from './action-verb.ts';
 import { SHOWN_LINE } from './visual-verb.ts';
 import { SCOPE_LINE, VerbRefusal, field, orNote, oneArgument } from './verb.ts';
 
-const CONNECTION_PARAM = { syntax: '<connection>', need: 'required', field: 'connection', more: 'ruimte-context database list names them' } as const;
+const CONNECTION_PARAM = { syntax: '<connection>', need: 'required', field: 'connection', more: 'database_list names them' } as const;
 
 const SCHEMA_PARAM = { syntax: '--schema S', need: 'optional', field: 'schema' } as const;
 
@@ -201,7 +201,7 @@ const queryAction = defineActionVerb('database', {
         { syntax: '--sql Q', need: 'optional', field: 'sql', more: SQL_PARAM_MORE }
     ],
     detail: [
-        "stdin\tThe statement, piped in or as a heredoc: ruimte-context database query shop <<'EOF' ... EOF",
+        "stdin\tThe statement, piped in or as a heredoc: database_query shop <<'EOF' ... EOF",
         'read\tOne statement that starts with SELECT or WITH, on a session opened read only; anything else, several statements included, is refused with unsupported',
         'order\tThe statement is read as a subquery, and MariaDB and MySQL drop an ORDER BY there unless a LIMIT follows it. A statement with no LIMIT anywhere gets one of --limit plus one; one that has a LIMIT in it keeps its ORDER BY only with a LIMIT right after it',
         'prints\tcolumns\tname\t...\tthe names of the columns of the result',
@@ -274,7 +274,7 @@ const executeAction = defineActionVerb('database', {
     usage: '<connection> [--schema S] (< statements.sql | --sql Q)',
     params: [CONNECTION_PARAM, SCHEMA_PARAM, { syntax: '--sql Q', need: 'optional', field: 'sql', more: SQL_PARAM_MORE }],
     detail: [
-        "stdin\tThe statements, piped in or as a heredoc: ruimte-context database execute shop <<'EOF' ... EOF",
+        "stdin\tThe statements, piped in or as a heredoc: database_execute shop <<'EOF' ... EOF",
         'write\tOnly on a connection a person on this machine set to read and write for agents in the connections dialog of the app (database-write-off otherwise), and never while you run in supervised (database-write-mode); ask the person instead',
         'prints\tstatement\tn\tsql\tone line per statement in order, the start of its SQL, followed by what it did',
         'prints\tdone\taffected\tlast-insert-id\tid\tfor a statement that changed rows; the id only when the server gave one',
@@ -318,7 +318,7 @@ export const DATABASE_SUMMARY =
 export const DATABASE_DETAIL: readonly string[] = [
     "when\tA question about the project's data, such as the last orders over an amount or how many users signed up this week: database list for the connections, database tables and database describe for where the data is, then database query",
     'read\tA query is one statement that starts with SELECT or WITH, on a session opened read only; it never changes anything',
-    'show\tIn an AI chat, show rows with a ruimte-ui block: $rows = @Query("database.query", {connection: "<connection>", sql: "<sql>"}) and a Table or Chart (ruimte-context help ui). query --show TITLE still puts a static table above your reply; either way the reply adds what the rows do not say and does not repeat them',
+    'show\tIn an AI chat, show rows with a ruimte-ui block: $rows = @Query("database.query", {connection: "<connection>", sql: "<sql>"}) and a Table or Chart (ui_catalog). query --show TITLE still puts a static table above your reply; either way the reply adds what the rows do not say and does not repeat them',
     'write\tdatabase execute writes, only on a connection a person on this machine allowed agents to write to in the connections dialog of the app; you cannot allow it yourself',
     'access\tA person can also turn a connection off for agents, and every action on it is refused with database-access-off',
     SESSION_LINE,

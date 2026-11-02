@@ -26,14 +26,14 @@ const AGENT_DETAIL: readonly string[] = [
     `kinds\tchat\tThe default for ${chatKinds().join(', ')}: the CLI as a thread in the node, fixed to that CLI, with no model picker on the composer; its last answer settles a task`,
     REGISTRY_KINDS_LINE,
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in; the only kind for a CLI without a chat backend, and a terminal child has to call done to settle a task',
-    'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',
+    'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run context_read on your id',
     'edge\tA line only joins two nodes of one canvas, so from any other view the edge column shows -',
-    'edge\tOne way only: the edge makes you readable to the child. You can read an agent you opened with ruimte-context read <its id> through its lineage, including a hidden agent, without a line back',
-    'edge\truimte-context link list lists what is drawn on the canvas now',
+    'edge\tOne way only: the edge makes you readable to the child. You can read an agent you opened with context_read <its id> through its lineage, including a hidden agent, without a line back',
+    'edge\tlink_list lists what is drawn on the canvas now',
     ...readsLines('the new agent'),
     'without a prompt\tLeave --prompt out and the node opens with the CLI waiting, so the person types the first thing themselves',
-    'groups\truimte-context node list lists the nodes of a canvas; a row of kind group is what --group takes',
-    'where\tWithout --view an agent on a canvas opens a node there; from a chat view it opens a hidden agent, reachable through its task row and ruimte-context read <id>. --view explicitly places it on that canvas',
+    'groups\tnode_list lists the nodes of a canvas; a row of kind group is what --group takes',
+    'where\tWithout --view an agent on a canvas opens a node there; from a chat view it opens a hidden agent, reachable through its task row and context_read <id>. --view explicitly places it on that canvas',
     'where\tWithout --beside and --group the first free spot right of the caller, or right of everything when the caller is none of its nodes',
     'group\tThe node lands in a row under the title bar of the group, which grows when it has no room; a collapsed group also takes the id into its members',
     'paths\t--cwd and --prompt-file are resolved against the project folder, never against your own directory; both may also be absolute',
@@ -50,7 +50,7 @@ const AGENT_DETAIL: readonly string[] = [
     PROJECT_LINE,
     'project\tWith --project the agent opens on the canvas of that project that --view names, with no edge to you; --cwd and --worktree stay inside that project, and --machine works only from your own',
     'retry\t--request-id R: the same id with the same command answers with the node, task and worktree the first call made, also after the machine restarted; another command under the same id is refused',
-    'operation\tStarting is not succeeding: ruimte-context operation get agent.start:<id> says whether the agent is queued, running, completed, failed or cancelled, from its task when it has one',
+    'operation\tStarting is not succeeding: operation_get agent.start:<id> says whether the agent is queued, running, completed, failed or cancelled, from its task when it has one',
     'note\tThe machine starts the node right away, whether or not anyone has its canvas open; a client that shows it later joins what runs'
 ];
 
@@ -80,7 +80,7 @@ export const agentVerb = defineStandaloneActionVerb({
             field: 'reads',
             text: 'Nodes the new agent can read from its first turn, by id, separated by commas: a line is drawn from each of them into it'
         },
-        { syntax: '--view V', need: 'optional', field: 'viewId', more: 'ruimte-context view list lists them' },
+        { syntax: '--view V', need: 'optional', field: 'viewId', more: 'view_list lists them' },
         { syntax: '--beside N', need: 'optional', field: 'beside', text: 'Puts the node directly right of node N, top edges level' },
         { syntax: '--group G', need: 'optional', field: 'group', text: 'Puts the node inside group node G of that canvas; not together with --beside' },
         {

@@ -77,7 +77,7 @@ export class StartClaims {
                 }
                 throw new VerbRefusal(
                     'request-unsettled',
-                    `The start with request id ${claim.requestId} was cut off before it answered; ruimte-context node list shows whether its agent is there. Start again with a new id if it is not`
+                    `The start with request id ${claim.requestId} was cut off before it answered; node_list shows whether its agent is there. Start again with a new id if it is not`
                 );
             }
             await this.claims.write({ key, state: 'pending', inputHash: claim.inputHash, at: this.now() });

@@ -124,7 +124,7 @@ const APPROVAL_STATES: Record<ChatApprovalDecision, string> = {
     cancelled: 'cancelled'
 };
 
-/* What `ruimte-context answer` needs of one waiting question besides the request: its id and what it may pick. */
+/* What `agent_answer` needs of one waiting question besides the request: its id and what it may pick. */
 function pendingQuestionLine(question: ChatQuestion): string {
     const how =
         question.choices.length === 0

@@ -77,6 +77,11 @@ describe('the configuration a chat CLI loads from its folder', () => {
         await say('chat-peer');
         expect(daemon.chatCommands.at(-1)).toContain('--setting-sources=user');
         expect(daemon.chatCommands.at(-1)).toContain('--strict-mcp-config');
+        // The strict flag keeps the servers on the line, so Ruimte's own stays.
+        expect(daemon.chatCommands.at(-1)).toContain(
+            '--mcp-config={"mcpServers":{"ruimte":{"type":"http","url":"http://127.0.0.1:4210/mcp","headers":{"Authorization":"Bearer ${RUIMTE_CONTEXT_TOKEN}"}}}}'
+        );
+        expect(daemon.chatEnvs.at(-1)).toMatchObject({ RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: expect.any(String) });
     });
 
     test('an agent that a peer chat opened never loads them either, however deep', async () => {

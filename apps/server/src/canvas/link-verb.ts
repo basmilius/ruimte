@@ -14,7 +14,7 @@ export const readsFlag = z.string().min(1, '--reads needs one or more node ids, 
 /* What --reads does, said the same way by every verb that takes it; `head` is what its lines run into. */
 export function readsLines(head: string): readonly string[] {
     return [
-        `reads\tThe line runs from the node you name into ${head}, so ${head} can run ruimte-context read on the id; between two agents that direction is what makes it readable`,
+        `reads\tThe line runs from the node you name into ${head}, so ${head} can run context_read on the id; between two agents that direction is what makes it readable`,
         'reads\tNo role and the label context, like every other line this verb draws into an agent',
         'reads\tThe node, its lines and the start of the agent are one write, so a line is there before the first turn runs; this is how you open an agent on a note you just put down',
         'reads\tOnly nodes that are on that canvas already, so never an agent this same call opens; an id that names none of them is refused with the ids that do',
@@ -27,17 +27,17 @@ export function readsLines(head: string): readonly string[] {
 const LINK_DETAIL: readonly string[] = [
     'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn, updated for one that was there and took the --role you named, and existing for one nothing happened to',
     'way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake',
-    'context\tAn edge with a terminal or a chat at one end lets that agent read the other end with ruimte-context read, whichever way it runs; between two agents only the head reads the tail, and a line between two other nodes is only a line',
+    'context\tAn edge with a terminal or a chat at one end lets that agent read the other end with context_read, whichever way it runs; between two agents only the head reads the tail, and a line between two other nodes is only a line',
     'both ways\tA --to that names a terminal or a chat, from a terminal or a chat, is two edges and two rows: each of them then reads the other, and either may notify the other',
     'both ways\tInto anything else it is one edge and one row, since only an agent node reads what a line brings it',
     'both ways\tA --role of target or origin is one edge and one row whatever the two ends are, since either only reads one way',
     'again\tAn edge that is already there is left alone and reported as existing, so running the same link new twice changes nothing',
     'again\tA --role that is not the role on that edge is written onto it and the row says updated; the role it already has, or no --role at all, leaves it as it is',
     `limit\tAt most ${MAX_LINKS} ids in --to`,
-    'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
-    'see\truimte-context link list\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round',
-    'see\truimte-context link delete\tremoving a line again, one direction at a time',
-    'see\truimte-context notify\tleaving a message for the agent at the other end, which takes a line running that way'
+    'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs',
+    'see\tlink_list\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round',
+    'see\tlink_delete\tremoving a line again, one direction at a time',
+    'see\tnotify\tleaving a message for the agent at the other end, which takes a line running that way'
 ];
 
 export const linkNewAction = defineActionVerb('link', {
@@ -85,11 +85,11 @@ export const linkListAction = defineActionVerb('link', {
     name: 'list',
     action: 'link.list',
     usage: '[--view V]',
-    params: [{ syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas to list, by view id', more: 'ruimte-context view list lists them' }],
+    params: [{ syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas to list, by view id', more: 'view_list lists them' }],
     detail: [
         'prints\tid\tfrom\tto\tlabel\tone line per line on the canvas, the label empty where it has none',
         'direction\tA line runs from the first id into the second; between two agents that makes the first readable to the second and never the other way round, while with one agent on it that agent reads the other end whichever way it runs',
-        'both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link new draws the second',
+        'both ways\tTwo agents that read each other are two lines, one each way; link_new draws the second',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
         'note\tA canvas with no lines on it prints only the revision row',
         REVISION_ROW,
@@ -114,7 +114,7 @@ export const linkDeleteAction = defineActionVerb('link', {
             need: 'required',
             field: 'edgeId',
             text: `The lines to remove, by id, separated by commas; at most ${MAX_PER_CALL}`,
-            more: 'ruimte-context link list lists them'
+            more: 'link_list lists them'
         },
         { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the lines are on, by view id; without it the one you are on' }
     ],
@@ -127,7 +127,7 @@ export const linkDeleteAction = defineActionVerb('link', {
         'rule\tA machine can free every node and view of every project on it, and every line with them; a refusal says whether this one does',
         'both ways\tTwo agents that read each other are two lines, one each way; this removes the one you name and leaves the other',
         'ends\tBoth nodes stay where they are; node delete removes a node together with its lines',
-        'see\truimte-context link list\tthe lines of a canvas, with the ids this takes'
+        'see\tlink_list\tthe lines of a canvas, with the ids this takes'
     ],
     positionals: oneArgument('link delete needs the id of a line', 'link delete takes its line ids in one argument, separated by commas, as a,b,c'),
     flags: z.object({ view: VIEW_FLAG }),

@@ -1,12 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { ChatItem, ProjectCanvasView, ProjectView } from '@ruimte/contracts';
-import type { CanvasHost } from '../canvas/verb.ts';
-import { runContext } from '../cli/context.ts';
-import { CONTEXT_ENV, routeContextCli } from '../cli/context-test-helpers.ts';
 import { ProjectIndex } from '../projects/project-index.ts';
 import fixture from '../../../ios/Tests/Fixtures/view-references.json';
 import { attachedReferences, referablesOfViews, referenceNote, referenced, referencedIds, resolveReference, resolveReferences } from './references.ts';
-import { handleContextRequest } from './context-route.ts';
 import { ContextStore } from './context-store.ts';
 
 const canvas: ProjectCanvasView = {
@@ -131,25 +127,23 @@ describe('the note in front of a message', () => {
         );
         expect(note).toBe(
             [
-                'The person referenced views and nodes of this project in this message. Read each with the command beside it before you answer.',
-                '- "Sketch" (drawing): `ruimte-context read sketch` · see its elements with `ruimte-context read sketch --elements` · write with `ruimte-context view drawing sketch --revision R`',
-                '- "Research" (note on "Planning"): `ruimte-context read research` · write with `ruimte-context node edit research`',
-                '- "Auth \\"rewrite\\"" (chat on "Planning"): `ruimte-context read earlier` · message it with `ruimte-context notify earlier`',
-                '- "dev server" (terminal on "Planning"): `ruimte-context read shell` · message it with `ruimte-context notify shell`',
-                '- "Onboarding flow" (diagram): `ruimte-context read flow` · write with `ruimte-context view diagram flow`',
-                '- "Preview" (browser on "Planning"): `ruimte-context read page` · drive it with `ruimte-context browser go page --url U`',
-                '- "Docs" (browser): `ruimte-context read docs`',
-                '- "Next steps" (text on "Planning"): `ruimte-context read label`',
-                '- "Planning" (canvas): `ruimte-context read main` · read any node on it with `ruimte-context read <id>` · add nodes with `ruimte-context node new <kind> --view main`',
+                'The person referenced views and nodes of this project in this message. Read each with the tool call beside it before you answer.',
+                '- "Sketch" (drawing): `context_read sketch` · see its elements with `context_read sketch --elements` · write with `view_drawing sketch --revision R`',
+                '- "Research" (note on "Planning"): `context_read research` · write with `node_edit research`',
+                '- "Auth \\"rewrite\\"" (chat on "Planning"): `context_read earlier` · message it with `notify earlier`',
+                '- "dev server" (terminal on "Planning"): `context_read shell` · message it with `notify shell`',
+                '- "Onboarding flow" (diagram): `context_read flow` · write with `view_diagram flow`',
+                '- "Preview" (browser on "Planning"): `context_read page` · drive it with `browser_go page --url U`',
+                '- "Docs" (browser): `context_read docs`',
+                '- "Next steps" (text on "Planning"): `context_read label`',
+                '- "Planning" (canvas): `context_read main` · read any node on it with `context_read <id>` · add nodes with `node_new <kind> --view main`',
                 'When you refer back to one of them, write `#` and its name exactly as listed (#Name), and the person can open it from your answer.'
             ].join('\n')
         );
     });
 
     test('a diagram node is written under the view it shows', () => {
-        expect(referenceNote(resolveReferences(['flow-node'], lookupFor('asker')))).toContain(
-            '`ruimte-context read flow-node` · write with `ruimte-context view diagram flow`'
-        );
+        expect(referenceNote(resolveReferences(['flow-node'], lookupFor('asker')))).toContain('`context_read flow-node` · write with `view_diagram flow`');
     });
 });
 
@@ -166,41 +160,26 @@ describe('reading what a message referenced', () => {
         drawingElements: async () => null,
         diagramDocument: async () => null
     });
-    const host = {
-        projects: { locate: () => null, machineOfNode: () => null },
-        context: store
-    } as unknown as CanvasHost;
-    const restore: Array<() => void> = [];
 
     afterEach(() => {
-        for (const undo of restore.splice(0)) {
-            undo();
-        }
         threads.set('asker', []);
         index.set('project-a', '/work/a', { views });
     });
 
-    /* The command the note hands the agent, run by the real CLI against the real route. */
-    const run = async (note: string): Promise<{ code: number; stdout: string }> => {
-        const command = /`ruimte-context (read \S+)`/.exec(note)?.[1];
-        expect(command).toBeDefined();
-        const cli = routeContextCli((request, pathname) =>
-            handleContextRequest(request, pathname, { targetForToken: (token) => (token === 'tok' ? 'asker' : null), host })
-        );
-        restore.push(cli.restore);
-        const code = await runContext(command!.split(' '), CONTEXT_ENV);
+    /* The read the note hands the agent, against the store the tool reads. */
+    const run = async (note: string): Promise<string | null> => {
+        const id = /`context_read (\S+)`/.exec(note)?.[1];
+        expect(id).toBeDefined();
 
-        return { code, stdout: cli.output.stdout };
+        return store.read('asker', id!);
     };
 
-    test('the command in the note reads the conversation once the message is in the thread', async () => {
+    test('the read in the note reads the conversation once the message is in the thread', async () => {
         const note = referenceNote(resolveReferences(['earlier'], lookupFor('asker')))!;
-        expect((await run(note)).code).toBe(3);
+        expect(await run(note)).toBeNull();
 
         threads.set('asker', [{ id: 'u1', kind: 'user', createdAt: 1, turnId: 't1', text: 'Carry on from there', chats: ['earlier'] }]);
-        const read = await run(note);
-        expect(read.code).toBe(0);
-        expect(read.stdout).toContain('The refresh token now stays in the shell.');
+        expect(await run(note)).toContain('The refresh token now stays in the shell.');
         expect(store.list('asker')).toEqual([]);
     });
 
@@ -233,8 +212,8 @@ describe('a reference in another project', () => {
     test('names only what --project crosses with', () => {
         const note = referenceNote([{ id: 'runner', kind: 'terminal', name: 'Runner', canvas: null, sources: [], project: 'other' }]);
 
-        expect(note).toContain('`ruimte-context read runner --project other`');
-        expect(note).toContain('`ruimte-context notify runner --project other`');
+        expect(note).toContain('`context_read runner --project other`');
+        expect(note).toContain('`notify runner --project other`');
         expect(note).not.toContain('of this project');
     });
 });

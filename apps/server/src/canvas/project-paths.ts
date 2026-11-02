@@ -24,7 +24,8 @@ async function checkInsideProject(
     folder: string,
     rule: InsideRule,
     path: string,
-    worktreePaths: (folder: string) => Promise<string[]>
+    worktreePaths: (folder: string) => Promise<string[]>,
+    also: readonly string[] = []
 ): Promise<{ resolved: string; real: string }> {
     const resolved = resolve(folder, path);
     const real = await realOrNull(resolved);
@@ -36,13 +37,18 @@ async function checkInsideProject(
         return { resolved, real };
     }
     const paths = await worktreePaths(folder);
-    const worktrees = await Promise.all(paths.map(realOrNull));
-    if (!worktrees.some((root) => root !== null && isInside(root, real))) {
+    const roots = await Promise.all([...paths, ...also].map(realOrNull));
+    if (!roots.some((root) => root !== null && isInside(root, real))) {
         // The paths as git has them, not the real ones the comparison ran on: those are what a caller can type back.
-        throw new VerbRefusal(rule.outsideCode, `${resolved} is outside ${folder} and the worktrees of its repository`, [
-            `folder\t${folder}`,
-            ...paths.filter((candidate) => candidate !== folder).map((candidate) => `worktree\t${candidate}`)
-        ]);
+        throw new VerbRefusal(
+            rule.outsideCode,
+            `${resolved} is outside ${folder}${also.length > 0 ? ', the other folders below' : ''} and the worktrees of its repository`,
+            [
+                `folder\t${folder}`,
+                ...paths.filter((candidate) => candidate !== folder).map((candidate) => `worktree\t${candidate}`),
+                ...also.map((candidate) => `also\t${candidate}`)
+            ]
+        );
     }
     return { resolved, real };
 }
@@ -111,19 +117,24 @@ export async function checkInsideFile(folder: string, path: string, worktreePath
 }
 
 /*
- * A file or an app bundle an agent hands a device, under the folder rule a cwd follows, as its real path so
- * a link swapped in after the check leads nowhere new. A bundle is a folder, and the device copies the links
- * in it along, so a link in it must stay inside too.
+ * A file or an app bundle an agent hands a device, inside the project folder, its worktrees or the folders
+ * in `also`, as its real path so a link swapped in after the check leads nowhere new. A bundle is a folder,
+ * and the device copies the links in it along, so a link in it must stay inside too.
  */
-export async function checkDevicePath(folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
-    const { real } = await checkInsideProject(folder, DEVICE_PATH_RULE, path, worktreePaths);
+export async function checkDevicePath(
+    folder: string,
+    path: string,
+    worktreePaths: (folder: string) => Promise<string[]>,
+    also: readonly string[] = []
+): Promise<string> {
+    const { real } = await checkInsideProject(folder, DEVICE_PATH_RULE, path, worktreePaths, also);
     if (!(await stat(real)).isDirectory()) {
         return real;
     }
     for (const name of await readdir(real, { recursive: true })) {
         const inner = join(real, name);
         if ((await lstat(inner)).isSymbolicLink()) {
-            await checkInsideProject(folder, DEVICE_PATH_RULE, inner, worktreePaths);
+            await checkInsideProject(folder, DEVICE_PATH_RULE, inner, worktreePaths, also);
         }
     }
     return real;

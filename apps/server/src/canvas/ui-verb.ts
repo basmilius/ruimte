@@ -23,7 +23,7 @@ function uiDetail(): string[] {
         'when\tWrite a block in your reply when it has structure a person scans or acts on; this is a reference, not a command',
         `syntax\t${syntax}`,
         ...example.map((line) => `example\t${line}`),
-        'detail\truimte-context help ui <group>\tthe components and rules of one group, also printed by ruimte-context ui <group>',
+        'detail\tui_catalog\tthe components and rules of one group',
         `query\t$name = @Query("source", {args}), with these sources and arguments: ${sources}; database.query only in a project with connections. Queries only read, never start work or run writes`
     ];
 }
@@ -44,7 +44,7 @@ function componentNames(group: UiGroupName): string[] {
 const HOST_RULES: Partial<Record<UiGroupName, string>> = {
     data: 'Stat value and previous take numbers, e.g. value={42}; unit is a suffix. Use EntityList with Entry children for formatted text such as "21 min 38 sec".',
     content:
-        'To show an image or model file of your own, attach it with ruimte-context chat attach --file <path>, which prints the id for attachment="<id>" on Image, Gallery and Compare, or on Model for a binary glTF, USDZ or STL',
+        'To show an image or model file of your own, attach it with chat_attach --file <path>, which prints the id for attachment="<id>" on Image, Gallery and Compare, or on Model for a binary glTF, USDZ or STL',
     places: 'Ruimte does not look up addresses, so give lat and lon for every Place; an address may still be given as text, but a Place with only an address is not placed on the map'
 };
 

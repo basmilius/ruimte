@@ -69,7 +69,7 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
     'view.create': async ({ kind, name, url, command, path, provider, after, connection, schema, table, mode, where }, { actor, context }) => {
         // Only `agent` starts anything, so a view an agent makes opens empty.
         if (command !== null || provider !== null) {
-            throw new VerbRefusal('starts-nothing', 'view new opens a chat or a terminal empty; ruimte-context agent is what starts a CLI');
+            throw new VerbRefusal('starts-nothing', 'view new opens a chat or a terminal empty; agent_start is what starts a CLI');
         }
         if (name === null) {
             throw new VerbRefusal('bad-arguments', 'view new needs a name');

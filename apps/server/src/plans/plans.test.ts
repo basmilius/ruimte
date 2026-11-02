@@ -107,7 +107,7 @@ describe('plan verbs', () => {
             'item\ttests\tstep\t-\tWrite the tests',
             'item\tcheck\tstep\t-\tA person checks it',
             'item\tmine\tstep\t-\tOnly the agent',
-            'example\truimte-context plan set build --state done',
+            'example\tplan_set build --state done',
             'ids\tIds are for your commands. When you talk to the person, name the plan and its steps by their title, never by id'
         ]);
         expect(events.map((event) => event.event)).toEqual(['plan.changed', 'plan.created']);
@@ -151,7 +151,7 @@ describe('plan verbs', () => {
         });
         const bySomeone = await runVerb(daemon, 'chat-lead', 'plan', ['set', 'build', '--state', 'done']);
         expect(refusalCode(bySomeone)).toBe('set-by-person');
-        expect(bySomeone.at(-1)).toStartWith('see\truimte-context plan note');
+        expect(bySomeone.at(-1)).toStartWith('see\tplan_note');
         expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['remove', 'build']))).toBe('set-by-person');
         expect((await runVerb(daemon, 'chat-lead', 'plan', ['note', 'build', '--text', 'Fixed in abc123']))[0]).toStartWith(`plan\t${planId}\trev 2`);
 
@@ -233,7 +233,7 @@ describe('plan verbs', () => {
         }
         const refused = await runVerb(daemon, 'chat-lead', 'plan', ['new', `--document=${DOCUMENT}`]);
         expect(refusalCode(refused)).toBe('too-many-plans');
-        expect(refused.at(-1)).toStartWith('see\truimte-context plan delete --plan P');
+        expect(refused.at(-1)).toStartWith('see\tplan_delete --plan P');
         const oldest = (await daemon.plans.read('chat-lead'))[0]!.id;
         expect(await runVerb(daemon, 'chat-lead', 'plan', ['delete', '--plan', oldest])).toEqual([`deleted\t${oldest}\tShip the feature`]);
         expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['new', `--document=${DOCUMENT}`]))).toBeUndefined();

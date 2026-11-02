@@ -8,10 +8,7 @@ import { AgentDatabases, connectionTarget } from '../database/agent-databases.ts
 import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseService } from '../database/database-service.ts';
 import { FakeHelper, type FakeAnswer } from '../database/fake-helper.ts';
-import { runContext } from '../cli/context.ts';
-import { CONTEXT_ENV, routeContextCli } from '../cli/context-test-helpers.ts';
 import { MachineHome } from '../fs/machine-home.ts';
-import { handleCanvasRequest } from './canvas-route.ts';
 import { SHOWN_LINE } from './visual-verb.ts';
 import { type CanvasHost, type Noun, type Verb } from './verb.ts';
 import { printed } from './verb-test-helpers.ts';
@@ -380,26 +377,6 @@ describe('ruimte-context database', () => {
         ]);
         host = { ...host, projects: { ...host.projects, locate: () => ({ projectId: 'scratch', folder: join(root, 'home', 'scratch'), canvasId: null }) } };
         expect((await run(['list']))[0]).toStartWith('refused\tdatabase-no-project\tYou are a chat in the Chats project');
-    });
-
-    test('the CLI sends a query on stdin through the canvas route and prints the rows, and a refusal on stderr', async () => {
-        script = (method) => (method === 'page' ? { result: { ...PAGE, rows: PAGE.rows.slice(0, 2), hasMore: false } } : undefined);
-        const cli = routeContextCli((request, pathname) =>
-            handleCanvasRequest(request, pathname, { targetForToken: (token) => (token === 'tok' ? 'chat-1' : null), host })
-        );
-
-        try {
-            const env = CONTEXT_ENV;
-            expect(await runContext(['database', 'query', 'local'], env, async () => 'SELECT id, note, total\nFROM orders;\n')).toBe(0);
-            expect(cli.output.stdout).toBe(
-                ['columns\tid\tnote\ttotal', 'row\t1\t<script>alert(1)</script>\t1234.50', 'row\t2\tNULL\t99.00', 'rows\t2', 'elapsed\t1.3 ms', ''].join('\n')
-            );
-            expect(helper.written.find((message) => message.method === 'page')?.params.sql).toBe('SELECT id, note, total\nFROM orders;');
-            expect(await runContext(['database', 'execute', 'local', '--sql', 'DELETE FROM orders'], env)).toBe(3);
-            expect(cli.output.stderr).toStartWith('refused\tdatabase-write-off\t');
-        } finally {
-            cli.restore();
-        }
     });
 
     test('help explains when to use it and prints every action', async () => {

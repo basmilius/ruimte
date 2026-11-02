@@ -18,16 +18,16 @@ enum DiagramAgentChoice: Hashable {
     case chat(id: String)
 }
 
-/// What the agent is asked. Diagrams are written by an agent, never drawn on a phone, so the message names the verb
+/// What the agent is asked. Diagrams are written by an agent, never drawn on a phone, so the message names the tool
 /// that writes one and the file it is in.
 enum DiagramAgentPrompt {
     static func text(name: String, diagramID: String, request: String, empty: Bool) -> String {
         let request = request.trimmingCharacters(in: .whitespacesAndNewlines)
         if empty {
-            return "Fill the empty diagram \"\(name)\" with `ruimte-context view diagram \(diagramID)`. It should show "
+            return "Fill the empty diagram \"\(name)\" with `view_diagram \(diagramID)`. It should show "
                 + request
         }
-        return "Change the diagram \"\(name)\" with `ruimte-context view diagram \(diagramID)`. "
+        return "Change the diagram \"\(name)\" with `view_diagram \(diagramID)`. "
             + "Read what it holds now in .ruimte/diagrams/\(diagramID).json first. " + request
     }
 
@@ -223,7 +223,7 @@ struct DiagramAgentSheet: View {
     }
 }
 
-/// An empty diagram asks what it should show and which chat draws it, as `ruimte-context view diagram` would.
+/// An empty diagram asks what it should show and which chat draws it, as `view_diagram` would.
 struct DiagramEmptyState: View {
     @Bindable var model: DiagramAgentModel
     let sent: (String) -> Void

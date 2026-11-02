@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
 import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
 import { startCwdGuard } from '../canvas/project-paths.ts';
 import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
+import { answerOf } from '../canvas/verb-test-helpers.ts';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli } from '@adecore/agents/testing';
@@ -225,20 +225,11 @@ async function boot(): Promise<Daemon> {
     return daemon;
 }
 
-/* A team verb run by the lead chat, the way `ruimte-context team` posts it. */
+/* A team verb run by the lead chat, as its `agent_team` call runs it. */
 async function openTeam(daemon: Daemon, extra: string[] = []): Promise<string[]> {
-    const path = `${CANVAS_PATH}/team`;
-    const response = await handleCanvasRequest(
-        new Request(`http://127.0.0.1${path}`, {
-            method: 'POST',
-            headers: { authorization: 'Bearer lead' },
-            body: JSON.stringify({ argv: ['--label', 'Crew', '--roles', JSON.stringify(TEAM), ...extra] })
-        }),
-        path,
-        { targetForToken: (token) => (token === 'lead' ? 'chat-lead' : null), host: daemon.host }
-    );
-    expect(response.status).toBe(200);
-    const lines = (await response.text()).trim().split('\n');
+    const { refused, lines } = await answerOf('team', ['--label', 'Crew', '--roles', JSON.stringify(TEAM), ...extra], 'chat-lead', daemon.host);
+    expect(refused).toBe(false);
+
     return lines.slice(1).map((line) => line.split('\t')[0]!);
 }
 

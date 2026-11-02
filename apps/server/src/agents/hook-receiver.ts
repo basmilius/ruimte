@@ -1,5 +1,5 @@
 import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
-import { bearerToken } from '../canvas/canvas-route.ts';
+import { bearerToken } from './bearer.ts';
 import { isRecord } from '../is-record.ts';
 import type { HookResult } from '../sessions/manager.ts';
 import { hasHooks, takesHookContext } from './hooks.ts';

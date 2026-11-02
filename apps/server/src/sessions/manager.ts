@@ -20,7 +20,7 @@ import { errorText } from '../error-text.ts';
 import { CodedError, SingleFlight } from '@adecore/agents';
 import { ClientSinks } from '../client-sinks.ts';
 import { countUsage } from '../stats/usage-stats.ts';
-import { prependPath } from '../env-path.ts';
+import { TERMINAL_TOKEN_VARIABLE, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
 
 type SessionErrorCode =
     | 'session-exists'
@@ -112,10 +112,8 @@ export interface SessionManagerOptions {
     env?: Record<string, string | undefined>;
     // Where the CLIs' hooks POST to; without it no hook variables reach the shell.
     hookUrl?: string;
-    // Where an agent reads its linked context; the hook token doubles as its bearer.
+    // Where an agent reads its linked context, with Ruimte's MCP server beside it; the hook token doubles as its bearer.
     contextUrl?: string;
-    // Put in front of PATH, so `ruimte-context` is there for every shell.
-    binDir?: string;
     // What a session may read the moment it starts; a shell with links gets one line about the CLI above its first prompt.
     contextFor?: (sessionId: string) => ContextSource[];
     // The prompt an agent node was made with, taken once: the CLI starts on it instead of on an empty turn.
@@ -210,7 +208,6 @@ export class SessionManager {
     private readonly titleReadAt = new Map<string, number>();
     hookUrl: string | null;
     contextUrl: string | null;
-    private readonly binDir: string | null;
     private readonly contextFor: (sessionId: string) => ContextSource[];
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     private readonly firstNotices: (sessionId: string) => string[];
@@ -243,7 +240,6 @@ export class SessionManager {
         this.env = options.env ?? process.env;
         this.hookUrl = options.hookUrl ?? null;
         this.contextUrl = options.contextUrl ?? null;
-        this.binDir = options.binDir ?? null;
         this.contextFor = options.contextFor ?? (() => []);
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.firstNotices = options.firstNotices ?? (() => []);
@@ -846,12 +842,13 @@ export class SessionManager {
         }
         await this.prepareAgent(launch.kind);
         const note = this.noteFor(sessionId);
+        const mcp = this.mcpEndpoint();
         if (launch.resume) {
-            return resumeOrFreshCommand(launch, launch.resume, note);
+            return resumeOrFreshCommand(launch, launch.resume, note, mcp);
         }
         // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
         const prompt = (await this.firstPrompt(sessionId)) ?? undefined;
-        const line = terminalCommand(launch, prompt, note);
+        const line = terminalCommand(launch, prompt, note, mcp);
 
         return this.platform === 'win32' && prompt?.startsWith('/') ? `${keepingFromPathConversion(prompt)} ${line}` : line;
     }
@@ -864,13 +861,22 @@ export class SessionManager {
         // A person who started another CLI by hand in this shell is resumed as that CLI, not as the node's.
         const launch: AgentLaunch = session.launch?.kind === agent.kind ? session.launch : { kind: agent.kind };
         const note = this.noteFor(session.id);
+        const mcp = this.mcpEndpoint();
         if (agent.transcriptPath === null) {
-            return resumeOrFreshCommand(launch, agent.agentSessionId, note);
+            return resumeOrFreshCommand(launch, agent.agentSessionId, note, mcp);
         }
         if (existsSync(agent.transcriptPath)) {
-            return resumeCommand(launch, agent.agentSessionId);
+            return resumeCommand(launch, agent.agentSessionId, mcp);
         }
-        return freshCommand(launch, note);
+        return freshCommand(launch, note, mcp);
+    }
+
+    /* Ruimte's MCP server for an agent this manager launches, which needs the hook token the session carries as its bearer. */
+    private mcpEndpoint(): McpEndpoint | undefined {
+        if (this.contextUrl === null || this.hookUrl === null) {
+            return undefined;
+        }
+        return { url: mcpUrlOf(this.contextUrl), tokenVariable: TERMINAL_TOKEN_VARIABLE };
     }
 
     private spawn(options: {
@@ -897,9 +903,6 @@ export class SessionManager {
         }
         if (this.contextUrl) {
             env.RUIMTE_CONTEXT_URL = this.contextUrl;
-        }
-        if (this.binDir) {
-            prependPath(env, this.binDir, this.platform);
         }
         if (!options.command && !options.launch && options.args.every((arg) => ['-l', '-i'].includes(arg))) {
             this.shellEnvironment?.(options.shell, env);

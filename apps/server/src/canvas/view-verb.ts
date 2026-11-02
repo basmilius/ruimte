@@ -8,7 +8,7 @@ import { PROJECT_FLAG, PROJECT_LINE } from './reach.ts';
 // A canvas with more nodes than this would bury the one line that says the view is gone.
 const DELETED_NODE_LINES = 20;
 
-const LISTED = 'ruimte-context view list lists them';
+const LISTED = 'view_list lists them';
 
 const nameArgument = titleField('A view name', 'view new needs a name');
 
@@ -26,7 +26,7 @@ const newSub = defineActionVerb('view', {
             syntax: '--connection C',
             need: 'database (required)',
             field: 'connection',
-            more: 'the id or the name of a connection; ruimte-context database list names them'
+            more: 'the id or the name of a connection; database_list names them'
         },
         {
             syntax: '--table T',
@@ -49,7 +49,7 @@ const newSub = defineActionVerb('view', {
         'kind\tseparator\tA line in the sidebar with a label, which never opens and holds nothing',
         'kind\tsubheader\tA heading over the rows under it, which never opens and holds nothing',
         'kind\tchat, terminal\tOpened empty, with no CLI and no directory; the id is the session id',
-        'kind\tdatabase\tOne table of a connection of this project, as rows or as structure; reading the rows stays with ruimte-context database. The view is written down with the connection id, so it is as private as the connection is',
+        'kind\tdatabase\tOne table of a connection of this project, as rows or as structure; reading the rows stays with the database_* tools. The view is written down with the connection id, so it is as private as the connection is',
         'paths\t--path is resolved against the project folder, never against your own directory; it may also be absolute and then points outside',
         `limit\tA project holds at most ${MAX_PROJECT_VIEWS} views`,
         'note\tThe view is written down as yours, which is what lets you remove it again with view delete',
@@ -184,7 +184,7 @@ const deleteSub = defineActionVerb('view', {
         'rule\tA machine can free every view of every project on it; a refusal says whether this one does',
         'rule\tNever the view you are standing in, since that would end the session asking, which is also why this can never empty the sidebar',
         'note\tA canvas takes its nodes with it, so the shells and agents on it stop where they are',
-        'see\truimte-context view list\tthe last column says which views this rule lets you remove'
+        'see\tview_list\tthe last column says which views this rule lets you remove'
     ],
     positionals: oneArgument('view delete needs the id of a view', 'view delete takes one view id and nothing else'),
     flags: z.object({}),
@@ -211,15 +211,14 @@ const listSub = defineActionVerb('view', {
     detail: [
         'prints\tid\tkind\tname\tdelete\twhy\ticon\tflag\tone line per view, in the order the sidebar has them',
         `kinds\t${VIEW_KINDS.join('\t')}`,
-        'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
+        'delete\tyes or no: whether view_delete would remove that view for you, with the reason beside it',
         'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
-        'icon\tThe Lucide name ruimte-context view icon gave the view, or - for one that wears the mark of its kind',
-        'flag\tThe color of the flag the person put on the view, or - for none; ruimte-context flag sets one',
+        'icon\tThe Lucide name view_edit gave the view, or - for one that wears the mark of its kind',
+        'flag\tThe color of the flag the person put on the view, or - for none; flag sets one',
         'self\tThe row after the views is self and the id of the view you are in',
         REVISION_ROW,
         'note\tA separator is a line in the sidebar and has an empty name',
-        PROJECT_LINE,
-        'see\truimte-context help view\tmaking a view, renaming it, marking it, moving it, removing it'
+        PROJECT_LINE
     ],
     positionals: z.tuple([], { error: 'view list takes no arguments' }),
     flags: z.object({ project: PROJECT_FLAG }),
@@ -249,7 +248,7 @@ export const VIEW_ACTIONS: readonly Action[] = [listSub, newSub, renameSub, icon
 export const VIEW_SUMMARY = 'Lists, makes, renames, marks, moves, removes and shows the views of the project, and writes a diagram';
 
 export const VIEW_DETAIL: readonly string[] = [
-    'see\truimte-context view list\tthe views of the project, which is where every id here comes from',
+    'see\tview_list\tthe views of the project, which is where every id here comes from',
     'note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a table of a database, a page, a session of its own, or a line between them',
     'note\tThe views of a project are shared, so what you make here is what every person with this project open sees'
 ];

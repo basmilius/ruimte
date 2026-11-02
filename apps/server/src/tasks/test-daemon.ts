@@ -5,8 +5,8 @@ import { NODE_SIZE, type AgentKind, type ChatItem, type ChatTurnItem, type Proje
 import { agentStates } from '../agents/agent-state.ts';
 import { chatRequests, AgentLineageStore, NoticeNotes, NoticeStore, restartBackgroundLimits, TaskStore } from '@adecore/agents/coordination';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
 import type { CanvasHost, VisualHost } from '../canvas/verb.ts';
+import { answerOf } from '../canvas/verb-test-helpers.ts';
 import { AttachmentStore, ChatStore, VisualStore } from '@adecore/agents/chat';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { continueOn } from '../chat/continue-on.ts';
@@ -221,6 +221,8 @@ export async function bootTestDaemon({
         store: new ChatStore(home, { attachments, isSidecar: isPlanFileName }),
         attachments,
         ...(checkpoints ? { checkpoints } : {}),
+        // Never listened on: a chat's CLI is a fake, and the URL only rides on its line and in its environment.
+        contextUrl: 'http://127.0.0.1:4210/context',
         spawn: (options) => {
             chatEnvs.push(options.env);
             chatCommands.push([...options.command]);
@@ -549,13 +551,7 @@ export function turnsOf(daemon: Pick<TestDaemon, 'chats'>, chatId: string): Chat
     return itemsOf(daemon, chatId).filter((item): item is ChatTurnItem => item.kind === 'turn');
 }
 
-/* A verb the node `caller` runs, the way `ruimte-context` posts it; the token is the caller's id. */
+/* A verb the node `caller` runs as a tool call does: its lines, or a refusal as its `refused` rows. */
 export async function runVerb(daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, argv: string[]): Promise<string[]> {
-    const path = `${CANVAS_PATH}/${name}`;
-    const response = await handleCanvasRequest(
-        new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: `Bearer ${caller}` }, body: JSON.stringify({ argv }) }),
-        path,
-        { targetForToken: (token) => token, host: daemon.host }
-    );
-    return (await response.text()).trim().split('\n');
+    return (await answerOf(name, argv, caller, daemon.host)).lines;
 }

@@ -4,7 +4,7 @@ import { STOP_GRACE_MS } from '../launches/runner.ts';
 import { defineActionVerb, runAction } from './action-verb.ts';
 import { SCOPE_LINE, field, orNote, oneArgument, TAIL_FLAG, jsonFlag } from './verb.ts';
 
-const LAUNCH_PARAM = { syntax: '<launch>', need: 'required', field: 'launch', more: 'ruimte-context launches list names them' } as const;
+const LAUNCH_PARAM = { syntax: '<launch>', need: 'required', field: 'launch', more: 'launch_list names them' } as const;
 
 const APPROVAL_LINE =
     'approval\tA launch starts only once a person approved it on this machine for the command, folder and environment it has now; a changed launch needs that again';
@@ -22,7 +22,7 @@ const listAction = defineActionVerb('launches', {
         'prints\tid\tname\tkind\tstate\tapproved\tport\turl\tmembers\tone line per launch, in the order of the menu',
         'kind\tservice runs until stopped and may wait on the port of its url; task runs once and ends; group starts the launches in members',
         'state\tstarting, running, stopping, or exited:<code>; a dash for one that has not run since the machine started, and for a group',
-        'approved\tyes or no; see ruimte-context help launches start',
+        'approved\tyes or no; launch_control starts only an approved launch',
         'columns\tport, url and members are a dash when there are none; members is comma separated'
     ],
     positionals: z.tuple([], { error: 'launches list takes no arguments' }),
@@ -42,7 +42,7 @@ const listAction = defineActionVerb('launches', {
                     launch.members.length === 0 ? '-' : launch.members.map(field).join(',')
                 ].join('\t')
             ),
-            'This project has no launches; a person adds them from the launch chip in the toolbar, and ruimte-context launches new adds one they approve'
+            'This project has no launches; a person adds them from the launch chip in the toolbar, and launch_new adds one they approve'
         );
     }
 });
@@ -81,7 +81,7 @@ const readAction = defineActionVerb('launches', {
 function startedLines(verb: string, output: { launchId: string; name: string; kind: string; members: string[] }): string[] {
     return [
         `${verb}\t${field(output.launchId)}\t${field(output.name)}${output.members.length === 0 ? '' : `\t${output.members.map(field).join(',')}`}`,
-        `see\truimte-context launches list\twhether it came up; ruimte-context launches read ${field(output.launchId)} for its output`
+        `see\tlaunch_list\twhether it came up; launch_read ${field(output.launchId)} for its output`
     ];
 }
 
@@ -126,7 +126,7 @@ const stopAction = defineActionVerb('launches', {
     usage: '<launch>',
     params: [LAUNCH_PARAM],
     detail: [
-        'prints\tstopping\tid\tname\tcount\thow many of its launches ran and are being stopped; ruimte-context launches list says when they are gone',
+        'prints\tstopping\tid\tname\tcount\thow many of its launches ran and are being stopped; launch_list says when they are gone',
         `signals\tCtrl+C first, then SIGTERM after ${STOP_GRACE_MS / 1_000} seconds; never SIGKILL, which only a person gives with Force stop`,
         APPROVAL_LINE,
         'refused\tlaunch-held\tnobody approved it here as it stands now, so an agent may not stop it: ask the person, whose launch chip in the toolbar asks for it',
@@ -232,7 +232,7 @@ const editAction = defineActionVerb('launches', {
     detail: [
         'prints\tsaved\tid\tname\tkind\tshared or private, then held',
         'keeps\tWhat you leave out stays as it was, its kind and its file too; --env sets the variables it names and leaves the rest',
-        "secret\tA variable that holds a secret is the person's, and refused with secret-variable; ruimte-context secret asks them for one",
+        "secret\tA variable that holds a secret is the person's, and refused with secret-variable; secret_request asks them for one",
         APPROVAL_LINE,
         'refusals\tlaunches-invalid\twrong-kind\tcommand-required\tsecret-variable\tunknown-launch\tambiguous-launch\tthe codes this action refuses with'
     ],

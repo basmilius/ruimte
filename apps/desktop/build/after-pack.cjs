@@ -22,7 +22,7 @@ module.exports = async (context) => {
     const daemon = join(bin, platform === 'win32' ? 'ruimte.exe' : 'ruimte');
     expectFiles([daemon], `No daemon at ${daemon}; run \`bun run --cwd apps/server compile\` for this os and arch first`);
     if (platform === 'win32') {
-        for (const name of ['ruimte-context.exe', join('native', 'adecore-database.exe')]) {
+        for (const name of [join('native', 'adecore-database.exe')]) {
             expectFiles([join(bin, name)], `No ${name} in ${bin}; run \`bun run --cwd apps/server compile -- --os win --arch x64\` first`);
         }
     }

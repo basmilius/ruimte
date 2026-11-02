@@ -1,6 +1,7 @@
 import { isIdle, type MachineWork } from '@ruimte/contracts';
 import { HOOK_EVENTS } from '../agents/hooks.ts';
 import type { ServerConfig } from '../config.ts';
+import type { DeviceDriver } from '../devices/agent-driver.ts';
 import { holdsForeground } from '../processes/foreground.ts';
 import { DarwinListenerProbe } from '../processes/listeners.ts';
 import { ProcessMonitor } from '../processes/monitor.ts';
@@ -31,11 +32,13 @@ interface ProcessesInput {
     work: AgentWorkBundle;
     launches: LaunchesBundle;
     projects: ProjectStore;
+    /* Frees the devices an agent claimed once its terminal ended. */
+    devices: Pick<DeviceDriver, 'nodeClosed'>;
     /* Ends the daemon for a reason it logs. */
     shutdown(reason: string): Promise<void>;
 }
 
-export async function wireProcesses({ config, machineId, agents, work, launches, projects, shutdown }: ProcessesInput): Promise<ProcessesBundle> {
+export async function wireProcesses({ config, machineId, agents, work, launches, projects, devices, shutdown }: ProcessesInput): Promise<ProcessesBundle> {
     const { sessions, chats } = agents;
     const sampler = await createSampler(process.platform, config.home);
     const sessionPorts = new SessionPorts({
@@ -96,6 +99,7 @@ export async function wireProcesses({ config, machineId, agents, work, launches,
         selfUpdate.nudge();
         if (sessions.get(sessionId)?.exited !== false) {
             work.tasks.terminals.ended(sessionId);
+            devices.nodeClosed(sessionId);
         }
     };
     sessions.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);

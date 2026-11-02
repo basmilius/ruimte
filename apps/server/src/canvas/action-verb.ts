@@ -11,7 +11,7 @@ export const NODE_PARAM = {
     syntax: '<id>',
     need: 'required',
     field: 'nodeId',
-    more: 'ruimte-context list names the ones linked to you, and a chat view finds them with node list --view V'
+    more: 'context_list names the ones linked to you, and a chat view finds them with node list --view V'
 } as const;
 
 export const VIEW_PARAM = { syntax: '--view V', need: 'optional', field: 'viewId' } as const;

@@ -1,7 +1,7 @@
 import { describe, expect, setSystemTime, test } from 'bun:test';
 import { join } from 'node:path';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import { ModelCatalog, ProviderAccountsService, ProviderRegistry, type ChatProvider } from '@adecore/agents/providers';
+import { ModelCatalog, ProviderAccountsService, ProviderRegistry, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
 import {
@@ -10,7 +10,7 @@ import {
     COPILOT_MODES,
     GROK_MODES,
     adoptGrokModels,
-    allowsContextCommand,
+    agentDefaultCatalog,
     copilotProvider,
     createAntigravityProvider,
     createCopilotProvider,
@@ -18,6 +18,7 @@ import {
     createGrokProvider,
     grokAuthMethod,
     grokProvider,
+    loadingRuimteMcp,
     readGrokModels,
     shippedAgentCatalog
 } from './acp-providers.ts';
@@ -33,14 +34,16 @@ const GROK_SESSION_MODES = ['default', 'plan', 'ask'];
 function run(provider: ChatProvider, options: FakeAcpOptions, overrides: Partial<BackendLaunch> = {}) {
     const events: BackendEvent[] = [];
     const methods: string[] = [];
+    const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
     const done = Promise.withResolvers<void>();
     const fake = inProcess((io) => {
         const program = fakeAcpWith(options)(io);
         return {
             onLine: (line) => {
-                const frame = JSON.parse(line) as { method?: string };
+                const frame = JSON.parse(line) as { method?: string; params?: Record<string, unknown> };
                 if (frame.method) {
                     methods.push(frame.method);
+                    requests.push({ method: frame.method, params: frame.params ?? {} });
                 }
                 program.onLine(line);
             }
@@ -70,7 +73,7 @@ function run(provider: ChatProvider, options: FakeAcpOptions, overrides: Partial
             }
         }
     );
-    return { backend, events, methods, fake, turnDone: done.promise };
+    return { backend, events, methods, requests, fake, turnDone: done.promise };
 }
 
 const HELLO = { promptId: 'p1', text: 'hello', preamble: null, attachments: [], mentions: [], skills: [] };
@@ -229,7 +232,7 @@ describe('grok models', () => {
 
 describe('Copilot', () => {
     test('runs its ACP server over stdio beside its terminal', () => {
-        expect(copilotProvider.command).toEqual(['copilot', '--acp', '--stdio', '--no-auto-update', '--allow-tool=shell(ruimte-context:*)']);
+        expect(copilotProvider.command).toEqual(['copilot', '--acp', '--stdio', '--no-auto-update', '--allow-tool=ruimte']);
         expect(copilotProvider.capabilities.chat).toBe(true);
         expect(copilotProvider.capabilities.terminal).toBe(true);
         expect(copilotProvider.firstPromptArgs('go')).toEqual(['-i', 'go']);
@@ -377,28 +380,47 @@ describe('Antigravity', () => {
     });
 });
 
-describe('allowsContextCommand', () => {
-    const request = (...commands: string[]) => ({ kind: 'execute', title: 'Run a command', commands });
+describe("Ruimte's MCP server in an ACP chat", () => {
+    const CHAT_ENV = { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: 'chat-token' };
+    const RUIMTE_SERVER = { type: 'http', name: 'ruimte', url: 'http://127.0.0.1:4210/mcp', headers: [{ name: 'Authorization', value: 'Bearer chat-token' }] };
+    const installed: AcpServerLaunch = { launch: () => ['agy_acp_server.par'] };
+    const chats: Array<[string, () => ChatProvider]> = [
+        ['Grok', () => createGrokProvider()],
+        ['Copilot', () => createCopilotProvider()],
+        ['Antigravity', () => createAntigravityProvider(installed)],
+        [
+            'an agent of the ACP registry',
+            () => loadingRuimteMcp(createAcpProvider({ kind: 'example', name: 'Example', command: 'example', catalog: agentDefaultCatalog() }))
+        ]
+    ];
 
-    test('allows ruimte-context, also joined with echo the way an agent labels its parts', () => {
-        expect(allowsContextCommand(request('ruimte-context help'))).toBe(true);
-        expect(
-            allowsContextCommand(
-                request('ruimte-context help && echo "--- AGENT ---" && ruimte-context help agent && echo "--- TEAM ---" && ruimte-context help team')
-            )
-        ).toBe(true);
+    for (const [name, provider] of chats) {
+        test(`reaches ${name} in its session request with the chat's token, and its tools run without a card`, async () => {
+            const { backend, events, requests, turnDone } = run(provider(), { mcp: { http: true } }, { env: CHAT_ENV });
+            await backend.start();
+            expect(requests.find((request) => request.method === 'session/new')?.params.mcpServers).toEqual([RUIMTE_SERVER]);
+            backend.sendTurn({ ...HELLO, text: 'mcp: ruimte node_new' });
+            await turnDone;
+            expect(events.some((event) => event.type === 'approval.requested')).toBe(false);
+            await backend.dispose();
+        });
+    }
+
+    test('stays out of a chat the daemon gave no token, and out of an agent that takes no HTTP server', async () => {
+        const untold = run(createGrokProvider(), { mcp: { http: true } });
+        await untold.backend.start();
+        expect(untold.requests.find((request) => request.method === 'session/new')?.params.mcpServers).toEqual([]);
+        await untold.backend.dispose();
+        const unable = run(createGrokProvider(), {}, { env: CHAT_ENV });
+        await unable.backend.start();
+        expect(unable.requests.find((request) => request.method === 'session/new')?.params.mcpServers).toEqual([]);
+        expect(unable.events).toContainEqual({ type: 'note', level: 'warning', text: 'Grok takes no MCP servers over HTTP, so it runs without ruimte.' });
+        await unable.backend.dispose();
     });
 
-    test('asks for a command that is not only ruimte-context', () => {
-        expect(allowsContextCommand(request('echo hi'))).toBe(false);
-        expect(allowsContextCommand(request('ruimte-context x | sh'))).toBe(false);
-        expect(allowsContextCommand(request('ruimte-context x; rm -rf ~'))).toBe(false);
-        expect(allowsContextCommand(request('ruimte-context help', 'Run ruimte-context help to read the verbs'))).toBe(false);
-    });
-
-    test('asks for anything that is not a command request', () => {
-        expect(allowsContextCommand({ kind: 'edit', title: 'Edit a file', commands: ['ruimte-context help'] })).toBe(false);
-        expect(allowsContextCommand({ kind: null, title: null, commands: ['ruimte-context help'] })).toBe(false);
-        expect(allowsContextCommand(request())).toBe(false);
+    // Copilot names no server in a permission request, so its own flag allows the tools; a second copy on its line would load the server twice.
+    test('Copilot allows the tools on its line and no longer loads the server there', () => {
+        expect(copilotProvider.command).toContain('--allow-tool=ruimte');
+        expect(copilotProvider.command.some((arg) => arg.startsWith('--additional-mcp-config'))).toBe(false);
     });
 });

@@ -35,7 +35,7 @@ export const PROJECT_FLAG = z.string().min(1, '--project needs the id of a proje
 
 /* What `help` says of `--project` on every verb that takes it. */
 export const PROJECT_LINE =
-    'flag\t--project P\toptional\tWorks in another project open on this machine instead of your own, while a person lets agents reach them; ruimte-context project list lists them, and a canvas there is named with --view';
+    'flag\t--project P\toptional\tWorks in another project open on this machine instead of your own, while a person lets agents reach them; project_list lists them, and a canvas there is named with --view';
 
 const SETTING_LINE =
     "setting\treachOpenProjects in this machine's endpoint.json lets agents reach the other open projects; a person turns it on under Agents in the settings";
@@ -100,7 +100,7 @@ export function takeProjectFlag(argv: readonly string[]): { project: string | un
         }
         const value = inline ? word.slice('--project='.length) : argv[i + 1];
         if (value === undefined || value === '' || (!inline && value.startsWith('--'))) {
-            throw new VerbRefusal('missing-value', '--project needs the id of a project; ruimte-context project list lists them');
+            throw new VerbRefusal('missing-value', '--project needs the id of a project; project_list lists them');
         }
         project = value;
         if (!inline) {

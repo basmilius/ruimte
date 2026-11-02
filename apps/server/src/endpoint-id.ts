@@ -241,7 +241,7 @@ export class EndpointIdentity {
         return this.resumeLimited;
     }
 
-    /* Whether `ruimte-context visual show` publishes; pages already in a thread show either way. */
+    /* Whether `visual_show` publishes; pages already in a thread show either way. */
     get visualReplies(): boolean {
         return this.visuals;
     }

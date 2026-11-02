@@ -85,7 +85,7 @@ export const DIAGRAM_EXAMPLE = JSON.stringify({
 });
 
 const DETAIL: readonly string[] = [
-    "stdin\tThe document as JSON, piped in or as a heredoc: ruimte-context view diagram <viewId> <<'EOF' ... EOF",
+    "stdin\tThe document as JSON, piped in or as a heredoc: view_diagram <viewId> <<'EOF' ... EOF",
     'prints\tview\trev\tnodes\tgroups\tedges\tthe view written, its new rev, and how many nodes, groups and edges it now holds',
     'document\t{ meta, nodes, groups, edges }\tone JSON object; version and rev belong to the daemon and are ignored when present',
     ...fieldLines('meta.', DiagramMetaSchema.shape, META_FIELDS),
@@ -110,7 +110,7 @@ export const diagramAction = defineActionVerb('view', {
             syntax: '<viewId>',
             need: 'required',
             field: 'viewId',
-            more: 'ruimte-context view list lists them, ruimte-context view new <name> --kind diagram makes one'
+            more: 'view_list lists them, view_new <name> --kind diagram makes one'
         },
         {
             syntax: '--document JSON',

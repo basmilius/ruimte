@@ -110,6 +110,8 @@ export class RecordingBackend implements DeviceBackend {
     info: DeviceInfo;
     shot = pngOf(1206, 2622);
     lists = 0;
+    /* The devices it was asked to start, each of which then runs. */
+    readonly boots: string[] = [];
     clipboard = '';
     /* The files of the recordings it began, and whether each was stopped. */
     readonly recordings: Array<{ file: string; stopped: boolean }> = [];
@@ -123,6 +125,13 @@ export class RecordingBackend implements DeviceBackend {
     list(): Promise<DeviceInfo[]> {
         this.lists += 1;
         return Promise.resolve([this.info]);
+    }
+
+    boot(deviceId: string): Promise<DeviceInfo> {
+        this.boots.push(deviceId);
+        this.info = { ...this.info, state: 'booted' };
+
+        return Promise.resolve(this.info);
     }
 
     createSource(): DeviceSource {

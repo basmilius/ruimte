@@ -206,7 +206,7 @@ describe('running it', () => {
         expect(notes.at(-1)).toMatchObject({
             noteId: 'after-settle-turn-1-ended',
             note: 'Run tests ended with exit code 1.',
-            preamble: expect.stringContaining('ruimte-context launches read run-tests')
+            preamble: expect.stringContaining('launch_read run-tests')
         });
     });
 

@@ -8,6 +8,7 @@ describe('forgetInheritedSession', () => {
             RUIMTE_HOOK_TOKEN: 'hook',
             RUIMTE_CONTEXT_URL: 'http://127.0.0.1:4210/context',
             RUIMTE_CONTEXT_TOKEN: 'context',
+            RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp',
             RUIMTE_SESSION_ID: 'node-1',
             RUIMTE_HOME: '/tmp/ruimte-dev',
             RUIMTE_LABEL: 'box',
@@ -50,7 +51,7 @@ describe('parseServerArgs', () => {
         expect(config.label).toBe('box');
         expect(parseServerArgs([], { RUIMTE_LABEL: 'named' }).label).toBe('named');
         expect(() => parseServerArgs(['dance'], {})).toThrow('Unknown command');
-        expect(parseServerArgs(['context', 'read', 'abc'], {})).toMatchObject({ command: 'context', args: ['read', 'abc'] });
+        expect(() => parseServerArgs(['context', 'read', 'abc'], {})).toThrow('Unknown command');
         expect(parseServerArgs(['--version'], {}).command).toBe('version');
         expect(parseServerArgs(['service', 'install', '--port', '4300', '--no-broker'], {})).toMatchObject({
             command: 'service',
@@ -73,10 +74,7 @@ describe('parseServerArgs', () => {
         expect(parseServerArgs(['status'], {}).json).toBeUndefined();
         expect(() => parseServerArgs(['login', '--json'], {})).toThrow('--json and --check only go with status');
         expect(() => parseServerArgs(['--port', '1', 'service', 'install'], {})).toThrow('Usage: ruimte service');
-        expect(parseServerArgs(['context', 'node', 'note', '--text', 'hi', '--port=1'], {})).toMatchObject({
-            command: 'context',
-            args: ['node', 'note', '--text', 'hi', '--port=1']
-        });
+        expect(parseServerArgs(['extension', 'pack', '--port=1'], {})).toMatchObject({ command: 'extension', args: ['pack', '--port=1'] });
     });
 
     test('the door on the local network listens ten ports above the daemon unless a flag says otherwise', () => {

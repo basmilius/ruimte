@@ -225,7 +225,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     /*
      * A note becomes the opening prompt of a chat beside it. The prompt is only seeded, never sent:
      * the person reads it once more and presses Enter. The edge keeps the note readable to the agent
-     * through `ruimte-context`, so a note edited later still reaches it.
+     * through `context_read`, so a note edited later still reaches it.
      */
     const startAgentFromNote = async (provider: ProviderInfo, account?: string): Promise<void> => {
         canvas();

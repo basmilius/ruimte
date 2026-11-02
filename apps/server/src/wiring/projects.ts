@@ -11,6 +11,7 @@ import { modesSet } from '../sessions/mode-approvals.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { DatabasesBundle } from './databases.ts';
+import type { DevicesBundle } from './devices.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { TemplatesBundle } from './templates.ts';
@@ -43,6 +44,7 @@ interface ProjectsInput {
         databases(): DatabasesBundle;
         language(): LanguageBundle;
         templates(): TemplatesBundle;
+        devices(): DevicesBundle;
     };
 }
 
@@ -50,6 +52,7 @@ export async function wireProjects({ home, machineId, stores, agents, computer, 
     const { sessions, chats } = agents;
     const endSession = async (kind: 'terminal' | 'chat', nodeId: string): Promise<void> => {
         computer.nodeClosed(nodeId);
+        later.devices().deviceDriver.nodeClosed(nodeId);
         later.launches().secrets.nodeClosed(nodeId);
         agents.proposals.forget(nodeId);
         await later.work().endChildren.owe(nodeId);

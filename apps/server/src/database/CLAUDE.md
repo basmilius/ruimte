@@ -9,6 +9,6 @@
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
-- Agents read a project's databases through `ruimte-context database`, read-only by default: one SELECT or WITH statement through `page` on a read-only session, and a SQLite file only inside the project folder.
+- Agents read a project's databases through the `database_*` tools, read-only by default: one SELECT or WITH statement through `page` on a read-only session, and a SQLite file only inside the project folder.
 - Writing (`execute`) works only on a connection a person on this machine set to write, kept under `$RUIMTE_HOME/database-access`, never in the project (`agent-access.ts`), and never from `supervised`.
 - The daemon holds a password only in memory, handed over by a project client and bound to where the connection pointed then. It drops it when the last client lets the project go (`agent-passwords.ts`).

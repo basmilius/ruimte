@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Tool } from '@modelcontextprotocol/client';
 import { isRecord } from '../is-record.ts';
-import { ApiMcpPool, readApiMcpConfig, type ConnectApiMcp } from './api-mcp.ts';
+import { ApiMcpPool, mcpResultText, readApiMcpConfig, type ConnectApiMcp } from './api-mcp.ts';
 import type { ApiToolCall, ApiToolContext, ApiToolResult } from './api-tools.ts';
 import { extractApiPage, limitApiText, publicWebUrl, requestPublicWeb, type ApiWebRequest } from './api-web.ts';
 
@@ -157,23 +157,8 @@ export async function executeApiNetworkTool(
     }
     const result = await runMcp(() => connection.call(call.tool, args, active));
     active.throwIfAborted();
-    const content = result.content
-        .map((block) => {
-            if (block.type === 'text') {
-                return block.text;
-            }
-            if (block.type === 'resource' && 'text' in block.resource) {
-                return block.resource.text;
-            }
-            if (block.type === 'resource_link') {
-                return `Resource: ${block.name} ${block.uri}`;
-            }
-            return `[${block.type} content omitted: this model accepts text]`;
-        })
-        .join('\n\n');
-    const structured = result.structuredContent === undefined ? '' : `\n${JSON.stringify(result.structuredContent)}`;
     return {
-        output: apiTextResult({ server: call.server, tool: call.tool, isError: result.isError === true }, content + structured),
+        output: apiTextResult({ server: call.server, tool: call.tool, isError: result.isError === true }, mcpResultText(result)),
         failed: result.isError === true
     };
 }

@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import {
     deviceTools,
@@ -11,6 +13,7 @@ import {
 } from '@ruimte/contracts';
 import { realTimers, type Timers } from '../timers.ts';
 import { captureFile, pngSize, writeShot } from '../shots.ts';
+import { DeviceClaims } from './device-claims.ts';
 import { centerOf, findElements, flattenTree, type DeviceElement } from './device-tree.ts';
 import type { DeviceManager } from './manager.ts';
 
@@ -113,6 +116,7 @@ type Manager = Pick<
     DeviceManager,
     | 'list'
     | 'find'
+    | 'boot'
     | 'hold'
     | 'release'
     | 'input'
@@ -137,6 +141,9 @@ interface DeviceDriverOptions {
     timers?: Timers;
     sleep?: (ms: number) => Promise<void>;
     gate?: DeviceGate;
+    claims?: DeviceClaims;
+    /* The system's temporary folders, which an agent may hand a device a file from; a test names its own. */
+    tempFolders?: readonly string[];
 }
 
 interface Hold {
@@ -170,6 +177,8 @@ export class DeviceDriver {
     private readonly timers: Timers;
     private readonly sleep: (ms: number) => Promise<void>;
     private readonly gate: DeviceGate;
+    private readonly claims: DeviceClaims;
+    private readonly tempFolders: readonly string[];
     private readonly shots = new Map<string, { width: number; height: number }>();
     private readonly holds = new Map<string, Hold>();
     private readonly readings = new Map<string, Reading>();
@@ -180,10 +189,32 @@ export class DeviceDriver {
         this.timers = options.timers ?? realTimers;
         this.sleep = options.sleep ?? ((ms) => Bun.sleep(ms));
         this.gate = options.gate ?? OPEN_GATE;
+        this.claims = options.claims ?? new DeviceClaims();
+        this.tempFolders = options.tempFolders ?? [...new Set([tmpdir(), '/tmp'])];
     }
 
     list(): Promise<DeviceInfo[]> {
         return this.manager.list();
+    }
+
+    /* Claims the device for this agent, or refuses with `device-in-use` while another agent holds it. */
+    claim(caller: string, device: DeviceInfo): void {
+        this.claims.take(caller, device);
+    }
+
+    /* The terminal or chat behind `caller` ended, so the devices it claimed are free for another agent. */
+    nodeClosed(caller: string): void {
+        this.claims.release(caller);
+    }
+
+    /* Starts a simulator or an emulator the way a person's start from its node does; a phone has no start. */
+    boot(device: DeviceInfo): Promise<DeviceInfo> {
+        return this.manager.boot(device.backendId, device.platform, device.deviceId);
+    }
+
+    /* Where beside the project an agent may hand a device a file from: its chat's own folders and the system's temporary ones. */
+    pathFolders(caller: string): string[] {
+        return [join(this.home, 'attachments', caller), join(this.home, 'chats', `${caller}.visuals`), ...this.tempFolders];
     }
 
     find(reference: DeviceReference): Promise<DeviceInfo | null> {
@@ -262,19 +293,19 @@ export class DeviceDriver {
             throw new CodedError(
                 'stale-element',
                 `There is no state of ${device.name} for element ${handle} to come from: its elements last until the next state, and an agent that stopped calling for a minute has none`,
-                ['see\truimte-context device state <id>\treads the elements again']
+                ['see\tdevice_state\treads the elements again']
             );
         }
         const element = known.elements[handle];
         if (!element) {
             throw new CodedError('unknown-element', `The last state of ${device.name} has no element ${handle}; it has 0 to ${known.elements.length - 1}`, [
-                'see\truimte-context device state <id>\treads the elements again'
+                'see\tdevice_state\treads the elements again'
             ]);
         }
         const center = centerOf(element);
         if (center.x < 0 || center.y < 0 || center.x >= known.screen.width || center.y >= known.screen.height) {
             throw new CodedError('offscreen-element', `Element ${handle} of ${device.name} lies off the screen, so a tap cannot reach it`, [
-                'note\tScroll it into view with device swipe, then read the state again'
+                'note\tScroll it into view with a swipe of device_input, then read the state again'
             ]);
         }
         await this.press(caller, device, { x: center.x / known.screen.width, y: center.y / known.screen.height });
@@ -438,7 +469,7 @@ export class DeviceDriver {
         const size = this.screen(device);
         if (size === null) {
             throw new CodedError('no-shot', `There is no shot of ${device.name} yet, and coordinates are pixels of the last one`, [
-                'see\truimte-context device shot <id>\ttakes one'
+                'see\tdevice_shot\ttakes one'
             ]);
         }
         if (at.x >= size.width || at.y >= size.height) {

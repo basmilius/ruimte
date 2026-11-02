@@ -173,11 +173,10 @@ describe('chat attach', () => {
         expect(await stat(join(home, 'attachments', 'term-lead')).catch(() => null)).toBeNull();
     });
 
-    test('a call without the bytes the CLI reads is refused with the way to run it', async () => {
+    test('a call without the bytes the tool reads is refused, so the verb itself never opens a path', async () => {
         const daemon = await bootWithChat();
         const lines = await runVerb(daemon, 'chat-lead', 'chat', ['attach', '--file', '/etc/hosts']);
-        expect(refusalCode(lines)).toBe('bad-arguments');
-        expect(lines).toContain('detail\truimte-context help chat attach');
+        expect(lines).toEqual(['refused\tbad-arguments\tchat attach needs --file <path>, which the tool reads before the verb runs']);
     });
 
     test('the action takes no path: only a name and the bytes', () => {

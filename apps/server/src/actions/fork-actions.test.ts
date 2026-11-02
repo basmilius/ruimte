@@ -30,7 +30,7 @@ test('the agent fork verb sends its branch to the owned fork host under the call
 
     expect(await forkVerb.run(['child', '--branch', 'alternative', '--title', 'Alternative'], { caller: 'lead', host })).toEqual([
         'fork\tforked\tmain\talternative',
-        'next\tGive it work with ruimte-context task new forked --prompt T; its result wakes you once it settled'
+        'next\tGive it work with task_new forked --prompt T; its result wakes you once it settled'
     ]);
     expect(received).toHaveLength(1);
     expect(received[0]!.input).toEqual({ chatId: 'child', turnId: null, title: 'Alternative', branch: 'alternative' });

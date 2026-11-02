@@ -2,8 +2,8 @@ import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
 import { AGENT_HOLD_IDLE_MS, SWIPE_DEFAULT_MS } from '../devices/agent-driver.ts';
 import { machineDeviceLine } from '../actions/device-actions.ts';
-import { NODE_PARAM, VIEW_PARAM, defineActionVerb, runAction } from './action-verb.ts';
-import { SCOPE_LINE, VIEW_FLAG, VerbRefusal, field, oneArgument, orNote, yesNo } from './verb.ts';
+import { defineActionVerb, runAction } from './action-verb.ts';
+import { SCOPE_LINE, VerbRefusal, field, oneArgument, orNote, yesNo } from './verb.ts';
 
 function powerLine(state: ActionOutput<'device.inspect'>): string {
     const { power } = state;
@@ -16,19 +16,26 @@ function powerLine(state: ActionOutput<'device.inspect'>): string {
     return `power\t${power.level}%\t${power.plugged ? 'plugged' : 'battery'}\t${power.charging ? 'charging' : 'not-charging'}${power.simulated ? '\tsimulated' : ''}`;
 }
 
-/* The sentences about the line and the device, which every action of this noun is held to. */
+/* The device a call names: the id device list gives it, or a device node's id, with no line or view. */
+const DEVICE_PARAM = {
+    syntax: '<device>',
+    need: 'required',
+    field: 'nodeId',
+    more: 'device_list gives the ids; the id of a device node works too'
+} as const;
+
+/* The sentences about the device and the claim, which every action of this noun is held to. */
 const COMMON_DETAIL: readonly string[] = [
-    'line\tA line between you and that node is what lets you operate its device, whichever way it was drawn, the same line that lets you read it',
-    'chat view\tA chat view has no lines: it operates any device node of the canvas it names with --view, and without --view it is refused with view-required',
-    'reference\tA device node the person pointed you at with # in one of your messages you operate as over a line, with no --view; a device that is a view of its own you only read',
-    'device\tThe device is its own sandbox: no card asks the person, and computer use need not be on',
-    `session\tA tap works whether or not anyone has the node open; whoever does sees it happen, and can pause you or take over. Your hold on the device ends ${AGENT_HOLD_IDLE_MS / 1000} s after your last call`,
-    'refused\tdevice-not-booted\tthe device is not running: ask the person to start it from its node, since an agent never starts one',
-    'refused\tdevice-missing\tthis machine does not have that device right now: tell the person',
-    'refused\tno-shot, outside-shot\tcoordinates are pixels of the last shot: take one with device shot and count in it',
-    'refused\tstale-element, unknown-element, offscreen-element\tan element is a number of the last device state of that device: read the state again',
-    'refused\tpaused, taken-over\tthe person paused you or operates the device by hand from its node: wait and call again later, taking a shot first, or stop and tell them what is left. A shot still works',
-    'see\truimte-context device state <id>\twhat the device can do, the size of the last shot and the elements on screen',
+    'device\tThe device is its own sandbox: it needs no line or node, no card asks the person, and computer use need not be on',
+    'claim\tYour first call on a device claims it for you until your terminal or chat ends; another agent is refused with device-in-use meanwhile',
+    `session\tA tap works whether or not anyone shows the device; whoever does sees it happen, and can pause you or take over. Your hold on the screen ends ${AGENT_HOLD_IDLE_MS / 1000} s after your last call`,
+    'refused\tdevice-not-booted\tthe device is not running: start a simulator or an emulator with device_start; a phone the person turns on',
+    'refused\tdevice-in-use\tanother agent operates that device: pick another with device_list, or wait and call again',
+    'refused\tdevice-missing, unknown-device\tthis machine does not have that device right now: device_list says what it has',
+    'refused\tno-shot, outside-shot\tcoordinates are pixels of the last shot: take one with device_shot and count in it',
+    'refused\tstale-element, unknown-element, offscreen-element\tan element is a number of the last device_state of that device: read the state again',
+    'refused\tpaused, taken-over\tthe person paused you or operates the device by hand: wait and call again later, taking a shot first, or stop and tell them what is left. A shot still works',
+    'see\tdevice_state\twhat the device can do, the size of the last shot and the elements on screen',
     SCOPE_LINE
 ];
 
@@ -43,8 +50,8 @@ function pixelPair(flag: string) {
         });
 }
 
-function nodeTuple(word: string, rest: string) {
-    return oneArgument(`device ${word} needs the id of a device node`, `device ${word} takes one node id${rest}`);
+function deviceTuple(word: string, rest: string) {
+    return oneArgument(`device ${word} needs the id of a device, as device_list gives it`, `device ${word} takes one device id${rest}`);
 }
 
 /* Text past this many characters is cut in a state line, which says how long it was. */
@@ -102,7 +109,7 @@ function treeLines(state: ActionOutput<'device.inspect'>): string[] {
 }
 
 function doneLine(word: string, outcome: ActionOutput<'device.tap'>): string[] {
-    return [`done\t${word}\t${outcome.nodeId}\t${field(outcome.device)}`, 'next\truimte-context device shot <id>\tshows what it did'];
+    return [`done\t${word}\t${outcome.nodeId}\t${field(outcome.device)}`, 'next\tdevice_shot\tshows what it did'];
 }
 
 const listAction = defineActionVerb('device', {
@@ -111,9 +118,9 @@ const listAction = defineActionVerb('device', {
     usage: '',
     params: [],
     detail: [
-        'prints\tdevice\tid\tname\tplatform\tkind\truntime\tstate\tone line per simulator, emulator or phone this machine has now; state is booted, shutdown or transitioning',
-        'see\truimte-context node new device --device <id>\tputs one on your canvas with a line from you, which is what lets you operate it; a chat view adds --view V and operates it on that canvas without a line',
-        'note\tListing touches no device. An agent never starts one: a device that is not booted waits for the person to start it from its node',
+        'prints\tdevice\tid\tname\tplatform\tkind\truntime\tstate\tone line per simulator, emulator or phone this machine has now, the devices of the side panel; state is booted, shutdown or transitioning',
+        'note\tEvery other device tool takes the id. Listing touches and claims no device',
+        'see\tdevice_start\tstarts a simulator or an emulator that is not booted',
         SCOPE_LINE
     ],
     positionals: z.tuple([], { error: 'device list takes nothing' }),
@@ -124,34 +131,54 @@ const listAction = defineActionVerb('device', {
     }
 });
 
+const startAction = defineActionVerb('device', {
+    name: 'start',
+    action: 'device.start',
+    usage: '<device>',
+    params: [DEVICE_PARAM],
+    detail: [
+        'prints\tstarted\tid\tdevice\tstate\tthe device runs, or is still starting when state is transitioning: take a shot once it is up',
+        'note\tStarts it for the person, as its start in the side panel does, and claims it for you. A device that already runs is only claimed',
+        'note\tStopping, restarting, erasing and folding a device and setting its camera stay with the person',
+        'refused\tdevice-not-startable\ta phone, or a device Ruimte cannot start on this machine: ask the person to turn it on',
+        ...COMMON_DETAIL
+    ],
+    positionals: deviceTuple('start', ' and nothing else'),
+    flags: z.object({}),
+    async run({ positionals: [id] }, call) {
+        const started = await runAction(call, 'device.start', { nodeId: id });
+        return [`started\t${id}\t${field(started.device)}\t${started.state}`, 'next\tdevice_state\twhat the device can do now'];
+    }
+});
+
 const stateAction = defineActionVerb('device', {
     name: 'state',
     action: 'device.inspect',
-    usage: '<id> [--find T] [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--find T', need: 'optional', field: 'find', more: 'prints matches, the number of elements that hold it' }],
+    usage: '<device> [--find T]',
+    params: [DEVICE_PARAM, { syntax: '--find T', need: 'optional', field: 'find', more: 'prints matches, the number of elements that hold it' }],
     detail: [
-        'prints\tdevice\tid\tname\tplatform\tkind\truntime\twhich device the node points at',
+        'prints\tdevice\tid\tname\tplatform\tkind\truntime\twhich device it is, by the id device_list gives it',
         'prints\tstate\tbooted|shutdown|transitioning|missing\twhether it runs; missing when this machine does not have it right now',
-        "prints\tpower\tN%\tplugged|battery\tcharging|not-charging[\tsimulated]\ta phone's own battery, read now; simulated while a level set with device set --battery stands in for it. unknown when the phone cannot say, none for a simulator or an emulator. Read only",
+        "prints\tpower\tN%\tplugged|battery\tcharging|not-charging[\tsimulated]\ta phone's own battery, read now; simulated while a level set with device_set battery stands in for it. unknown when the phone cannot say, none for a simulator or an emulator. Read only",
         'prints\tscreen\twidthxheight|unknown\tthe size of the last shot, which --at, --from and --to are counted in; unknown until you take one',
-        'prints\tbuttons\tname ...\tthe buttons device button takes on this device',
+        'prints\tbuttons\tname ...\tthe buttons a button of device_input takes on this device',
         'prints\tcan\tshot|input|type|launch|tree\tyes|no\twhat works on it now; input is tap, swipe and button, tree the elements below',
         'prints\telements\tN\twidthxheight\thow many elements the screen holds, and its size in pixels',
         'prints\ttree\tline\tone row per element: [N] role, label, value=, id=, frame as x,y widthxheight, and offscreen or disabled; the indent after the tab is its depth',
         'prints\ttree\tnone\twhy\twhen the elements could not be read; a shot still shows the screen',
-        'read\t[N] is the number device tap takes with --element, until the next device state of this device',
-        'read\tA frame is in pixels of the screen, the pixels a shot has, so it lines up with device shot and tap --at',
+        'read\t[N] is the number a tap of device_input takes as its element, until the next device_state of this device',
+        'read\tA frame is in pixels of the screen, the pixels a shot has, so it lines up with device_shot and a tap at a pixel',
         'note\tThe tree holds only the app in front, or an alert over it; no web content, and of a long list only the rows on screen. Take a shot for those',
         'note\tA simulator and an Android device have a tree; an iPhone has shots only',
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('state', ' and nothing else'),
-    flags: z.object({ find: z.string({ error: '--find needs the text to look for' }).min(1, '--find needs the text to look for').optional(), view: VIEW_FLAG }),
+    positionals: deviceTuple('state', ' and nothing else'),
+    flags: z.object({ find: z.string({ error: '--find needs the text to look for' }).min(1, '--find needs the text to look for').optional() }),
     async run({ positionals: [id], flags }, call) {
-        const state = await runAction(call, 'device.inspect', { nodeId: id, viewId: flags.view ?? null, find: flags.find ?? null });
+        const state = await runAction(call, 'device.inspect', { nodeId: id, find: flags.find ?? null });
         const { device } = state;
         return [
-            `device\t${id}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}`,
+            `device\t${state.deviceId ?? id}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}`,
             `state\t${state.state ?? 'missing'}`,
             powerLine(state),
             `screen\t${state.screen === null ? 'unknown' : `${state.screen.width}x${state.screen.height}`}`,
@@ -169,18 +196,18 @@ const stateAction = defineActionVerb('device', {
 const shotAction = defineActionVerb('device', {
     name: 'shot',
     action: 'device.screenshot',
-    usage: '<id> [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM],
+    usage: '<device>',
+    params: [DEVICE_PARAM],
     detail: [
         'prints\tshot\tpath\twidthxheight\tthe png on this machine, which you open with your own tools, and its size in pixels',
         'note\tEvery coordinate a later call takes is a pixel of this picture, counted from its top-left corner',
         'note\tThe file is this machine’s, not the project’s: it lives outside the project folder and is swept a day later',
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('shot', ' and nothing else'),
-    flags: z.object({ view: VIEW_FLAG }),
-    async run({ positionals: [id], flags }, call) {
-        const shot = await runAction(call, 'device.screenshot', { nodeId: id, viewId: flags.view ?? null });
+    positionals: deviceTuple('shot', ' and nothing else'),
+    flags: z.object({}),
+    async run({ positionals: [id] }, call) {
+        const shot = await runAction(call, 'device.screenshot', { nodeId: id });
         return [`shot\t${field(shot.path)}\t${shot.width}x${shot.height}\tRead it with your own tools`];
     }
 });
@@ -188,33 +215,30 @@ const shotAction = defineActionVerb('device', {
 const tapAction = defineActionVerb('device', {
     name: 'tap',
     action: 'device.tap',
-    usage: '<id> (--element N | --at X,Y) [--view V]',
+    usage: '<device> (--element N | --at X,Y)',
     params: [
-        NODE_PARAM,
-        VIEW_PARAM,
+        DEVICE_PARAM,
         { syntax: '--element N', need: 'or --at', field: 'element' },
         { syntax: '--at X,Y', need: 'or --element', text: 'A pixel of the last shot, counted from its top-left corner' }
     ],
     detail: [
-        'note\tBy element it taps the middle of that element of the last device state, and needs no shot',
+        'note\tBy element it taps the middle of that element of the last device_state, and needs no shot',
         'note\tA tap changes the screen, so read the state again before the next --element',
         'prints\tdone\ttap\tid\tdevice',
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('tap', ' and the element in --element or the pixel in --at'),
+    positionals: deviceTuple('tap', ' and the element in --element or the pixel in --at'),
     flags: z.object({
-        view: VIEW_FLAG,
         at: pixelPair('at').optional(),
         element: z
-            .string({ error: '--element needs the number of an element, as device state lists it' })
-            .regex(/^\d+$/, '--element takes the number in brackets that device state gave the element')
+            .string({ error: '--element needs the number of an element, as device_state lists it' })
+            .regex(/^\d+$/, '--element takes the number in brackets that device_state gave the element')
             .transform(Number)
             .optional()
     }),
     async run({ positionals: [id], flags }, call) {
         const outcome = await runAction(call, 'device.tap', {
             nodeId: id,
-            viewId: flags.view ?? null,
             x: flags.at?.x ?? null,
             y: flags.at?.y ?? null,
             element: flags.element ?? null
@@ -226,10 +250,9 @@ const tapAction = defineActionVerb('device', {
 const swipeAction = defineActionVerb('device', {
     name: 'swipe',
     action: 'device.swipe',
-    usage: '<id> --from X,Y --to X,Y [--view V]',
+    usage: '<device> --from X,Y --to X,Y',
     params: [
-        NODE_PARAM,
-        VIEW_PARAM,
+        DEVICE_PARAM,
         { syntax: '--from X,Y', need: 'required', text: 'The pixel of the last shot the finger presses on' },
         { syntax: '--to X,Y', need: 'required', text: 'The pixel it lets go on' },
         { syntax: '--ms N', need: 'optional', field: 'ms' }
@@ -240,9 +263,8 @@ const swipeAction = defineActionVerb('device', {
         'prints\tdone\tswipe\tid\tdevice',
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('swipe', ' and the pixels in --from and --to'),
+    positionals: deviceTuple('swipe', ' and the pixels in --from and --to'),
     flags: z.object({
-        view: VIEW_FLAG,
         from: pixelPair('from'),
         to: pixelPair('to'),
         ms: z
@@ -255,7 +277,6 @@ const swipeAction = defineActionVerb('device', {
     async run({ positionals: [id], flags }, call) {
         const outcome = await runAction(call, 'device.swipe', {
             nodeId: id,
-            viewId: flags.view ?? null,
             fromX: flags.from.x,
             fromY: flags.from.y,
             toX: flags.to.x,
@@ -269,54 +290,52 @@ const swipeAction = defineActionVerb('device', {
 const buttonAction = defineActionVerb('device', {
     name: 'button',
     action: 'device.button',
-    usage: '<id> --name B [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--name B', need: 'required', field: 'button' }],
+    usage: '<device> --name B',
+    params: [DEVICE_PARAM, { syntax: '--name B', need: 'required', field: 'button' }],
     detail: [
         'note\tAn iPhone knows home, swipeHome, appSwitcher, lock and siri; an Android device back, home, appSwitcher, lock, siri, volumeUp, volumeDown and playPause. A button the device does not announce is refused with the ones it does',
         'prints\tdone\tbutton\tid\tdevice',
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('button', ' and the button in --name'),
+    positionals: deviceTuple('button', ' and the button in --name'),
     flags: z.object({
-        view: VIEW_FLAG,
-        name: z.string({ error: '--name needs a button, as device state lists them' }).min(1, '--name needs a button, as device state lists them')
+        name: z.string({ error: '--name needs a button, as device_state lists them' }).min(1, '--name needs a button, as device_state lists them')
     }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('button', await runAction(call, 'device.button', { nodeId: id, viewId: flags.view ?? null, button: flags.name }));
+        return doneLine('button', await runAction(call, 'device.button', { nodeId: id, button: flags.name }));
     }
 });
 
 const typeAction = defineActionVerb('device', {
     name: 'type',
     action: 'device.type',
-    usage: '<id> --text T [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--text T', need: 'required', field: 'text' }],
+    usage: '<device> --text T',
+    params: [DEVICE_PARAM, { syntax: '--text T', need: 'required', field: 'text' }],
     detail: [
         'note\tThe text goes wherever the focus is, so tap the field first and take a shot to see it has the cursor',
         'note\tA simulator and an Android device take the text through their clipboard, which it replaces, so any character goes; a newline is Return and a tab is Tab. An iPhone takes no text',
         'prints\tdone\ttype\tid\tdevice',
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('type', ' and the text in --text'),
-    flags: z.object({ text: z.string({ error: '--text needs the text to type' }).min(1, '--text needs the text to type'), view: VIEW_FLAG }),
+    positionals: deviceTuple('type', ' and the text in --text'),
+    flags: z.object({ text: z.string({ error: '--text needs the text to type' }).min(1, '--text needs the text to type') }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('type', await runAction(call, 'device.type', { nodeId: id, viewId: flags.view ?? null, text: flags.text }));
+        return doneLine('type', await runAction(call, 'device.type', { nodeId: id, text: flags.text }));
     }
 });
 
 const launchAction = defineActionVerb('device', {
     name: 'launch',
     action: 'device.launch',
-    usage: '<id> --app A [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--app A', need: 'required', field: 'app' }],
+    usage: '<device> --app A',
+    params: [DEVICE_PARAM, { syntax: '--app A', need: 'required', field: 'app' }],
     detail: ['note\tThe app has to be installed on the device already', 'prints\tdone\tlaunch\tid\tdevice', ...COMMON_DETAIL],
-    positionals: nodeTuple('launch', ' and the app in --app'),
+    positionals: deviceTuple('launch', ' and the app in --app'),
     flags: z.object({
-        app: z.string({ error: '--app needs a bundle id or a package name' }).min(1, '--app needs a bundle id or a package name'),
-        view: VIEW_FLAG
+        app: z.string({ error: '--app needs a bundle id or a package name' }).min(1, '--app needs a bundle id or a package name')
     }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('launch', await runAction(call, 'device.launch', { nodeId: id, viewId: flags.view ?? null, app: flags.app }));
+        return doneLine('launch', await runAction(call, 'device.launch', { nodeId: id, app: flags.app }));
     }
 });
 
@@ -331,22 +350,21 @@ const locationPair = z
 
 const APP_FLAG = z.string({ error: '--app needs a bundle id or a package name' }).trim().min(1, '--app needs a bundle id or a package name');
 
-/* The tools beside shots and taps refuse what the device does not announce, and a path that leaves the project. */
+/* The tools beside shots and taps refuse what the device does not announce, and a path outside the folders an agent may hand over. */
 const TOOL_DETAIL: readonly string[] = [
-    'refused\tdevice-action-unavailable\tthe device does not announce that tool; device state says what it can do',
-    'note\tAn agent never starts, stops, restarts, erases or folds a device, nor sets its camera: those stay with the person'
+    'refused\tdevice-action-unavailable\tthe device does not announce that tool; device_state says what it can do',
+    'note\tAn agent never stops, restarts, erases or folds a device, nor sets its camera: those stay with the person'
 ];
 
 const PATH_DETAIL =
-    'refused\tdevice-path-refused\tthe path is not there, or lies outside the project folder and its worktrees, or is no file this device takes';
+    "refused\tdevice-path-refused\tthe path is not there, or lies outside the project folder, its worktrees, your chat's own folder and the system temp folder, or is no file this device takes";
 
 const setAction = defineActionVerb('device', {
     name: 'set',
     action: 'device.set',
-    usage: '<id> [--appearance light|dark] [--text-size S] [--status-bar clean|default] [--battery N [--charging]] [--location LAT,LON | --clear-location] [--view V]',
+    usage: '<device> [--appearance light|dark] [--text-size S] [--status-bar clean|default] [--battery N [--charging]] [--location LAT,LON | --clear-location]',
     params: [
-        NODE_PARAM,
-        VIEW_PARAM,
+        DEVICE_PARAM,
         { syntax: '--appearance light|dark', need: 'optional', field: 'appearance', text: 'Light or dark' },
         { syntax: '--text-size S', need: 'optional', field: 'textSize', text: 'small, default, large or extra-large' },
         { syntax: '--status-bar clean|default', need: 'optional', field: 'statusBar', text: 'clean shows 9:41 and full bars, default the real ones' },
@@ -361,10 +379,9 @@ const setAction = defineActionVerb('device', {
         ...TOOL_DETAIL,
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('set', ' and the flags of what changes'),
+    positionals: deviceTuple('set', ' and the flags of what changes'),
     switches: ['charging', 'clear-location'],
     flags: z.object({
-        view: VIEW_FLAG,
         appearance: z.enum(['light', 'dark'], { error: '--appearance is light or dark' }).optional(),
         'text-size': z.enum(['small', 'default', 'large', 'extra-large'], { error: '--text-size is small, default, large or extra-large' }).optional(),
         'status-bar': z.enum(['clean', 'default'], { error: '--status-bar is clean or default' }).optional(),
@@ -379,7 +396,6 @@ const setAction = defineActionVerb('device', {
     async run({ positionals: [id], flags, switches }, call) {
         const outcome = await runAction(call, 'device.set', {
             nodeId: id,
-            viewId: flags.view ?? null,
             appearance: flags.appearance ?? null,
             textSize: flags['text-size'] ?? null,
             statusBar: flags['status-bar'] ?? null,
@@ -396,23 +412,22 @@ const setAction = defineActionVerb('device', {
 const openAction = defineActionVerb('device', {
     name: 'open',
     action: 'device.open',
-    usage: '<id> --url U [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--url U', need: 'required', text: 'A link, or a scheme of an app such as myapp://' }],
+    usage: '<device> --url U',
+    params: [DEVICE_PARAM, { syntax: '--url U', need: 'required', text: 'A link, or a scheme of an app such as myapp://' }],
     detail: ['prints\tdone\topen\tid\tdevice', ...TOOL_DETAIL, ...COMMON_DETAIL],
-    positionals: nodeTuple('open', ' and the link in --url'),
-    flags: z.object({ url: z.string({ error: '--url needs a link' }).min(1, '--url needs a link'), view: VIEW_FLAG }),
+    positionals: deviceTuple('open', ' and the link in --url'),
+    flags: z.object({ url: z.string({ error: '--url needs a link' }).min(1, '--url needs a link') }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('open', await runAction(call, 'device.open', { nodeId: id, viewId: flags.view ?? null, url: flags.url }));
+        return doneLine('open', await runAction(call, 'device.open', { nodeId: id, url: flags.url }));
     }
 });
 
 const permissionAction = defineActionVerb('device', {
     name: 'permission',
     action: 'device.permission',
-    usage: '<id> --app A (--grant|--revoke|--reset) [--name P | --all] [--view V]',
+    usage: '<device> --app A (--grant|--revoke|--reset) [--name P | --all]',
     params: [
-        NODE_PARAM,
-        VIEW_PARAM,
+        DEVICE_PARAM,
         { syntax: '--app A', need: 'required', field: 'app' },
         { syntax: '--grant', need: 'or --revoke or --reset', text: 'Allows it' },
         { syntax: '--revoke', need: 'or --grant or --reset', text: 'Takes it away' },
@@ -421,7 +436,7 @@ const permissionAction = defineActionVerb('device', {
         { syntax: '--all', need: 'or --name', text: 'Every permission the device has' }
     ],
     detail: ['prints\tdone\tpermission\tid\tdevice', ...TOOL_DETAIL, ...COMMON_DETAIL],
-    positionals: nodeTuple('permission', ' and the app in --app'),
+    positionals: deviceTuple('permission', ' and the app in --app'),
     switches: ['grant', 'revoke', 'reset', 'all'],
     flags: z.object({
         app: APP_FLAG,
@@ -429,8 +444,7 @@ const permissionAction = defineActionVerb('device', {
             .enum(['camera', 'microphone', 'photos', 'contacts', 'calendar', 'reminders', 'location', 'motion', 'media-library', 'faceid'], {
                 error: '--name is one of camera, microphone, photos, contacts, calendar, reminders, location, motion, media-library and faceid'
             })
-            .optional(),
-        view: VIEW_FLAG
+            .optional()
     }),
     async run({ positionals: [id], flags, switches }, call) {
         const decisions = (['grant', 'revoke', 'reset'] as const).filter((decision) => switches.has(decision));
@@ -444,7 +458,6 @@ const permissionAction = defineActionVerb('device', {
             'permission',
             await runAction(call, 'device.permission', {
                 nodeId: id,
-                viewId: flags.view ?? null,
                 app: flags.app,
                 decision: decisions[0]!,
                 permission: flags.name ?? null
@@ -456,27 +469,25 @@ const permissionAction = defineActionVerb('device', {
 const pushAction = defineActionVerb('device', {
     name: 'push',
     action: 'device.push',
-    usage: '<id> --app A --payload JSON [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--app A', need: 'required', field: 'app' }, { syntax: '--payload JSON', need: 'required', field: 'payload' }],
+    usage: '<device> --app A --payload JSON',
+    params: [DEVICE_PARAM, { syntax: '--app A', need: 'required', field: 'app' }, { syntax: '--payload JSON', need: 'required', field: 'payload' }],
     detail: ['note\tOnly a simulator takes a push from Ruimte', 'prints\tdone\tpush\tid\tdevice', ...TOOL_DETAIL, ...COMMON_DETAIL],
-    positionals: nodeTuple('push', ' and the app in --app'),
+    positionals: deviceTuple('push', ' and the app in --app'),
     flags: z.object({
         app: APP_FLAG,
-        payload: z.string({ error: '--payload needs the alert text' }).min(1, '--payload needs the alert text'),
-        view: VIEW_FLAG
+        payload: z.string({ error: '--payload needs the alert text' }).min(1, '--payload needs the alert text')
     }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('push', await runAction(call, 'device.push', { nodeId: id, viewId: flags.view ?? null, app: flags.app, payload: flags.payload }));
+        return doneLine('push', await runAction(call, 'device.push', { nodeId: id, app: flags.app, payload: flags.payload }));
     }
 });
 
 const biometricAction = defineActionVerb('device', {
     name: 'biometric',
     action: 'device.biometric',
-    usage: '<id> (--match|--nomatch|--enroll|--unenroll) [--sensor face|finger] [--view V]',
+    usage: '<device> (--match|--nomatch|--enroll|--unenroll) [--sensor face|finger]',
     params: [
-        NODE_PARAM,
-        VIEW_PARAM,
+        DEVICE_PARAM,
         { syntax: '--match', need: 'one of four', text: 'Answers the check the app asks for as the right face or finger' },
         { syntax: '--nomatch', need: 'one of four', text: 'Answers it as a wrong one' },
         { syntax: '--enroll', need: 'one of four', text: 'Sets up Face ID or Touch ID on a simulator' },
@@ -484,37 +495,34 @@ const biometricAction = defineActionVerb('device', {
         { syntax: '--sensor face|finger', need: 'optional', field: 'sensor' }
     ],
     detail: ['note\tAndroid takes a fingerprint touch on an emulator only', 'prints\tdone\tbiometric\tid\tdevice', ...TOOL_DETAIL, ...COMMON_DETAIL],
-    positionals: nodeTuple('biometric', ' and one of --match, --nomatch, --enroll and --unenroll'),
+    positionals: deviceTuple('biometric', ' and one of --match, --nomatch, --enroll and --unenroll'),
     switches: ['match', 'nomatch', 'enroll', 'unenroll'],
-    flags: z.object({ sensor: z.enum(['face', 'finger'], { error: '--sensor is face or finger' }).optional(), view: VIEW_FLAG }),
+    flags: z.object({ sensor: z.enum(['face', 'finger'], { error: '--sensor is face or finger' }).optional() }),
     async run({ positionals: [id], flags, switches }, call) {
         const events = (['match', 'nomatch', 'enroll', 'unenroll'] as const).filter((event) => switches.has(event));
         if (events.length !== 1) {
             throw new VerbRefusal('bad-arguments', 'device biometric takes one of --match, --nomatch, --enroll and --unenroll');
         }
-        return doneLine(
-            'biometric',
-            await runAction(call, 'device.biometric', { nodeId: id, viewId: flags.view ?? null, event: events[0]!, sensor: flags.sensor ?? null })
-        );
+        return doneLine('biometric', await runAction(call, 'device.biometric', { nodeId: id, event: events[0]!, sensor: flags.sensor ?? null }));
     }
 });
 
 const clipboardAction = defineActionVerb('device', {
     name: 'clipboard',
     action: 'device.clipboard',
-    usage: '<id> [--text T] [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--text T', need: 'optional', field: 'text' }],
+    usage: '<device> [--text T]',
+    params: [DEVICE_PARAM, { syntax: '--text T', need: 'optional', field: 'text' }],
     detail: [
         'prints\tclipboard\ttext\twhat the clipboard holds after the call, cut like a state line',
-        'note\tPutting text there does not paste it; device type types into the field that has the focus',
+        'note\tPutting text there does not paste it; a type of device_input types into the field that has the focus',
         'note\tThe clipboard of an iOS simulator follows the clipboard of the Mac, so it is only written, never read',
         ...TOOL_DETAIL,
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('clipboard', ' and nothing else'),
-    flags: z.object({ text: z.string({ error: '--text needs the text to put there' }).optional(), view: VIEW_FLAG }),
+    positionals: deviceTuple('clipboard', ' and nothing else'),
+    flags: z.object({ text: z.string({ error: '--text needs the text to put there' }).optional() }),
     async run({ positionals: [id], flags }, call) {
-        const outcome = await runAction(call, 'device.clipboard', { nodeId: id, viewId: flags.view ?? null, text: flags.text ?? null });
+        const outcome = await runAction(call, 'device.clipboard', { nodeId: id, text: flags.text ?? null });
         return [`clipboard\t${quote(outcome.text)}`];
     }
 });
@@ -522,8 +530,8 @@ const clipboardAction = defineActionVerb('device', {
 const recordAction = defineActionVerb('device', {
     name: 'record',
     action: 'device.record',
-    usage: '<id> --seconds N [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--seconds N', need: 'required', text: 'How long it records, 1 to 60' }],
+    usage: '<device> --seconds N',
+    params: [DEVICE_PARAM, { syntax: '--seconds N', need: 'required', text: 'How long it records, 1 to 60' }],
     detail: [
         'prints\trecording\tpath\tthe mp4 on this machine, which you open with your own tools',
         'note\tThe call returns once the recording ended; act on the device from another call while it runs',
@@ -531,17 +539,16 @@ const recordAction = defineActionVerb('device', {
         ...TOOL_DETAIL,
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('record', ' and the length in --seconds'),
+    positionals: deviceTuple('record', ' and the length in --seconds'),
     flags: z.object({
         seconds: z
             .string({ error: '--seconds needs how long to record' })
             .regex(/^\d+$/, '--seconds takes a whole number')
             .transform(Number)
-            .refine((value) => value >= 1 && value <= 60, '--seconds is between 1 and 60'),
-        view: VIEW_FLAG
+            .refine((value) => value >= 1 && value <= 60, '--seconds is between 1 and 60')
     }),
     async run({ positionals: [id], flags }, call) {
-        const outcome = await runAction(call, 'device.record', { nodeId: id, viewId: flags.view ?? null, seconds: flags.seconds });
+        const outcome = await runAction(call, 'device.record', { nodeId: id, seconds: flags.seconds });
         return [`recording\t${field(outcome.path)}\tRead it with your own tools`];
     }
 });
@@ -549,8 +556,8 @@ const recordAction = defineActionVerb('device', {
 const installAction = defineActionVerb('device', {
     name: 'install',
     action: 'device.install',
-    usage: '<id> --path P [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--path P', need: 'required', field: 'path' }],
+    usage: '<device> --path P',
+    params: [DEVICE_PARAM, { syntax: '--path P', need: 'required', field: 'path' }],
     detail: [
         'note\tA simulator takes an .app built for it, an iPhone an .app or an .ipa, and Android an .apk',
         'prints\tdone\tinstall\tid\tdevice',
@@ -558,41 +565,45 @@ const installAction = defineActionVerb('device', {
         ...TOOL_DETAIL,
         ...COMMON_DETAIL
     ],
-    positionals: nodeTuple('install', ' and the app in --path'),
-    flags: z.object({ path: z.string({ error: '--path needs the app to install' }).min(1, '--path needs the app to install'), view: VIEW_FLAG }),
+    positionals: deviceTuple('install', ' and the app in --path'),
+    flags: z.object({ path: z.string({ error: '--path needs the app to install' }).min(1, '--path needs the app to install') }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('install', await runAction(call, 'device.install', { nodeId: id, viewId: flags.view ?? null, path: flags.path }));
+        return doneLine('install', await runAction(call, 'device.install', { nodeId: id, path: flags.path }));
     }
 });
 
 const mediaAction = defineActionVerb('device', {
     name: 'media',
     action: 'device.media',
-    usage: '<id> --path P [P…] [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--path P', need: 'required', field: 'paths', more: 'more pictures follow the first as arguments, 20 in all' }],
+    usage: '<device> --path P [P…]',
+    params: [DEVICE_PARAM, { syntax: '--path P', need: 'required', field: 'paths', more: 'more pictures follow the first as arguments, 20 in all' }],
     detail: ['note\tpng, jpg, jpeg, heic, gif, mp4 and mov', 'prints\tdone\tmedia\tid\tdevice', PATH_DETAIL, ...TOOL_DETAIL, ...COMMON_DETAIL],
-    positionals: z.array(z.string().min(1)).min(1, 'device media needs the id of a device node').max(20, 'device media takes 20 pictures at most'),
-    flags: z.object({ path: z.string({ error: '--path needs a picture or a video' }).min(1, '--path needs a picture or a video'), view: VIEW_FLAG }),
+    positionals: z
+        .array(z.string().min(1))
+        .min(1, 'device media needs the id of a device, as device_list gives it')
+        .max(20, 'device media takes 20 pictures at most'),
+    flags: z.object({ path: z.string({ error: '--path needs a picture or a video' }).min(1, '--path needs a picture or a video') }),
     async run({ positionals: [id, ...more], flags }, call) {
-        return doneLine('media', await runAction(call, 'device.media', { nodeId: id!, viewId: flags.view ?? null, paths: [flags.path, ...more] }));
+        return doneLine('media', await runAction(call, 'device.media', { nodeId: id!, paths: [flags.path, ...more] }));
     }
 });
 
 const terminateAction = defineActionVerb('device', {
     name: 'terminate',
     action: 'device.terminate',
-    usage: '<id> --app A [--view V]',
-    params: [NODE_PARAM, VIEW_PARAM, { syntax: '--app A', need: 'required', field: 'app' }],
+    usage: '<device> --app A',
+    params: [DEVICE_PARAM, { syntax: '--app A', need: 'required', field: 'app' }],
     detail: ['prints\tdone\tterminate\tid\tdevice', ...TOOL_DETAIL, ...COMMON_DETAIL],
-    positionals: nodeTuple('terminate', ' and the app in --app'),
-    flags: z.object({ app: APP_FLAG, view: VIEW_FLAG }),
+    positionals: deviceTuple('terminate', ' and the app in --app'),
+    flags: z.object({ app: APP_FLAG }),
     async run({ positionals: [id], flags }, call) {
-        return doneLine('terminate', await runAction(call, 'device.terminate', { nodeId: id, viewId: flags.view ?? null, app: flags.app }));
+        return doneLine('terminate', await runAction(call, 'device.terminate', { nodeId: id, app: flags.app }));
     }
 });
 
 export const DEVICE_ACTIONS = [
     listAction,
+    startAction,
     stateAction,
     shotAction,
     tapAction,
@@ -613,12 +624,12 @@ export const DEVICE_ACTIONS = [
 ] as const;
 
 export const DEVICE_SUMMARY =
-    'Sees and operates the device under a device node you have a line to, or on the canvas a chat view names: the elements and a picture of its screen, taps, swipes, buttons, text, apps and its tools';
+    'Starts, sees and operates the simulators, emulators and phones of this machine by their id: the elements and a picture of the screen, taps, swipes, buttons, text, apps and the tools of the device';
 
 export const DEVICE_DETAIL: readonly string[] = [
-    'note\tRead the elements with device state and tap one by its number; take a shot for what the tree does not hold, act in its pixels, and read again to see what happened',
-    'note\tA simulator, an emulator or a phone, as long as it runs on this machine; an agent never starts, stops, restarts, erases or folds one, nor sets its camera',
-    'note\tThe tools beside shots and taps (set, open, permission, push, biometric, clipboard, record, install, media, terminate) work on what the device announces; a path is a file of the project folder or its worktrees',
-    'see\truimte-context read <id>\twhich device the node points at, without touching it',
+    'note\tdevice_list gives the ids; device_start starts a simulator or an emulator. One agent operates a device at a time, from its first call until its terminal or chat ends',
+    'note\tRead the elements with device_state and tap one by its number; take a shot for what the tree does not hold, act in its pixels, and read again to see what happened',
+    'note\tAn agent never stops, restarts, erases or folds a device, nor sets its camera: those stay with the person',
+    "note\tThe tools beside shots and taps (set, open, permission, push, biometric, clipboard, record, install, media, terminate) work on what the device announces; a path is a file of the project folder, its worktrees, your chat's own folder or the system temp folder",
     SCOPE_LINE
 ];

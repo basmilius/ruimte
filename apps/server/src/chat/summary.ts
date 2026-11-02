@@ -162,7 +162,7 @@ export function summaryTexts(
     after: number | null
 ): { note: string; preamble: string } {
     const { text, cut } = cutAt(summary, SUMMARY_MAX_BYTES);
-    const read = `ruimte-context read ${fork.id}`;
+    const read = `context_read on ${fork.id}`;
     const body = cut ? `${text}\n\n[The summary was cut at ${SUMMARY_MAX_BYTES / 1024} KiB; ${read} shows the whole fork.]` : text;
     return {
         note: `Summary from fork ${fork.title} (${fork.kind} ${fork.id})\n\n${body}`,

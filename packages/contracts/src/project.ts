@@ -318,7 +318,7 @@ export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
 
 /*
  * `context` is the one every version has drawn: the agent it touches reads the other end with
- * `ruimte-context read` and may notify along it; between two agents the head reads. `target` runs from
+ * `context_read` and may notify along it; between two agents the head reads. `target` runs from
  * an agent into something it can drive. `origin` only records which node opened another and grants nothing.
  */
 export const EDGE_ROLES = ['context', 'target', 'origin'] as const;

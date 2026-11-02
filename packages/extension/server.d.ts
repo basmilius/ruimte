@@ -76,7 +76,7 @@ export function emit<Payload>(name: string, payload?: Payload): void;
 export function defineNodeContext<Data>(nodeType: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void;
 
 /**
- * Needs `agents.tools`. Any agent on this machine can then find it with `ruimte-context tool list` and call it with `tool run`.
+ * Needs `agents.tools`. Any agent Ruimte starts on this machine can then find it with `tool_list` and call it with `tool_run`.
  * Having it starts `server/` with the machine, since an agent can only find what is running. It answers in text. Type `Input`
  * after `parameters`, a JSON Schema.
  */

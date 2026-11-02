@@ -148,10 +148,10 @@ describe('summaryTexts', () => {
         const long = `${'a'.repeat(SUMMARY_MAX_BYTES - 1)}é and more`;
         const { note, preamble } = summaryTexts(long, { id: 'chat-fork', title: 'Lexer (fork)', kind: 'view' }, null);
         expect(note).toStartWith('Summary from fork Lexer (fork) (view chat-fork)');
-        expect(note).toContain(`${'a'.repeat(SUMMARY_MAX_BYTES - 1)}\n\n[The summary was cut at 8 KiB; ruimte-context read chat-fork shows the whole fork.]`);
+        expect(note).toContain(`${'a'.repeat(SUMMARY_MAX_BYTES - 1)}\n\n[The summary was cut at 8 KiB; context_read on chat-fork shows the whole fork.]`);
         expect(note).not.toContain('and more');
         expect(preamble).toStartWith('Ruimte: a fork of this conversation, view chat-fork ("Lexer (fork)"), forked, reports what it found:');
-        expect(preamble).toEndWith('(The whole fork is readable with ruimte-context read chat-fork.)');
+        expect(preamble).toEndWith('(The whole fork is readable with context_read on chat-fork.)');
     });
 });
 

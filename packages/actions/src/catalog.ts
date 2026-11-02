@@ -262,14 +262,17 @@ const browserOutcome = z.object({
     error: z.string().nullable()
 });
 
-const deviceNode = nodeId.describe('The device node, by id');
+const deviceNode = nodeId.describe('The device, by the id device.list gives it, or a device node by its id');
 const devicePixel = z.number().min(0).describe('A pixel of the last device shot, counted from its top-left corner');
 const deviceDone = z.object({ nodeId, device: z.string() });
 const deviceElement = z.number().int().min(0).describe('An element by the number in brackets the last device state gave it');
 const deviceSize = z.object({ width: z.number().int(), height: z.number().int() });
 const deviceApp = z.string().trim().min(1).max(256).describe('A bundle id on iOS or a package name on Android');
-/* A path the agent hands a device, inside the project folder or one of its worktrees. */
-const devicePath = z.string().min(1).max(4096).describe('A file inside the project folder or one of its worktrees, relative to the folder or absolute');
+const devicePath = z
+    .string()
+    .min(1)
+    .max(4096)
+    .describe("A file inside the project folder, its worktrees, the chat's own folder or the system temp folder, relative to the project folder or absolute");
 
 const computerApp = z.string().min(1).describe('The app: its name, bundle id or pid, as computer apps lists them');
 const computerAppRef = z.object({ name: z.string(), bundleId: z.string().nullable(), pid: z.number().int() });
@@ -476,7 +479,7 @@ const launchFields = {
 const { name: launchFieldName, ...launchRunFields } = launchFields;
 const launchSaved = z.object({ launchId: z.string(), name: z.string(), kind: LaunchConfigKindSchema, shared: z.boolean() });
 
-const routineId = z.string().min(1).describe('The id of a routine, from ruimte-context routine list');
+const routineId = z.string().min(1).describe('The id of a routine, from routine_list');
 /* What an agent may give a routine; the daemon fills the rest from the caller and from what the routine was. */
 const routineFields = {
     title: z.string().trim().min(1).max(ROUTINE_LIMITS.title).describe('What the person sees the routine and the artifact of its runs as'),
@@ -2353,7 +2356,7 @@ export const ACTION_DEFINITIONS = {
     'chat.attach': {
         title: 'Attach an image or a model to this chat',
         description:
-            'Makes an image or a 3D model of your own an attachment of this chat and answers its id, which Image, Gallery and Compare take as attachment for an image and Model for a model. The ruimte-context command reads the file in your own process.',
+            'Makes an image or a 3D model of your own an attachment of this chat and answers its id, which Image, Gallery and Compare take as attachment for an image and Model for a model.',
         effect: 'shared',
         domain: 'communicate',
         actors: AGENT,
@@ -2367,7 +2370,7 @@ export const ACTION_DEFINITIONS = {
     'artifact.publish': {
         title: 'Publish to Output',
         description:
-            "Saves files of your own as a new version of an artifact in this project's Output, where the person keeps results that should outlast the conversation. The same key makes a new version of the same artifact. The ruimte-context command reads the files in your own process and sends them before this runs.",
+            "Saves files of your own as a new version of an artifact in this project's Output, where the person keeps results that should outlast the conversation. The same key makes a new version of the same artifact.",
         effect: 'shared',
         domain: 'files',
         actors: AGENT,
@@ -2738,13 +2741,12 @@ export const ACTION_DEFINITIONS = {
     },
     'device.inspect': {
         title: 'Read a device',
-        description: 'Which device a device node holds on this machine, whether it runs, its screen and buttons, and what an agent can do on it.',
+        description: 'Which device this is, whether it runs, its screen and buttons, and what an agent can do on it.',
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             find: z
                 .string()
                 .min(1)
@@ -2753,6 +2755,8 @@ export const ACTION_DEFINITIONS = {
         }),
         output: z.object({
             nodeId,
+            // The id device.list gives the device; null while this machine does not have it.
+            deviceId: z.string().nullable(),
             device: DeviceReferenceSchema,
             // False when this machine has no such device right now; everything below is then empty.
             present: z.boolean(),
@@ -2791,7 +2795,7 @@ export const ACTION_DEFINITIONS = {
     },
     'device.list': {
         title: 'List devices',
-        description: 'Lists the simulators, emulators and phones this machine has now, whether each runs, and the id a device node is made with.',
+        description: 'Lists the simulators, emulators and phones this machine has now, whether each runs, and the id every other device action takes.',
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
@@ -2802,32 +2806,31 @@ export const ACTION_DEFINITIONS = {
     },
     'device.screenshot': {
         title: 'Photograph a device',
-        description: 'Writes a png of the screen of a device node and answers where it is and how many pixels it has.',
+        description: 'Writes a png of the screen of a device and answers where it is and how many pixels it has.',
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView }),
+        input: z.object({ nodeId: deviceNode }),
         // On this machine, outside the project folder.
         output: z.object({ nodeId, path: z.string(), width: z.number().int(), height: z.number().int() })
     },
     'device.tap': {
         title: 'Tap a device',
-        description: 'Taps the screen of a device node at a pixel of its last shot, or in the middle of an element of its last state.',
+        description: 'Taps the screen of a device at a pixel of its last shot, or in the middle of an element of its last state.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, x: devicePixel.nullish(), y: devicePixel.nullish(), element: deviceElement.nullish() }),
+        input: z.object({ nodeId: deviceNode, x: devicePixel.nullish(), y: devicePixel.nullish(), element: deviceElement.nullish() }),
         output: deviceDone
     },
     'device.swipe': {
         title: 'Swipe on a device',
-        description: 'Presses on the screen of a device node at one pixel of its last shot, moves to another and lets go there.',
+        description: 'Presses on the screen of a device at one pixel of its last shot, moves to another and lets go there.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             fromX: devicePixel,
             fromY: devicePixel,
             toX: devicePixel,
@@ -2844,46 +2847,42 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             button: z.string().min(1).describe('A button the device announces, as device.inspect lists them')
         }),
         output: deviceDone
     },
     'device.type': {
         title: 'Type on a device',
-        description: 'Types text into whatever has the focus on the device of a device node.',
+        description: 'Types text into whatever has the focus on a device.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             text: z.string().min(1).max(2000).describe('The text to type; a newline is Return and a tab is Tab')
         }),
         output: deviceDone
     },
     'device.launch': {
         title: 'Open an app on a device',
-        description: 'Opens an app on a device node by its bundle id or package name.',
+        description: 'Opens an app on a device by its bundle id or package name.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             app: deviceApp
         }),
         output: deviceDone
     },
     'device.set': {
         title: 'Set up a device',
-        description: 'Changes what a device node shows: its appearance, text size, status bar, battery and simulated location.',
+        description: 'Changes what a device shows: its appearance, text size, status bar, battery and simulated location.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             appearance: DeviceAppearanceSchema.nullish(),
             textSize: DeviceTextSizeSchema.nullish(),
             statusBar: DeviceStatusBarSchema.nullish(),
@@ -2897,11 +2896,11 @@ export const ACTION_DEFINITIONS = {
     },
     'device.open': {
         title: 'Open a link on a device',
-        description: 'Opens a link or an app scheme on the device of a device node.',
+        description: 'Opens a link or an app scheme on a device.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, url: z.string().trim().min(1).max(2048) }),
+        input: z.object({ nodeId: deviceNode, url: z.string().trim().min(1).max(2048) }),
         output: deviceDone
     },
     'device.permission': {
@@ -2912,7 +2911,6 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             app: deviceApp,
             decision: z.enum(['grant', 'revoke', 'reset']),
             permission: DevicePermissionSchema.nullish().describe('One permission; without it every permission of the app')
@@ -2925,7 +2923,7 @@ export const ACTION_DEFINITIONS = {
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, app: deviceApp, payload: z.string().min(1).max(16_384).describe('The alert text') }),
+        input: z.object({ nodeId: deviceNode, app: deviceApp, payload: z.string().min(1).max(16_384).describe('The alert text') }),
         output: deviceDone
     },
     'device.biometric': {
@@ -2936,7 +2934,6 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             event: z.enum(['enroll', 'unenroll', 'match', 'nomatch']),
             sensor: z.enum(['face', 'finger']).nullish().describe('Face ID or a fingerprint; face on iOS and finger on Android without it')
         }),
@@ -2950,47 +2947,56 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({
             nodeId: deviceNode,
-            viewId: operatedView,
             text: z.string().max(1_048_576).nullish().describe('What to put on it; without it the clipboard is read')
         }),
         output: deviceDone.extend({ text: z.string() })
     },
     'device.record': {
         title: 'Record a device',
-        description: 'Records the screen of a device node for some seconds and answers where the video is.',
+        description: 'Records the screen of a device for some seconds and answers where the video is.',
         effect: 'read',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, seconds: z.number().int().min(1).max(60) }),
+        input: z.object({ nodeId: deviceNode, seconds: z.number().int().min(1).max(60) }),
         // On this machine, outside the project folder.
         output: deviceDone.extend({ path: z.string() })
     },
     'device.install': {
         title: 'Install an app on a device',
-        description: 'Installs an app bundle from the project folder or its worktrees on a device.',
+        description: 'Installs an app bundle from a file the agent may hand over on a device.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, path: devicePath }),
+        input: z.object({ nodeId: deviceNode, path: devicePath }),
         output: deviceDone
     },
     'device.media': {
         title: 'Add pictures to a device',
-        description: 'Adds pictures and videos from the project folder or its worktrees to the photos of a device.',
+        description: 'Adds pictures and videos the agent may hand over to the photos of a device.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, paths: z.array(devicePath).min(1).max(20) }),
+        input: z.object({ nodeId: deviceNode, paths: z.array(devicePath).min(1).max(20) }),
         output: deviceDone
     },
     'device.terminate': {
         title: 'Stop an app on a device',
-        description: 'Stops an app that runs on a device node.',
+        description: 'Stops an app that runs on a device.',
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ nodeId: deviceNode, viewId: operatedView, app: deviceApp }),
+        input: z.object({ nodeId: deviceNode, app: deviceApp }),
         output: deviceDone
+    },
+    'device.start': {
+        title: 'Start a device',
+        description:
+            'Starts a simulator or an emulator for the person, as its start in the side panel does, and claims it for the agent; a phone has no start.',
+        effect: 'external',
+        domain: 'machine',
+        actors: AGENT,
+        input: z.object({ nodeId: deviceNode }),
+        output: deviceDone.extend({ state: DeviceStateSchema })
     },
     'context.list': {
         title: 'List linked context',

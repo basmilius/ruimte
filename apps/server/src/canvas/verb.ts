@@ -74,7 +74,8 @@ import {
     type Action as RegistryAction,
     type Noun as RegistryNoun,
     type Verb as RegistryVerb,
-    type VerbEntry as RegistryVerbEntry
+    type VerbEntry as RegistryVerbEntry,
+    type VerbSpec as RegistryVerbSpec
 } from '@adecore/agents/context';
 
 // The verbs reach the one sanitizer and the registry through the toolkit they already import.
@@ -149,7 +150,7 @@ export interface CanvasHost {
     forks?: AgentForkHost;
     /* Operating the apps of this machine through its helper; absent on a host without one. */
     computer?: ComputerHost;
-    /* Seeing and operating the device under a device node; absent on a host without devices. */
+    /* Seeing, starting and operating the devices of this machine; absent on a host without devices. */
     devices?: DeviceDriveHost;
     /* What a person linked into a session, which `list` and `read` answer with. */
     context?: ContextHost;
@@ -415,6 +416,9 @@ export type DeviceDriveHost = Pick<
     DeviceDriver,
     | 'list'
     | 'find'
+    | 'claim'
+    | 'boot'
+    | 'pathFolders'
     | 'screen'
     | 'abilities'
     | 'power'
@@ -484,7 +488,36 @@ export type Noun = RegistryNoun<VerbCall>;
 
 export type VerbEntry = RegistryVerbEntry<VerbCall>;
 
-export const { defineVerb, defineAction, defineNoun, defineHelp, dryRunVerbNames, dryRunLine } = createVerbRegistry<VerbCall>({ cli: 'ruimte-context' });
+export type ArgumentSpec = RegistryVerbSpec<z.ZodType, z.ZodObject, VerbCall>;
+
+const registry = createVerbRegistry<VerbCall>({ cli: 'ruimte-context' });
+
+/* The spec each verb and action was defined from, which the registry keeps to itself and the MCP tools read their fields off. */
+const SPECS = new WeakMap<Verb | Action, ArgumentSpec>();
+
+export const { defineNoun, defineHelp, dryRunVerbNames, dryRunLine } = registry;
+
+export function defineVerb<Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: RegistryVerbSpec<Positionals, Flags, VerbCall>): Verb {
+    const verb = registry.defineVerb(spec);
+    SPECS.set(verb, spec as unknown as ArgumentSpec);
+
+    return verb;
+}
+
+export function defineAction<Positionals extends z.ZodType, Flags extends z.ZodObject>(
+    noun: string,
+    spec: RegistryVerbSpec<Positionals, Flags, VerbCall>
+): Action {
+    const action = registry.defineAction(noun, spec);
+    SPECS.set(action, spec as unknown as ArgumentSpec);
+
+    return action;
+}
+
+/* The spec a verb or an action was defined from; undefined for one made outside `defineVerb` and `defineAction`. */
+export function specOf(entry: Verb | Action): ArgumentSpec | undefined {
+    return SPECS.get(entry);
+}
 
 /* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
 export const SCOPE_LINE =

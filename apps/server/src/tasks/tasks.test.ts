@@ -338,7 +338,7 @@ describe('a task wakes the chat that gave it', () => {
         await daemon.worker.settled();
         const pty = daemon.adapter.forSession(child.childId);
         // The terminal was told how to report back, on the line its CLI starts with.
-        expect(pty.input[0]).toContain('ruimte-context done --result');
+        expect(pty.input[0]).toContain('call task_done with the result');
 
         pty.exit(0);
         await untilWoken(daemon);
@@ -347,9 +347,9 @@ describe('a task wakes the chat that gave it', () => {
         expect(daemon.tasks.get(child.taskId)).toMatchObject({
             status: 'failed',
             wake: 'sent',
-            result: { source: 'exit', text: 'It ended without a result: a terminal reports back with ruimte-context done.' }
+            result: { source: 'exit', text: 'It ended without a result: a terminal reports back with task_done.' }
         });
-        expect(daemon.alerts).toEqual([`${child.childId}\tTask failed: Lexer\tIt ended without a result: a terminal reports back with ruimte-context done.`]);
+        expect(daemon.alerts).toEqual([`${child.childId}\tTask failed: Lexer\tIt ended without a result: a terminal reports back with task_done.`]);
         const row = leadItems(daemon).find((item): item is ChatSubagentItem => item.kind === 'subagent');
         expect(row?.status).toBe('failed');
     });
@@ -938,7 +938,7 @@ describe('a child that waits on input', () => {
         expect(note?.kind === 'note' ? note.text : '').toContain(`- question 0: "which color`);
         expect(note?.kind === 'note' ? note.text : '').toContain(`(choices: Red (Warm) | Blue (Cool); pick one, or answer in your own words)`);
         expect(note?.kind === 'note' ? note.text : '').toContain(
-            `ruimte-context answer ${child.childId} req-q --answer '<a choice label as written, or your own words>'`
+            `agent_answer with id "${child.childId}", request "req-q" and answer "<a choice label as written, or your own words>"`
         );
 
         expect(await runVerb(daemon, 'chat-lead', 'answer', [child.childId, 'req-q', '--answer', 'Red'])).toEqual([`answered\t${child.childId}\treq-q`]);

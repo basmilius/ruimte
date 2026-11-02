@@ -28,7 +28,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - A child that stops on a limit pauses its task. The turn says which limit and when it lifts (`limit`, read only from the CLI's own stream), the task stays open with `paused`, and its parent sleeps on until the child finishes after the reset. An overload the daemon does not try again is an ordinary error and fails the task.
 - A task settles only once its child is really done. A turn that ends while its CLI still runs background work (a background subagent, a Claude workflow, an agent Codex spawned: `@adecore/agents/chat/background-work.ts`) settles nothing, and the parent is not woken in between.
-- The task then settles on the turn the CLI opens by itself once that work ended, on the child's last turn when its CLI opens none (Codex), or on `ruimte-context done`, which works all the while.
+- The task then settles on the turn the CLI opens by itself once that work ended, on the child's last turn when its CLI opens none (Codex), or on `task_done`, which works all the while.
 - A command or monitor the child's CLI runs in the background (its own or a subagent's, as the chat's `background` shows it) holds the task too, for at most 30 minutes from the moment it is all that is left, since a dev server never ends. That limit is a `background-limit` entry with a time. It survives a restart, runs once, and lapses when the task settles otherwise. When it passes, the task settles on the child's last result, which names the commands that still ran.
 - A daemon restart takes the CLI and its commands down. A task only commands held then fails at once with the child's last result and a line naming what was lost, and wakes its parent once, as when the CLI goes within one run.
 - Subagents and workflows have no limit.
@@ -38,8 +38,8 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 
 - A child with a task that waits on a question or an approval leaves its parent one note per request (`deliver-waiting`) and does not wake it. The note is due 15 seconds after the request came and is written only if the request still waits then, so a request settled at once leaves none.
 - A child on another machine leaves no such note. Its requests wait on that machine, where a person answers them, and its parent hears only the result.
-- A parent may answer a question of a child it opened itself with `ruimte-context answer`, as a person's `chat.answer` does; whoever answers first wins. Approvals, logins and every other card stay with the person.
-- A parent may `ruimte-context read` a child it opened itself without a line, by the same lineage.
+- A parent may answer a question of a child it opened itself with `agent_answer`, as a person's `chat.answer` does; whoever answers first wins. Approvals, logins and every other card stay with the person.
+- A parent may `context_read` a child it opened itself without a line, by the same lineage.
 
 ### Work on a clock
 

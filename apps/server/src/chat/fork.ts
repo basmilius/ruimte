@@ -218,7 +218,7 @@ const CHAT_CLIS: ReadonlySet<AgentKind> = new Set(['claude', 'codex']);
 /* What the person reads under the copied history of a fork that goes on with another CLI, after "Forked". */
 function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
     const read = handoff.all ? 'the whole conversation' : `the last ${handoff.turns === 1 ? 'turn' : `${handoff.turns} turns`}`;
-    return `after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
+    return `after ${cutPlace(cut)} and continued with ${handoff.to}. ${filesLine(cut, files)} The agent got ${read} as text and can read the rest of ${original.title} itself.`;
 }
 
 function cliRefusal(error: unknown): ChatError {

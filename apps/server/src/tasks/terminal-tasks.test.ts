@@ -50,6 +50,6 @@ test('a terminal agent that says goodbye without done fails its task, saying how
     await owed;
     expect(tasks.get(task.id)).toMatchObject({
         status: 'failed',
-        result: { text: 'It ended without a result: a terminal reports back with ruimte-context done.', source: 'exit' }
+        result: { text: 'It ended without a result: a terminal reports back with task_done.', source: 'exit' }
     });
 });

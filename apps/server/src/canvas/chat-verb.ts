@@ -16,10 +16,10 @@ const attach = defineActionVerb('chat', {
         {
             syntax: '--file <path>',
             need: 'required',
-            text: 'An image or model file in your own sandbox; ruimte-context reads it and sends its bytes, so the daemon never opens a path'
+            text: "An image or model file in the project folder, its worktrees, this chat's own folder or the system temp folder; the machine reads it there and refuses a path anywhere else"
         },
         { syntax: '--name N', need: 'optional', field: 'name', more: 'the file name without its folder when omitted' },
-        { syntax: '--data B', need: 'optional', field: 'data', more: 'ruimte-context fills this from --file; there is no reason to write it yourself' }
+        { syntax: '--data B', need: 'optional', field: 'data', more: 'the tool fills this from --file; there is no reason to write it yourself' }
     ],
     detail: [
         `limits\tPNG, JPEG, GIF, WebP, HEIC and HEIF images of at most ${AGENT_IMAGE_BYTES / MIB} MiB, binary glTF, USDZ and STL models of at most ${AGENT_MODEL_BYTES / MIB} MiB, ${AGENT_ATTACHMENT_LIMIT} per chat together; the type is read off the bytes, not the name`,
@@ -27,7 +27,7 @@ const attach = defineActionVerb('chat', {
         'use\t<Image attachment="<id>" alt="..."/> in a ruimte-ui block, and Gallery and Compare take ids the same way; a model is <Model attachment="<id>">caption</Model>, shown only when the person asks to see it',
         'chat\tOnly an AI chat takes one, in any permission mode: it changes nothing but your own thread. It goes with a clear or a deletion of the chat',
         'refusals\tattach-needs-chat\tattach-unreadable\tattach-not-image\tattach-too-large\tattach-limit\tthe codes this action refuses with; attach-not-image also means no model',
-        'see\truimte-context help ui content\tthe components that show it'
+        'see\tui_catalog with group content\tthe components that show it'
     ],
     positionals: z.tuple([], { error: 'chat attach takes no arguments; name the file with --file' }),
     flags: z.object({
@@ -37,10 +37,8 @@ const attach = defineActionVerb('chat', {
     }),
     async run({ flags }, call) {
         if (flags.data === undefined || flags.name === undefined) {
-            // Only ruimte-context reads the file; a call that skipped it has no bytes to attach.
-            throw new VerbRefusal('bad-arguments', 'chat attach needs --file <path>, which ruimte-context reads before it asks the daemon', [
-                'detail\truimte-context help chat attach'
-            ]);
+            // Only the MCP tool reads the file (`mcp/uploads.ts`); a call that skipped it has no bytes to attach.
+            throw new VerbRefusal('bad-arguments', 'chat attach needs --file <path>, which the tool reads before the verb runs');
         }
         const { attachment } = await runAction(call, 'chat.attach', { name: flags.name, data: flags.data });
         return [

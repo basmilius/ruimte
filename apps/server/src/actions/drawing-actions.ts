@@ -8,8 +8,6 @@ import { DrawingError } from '../projects/drawing-store.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { MAX_PROBLEMS, parseJson, pathOf, problemsRefusal } from './json-input.ts';
 
-const HELP_LINE = 'detail\truimte-context help view drawing';
-
 /* The ids the daemon gives new elements, in the shape a person's own elements have. */
 function systemMint(): DrawingEditMint {
     return { id: () => `el-${randomBytes(5).toString('hex')}`, seed: () => randomInt(2 ** 31) };
@@ -57,7 +55,7 @@ function editProblems(error: z.ZodError): VerbRefusal {
         text: issue.code === 'unrecognized_keys' ? `has no field ${issue.keys.join(', ')}` : issue.message
     }));
 
-    return problemsRefusal('bad-edit', problems, HELP_LINE);
+    return problemsRefusal('bad-edit', problems);
 }
 
 export const drawingActions: ActionHandlers<ServerActionContext> = {
@@ -81,13 +79,9 @@ export const drawingActions: ActionHandlers<ServerActionContext> = {
             );
         }
         if (edit.trim() === '') {
-            throw new VerbRefusal(
-                'no-edit',
-                "view drawing reads the edit on stdin and got nothing: ruimte-context view drawing <viewId> --revision N <<'EOF' ... EOF",
-                [HELP_LINE]
-            );
+            throw new VerbRefusal('no-edit', 'view_drawing got an empty edit; pass the edit as JSON');
         }
-        const parsed = DrawingEditSchema.safeParse(parseJson(edit, 'edit', HELP_LINE));
+        const parsed = DrawingEditSchema.safeParse(parseJson(edit, 'edit'));
         if (!parsed.success) {
             throw editProblems(parsed.error);
         }
@@ -96,7 +90,7 @@ export const drawingActions: ActionHandlers<ServerActionContext> = {
             return { output: { viewId: view.id, ...edited } };
         } catch (e) {
             if (e instanceof DrawingError) {
-                throw new VerbRefusal(e.code, e.message, e.code === 'bad-edit' ? [...e.lines.slice(0, MAX_PROBLEMS), HELP_LINE] : e.lines);
+                throw new VerbRefusal(e.code, e.message, e.code === 'bad-edit' ? e.lines.slice(0, MAX_PROBLEMS) : e.lines);
             }
             throw e;
         }

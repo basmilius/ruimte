@@ -57,7 +57,7 @@ function withCanvas(content: ProjectContent, canvas: ProjectCanvasView): Project
 function deletableLines(content: ProjectContent, place: IndexedPlace, call: VerbCall, anyNode: boolean): string[] {
     const canvas = place.canvasId === null ? undefined : content.views.find((view) => view.id === place.canvasId);
     if (canvas === undefined || !isCanvasView(canvas)) {
-        return ['detail\truimte-context node list --view <id>\tthe nodes of a canvas, which is where an id comes from'];
+        return ['detail\tnode_list --view <id>\tthe nodes of a canvas, which is where an id comes from'];
     }
     return nodeLines(canvas, {
         takes: (node) => node.id !== lineEndOf(canvas.nodes, call.caller) && (anyNode || call.host.lineage.madeBy(node.id) === call.caller),
@@ -95,7 +95,7 @@ function mayColor(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall, 
 function colorableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
     return nodeLines(canvas, {
         takes: (node) => !isUnknownNode(node) && mayColor(canvas, node, call, chatView),
-        empty: `${canvas.id} has no node you may color; ruimte-context node new adds one of your own`
+        empty: `${canvas.id} has no node you may color; node_new adds one of your own`
     });
 }
 
@@ -103,7 +103,7 @@ function colorableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boo
 function writableLines(canvas: ProjectCanvasView, call: VerbCall, chatView: boolean): string[] {
     return nodeLines(canvas, {
         takes: (node) => node.kind === 'note' && mayWrite(canvas, node, call, chatView),
-        empty: `${canvas.id} has no note you may write in; ruimte-context node new note --text B adds one of your own`
+        empty: `${canvas.id} has no note you may write in; node_new note --text B adds one of your own`
     });
 }
 
@@ -166,7 +166,7 @@ function writtenOn(
     if (!mayWrite(canvas, node, caller, chatView)) {
         throw new VerbRefusal('not-linked', `${nodeId} is a note you did not make and no line joins you to it: draw that line and you can write in it`, [
             ...writableLines(canvas, caller, chatView),
-            `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+            `see\tlink_new --to ${nodeId}\tdraws the line this needs`
         ]);
     }
     // Read here under the project's lock and nowhere earlier, so of two agents appending at once the second writes under the first.
@@ -223,7 +223,7 @@ async function checkArtifact(call: ServerActionCall, artifactId: string, version
         return { reference: { id: artifact.artifactId, ...(versionId == null ? {} : { version: version.versionId }) }, title: artifact.title };
     } catch (error) {
         if (error instanceof ArtifactError) {
-            throw new VerbRefusal('not-found', error.message, ['see\truimte-context artifact list\twhat this project keeps']);
+            throw new VerbRefusal('not-found', error.message, ['see\tartifact_list\twhat this project keeps']);
         }
         throw error;
     }
@@ -248,7 +248,7 @@ async function checkNode(spec: NodeSpec, call: ServerActionCall): Promise<Checke
     const { host, place } = call.context;
     const { kind } = spec;
     if (kind === 'group') {
-        throw new VerbRefusal('bad-arguments', 'node new draws no frame; ruimte-context node group draws one around nodes');
+        throw new VerbRefusal('bad-arguments', 'node new draws no frame; node_group draws one around nodes');
     }
     const kindLines = [kindLine(kind), EVERY_KIND_LINE];
     const given: Record<KindFlag, unknown> = {
@@ -299,7 +299,7 @@ function sourceNameOf(content: ProjectContent, spec: NodeSpec): string | undefin
             orNote(
                 content.views.filter(ofKind).map((view) => `${sourceKind}\t${view.id}\t${field(view.name)}`),
                 sourceKind === 'diagram'
-                    ? 'This project has no diagram views; ruimte-context view new --kind diagram makes one'
+                    ? 'This project has no diagram views; view_new --kind diagram makes one'
                     : 'This project has no drawing views; a person makes one in the sidebar'
             )
         );
@@ -424,7 +424,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
     'node.create': async (input, call) => {
         // Only `agent` starts anything, so a node an agent adds opens empty.
         if (input.command !== null || input.provider !== null) {
-            throw new VerbRefusal('starts-nothing', 'node new starts no CLI and no command; ruimte-context agent is what opens an agent');
+            throw new VerbRefusal('starts-nothing', 'node new starts no CLI and no command; agent_start is what opens an agent');
         }
         const made = await createNodes(call, input.viewId, [input], false);
         const [first] = made.nodes;
@@ -493,7 +493,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                         throw refuseOwnView(
                             own,
                             'there is no node to remove',
-                            [...lines, `see\truimte-context view delete ${own.id}\tremoves a view you made, with the session it holds`],
+                            [...lines, `see\tview_delete ${own.id}\tremoves a view you made, with the session it holds`],
                             id
                         );
                     }
@@ -620,7 +620,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
             if (!mayColor(canvas, node, caller, chatView)) {
                 throw new VerbRefusal('not-linked', `${nodeId} is a node you did not make and no line joins you to it: draw that line and you can color it`, [
                     ...colorableLines(canvas, caller, chatView),
-                    `see\truimte-context link new --to ${nodeId}\tdraws the line this needs`
+                    `see\tlink_new --to ${nodeId}\tdraws the line this needs`
                 ]);
             }
             const patch = nodeColorPatch(node, color);

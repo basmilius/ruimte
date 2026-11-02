@@ -8,10 +8,8 @@ import {
     agentAttachmentBytes,
     agentAttachmentType
 } from '../chat/attachment-type.ts';
-import { imageType } from '../cli/visual-images.ts';
+import { imageType } from '../mcp/visual-images.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
-
-const HELP_LINE = 'detail\truimte-context help chat attach';
 
 const MIB = 1024 * 1024;
 
@@ -21,17 +19,13 @@ export const chatAttachActions: ActionHandlers<ServerActionContext> = {
         await requireChatCaller(
             context,
             actor.id,
-            (you) =>
-                new VerbRefusal('attach-needs-chat', `A file attaches only to the thread of an AI chat, and you are ${you}: describe it in text instead`, [
-                    HELP_LINE
-                ])
+            (you) => new VerbRefusal('attach-needs-chat', `A file attaches only to the thread of an AI chat, and you are ${you}: describe it in text instead`)
         );
         const bytes = Buffer.from(data, 'base64');
         if (bytes.byteLength > AGENT_MODEL_BYTES) {
             throw new VerbRefusal(
                 'attach-too-large',
-                `The file is ${Math.ceil(bytes.byteLength / MIB)} MiB and at most ${AGENT_MODEL_BYTES / MIB} MiB attach for a model, ${AGENT_IMAGE_BYTES / MIB} MiB for an image`,
-                [HELP_LINE]
+                `The file is ${Math.ceil(bytes.byteLength / MIB)} MiB and at most ${AGENT_MODEL_BYTES / MIB} MiB attach for a model, ${AGENT_IMAGE_BYTES / MIB} MiB for an image`
             );
         }
         // The bytes decide the type: the daemon trusts no CLI to have checked them.
@@ -39,15 +33,13 @@ export const chatAttachActions: ActionHandlers<ServerActionContext> = {
         if (type === null) {
             throw new VerbRefusal(
                 'attach-not-image',
-                `Only a ${Object.values(AGENT_IMAGE_TYPES).join(', ')} image or a ${Object.values(AGENT_MODEL_TYPES).join(', ')} model attaches, and these bytes are ${imageType(bytes) ?? 'neither'}`,
-                [HELP_LINE]
+                `Only a ${Object.values(AGENT_IMAGE_TYPES).join(', ')} image or a ${Object.values(AGENT_MODEL_TYPES).join(', ')} model attaches, and these bytes are ${imageType(bytes) ?? 'neither'}`
             );
         }
         if (bytes.byteLength > agentAttachmentBytes(type.kind)) {
             throw new VerbRefusal(
                 'attach-too-large',
-                `The image is ${Math.ceil(bytes.byteLength / MIB)} MiB and at most ${AGENT_IMAGE_BYTES / MIB} MiB attach`,
-                [HELP_LINE]
+                `The image is ${Math.ceil(bytes.byteLength / MIB)} MiB and at most ${AGENT_IMAGE_BYTES / MIB} MiB attach`
             );
         }
         const attachment = await images.attach(actor.id, { name, mime: type.mime, bytes });

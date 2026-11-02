@@ -31,7 +31,7 @@ export function arrangedCanvas(content: ProjectContent, caller: string, viewId: 
         throw new VerbRefusal(
             'not-a-chat-view',
             '--view lets a chat view operate the nodes of a canvas without a line; you are no chat view, so a line between you and the node is what lets you',
-            ['see\truimte-context link new --to <id>\tdraws that line from a node on the same canvas']
+            ['see\tlink_new --to <id>\tdraws that line from a node on the same canvas']
         );
     }
     return canvasNamed(content, viewId);
@@ -40,7 +40,7 @@ export function arrangedCanvas(content: ProjectContent, caller: string, viewId: 
 /* An id the call asked for on one canvas while it stands on another; the call again with that canvas is the answer. */
 export function notOnView(id: string, holding: ProjectCanvasView, named: ProjectCanvasView, again: string): VerbRefusal {
     return new VerbRefusal('not-on-view', `${id} stands on ${holding.id}, not on ${named.id}`, [
-        `see\truimte-context ${again} --view ${holding.id}\tnames the canvas it stands on`
+        `see\t${again} --view ${holding.id}\tnames the canvas it stands on`
     ]);
 }
 
@@ -49,6 +49,6 @@ export function viewRequired(id: string, holding: ProjectCanvasView, again: stri
     return new VerbRefusal(
         'view-required',
         `${id} stands on ${holding.id}; a chat view reads and operates the nodes of a canvas by naming it with --view, since no line runs to a view`,
-        [`see\truimte-context ${again} --view ${holding.id}\tnames the canvas it stands on`]
+        [`see\t${again} --view ${holding.id}\tnames the canvas it stands on`]
     );
 }

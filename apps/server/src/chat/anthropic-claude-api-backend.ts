@@ -4,8 +4,18 @@ import { z } from 'zod';
 import type { RuntimeMode } from '@ruimte/contracts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from '@adecore/agents/chat';
 import { ANTHROPIC_URL, anthropicHeaders, anthropicHttpError, type AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
-import { ApiTools, CONTINUE_MESSAGE, INTERRUPTED, apiInstructions, endTurn, readThread, writeThread, type ToolRounds } from './api-chat.ts';
-import { executeNanoTool, NANOGPT_TOOLS, nanoEffectiveMode } from './nanogpt-tools.ts';
+import {
+    ApiTools,
+    CONTINUE_MESSAGE,
+    INTERRUPTED,
+    apiInstructions,
+    endTurn,
+    readThread,
+    writeThread,
+    type ApiToolDefinition,
+    type ToolRounds
+} from './api-chat.ts';
+import { executeNanoTool, nanoEffectiveMode } from './nanogpt-tools.ts';
 import { readAnthropicStream, type AnthropicToolUse, type AnthropicUsage, type AnthropicTurn } from './anthropic-claude-api-stream.ts';
 import { cancellableTimeout, type Timer } from '@adecore/agents';
 
@@ -46,13 +56,15 @@ async function* touching(body: AsyncIterable<Uint8Array>, touch: () => void): As
     }
 }
 
-/* The tools of the NanoGPT chat in the form this API takes: the schema is `input_schema`, and the last one carries a cache mark. */
-const TOOLS = NANOGPT_TOOLS.map((tool, index) => ({
-    name: tool.function.name,
-    description: tool.function.description,
-    input_schema: tool.function.parameters,
-    ...(index === NANOGPT_TOOLS.length - 1 ? { cache_control: { type: 'ephemeral' } } : {})
-}));
+/* The tools in the form this API takes: the schema is `input_schema`, and the last one carries a cache mark. */
+function anthropicTools(tools: ApiToolDefinition[]) {
+    return tools.map((tool, index) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.parameters,
+        ...(index === tools.length - 1 ? { cache_control: { type: 'ephemeral' } } : {})
+    }));
+}
 
 /*
  * A chat on the API of Claude, its thread kept beside the key as `<session id>.json`. Every request marks its
@@ -210,6 +222,8 @@ export class AnthropicClaudeApiBackend implements ChatBackend {
     }
     /* One request of a round, streamed into the thread under `ref` with a ref per block, and the tokens it spent logged even when it fails. */
     private async exchange(ref: string, signal: AbortSignal): Promise<AnthropicTurn> {
+        // Before the idle clock starts: the first call connects to Ruimte's server.
+        const tools = anthropicTools(await this.tools.definitions());
         const model = this.launch.selection.model;
         const key = this.service.apiKey;
         const idle = new AbortController();
@@ -232,7 +246,7 @@ export class AnthropicClaudeApiBackend implements ChatBackend {
                     stream: true,
                     system: [{ type: 'text', text: apiInstructions(this.launch), cache_control: { type: 'ephemeral' } }],
                     messages: this.withCacheMark(this.messages),
-                    tools: TOOLS,
+                    tools,
                     // The newer models think on their own; the older ones have to be asked, and say so in the model list.
                     ...(this.service.supportsAdaptiveThinking(model) ? { thinking: { type: 'adaptive', display: 'summarized' } } : {})
                 })
@@ -383,6 +397,7 @@ export class AnthropicClaudeApiBackend implements ChatBackend {
     async dispose(): Promise<void> {
         this.interrupt();
         await this.work;
+        await this.tools.close();
         this.opened = false;
         this.host.onEvent({ type: 'exit', exitCode: 0 });
     }

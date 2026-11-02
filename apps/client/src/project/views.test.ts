@@ -40,7 +40,7 @@ describe('asking an agent to write an empty diagram', () => {
         expect(canvas.nodes[chat!]?.kind).toBe('chat');
         expect(canvas.edges).toEqual([expect.objectContaining({ from: mirror!.id, to: chat })]);
         expect(useDrafts.getState().ids).toContain(chat!);
-        expect(readDraft(chat!).text).toBe('Fill the empty diagram "Flow" with `ruimte-context view diagram flow`. It should show ');
+        expect(readDraft(chat!).text).toBe('Fill the empty diagram "Flow" with `view_diagram flow`. It should show ');
     });
 
     test('a view that is not a diagram or a drawing asks nothing', async () => {

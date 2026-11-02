@@ -191,16 +191,23 @@ function appLine(app: RunningApp): string {
     return `app\t${app.name}\t${app.bundleId ?? '-'}\t${app.pid}`;
 }
 
-const APPS_SEE = 'see\truimte-context computer apps\tevery app that runs, with its bundle id and pid';
+const APPS_SEE = 'see\tcomputer_apps\tevery app that runs, with its bundle id and pid';
+
+// The actions `computer_act` bundles; every other `cu` command is a tool of its own.
+const ACT_COMMANDS: ReadonlySet<string> = new Set(['click', 'type', 'key', 'set-value', 'scroll', 'drag']);
+
+function computerTool(command: string): string {
+    return ACT_COMMANDS.has(command) ? 'computer_act' : `computer_${command.replaceAll('-', '_')}`;
+}
 
 /*
- * The helper words its errors for `cu`, its own command line; an agent runs this CLI instead, and a
+ * The helper words its errors for `cu`, its own command line; an agent calls the tools instead, and a
  * missing grant is a person's to give.
  */
 export function agentWords(message: string): string {
     return message
         .replace(/run `cu doctor`/g, 'a person grants it to Ruimte Computer Use in System Settings')
-        .replace(/`cu ([a-z-]+)/g, '`ruimte-context computer $1');
+        .replace(/`cu ([a-z-]+)/g, (_, action: string) => `\`${computerTool(action)}`);
 }
 
 export interface ComputerUseOptions {
@@ -644,7 +651,7 @@ export class ComputerUse {
         if (command !== 'open') {
             throw new ComputerRefusal('unknown-app', `No app that runs is called ${query}; open starts one`, [
                 ...apps.map(appLine),
-                'see\truimte-context computer open <app>\tstarts an app by the file name of its bundle or its bundle id'
+                'see\tcomputer_open <app>\tstarts an app by the file name of its bundle or its bundle id'
             ]);
         }
         const installed =

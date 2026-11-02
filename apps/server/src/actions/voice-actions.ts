@@ -47,7 +47,7 @@ async function sessionProject(context: ServerActionContext): Promise<{ projectId
 /*
  * Refused before anything is read: a chat on another machine has nothing here but the shell it left, and
  * Voice reaches only the project its session works in now, whatever id the model names. The words are for
- * the model of a voice and name no `ruimte-context` flag.
+ * the model of a voice and name no agent tool or flag.
  */
 async function chatOfSession(context: ServerActionContext, chatId: string): Promise<VoiceAgentPlace & { project: string }> {
     const voice = voiceOf(context);

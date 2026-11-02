@@ -25,7 +25,7 @@ const BESIDE_LINES_MAX = 20;
 export function nodeLines(canvas: ProjectCanvasView, options: { takes?: (node: ProjectNode) => boolean; empty?: string } = {}): string[] {
     const nodes = options.takes === undefined ? canvas.nodes : canvas.nodes.filter(options.takes);
     if (nodes.length > BESIDE_LINES_MAX) {
-        return [`detail\truimte-context node list\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
+        return [`detail\tnode_list\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
     }
     return orNote(
         nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),

@@ -14,17 +14,16 @@ export const MAX_TASK_PROMPT_LENGTH = MAX_PROMPT_LENGTH - BRIEF_ROOM;
 /*
  * The line a child reads under its prompt. A chat child's last answer is its result, and naming done
  * there made every child call it anyway. A terminal child has no answer the daemon can take, so it
- * calls done; the quoting advice is there because Codex's allow rule cannot parse `$'...'` or a
- * heredoc, which runs the call sandboxed and asks the person for approval.
+ * calls `task_done`.
  */
 export function taskBrief(chat: boolean): string {
     return `\n\n(${chat ? CHAT_TASK_BRIEF : TERMINAL_TASK_BRIEF})`;
 }
 
 const CHAT_TASK_BRIEF =
-    'This is a task from the agent that opened you. End this turn with the result as your last message; that is reported back to it, so no ruimte-context call is needed.';
+    'This is a task from the agent that opened you. End this turn with the result as your last message; that is reported back to it, so no tool call is needed.';
 const TERMINAL_TASK_BRIEF =
-    "This is a task from the agent that opened you. When it is finished, run ruimte-context done --result '...' and write a line break as \\n inside those plain single quotes; if you exit without it, the task fails.";
+    'This is a task from the agent that opened you. When it is finished, call task_done with the result; if you exit without it, the task fails.';
 
 /*
  * The first prompt a child of a task is held with. A chat hears the brief beside the prompt and folds it
@@ -65,9 +64,7 @@ export function requireChatParent(content: ProjectContent, caller: string, hidde
         throw new VerbRefusal(
             'not-a-chat-parent',
             `Only a chat can give a task, and you are ${kind === null ? 'not a node of this project' : `a ${kind}`}: a task wakes the chat that gave it with the result, and nothing else can be woken`,
-            [
-                'see\truimte-context agent\twithout --task it opens the same agent, and ruimte-context read on its id shows what it did once a line runs from it into you'
-            ]
+            ['see\tagent_start\twithout --task it opens the same agent, and context_read on its id shows what it did once a line runs from it into you']
         );
     }
 }

@@ -5,8 +5,6 @@ import { VerbRefusal, field, orNote, type VisualHost } from '../canvas/verb.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
 
-const HELP_LINE = 'detail\truimte-context help visual';
-
 /* What the store refuses a page with; its message already says what to change. */
 const STORE_REFUSALS: ReadonlySet<string> = new Set(['visual-invalid', 'visual-too-large']);
 
@@ -61,7 +59,7 @@ async function storeRefusalsAsVerb<Result>(work: () => Promise<Result>): Promise
         return await work();
     } catch (e) {
         if (e instanceof CodedError && STORE_REFUSALS.has(e.code)) {
-            throw new VerbRefusal(e.code, e.message, [HELP_LINE]);
+            throw new VerbRefusal(e.code, e.message);
         }
         throw e;
     }
@@ -105,13 +103,12 @@ export const visualActions: ActionHandlers<ServerActionContext> = {
     'visual.preview': async ({ html, width, appearance }, { actor, context }) => {
         const { visuals, chatId } = await visualChat(context, actor.id);
         if (html.trim() === '') {
-            throw new VerbRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document', [HELP_LINE]);
+            throw new VerbRefusal('visual-invalid', 'The page is empty; pass one self-contained HTML document');
         }
         if (!renderable(html)) {
             throw new VerbRefusal(
                 'visual-too-large',
-                `The page is larger than the ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB a visual may be; load libraries from a public CDN URL and refer to large images by their http(s) URL`,
-                [HELP_LINE]
+                `The page is larger than the ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB a visual may be; load libraries from a public CDN URL and refer to large images by their http(s) URL`
             );
         }
         if (!visuals.preview) {

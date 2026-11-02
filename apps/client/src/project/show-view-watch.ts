@@ -42,7 +42,7 @@ function onShowView(endpointId: string, payload: ProjectShowViewEvent): void {
 }
 
 /*
- * `ruimte-context view open` on any machine this client is holding a socket to. The daemon only sends it
+ * `view_open` on any machine this client is holding a socket to. The daemon only sends it
  * to the clients that have that project open, and this side still checks it is about the project
  * on screen, since the socket may outlive a switch to another project.
  */

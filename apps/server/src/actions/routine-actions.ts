@@ -32,7 +32,7 @@ export function routinesOf(context: ServerActionContext): RoutineAgentHost {
 function routineLines(entries: readonly RoutineEntry[]): string[] {
     return orNote(
         entries.map((entry) => `routine\t${entry.routine.id}\t${field(entry.routine.title)}`),
-        'This project has no routines yet; ruimte-context routine new adds one'
+        'This project has no routines yet; routine_new adds one'
     );
 }
 
@@ -130,10 +130,7 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
             launchId = named(await launchHostOf(context).list(place.projectId), input.launch).launchId;
         }
         if (launchId === undefined) {
-            throw new VerbRefusal(
-                'launch-required',
-                'A launch routine needs --launch: the id of the launch it starts; ruimte-context launches list names them'
-            );
+            throw new VerbRefusal('launch-required', 'A launch routine needs --launch: the id of the launch it starts; launch_list names them');
         }
         routine = { ...launch, ...base, kind, launchId };
     }

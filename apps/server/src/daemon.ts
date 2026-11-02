@@ -1,4 +1,3 @@
-import { dirname, resolve } from 'node:path';
 import { greetingLines } from './cli/greeting.ts';
 import type { ServerConfig } from './config.ts';
 import { CONTEXT_PATH } from './context/context-store.ts';
@@ -66,8 +65,6 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         config,
         compiled,
         sourceDir: import.meta.dir,
-        // `ruimte-context` lives next to the binary, or next to the source in dev.
-        binDir: compiled ? dirname(process.execPath) : resolve(import.meta.dir, '..', 'bin'),
         contextUrl: `http://127.0.0.1:${config.port}${CONTEXT_PATH}`
     };
     const { home } = config;
@@ -120,7 +117,14 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         stores,
         agents,
         computer,
-        later: { launches: () => launches, work: () => work, databases: () => databases, language: () => language, templates: () => templates }
+        later: {
+            launches: () => launches,
+            work: () => work,
+            databases: () => databases,
+            language: () => language,
+            templates: () => templates,
+            devices: () => devices
+        }
     });
     const templates = wireTemplates(home, projects);
     watchProjects(projects.store);
@@ -159,6 +163,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         work,
         launches,
         projects: projects.store,
+        devices: devices.deviceDriver,
         shutdown: (reason) => shutdown(reason)
     });
     const maintenance = wireMaintenance(home, processes, { language: () => language.host, projects: () => projects.store.index });

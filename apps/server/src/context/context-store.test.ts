@@ -2,25 +2,31 @@ import { describe, expect, test } from 'bun:test';
 import { compileUi } from '@adecore/intelligent-ui';
 import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/verb.ts';
-import { handleContextRequest } from './context-route.ts';
+import { catalog } from '../mcp/catalog.ts';
+import { callTool } from '../mcp/mcp-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 import type { ChatUsageInfo } from './chat-usage.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import { artifactReport } from '../artifacts/artifact-report.ts';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
 
-/* The route in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
-function route(context: ContextStore) {
-    return (path: string, token?: string) => {
-        const url = new URL(`http://127.0.0.1${path}`);
-        const host = {
-            projects: { locate: () => null, machineOfNode: () => null },
-            context
-        } as unknown as CanvasHost;
-        return handleContextRequest(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname, {
-            targetForToken: (given) => (given === 'tok' ? 'agent' : null),
-            host
-        });
+interface ToolAnswer {
+    refused: boolean;
+    text: string;
+}
+
+/* The context tools in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
+function toolsOf(context: ContextStore): (name: string, input?: Record<string, unknown>) => Promise<ToolAnswer> {
+    const host = {
+        projects: { locate: () => null, machineOfNode: () => null },
+        context
+    } as unknown as CanvasHost;
+
+    return async (name, input = {}) => {
+        const result = await callTool(catalog(), name, input, { caller: 'agent', host, files: () => Promise.reject(new Error('no files in these tests')) });
+        const first = result.content[0];
+
+        return { refused: result.isError === true, text: first?.type === 'text' ? first.text : '' };
     };
 }
 
@@ -121,7 +127,11 @@ const store = new ContextStore({
     canvasOf: (targetId) => (targetId === 'agent' ? canvas : null)
 });
 
-const get = route(store);
+const tool = toolsOf(store);
+
+function read(id: string, input: Record<string, unknown> = {}): Promise<ToolAnswer> {
+    return tool('context_read', { id, ...input });
+}
 
 describe('ContextStore', () => {
     test('a source handed over with no line is read like a linked one, and one with nothing in it says so', async () => {
@@ -236,29 +246,28 @@ describe('ContextStore', () => {
         expect((await store.read('agent', 'view-1', 2)) ?? '').not.toContain('<svg');
     });
 
-    test('the HTTP face checks the token and answers list and read', async () => {
+    test('the context tools list and read what is linked', async () => {
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
-        expect((await get('/context')).status).toBe(401);
-        expect((await get('/context', 'wrong')).status).toBe(401);
-        expect(await (await get('/context', 'tok')).json()).toEqual({ sources: [{ id: 'note', kind: 'text', title: 'Sprint' }] });
-        expect(await (await get('/context/note', 'tok')).text()).toBe('ship it');
-        expect((await get('/context/other', 'tok')).status).toBe(404);
+        expect(await tool('context_list')).toEqual({ refused: false, text: 'note\ttext\tSprint\t-\t-' });
+        expect(await read('note')).toEqual({ refused: false, text: 'ship it' });
+        expect((await read('other')).refused).toBe(true);
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'one\ntwo' }]);
-        expect(await (await get('/context/note?tail=1', 'tok')).text()).toBe('two');
-        expect((await get('/context/note?tail=0', 'tok')).status).toBe(400);
-        expect((await get('/context/note?tail=two', 'tok')).status).toBe(400);
-        expect((await get('/context/%E0', 'tok')).status).toBe(400);
+        expect(await read('note', { tail: 1 })).toEqual({ refused: false, text: 'two' });
+        expect((await read('note', { tail: 0 })).text).toStartWith('refused bad-arguments:');
+        expect((await read('note', { tail: 'two' })).text).toStartWith('refused bad-arguments:');
     });
 
-    test('a read that finds nothing answers why, from the canvas the CLI cannot see', async () => {
+    test('a read that finds nothing answers why, from the canvas the agent cannot see', async () => {
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
-        const refused = await get('/context/term', 'tok');
-        expect(refused.status).toBe(404);
-        const body = await refused.text();
-        expect(body.split('\n')[0]).toStartWith('not-linked\tterm is a terminal node on main with a line from you into it');
-        expect(body).toInclude('ruimte-context link new --from term --to agent');
-        // An id the canvas does not carry either keeps the answer the CLI would have written itself.
-        expect(await (await get('/context/other', 'tok')).text()).toStartWith('unknown-source\tother is not linked to this session');
+        const refused = await read('term');
+        expect(refused.refused).toBe(true);
+        expect(refused.text.split('\n')[0]).toStartWith('refused not-linked: term is a terminal node on main with a line from you into it');
+        expect(refused.text).toInclude('link_new');
+        // An id the canvas does not carry either is refused with what is linked under it.
+        expect((await read('other')).text.split('\n')).toEqual([
+            'refused unknown-source: other is not linked to this session, and no node of main carries that id either',
+            'note\ttext\tSprint'
+        ]);
     });
 
     test('a linked chat reads its plans above the thread, and a tail never cuts them off', async () => {
@@ -344,15 +353,6 @@ describe('a chat read with its usage', () => {
         });
         expect((await withUsage.answer('agent', 'chat', null, 'toolu_1')).usage).toBeUndefined();
         expect(await withUsage.answer('agent', 'note', null, null)).toEqual({ text: 'ship it' });
-    });
-
-    test('the HTTP face answers JSON when asked, and text otherwise', async () => {
-        const json = await route(withUsage)('/context/chat?tail=1&json', 'tok');
-        expect(json.headers.get('content-type')).toStartWith('application/json');
-        const body = (await json.json()) as { text: string; usage: { contextPercent: number } };
-        expect(body.text).toEndWith('\n\nDone.');
-        expect(body.usage.contextPercent).toBe(25);
-        expect(await (await route(withUsage)('/context/note', 'tok')).text()).toBe('ship it');
     });
 });
 
@@ -542,21 +542,26 @@ describe('a subagent of a linked chat', () => {
         }
     });
 
-    const ask = (path: string) => route(subagentStore)(path, 'tok');
+    const ask = toolsOf(subagentStore);
 
-    test('--subagent prints that conversation through the chat it belongs to, and --tail counts its lines', async () => {
-        expect(await (await ask('/context/chat?subagent=toolu_1')).text()).toBe('## User\n\nSurvey the docs\n\n## Assistant\n\nA guide is missing.');
-        expect(await (await ask('/context/chat?subagent=toolu_1&tail=1')).text()).toBe('A guide is missing.');
+    test('subagent prints that conversation through the chat it belongs to, and tail counts its lines', async () => {
+        expect(await ask('context_read', { id: 'chat', subagent: 'toolu_1' })).toEqual({
+            refused: false,
+            text: '## User\n\nSurvey the docs\n\n## Assistant\n\nA guide is missing.'
+        });
+        expect((await ask('context_read', { id: 'chat', subagent: 'toolu_1', tail: 1 })).text).toBe('A guide is missing.');
     });
 
-    test('a subagent that is not there, or asked of something that is no chat, is a 422 that says why', async () => {
-        const missing = await ask('/context/chat?subagent=toolu_2');
-        expect(missing.status).toBe(422);
-        expect(await missing.text()).toBe('Claude has not written a transcript for this subagent');
-        const note = await ask('/context/note?subagent=toolu_1');
-        expect(note.status).toBe(422);
-        expect(await note.text()).toBe('note is a text, and only a chat has subagents');
-        expect((await ask('/context/nope?subagent=toolu_1')).status).toBe(404);
+    test('a subagent that is not there, or asked of something that is no chat, is refused with why', async () => {
+        expect(await ask('context_read', { id: 'chat', subagent: 'toolu_2' })).toEqual({
+            refused: true,
+            text: 'refused unknown-subagent: Claude has not written a transcript for this subagent'
+        });
+        expect(await ask('context_read', { id: 'note', subagent: 'toolu_1' })).toEqual({
+            refused: true,
+            text: 'refused unknown-subagent: note is a text, and only a chat has subagents'
+        });
+        expect((await ask('context_read', { id: 'nope', subagent: 'toolu_1' })).text).toStartWith('refused unknown-source:');
     });
 });
 
@@ -602,22 +607,22 @@ describe('a diagram as context', () => {
         expect(await store.read('agent', 'flow-1', 100)).toBe(
             'Client (React)\nDaemon\nDisk\nClient -> Daemon: socket\nDaemon -> Disk\nMachine wraps: Daemon, Disk'
         );
-        expect(await (await get('/context/flow-1?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
+        expect((await read('flow-1', { tail: 1 })).text).toBe('Machine wraps: Daemon, Disk');
     });
 
     test('the node it is linked through reads it too, and lists under the view id alone', async () => {
         linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire', nodeId: 'diagram-node' }]);
         expect(store.list('agent')).toEqual([{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
-        expect(await (await get('/context/diagram-node', 'tok')).text()).toBe(await (await get('/context/flow-1', 'tok')).text());
-        expect(await (await get('/context/diagram-node?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
+        expect(await read('diagram-node')).toEqual(await read('flow-1'));
+        expect((await read('diagram-node', { tail: 1 })).text).toBe('Machine wraps: Daemon, Disk');
         // A node nothing links into the asker stays unreadable, whatever it mirrors.
-        expect((await get('/context/other-node', 'tok')).status).toBe(404);
+        expect((await read('other-node')).refused).toBe(true);
     });
 
     test('a diagram the daemon cannot find reads as nothing at all', async () => {
         linked.set('agent', [{ id: 'gone', kind: 'diagram', title: 'Wire' }]);
         expect(await store.read('agent', 'gone')).toBeNull();
-        expect((await get('/context/gone', 'tok')).status).toBe(404);
+        expect((await read('gone')).refused).toBe(true);
     });
 });
 

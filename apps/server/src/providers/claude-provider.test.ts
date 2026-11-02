@@ -2,9 +2,9 @@ import { expect, test } from 'bun:test';
 import { CLAUDE_ALLOW_CONTEXT, claudeProvider } from './claude-provider.ts';
 import { terminalCommand } from './launch.ts';
 
-const ALLOW_CONTEXT = '--allowedTools=Bash(ruimte-context *)';
+const ALLOW_CONTEXT = '--allowedTools=mcp__ruimte';
 
-test('a chat and a terminal let ruimte-context through without a prompt', async () => {
+test("a chat and a terminal let Ruimte's MCP tools through without a prompt", async () => {
     let command: string[] = [];
     const backend = claudeProvider.createBackend(
         {
@@ -33,5 +33,5 @@ test('a chat and a terminal let ruimte-context through without a prompt', async 
     await backend.start();
     expect(command).toContain(ALLOW_CONTEXT);
     expect(CLAUDE_ALLOW_CONTEXT).toBe(ALLOW_CONTEXT);
-    expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe("claude '--allowedTools=Bash(ruimte-context *)' --permission-mode default");
+    expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe("claude '--allowedTools=mcp__ruimte' --permission-mode default");
 });

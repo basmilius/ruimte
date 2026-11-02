@@ -8,8 +8,6 @@ export const ARTIFACT_SUMMARY = "Publishes results that should stay to this proj
 
 const GIB = 1024 * 1024 * 1024;
 
-const HELP_LINE = 'detail\truimte-context help artifact publish';
-
 function versionLine(artifact: Artifact, version: ArtifactVersion): string {
     return `artifact\t${artifact.artifactId}\t${version.versionId}\t${version.number}\t${artifact.kind}\t${field(artifact.title)}\t${version.files.length}\t${version.bytes}`;
 }
@@ -18,7 +16,7 @@ function summaryLine(summary: ArtifactSummary): string {
     return `artifact\t${summary.artifactId}\t${summary.latest.versionId}\t${summary.latest.number}\t${summary.kind}\t${field(summary.title)}\t${summary.key ?? '-'}\t${new Date(summary.latest.createdAt).toISOString()}`;
 }
 
-const FilesSchema = jsonFlag('--files is JSON, which ruimte-context writes').pipe(z.array(z.object({ name: z.string(), size: z.number() })));
+const FilesSchema = jsonFlag('--files is JSON, which the tool writes from the files it read').pipe(z.array(z.object({ name: z.string(), size: z.number() })));
 
 const publish = defineActionVerb('artifact', {
     name: 'publish',
@@ -28,7 +26,7 @@ const publish = defineActionVerb('artifact', {
         {
             syntax: '--file <path>',
             need: 'required',
-            text: `A file in your own sandbox, once per file, at most ${ARTIFACT_LIMITS.filesPerVersion} and ${ARTIFACT_LIMITS.versionBytes / GIB} GiB together; ruimte-context reads them and sends their bytes, so the daemon never opens a path`
+            text: `A file in the project folder, its worktrees, this chat's own folder or the system temp folder, once per file, at most ${ARTIFACT_LIMITS.filesPerVersion} and ${ARTIFACT_LIMITS.versionBytes / GIB} GiB together; the machine reads them there and refuses a path anywhere else`
         },
         { syntax: '--title T', need: 'optional', field: 'title', more: 'the name of the first file without its extension when omitted' },
         {
@@ -43,9 +41,9 @@ const publish = defineActionVerb('artifact', {
             field: 'key',
             more: 'lowercase letters, digits and dashes; the same key again adds a version to the same artifact. Without one, a file this chat published before under the same name gets a new version too'
         },
-        { syntax: '--request-id R', need: 'optional', field: 'requestId', more: 'ruimte-context makes one per call when omitted' },
-        { syntax: '--upload U', need: 'optional', field: 'upload', more: 'ruimte-context fills this; there is no reason to write it yourself' },
-        { syntax: '--files F', need: 'optional', field: 'files', more: 'ruimte-context fills this from --file' }
+        { syntax: '--request-id R', need: 'optional', field: 'requestId', more: 'the tool makes one per call when omitted' },
+        { syntax: '--upload U', need: 'optional', field: 'upload', more: 'the tool fills this; there is no reason to write it yourself' },
+        { syntax: '--files F', need: 'optional', field: 'files', more: 'the tool fills this from --file' }
     ],
     detail: [
         'prints\tartifact\tid\tversion\tnumber\tkind\ttitle\tfiles\tbytes\tthe version this call saved, or the one an earlier call with the same request id saved',
@@ -54,11 +52,11 @@ const publish = defineActionVerb('artifact', {
         'provenance\tThe machine records which chat, turn, task and node made the version from the call itself; nothing you pass sets or changes it',
         'resume\tAn interrupted publish goes on where it stopped when you run the same command with the same --request-id',
         'refusals\ttoo-large\tdisk-full\tupload-incomplete\tupload-mismatch\ttoo-many-uploads\tbad-name\tbad-key\tkey-reserved\tthe codes this action refuses with',
-        'see\truimte-context artifact list\twhat this project keeps'
+        'see\tartifact_list\twhat this project keeps'
     ],
     positionals: z.tuple([], { error: 'artifact publish takes no arguments; name each file with --file' }),
     flags: z.object({
-        // Read by ruimte-context, which sends the bytes and leaves the flag out.
+        // The MCP tool reads the files and stages their bytes (`mcp/uploads.ts`), which fills the two flags below instead.
         file: z.string().optional(),
         upload: z.string().optional(),
         files: FilesSchema.optional(),
@@ -69,10 +67,8 @@ const publish = defineActionVerb('artifact', {
     }),
     async run({ flags }, call) {
         if (flags.upload === undefined || flags.files === undefined || flags['request-id'] === undefined) {
-            // Only ruimte-context reads the files; a call that skipped it has no bytes to publish.
-            throw new VerbRefusal('bad-arguments', 'artifact publish needs --file <path>, which ruimte-context reads and sends before it asks the daemon', [
-                HELP_LINE
-            ]);
+            // Only the MCP tool stages the files; a call that skipped it has no bytes to publish.
+            throw new VerbRefusal('bad-arguments', 'artifact publish needs --file <path>, which the tool reads and stages before the verb runs');
         }
         const { artifact, version, existing } = await runAction(call, 'artifact.publish', {
             upload: flags.upload,
@@ -123,10 +119,7 @@ const read = defineActionVerb('artifact', {
         `text\tA text file prints whole up to ${MAX_READ_BYTES / 1024} KiB, then a truncated line; any other file prints what it is and no bytes`,
         'refusals\tnot-found\tthe code this action refuses with; an artifact of another project is not found'
     ],
-    positionals: oneArgument(
-        'artifact read needs the id of an artifact; ruimte-context artifact list lists them',
-        'artifact read takes one id and nothing else'
-    ),
+    positionals: oneArgument('artifact read needs the id of an artifact; artifact_list lists them', 'artifact read takes one id and nothing else'),
     flags: z.object({
         version: z.string().min(1, '--version needs a version id').optional(),
         file: z.coerce

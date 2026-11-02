@@ -68,7 +68,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
                         .filter((agent) => host.lineage.madeBy(agent.node.id) === caller)
                         .map((agent) => agent.node) ?? [])
                 ].map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
-                'You have opened no agent that is still in this project; ruimte-context agent --task opens one with a task of its own'
+                'You have opened no agent that is still in this project; agent_start --task opens one with a task of its own'
             );
         const hidden = host.hiddenAgents?.get(nodeId);
         const target = nodeOf(content, nodeId) ?? (hidden?.projectId === place.projectId ? hidden.node : undefined);
@@ -86,7 +86,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         if (host.lineage.madeBy(nodeId) !== caller) {
             throw new VerbRefusal('not-yours', `${nodeId} is not a node you opened; a task only goes to an agent you opened yourself`, [
                 ...lines(),
-                `see\truimte-context notify ${nodeId}\tsends it a message along a line, which it acts on itself and never reports back from`
+                `see\tnotify ${nodeId}\tsends it a message along a line, which it acts on itself and never reports back from`
             ]);
         }
         if (host.projects.machineOfNode(nodeId) !== null) {
@@ -102,8 +102,8 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
                 `${nodeId} is a terminal node: a task has to start a turn, and nothing is typed into a shell a person can type in`,
                 [
                     ...lines(),
-                    `see\truimte-context notify ${nodeId}\tsends it a message its agent hears at the start of its next turn; a terminal is never given a turn either`,
-                    'see\truimte-context agent --terminal --task\topens a terminal of its own with the task on the line its CLI starts with'
+                    `see\tnotify ${nodeId}\tsends it a message its agent hears at the start of its next turn; a terminal is never given a turn either`,
+                    'see\tagent_start --terminal --task\topens a terminal of its own with the task on the line its CLI starts with'
                 ]
             );
         }
@@ -112,7 +112,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
             throw new VerbRefusal(
                 'task-running',
                 `${nodeId} is working on the task "${field(running.title)}" and takes one at a time; wait for its result, which wakes you`,
-                [taskLine(running, caller), 'see\truimte-context agent --task\topens another agent for work that cannot wait']
+                [taskLine(running, caller), 'see\tagent_start --task\topens another agent for work that cannot wait']
             );
         }
         const state = await host.tasks.chatState(nodeId);

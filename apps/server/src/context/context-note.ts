@@ -6,83 +6,70 @@ import { NODE_VERB_KINDS } from '../canvas/node-kinds.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import { uiSourceExamples } from '../chat/ui-source-args.ts';
 
-/* Asked for a CLI by name, a model that has not read the names goes looking through its own tools
-   for one and reports back that this machine has none, so the verb names them where it is offered. */
+/*
+ * Each rule is said once, where the agent decides; what a tool's description, schema, refusal or result
+ * already says stays out, since this note rides along with every turn of every agent Ruimte starts.
+ */
+
+/* Asked for a CLI by name, a model that has not read the names reports that this machine has none. */
 const CLI_NAMES = BUILT_IN_KINDS.join(', ');
 
-/* Told only that it places "nodes", a model asked for a note writes a file with its own tools and
-   the canvas stays empty, so the kinds `node new` opens are named where the command is introduced. */
+/* Told only that it places "nodes", a model asked for a note writes a file and the canvas stays empty. */
 const NODE_KINDS = NODE_VERB_KINDS.join(', ');
 
-const PRODUCT_NOTE = 'Ruimte is a workspace for AI engineering, built around projects, views and persistent sessions.';
-
-// A model with tool search otherwise looks for a tool named ruimte-context and gives up.
-const COMMANDS_NOTE =
-    '`ruimte-context` is a shell command for working with project views and resources. ' +
-    '`ruimte-context help` lists its commands; `ruimte-context help <verb or noun>` explains one.';
-
-const CHAT_VIEW_NOTE = 'You are working in a chat view. Skip linked-context discovery.';
+// With tool search the tools are deferred, so a model that is not told they exist never looks.
+const PRODUCT_NOTE =
+    "Ruimte is a workspace for AI engineering, built around projects, views and persistent sessions. Its MCP tools (`context_read`, `node_new`, `view_list`, ...) work on this project's views and nodes.";
 
 /* Agents changed one node at a time in a loop, a write and a redraw of every client each. */
-const MANY_AT_ONCE =
-    'To change several at once, use one call, never a loop of calls: `--json` on node new, node edit and node rename, and ids separated by commas on node delete, link delete and flag.';
+const MANY_AT_ONCE = 'Change several nodes or lines in one call, never in a loop of calls.';
 
-/* Told only that it may name a canvas for a note, a chat view tried to link itself to a device it
-   had just placed, and no line can reach a view; so the whole of what --view gives it is spelled out. */
-const CHAT_VIEW_CANVAS_NOTE =
-    'No line runs to a chat view, so you arrange a canvas the way the person does: name it with --view (`ruimte-context view list` lists them) and you may add, edit, rename, arrange and group its nodes, draw lines between them, and read and operate any node there without a line: `read <id> --view <canvas>` for a note, a chat or a terminal, `browser` for a page and `device` for a simulator or phone (take a `shot`, act in its pixels with `tap`, `swipe` and `button`, and take the next shot to see what happened). Without --view these refuse with view-required. Work on a canvas only for what the person asks of it. ' +
-    MANY_AT_ONCE;
+const CHAT_VIEW_NOTE = 'You work in a chat view; skip linked-context discovery.';
+
+/* No line can reach a view, so a chat view is told what naming a canvas gives it. */
+const CHAT_VIEW_CANVAS_NOTE = `To work on a canvas, name it with \`view\` (from \`view_list\`): you may then add, edit, arrange and group its nodes, draw lines between them, and read and operate any node there. Do that only for what the person asks of it. ${MANY_AT_ONCE}`;
 
 /* A hidden agent a chat opened stands on no canvas either, but it is no view and arranges none. */
-const HIDDEN_AGENT_PLACEMENT = 'For a note or drawing the person asks for in Ruimte, name its destination with --view.';
+const HIDDEN_AGENT_PLACEMENT = 'Put a note or drawing the person asks for on a canvas you name with `view`.';
 
 const TERMINAL_VIEW_NOTE =
-    'You are working in a terminal view. Skip linked-context discovery. ' +
-    'For agents, notes or drawings you open in Ruimte, select a destination with --view.';
+    'You work in a terminal view; skip linked-context discovery. Agents, notes and drawings you open go on a canvas you name with `view`.';
 
-const CANVAS_NODE_NOTE =
-    'You are working in a node on a canvas. ' +
-    '`ruimte-context list` lists your linked context, and `ruimte-context read <id>` reads a source. ' +
-    `\`ruimte-context node new\` creates nodes in this view: ${NODE_KINDS}. ` +
-    'Use these commands for notes or drawings the person requests in this view. ' +
-    MANY_AT_ONCE;
+const CANVAS_NODE_NOTE = `You work in a node on a canvas. \`context_list\` lists what is linked to you and \`context_read\` reads it. Notes or drawings the person asks for in this view are nodes, which \`node_new\` adds (${NODE_KINDS}). ${MANY_AT_ONCE}`;
 
-/* The brake below reads as "use your own means" exactly when the person asked for a second agent
-   beside this one, so the difference between answering yourself and hiding the work is spelled out. */
+/* The brake below reads as "use your own means" exactly when the person asked for a second agent. */
 const NOT_A_SUBAGENT = 'An agent the person asks for is one of these, never a subagent of your own.';
 
 const AGENT_PERMISSION_NOTE =
-    'Leave `--mode` out unless the person explicitly requests a different permission mode. Chat agents inherit your mode; a read-only or review assignment does not imply `supervised`.';
+    'Leave `mode` out unless the person asks for another permission mode; a read-only or review assignment does not imply `supervised`.';
 
-/*
- * What the verb opens, with the reason not to reach for it: a model that reads only what it can do
- * opens a team for work it could have answered itself, and every agent leaves a node behind.
- */
+/* What the tools open, with the reason not to: every agent leaves a node behind. */
 function opensAt(depth: number): string | null {
     if (depth < MAX_TEAM_DEPTH) {
-        return `It also opens agents (\`agent <cli>\` for one, \`team\` for several in parallel, with <cli> one of ${CLI_NAMES}), which is for work the person asked you to split or that truly runs in parallel: every agent is a node on their canvas until someone removes it, so answer yourself whatever you can. ${NOT_A_SUBAGENT}`;
+        return `\`agent_start\` opens an agent and \`agent_team\` several in parallel (cli: ${CLI_NAMES}), only for work the person asked you to split or that truly runs in parallel: each stays a node on their canvas, so answer yourself whatever you can. ${NOT_A_SUBAGENT}`;
     }
+
     if (depth < MAX_AGENT_DEPTH) {
-        return `It also opens a helper agent with \`agent <cli>\`, with <cli> one of ${CLI_NAMES}, which is for work the person asked you to split: that agent is a node on their canvas until someone removes it, so answer yourself whatever you can. ${NOT_A_SUBAGENT}`;
+        return `\`agent_start\` opens a helper agent (cli: ${CLI_NAMES}), only for work the person asked you to split: it stays a node on their canvas, so answer yourself whatever you can. ${NOT_A_SUBAGENT}`;
     }
+
     return null;
 }
 
-const ALERT_NOTE =
-    'When the person asks you to notify them, use `ruimte-context alert --text "..."` at the requested moment. Ordinary completed turns do not send a notification. Use alert only when they asked for one.';
+const ALERT_NOTE = 'Call `alert` only when the person asked to be notified, at the moment they named.';
 
-/* Said only while a person turned computer use on for this machine; off, the noun only refuses. */
+/* Said only while a person turned computer use on for this machine; off, the tools are not offered. */
 const COMPUTER_NOTE =
-    'With `ruimte-context computer` you read and operate the apps of this Mac, each only once the person lets you into it; use it only when they ask you to work in an app. You work in the background by default, so the person can go on with their own work; ask them before you use `--front`, which brings the app forward and interrupts them. The person can pause you, take over or stop you at any moment: then wait for them, or ask them, instead of calling again in a loop. A call holds 6 s for their answer or their pause; `--wait 60` holds longer and goes on as soon as they are done, so give that shell command a timeout above the wait.';
+    "The `computer_*` tools operate this Mac's apps, each once the person lets you in; use them only when asked to work in an app. Stay in the background and ask before you set `front`, which interrupts the person. When they pause, take over or stop you, wait for them or ask them instead of calling again in a loop.";
 
 /* Said only to an AI chat while visual replies are on for this machine; a terminal has no thread to show a page in. */
 const VISUAL_FILES_NOTE =
-    "Keep visual source files outside the project: save HTML directly with `ruimte-context visual write --name chart.html` and the page on stdin, using a distinct name per visual. It returns an absolute path in this chat's private storage under RUIMTE_HOME; use that path for preview and show, and visual write with the same name to update it. Create a project file only when the person explicitly asks for an export.";
+    "Write a visual's page with `visual_write`, under a name of its own, which keeps it in this chat's storage and never in the project unless the person asks for an export; write the same name to update it.";
 
 const VISUAL_LAYOUT_NOTE =
-    'Visuals follow the reply column by default. For an application mockup or dashboard that benefits from more width, opt in with `visual show --layout wide`. The host chooses the width within the chat pane; keep the page responsive and preview it at both 360px and 1200px with `visual preview --width`.';
+    'Keep the page responsive and check it with `visual_preview` at 360 and 1200 pixels wide; `layout` wide on `visual_show` gives a mockup or dashboard more width than the reply column.';
 
-const UI_DETAIL_HINT = '`ruimte-context help ui <group>` gives props and rules';
+const UI_DETAIL_HINT = '`ui_catalog` gives props and rules';
 
 /*
  * The catalog of UI blocks and how to use it, said only to an agent a person reads in a thread: a
@@ -99,8 +86,8 @@ function uiNote(databases: boolean): string {
             'Write a block when the answer has structure a person scans or acts on (numbers to compare, rows, steps, a status, shortcuts after finished work); what a sentence or a short list says stays prose.',
             'Children sit in their parent: Stat in Stats, Column in Table, Option in Segmented or Select, Item in Checklist, Choice in Choices, Step in Steps, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Tab in Tabs, Section in Sections, Source in Sources.',
             'Stat takes numbers; Entry holds text.',
-            'Show an image file of your own with `ruimte-context chat attach --file <path>` and `Image attachment=<id>`, a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it.',
-            'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths, and file links, are relative to your working folder; a Node id is one ruimte-context printed.',
+            'Show an image file of your own with `chat_attach` and `Image attachment=<id>`, a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it.',
+            'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths, and file links, are relative to your working folder; a Node id is one a Ruimte tool printed.',
             `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.`
         ].join(' ')
     );
@@ -113,7 +100,7 @@ function visualNote(ui: boolean, databases: boolean): string {
         : 'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply';
     return [
         ...(ui ? [uiNote(databases)] : []),
-        `${page} with \`ruimte-context visual show --title T < page.html\` after checking it with \`visual preview\` (\`ruimte-context help visual\` has the rules), and let the reply add only what the page does not say.`,
+        `${page} with \`visual_show\`, and let the reply add only what the page does not say.`,
         VISUAL_FILES_NOTE,
         VISUAL_LAYOUT_NOTE
     ].join(' ');
@@ -124,25 +111,24 @@ export const VISUAL_RESUME_NOTE = `${VISUAL_FILES_NOTE} ${VISUAL_LAYOUT_NOTE}`;
 
 /* Said only in a project with database connections: without it a model asked about the data reads the schema from migrations and guesses. */
 function databaseNote(ui: boolean): string {
-    return `This project has databases: answer a question about its data with \`ruimte-context database\` (list, tables, describe, query), which reads with one SELECT or WITH statement on a read-only session${ui ? '; to show rows, write a block with $rows = @Query("database.query", {...}) and a Table or Chart' : ''}; \`ruimte-context help database\` has the rules.`;
+    return `This project has databases: answer a question about its data with the \`database_*\` tools${ui ? ', and show rows with a block of $rows = @Query("database.query", {...}) and a Table or Chart' : ''}.`;
 }
 
 /* Said only while a device node is linked in: without it a model asked to try an app reaches for a simulator of its own. */
 const DEVICE_NOTE =
-    'A device node linked to you is a simulator or phone you operate with `ruimte-context device`: take a `shot`, act in its pixels with `tap`, `swipe` and `button`, and take the next shot to see what happened.';
+    'The device tools work on a simulator or phone of this machine by its device id, from `device_list`: take a `device_shot`, act in its pixels with `device_input`, and take the next shot to see what happened.';
 
 /* Without it a model keeps a finished report as a file in the project, or shows it as a page that stays in one thread only. */
 const OUTPUT_NOTE =
-    "A result the person should keep beyond this conversation (a report, a build, an export, a recording) goes to the project's Output with `ruimte-context artifact publish --file <path>`; an answer for now stays in this conversation.";
+    "A result the person should keep beyond this conversation (a report, a build, an export, a recording) goes to the project's Output with `artifact_publish`; an answer for now stays in the conversation.";
 
 /* Without it a reply rebuilds the report it just published, often as a table of its own. */
 export const PUBLISHED_INLINE_NOTE =
-    'This chat shows a report, image or page you publish where you published it, so your reply does not repeat its content or copy its tables: a short summary and what stands out are enough.';
+    'This chat shows what you publish where you published it, so your reply does not repeat its content or copy its tables: a short summary and what stands out are enough.';
 
-// Generated by the daemon so every CLI and SSH host receives current verbs and depth limits.
-// The command rather than the projects themselves, since which projects are open changes during a session.
+// The tool rather than the projects themselves, since which projects are open changes during a session.
 const REACH_NOTE =
-    'This machine lets agents reach its other open projects: `ruimte-context project list` lists them, and `--project <id>` on view list, node list, link list, read, notify, agent, team and task new works there. Use it only for what the person asks of another project.';
+    'This machine lets you reach its other open projects: `project_list` lists them, and the tools that take `project` work there. Use that only for what the person asks of another project.';
 
 export function verbsNote({
     depth,
@@ -174,19 +160,19 @@ export function verbsNote({
         OUTPUT_NOTE,
         // A terminal has no thread to show it in, and a child's reply goes to a parent that never saw it.
         ...(terminal || !ui ? [] : [PUBLISHED_INLINE_NOTE]),
-        'Ids in its output are for your commands; to the person, name things by their title, never by id.'
+        'Ids are for tool calls; to the person, name things by their title, never by id.'
     ];
+
     if (standalone && !terminal) {
         return [
             PRODUCT_NOTE,
-            COMMANDS_NOTE,
             CHAT_VIEW_NOTE,
-            "Delegate routine work with your CLI's own subagents. Keep any model and reasoning effort the person asked for, and say so when one cannot be set; choose the costliest efforts only when the person names them.",
+            "Delegate routine work to your CLI's own subagents. Keep any model and reasoning effort the person asked for, and say so when one cannot be set; choose the costliest efforts only when the person names them.",
             ...(depth < MAX_AGENT_DEPTH
                 ? [
-                      `For an agent or model the person names, use \`ruimte-context agent <cli> --task <title> --prompt <assignment>\`, with <cli> one of ${CLI_NAMES}${depth < MAX_TEAM_DEPTH ? '; `team --task` starts several agents' : ''}. These agents stay hidden and their results return to this chat; end your turn after delegating instead of polling.`,
+                      `For an agent or model the person names, use \`agent_start\` with a \`task\` (cli: ${CLI_NAMES})${depth < MAX_TEAM_DEPTH ? ', or `agent_team` for several' : ''}. These agents stay hidden and their results return to this chat, so end your turn after delegating instead of polling.`,
                       AGENT_PERMISSION_NOTE,
-                      'Use --view only when the person asks to place the agent on a canvas.'
+                      'Set `view` only when the person asks to place the agent on a canvas.'
                   ]
                 : []),
             depth === 0 ? CHAT_VIEW_CANVAS_NOTE : HIDDEN_AGENT_PLACEMENT,
@@ -194,16 +180,15 @@ export function verbsNote({
             ...closing
         ].join(' ');
     }
+
     const opens = opensAt(depth);
+
     return [
         PRODUCT_NOTE,
-        COMMANDS_NOTE,
         standalone ? TERMINAL_VIEW_NOTE : CANVAS_NODE_NOTE,
         ALERT_NOTE,
         ...(opens === null ? [] : [opens, AGENT_PERMISSION_NOTE]),
-        ...(depth < MAX_AGENT_DEPTH && !standalone
-            ? ['With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.']
-            : []),
+        ...(depth < MAX_AGENT_DEPTH && !standalone ? ['With a `task`, the result comes back as your next message, so end your turn instead of polling.'] : []),
         ...closing
     ].join(' ');
 }
@@ -215,7 +200,7 @@ function linksDevice(sources: readonly ContextSource[]): boolean {
 // Past this many, a busy canvas would flood a prompt line; the rest becomes a count.
 const MAX_NAMED = 5;
 
-export const CONTEXT_LEAD = 'Ruimte: linked context is available with ruimte-context (list, read <id>): ';
+export const CONTEXT_LEAD = 'Ruimte: linked context, read with context_read: ';
 
 function quote(source: ContextSource): string {
     return `"${source.title}" (${source.kind})`;
@@ -289,8 +274,8 @@ export function designNote(path: string, onCanvas = false): string {
         'A `<style id="ruimte-edits">` block holds the styles a person set by hand, as rules with `!important`. Leave it alone, except that a rule for an element you change goes with that change, and when they ask you to fold it in, move each rule into the source of its element and remove the block.',
         'Use text the person gives you word for word; style it, but rewrite it only when they ask. For a small request, change only what was asked; for a significant revision, copy the page and change the copy (`Onboarding v2.html`).',
         // Files and checking.
-        'Write each page as one self-contained HTML file in that folder with a descriptive name, such as `Onboarding.html`, assets by relative path and libraries from a public CDN; these files are the exception to keeping visual sources outside the project. Never show a design with `visual show`, since the view shows the folder.',
-        'Before you end a turn, check every page you changed with `ruimte-context visual preview --width <width> < <file>` and fix what the console reports; a board draws without its pan and zoom there. Then reply in a sentence or two: what you made and what to look at.'
+        'Write each page as one self-contained HTML file in that folder with a descriptive name, such as `Onboarding.html`, assets by relative path and libraries from a public CDN; these files are the exception to keeping visual sources outside the project. Never show a design with `visual_show`, since the view shows the folder.',
+        'Before you end a turn, check every page you changed with `visual_preview` at its width and fix what the console reports; a board draws without its pan and zoom there. Then reply in a sentence or two: what you made and what to look at.'
     ].join(' ');
 }
 
@@ -307,7 +292,7 @@ export interface ChatPromptOptions {
     design?: { folder: string; onCanvas: boolean } | null;
 }
 
-/* The part of a chat's prompt that is about the CLI, without the names of what is linked. */
+/* The part of a chat's prompt that is about Ruimte's tools, without the names of what is linked. */
 export function chatNote({ sources, depth, standalone, computer, visuals, databases, reach, design }: ChatPromptOptions): string {
     const verbs = verbsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach });
 
@@ -315,7 +300,7 @@ export function chatNote({ sources, depth, standalone, computer, visuals, databa
 }
 
 /*
- * What an agent is told once at the start of a chat process, so it knows the CLI without being
+ * What an agent is told once at the start of a chat process, so it knows the tools without being
  * nagged every turn. Claude Code takes it as a system prompt and Codex as a thread's developer instructions.
  */
 export function chatPrompt(options: ChatPromptOptions): string {
@@ -325,7 +310,7 @@ export function chatPrompt(options: ChatPromptOptions): string {
 }
 
 /*
- * Session start receives the CLI note and full link list. Later hooks carry only link changes and
+ * Session start receives the tools note and full link list. Later hooks carry only link changes and
  * queued messages, avoiding repeated instructions on every prompt.
  */
 export function hookContext(
@@ -364,7 +349,7 @@ export function hookContext(
 }
 
 /*
- * What an agent that already knows the CLI must hear at the start of its next turn: which
+ * What an agent that already knows the tools must hear at the start of its next turn: which
  * links came and went since the previous one. Null when the set is the same, so a chat is
  * never nagged. Sources are matched by id; a renamed one is not a change.
  */
@@ -383,7 +368,7 @@ export function contextChangeNote(previous: ContextSource[], current: ContextSou
     if (removed.length > 0) {
         parts.push(`Removed: ${nameSources(removed)}.`);
     }
-    parts.push(current.length === 0 ? 'Nothing is linked now.' : 'Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item.');
+    parts.push(current.length === 0 ? 'Nothing is linked now.' : '`context_list` lists it and `context_read` reads one item.');
     return parts.join(' ');
 }
 

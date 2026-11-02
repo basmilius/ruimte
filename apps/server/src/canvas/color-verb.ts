@@ -14,7 +14,7 @@ export const nodeColorAction = defineActionVerb('node', {
     params: [
         { syntax: '<nodeId>', need: 'required', field: 'nodeId', text: 'The node to color, by id; one node per call' },
         { syntax: `--color <C|${NONE}>`, need: 'required', field: 'color', text: `One of the ${NODE_ACCENT_NAMES.length} colors, or ${NONE} to take it off` },
-        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the node is on, by view id', more: 'ruimte-context view list lists them' },
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the node is on, by view id', more: 'view_list lists them' },
         { syntax: '--dry-run', need: 'no value', text: `Checks everything and writes nothing; ${DRY_RUN_PREVIEW}` }
     ],
     detail: [
@@ -27,8 +27,8 @@ export const nodeColorAction = defineActionVerb('node', {
         'who\tA chat view has no lines: it colors any node of the canvas it names with --view, the way the person arranging that canvas would',
         'who\tA node the person pointed you at with # in one of your messages is yours to color as along a line, with no --view; a # to its canvas alone is not',
         'refusals\tunknown-color\tnot-linked\tunknown-node\tnode-on-other-machine\tthe whole set this verb refuses with',
-        'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
-        'see\truimte-context node group --color C\ta frame around nodes in one of the same colors'
+        'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs',
+        'see\tnode_group --color C\ta frame around nodes in one of the same colors'
     ],
     positionals: oneArgument('node color needs the id of a node', 'node color takes one node id and nothing else; the color goes in --color'),
     flags: z.object({

@@ -62,15 +62,15 @@ const TEAM_DETAIL: readonly string[] = [
     ...ROLES_LINES,
     'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
-    `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex"},{"title":"Shell","prompt":"Run the lexer tests","provider":"claude","terminal":true}]'`,
+    `example\tagent_team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex"},{"title":"Shell","prompt":"Run the lexer tests","provider":"claude","terminal":true}]'`,
     'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first when visible, then one line per role in the order of --roles, with its task id last under --task; hidden roles have - for view and edge and no group row',
     'prints\treads\tid\tfrom\tto\tone line per --reads node per role, under the roles: the line drawn from that node into that agent',
     'prints\tnext\tthe last line under --task, saying what to do while the tasks run',
-    'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read; a line only joins two nodes of one canvas',
+    'edges\tOne edge per role, from you into that agent, so each of them can read you with context_read; a line only joins two nodes of one canvas',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
-    "edges\tYou can read each agent you opened with ruimte-context read <the role's id> through its lineage, including a hidden role, without a line back",
+    "edges\tYou can read each agent you opened with context_read <the role's id> through its lineage, including a hidden role, without a line back",
     'edges\tWith --task no line back is needed, since the results of the roles arrive as your next message once they all settled',
-    'edges\truimte-context link list lists what is drawn on the canvas now',
+    'edges\tlink_list lists what is drawn on the canvas now',
     ...readsLines('every role'),
     'where\tThe group lands on the first free spot right of you, or right of everything when you are none of its nodes',
     'where\tFrom a chat view the agents stay hidden, without a group or edges; --task shows their work in this chat. --view explicitly places the team on that canvas',
@@ -87,7 +87,7 @@ const TEAM_DETAIL: readonly string[] = [
     ...MACHINE_LINES,
     PROJECT_LINE,
     `depth\tA role lands at depth ${MAX_TEAM_DEPTH}: it may open a single agent of its own with agent, and a team of its own is refused`,
-    'operation\tStarting is not succeeding: ruimte-context operation get team.start:<id>,<id> with the ids of the roles in the order they were printed says how the team goes, role by role',
+    'operation\tStarting is not succeeding: operation_get team.start:<id>,<id> with the ids of the roles in the order they were printed says how the team goes, role by role',
     'note\tThe machine starts every agent right away, whether or not anyone has its canvas open; a client that shows one later joins what runs'
 ];
 
@@ -139,7 +139,7 @@ export const teamVerb = defineStandaloneActionVerb({
             syntax: '--view V',
             need: 'optional',
             field: 'viewId',
-            more: 'ruimte-context view list lists them. Without it the view you are in, when that is a canvas'
+            more: 'view_list lists them. Without it the view you are in, when that is a canvas'
         },
         { syntax: '--mode M', need: 'optional', field: 'mode', more: MODE_FLAG_HELP },
         { syntax: '--worktree', need: 'no value', field: 'worktree', more: 'not together with --cwd' },

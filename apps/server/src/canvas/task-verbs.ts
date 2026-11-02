@@ -9,11 +9,11 @@ export { taskBrief } from './tasks.ts';
 
 export const TASK_LINES: readonly string[] = [
     'task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result',
-    'task\tA chat child finishes its task with the last answer of its first turn, or earlier with ruimte-context done; one that gave tasks of its own finishes with the turn after they all woke it; a terminal child has to call done, and one that exits without it fails the task',
+    'task\tA chat child finishes its task with the last answer of its first turn, or earlier with task_done; one that gave tasks of its own finishes with the turn after they all woke it; a terminal child has to call done, and one that exits without it fails the task',
     'task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll',
     'task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others',
     "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
-    'task\truimte-context task list lists the ones still open or yet to wake you, with their status; --all adds the history'
+    'task\ttask_list lists the ones still open or yet to wake you, with their status; --all adds the history'
 ];
 
 /*
@@ -78,10 +78,10 @@ const TASK_NEW_DETAIL: readonly string[] = [
     'mode\tThe agent keeps the permission mode it was opened in, which was already no wider than yours; a task never widens it',
     'depth\tNo node is opened here, so neither the depth an agent may open at nor the number of agents you may have open comes in',
     'refusals\tnot-a-chat-parent\tself-task\tunknown-node\tnot-on-a-canvas\tnot-an-agent\tnot-yours\tnot-a-chat\tno-agent\ttask-running\tthe whole set this action refuses with',
-    'see\truimte-context agent --task\topens an agent that is not there yet, with a task of its own',
-    'see\truimte-context notify\tsends a message to any terminal or chat of this project, which a chat takes a turn on but never reports back from: a task comes back to you with its result and settles, a message does not',
+    'see\tagent_start --task\topens an agent that is not there yet, with a task of its own',
+    'see\tnotify\tsends a message to any terminal or chat of this project, which a chat takes a turn on but never reports back from: a task comes back to you with its result and settles, a message does not',
     ...TASK_LINES,
-    'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'
+    'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs'
 ];
 
 const NEEDS_TARGET = 'task new takes the id of the agent to give the task to';
@@ -145,13 +145,13 @@ export const taskListAction = defineActionVerb('task', {
     async run({ switches }, call) {
         const { tasks, hidden } = await runAction(call, 'task.list', { all: switches.has('all') });
         if (tasks.length === 0 && hidden === 0) {
-            return ['note\tYou have given no task and were given none; ruimte-context agent --task gives one'];
+            return ['note\tYou have given no task and were given none; agent_start --task gives one'];
         }
         const lines = tasks.map((task) => taskLine(task, call.caller));
         if (hidden === 0) {
             return lines;
         }
-        const note = `${hidden === 1 ? '1 older task is' : `${hidden} older tasks are`} hidden, settled and already reported; ruimte-context task list --all lists them`;
+        const note = `${hidden === 1 ? '1 older task is' : `${hidden} older tasks are`} hidden, settled and already reported; task_list --all lists them`;
         return [...lines, tasks.length === 0 ? `note\tNo task is open or waiting to wake you; ${note}` : `note\t${note}`];
     }
 });

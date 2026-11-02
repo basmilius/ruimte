@@ -86,7 +86,7 @@ test('the places group tells agents to give lat and lon since Ruimte looks up no
 
 test('the content group says how to attach a file of your own', async () => {
     const rules = (await run('ui', 'content')).find((line) => line.startsWith('rules\t'));
-    expect(rules).toContain('ruimte-context chat attach --file <path>');
+    expect(rules).toContain('chat_attach --file <path>');
     expect(rules).toContain('or on Model for a binary glTF, USDZ or STL');
     expect(rules).toContain('Image, Gallery and Compare');
     expect((await run('ui', 'data')).find((line) => line.startsWith('rules\t'))).not.toContain('chat attach');

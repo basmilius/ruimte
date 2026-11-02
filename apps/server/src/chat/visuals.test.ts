@@ -156,10 +156,10 @@ describe('visual verbs', () => {
         expect(await runVerb(daemon, 'chat-lead', 'visual', ['list'])).toEqual(['note\tThis chat shows no visual']);
     });
 
-    test('what the store refuses comes back under its own code and message, with the help to read', async () => {
+    test('what the store refuses comes back under its own code and message', async () => {
         const daemon = await bootWithChat();
         const empty = await show(daemon, 'chat-lead', ['--title', 'Bars', '--html=']);
-        expect(empty).toEqual(['refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document', 'detail\truimte-context help visual']);
+        expect(empty).toEqual(['refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document']);
         const blank = await show(daemon, 'chat-lead', ['--title', ' ', `--html=${PAGE}`]);
         expect(blank[0]).toBe('refused\tvisual-invalid\tA visual needs a title; give it a short one that says what the page shows');
         const long = await show(daemon, 'chat-lead', ['--title', 'x'.repeat(VISUAL_LIMITS.title + 1), `--html=${PAGE}`]);
@@ -218,16 +218,14 @@ describe('visual verbs', () => {
         const daemon = await boot();
         const lines = await runVerb(daemon, 'chat-lead', 'help', ['visual']);
         expect(lines[0]).toBe('usage\tvisual\t<write|preview|show|list|remove> ...');
-        expect(lines.some((line) => line.startsWith('preview\tPreview first, then show: ruimte-context visual preview < page.html'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('preview\tPreview first, then show: visual_preview < page.html'))).toBe(true);
         expect(lines).toContain(
             'action\tvisual preview\t[--width W] [--appearance dark|light] (< page.html | --html H)\tRenders a self-contained HTML page the way this chat would draw it, without showing it, and answers a png of it, the height it needs and what it wrote to its console.'
         );
         expect(lines.some((line) => line.startsWith('page\tA visual is one self-contained HTML document'))).toBe(true);
         expect(lines.some((line) => line.startsWith('layout\t'))).toBe(true);
         expect(lines.some((line) => line.startsWith('theme\t') && line.includes('--chart-1'))).toBe(true);
-        expect(lines.filter((line) => line.startsWith('example\t'))[0]).toBe(
-            `example\truimte-context visual show --title "Open issues per label" --height 160 <<'EOF'`
-        );
+        expect(lines.filter((line) => line.startsWith('example\t'))[0]).toBe(`example\tvisual_show --title "Open issues per label" --height 160 <<'EOF'`);
         expect(lines.filter((line) => line.startsWith('example\t')).at(-1)).toBe('example\tEOF');
         expect(lines).toContain(IMAGES_LINE);
         expect(lines.some((line) => line.startsWith('storage\t') && line.includes('outside the project'))).toBe(true);
@@ -278,7 +276,7 @@ describe('previews and measured heights', () => {
             'console\tlog\tdrawn 3 bars',
             'console\texception\tUncaught TypeError: x is not a function at page.html:12:5',
             'note\t4 more console messages were left out',
-            'next\tThis only checked the page; ruimte-context visual show --title T with the same page on stdin shows it above your reply'
+            'next\tThis only checked the page; visual_show --title T with the same page on stdin shows it above your reply'
         ]);
         await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '400', '--appearance', 'light', `--html=${PAGE}`]);
         expect(asked).toEqual([
@@ -328,8 +326,7 @@ describe('previews and measured heights', () => {
         const daemon = await bootWithChat({ visualRender: { preview } });
         expect(refusalCode(await runVerb(daemon, 'term-lead', 'visual', ['preview', `--html=${PAGE}`]))).toBe('visual-needs-chat');
         expect(await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--html='])).toEqual([
-            'refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document',
-            'detail\truimte-context help visual'
+            'refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document'
         ]);
         expect((await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '200', `--html=${PAGE}`]))[0]).toBe(
             'refused\tbad-arguments\t--width is from 240 to 1600 CSS pixels'

@@ -1,103 +1,18 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import {
-    canvasContextSources,
-    deriveProjectContextSources,
-    deviceButtons,
-    isCanvasView,
-    type ContextSource,
-    type DeviceInfo,
-    type DeviceReference,
-    type ProjectCanvasView
-} from '@ruimte/contracts';
+import { deviceButtons, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
-import { arrangedCanvas, isChatView, notOnView, viewRequired } from '../canvas/chat-view.ts';
 import { checkDevicePath } from '../canvas/project-paths.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import type { DeviceActionBody } from '../devices/agent-driver.ts';
-import { VerbRefusal, field, orNote, referencedBy, type CanvasHost, type DeviceDriveHost } from '../canvas/verb.ts';
+import { VerbRefusal, field, orNote, type CanvasHost, type DeviceDriveHost } from '../canvas/verb.ts';
 import type { ServerActionContext } from './context.ts';
 
-/* Every device node this caller may operate, for a refusal that offers what the next call takes. */
-function deviceLines(sources: readonly ContextSource[], empty: string): string[] {
-    return orNote(
-        sources
-            .filter((source) => source.kind === 'device')
-            .map((source) => `device\t${source.id}\t${field(source.title)}\t${field(source.device?.name ?? '')}`),
-        empty
-    );
-}
+const NO_DEVICES = 'This machine has no simulator, emulator or phone right now; the person brings one';
 
-/* What to say when the caller may operate no device node at all, by where it stands. */
-function noDeviceNote(callerCanvas: string | null, chatView: boolean, arranged: ProjectCanvasView | null): string {
-    if (arranged !== null) {
-        return `${arranged.id} has no device node; ruimte-context node new device --device <id> --view ${arranged.id} puts one there`;
-    }
-    if (chatView) {
-        return 'A chat view operates the device nodes of a canvas it names with --view; ruimte-context node list --view <id> lists them';
-    }
-    return callerCanvas === null
-        ? 'No device node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
-        : 'No device node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas';
-}
-
-/* What gets a caller a device it may operate: a line, which only runs between two nodes of one canvas. */
-function lineLines(id: string, callerCanvas: string | null, deviceCanvas: string): string[] {
-    if (callerCanvas === null) {
-        return [`note\t${id} stands on ${deviceCanvas}, and you are a view of your own: a line only runs between two nodes of one canvas`];
-    }
-    if (callerCanvas === deviceCanvas) {
-        return [`see\truimte-context link new --to ${id}\tdraws it`];
-    }
-    return [`note\t${id} stands on ${deviceCanvas} and you on ${callerCanvas}, and a line only runs between two nodes of one canvas`];
-}
-
-/*
- * The device a device node of this project points at, reached over the line a read takes, a `#` a
- * person pointed the caller at it with, or the canvas a chat view names. No card asks a person: the
- * device is a sandbox of its own, and the line is the permission.
- */
-async function referenceOf(
-    { host, place, extension }: ServerActionContext,
-    caller: string,
-    id: string,
-    viewId: string | null | undefined
-): Promise<DeviceReference> {
-    const content = await host.projects.read(place.projectId);
-    // A peer drives no device: a hidden canvas holds the nodes of another machine, whatever lines it mirrored.
-    const callerCanvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === caller));
-    if (callerCanvas?.hidden === true || host.untrusted?.fromPeer(caller) === true) {
-        throw new VerbRefusal('peer-no-device', 'Work another machine gave this one drives no device here');
-    }
-    const chatView = isChatView(content, caller);
-    const arranged = arrangedCanvas(content, caller, viewId);
-    const sources = arranged === null ? (deriveProjectContextSources(content.views, null).get(caller) ?? []) : canvasContextSources(arranged);
-    const lines = (): string[] => deviceLines(sources, noDeviceNote(place.canvasId, chatView, arranged));
-    const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === id));
-    const node = canvas?.nodes.find((candidate) => candidate.id === id);
-    if (!canvas || !node) {
-        throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, lines());
-    }
-    refuseOtherMachine(host, id);
-    if (arranged !== null && arranged.id !== canvas.id) {
-        throw notOnView(id, canvas, arranged, `device state ${id}`);
-    }
-    if (node.kind !== 'device') {
-        throw new VerbRefusal('not-a-device', `${id} is a ${node.kind} node, and only a device node has a device to operate`, lines());
-    }
-    // A node without a device is no source a line hands over, so this comes before the line.
-    if (!node.device) {
-        throw new VerbRefusal('no-device', `${id} points at no device yet; a person picks one on the node`);
-    }
-    if (extension !== true && !sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
-        if (chatView) {
-            throw viewRequired(id, canvas, `device state ${id}`);
-        }
-        throw new VerbRefusal('not-linked', `No line runs between you and ${id}, and that line is what lets you operate its device`, [
-            ...lineLines(id, place.canvasId, canvas.id),
-            ...lines()
-        ]);
-    }
-    return node.device;
+/* What an id an agent gave names: the device a node points at, or one of this machine by its id, null when this machine lacks it now. */
+interface DeviceTarget {
+    reference: DeviceReference;
+    device: DeviceInfo | null;
 }
 
 function driverOf(host: CanvasHost): DeviceDriveHost {
@@ -107,28 +22,94 @@ function driverOf(host: CanvasHost): DeviceDriveHost {
     return host.devices;
 }
 
-/* The device a node points at on this machine now, refused when it is not here or not running. */
-async function bootedDevice(context: ServerActionContext, caller: string, nodeId: string, viewId: string | null | undefined): Promise<DeviceInfo> {
-    const reference = await referenceOf(context, caller, nodeId, viewId);
-    const device = await driverOf(context.host).find(reference);
-    if (device === null) {
-        throw new VerbRefusal('device-missing', `This machine has no ${reference.name} (${reference.runtime}) right now`, [
-            'note\tA phone that is unplugged or a simulator that was removed is not there to be found; the person brings it back'
-        ]);
+/* One device of this machine as device list prints it, by the id every other device action takes. */
+export function machineDeviceLine(device: Pick<DeviceInfo, 'deviceId' | 'name' | 'platform' | 'kind' | 'runtime' | 'state'>): string {
+    return `device\t${device.deviceId}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}\t${device.state}`;
+}
+
+function referenceOf(device: DeviceInfo): DeviceReference {
+    return { platform: device.platform, kind: device.kind, name: device.name, runtime: device.runtime };
+}
+
+/*
+ * The device an agent names, by the id `device list` gives it or by a device node of its project, with
+ * no line or view: the device is a sandbox of its own, and one agent at a time holds it. Work another
+ * machine gave drives no device here, and a node bound to another machine is that machine's.
+ */
+async function targetOf({ host, place }: ServerActionContext, caller: string, id: string): Promise<DeviceTarget> {
+    const content = await host.projects.read(place.projectId);
+    const canvases = content.views.filter(isCanvasView);
+    const callerCanvas = canvases.find((view) => view.nodes.some((candidate) => candidate.id === caller));
+
+    if (callerCanvas?.hidden === true || host.untrusted?.fromPeer(caller) === true) {
+        throw new VerbRefusal('peer-no-device', 'Work another machine gave this one drives no device here');
     }
+
+    const driver = driverOf(host);
+    const node = canvases.flatMap((view) => view.nodes).find((candidate) => candidate.id === id);
+
+    if (node !== undefined) {
+        refuseOtherMachine(host, id);
+
+        if (node.kind !== 'device') {
+            throw new VerbRefusal('not-a-device', `${id} is a ${node.kind} node, and only a device node has a device to operate`, [
+                'see\tdevice_list\tthe devices of this machine, by the id every device tool takes'
+            ]);
+        }
+
+        if (!node.device) {
+            throw new VerbRefusal('no-device', `${id} points at no device yet; a person picks one on the node`);
+        }
+
+        return { reference: node.device, device: await driver.find(node.device) };
+    }
+
+    const devices = await driver.list();
+    const device = devices.find((candidate) => candidate.deviceId === id);
+
+    if (!device) {
+        throw new VerbRefusal('unknown-device', `${id} is not a device of this machine right now`, orNote(devices.map(machineDeviceLine), NO_DEVICES));
+    }
+
+    return { reference: referenceOf(device), device };
+}
+
+/* An agent's call takes the device for it; an extension a person installed holds no claim. */
+function claim({ host, extension }: ServerActionContext, caller: string, device: DeviceInfo): void {
+    if (extension !== true) {
+        driverOf(host).claim(caller, device);
+    }
+}
+
+function missing(reference: DeviceReference): VerbRefusal {
+    return new VerbRefusal('device-missing', `This machine has no ${reference.name} (${reference.runtime}) right now`, [
+        'note\tA phone that is unplugged or a simulator that was removed is not there to be found; the person brings it back'
+    ]);
+}
+
+/* The device an id names on this machine now, claimed for the caller, refused when it is not here or not running. */
+async function bootedDevice(context: ServerActionContext, caller: string, id: string): Promise<DeviceInfo> {
+    const { reference, device } = await targetOf(context, caller, id);
+
+    if (device === null) {
+        throw missing(reference);
+    }
+
     if (device.state !== 'booted') {
         throw new VerbRefusal(
             'device-not-booted',
             `${device.name} is not running${device.state === 'transitioning' ? ' yet: it is starting or stopping' : ''}`,
-            ['note\tAn agent never starts a device: ask the person to start it from its node, then call again']
+            [
+                device.kind === 'physical'
+                    ? 'note\tRuimte starts no phone: ask the person to turn it on and unlock it, then call again'
+                    : 'see\tdevice_start\tstarts it, then call again'
+            ]
         );
     }
-    return device;
-}
 
-/* One device of this machine as device list prints it, by the id node new device takes. */
-export function machineDeviceLine(device: Pick<DeviceInfo, 'deviceId' | 'name' | 'platform' | 'kind' | 'runtime' | 'state'>): string {
-    return `device\t${device.deviceId}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}\t${device.state}`;
+    claim(context, caller, device);
+
+    return device;
 }
 
 /* The device a new device node shows, by the id device list gives it, as the node keeps it. */
@@ -136,18 +117,14 @@ export async function machineDevice(host: CanvasHost, deviceId: string): Promise
     const devices = await driverOf(host).list();
     const device = devices.find((candidate) => candidate.deviceId === deviceId);
     if (!device) {
-        throw new VerbRefusal(
-            'unknown-device',
-            `${deviceId} is not a device of this machine right now`,
-            orNote(devices.map(machineDeviceLine), 'This machine has no simulator, emulator or phone right now; the person brings one')
-        );
+        throw new VerbRefusal('unknown-device', `${deviceId} is not a device of this machine right now`, orNote(devices.map(machineDeviceLine), NO_DEVICES));
     }
-    return { platform: device.platform, kind: device.kind, name: device.name, runtime: device.runtime };
+    return referenceOf(device);
 }
 
-/* A path an agent hands a device, held to the folder rule of --cwd: the project folder or one of its worktrees. */
-function devicePath({ host, place }: ServerActionContext, path: string): Promise<string> {
-    return checkDevicePath(place.folder, path, (folder) => host.checkouts.paths(folder));
+/* A path an agent hands a device: inside the project folder, one of its worktrees, the caller's own chat folders or the system's temporary ones. */
+function devicePath({ host, place }: ServerActionContext, caller: string, path: string): Promise<string> {
+    return checkDevicePath(place.folder, path, (folder) => host.checkouts.paths(folder), driverOf(host).pathFolders(caller));
 }
 
 /* What device set asks for, one action per thing it changes, in the order a person would set them. */
@@ -203,14 +180,36 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
             }
         };
     },
-    'device.inspect': async ({ nodeId, viewId, find }, { actor, context }) => {
-        const reference = await referenceOf(context, actor.id, nodeId, viewId);
+    'device.start': async ({ nodeId: id }, { actor, context }) => {
+        const { reference, device } = await targetOf(context, actor.id, id);
+
+        if (device === null) {
+            throw missing(reference);
+        }
+
+        if (device.kind === 'physical') {
+            throw new VerbRefusal('device-not-startable', `${device.name} is a phone, and Ruimte starts only a simulator or an emulator`, [
+                'note\tAsk the person to turn it on and unlock it, then call again'
+            ]);
+        }
+
+        if (!device.capabilities.boot) {
+            throw new VerbRefusal('device-not-startable', `Ruimte cannot start ${device.name} on this machine`);
+        }
+
+        claim(context, actor.id, device);
+        const started = device.state === 'booted' ? device : await driverOf(context.host).boot(device);
+
+        return { output: { nodeId: id, device: started.name, state: started.state } };
+    },
+    'device.inspect': async ({ nodeId, find }, { actor, context }) => {
+        const { reference, device } = await targetOf(context, actor.id, nodeId);
         const driver = driverOf(context.host);
-        const device = await driver.find(reference);
         if (device === null) {
             return {
                 output: {
                     nodeId,
+                    deviceId: null,
                     device: reference,
                     present: false,
                     state: null,
@@ -223,6 +222,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
                 }
             };
         }
+        claim(context, actor.id, device);
         const can = driver.abilities(device);
         let tree: Awaited<ReturnType<DeviceDriveHost['tree']>> | null = null;
         let treeError: string | null = null;
@@ -240,6 +240,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         return {
             output: {
                 nodeId,
+                deviceId: device.deviceId,
                 device: reference,
                 present: true,
                 state: device.state,
@@ -258,21 +259,21 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
             }
         };
     },
-    'device.screenshot': async ({ nodeId, viewId }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.screenshot': async ({ nodeId }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         const shot = await driverOf(context.host).shot(actor.id, device, nodeId);
         return { output: { nodeId, ...shot } };
     },
-    'device.tap': async ({ nodeId, viewId, x, y, element }, { actor, context }) => {
+    'device.tap': async ({ nodeId, x, y, element }, { actor, context }) => {
         const handle = element ?? null;
         const pixel = x == null || y == null ? null : { x, y };
         if (handle === null ? pixel === null : (x ?? y ?? null) !== null) {
             throw new VerbRefusal('bad-arguments', 'A tap takes either an element of the last state or a pixel of the last shot as x and y', [
-                'see\truimte-context device state <id>\tnumbers the elements',
-                'see\truimte-context device shot <id>\ttakes a picture to count pixels in'
+                'see\tdevice_state\tnumbers the elements',
+                'see\tdevice_shot\ttakes a picture to count pixels in'
             ]);
         }
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+        const device = await bootedDevice(context, actor.id, nodeId);
         const driver = driverOf(context.host);
         if (handle !== null) {
             await driver.tapElement(actor.id, device, handle);
@@ -281,13 +282,13 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         }
         return { output: { nodeId, device: device.name } };
     },
-    'device.swipe': async ({ nodeId, viewId, fromX, fromY, toX, toY, ms }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.swipe': async ({ nodeId, fromX, fromY, toX, toY, ms }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).swipe(actor.id, device, { x: fromX, y: fromY }, { x: toX, y: toY }, ms ?? undefined);
         return { output: { nodeId, device: device.name } };
     },
-    'device.button': async ({ nodeId, viewId, button }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.button': async ({ nodeId, button }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         const buttons = deviceButtons(device);
         const named = buttons.find((candidate) => candidate === button);
         if (named === undefined) {
@@ -303,70 +304,70 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         await driverOf(context.host).button(actor.id, device, named);
         return { output: { nodeId, device: device.name } };
     },
-    'device.type': async ({ nodeId, viewId, text }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.type': async ({ nodeId, text }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).type(actor.id, device, text);
         return { output: { nodeId, device: device.name } };
     },
     'device.set': async (input, { actor, context }) => {
         const bodies = setBodies(input);
-        const device = await bootedDevice(context, actor.id, input.nodeId, input.viewId);
+        const device = await bootedDevice(context, actor.id, input.nodeId);
         await driverOf(context.host).act(actor.id, device, 'set', bodies);
         return { output: { nodeId: input.nodeId, device: device.name } };
     },
-    'device.open': async ({ nodeId, viewId, url }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.open': async ({ nodeId, url }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).act(actor.id, device, 'open', [{ action: 'openUrl', url }]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.permission': async ({ nodeId, viewId, app, decision, permission }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.permission': async ({ nodeId, app, decision, permission }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).act(actor.id, device, 'permission', [
             permission ? { action: 'setPermission', appId: app, permission, decision } : { action: 'setAllPermissions', appId: app, decision }
         ]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.push': async ({ nodeId, viewId, app, payload }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.push': async ({ nodeId, app, payload }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).act(actor.id, device, 'push', [{ action: 'sendPush', appId: app, payload }]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.biometric': async ({ nodeId, viewId, event, sensor }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.biometric': async ({ nodeId, event, sensor }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).act(actor.id, device, 'biometric', [
             { action: 'biometric', event, sensor: sensor ?? (device.platform === 'ios' ? 'face' : 'finger') }
         ]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.clipboard': async ({ nodeId, viewId, text }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.clipboard': async ({ nodeId, text }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         const held = await driverOf(context.host).clipboard(actor.id, device, text ?? null);
         return { output: { nodeId, device: device.name, text: held } };
     },
-    'device.record': async ({ nodeId, viewId, seconds }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.record': async ({ nodeId, seconds }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         const path = await driverOf(context.host).record(actor.id, device, seconds, nodeId);
         return { output: { nodeId, device: device.name, path } };
     },
-    'device.install': async ({ nodeId, viewId, path }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
-        const checked = await devicePath(context, path);
+    'device.install': async ({ nodeId, path }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
+        const checked = await devicePath(context, actor.id, path);
         await driverOf(context.host).act(actor.id, device, 'install', [{ action: 'installApp', path: checked }]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.media': async ({ nodeId, viewId, paths }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
-        const checked = await Promise.all(paths.map((path) => devicePath(context, path)));
+    'device.media': async ({ nodeId, paths }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
+        const checked = await Promise.all(paths.map((path) => devicePath(context, actor.id, path)));
         await driverOf(context.host).act(actor.id, device, 'media', [{ action: 'addMedia', paths: checked }]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.terminate': async ({ nodeId, viewId, app }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.terminate': async ({ nodeId, app }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         await driverOf(context.host).act(actor.id, device, 'terminate', [{ action: 'terminateApp', appId: app }]);
         return { output: { nodeId, device: device.name } };
     },
-    'device.launch': async ({ nodeId, viewId, app }, { actor, context }) => {
-        const device = await bootedDevice(context, actor.id, nodeId, viewId);
+    'device.launch': async ({ nodeId, app }, { actor, context }) => {
+        const device = await bootedDevice(context, actor.id, nodeId);
         const driver = driverOf(context.host);
         if (!driver.abilities(device).launch) {
             throw new VerbRefusal('device-action-unavailable', `Ruimte cannot open an app on ${device.name}`);

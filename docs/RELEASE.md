@@ -68,7 +68,7 @@ bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants ever
 
 ## Windows
 
-Shipped unsigned from the first release after `WINDOWS_RELEASE` went on ([WINDOWS.md](WINDOWS.md)). The `windows` job runs only when the repository variable `WINDOWS_RELEASE` is `true`. On `windows-latest` (NSIS needs Windows), `electron-builder --win --x64 --publish always` uploads `Ruimte-<version>-x64-setup.exe`, its blockmap, `latest.yml` and a zip. `publish` waits for it, so a failed Windows build keeps the release a draft. `after-pack.cjs` refuses a package without `bin/ruimte.exe`, `bin/ruimte-context.exe` and `bin/native/adecore-database.exe`. `/download/windows` on the site points at the latest installer.
+Shipped unsigned from the first release after `WINDOWS_RELEASE` went on ([WINDOWS.md](WINDOWS.md)). The `windows` job runs only when the repository variable `WINDOWS_RELEASE` is `true`. On `windows-latest` (NSIS needs Windows), `electron-builder --win --x64 --publish always` uploads `Ruimte-<version>-x64-setup.exe`, its blockmap, `latest.yml` and a zip. `publish` waits for it, so a failed Windows build keeps the release a draft. `after-pack.cjs` refuses a package without `bin/ruimte.exe` and `bin/native/adecore-database.exe`. `/download/windows` on the site points at the latest installer.
 
 Without the variable, `build.ts --skip win32-x64` leaves `@ruimte/win32-x64` out of npm. With the variable off the launcher still names the package, so a machine on Windows gets npm's missing-package message.
 

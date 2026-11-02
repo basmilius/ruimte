@@ -18,7 +18,7 @@ export function noticeNote(notice: Notice): string {
  * enforces; without it an agent answers and then waits for a reply that never comes on its own.
  */
 export function messageText(count: number): string {
-    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with ruimte-context notify if you were asked something. Agents reading each other wake each other a few times; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
+    return `${count === 1 ? 'Another agent of this project sent you the message above' : `${count} agents of this project sent you the messages above`}. Act on it, and answer with notify if you were asked something. Agents reading each other wake each other a few times; past that a message waits until its node takes a turn for another reason, and the answer to your notify says so.`;
 }
 
 /* What a person reads above the turn in the thread: who it came from, by the name they see on the canvas. */
@@ -40,8 +40,7 @@ export interface NoticeDelivery {
 }
 
 // Without this tail on every answer to a notify, a model polls the node it wrote to until it gives up.
-export const NO_REPLY_NOTICE =
-    'do not wait on it: an answer reaches you only as a message of its own, and ruimte-context task new is what brings a result back';
+export const NO_REPLY_NOTICE = 'do not wait on it: an answer reaches you only as a message of its own, and task_new is what brings a result back';
 
 function delivered(at: NoticeDelivery['at'], wake: boolean, detail: string): NoticeDelivery {
     return { at, wake, detail: `${detail}; ${NO_REPLY_NOTICE}` };

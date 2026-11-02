@@ -19,7 +19,7 @@ export function agentKindField(what: string) {
 }
 
 export const REGISTRY_KINDS_LINE =
-    'kinds\tregistry\tAn agent a person installed from the ACP registry is named by its kind, and is a chat only; ruimte-context provider catalog lists them';
+    'kinds\tregistry\tAn agent a person installed from the ACP registry is named by its kind, and is a chat only; provider_info lists them';
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
 export function chatKinds(): AgentKind[] {

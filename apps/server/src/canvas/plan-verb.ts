@@ -110,7 +110,7 @@ function itemLines(items: readonly PlanItem[], under = '-'): string[] {
     ]);
 }
 
-const planFlag = z.string().min(1, '--plan needs the id of a plan; ruimte-context plan read --all lists them').optional();
+const planFlag = z.string().min(1, '--plan needs the id of a plan; plan_read --all lists them').optional();
 const stateFlag = z.enum(PlanStepStateSchema.options, { error: `--state takes one of ${PlanStepStateSchema.options.join(', ')}` });
 const checksFlag = z.enum(PlanChecksSchema.options, { error: `--checks takes one of ${PlanChecksSchema.options.join(', ')}` }).optional();
 
@@ -148,7 +148,7 @@ const newSub = defineActionVerb('plan', {
         { syntax: '--dry-run', need: 'optional', text: 'The same checks, nothing written; minted ids differ from the ones a real run mints' }
     ],
     detail: [
-        "stdin\tThe plan as JSON, piped in or as a heredoc: ruimte-context plan new <<'EOF' ... EOF",
+        "stdin\tThe plan as JSON, piped in or as a heredoc: plan_new <<'EOF' ... EOF",
         'prints\tplan\tid\trev 0\tkind\ttitle\tthe plan made; dry-run instead of plan with --dry-run',
         'prints\titem\tid\ttype\tunder\ttitle\tone line per item in document order; under is the section or step it stands in, - at the top',
         'prints\texample\ta command that checks off the first step',
@@ -192,9 +192,7 @@ const newSub = defineActionVerb('plan', {
         return [
             `${dryRun ? 'dry-run' : 'plan'}\t${plan.id}\trev ${plan.rev}\t${plan.meta.kind}\t${field(plan.meta.title)}`,
             ...itemLines(plan.items),
-            firstStep
-                ? `example\truimte-context plan set ${firstStep.id} --state done`
-                : 'example\truimte-context plan add --type step --title "The first step"',
+            firstStep ? `example\tplan_set ${firstStep.id} --state done` : 'example\tplan_add --type step --title "The first step"',
             IDS_LINE,
             ...(dryRun ? ['note\tNothing was written; run it again without --dry-run to make the plan'] : [])
         ];
@@ -215,7 +213,7 @@ const readSub = defineActionVerb('plan', {
     flags: z.object({ plan: planFlag }),
     switches: ['all'],
     async run({ flags, switches }, call) {
-        const NO_PLAN = 'note\tThis chat has no plan; ruimte-context plan new makes one';
+        const NO_PLAN = 'note\tThis chat has no plan; plan_new makes one';
         if (switches.has('all')) {
             const { plans } = await runAction(call, 'plan.list', {});
             if (plans.length === 0) {
@@ -471,8 +469,8 @@ export const planVerb = defineNoun({
         'person\tA state a person set is never yours to change (set-by-person), and a step a person unlocked stays unlocked (unlocked-by-person)',
         'status\tThe status line is one short sentence about what happens now or next, never counts, since the panel shows progress itself',
         IDS_LINE,
-        'compaction\tAfter a compaction you may no longer know the ids: ruimte-context plan read without arguments prints them',
-        'others\truimte-context read <chat> on a linked chat shows its plans above the conversation; you never set steps of another chat',
+        'compaction\tAfter a compaction you may no longer know the ids: plan_read without arguments prints them',
+        'others\tcontext_read <chat> on a linked chat shows its plans above the conversation; you never set steps of another chat',
         REFUSAL_CODES
     ],
     actions: [newSub, readSub, setSub, noteSub, addSub, editSub, moveSub, removeSub, statusSub, deleteSub]

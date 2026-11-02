@@ -1,6 +1,6 @@
 # Windows
 
-Windows 11 x64 runs but is not supported. Rick's [#64](https://github.com/basmilius/ruimte/pull/64) is the base: daemon and desktop app build, install and start, a terminal runs in Git Bash and `ruimte-context` reaches the daemon. The npm launcher refuses Windows (`packages/npm/src/launcher.ts`) until the list below is done. Release mechanics: [RELEASE.md](RELEASE.md), "Windows".
+Windows 11 x64 runs but is not supported. Rick's [#64](https://github.com/basmilius/ruimte/pull/64) is the base: daemon and desktop app build, install and start, a terminal runs in Git Bash and an agent reaches the daemon's MCP server. The npm launcher refuses Windows (`packages/npm/src/launcher.ts`) until the list below is done. Release mechanics: [RELEASE.md](RELEASE.md), "Windows".
 
 ## Decisions
 
@@ -19,9 +19,7 @@ Do not reverse one without asking Bas.
 
 Unit tested. "Unverified" means nobody tried it on a PC.
 
-- PATH with `;` under the variable's existing name (`apps/server/src/env-path.ts`).
 - A save never writes through a link (`fs/write.ts`). A rename never folds two hard links and handles a case-only change (`fs/rename.ts`). Detected launches write `/` paths (`launches/detect.ts`, `launches/vscode.ts`).
-- `ruimte-context.exe` ships beside `ruimte.exe`: a Rust launcher (`apps/context-launcher`) that passes the words through untouched, so nothing re-reads `%` and `^`. `compile.ts` builds it with MSVC on Windows and MinGW elsewhere (`rustup target add x86_64-pc-windows-gnu`, `x86_64-w64-mingw32-gcc`). `apps/server/bin/ruimte-context.cmd` is for `bun dev` only and still re-reads them.
 - Terminals start in Git Bash with `-l`; `shellName` drops `.exe`.
 - Delete to the Recycle Bin (`apps/server/src/fs/trash.ts`, `fs/recycle-bin.ts`), unverified. No error dialogs. An item the bin would not take is refused, never deleted for good: a non-fixed drive, a bin that is off, an item larger than the bin, a linked folder. PowerShell ends after 30 seconds. The C# helper compiles once per version into `%LOCALAPPDATA%\Ruimte\recycle-bin`. Should the shell still mean to delete for good, `FOF_WANTNUKEWARNING` makes it ask on the PC, and with nobody there the time limit leaves the file. A file a refused rename replaced stays in its hidden `.ruimte-overwrite-*` folder.
 - `bun run dev` goes through `apps/server/scripts/dev.ts` (Bun's Windows shell lacks `${VAR:-default}` and `HOME`).
@@ -98,7 +96,6 @@ Done, unit tested with Windows paths, untried on the PC.
 ### 6. Packaging and the service
 
 - Code signing. The npm placeholder is published with Trusted Publishing, `WINDOWS_RELEASE` is on, `unit (Windows)` counts in the final check and the launcher takes Windows.
-- `ruimte-context.exe` has no version information (company, copyright). The Rust launcher would need a build script and a resource compiler on both build routes; `ruimte.exe`, `Ruimte.exe` and the setup have it.
 - The firewall's question comes at the first start, since the LAN door listens on every interface. A client learns the door over a connection it already has (`endpoint.info`), so the door could open later, but a machine on no account also lets a client in on a statement, so "once on an account" is not enough. Not decided: open it when the machine joins an account or first lets a client in.
 - The site offers the installer once a release has one.
 

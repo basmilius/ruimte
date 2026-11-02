@@ -9,7 +9,7 @@ const requestAction = defineActionVerb('secret', {
     action: 'secret.request',
     usage: '--launch <launch> --variable <NAME> --label <text> --reason <text> [--placeholder <text>] [--wait S]',
     params: [
-        { syntax: '--launch <launch>', need: 'required', field: 'launch', more: 'ruimte-context launches list names them; a group has no environment' },
+        { syntax: '--launch <launch>', need: 'required', field: 'launch', more: 'launch_list names them; a group has no environment' },
         { syntax: '--variable <NAME>', need: 'required', field: 'variable', more: 'not one starting with RUIMTE_' },
         { syntax: '--label <text>', need: 'required', field: 'label' },
         { syntax: '--reason <text>', need: 'required', field: 'reason' },

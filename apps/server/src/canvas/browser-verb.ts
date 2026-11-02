@@ -20,7 +20,7 @@ const COMMON_DETAIL: readonly string[] = [
     'reference\tA browser node the person pointed you at with # in one of your messages you drive as over a line, with no --view; a browser that is a view of its own you only read',
     'page\tThe page lives where it is shown: in the app of whoever has this project open, or on this machine for a client that has no browser of its own',
     'page\tNobody watching is not a failure; the call says open no, changes nothing, and the same call later reaches whoever is there then',
-    'see\truimte-context read <id>\tthe address and the text of the page, which is how you read what you navigated to',
+    'see\tcontext_read <id>\tthe address and the text of the page, which is how you read what you navigated to',
     SCOPE_LINE
 ];
 
@@ -141,7 +141,7 @@ export const BROWSER_SUMMARY =
 
 export const BROWSER_DETAIL: readonly string[] = [
     'note\tOnly a page: a click, a keystroke and a scroll stay a person’s, and an agent works a page by its address',
-    'see\truimte-context node new browser --url U\tputting a browser node on the canvas in the first place',
-    'see\truimte-context read <id>\treading what the page says',
+    'see\tnode_new browser --url U\tputting a browser node on the canvas in the first place',
+    'see\tcontext_read <id>\treading what the page says',
     SCOPE_LINE
 ];

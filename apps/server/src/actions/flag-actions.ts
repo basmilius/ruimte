@@ -14,7 +14,7 @@ function targetOf(content: ProjectContent, id: string): 'view' | 'node' {
     }
     throw new VerbRefusal('unknown-target', `${id} is not a view or a node of this project`, [
         ...viewLines(content.views),
-        'note\tflag takes an id, never a name; ruimte-context node list lists the nodes of a canvas'
+        'note\tflag takes an id, never a name; node_list lists the nodes of a canvas'
     ]);
 }
 

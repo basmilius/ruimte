@@ -1,7 +1,8 @@
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
-import { ANTIGRAVITY_CLI, COPILOT_ALLOW_CONTEXT, GROK_ALLOW_CONTEXT } from './acp-providers.ts';
+import { ANTIGRAVITY_CLI } from './acp-providers.ts';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { providerFor } from './registry.ts';
+import { COPILOT_ALLOW_MCP, mcpArgs, type McpEndpoint } from './ruimte-mcp.ts';
 
 /*
  * The flags each CLI takes for Ruimte's runtime modes, verified against the installed CLIs. A CLI or mode
@@ -108,24 +109,31 @@ export async function probeCodexNoDaemon(
     }
 }
 
-// The flag that lets `ruimte-context` run without a prompt, for the CLIs that take one on the line.
+// The flag that lets Ruimte's MCP tools run without a prompt, for the CLIs that take one on the line.
 const ALLOW_CONTEXT: Partial<Record<AgentKind, string>> = {
     claude: CLAUDE_ALLOW_CONTEXT,
-    copilot: COPILOT_ALLOW_CONTEXT,
-    grok: GROK_ALLOW_CONTEXT
+    copilot: COPILOT_ALLOW_MCP
 };
 
-// What a CLI gets on every line, fresh or resumed, whatever the mode.
-function alwaysFlags(kind: AgentKind): string[] {
+/*
+ * What a CLI gets on every line, fresh or resumed, whatever the mode: Ruimte's MCP server, which no CLI keeps from
+ * one start to the next, and leave to use it. A `-c` stays a bare word; every value is quoted.
+ */
+function alwaysFlags(kind: AgentKind, mcp: McpEndpoint | undefined): string[] {
     const allow = ALLOW_CONTEXT[kind];
+    const flags = (mcp === undefined ? [] : mcpArgs(kind, mcp)).map((arg) => (arg === '-c' ? arg : quote(arg)));
     if (allow !== undefined) {
-        return [quote(allow)];
+        flags.push(quote(allow));
     }
-    return kind === 'codex' && codexNoDaemon ? ['--no-daemon'] : [];
+    if (kind === 'codex' && codexNoDaemon) {
+        flags.push('--no-daemon');
+    }
+
+    return flags;
 }
 
 /*
- * How a CLI is told about `ruimte-context` on its launch line, where it takes one: a note there sits with the
+ * How a CLI is told about Ruimte's tools on its launch line, where it takes one: a note there sits with the
  * session's instructions rather than in the conversation, and its `SessionStart` hook leaves it out. Codex parses a
  * `-c` value as TOML, and a JSON string is a valid TOML basic string. Only a fresh launch carries it:
  * Codex 0.154 ignores developer instructions on a resume (measured) and keeps those the session started with.
@@ -145,8 +153,8 @@ export function takesNoteOnLine(kind: AgentKind): boolean {
  * that gap with `DEFAULT_RUNTIME_MODE`, because a resume of a CLI nobody chose a mode for would
  * otherwise be handed full access.
  */
-function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined): string[] {
-    const flags = [...alwaysFlags(launch.kind), ...(runtimeMode === undefined ? [] : (RUNTIME_FLAGS[launch.kind]?.[runtimeMode] ?? []))];
+function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined, mcp: McpEndpoint | undefined): string[] {
+    const flags = [...alwaysFlags(launch.kind, mcp), ...(runtimeMode === undefined ? [] : (RUNTIME_FLAGS[launch.kind]?.[runtimeMode] ?? []))];
     const modelFlag = MODEL_FLAG[launch.kind];
     if (launch.model && modelFlag) {
         flags.push(modelFlag, quote(launch.model));
@@ -158,16 +166,16 @@ function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined):
  * Put the first prompt on the launch command because CLIs expose no reliable ready-for-input signal.
  * Building the line in the daemon also keeps flags out of the wire protocol.
  */
-export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?: string): string {
+export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?: string, mcp?: McpEndpoint): string {
     const provider = providerFor(launch.kind);
     if (!provider.capabilities.terminal) {
         throw new Error(`${provider.name} is only available as a chat.`);
     }
     if (launch.resume) {
-        return resumeCommand(launch, launch.resume);
+        return resumeCommand(launch, launch.resume, mcp);
     }
     // Only the executable: the arguments on a provider are the ones its chat backend needs.
-    const parts = [terminalExecutable(launch.kind), ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE)];
+    const parts = [terminalExecutable(launch.kind), ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE, mcp)];
     const noteFlags = NOTE_FLAGS[launch.kind];
     if (note && noteFlags) {
         parts.push(...noteFlags(note));
@@ -185,19 +193,19 @@ export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?
  * then told the same thing twice; Codex takes its sandbox and its approval policy from the line
  * alone, so without this a `full-access` node would come back sandboxed.
  */
-export function resumeCommand(launch: AgentLaunch, agentSessionId: string): string {
-    return resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode));
+export function resumeCommand(launch: AgentLaunch, agentSessionId: string, mcp?: McpEndpoint): string {
+    return resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode, mcp));
 }
 
 /* The line a CLI starts fresh with, whatever the launch it was recorded with asked to resume. */
-export function freshCommand(launch: AgentLaunch, note?: string): string {
-    return terminalCommand({ ...launch, resume: undefined }, undefined, note);
+export function freshCommand(launch: AgentLaunch, note?: string, mcp?: McpEndpoint): string {
+    return terminalCommand({ ...launch, resume: undefined }, undefined, note, mcp);
 }
 
 /*
  * A resume the daemon has no evidence for, in one line. The CLI exits non-zero when the session it
  * was handed is not there, so the shell then starts a fresh one itself.
  */
-export function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string): string {
-    return `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch, note)}`;
+export function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string, mcp?: McpEndpoint): string {
+    return `${resumeCommand(launch, agentSessionId, mcp)} || ${freshCommand(launch, note, mcp)}`;
 }

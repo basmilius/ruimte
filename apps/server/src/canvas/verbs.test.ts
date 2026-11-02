@@ -51,7 +51,7 @@ import type { SessionEvent } from '../sessions/manager.ts';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { DIAGRAM_EXAMPLE } from './diagram-verb.ts';
 import { MAX_NOTICE_LENGTH, MAX_PROMPT_LENGTH } from '@ruimte/actions';
-import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
+import { answerOf } from './verb-test-helpers.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
 import { AGENT_KINDS } from './agents.ts';
 import { MAX_LINKS } from './links.ts';
@@ -438,15 +438,17 @@ function unusedPlans(): Promise<never> {
     return Promise.reject(new Error('no plans in these tests'));
 }
 
+/* A verb the holder of `token` runs; the status is 200 for an answer and 422 for a refusal, which keeps these assertions short. */
 async function post(verb: string, argv: string[], token = 'term', through: CanvasHost = host()): Promise<{ status: number; lines: string[] }> {
-    const path = `${CANVAS_PATH}/${verb}`;
-    const response = await handleCanvasRequest(
-        new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ argv }) }),
-        path,
-        { targetForToken: (value) => TOKENS[value] ?? null, host: through }
-    );
-    const body = await response.text();
-    return { status: response.status, lines: body === '' ? [] : body.replace(/\n$/, '').split('\n') };
+    const caller = TOKENS[token];
+
+    if (caller === undefined) {
+        throw new Error(`${token} is no token of these tests`);
+    }
+
+    const { refused, lines } = await answerOf(verb, argv, caller, through);
+
+    return { status: refused ? 422 : 200, lines };
 }
 
 function onDisk(): Promise<ProjectDocument> {
@@ -535,56 +537,6 @@ const HELP_LINE = 'detail\truimte-context help\tevery verb and noun, with what e
 function allActions(): Array<{ noun: Noun; action: Noun['actions'][number] }> {
     return VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => ({ noun: entry, action })) : []));
 }
-
-describe('the route', () => {
-    test('answers 405 to anything but POST and 401 to an unknown token', async () => {
-        const path = `${CANVAS_PATH}/help`;
-        const deps = { targetForToken: () => null, host: host() };
-        expect((await handleCanvasRequest(new Request(`http://127.0.0.1${path}`), path, deps)).status).toBe(405);
-        expect((await post('help', [], 'nope')).status).toBe(401);
-    });
-
-    test('an unknown verb is a 404 refusal that points at help and lists the verbs and nouns', async () => {
-        const { status, lines } = await post('spawn', ['claude']);
-        expect(status).toBe(404);
-        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb or a noun');
-        expect(lines[1]).toBe(HELP_LINE);
-        expect(lines.slice(2)).toEqual(rootRows());
-    });
-
-    test('a spelling from before the nouns is an unknown verb like any other', async () => {
-        for (const old of ['nodes', 'edges', 'views', 'rename', 'group', 'arrange', 'open', 'diagram', 'tasks']) {
-            const { status, lines } = await post(old, []);
-            expect(status).toBe(404);
-            expect(lines[0]).toBe(`refused\tunknown-verb\t${old} is not a verb or a noun`);
-            expect(lines[1]).toBe(HELP_LINE);
-        }
-    });
-
-    test('a verb and its arguments quoted into one name is told what went wrong', async () => {
-        const { status, lines } = await post('help agent', []);
-        expect(status).toBe(404);
-        expect(lines[0]).toBe('refused\tunknown-verb\thelp agent is not a verb or a noun');
-        expect(lines[1]).toBe('note\tA verb and its arguments are separate words, so this is ruimte-context help agent, not one name');
-        expect(lines[2]).toBe(HELP_LINE);
-        expect(lines.slice(3)).toEqual(rootRows());
-        expect((await post('node list', [])).lines[1]).toBe(
-            'note\tA verb and its arguments are separate words, so this is ruimte-context node list, not one name'
-        );
-        // A name that starts with nothing this daemon knows gets the list and no guess.
-        expect((await post('spawn team', [])).lines[1]).toBe(HELP_LINE);
-    });
-
-    test('a body without argv is refused', async () => {
-        const path = `${CANVAS_PATH}/help`;
-        const response = await handleCanvasRequest(
-            new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: 'Bearer term' }, body: '{}' }),
-            path,
-            { targetForToken: (value) => TOKENS[value] ?? null, host: host() }
-        );
-        expect(response.status).toBe(422);
-    });
-});
 
 describe('the tree', () => {
     test('a noun needs one of its actions, and says which they are', async () => {
@@ -799,8 +751,8 @@ describe('help', () => {
         expect(lines.some((line) => line.startsWith('flag\t--prompt T\t') && line.includes(String(MAX_PROMPT_LENGTH)))).toBe(true);
         expect(lines.some((line) => line.startsWith('paths\t') && line.includes('worktree'))).toBe(true);
         expect(lines.some((line) => line.startsWith('without a prompt\t'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('ruimte-context read') && line.includes('hidden agent'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('groups\t') && line.includes('ruimte-context node list'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('context_read') && line.includes('hidden agent'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('groups\t') && line.includes('node_list'))).toBe(true);
         // An apostrophe in a prompt is where a shell eats the argument, which no refusal can explain afterwards.
         expect(lines.some((line) => line.startsWith('quoting\t') && line.includes("'\\''"))).toBe(true);
         expect(lines.some((line) => line.startsWith('flag\t--title T\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
@@ -812,7 +764,7 @@ describe('help', () => {
             'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first when visible, then one line per role in the order of --roles, with its task id last under --task; hidden roles have - for view and edge and no group row'
         );
         // The way back into a role's work, which agent says and team did not.
-        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context read') && line.includes('hidden role'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('context_read') && line.includes('hidden role'))).toBe(true);
         // Which CLIs open a chat role, from the registry rather than from a phrase that can drift.
         expect(lines.some((line) => line.startsWith('roles\tterminal\t') && line.includes('claude, codex'))).toBe(true);
         expect(lines.some((line) => line.startsWith('depth\t') && line.includes(`A role lands at depth ${MAX_TEAM_DEPTH}`) && line.includes('agent'))).toBe(
@@ -833,7 +785,7 @@ describe('help', () => {
     test('everything that draws or lists a line points at link list', async () => {
         for (const words of [['agent'], ['team'], ['link', 'new'], ['node', 'list'], ['link', 'delete']]) {
             const { lines } = await post('help', words);
-            expect(lines.some((line) => line.includes('ruimte-context link list'))).toBe(true);
+            expect(lines.some((line) => line.includes('link_list'))).toBe(true);
         }
         const { lines } = await post('help', ['team']);
         expect(lines.some((line) => line.startsWith('edges\t') && line.includes('One way only'))).toBe(true);
@@ -890,14 +842,6 @@ describe('help', () => {
             'refused\tbad-arguments\tagent is a verb and has no actions; ruimte-context help agent details it',
             'detail\truimte-context help agent\tone verb in full'
         ]);
-    });
-
-    test('list and read are named there but not run by the canvas route', async () => {
-        for (const verb of ['list', 'read']) {
-            const { status, lines } = await post(verb, []);
-            expect(status).toBe(404);
-            expect(lines).toEqual([`refused\tnot-a-canvas-verb\t${verb} is answered by GET /context; run ruimte-context ${verb}`]);
-        }
     });
 
     test('refuses arguments it does not take', async () => {
@@ -957,7 +901,7 @@ describe('refusals', () => {
             const [first, ...rest] = verb.split(' ');
             const { status, lines } = await post(first!, [...rest, ...argv]);
             expect({ argv, status, line: lines[0] }).toEqual({ argv, status: 422, line: `refused\t${code}\t${message}` });
-            expect(lines).toContain(`detail\truimte-context help ${verb}`);
+            expect(lines.some((line) => line.startsWith(`usage\t${verb}\t`))).toBe(true);
         }
     });
 
@@ -986,7 +930,7 @@ describe('refusals', () => {
         await replaceContent(full);
         expect((await post('node', ['new', 'note', '--view', 'board', '--beside', 'nope'])).lines).toEqual([
             'refused\tunknown-node\tnope is not a node on board',
-            'detail\truimte-context node list\tthe 30 nodes of board'
+            'detail\tnode_list\tthe 30 nodes of board'
         ]);
     });
 
@@ -1283,31 +1227,20 @@ describe('node new', () => {
             device: { platform: 'ios', kind: 'simulator', name: SIMULATOR.name, runtime: SIMULATOR.runtime }
         });
         expect(canvas.edges.find((edge) => edge.id === edgeId)).toEqual({ id: edgeId!, from: 'term-1', to: id!, role: 'origin' });
-        expect((await post('device', ['state', id!])).lines.slice(0, 2)).toEqual([`device\t${id}\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0`, 'state\tbooted']);
+        expect((await post('device', ['state', id!])).lines.slice(0, 2)).toEqual(['device\tsim-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0', 'state\tbooted']);
     });
 
-    test('a chat view puts a device on the canvas it names with no line, and operates it there by naming that canvas', async () => {
+    test('a chat view puts a device on the canvas it names with no line, and every agent operates a device node with no line or view', async () => {
         const [id, kind, view, edge] = (await post('node', ['new', 'device', '--device', 'sim-1', '--view', 'main'], 'chat')).lines[0]!.split('\t');
         expect([kind, view, edge]).toEqual(['device', 'main', '-']);
         expect((await canvasOnDisk()).edges).toEqual([]);
-        expect((await post('device', ['state', id!, '--view', 'main'], 'chat')).lines.slice(0, 2)).toEqual([
-            `device\t${id}\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0`,
+        expect((await post('device', ['state', id!], 'chat')).lines.slice(0, 2)).toEqual([
+            'device\tsim-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',
             'state\tbooted'
         ]);
-        expect((await post('device', ['state', id!], 'chat')).lines).toEqual([
-            `refused\tview-required\t${id} stands on main; a chat view reads and operates the nodes of a canvas by naming it with --view, since no line runs to a view`,
-            `see\truimte-context device state ${id} --view main\tnames the canvas it stands on`
-        ]);
-        expect((await post('device', ['shot', id!, '--view', 'board'], 'chat')).lines[0]).toBe(`refused\tnot-on-view\t${id} stands on main, not on board`);
-        expect((await post('device', ['open', id!, '--url', 'https://ruimte.app', '--view', 'main'], 'chat')).lines[0]).toBe(
-            `done\topen\t${id}\tiPhone 18 Pro`
-        );
-        expect((await post('device', ['open', id!, '--url', 'https://ruimte.app'], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
-        // The terminal beside it on that canvas has no line to it, and a line is still what it needs.
-        expect((await post('device', ['state', id!])).lines[0]).toBe(
-            `refused\tnot-linked\tNo line runs between you and ${id}, and that line is what lets you operate its device`
-        );
-        expect((await post('device', ['state', id!, '--view', 'main'])).lines[0]).toStartWith('refused\tnot-a-chat-view\t');
+        expect((await post('device', ['open', id!, '--url', 'https://ruimte.app'], 'chat')).lines[0]).toBe(`done\topen\t${id}\tiPhone 18 Pro`);
+        // The chat claimed the device, so the terminal beside it waits for it.
+        expect((await post('device', ['state', 'sim-1'])).lines[0]).toStartWith('refused\tdevice-in-use\t');
     });
 
     test('a device node needs a device this machine has, and only a device node takes one', async () => {
@@ -1455,7 +1388,7 @@ describe('node new', () => {
         const { lines } = await post('node', ['new', 'diagram', '--source', 'nowhere']);
         expect(lines).toEqual([
             'refused\tnot-a-diagram\tnowhere is not a diagram view of this project',
-            'note\tThis project has no diagram views; ruimte-context view new --kind diagram makes one'
+            'note\tThis project has no diagram views; view_new --kind diagram makes one'
         ]);
     });
 
@@ -3408,8 +3341,8 @@ describe('node edit', () => {
         expect(refused.lines[0]).toBe(
             'refused\tnot-linked\tnote-1 is a note you did not make and no line joins you to it: draw that line and you can write in it'
         );
-        expect(refused.lines).toContain('note\tmain has no note you may write in; ruimte-context node new note --text B adds one of your own');
-        expect(refused.lines).toContain('see\truimte-context link new --to note-1\tdraws the line this needs');
+        expect(refused.lines).toContain('note\tmain has no note you may write in; node_new note --text B adds one of your own');
+        expect(refused.lines).toContain('see\tlink_new --to note-1\tdraws the line this needs');
         // The line a person drew from the note into this session says the same thing as one the other way.
         await post('link', ['new', '--from', 'note-1', '--to', 'term-1']);
         expect((await post('node', ['edit', 'note-1', '--text', 'mine'])).status).toBe(200);
@@ -3508,7 +3441,7 @@ describe('node color', () => {
             'refused\tnot-linked\tnote-1 is a node you did not make and no line joins you to it: draw that line and you can color it'
         );
         expect(refused.lines).toContain('node\tterm-1\tterminal\tshell');
-        expect(refused.lines).toContain('see\truimte-context link new --to note-1\tdraws the line this needs');
+        expect(refused.lines).toContain('see\tlink_new --to note-1\tdraws the line this needs');
         expect((await onDisk()).rev).toBe(1);
         await post('link', ['new', '--from', 'note-1', '--to', 'term-1']);
         expect((await post('node', ['color', 'note-1', '--color', 'teal'])).status).toBe(200);
@@ -3711,7 +3644,7 @@ describe('node delete', () => {
         expect(own.lines[0]).toBe(
             'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so there is no node to remove'
         );
-        expect(own.lines.at(-1)).toBe('see\truimte-context view delete chat-1\tremoves a view you made, with the session it holds');
+        expect(own.lines.at(-1)).toBe('see\tview_delete chat-1\tremoves a view you made, with the session it holds');
         const mine = await madeId(post('node', ['new', 'note', '--title', 'Mine']));
         expect((await post('node', ['delete', 'nope'])).lines.slice(1)).toEqual([`node\t${mine}\tnote\tMine`]);
     });
@@ -3916,7 +3849,6 @@ describe('view diagram', () => {
         expect(problems).toContain('problem\tnodes[1].label\tis missing and needs a string (node "api")');
         expect(problems).toContain('problem\tnodes[1]\thas no field lable (node "api")');
         expect(problems.some((line) => line.startsWith('problem\tedges[0].style\t') && line.endsWith('(the edge from "web" to "api")'))).toBe(true);
-        expect(lines.at(-1)).toBe('detail\truimte-context help view diagram');
         for (const line of lines) {
             expect(line).not.toInclude('Invalid');
             expect(line).not.toInclude('expected');
@@ -3939,7 +3871,7 @@ describe('view diagram', () => {
     test('a view that is no diagram, or a diagram of another project, is refused with the diagrams of this one', async () => {
         expect((await write('sketch-1', doc())).lines).toEqual([
             'refused\tnot-a-diagram\tsketch-1 is not a diagram view of this project',
-            'note\tThis project has no diagram view; ruimte-context view new <name> --kind diagram makes one'
+            'note\tThis project has no diagram view; view_new <name> --kind diagram makes one'
         ]);
         const id = await made('Flow', ['--kind', 'diagram']);
         expect((await write('sketch-1', doc())).lines.slice(1)).toEqual([`view\t${id}\tdiagram\tFlow`]);
@@ -4017,9 +3949,7 @@ describe('task list', () => {
         }
         // A child that is told about done calls it even when its last answer already reports back.
         expect(taskBrief(true)).not.toContain('done');
-        // Codex's allow rule cannot read $'...', so that call would wait on a person's approval.
-        expect(taskBrief(false)).toContain("ruimte-context done --result '...'");
-        expect(taskBrief(false)).toContain('\\n');
+        expect(taskBrief(false)).toContain('call task_done with the result');
     });
 
     test('team --task gives every role a task of its own', async () => {
@@ -4050,12 +3980,10 @@ describe('task list', () => {
             expect((await post('task', ['list'], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed\t-`]);
             // The child is done with a task that settled, while the parent still waits for the wake.
             expect((await post('task', ['list'], 'child')).lines).toEqual([
-                'note\tNo task is open or waiting to wake you; 1 older task is hidden, settled and already reported; ruimte-context task list --all lists them'
+                'note\tNo task is open or waiting to wake you; 1 older task is hidden, settled and already reported; task_list --all lists them'
             ]);
             expect((await post('task', ['list', '--all'], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed\t-`]);
-            expect((await post('task', ['list'], 'term')).lines).toEqual([
-                'note\tYou have given no task and were given none; ruimte-context agent --task gives one'
-            ]);
+            expect((await post('task', ['list'], 'term')).lines).toEqual(['note\tYou have given no task and were given none; agent_start --task gives one']);
         } finally {
             delete TOKENS.child;
         }
@@ -4068,7 +3996,7 @@ describe('task list', () => {
 
         expect((await post('task', ['list'], 'chat')).lines).toEqual([
             `task\t${later}\tgave\topen\t${laterChild}\tLexer\tpending\t\t-`,
-            'note\t1 older task is hidden, settled and already reported; ruimte-context task list --all lists them'
+            'note\t1 older task is hidden, settled and already reported; task_list --all lists them'
         ]);
         expect((await post('task', ['list', '--all'], 'chat')).lines.map((line) => line.split('\t')[1])).toEqual([earlier, later]);
     });
@@ -4166,36 +4094,32 @@ describe('browser', () => {
         const mine = await ownPage();
         const far = await madeId(post('node', ['new', 'browser', '--url', 'https://example.com/far', '--view', 'board']));
         const open = (await post('browser', ['state', far])).lines;
-        expect(open).toContain(
-            'see\truimte-context node new browser --url https://example.com/two\topens a page of your own on your canvas, with the line to it drawn'
-        );
+        expect(open).toContain('see\tnode_new browser --url https://example.com/two\topens a page of your own on your canvas, with the line to it drawn');
         expect(open.find((line) => line.startsWith(`browser\t${mine}\t`))?.split('\t')[3]).toBe('https://example.com/two');
 
         pageOpen = false;
         const closed = (await post('browser', ['state', far])).lines;
-        expect(closed).toContain(
-            'see\truimte-context node new browser --url https://example.com/far\topens a page of your own on your canvas, with the line to it drawn'
-        );
+        expect(closed).toContain('see\tnode_new browser --url https://example.com/far\topens a page of your own on your canvas, with the line to it drawn');
         expect(closed.find((line) => line.startsWith(`browser\t${mine}\t`))?.split('\t')[3]).toBe('https://example.com/');
     });
 
     test('a line is the hint only for a page on the canvas of the caller', async () => {
         pageOpen = false;
         const near = await madeId(post('node', ['new', 'browser', '--url', 'https://example.com/near', '--view', 'main', '--beside', 'note-1'], 'chat'));
-        expect((await post('browser', ['state', near])).lines[1]).toBe(`see\truimte-context link new --to ${near}\tdraws it`);
+        expect((await post('browser', ['state', near])).lines[1]).toBe(`see\tlink_new --to ${near}\tdraws it`);
 
         const far = await madeId(post('node', ['new', 'browser', '--url', 'https://example.com/far', '--view', 'board']));
         const across = (await post('browser', ['state', far])).lines;
         expect(across.slice(1, 3)).toEqual([
             `note\t${far} stands on board and you on main, and a line only runs between two nodes of one canvas`,
-            'see\truimte-context node new browser --url https://example.com/far\topens a page of your own on your canvas, with the line to it drawn'
+            'see\tnode_new browser --url https://example.com/far\topens a page of your own on your canvas, with the line to it drawn'
         ]);
         expect(across.some((line) => line.includes(`link new --to ${far}`))).toBe(false);
 
         const alone = (await post('browser', ['state', far], 'chat')).lines;
         expect(alone).toEqual([
             `refused\tview-required\t${far} stands on board; a chat view reads and operates the nodes of a canvas by naming it with --view, since no line runs to a view`,
-            `see\truimte-context browser state ${far} --view board\tnames the canvas it stands on`
+            `see\tbrowser_state ${far} --view board\tnames the canvas it stands on`
         ]);
     });
 
@@ -4206,7 +4130,7 @@ describe('browser', () => {
         expect(lines[1]).toBe(`page\t${far}\thttps://example.com/two\tTwo`);
         expect((await post('browser', ['state', far, '--view', 'main'], 'chat')).lines).toEqual([
             `refused\tnot-on-view\t${far} stands on board, not on main`,
-            `see\truimte-context browser state ${far} --view board\tnames the canvas it stands on`
+            `see\tbrowser_state ${far} --view board\tnames the canvas it stands on`
         ]);
         // A node on a canvas keeps to its lines, and --view does not stand in for one.
         expect((await post('browser', ['state', far, '--view', 'board'])).lines[0]).toStartWith('refused\tnot-a-chat-view\t');
@@ -4314,7 +4238,7 @@ describe('node new --json', () => {
     test('help node new says that several nodes go in one call', async () => {
         const { lines } = await post('help', ['node', 'new']);
         expect(lines.some((line) => line.startsWith('many\tTo add several nodes, give them all to one call with --json'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('example\truimte-context node new --json '))).toBe(true);
+        expect(lines.some((line) => line.startsWith('example\tnode_new --json '))).toBe(true);
     });
 });
 
@@ -4711,7 +4635,7 @@ describe('reading what a # points at in another form', () => {
         const orders = textOf(await read('chat-1', { sourceId: 'orders' }));
         expect(orders).toContain('connection: Shop (shop-1, mysql, read)');
         expect(orders).toContain('filter: total > 10');
-        expect(orders).toContain('ruimte-context database query "shop-1" --schema "shop" <<\'SQL\'\nSELECT * FROM `orders` WHERE total > 10 LIMIT 50\nSQL');
+        expect(orders).toContain('database_query {"connection":"shop-1","schema":"shop","sql":"SELECT * FROM `orders` WHERE total > 10 LIMIT 50"}');
         expect(textOf(await read('chat-1', { sourceId: 'far' }))).toContain('connection: elsewhere-1 (not on this machine)');
     });
 

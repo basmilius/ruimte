@@ -57,13 +57,25 @@ beforeEach(async () => {
 function hostWith(backends: RecordingBackend[]): CanvasHost {
     return {
         projects: {
-            locate: (id: string) => (id === 'chat-1' ? { projectId: 'p1', folder: projectFolder, canvasId: 'main' } : null),
+            locate: (id: string) => (id.startsWith('chat-') ? { projectId: 'p1', folder: projectFolder, canvasId: 'main' } : null),
             read: async () => content(),
             machineOfNode: (nodeId: string) => (bound.has(nodeId) ? 'machine-b' : null)
         },
         checkouts: { paths: async () => [] },
-        devices: new DeviceDriver({ home, manager: new DeviceManager(backends), timers: new ManualTimers(), sleep: async () => undefined })
+        devices: driverWith(backends)
     } as unknown as CanvasHost;
+}
+
+/* The system's temporary folder holds every folder of these tests, so it stands in for none unless a test names one. */
+function driverWith(backends: RecordingBackend[], options: Partial<ConstructorParameters<typeof DeviceDriver>[0]> = {}): DeviceDriver {
+    return new DeviceDriver({
+        home,
+        manager: new DeviceManager(backends),
+        timers: new ManualTimers(),
+        sleep: async () => undefined,
+        tempFolders: [],
+        ...options
+    });
 }
 
 /* A second device node beside the phone, linked to the caller, pointing at this device. */
@@ -80,19 +92,20 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-function run(argv: string[]): Promise<string[]> {
-    return printed(noun, argv, { caller: 'chat-1', host });
+function run(argv: string[], caller = 'chat-1'): Promise<string[]> {
+    return printed(noun, argv, { caller, host });
 }
 
-describe('ruimte-context device', () => {
-    test('has no word that erases, starts, stops, restarts or folds a device or sets its camera, which only a person does', () => {
+describe('device tools', () => {
+    test('has no word that erases, stops, restarts or folds a device or sets its camera, which only a person does', () => {
         const words = noun.actions.map((action) => action.word);
 
-        for (const word of ['erase', 'boot', 'start', 'shutdown', 'stop', 'restart', 'fold', 'hinge', 'camera']) {
+        for (const word of ['erase', 'boot', 'shutdown', 'stop', 'restart', 'fold', 'hinge', 'camera']) {
             expect(words).not.toContain(word);
         }
         expect(words).toEqual([
             'list',
+            'start',
             'state',
             'shot',
             'tap',
@@ -113,9 +126,9 @@ describe('ruimte-context device', () => {
         ]);
     });
 
-    test('says which device the node holds and what works on it', async () => {
+    test('says which device the node holds, by its device id, and what works on it', async () => {
         expect(await run(['state', 'phone-1'])).toEqual([
-            'device\tphone-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',
+            'device\tsim-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',
             'state\tbooted',
             'power\tnone',
             'screen\tunknown',
@@ -187,10 +200,7 @@ describe('ruimte-context device', () => {
         const [kind, path, size] = line!.split('\t');
         expect([kind, dirname(path!), size]).toEqual(['shot', join(home, 'screenshots'), '1000x2000']);
         expect(basename(path!)).toMatch(/^phone-1-\d+\.png$/);
-        expect(await run(['tap', 'phone-1', '--at', '500,500'])).toEqual([
-            'done\ttap\tphone-1\tiPhone 18 Pro',
-            'next\truimte-context device shot <id>\tshows what it did'
-        ]);
+        expect(await run(['tap', 'phone-1', '--at', '500,500'])).toEqual(['done\ttap\tphone-1\tiPhone 18 Pro', 'next\tdevice_shot\tshows what it did']);
         expect(backend.source.inputs[0]).toEqual({ kind: 'pointer', phase: 'down', x: 0.5, y: 0.25 });
     });
 
@@ -229,29 +239,73 @@ describe('ruimte-context device', () => {
         );
     });
 
-    test('only a line lets the caller operate a device, and a refusal offers the ones it has', async () => {
+    test('operates a device by the id device list gives it, or by any device node of the project, with no line', async () => {
         edges = [];
-        expect(await run(['tap', 'phone-1', '--at', '1,1'])).toEqual([
-            'refused\tnot-linked\tNo line runs between you and phone-1, and that line is what lets you operate its device',
-            'see\truimte-context link new --to phone-1\tdraws it',
-            'note\tNo device node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas'
-        ]);
-        expect((await run(['shot', 'phone-2']))[1]).toBe('note\tphone-2 stands on other and you on main, and a line only runs between two nodes of one canvas');
-        edges = [{ id: 'edge-1', from: 'chat-1', to: 'phone-1' }];
+        expect(await run(['list'])).toEqual(['device\tsim-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0\tbooted']);
+        await run(['shot', 'sim-1']);
+        expect((await run(['tap', 'sim-1', '--at', '1,1']))[0]).toBe('done\ttap\tsim-1\tiPhone 18 Pro');
+        expect((await run(['tap', 'phone-2', '--at', '1,1']))[0]).toBe('done\ttap\tphone-2\tiPhone 18 Pro');
+        expect(backend.source.inputs).toHaveLength(4);
+    });
+
+    test('refuses an id that is neither a device of this machine nor a device node, offering the devices it has', async () => {
         expect(await run(['state', 'nothing'])).toEqual([
-            'refused\tunknown-node\tnothing is not a node of this project',
-            'device\tphone-1\tPhone\tiPhone 18 Pro'
+            'refused\tunknown-device\tnothing is not a device of this machine right now',
+            'device\tsim-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0\tbooted'
         ]);
         expect((await run(['state', 'chat-1']))[0]).toBe('refused\tnot-a-device\tchat-1 is a chat node, and only a device node has a device to operate');
     });
 
-    test('refuses a device that is not running, and never starts it', async () => {
+    test('refuses a device that is not running, and points at device_start', async () => {
         backend.info = { ...SIMULATOR, state: 'shutdown' };
-        expect(await run(['tap', 'phone-1', '--at', '1,1'])).toEqual([
+        expect(await run(['tap', 'sim-1', '--at', '1,1'])).toEqual([
             'refused\tdevice-not-booted\tiPhone 18 Pro is not running',
-            'note\tAn agent never starts a device: ask the person to start it from its node, then call again'
+            'see\tdevice_start\tstarts it, then call again'
         ]);
-        expect(backend.source.starts).toBe(0);
+        expect(backend.boots).toEqual([]);
+    });
+
+    test('starts a simulator the way the side panel does, and only claims one that already runs', async () => {
+        backend.info = { ...SIMULATOR, state: 'shutdown' };
+        expect(await run(['start', 'sim-1'])).toEqual(['started\tsim-1\tiPhone 18 Pro\tbooted', 'next\tdevice_state\twhat the device can do now']);
+        expect(backend.boots).toEqual(['sim-1']);
+        expect((await run(['start', 'phone-1']))[0]).toBe('started\tphone-1\tiPhone 18 Pro\tbooted');
+        expect(backend.boots).toEqual(['sim-1']);
+    });
+
+    test('refuses to start a phone, or a device this machine cannot start', async () => {
+        const phone = linkedTo({
+            ...SIMULATOR,
+            deviceId: 'coredevice-1',
+            backendId: 'coredevice',
+            kind: 'physical',
+            name: 'Test iPhone',
+            runtime: 'iOS 27.2',
+            state: 'shutdown',
+            capabilities: { boot: false, shutdown: false, stream: true, input: true, screenshot: true }
+        });
+        expect(await run(['start', 'coredevice-1'])).toEqual([
+            'refused\tdevice-not-startable\tTest iPhone is a phone, and Ruimte starts only a simulator or an emulator',
+            'note\tAsk the person to turn it on and unlock it, then call again'
+        ]);
+        backend.info = { ...SIMULATOR, state: 'shutdown', capabilities: { ...SIMULATOR.capabilities, boot: false } };
+        expect((await run(['start', 'sim-1']))[0]).toBe('refused\tdevice-not-startable\tRuimte cannot start iPhone 18 Pro on this machine');
+        expect([...phone.boots, ...backend.boots]).toEqual([]);
+    });
+
+    test('holds a device for the first agent until its terminal or chat ends, and tells another nothing of it', async () => {
+        await run(['shot', 'sim-1']);
+        expect(await run(['tap', 'sim-1', '--at', '1,1'], 'chat-2')).toEqual([
+            'refused\tdevice-in-use\tAnother agent operates iPhone 18 Pro right now, and a device takes one agent at a time',
+            'note\tPick another device with device_list, or wait until that agent is done and call again'
+        ]);
+        expect((await run(['start', 'phone-1'], 'chat-2'))[0]).toStartWith('refused\tdevice-in-use\t');
+        expect((await run(['list'], 'chat-2'))[0]).toStartWith('device\tsim-1\t');
+        expect(backend.source.inputs).toEqual([]);
+
+        (host.devices as DeviceDriver).nodeClosed('chat-1');
+        expect((await run(['shot', 'sim-1'], 'chat-2'))[0]).toStartWith('shot\t');
+        expect((await run(['shot', 'sim-1']))[0]).toStartWith('refused\tdevice-in-use\t');
     });
 
     test('refuses a node that points at no device yet', async () => {
@@ -346,10 +400,7 @@ describe('ruimte-context device on a device with a tree', () => {
     test('taps an element of the last state without a shot, and refuses a stale one or two targets at once', async () => {
         expect((await run(['tap', 'phone-1', '--element', '3']))[0]).toStartWith('refused\tstale-element\t');
         await run(['state', 'phone-1']);
-        expect(await run(['tap', 'phone-1', '--element', '3'])).toEqual([
-            'done\ttap\tphone-1\tiPhone 18 Pro',
-            'next\truimte-context device shot <id>\tshows what it did'
-        ]);
+        expect(await run(['tap', 'phone-1', '--element', '3'])).toEqual(['done\ttap\tphone-1\tiPhone 18 Pro', 'next\tdevice_shot\tshows what it did']);
         expect(backend.source.inputs[0]).toEqual({ kind: 'pointer', phase: 'down', x: 0.5, y: 565 / 2000 });
         expect((await run(['tap', 'phone-1', '--element', '9']))[0]).toStartWith('refused\tunknown-element\t');
         expect((await run(['tap', 'phone-1', '--element', 'two']))[0]).toStartWith('refused\tbad-arguments\t--element takes the number in brackets');
@@ -390,7 +441,7 @@ describe('ruimte-context device tools', () => {
     test('sets up the device in one step, in the order a person would', async () => {
         expect(
             await run(['set', 'phone-1', '--appearance', 'dark', '--status-bar', 'clean', '--battery', '40', '--charging', '--location', '52.3676,4.9041'])
-        ).toEqual(['done\tset\tphone-1\tiPhone 18 Pro', 'next\truimte-context device shot <id>\tshows what it did']);
+        ).toEqual(['done\tset\tphone-1\tiPhone 18 Pro', 'next\tdevice_shot\tshows what it did']);
         expect(backend.actions).toEqual([
             { ...target, action: 'setAppearance', value: 'dark' },
             { ...target, action: 'setStatusBar', value: 'clean' },
@@ -479,22 +530,42 @@ describe('ruimte-context device tools', () => {
         expect(backend.actions).toHaveLength(2);
     });
 
-    test('a tool the device does not announce is refused before it runs, and so is one without a line', async () => {
+    test("takes a file from the chat's own folders and the system temp folder too", async () => {
+        const temp = await mkdtemp(join(tmpdir(), 'ruimte-device-temp-'));
+        try {
+            const attachments = join(home, 'attachments', 'chat-1');
+            const visuals = join(home, 'chats', 'chat-1.visuals');
+            const another = join(home, 'attachments', 'chat-9');
+            await mkdir(attachments, { recursive: true });
+            await mkdir(visuals, { recursive: true });
+            await mkdir(another, { recursive: true });
+            await writeFile(join(another, 'x.png'), 'png');
+            await writeFile(join(attachments, 'a.png'), 'png');
+            await writeFile(join(visuals, 'b.png'), 'png');
+            await writeFile(join(temp, 'c.png'), 'png');
+            host = { ...hostWith([backend]), devices: driverWith([backend], { tempFolders: [temp] }) } as CanvasHost;
+
+            expect((await run(['media', 'phone-1', '--path', join(attachments, 'a.png'), join(visuals, 'b.png'), join(temp, 'c.png')]))[0]).toStartWith(
+                'done\tmedia\t'
+            );
+            expect((await run(['media', 'phone-1', '--path', join(another, 'x.png')]))[0]).toStartWith('refused\tdevice-path-refused\t');
+            expect(backend.actions).toHaveLength(1);
+        } finally {
+            await rm(temp, { recursive: true, force: true });
+        }
+    });
+
+    test('a tool the device does not announce is refused before it runs', async () => {
         backend.info = { ...SIMULATOR, capabilities: { ...SIMULATOR.capabilities, tools: ['launchApp'] } };
         expect((await run(['open', 'phone-1', '--url', 'https://ruimte.app']))[0]).toBe(
             'refused\tdevice-action-unavailable\tiPhone 18 Pro has no openUrl tool in Ruimte'
         );
-        edges = [];
-        expect((await run(['install', 'phone-1', '--path', 'build/Atlas.app']))[0]).toStartWith('refused\tnot-linked\t');
         expect(backend.actions).toEqual([]);
     });
 
     test('every tool waits while the person paused the agent', async () => {
         const control = new DeviceControl();
-        host = {
-            ...hostWith([backend]),
-            devices: new DeviceDriver({ home, manager: new DeviceManager([backend]), timers: new ManualTimers(), sleep: async () => undefined, gate: control })
-        } as CanvasHost;
+        host = { ...hostWith([backend]), devices: driverWith([backend], { gate: control }) } as CanvasHost;
         await run(['open', 'phone-1', '--url', 'https://ruimte.app']);
         control.control(SIMULATOR, 'pause');
 

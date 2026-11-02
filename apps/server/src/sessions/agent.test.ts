@@ -120,14 +120,14 @@ describe('agent status via hooks', () => {
             const line = pty.options.env[START_LINE_ENV] ?? pty.input.join('');
             expect(line).toContain('codex resume');
             expect(line).toContain('Ruimte is a workspace for AI engineering');
-            expect(line).not.toContain('You are working in a chat view');
+            expect(line).not.toContain('You work in a chat view');
             if (sessionId === 'terminal-view') {
-                expect(line).toContain('You are working in a terminal view');
-                expect(line).toContain('select a destination with --view');
-                expect(line).not.toContain('You are working in a node on a canvas');
+                expect(line).toContain('You work in a terminal view');
+                expect(line).toContain('go on a canvas you name with `view`');
+                expect(line).not.toContain('You work in a node on a canvas');
             } else {
-                expect(line).toContain('You are working in a node on a canvas');
-                expect(line).not.toContain('You are working in a terminal view');
+                expect(line).toContain('You work in a node on a canvas');
+                expect(line).not.toContain('You work in a terminal view');
             }
         }
     });

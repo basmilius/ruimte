@@ -13,7 +13,7 @@ const APPEND_FLAG = 'append';
 
 const EDIT_USAGE = `(<nodeId> --text B [--${APPEND_FLAG}] | --json J) [--view V]`;
 
-const EDIT_USAGE_LINES = [`usage\tnode edit\t${EDIT_USAGE}`, 'detail\truimte-context help node edit'];
+const EDIT_USAGE_LINES = [`usage\tnode edit\t${EDIT_USAGE}`];
 
 /* One note of a --json call: its id and the body, with JSON's own escapes rather than the ones of --text. */
 const JsonEditSchema = z.strictObject({
@@ -22,7 +22,7 @@ const JsonEditSchema = z.strictObject({
     append: z.boolean({ error: 'append is true or false' }).optional()
 });
 
-const JSON_EXAMPLE = `ruimte-context node edit --json '[{"id":"note-1","text":"Done"},{"id":"note-2","text":"One more line","append":true}]'`;
+const JSON_EXAMPLE = `node_edit --json '[{"id":"note-1","text":"Done"},{"id":"note-2","text":"One more line","append":true}]'`;
 
 export const nodeEditAction = defineActionVerb('node', {
     name: 'edit',
@@ -43,7 +43,7 @@ export const nodeEditAction = defineActionVerb('node', {
             text: `Several notes in one call: an array of up to ${MAX_PER_CALL} objects, each with id, text and, to write under what is there, append set to true`,
             more: '--json - takes the array from stdin, a heredoc included'
         },
-        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the notes are on, by view id', more: 'ruimte-context view list lists them' }
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the notes are on, by view id', more: 'view_list lists them' }
     ],
     detail: [
         'prints\tedited\tid\tlines\tcharacters\tthe note as it now stands, so an append tells you how much is written there in total; one row per note, in the order given',
@@ -52,7 +52,7 @@ export const nodeEditAction = defineActionVerb('node', {
         `example\t${JSON_EXAMPLE}`,
         "kind\tOnly a note: a file node is the file system's, and a browser, a terminal and a chat show what they run, not text of yours",
         'who\tA note you made yourself, or one a line joins you to, whichever way that line runs: a person drawing that line is what says you may write here',
-        'who\tThe same line lets you read the note back with ruimte-context read, whichever way it runs',
+        'who\tThe same line lets you read the note back with context_read, whichever way it runs',
         'who\tA chat view has no lines: it writes in any note of the canvas it names with --view, the way the person arranging that canvas would',
         'who\tA note the person pointed you at with # in one of your messages is yours to write in as along a line, with no --view, for as long as that message is in your thread; a # to its canvas alone is not',
         'append\tThe text lands on a line of its own under what is there, so two agents writing in turn never drop what the other put down',
@@ -60,9 +60,9 @@ export const nodeEditAction = defineActionVerb('node', {
         'note\tThe body it already carries writes nothing and is not a refusal',
         'note\tWithout --append the old body is gone; on a note you share with another agent that is what --append is for',
         'refusals\tnot-a-note\tnot-linked\tunknown-node\tnot-on-a-canvas\tthe whole set this action refuses with',
-        'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
-        'see\truimte-context node new note --text B\tadding the note in the first place',
-        'see\truimte-context link new --to <id>\tthe line that makes a note somebody else made yours to write in'
+        'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs',
+        'see\tnode_new note --text B\tadding the note in the first place',
+        'see\tlink_new --to <id>\tthe line that makes a note somebody else made yours to write in'
     ],
     positionals: z.tuple([z.string().min(1, NEEDS_ID).optional()], {
         error: (issue) =>

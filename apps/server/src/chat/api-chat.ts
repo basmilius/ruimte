@@ -3,14 +3,19 @@ import { readFile } from 'node:fs/promises';
 import type { z } from 'zod';
 import type { RuntimeMode } from '@ruimte/contracts';
 import type { ApprovalDecision, BackendHost, BackendLaunch } from '@adecore/agents/chat';
+import type { Tool } from '@modelcontextprotocol/client';
 import { isNotFound, writeAtomic } from '@adecore/agents';
+import { errorText } from '../error-text.ts';
+import { isRecord } from '../is-record.ts';
+import { MCP_SERVER } from '../providers/ruimte-mcp.ts';
+import { connectApiMcp, mcpResultText, ruimteMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
 import { API_TOOL_NAMES, apiToolInput, askUserCard, type ApiToolCall } from './api-tools.ts';
-import { executeNanoTool, nanoNeedsApproval, nanoToolCall } from './nanogpt-tools.ts';
+import { NANOGPT_TOOLS, executeNanoTool, nanoNeedsApproval, nanoToolCall } from './nanogpt-tools.ts';
 
 /*
  * What the chats on a plain API (NanoGPT, the Claude API) share: the API keeps no conversation, so the
  * thread is a file the backend writes after every step. Project tools wait for approval as far as
- * the runtime mode says.
+ * the runtime mode says; the tools of Ruimte's MCP server sit beside them.
  */
 
 /*
@@ -84,20 +89,60 @@ interface ApiToolsOptions {
     /* Where a tool keeps what it keeps when the launch names no Ruimte home. */
     home: string;
     executeTool: typeof executeNanoTool;
+    connectMcp?: ConnectApiMcp;
 }
 
-/* The project tools of one chat, with the approval and question cards a person answers. */
+/* A tool as the model is offered it, before each API puts it in its own shape. */
+export interface ApiToolDefinition {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+}
+
+// The name the model and the thread give a tool of Ruimte's MCP server, the one Claude Code gives it too.
+const RUIMTE_TOOL_PREFIX = `mcp__${MCP_SERVER}__`;
+
+// Connecting and listing happen once per backend, apart from any turn, so a stopped turn does not lose the tools.
+const RUIMTE_CONNECT_TIMEOUT_MS = 20_000;
+
+interface RuimteTools {
+    connection: ApiMcpConnection;
+    tools: Tool[];
+}
+
+/* The project tools of one chat, with the approval and question cards a person answers, and Ruimte's own tools. */
 export class ApiTools {
     private readonly pending = new Map<string, (decision: ApprovalDecision | null) => void>();
     private readonly questions = new Map<string, (answer: string | null) => void>();
     private readonly options: ApiToolsOptions;
+    private ruimte: Promise<RuimteTools | null> | null = null;
 
     constructor(options: ApiToolsOptions) {
         this.options = options;
     }
 
+    /* Every tool the model is offered, the same list on every request, so the prompt cache holds. */
+    async definitions(): Promise<ApiToolDefinition[]> {
+        const ruimte = await this.ruimteTools();
+        const own = (ruimte?.tools ?? []).map((tool) => ({
+            name: `${RUIMTE_TOOL_PREFIX}${tool.name}`,
+            description: tool.description ?? '',
+            parameters: tool.inputSchema as Record<string, unknown>
+        }));
+
+        return [...NANOGPT_TOOLS.map((tool) => tool.function), ...own];
+    }
+
+    async close(): Promise<void> {
+        const ruimte = await this.ruimte?.catch(() => null);
+        await ruimte?.connection.close().catch(() => undefined);
+    }
+
     /* Runs one call of the model and says what it answers; throws only when the turn was stopped. */
     async run(name: string, argumentsJson: string, signal: AbortSignal): Promise<{ output: string; failed: boolean }> {
+        if (name.startsWith(RUIMTE_TOOL_PREFIX)) {
+            return this.runRuimte(name, argumentsJson, signal);
+        }
         const { launch, host, mode } = this.options;
         signal.throwIfAborted();
         let output = 'Invalid or unsupported tool arguments.';
@@ -146,6 +191,65 @@ export class ApiTools {
             host.onEvent({ type: 'tool.done', ref, output, state: 'error' });
         }
         return { output, failed: true };
+    }
+
+    /* A call to Ruimte's own server, which runs without a card in every mode: the daemon checks each call itself. */
+    private async runRuimte(name: string, argumentsJson: string, signal: AbortSignal): Promise<{ output: string; failed: boolean }> {
+        const { launch, host } = this.options;
+        signal.throwIfAborted();
+        const ruimte = await this.ruimteTools();
+        const tool = name.slice(RUIMTE_TOOL_PREFIX.length);
+        let input: unknown = null;
+        try {
+            input = JSON.parse(argumentsJson);
+        } catch {
+            // Refused below like any other bad arguments.
+        }
+        if (ruimte === null || !ruimte.tools.some((entry) => entry.name === tool) || !isRecord(input)) {
+            return { output: 'Invalid or unsupported tool arguments.', failed: true };
+        }
+        const ref = `${launch.generation}-${randomUUID()}`;
+        host.onEvent({ type: 'tool.started', ref, name, input, parentRef: null });
+        try {
+            const result = await ruimte.connection.call(tool, input, signal);
+            const output = mcpResultText(result);
+            const failed = result.isError === true;
+            host.onEvent({ type: 'tool.done', ref, output, state: failed ? 'error' : 'done' });
+
+            return { output, failed };
+        } catch (error) {
+            if (signal.aborted) {
+                host.onEvent({ type: 'tool.done', ref, output: 'Interrupted; check any partial effects before retrying.', state: 'error' });
+                throw error;
+            }
+            const output = `Tool failed: ${errorText(error)}`;
+            host.onEvent({ type: 'tool.done', ref, output, state: 'error' });
+
+            return { output, failed: true };
+        }
+    }
+
+    /* Ruimte's server for a chat the daemon gave a token; a chat it cannot reach runs on the project tools alone. */
+    private ruimteTools(): Promise<RuimteTools | null> {
+        this.ruimte ??= (async () => {
+            const { launch, host } = this.options;
+            const server = ruimteMcpServer(launch.env)[MCP_SERVER];
+            if (server === undefined) {
+                return null;
+            }
+            const signal = AbortSignal.timeout(RUIMTE_CONNECT_TIMEOUT_MS);
+            try {
+                const connection = await (this.options.connectMcp ?? connectApiMcp)(server, launch.cwd, launch.env, signal);
+
+                return { connection, tools: await connection.list(signal) };
+            } catch (error) {
+                host.onEvent({ type: 'note', level: 'warning', text: `Ruimte's tools are unavailable in this chat: ${errorText(error)}` });
+
+                return null;
+            }
+        })();
+
+        return this.ruimte;
     }
 
     respondApproval(id: string, decision: ApprovalDecision): boolean {

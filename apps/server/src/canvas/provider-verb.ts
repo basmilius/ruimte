@@ -19,7 +19,7 @@ const catalogAction = defineActionVerb('provider', {
     detail: [
         'prints\tregistry\tsource\tread at\tlive, cached or unavailable, when the registry was read, and why the last read failed when it did',
         'prints\tagent\tkind\tname\tversion\tdistribution\tinstalled\tstate\tdescription\tone line per agent with a build or package for this machine; distribution is binary, npm or uv, installed a version or -',
-        'chat\tAn installed agent is a chat on this machine; ruimte-context agent <kind> opens one',
+        'chat\tAn installed agent is a chat on this machine; agent_start <kind> opens one',
         PERSON_INSTALLS,
         'refusals\tno-providers\tthe codes this action refuses with'
     ],

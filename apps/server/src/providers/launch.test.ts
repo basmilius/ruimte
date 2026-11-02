@@ -1,12 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { COPILOT_ALLOW_CONTEXT, GROK_ALLOW_CONTEXT } from './acp-providers.ts';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { freshCommand, probeCodexNoDaemon, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
+import { COPILOT_ALLOW_MCP, type McpEndpoint } from './ruimte-mcp.ts';
 
-// How the launch line quotes the flag that lets ruimte-context through.
+// How the launch line quotes the flag that lets Ruimte's MCP tools through.
 const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
-const GROK_ALLOW = `'${GROK_ALLOW_CONTEXT}'`;
-const COPILOT_ALLOW = `'${COPILOT_ALLOW_CONTEXT}'`;
+const COPILOT_ALLOW = `'${COPILOT_ALLOW_MCP}'`;
+const MCP: McpEndpoint = { url: 'http://127.0.0.1:4210/mcp', tokenVariable: 'RUIMTE_HOOK_TOKEN' };
+
+/* What a POSIX shell hands the CLI for one quoted word of a line. */
+function unquoted(word: string): string {
+    return word.slice(1, -1).replaceAll(`'\\''`, "'");
+}
 
 describe('terminalCommand', () => {
     test('a chat-only provider cannot launch its helper in a terminal, with or without a prompt or resume id', () => {
@@ -46,23 +51,32 @@ describe('terminalCommand', () => {
         );
         expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'supervised' }, 'go')).toBe("agy '-i' 'go'");
         expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' }, 'go')).toBe(`copilot ${COPILOT_ALLOW} '-i' 'go'`);
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' }, 'go')).toBe(`grok ${GROK_ALLOW} --permission-mode default 'go'`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' }, 'go')).toBe(`grok --permission-mode default 'go'`);
     });
 
-    test('a Grok or Copilot terminal lets ruimte-context through in every mode, fresh or resumed', () => {
-        expect(GROK_ALLOW).toBe("'--allow=Bash(ruimte-context *)'");
-        expect(COPILOT_ALLOW).toBe("'--allow-tool=shell(ruimte-context:*)'");
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' })).toBe(`grok ${GROK_ALLOW} --permission-mode default`);
-        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' })).toBe(`copilot ${COPILOT_ALLOW}`);
-        expect(resumeCommand({ kind: 'grok' }, 'abc')).toBe(`grok ${GROK_ALLOW} --resume 'abc'`);
-        expect(resumeCommand({ kind: 'copilot' }, 'abc')).toBe(`copilot ${COPILOT_ALLOW} --resume='abc'`);
+    test("Claude Code, Codex and Copilot load Ruimte's MCP server on every line, fresh or resumed, with the token left in the environment", () => {
+        const claude = terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, undefined, undefined, MCP);
+        const config = unquoted(/^claude ('--mcp-config=[^']*') /.exec(claude)![1]!);
+        expect(JSON.parse(config.slice('--mcp-config='.length))).toEqual({
+            mcpServers: { ruimte: { type: 'http', url: MCP.url, headers: { Authorization: 'Bearer ${RUIMTE_HOOK_TOKEN}' } } }
+        });
+        expect(claude).toEndWith(`${ALLOW} --permission-mode default`);
+        expect(resumeCommand({ kind: 'claude' }, 'abc', MCP)).toStartWith(`claude '--mcp-config=`);
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' }, undefined, undefined, MCP)).toBe(
+            `codex -c 'mcp_servers.ruimte.url="${MCP.url}"' -c 'mcp_servers.ruimte.bearer_token_env_var="RUIMTE_HOOK_TOKEN"' -c 'mcp_servers.ruimte.default_tools_approval_mode="approve"' --ask-for-approval on-request --sandbox workspace-write`
+        );
+        expect(resumeCommand({ kind: 'codex' }, 'abc', MCP)).toStartWith(`codex resume -c 'mcp_servers.ruimte.url=`);
+        expect(resumeCommand({ kind: 'copilot' }, 'abc', MCP)).toMatch(/^copilot '--additional-mcp-config=\{.*\}' '--allow-tool=ruimte' --resume='abc'$/);
+        // Grok and Antigravity take no MCP server on their line.
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised' }, undefined, undefined, MCP)).toBe('grok --permission-mode default');
+        expect(terminalCommand({ kind: 'antigravity', runtimeMode: 'supervised' }, undefined, undefined, MCP)).toBe('agy');
     });
 
     test('a Grok terminal starts in the permission mode of its runtime mode, and resumes in it', () => {
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto-accept-edits' })).toBe(`grok ${GROK_ALLOW} --permission-mode acceptEdits`);
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto' })).toBe(`grok ${GROK_ALLOW} --permission-mode auto`);
-        expect(terminalCommand({ kind: 'grok' })).toBe(`grok ${GROK_ALLOW} --permission-mode bypassPermissions`);
-        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised', resume: 'abc' })).toBe(`grok ${GROK_ALLOW} --permission-mode default --resume 'abc'`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto-accept-edits' })).toBe(`grok --permission-mode acceptEdits`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'auto' })).toBe(`grok --permission-mode auto`);
+        expect(terminalCommand({ kind: 'grok' })).toBe(`grok --permission-mode bypassPermissions`);
+        expect(terminalCommand({ kind: 'grok', runtimeMode: 'supervised', resume: 'abc' })).toBe(`grok --permission-mode default --resume 'abc'`);
     });
 
     test('a kind this daemon does not offer starts nothing', () => {
@@ -76,9 +90,7 @@ describe('terminalCommand', () => {
             `codex --ask-for-approval on-request --sandbox workspace-write -c 'developer_instructions="Run \`ruimte-context help\`; it'\\''s \\"quoted\\"\\nand \\\\ kept"' 'go'`
         );
         const word = line.split(' -c ')[1]!.split(" 'go'")[0]!;
-        // What a POSIX shell hands the CLI: the quotes gone and each '\'' an apostrophe again.
-        const argument = word.slice(1, -1).replaceAll(`'\\''`, "'");
-        expect(Bun.TOML.parse(argument)).toEqual({ developer_instructions: note });
+        expect(Bun.TOML.parse(unquoted(word))).toEqual({ developer_instructions: note });
     });
 
     test('only Codex takes the note on its line, and only on a fresh launch', () => {

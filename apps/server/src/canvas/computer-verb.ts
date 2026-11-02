@@ -200,7 +200,7 @@ const COMMON_DETAIL: readonly string[] = [
     'refused\tapp-refused\tthe app or the helper said no, usually to a number from an older state: read the state again',
     'refused\tnot-in-session, computer-use-off, not-granted\tnothing you can change: tell the person',
     'elements\tAn element keeps its number while it is the same element; after a new window or sheet read the state again',
-    'see\truimte-context computer apps\tthe apps that run, and which of them you may operate without asking'
+    'see\tcomputer_apps\tthe apps that run, and which of them you may operate without asking'
 ];
 
 const apps = defineActionVerb('computer', {
@@ -633,7 +633,7 @@ export const COMPUTER_SUMMARY =
     'Reads and operates the apps of this machine, each only once a person let you into it; only while a person turned computer use on here';
 
 export const COMPUTER_DETAIL: readonly string[] = [
-    'first\truimte-context computer apps to see what runs and what you may operate, then open <app> or state <app> to read the whole window once',
+    'first\tcomputer_apps to see what runs and what you may operate, then open <app> or state <app> to read the whole window once',
     "one\tOne agent operates this Mac at a time, until its turn ends; another agent's call refuses with busy, or holds in line with --wait S",
     "background\tEvery call works behind the person's work, so they can go on; what needs the front refuses with needs-front. Ask the person before you call again with --front, which brings the app forward and interrupts them",
     'loop\tAn action with --state acts and answers with what changed since then, marked + new, - gone, ~ changed; wait <app> --text T instead of sleeping; read for a text a state cut',

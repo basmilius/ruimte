@@ -114,11 +114,6 @@ if (config.command === 'extension') {
     process.exit(await runExtension(config.args, { port: config.port, home: config.home }));
 }
 
-if (config.command === 'context') {
-    const { runContext } = await import('./cli/context.ts');
-    process.exit(await runContext(config.args));
-}
-
 if (config.command === 'voice') {
     const { processKeyReader, runVoice } = await import('./cli/voice.ts');
     process.exit(
@@ -131,7 +126,7 @@ if (config.command === 'voice') {
     );
 }
 
-// Only after the CLI commands: `ruimte context` runs inside a session and needs these to find it.
+// Only after the CLI commands: `ruimte notify` runs inside a session and needs these to find it.
 forgetInheritedSession(process.env);
 // Read into the config already; a shell must not pass it on to a daemon started by hand inside a session.
 delete process.env.RUIMTE_SERVICE;

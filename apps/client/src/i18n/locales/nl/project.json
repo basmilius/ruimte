@@ -23,7 +23,7 @@
         "newTab": "{{view}} geopend als tabblad"
     },
     "diagram": {
-        "draft": "Vul het lege diagram \"{{name}}\" met `ruimte-context view diagram {{viewId}}`. Het moet dit laten zien: "
+        "draft": "Vul het lege diagram \"{{name}}\" met `view_diagram {{viewId}}`. Het moet dit laten zien: "
     },
     "view": {
         "fallbackName": "deze weergave"

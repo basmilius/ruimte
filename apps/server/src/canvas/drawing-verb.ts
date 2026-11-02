@@ -40,7 +40,7 @@ function kindLines(): string[] {
 }
 
 const DETAIL: readonly string[] = [
-    "stdin\tThe edit as JSON, piped in or as a heredoc: ruimte-context view drawing <viewId> --revision N <<'EOF' ... EOF",
+    "stdin\tThe edit as JSON, piped in or as a heredoc: view_drawing <viewId> --revision N <<'EOF' ... EOF",
     'prints\tview\trev\telements\tthe view written, its new revision and how many elements it now holds, then one added line per new element with its id, in the order of add',
     'edit\t{ add, update, remove }\tone JSON object; each list is optional, and the whole edit is one step: everything lands or nothing does',
     'add\tNew elements, drawn on top in the order given. The daemon gives each its id and seed; stroke is ink, strokeWidth 2 and a text or note size 20 when left out',
@@ -68,7 +68,7 @@ export const drawingAction = defineActionVerb('view', {
             syntax: '<viewId>',
             need: 'required',
             field: 'viewId',
-            more: 'ruimte-context view list lists them, ruimte-context view new <name> --kind drawing makes one'
+            more: 'view_list lists them, view_new <name> --kind drawing makes one'
         },
         { syntax: '--revision N', need: 'required', field: 'revision' },
         {

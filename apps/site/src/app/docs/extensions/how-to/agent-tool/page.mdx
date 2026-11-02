@@ -4,7 +4,7 @@ export const metadata = { title: 'Give agents a tool' };
 
 # Give agents a tool
 
-<p className="lead">A tool that every agent on the machine finds and calls through `ruimte-context`, in a chat or a terminal.</p>
+<p className="lead">A tool that every agent Ruimte starts on the machine finds and calls, in a chat or a terminal.</p>
 
 This page gives agents a `tickets` tool that answers the open tickets of a tracker. It builds on the server part of [Server and secrets](/docs/extensions/how-to/server), which keeps the tracker's key.
 
@@ -76,19 +76,12 @@ A tool answers in text, since an agent reads text. Anything else is sent as JSON
 
 ## How an agent finds it
 
-Every agent Ruimte starts knows `ruimte-context`. `tool list` prints each tool on the machine with its id, its description and the schema of its input. `tool run` calls one by its id, which is your extension's id and the tool's joined by a slash:
-
-```bash
-ruimte-context tool list
-ruimte-context tool run acme.tickets/tickets --input '{"state":"open"}'
-```
-
-Without `--input`, the tool gets `{}`. In a chat, it looks like this:
+Every agent Ruimte starts gets Ruimte's own tools, `tool_list` and `tool_run` among them. `tool_list` answers each tool on the machine with its id, its description and the schema of its input. `tool_run` calls one by its id, which is your extension's id and the tool's joined by a slash, such as `acme.tickets/tickets`, and hands your `run` the input the agent gave. Without one, the tool gets `{}`. In a chat, it looks like this:
 
 <AgentTool />
 
 ## Check it
 
-Run `bun run dev`, then ask a chat on the machine which tickets are open. It runs `tool list`, finds yours, and calls it. When it does not, check that the manifest names `agents.tools`, and that `bun run dev` printed no error from the server part.
+Run `bun run dev`, then ask a chat on the machine which tickets are open. It calls `tool_list`, finds yours, and runs it. When it does not, check that the manifest names `agents.tools`, and that `bun run dev` printed no error from the server part.
 
 A person can reach the same work by voice. [Chats and agents](/docs/extensions/chats-and-agents#voice) has `defineVoiceAction`, which you describe the same way.

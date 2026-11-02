@@ -106,7 +106,7 @@ export const USAGE_VIEW_COUNTERS = {
     database: 'viewsDatabase'
 } as const satisfies Record<string, UsageCounter>;
 
-// Every `ruimte-context` verb in one group, since the batch has fewer counters than there are verbs.
+// Every agent verb in one group, since the batch has fewer counters than there are verbs.
 export const USAGE_VERB_COUNTERS = {
     help: 'verbsRead',
     list: 'verbsRead',

@@ -26,7 +26,7 @@ async function arrangedSource({ host, place }: ServerActionContext, caller: stri
     }
     const holding = canvasHolding(content, sourceId);
     if (holding && holding.id !== canvas.id) {
-        throw notOnView(sourceId, holding, canvas, `read ${sourceId}`);
+        throw notOnView(sourceId, holding, canvas, `context_read ${sourceId}`);
     }
     if (holding) {
         throw new ContextRefusal('unreadable', `${sourceId} is on ${canvas.id}, but it holds nothing to read`);
@@ -57,7 +57,7 @@ async function chatViewRefusal({ host }: ServerActionContext, caller: string, so
     }
     const content = await host.projects.read(place.projectId);
     const holding = canvasHolding(content, sourceId);
-    return holding && isChatView(content, caller) ? viewRequired(sourceId, holding, `read ${sourceId}`) : null;
+    return holding && isChatView(content, caller) ? viewRequired(sourceId, holding, `context_read ${sourceId}`) : null;
 }
 
 /* What a person linked into the caller: only a line it sits on, or the frame of a group, makes a source readable. */

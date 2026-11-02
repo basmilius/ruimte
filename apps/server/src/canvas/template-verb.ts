@@ -75,7 +75,7 @@ const newAction = defineActionVerb('template', {
         'whose\tIt joins the templates of the person on this machine, marked as added by an agent, in Settings, Editor, Templates; it is not written to the project, and no verb edits or removes a template',
         "taken\tA key is refused when an enabled template of the same kind, built-in, the person's or the project's, already has it for one of the same languages; template list shows them",
         `refusals\t${REFUSALS}`,
-        'see\truimte-context template list\tthe templates already there'
+        'see\ttemplate_list\tthe templates already there'
     ],
     positionals: z.tuple([], { error: 'template new takes no arguments; everything goes in its flags' }),
     flags: z.object({

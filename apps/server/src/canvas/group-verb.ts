@@ -18,7 +18,7 @@ export const groupAction = defineActionVerb('node', {
             more: `at most ${MAX_TITLE_LENGTH} characters; without one it is called "${DEFAULT_TITLES.group}"`
         },
         { syntax: '--color C', need: 'optional', field: 'color', more: `one of ${NODE_ACCENT_NAMES.length}` },
-        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the nodes are on, by view id', more: 'ruimte-context view list lists them' }
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the nodes are on, by view id', more: 'view_list lists them' }
     ],
     detail: [
         ...COLOR_LINES,
@@ -35,8 +35,8 @@ export const groupAction = defineActionVerb('node', {
         'rule\tA group is never one of --nodes; a frame is drawn around nodes, and the client leaves a group out of a selection for the same reason',
         'collapsed\tInside a group that is folded shut the new frame joins its members in the file, so it is folded away with the rest',
         `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes, this frame among them`,
-        'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
-        'see\truimte-context node arrange\ttidying those nodes before you draw a frame around them',
+        'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs',
+        'see\tnode_arrange\ttidying those nodes before you draw a frame around them',
         TITLE_LINE
     ],
     positionals: z.tuple([], { error: 'node group takes no arguments, only flags; the nodes go in --nodes' }),

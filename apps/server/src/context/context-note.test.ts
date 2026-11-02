@@ -45,9 +45,7 @@ const many = Array.from({ length: 8 }, (_, i): ContextSource => ({ id: `t${i}`, 
 describe('contextHint', () => {
     test('is silent without links and names each source with its kind', () => {
         expect(contextHint([])).toBeNull();
-        expect(contextHint([text, terminal])).toBe(
-            'Ruimte: linked context is available with ruimte-context (list, read <id>): "Sprint goals" (text), "dev server" (terminal).'
-        );
+        expect(contextHint([text, terminal])).toBe('Ruimte: linked context, read with context_read: "Sprint goals" (text), "dev server" (terminal).');
     });
 
     test('caps the names and counts the rest', () => {
@@ -81,9 +79,9 @@ describe('verbsNote', () => {
 
     test('teaches the catalog only to a chat a person reads, with databases only where the project has connections', () => {
         expect(VISUAL_NOTE).toContain('Queries only read, never start work or run writes.');
-        expect(VISUAL_NOTE).toContain('`ruimte-context help ui <group>` gives props and rules');
+        expect(VISUAL_NOTE).toContain('`ui_catalog` gives props and rules');
         expect(VISUAL_NOTE).toContain('places: Map, Place');
-        expect(VISUAL_NOTE).toContain('`ruimte-context chat attach --file <path>` and `Image attachment=<id>`');
+        expect(VISUAL_NOTE).toContain('`chat_attach` and `Image attachment=<id>`');
         expect(VISUAL_NOTE).toContain('a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it');
         expect(VISUAL_NOTE).toContain('Stat in Stats');
         expect(VISUAL_NOTE).toContain('Stat takes numbers; Entry holds text.');
@@ -95,14 +93,20 @@ describe('verbsNote', () => {
         const child = verbsNote({ depth: 1, standalone: true, visuals: true, databases: true });
         expect(child).not.toContain(RUIMTE_UI_FENCE);
         expect(child).not.toContain('@Query');
-        expect(child).toContain('`ruimte-context visual show --title T < page.html`');
+        expect(child).toContain('`visual_show`');
         expect(VISUAL_RESUME_NOTE).not.toContain(RUIMTE_UI_FENCE);
     });
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {
         const added = verbsNote({ depth: 0, visuals: true }).length - verbsNote({ depth: 0 }).length;
-        expect(added).toBeLessThanOrEqual(4570);
+        expect(added).toBeLessThanOrEqual(4100);
         expect(VISUAL_NOTE).not.toContain('Props:');
+    });
+
+    test('the note without UI blocks stays within its budget, since it rides along with every agent Ruimte starts', () => {
+        const everything = { computer: true, device: true, databases: true, reach: true };
+        expect(verbsNote({ depth: 0, ...everything }).length).toBeLessThanOrEqual(2600);
+        expect(verbsNote({ depth: 0, standalone: true, ...everything }).length).toBeLessThanOrEqual(2700);
     });
 
     test('sends a question the turn waits on to the question tool, never to Choices, and names no tool', () => {
@@ -124,15 +128,15 @@ describe('verbsNote', () => {
         for (const standalone of [false, true]) {
             expect(verbsNote({ depth: 0, standalone })).not.toContain('computer');
             const note = verbsNote({ depth: 0, standalone, computer: true });
-            expect(note).toContain('`ruimte-context computer`');
+            expect(note).toContain('`computer_*`');
             // A person who paused or stopped the agent is waited for, not called around.
-            expect(note).toContain('pause you, take over or stop you');
+            expect(note).toContain('pause, take over or stop you');
             expect(note).toContain('instead of calling again in a loop');
-            expect(note).toContain('You work in the background by default');
-            expect(note).toContain('ask them before you use `--front`');
+            expect(note).toContain('Stay in the background');
+            expect(note).toContain('ask before you set `front`');
         }
-        expect(hookContext('SessionStart', [], { computer: true })).toContain('`ruimte-context computer`');
-        expect(chatPrompt({ sources: [], depth: 0, computer: true })).toContain('`ruimte-context computer`');
+        expect(hookContext('SessionStart', [], { computer: true })).toContain('`computer_*`');
+        expect(chatPrompt({ sources: [], depth: 0, computer: true })).toContain('`computer_*`');
     });
 
     test('tells a chat that works on a design where its files go, and every other chat nothing about designs', () => {
@@ -153,8 +157,8 @@ describe('verbsNote', () => {
         expect(prompt).toContain('when the person asks for a light or a dark board, give it that instead');
         expect(prompt).toContain('never those theme variables');
         expect(prompt).toContain('Use text the person gives you word for word');
-        expect(prompt).toContain('Never show a design with `visual show`');
-        expect(prompt).toContain('`ruimte-context visual preview --width <width> < <file>`');
+        expect(prompt).toContain('Never show a design with `visual_show`');
+        expect(prompt).toContain('`visual_preview` at its width');
         expect(chatPrompt({ sources: [], depth: 0, standalone: true, visuals: true })).not.toContain('design');
     });
 
@@ -170,15 +174,14 @@ describe('verbsNote', () => {
 
     test('tells an AI chat about visuals only while they are on, on a canvas and in a view alike, and never a terminal', () => {
         for (const standalone of [false, true]) {
-            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain('`ruimte-context visual show --title T < page.html`');
+            expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: true })).toContain('`visual_show`');
             expect(chatPrompt({ sources: [], depth: 0, standalone })).not.toContain('visual');
             expect(chatPrompt({ sources: [], depth: 0, standalone, visuals: false })).not.toContain('visual');
         }
-        expect(VISUAL_NOTE).toContain('`ruimte-context visual show --title T < page.html`');
-        expect(VISUAL_NOTE).toContain('`ruimte-context help visual`');
-        expect(VISUAL_NOTE).toContain('after checking it with `visual preview`');
-        expect(VISUAL_NOTE).toContain('`ruimte-context visual write --name chart.html`');
-        expect(VISUAL_NOTE).toContain('outside the project');
+        expect(VISUAL_NOTE).toContain('`visual_show`');
+        expect(VISUAL_NOTE).toContain('check it with `visual_preview`');
+        expect(VISUAL_NOTE).toContain('`visual_write`');
+        expect(VISUAL_NOTE).toContain('never in the project unless the person asks for an export');
         // A terminal agent hears the verbs through its hooks, which never carry the sentence.
         expect(hookContext('SessionStart', [], { depth: 0 })).not.toContain('visual');
     });
@@ -190,21 +193,21 @@ describe('verbsNote', () => {
             title: 'Phone',
             device: { platform: 'ios' as const, kind: 'simulator' as const, name: 'iPhone', runtime: 'iOS 27.0' }
         };
-        expect(chatPrompt({ sources: [], depth: 0 })).not.toContain('ruimte-context device');
-        expect(chatPrompt({ sources: [phone], depth: 0 })).toContain('`ruimte-context device`');
-        expect(hookContext('SessionStart', [phone])).toContain('`ruimte-context device`');
-        expect(verbsNote({ depth: 0, standalone: true, device: true })).toContain('`ruimte-context device`');
+        expect(chatPrompt({ sources: [], depth: 0 })).not.toContain('device_shot');
+        expect(chatPrompt({ sources: [phone], depth: 0 })).toContain('`device_shot`');
+        expect(hookContext('SessionStart', [phone])).toContain('`device_shot`');
+        expect(verbsNote({ depth: 0, standalone: true, device: true })).toContain('`device_shot`');
     });
 
     test('offers team and agent at depth 0, only agent at depth 1 and neither below', () => {
-        expect(VERBS_NOTE).toContain('`agent <cli>` for one, `team` for several in parallel');
+        expect(VERBS_NOTE).toContain('`agent_start` opens an agent and `agent_team` several in parallel');
         expect(VERBS_NOTE).toContain('answer yourself whatever you can');
         expect(VERBS_NOTE).toContain('end your turn instead of polling');
         const helper = verbsNote({ depth: 1 });
-        expect(helper).toContain('opens a helper agent with `agent <cli>`');
+        expect(helper).toContain('`agent_start` opens a helper agent');
         expect(helper).toContain('answer yourself whatever you can');
-        expect(helper).not.toContain('`team`');
-        expect(helper).toContain('--task');
+        expect(helper).not.toContain('agent_team');
+        expect(helper).toContain('With a `task`');
         // Named where the verb is offered, since a prompt asks for a CLI by name and never by flag.
         for (const cli of BUILT_IN_KINDS) {
             expect(VERBS_NOTE).toContain(cli);
@@ -213,21 +216,21 @@ describe('verbsNote', () => {
         for (const note of [VERBS_NOTE, helper]) {
             // A person asking for a second agent wants a node, so the note must not read as a nudge to delegate inside the CLI.
             expect(note).toContain('never a subagent of your own');
-            expect(note).toContain('Leave `--mode` out unless the person explicitly requests a different permission mode');
+            expect(note).toContain('Leave `mode` out unless the person asks for another permission mode');
             expect(note).toContain('a read-only or review assignment does not imply `supervised`');
         }
         const deepest = verbsNote({ depth: 2 });
-        expect(deepest).not.toContain('`agent`');
-        expect(deepest).not.toContain('--task');
+        expect(deepest).not.toContain('agent_start');
+        expect(deepest).not.toContain('`task`');
         expect(deepest).not.toContain('subagent');
         for (const note of [VERBS_NOTE, helper, deepest]) {
             // Named at every depth, since a model told only about "nodes" writes the note the person asked for as a file.
             for (const kind of NODE_VERB_KINDS) {
                 expect(note).toContain(kind);
             }
-            expect(note).toContain('Use these commands for notes or drawings the person requests in this view');
-            expect(note).toContain('`ruimte-context help <verb or noun>`');
-            expect(note).toContain('a shell command for working with project views and resources');
+            expect(note).toContain('Notes or drawings the person asks for in this view are nodes, which `node_new` adds');
+            expect(note).toContain("Its MCP tools (`context_read`, `node_new`, `view_list`, ...) work on this project's views and nodes");
+            expect(note).not.toContain('ruimte-context');
             expect(note).toEndWith('never by id.');
             expect(note).not.toContain('  ');
         }
@@ -238,7 +241,7 @@ describe('contextPrompt', () => {
     test('names the sources a chat has and prefers the context the person supplied', () => {
         expect(contextPrompt([])).toBeNull();
         expect(contextPrompt([device])).toBe(
-            'Ruimte: linked context is available with ruimte-context (list, read <id>): "iPhone 18 Pro Max" (device). This is what the person means, so prefer it over anything your own tools or servers turn up.'
+            'Ruimte: linked context, read with context_read: "iPhone 18 Pro Max" (device). This is what the person means, so prefer it over anything your own tools or servers turn up.'
         );
     });
 
@@ -252,18 +255,18 @@ describe('contextPrompt', () => {
 test('a chat view skips linked-context discovery and opens hidden agents with the requested model', () => {
     for (const depth of [0, 1]) {
         const note = chatPrompt({ sources: [device], depth, standalone: true });
-        expect(note).toContain('a shell command for working with project views and resources');
+        expect(note).toContain('Its MCP tools');
         expect(note).toContain("your CLI's own subagents");
         expect(note).toContain('Keep any model and reasoning effort the person asked for');
-        expect(note).toContain('You are working in a chat view. Skip linked-context discovery');
-        expect(note).not.toContain('You are working in a node on a canvas');
+        expect(note).toContain('You work in a chat view; skip linked-context discovery');
+        expect(note).not.toContain('You work in a node on a canvas');
         expect(note).not.toContain('context linked to this chat');
         expect(note).toContain('These agents stay hidden');
-        expect(note).toContain('Leave `--mode` out unless the person explicitly requests a different permission mode');
+        expect(note).toContain('Leave `mode` out unless the person asks for another permission mode');
         expect(note).toContain('a read-only or review assignment does not imply `supervised`');
         expect(note).toContain('end your turn after delegating instead of polling');
-        expect(note).toContain('Use --view only when the person asks to place the agent on a canvas');
-        expect(note).toContain('--view');
+        expect(note).toContain('Set `view` only when the person asks to place the agent on a canvas');
+        expect(note).toContain('`view`');
         expect(note).not.toContain('never a subagent of your own');
         expect(note).toContain('"iPhone 18 Pro Max" (device)');
     }
@@ -271,19 +274,17 @@ test('a chat view skips linked-context discovery and opens hidden agents with th
 
 test('a chat view arranges the canvas it names and operates its nodes without a line, which a hidden agent is never told', () => {
     const view = verbsNote({ depth: 0, standalone: true });
-    expect(view).toContain('No line runs to a chat view, so you arrange a canvas the way the person does');
-    expect(view).toContain('`read <id> --view <canvas>`');
-    expect(view).toContain('`device` for a simulator or phone');
-    expect(view).toContain('Without --view these refuse with view-required');
+    expect(view).toContain('To work on a canvas, name it with `view`');
+    expect(view).toContain('read and operate any node there');
     const hidden = verbsNote({ depth: 1, standalone: true });
-    expect(hidden).not.toContain('No line runs to a chat view');
-    expect(hidden).toContain('For a note or drawing the person asks for in Ruimte, name its destination with --view');
+    expect(hidden).not.toContain('To work on a canvas');
+    expect(hidden).toContain('Put a note or drawing the person asks for on a canvas you name with `view`');
 });
 
 test('a hidden agent at the depth limit is not told to start another agent', () => {
     const note = verbsNote({ depth: 2, standalone: true });
-    expect(note).not.toContain('ruimte-context agent');
-    expect(note).not.toContain('team --task');
+    expect(note).not.toContain('agent_start');
+    expect(note).not.toContain('agent_team');
 });
 
 describe('chatPrompt', () => {
@@ -298,12 +299,12 @@ describe('chatPrompt', () => {
 describe('hookContext', () => {
     test('a terminal view receives its own placement instructions at startup', () => {
         const note = hookContext('SessionStart', [], { standalone: true });
-        expect(note).toContain('You are working in a terminal view. Skip linked-context discovery');
-        expect(note).toContain('select a destination with --view');
-        expect(note).not.toContain('You are working in a node on a canvas');
-        expect(note).not.toContain('You are working in a chat view');
+        expect(note).toContain('You work in a terminal view; skip linked-context discovery');
+        expect(note).toContain('go on a canvas you name with `view`');
+        expect(note).not.toContain('You work in a node on a canvas');
+        expect(note).not.toContain('You work in a chat view');
         expect(note).not.toContain('These agents stay hidden');
-        expect(note).not.toContain('--task');
+        expect(note).not.toContain('`task`');
     });
 
     test('SessionStart always carries the verbs, a prompt only the links', () => {
@@ -348,13 +349,13 @@ describe('contextChangeNote', () => {
 
     test('names what was added and points at the CLI', () => {
         expect(contextChangeNote([text], [text, terminal])).toBe(
-            'Ruimte: the linked context changed since your last turn. Added: "dev server" (terminal). Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item.'
+            'Ruimte: the linked context changed since your last turn. Added: "dev server" (terminal). `context_list` lists it and `context_read` reads one item.'
         );
     });
 
     test('names what was removed, and says so when nothing is left', () => {
         expect(contextChangeNote([text, chat], [text])).toBe(
-            'Ruimte: the linked context changed since your last turn. Removed: "planner" (chat). Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item.'
+            'Ruimte: the linked context changed since your last turn. Removed: "planner" (chat). `context_list` lists it and `context_read` reads one item.'
         );
         expect(contextChangeNote([text], [])).toBe(
             'Ruimte: the linked context changed since your last turn. Removed: "Sprint goals" (text). Nothing is linked now.'
@@ -371,7 +372,6 @@ describe('contextChangeNote', () => {
 test('every agent learns how to send a notification only when requested', () => {
     for (const standalone of [false, true]) {
         const note = verbsNote({ depth: 0, standalone });
-        expect(note).toContain('ruimte-context alert --text');
-        expect(note).toContain('Use alert only when they asked for one');
+        expect(note).toContain('Call `alert` only when the person asked to be notified, at the moment they named');
     }
 });

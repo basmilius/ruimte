@@ -577,7 +577,7 @@ export class ExtensionHost {
         const slash = tool.indexOf('/');
 
         if (slash === -1 || !this.tools.has(tool)) {
-            throw new VerbRefusal('no-tool', `No tool ${tool}. ruimte-context tool list says what there is`);
+            throw new VerbRefusal('no-tool', `No tool ${tool}. tool_list says what there is`);
         }
 
         const id = tool.slice(0, slash);

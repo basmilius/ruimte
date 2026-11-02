@@ -2,14 +2,8 @@ import { mkdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { AgentKind } from '@ruimte/contracts';
-import { fileExists, isNotFound, writeAtomic, KeyedSerializer } from '@adecore/agents';
-import {
-    codexRulesPathIn as codexRulesPathInFolder,
-    codexRulesText,
-    defaultCodexHome,
-    installCodexRules as installCodexRulesAt,
-    type CodexRules
-} from '@adecore/agents/providers';
+import { isNotFound, writeAtomic, KeyedSerializer } from '@adecore/agents';
+import { codexRulesPathIn as codexRulesPathInFolder, codexRulesText, defaultCodexHome, type CodexRules } from '@adecore/agents/providers';
 import { HOOK_EVENTS } from './hooks.ts';
 import { errorText } from '../error-text.ts';
 import { isRecord } from '../is-record.ts';
@@ -348,26 +342,21 @@ export function defaultConfigFolder(kind: AgentKind, env: Record<string, string 
     return null;
 }
 
-/* Lets Codex run `ruimte-context` outside its sandbox without asking; the daemon already enforces every verb (mode ceiling, depth, cwd). */
-const RUIMTE_CODEX_RULES: CodexRules = { app: 'Ruimte', commands: ['ruimte-context'] };
+/*
+ * The rule an earlier release wrote so Codex ran `ruimte-context` outside its sandbox. Agents reach the daemon over
+ * MCP now, so it is never written again; the next install removes the file while it still says exactly this.
+ */
+const FORMER_CODEX_RULES: CodexRules = { app: 'Ruimte', commands: ['ruimte-context'] };
 
-export const CODEX_RULES = codexRulesText(RUIMTE_CODEX_RULES);
-
-export function installCodexRules(path: string): Promise<InstallResult> {
-    return installCodexRulesAt(path, RUIMTE_CODEX_RULES);
-}
+export const CODEX_RULES = codexRulesText(FORMER_CODEX_RULES);
 
 export function codexRulesPathIn(folder: string): string {
-    return codexRulesPathInFolder(folder, RUIMTE_CODEX_RULES);
-}
-
-export function defaultCodexRulesPath(env: Record<string, string | undefined> = process.env): string {
-    return codexRulesPathIn(defaultCodexHome(env));
+    return codexRulesPathInFolder(folder, FORMER_CODEX_RULES);
 }
 
 /*
- * Lets Antigravity's `agy` run `ruimte-context` without asking, and outside its sandbox, which keeps it from the daemon.
- * Rule syntax and file: https://antigravity.google/docs/permissions ("CLI fine-grained permissions").
+ * The rules an earlier release put in `agy`'s `permissions.allow` for `ruimte-context`, which the next install takes
+ * out again. They name a command only Ruimte shipped. Syntax: https://antigravity.google/docs/permissions.
  */
 export const ANTIGRAVITY_RULES: readonly string[] = ['command(ruimte-context)', 'unsandboxed(ruimte-context)'];
 
@@ -384,23 +373,6 @@ function antigravityAllow(config: unknown): { permissions: Record<string, unknow
         return null;
     }
     return { permissions, allow: Array.isArray(permissions.allow) ? permissions.allow : [] };
-}
-
-/* Adds Ruimte's rules to `permissions.allow` and leaves every other entry and key where it was. */
-function mergeAntigravityRules(config: unknown): SettingsMerge {
-    const found = antigravityAllow(config);
-    if (found === null) {
-        return { config: {}, changed: false, refused: true };
-    }
-    const missing = ANTIGRAVITY_RULES.filter((rule) => !found.allow.includes(rule));
-    if (missing.length === 0) {
-        return { config: config as Record<string, unknown>, changed: false, refused: false };
-    }
-    return {
-        config: { ...(config as Record<string, unknown>), permissions: { ...found.permissions, allow: [...found.allow, ...missing] } },
-        changed: true,
-        refused: false
-    };
 }
 
 /* Takes exactly Ruimte's rules out; a `permissions` key Ruimte created goes with them once nothing else is in it. */
@@ -429,35 +401,27 @@ export function hasAntigravityRules(config: unknown): boolean {
     return found !== null && found.allow.some((rule) => typeof rule === 'string' && ANTIGRAVITY_RULES.includes(rule));
 }
 
-function installAntigravityRules(link: string): Promise<HooksInstall> {
-    return mergeIntoSettings(link, 'permissions', mergeAntigravityRules, 'is not a settings object with permissions in the shape agy reads');
-}
-
 export interface FolderInstall extends HooksInstall {
     path: string;
-    kind: 'hooks' | 'rules';
+    kind: 'hooks';
 }
 
-/*
- * Everything the daemon puts in one config folder of a CLI: its hooks, for Codex the rule that lets
- * `ruimte-context` out of the sandbox, and for Antigravity the rule that lets `agy` run it without asking.
- * Answers what was written where, so the caller can say so.
- */
-export async function installInFolder(kind: AgentKind, folder: string): Promise<FolderInstall[]> {
-    const installs: FolderInstall[] = [];
-    if (kind === 'antigravity') {
-        const path = antigravitySettingsPathIn(folder);
-        installs.push({ path, kind: 'rules', ...(await installAntigravityRules(path)) });
-    }
-    const hookPath = hookPathIn(kind, folder);
-    if (hookPath === null) {
-        return installs;
-    }
-    installs.push({ path: hookPath, kind: 'hooks', ...(await installHooks(hookPath, kind)) });
+/* The rules file of an earlier release in one config folder of a CLI, which an install takes out again; null for a CLI that had none. */
+export function formerRulesPathIn(kind: AgentKind, folder: string): string | null {
     if (kind === 'codex') {
-        const rulesPath = codexRulesPathIn(folder);
-        const existed = await fileExists(rulesPath);
-        installs.push({ path: rulesPath, kind: 'rules', result: await installCodexRules(rulesPath), createdFile: !existed, createdHooksKey: false });
+        return codexRulesPathIn(folder);
     }
-    return installs;
+
+    return kind === 'antigravity' ? antigravitySettingsPathIn(folder) : null;
+}
+
+/* The status hooks the daemon puts in one config folder of a CLI, answering what was written where so the caller can say so. */
+export async function installInFolder(kind: AgentKind, folder: string): Promise<FolderInstall[]> {
+    const hookPath = hookPathIn(kind, folder);
+
+    if (hookPath === null) {
+        return [];
+    }
+
+    return [{ path: hookPath, kind: 'hooks', ...(await installHooks(hookPath, kind)) }];
 }

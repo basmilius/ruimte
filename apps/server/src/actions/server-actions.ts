@@ -36,7 +36,7 @@ import { worktreeActions } from './worktree-actions.ts';
 
 /*
  * What the daemon itself carries out, on the project file rather than on a client's stores. A client
- * has its own handlers for the same actions; an agent's `ruimte-context` call lands here.
+ * has its own handlers for the same actions; an agent's tool call lands here.
  */
 export const serverActions = new ActionRegistry<ServerActionContext>(
     {

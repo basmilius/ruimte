@@ -7,7 +7,7 @@ export const MAX_LINKS = 20;
 /* What each role is for, offered whenever a call names one this version does not have. */
 export const ROLE_LINES: readonly string[] = [
     `roles\t${EDGE_ROLES.join('\t')}`,
-    'role\tcontext\tThe head reads the tail with ruimte-context read; this is what a line without a role already is',
+    'role\tcontext\tThe head reads the tail with context_read; this is what a line without a role already is',
     'role\ttarget\tFrom an agent into something it can drive, such as a device or a page',
     'role\torigin\tOne node opened the other; it says where a node came from and nothing more'
 ];
@@ -19,7 +19,7 @@ const EDGE_LINES_MAX = 20;
 export function edgeLines(canvas: ProjectCanvasView, takes: (edge: ProjectEdge) => boolean): string[] {
     const edges = canvas.edges.filter(takes);
     if (edges.length > EDGE_LINES_MAX) {
-        return [`detail\truimte-context link list --view ${canvas.id}\tthe ${canvas.edges.length} lines of ${canvas.id}`];
+        return [`detail\tlink_list --view ${canvas.id}\tthe ${canvas.edges.length} lines of ${canvas.id}`];
     }
     return orNote(
         edges.map((edge) => ['edge', edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t')),

@@ -2,12 +2,11 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { ModelOptionDescriptorSchema } from '@ruimte/contracts';
 import { runProcess } from '@adecore/agents';
-import type { AcpClientInfo, AcpModeMap, AcpPermissionRequest } from '@adecore/agents/chat';
+import type { AcpClientInfo, AcpModeMap } from '@adecore/agents/chat';
 import {
     ModelCatalog,
     createAcpProvider,
     detectCli,
-    isOnlyCommands,
     type AccountReading,
     type AcpCatalogStore,
     type AcpProviderSpec,
@@ -19,6 +18,7 @@ import copilotModels from '@adecore/agents/providers/copilot-models.json' with {
 import grokModels from '@adecore/agents/providers/grok-models.json' with { type: 'json' };
 import antigravityRelease from './antigravity-acp-release.json' with { type: 'json' };
 import { parseAcpServerRelease, type AcpServerLaunch } from './acp-server.ts';
+import { COPILOT_ALLOW_MCP, withRuimteMcp } from './ruimte-mcp.ts';
 
 // How the daemon names itself to every ACP agent it starts.
 export const RUIMTE_ACP_CLIENT: AcpClientInfo = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };
@@ -47,20 +47,6 @@ export function agentModel(selection: { model: string }): string | null {
     return selection.model === AGENT_DEFAULT_MODEL ? null : selection.model;
 }
 
-const CONTEXT_COMMANDS = ['ruimte-context', 'echo'];
-
-/*
- * Lets an agent run `ruimte-context` in every runtime mode without a card, the way Claude Code's `Bash(ruimte-context *)`
- * does: the daemon checks every verb itself. `echo` may join it, since agents label the parts of one call with it.
- */
-export function allowsContextCommand(request: AcpPermissionRequest): boolean {
-    if (request.kind !== 'execute' || request.commands.length === 0) {
-        return false;
-    }
-    const everyPasses = request.commands.every((command) => isOnlyCommands(command, CONTEXT_COMMANDS));
-    return everyPasses && request.commands.some((command) => !isOnlyCommands(command, ['echo']));
-}
-
 /*
  * Grok's session modes (`default`, `plan`, `ask`) choose what a turn does, not what it may do without
  * asking, so only `supervised` names one; every wider runtime mode runs in `default` and the backend
@@ -73,14 +59,6 @@ export const GROK_MODES: AcpModeMap = { supervised: ['default'] };
  * every tool (github/copilot-cli#2942), so it is no permission level and `supervised` names the agent mode.
  */
 export const COPILOT_MODES: AcpModeMap = { supervised: ['https://agentclientprotocol.com/protocol/session-modes#agent'] };
-
-/*
- * Every `ruimte-context` call goes through without a prompt, in every mode, since the daemon already enforces each
- * verb. Grok 1.0.62 takes allow rules on its TUI only (`grok agent stdio` has no such flag), and a chained command
- * passes only when every segment is allowed. Copilot's `:*` matches the command followed by a space.
- */
-export const GROK_ALLOW_CONTEXT = '--allow=Bash(ruimte-context *)';
-export const COPILOT_ALLOW_CONTEXT = '--allow-tool=shell(ruimte-context:*)';
 
 /* The login Grok is asked to use: the key in the environment where there is one, else the one `grok login` left. */
 export function grokAuthMethod(env: Record<string, string | undefined>): string {
@@ -104,7 +82,6 @@ const GROK_SPEC: AcpProviderSpec = {
     loginHint: 'Run `grok login` in a terminal, or set `XAI_API_KEY`.',
     client: RUIMTE_ACP_CLIENT,
     capabilities: { terminal: true, hooks: true },
-    autoAllow: allowsContextCommand,
     resumeCommand: 'grok {flags} --resume {id}',
     home: { env: 'GROK_HOME', fallback: '.grok', loginEnv: ['XAI_API_KEY'], loginCommand: 'grok login' },
     install: {
@@ -294,7 +271,7 @@ export function createGrokProvider(catalogStore?: AcpCatalogStore): ChatProvider
             }
             return { signedIn: listed.signedIn, email: null, plan: null, organization: null };
         },
-        createBackend: (launch, host) => forLogin(grokAuthMethod(launch.env)).createBackend(launch, host)
+        createBackend: (launch, host) => forLogin(grokAuthMethod(launch.env)).createBackend(withRuimteMcp(launch), host)
     };
 }
 
@@ -306,14 +283,13 @@ const COPILOT_SPEC: AcpProviderSpec = {
     kind: 'copilot',
     name: 'GitHub Copilot',
     command: 'copilot',
-    args: ['--acp', '--stdio', '--no-auto-update', COPILOT_ALLOW_CONTEXT],
+    args: ['--acp', '--stdio', '--no-auto-update', COPILOT_ALLOW_MCP],
     catalog: shippedAgentCatalog('copilot'),
     model: agentModel,
     modes: COPILOT_MODES,
     loginHint: 'Run `copilot login` in a terminal.',
     client: RUIMTE_ACP_CLIENT,
     capabilities: { terminal: true, hooks: true },
-    autoAllow: allowsContextCommand,
     resumeCommand: 'copilot {flags} --resume={id}',
     detect: probeWithoutUpdate,
     install: {
@@ -337,13 +313,24 @@ export function copilotUsageDirectory(home: string): string {
     return join(home, 'usage', 'copilot');
 }
 
+/*
+ * A chat's Copilot loads Ruimte's MCP server from its session request. Its permission requests name no server, so
+ * `COPILOT_ALLOW_MCP` on its line is what runs the server's tools without asking (measured on Copilot CLI 1.0.104).
+ */
 export function createCopilotProvider(catalogStore?: AcpCatalogStore, usageLog?: string): ChatProvider {
-    return createAcpProvider({
-        ...COPILOT_SPEC,
-        catalog: shippedAgentCatalog('copilot'),
-        ...storing(catalogStore),
-        ...(usageLog === undefined ? {} : { usageLog })
-    });
+    return loadingRuimteMcp(
+        createAcpProvider({
+            ...COPILOT_SPEC,
+            catalog: shippedAgentCatalog('copilot'),
+            ...storing(catalogStore),
+            ...(usageLog === undefined ? {} : { usageLog })
+        })
+    );
+}
+
+/* An ACP agent whose chats load Ruimte's MCP server, for a provider whose `createBackend` is the one `createAcpProvider` made. */
+export function loadingRuimteMcp(provider: ChatProvider): ChatProvider {
+    return { ...provider, createBackend: (launch, host) => provider.createBackend(withRuimteMcp(launch), host) };
 }
 
 export const copilotProvider: ChatProvider = createCopilotProvider();
@@ -382,7 +369,6 @@ const ANTIGRAVITY_SPEC: AcpProviderSpec = {
     loginHint: 'Sign in to Antigravity in the browser the chat opens.',
     client: RUIMTE_ACP_CLIENT,
     capabilities: { terminal: true, hooks: true },
-    autoAllow: allowsContextCommand,
     resumeCommand: 'agy {flags} --conversation {id}',
     home: ANTIGRAVITY_HOME,
     // The CLI only; the chat's server is the step after it, installed from the Providers pane.
@@ -428,7 +414,7 @@ export function createAntigravityProvider(server: AcpServerLaunch | null, catalo
             if (server?.launch() == null) {
                 throw new Error('Install the Antigravity server in Settings, Providers first.');
             }
-            return base.createBackend(launch, host);
+            return base.createBackend(withRuimteMcp(launch), host);
         }
     };
 }

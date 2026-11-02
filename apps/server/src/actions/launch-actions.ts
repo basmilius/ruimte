@@ -12,7 +12,7 @@ export function launchHostOf(context: ServerActionContext): LaunchHost {
 export function launchLines(launches: readonly LaunchReading[]): string[] {
     return orNote(
         launches.map((launch) => `launch\t${field(launch.launchId)}\t${field(launch.name)}`),
-        'This project has no launches; a person adds them from the launch chip in the toolbar, and ruimte-context launches new adds one they approve'
+        'This project has no launches; a person adds them from the launch chip in the toolbar, and launch_new adds one they approve'
     );
 }
 

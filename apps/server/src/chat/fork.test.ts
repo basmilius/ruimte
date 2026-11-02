@@ -242,7 +242,7 @@ describe('forking a Claude chat', () => {
         expect(record.preambles[0]).toContain('What follows is all of it, as text.');
         expect(record.items.at(-1)).toMatchObject({
             kind: 'note',
-            text: 'Forked from Lexer after its last turn (turn 6) and continued with Codex. Both work in the same folder from here. The agent got the whole conversation as text and can read the rest of Lexer through ruimte-context.'
+            text: 'Forked from Lexer after its last turn (turn 6) and continued with Codex. Both work in the same folder from here. The agent got the whole conversation as text and can read the rest of Lexer itself.'
         });
         const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
         expect(canvas.nodes.find((node) => node.id === nodeId)).toMatchObject({ provider: 'codex', providerFixed: true });

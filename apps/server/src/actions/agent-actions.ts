@@ -150,8 +150,8 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
         const target = messageTarget(content.views, nodeId);
         if (target === null) {
             throw new VerbRefusal('unknown-node', `${nodeId} is no terminal or chat of this project`, [
-                'see\truimte-context node list\tlists the nodes of a canvas with their ids',
-                'see\truimte-context view list\tlists the views of this project, a terminal or chat of its own among them'
+                'see\tnode_list\tlists the nodes of a canvas with their ids',
+                'see\tview_list\tlists the views of this project, a terminal or chat of its own among them'
             ]);
         }
         if (target !== 'agent') {

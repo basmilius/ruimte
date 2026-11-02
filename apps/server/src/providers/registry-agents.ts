@@ -10,7 +10,7 @@ import { errorText } from '../error-text.ts';
 import { extractEntries, extractZipFile, readArchive } from '../language/archive.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
 import { throwOnFailure } from './cli-versions.ts';
-import { RUIMTE_ACP_CLIENT, agentDefaultCatalog, agentModel, allowsContextCommand } from './acp-providers.ts';
+import { RUIMTE_ACP_CLIENT, agentDefaultCatalog, agentModel, loadingRuimteMcp } from './acp-providers.ts';
 import type { AcpRegistry, RegistryDistribution, RegistryEntry } from './acp-registry.ts';
 import { downloadFile, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { downloadChecked } from './acp-server.ts';
@@ -328,7 +328,7 @@ export class RegistryAgents {
     private offer(agent: InstalledAgent): void {
         this.agents.set(agent.id, agent);
         const [command, ...args] = this.launch(agent);
-        this.providers.add(
+        const provider = loadingRuimteMcp(
             createAcpProvider({
                 kind: agent.kind,
                 name: agent.name,
@@ -339,12 +339,12 @@ export class RegistryAgents {
                 model: agentModel,
                 loginHint: `Sign in to ${agent.name} the way its own documentation says, then start the chat again.`,
                 client: RUIMTE_ACP_CLIENT,
-                autoAllow: allowsContextCommand,
                 catalogStore: acpCatalogStore(this.home, agent.kind),
                 // The record says what is installed; starting the agent to ask would run code a person never asked to run.
                 detect: (path) => Promise.resolve({ installed: existsSync(path), version: agent.version })
             })
         );
+        this.providers.add(provider);
         this.providers.invalidate(agent.kind);
     }
 

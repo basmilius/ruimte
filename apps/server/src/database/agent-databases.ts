@@ -123,7 +123,7 @@ function connectionLines(connections: readonly AgentConnection[]): string[] {
 }
 
 const FAILURE_DETAILS: Partial<Record<string, string>> = {
-    unsupported: 'database query reads one statement that starts with SELECT or WITH; ruimte-context help database query',
+    unsupported: 'database_query reads one statement that starts with SELECT or WITH',
     'read-only': 'A query runs on a read-only session; database execute writes, on a connection a person allowed to write'
 };
 

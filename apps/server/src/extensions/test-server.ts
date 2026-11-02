@@ -203,7 +203,7 @@ class TestMachine {
 
     async runTool(id: string, input: object, caller: string): Promise<string> {
         if (this.tools.get(id) !== true) {
-            const missing = `No tool ${this.id}/${id}. ruimte-context tool list says what there is`;
+            const missing = `No tool ${this.id}/${id}. tool_list says what there is`;
 
             throw new Error(this.tools.has(id) ? `${missing}. defineAgentTool needs the permission agents.tools in manifest.json` : missing);
         }

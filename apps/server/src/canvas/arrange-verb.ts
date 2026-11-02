@@ -19,7 +19,7 @@ export const arrangeAction = defineActionVerb('node', {
         },
         { syntax: '--layout L', need: 'optional', field: 'layout', text: `${ARRANGE_LAYOUTS.join(', ')}; without it a ${DEFAULT_LAYOUT}` },
         { syntax: '--cols N', need: 'grid only', field: 'columns' },
-        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the nodes are on, by view id', more: 'ruimte-context view list lists them' }
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the nodes are on, by view id', more: 'view_list lists them' }
     ],
     detail: [
         'prints\tid\tx\ty\tone line per node in the order you named them, at the top left corner it now has',
@@ -33,7 +33,7 @@ export const arrangeAction = defineActionVerb('node', {
         'note\tOnly the nodes you name are kept apart; one you leave out may end up under one you named',
         'note\tA node moved out of a frame it stood in leaves that group, the same as a person dragging it out',
         'note\tNodes that are already where this would put them are reported and nothing is written',
-        'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs and their sizes'
+        'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs and their sizes'
     ],
     positionals: z.tuple([], { error: 'node arrange takes no arguments, only flags; the nodes go in --nodes' }),
     flags: z.object({

@@ -624,7 +624,7 @@ describe('a chat view', () => {
             error: {
                 code: 'view-required',
                 message: 'term-2 stands on main; a chat view reads and operates the nodes of a canvas by naming it with --view, since no line runs to a view',
-                details: ['see\truimte-context read term-2 --view main\tnames the canvas it stands on']
+                details: ['see\tcontext_read term-2 --view main\tnames the canvas it stands on']
             }
         });
         // An id on no canvas at all is no node it forgot to name a canvas for.

@@ -11,14 +11,14 @@ export function AgentTool() {
         <Scaled
             width={760}
             height={250}
-            label="A chat. The person asks which tickets are open. The agent runs ruimte-context tool list, then tool run acme.tickets/tickets, and answers with the two open tickets."
+            label="A chat. The person asks which tickets are open. The agent calls tool_list, then tool_run with acme.tickets/tickets, and answers with the two open tickets."
         >
             <SceneFrame>
                 <div className="flex grow flex-col gap-3 px-8 pt-7">
                     <UserBubble>Which tickets are still open?</UserBubble>
                     <div className="flex flex-col">
-                        <ToolRow tool="bash" label="Ran" detail="ruimte-context tool list" />
-                        <ToolRow tool="bash" label="Ran" detail={`ruimte-context tool run acme.tickets/tickets --input '{"state":"open"}'`} />
+                        <ToolRow tool="read" label="Used" detail="tool_list" />
+                        <ToolRow tool="read" label="Used" detail={`tool_run acme.tickets/tickets {"state":"open"}`} />
                     </div>
                     <AssistantText
                         shown

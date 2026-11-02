@@ -89,7 +89,7 @@ describe('ruimte-context launches', () => {
         ]);
         launches = [];
         expect(await run(['list'])).toEqual([
-            'note\tThis project has no launches; a person adds them from the launch chip in the toolbar, and ruimte-context launches new adds one they approve'
+            'note\tThis project has no launches; a person adds them from the launch chip in the toolbar, and launch_new adds one they approve'
         ]);
     });
 
@@ -116,10 +116,7 @@ describe('ruimte-context launches', () => {
     });
 
     test('starts and restarts an approved launch', async () => {
-        expect(await run(['start', 'dev'])).toEqual([
-            'started\tdev\tDev',
-            'see\truimte-context launches list\twhether it came up; ruimte-context launches read dev for its output'
-        ]);
+        expect(await run(['start', 'dev'])).toEqual(['started\tdev\tDev', 'see\tlaunch_list\twhether it came up; launch_read dev for its output']);
         expect((await run(['restart', 'Full stack']))[0]).toBe('restarted\tstack\tFull stack\tdev,tests');
         expect(calls).toEqual(['start dev', 'restart stack']);
     });
@@ -153,7 +150,7 @@ describe('ruimte-context launches', () => {
     });
 });
 
-describe('ruimte-context launches new and edit', () => {
+describe('launch_new and edit', () => {
     test('a new launch gets an id of its own name, goes in the private file, and waits on a person', async () => {
         const lines = await run([
             'new',

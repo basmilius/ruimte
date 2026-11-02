@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
 import { VerbRefusal, defineNoun, field, orNote, oneArgument, TAIL_FLAG } from './verb.ts';
 
-const BRANCH_TEXT = 'The branch of the worktree, from ruimte-context worktree list';
+const BRANCH_TEXT = 'The branch of the worktree, from worktree_list';
 
 const listSub = defineActionVerb('worktree', {
     name: 'list',
@@ -15,7 +15,7 @@ const listSub = defineActionVerb('worktree', {
         'from\tThe branch it was made from, which its commits are counted against; a dash for a worktree made outside Ruimte',
         'counts\tchanged: uncommitted tracked files; new: untracked files; commits: commits the from branch does not have',
         'missing\tA worktree whose folder is gone prints missing in the path column',
-        'see\truimte-context worktree diff\twhat one of them changed'
+        'see\tworktree_diff\twhat one of them changed'
     ],
     positionals: z.tuple([], { error: 'worktree list takes no arguments' }),
     flags: z.object({}),

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool, type Transport } from '@modelcontextprotocol/client';
 import { isNotFound } from '@adecore/agents';
 import { z } from 'zod';
+import { CHAT_TOKEN_VARIABLE, MCP_SERVER, MCP_URL_VARIABLE } from '../providers/ruimte-mcp.ts';
 import { ApiStdioTransport } from './api-mcp-stdio.ts';
 
 const common = { enabled: z.boolean().optional(), allowedTools: z.array(z.string().min(1).max(200)).max(100).optional() };
@@ -78,6 +79,36 @@ export function expandMcpEnvironment(values: Record<string, string>, env: Record
             })
         ])
     );
+}
+
+/* Ruimte's own server, for a chat the daemon gave a token; it wins over a server of the same name in `api-mcp.json`. */
+export function ruimteMcpServer(env: Record<string, string>): Record<string, ApiMcpServer> {
+    const url = env[MCP_URL_VARIABLE];
+    if (url === undefined || env[CHAT_TOKEN_VARIABLE] === undefined) {
+        return {};
+    }
+    return { [MCP_SERVER]: { type: 'http', url, headers: { Authorization: `Bearer \${${CHAT_TOKEN_VARIABLE}}` } } };
+}
+
+/* A tool's result as the text a model that reads only text gets. */
+export function mcpResultText(result: CallToolResult): string {
+    const content = result.content
+        .map((block) => {
+            if (block.type === 'text') {
+                return block.text;
+            }
+            if (block.type === 'resource' && 'text' in block.resource) {
+                return block.resource.text;
+            }
+            if (block.type === 'resource_link') {
+                return `Resource: ${block.name} ${block.uri}`;
+            }
+            return `[${block.type} content omitted: this model accepts text]`;
+        })
+        .join('\n\n');
+    const structured = result.structuredContent === undefined ? '' : `\n${JSON.stringify(result.structuredContent)}`;
+
+    return content + structured;
 }
 
 export interface ApiMcpConnection {

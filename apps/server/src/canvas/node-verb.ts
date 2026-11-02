@@ -31,12 +31,12 @@ const REQUIRED_NOTE = `${Object.entries(REQUIRED_FLAG)
     .map(([kind, flag], index) => `${index === 0 ? 'A' : 'a'} ${kind} needs --${flag}`)
     .join(', ')}.`;
 
-const LISTED = 'ruimte-context view list lists them';
+const LISTED = 'view_list lists them';
 
 const NEW_USAGE = `(<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--device D] [--cwd P] [--artifact A] [--version R] [--routine R] [--color C] [--beside N] | --json J) [--view V] [--dry-run]`;
 
 // What the parser answers a call it cannot read with, for the two it cannot catch on its own: no kind, and a kind beside --json.
-const NEW_USAGE_LINES = [`usage\tnode new\t${NEW_USAGE}`, 'detail\truimte-context help node new'];
+const NEW_USAGE_LINES = [`usage\tnode new\t${NEW_USAGE}`];
 
 /* One node of a --json call: the kind and the fields of the flags a single call takes, by their flag names. */
 const JsonNodeSchema = z.strictObject({
@@ -53,7 +53,7 @@ const JsonNodeSchema = z.strictObject({
     color: z.enum(NODE_ACCENT_NAMES, { error: `color takes one of the ${NODE_ACCENT_NAMES.length} colors` }).optional()
 });
 
-const JSON_EXAMPLE = `ruimte-context node new --json '[{"kind":"note","title":"Idea","text":"Body","color":"teal"},{"kind":"browser","url":"https://example.com"}]'`;
+const JSON_EXAMPLE = `node_new --json '[{"kind":"note","title":"Idea","text":"Body","color":"teal"},{"kind":"browser","url":"https://example.com"}]'`;
 
 export const nodeNewAction = defineActionVerb('node', {
     name: 'new',
@@ -76,7 +76,7 @@ export const nodeNewAction = defineActionVerb('node', {
             need: 'every kind',
             field: 'color',
             text: `One of the ${NODE_ACCENT_NAMES.length} colors; a note takes its paper from it`,
-            more: 'ruimte-context help node color lists them'
+            more: NODE_ACCENT_NAMES.join(', ')
         },
         {
             syntax: '--dry-run',
@@ -92,13 +92,13 @@ export const nodeNewAction = defineActionVerb('node', {
         { syntax: '--url U', need: kindsFor('url'), field: 'url' },
         { syntax: '--source V', need: kindsFor('source'), field: 'source', more: LISTED },
         { syntax: '--path P', need: kindsFor('path'), field: 'path', more: 'it has to exist' },
-        { syntax: '--device D', need: kindsFor('device'), field: 'device', more: 'ruimte-context device list lists the ones of this machine' },
+        { syntax: '--device D', need: kindsFor('device'), field: 'device', more: 'device_list lists the ones of this machine' },
         { syntax: '--cwd P', need: kindsFor('cwd'), field: 'cwd' },
         {
             syntax: '--artifact A',
             need: kindsFor('artifact'),
             field: 'artifact',
-            more: "an artifact of this project's Output; ruimte-context artifact list lists them"
+            more: "an artifact of this project's Output; artifact_list lists them"
         },
         {
             syntax: '--version R',
@@ -110,7 +110,7 @@ export const nodeNewAction = defineActionVerb('node', {
             syntax: '--routine R',
             need: kindsFor('routine'),
             field: 'routine',
-            more: 'a routine of this project; ruimte-context routine list lists them'
+            more: 'a routine of this project; routine_list lists them'
         },
         {
             syntax: '--json J',
@@ -127,11 +127,11 @@ export const nodeNewAction = defineActionVerb('node', {
         ...NODE_VERB_KINDS.map(kindLine),
         EVERY_KIND_LINE,
         'edge\tA line is drawn from you into the new node, so the canvas says where it came from and not only that it is there',
-        'edge\tInto a terminal or a chat that line is context, the direction that makes you readable to it: it can run ruimte-context read on your id',
-        "edge\tInto a note, a browser, a file, a drawing, a diagram or a device it lets you read that node, drive a browser node's page and operate a device: only an agent reads, so a line with one agent on it is yours whichever way it runs",
+        'edge\tInto a terminal or a chat that line is context, the direction that makes you readable to it: it can run context_read on your id',
+        "edge\tInto a note, a browser, a file, a drawing or a diagram it lets you read that node and drive a browser node's page: only an agent reads, so a line with one agent on it is yours whichever way it runs. A device needs no line: the device tools take its device id",
         'edge\tOnly a node on that canvas gets one: a chat that is a view of its own, or a node of another canvas, gets no line and the edge column shows -. A chat view needs none: it reads and operates every node of the canvas it names with --view',
-        'edge\tBetween two agents it runs one way only: you do not read a new terminal or chat through it. ruimte-context link new --to <its id> draws the line back when you want that too',
-        'edge\truimte-context link list lists what is drawn on the canvas now',
+        'edge\tBetween two agents it runs one way only: you do not read a new terminal or chat through it. link_new --to <its id> draws the line back when you want that too',
+        'edge\tlink_list lists what is drawn on the canvas now',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one, and what it adds gets no line',
         'where\tWithout --beside the first free spot right of the caller, or right of everything when the caller is not on that canvas',
         'paths\t--path and --cwd are resolved against the project folder, never against your own directory; both may also be absolute',
@@ -248,7 +248,7 @@ export const nodeDeleteAction = defineActionVerb('node', {
             need: 'required',
             field: 'nodeIds',
             text: `The nodes to remove, by id, separated by commas; at most ${MAX_PER_CALL}, all on one canvas`,
-            more: 'ruimte-context node list lists them'
+            more: 'node_list lists them'
         }
     ],
     detail: [
@@ -265,7 +265,7 @@ export const nodeDeleteAction = defineActionVerb('node', {
         'group\tRemoving a group takes the frame and nothing else: the nodes inside it stay where they stand, because they are not yours to remove with it',
         'group\tA group emptied by removing its last member goes with it, together with its connections',
         'note\tThe nodes are found on any canvas of this project, so this takes no --view; one call takes the nodes of one canvas',
-        'see\truimte-context node list\tthe nodes of a canvas, with the ids this takes'
+        'see\tnode_list\tthe nodes of a canvas, with the ids this takes'
     ],
     positionals: oneArgument('node delete needs the id of a node', 'node delete takes its node ids in one argument, separated by commas, as a,b,c'),
     flags: z.object({}),
@@ -313,9 +313,9 @@ export const nodeListAction = defineActionVerb('node', {
         REVISION_ROW,
         'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
         'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',
-        'flag\tThe color of the flag the person put on the node, or - for none; ruimte-context flag sets one',
+        'flag\tThe color of the flag the person put on the node, or - for none; flag sets one',
         SNOOZE_LINE,
-        'see\truimte-context link list\tthe lines of the same canvas, which this list does not show',
+        'see\tlink_list\tthe lines of the same canvas, which this list does not show',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
         PROJECT_LINE,
         SCOPE_LINE

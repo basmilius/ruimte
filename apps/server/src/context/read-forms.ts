@@ -14,16 +14,6 @@ import type { Reference } from './references.ts';
 
 export type ReadForm = 'elements' | 'image';
 
-/* The refusals a read in another form adds to a read's own, which the context route answers as a verb's. */
-export const READ_FORM_REFUSALS: ReadonlySet<string> = new Set([
-    'bad-arguments',
-    'visual-needs-chat',
-    'visual-too-large',
-    'preview-unavailable',
-    'preview-timeout',
-    'preview-failed'
-]);
-
 const PAPER = '#ffffff';
 const PREVIEW_REFUSALS: ReadonlySet<string> = new Set(['preview-unavailable', 'preview-timeout', 'preview-failed']);
 

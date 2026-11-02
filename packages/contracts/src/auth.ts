@@ -40,7 +40,7 @@ export const EndpointNodeSizesSchema = z.record(z.string(), z.object({ w: z.numb
 
 /* The switches a person sets on a machine, which its info, its settings and its change event all carry. */
 const MACHINE_SWITCHES = {
-    // Lets `ruimte-context view delete` remove views an agent did not make. Enforced by the daemon, so it
+    // Lets `view_delete` remove views an agent did not make. Enforced by the daemon, so it
     // lives in `endpoint.json`, not in a client's settings. Absent reads as false.
     agentsDeleteAnyView: z.boolean().optional(),
     // Lets an agent read the other projects open on this machine and start agents there (`--project`). Enforced
@@ -52,7 +52,7 @@ const MACHINE_SWITCHES = {
     streamingAllowed: z.boolean().optional(),
     // Lets a chat that stopped on a limit resume on a clock when its own switch allows. Absent reads as false.
     resumeAtReset: z.boolean().optional(),
-    // `ruimte-context visual`. Off only when a person turned it off; absent reads as on.
+    // The `visual_*` tools. Off only when a person turned it off; absent reads as on.
     visualReplies: z.boolean().optional(),
     // The daemon holds the block, so it holds without a window and for a phone. Absent reads as off.
     keepAwake: KeepAwakeModeSchema.optional(),

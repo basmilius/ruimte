@@ -1,5 +1,5 @@
 import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '../index.ts';
-import { operatedView, type WriteCases } from './case.ts';
+import type { WriteCases } from './case.ts';
 
 const identity = { endpointId: 'endpoint-1', name: 'Studio', keepAwake: 'working', broker: { mode: 'off' } } as const;
 const swipe = { nodeId: 'device-1', fromX: 10, fromY: 600, toX: 10, toY: 100, ms: 300 };
@@ -79,8 +79,7 @@ export const cases: WriteCases = {
     'device.tap': {
         actors: ['agent'],
         input: { nodeId: 'device-1', x: 120, y: 340 },
-        refused: { 'a negative element': { nodeId: 'device-1', element: -1 }, 'a fractional element': { nodeId: 'device-1', element: 1.5 } },
-        restricted: operatedView
+        refused: { 'a negative element': { nodeId: 'device-1', element: -1 }, 'a fractional element': { nodeId: 'device-1', element: 1.5 } }
     },
     'device.swipe': {
         actors: ['agent'],
@@ -89,26 +88,22 @@ export const cases: WriteCases = {
             'faster than a finger': { ...swipe, ms: 49 },
             'slower than five seconds': { ...swipe, ms: 5001 },
             'no end': { nodeId: 'device-1', fromX: 10, fromY: 600 }
-        },
-        restricted: operatedView
+        }
     },
     'device.button': {
         actors: ['agent'],
         input: { nodeId: 'device-1', button: 'home' },
-        refused: { 'an empty button': { nodeId: 'device-1', button: '' } },
-        restricted: operatedView
+        refused: { 'an empty button': { nodeId: 'device-1', button: '' } }
     },
     'device.type': {
         actors: ['agent'],
         input: { nodeId: 'device-1', text: 'ruimte\n' },
-        refused: { 'nothing to type': { nodeId: 'device-1', text: '' }, 'past two thousand characters': { nodeId: 'device-1', text: 'x'.repeat(2001) } },
-        restricted: operatedView
+        refused: { 'nothing to type': { nodeId: 'device-1', text: '' }, 'past two thousand characters': { nodeId: 'device-1', text: 'x'.repeat(2001) } }
     },
     'device.launch': {
         actors: ['agent'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios' },
-        refused: { 'a blank app': { nodeId: 'device-1', app: ' ' }, 'an app id past its limit': { nodeId: 'device-1', app: 'x'.repeat(257) } },
-        restricted: operatedView
+        refused: { 'a blank app': { nodeId: 'device-1', app: ' ' }, 'an app id past its limit': { nodeId: 'device-1', app: 'x'.repeat(257) } }
     },
     'device.set': {
         actors: ['agent'],
@@ -117,14 +112,12 @@ export const cases: WriteCases = {
             'a battery past full': { nodeId: 'device-1', battery: 101 },
             'a latitude off the globe': { nodeId: 'device-1', latitude: 91, longitude: 0 },
             'a text size it has not': { nodeId: 'device-1', textSize: 'huge' }
-        },
-        restricted: operatedView
+        }
     },
     'device.open': {
         actors: ['agent'],
         input: { nodeId: 'device-1', url: 'https://ruimte.app' },
-        refused: { 'a blank link': { nodeId: 'device-1', url: ' ' } },
-        restricted: operatedView
+        refused: { 'a blank link': { nodeId: 'device-1', url: ' ' } }
     },
     'device.permission': {
         actors: ['agent'],
@@ -132,14 +125,12 @@ export const cases: WriteCases = {
         refused: {
             'a decision it has not': { nodeId: 'device-1', app: 'app.ruimte.ios', decision: 'allow' },
             'a permission it has not': { nodeId: 'device-1', app: 'app.ruimte.ios', decision: 'grant', permission: 'telepathy' }
-        },
-        restricted: operatedView
+        }
     },
     'device.push': {
         actors: ['agent'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios', payload: 'Build is green' },
-        refused: { 'nothing to say': { nodeId: 'device-1', app: 'app.ruimte.ios', payload: '' } },
-        restricted: operatedView
+        refused: { 'nothing to say': { nodeId: 'device-1', app: 'app.ruimte.ios', payload: '' } }
     },
     'device.biometric': {
         actors: ['agent'],
@@ -147,20 +138,17 @@ export const cases: WriteCases = {
         refused: {
             'an event it has not': { nodeId: 'device-1', event: 'blink' },
             'a sensor it has not': { nodeId: 'device-1', event: 'match', sensor: 'iris' }
-        },
-        restricted: operatedView
+        }
     },
     'device.clipboard': {
         actors: ['agent'],
         input: { nodeId: 'device-1', text: 'héllo' },
-        refused: { 'more than a megabyte': { nodeId: 'device-1', text: 'x'.repeat(1_048_577) } },
-        restricted: operatedView
+        refused: { 'more than a megabyte': { nodeId: 'device-1', text: 'x'.repeat(1_048_577) } }
     },
     'device.install': {
         actors: ['agent'],
         input: { nodeId: 'device-1', path: 'build/Atlas.app' },
-        refused: { 'no path': { nodeId: 'device-1', path: '' } },
-        restricted: operatedView
+        refused: { 'no path': { nodeId: 'device-1', path: '' } }
     },
     'device.media': {
         actors: ['agent'],
@@ -168,14 +156,17 @@ export const cases: WriteCases = {
         refused: {
             'no pictures': { nodeId: 'device-1', paths: [] },
             'more than twenty': { nodeId: 'device-1', paths: Array.from({ length: 21 }, () => 'a.png') }
-        },
-        restricted: operatedView
+        }
     },
     'device.terminate': {
         actors: ['agent'],
         input: { nodeId: 'device-1', app: 'app.ruimte.ios' },
-        refused: { 'a blank app': { nodeId: 'device-1', app: ' ' } },
-        restricted: operatedView
+        refused: { 'a blank app': { nodeId: 'device-1', app: ' ' } }
+    },
+    'device.start': {
+        actors: ['agent'],
+        input: { nodeId: 'sim-1' },
+        refused: { 'no device': { nodeId: '' } }
     },
     'machine.setIdentity': {
         actors: ['person'],

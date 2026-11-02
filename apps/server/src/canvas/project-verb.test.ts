@@ -75,7 +75,7 @@ describe('ruimte-context project', () => {
     });
 });
 
-describe('ruimte-context project ignored', () => {
+describe('project_ignored', () => {
     test('lists the files git ignores in the project, links apart, and refuses a folder outside a repository', async () => {
         const folder = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-ignored-verb-')));
         const outside = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-ignored-none-')));

@@ -29,7 +29,7 @@ export const forkVerb = defineStandaloneActionVerb({
         'conversation\tIt goes on after the last turn of the original that finished, with the conversation up to it, in the same CLI, account and model',
         'files\tWithout --branch it works in the folder of the original; with --branch in a new worktree on that branch, from HEAD',
         'turn\tNot while the original works on a turn: its conversation would change while it is copied',
-        'task\tA fork starts no turn: give it work with ruimte-context task new <id>, whose result wakes you once, like that of any agent you opened',
+        'task\tA fork starts no turn: give it work with task_new <id>, whose result wakes you once, like that of any agent you opened',
         ...MODE_LINES,
         ...DEPTH_LIMIT_LINES,
         'refusals\tself-fork\tnot-yours\tnode-on-other-machine\tnot-a-chat\tno-turn\tturn-running\tchat-busy\ttranscript-missing\ttoo-deep\ttoo-many-agents\tnot-a-repository\tbranch-exists\tthe codes this verb refuses with most',
@@ -49,7 +49,7 @@ export const forkVerb = defineStandaloneActionVerb({
         });
         return [
             `fork\t${forked.nodeId}\t${forked.viewId}\t${forked.branch ?? '-'}`,
-            `next\tGive it work with ruimte-context task new ${forked.nodeId} --prompt T; its result wakes you once it settled`
+            `next\tGive it work with task_new ${forked.nodeId} --prompt T; its result wakes you once it settled`
         ];
     }
 });

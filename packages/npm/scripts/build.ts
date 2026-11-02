@@ -11,7 +11,7 @@ import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
  *   bun scripts/build.ts --version 0.2.0 --binaries <dir> --out <dir>
  *
  * `--binaries` holds one folder per target (`darwin-arm64/`, ...), each what `compile.ts --target`
- * wrote: `ruimte` (`ruimte.exe` and `ruimte-context.exe` on Windows), `ruimte-context` and `ruimte.build`. `--only darwin-arm64`
+ * wrote: `ruimte` (`ruimte.exe` on Windows) and `ruimte.build`. `--only darwin-arm64`
  * builds the packages for the binaries that exist, which is what a local try on one machine has.
  * `--skip win32-x64` leaves a platform out of the release, the launcher's dependencies included.
  * `@ruimte/extension` goes in `extension/`, the types of `packages/extension` at the same version.
@@ -70,8 +70,7 @@ for (const target of targets) {
     const dir = join(out, targetId(target));
     await mkdir(join(dir, 'bin'), { recursive: true });
     const binary = binaryNameOf(target.os);
-    // Git Bash runs `ruimte-context`; cmd and PowerShell find the `ruimte-context.exe` beside it.
-    const files = [binary, 'ruimte-context', 'ruimte.build', ...(target.os === 'win32' ? ['ruimte-context.exe'] : [])];
+    const files = [binary, 'ruimte.build'];
     for (const name of files) {
         if (!existsSync(join(source, name))) {
             console.error(`Missing ${join(source, name)}`);

@@ -97,7 +97,7 @@ function lastTurn(items: readonly ChatItem[]): ChatTurnItem | null {
 
 /* What a turn of the chat leaves the agent to read about the run, said in the words its launches verb takes. */
 function endedPreamble(name: string, launchId: string, status: LaunchStatus): string {
-    return `${endedText(name, status)} It ran in your worktree after your last turn; ruimte-context launches read ${launchId} shows its output.`;
+    return `${endedText(name, status)} It ran in your worktree after your last turn; launch_read ${launchId} shows its output.`;
 }
 
 function endedText(name: string, status: LaunchStatus): string {

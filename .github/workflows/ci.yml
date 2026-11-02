@@ -40,7 +40,6 @@ jobs:
             rust:
               - '.github/**'
               - 'apps/ios-device-bridge/**'
-              - 'apps/context-launcher/**'
             RuimtePulsar:
               - '.github/**'
               - 'apps/ios/Packages/RuimtePulsar/**'
@@ -151,7 +150,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        crate: [ios-device-bridge, context-launcher]
+        crate: [ios-device-bridge]
     defaults:
       run:
         working-directory: apps/${{ matrix.crate }}
@@ -161,9 +160,6 @@ jobs:
         with:
           workspaces: apps/${{ matrix.crate }}
       - run: cargo test --locked
-      # The launcher only ships for Windows, and no Windows runner checks every push, so its Windows code compiles here.
-      - if: matrix.crate == 'context-launcher'
-        run: rustup target add x86_64-pc-windows-gnu && cargo clippy --locked --target x86_64-pc-windows-gnu -- -D warnings
 
   # The packages declare swift-tools-version 6.4, which takes Xcode 27; macos-latest still carries 26.
   swift-pulsar:

@@ -178,8 +178,9 @@ export function resolveReferences(ids: readonly string[] | undefined, lookup: (i
     return references;
 }
 
-function command(text: string): string {
-    return `\`ruimte-context ${text}\``;
+/* A tool call as a reference line names it: the tool, then its arguments the way its result rows write them. */
+function command(tool: string, args: string): string {
+    return `\`${tool} ${args}\``;
 }
 
 /* What the agent may do besides reading, as a reference gives it: what a line gives, and for a canvas adding nodes. */
@@ -187,23 +188,23 @@ function writeCommand(reference: Reference): string | null {
     const { id, kind, canvas } = reference;
     switch (kind) {
         case 'note':
-            return `write with ${command(`node edit ${id}`)}`;
+            return `write with ${command('node_edit', id)}`;
         case 'chat':
         case 'terminal':
-            return `message it with ${command(`notify ${id}`)}`;
+            return `message it with ${command('notify', id)}`;
         case 'diagram':
-            return `write with ${command(`view diagram ${reference.sources[0]?.id ?? id}`)}`;
+            return `write with ${command('view_diagram', reference.sources[0]?.id ?? id)}`;
         case 'drawing': {
             const viewId = reference.sources[0]?.id ?? id;
-            return `see its elements with ${command(`read ${viewId} --elements`)} · write with ${command(`view drawing ${viewId} --revision R`)}`;
+            return `see its elements with ${command('context_read', `${viewId} --elements`)} · write with ${command('view_drawing', `${viewId} --revision R`)}`;
         }
-        // A browser or a device that is a view of its own has no node the verbs drive.
+        // A browser or a device that is a view of its own has no node the tools drive.
         case 'browser':
-            return canvas === null ? null : `drive it with ${command(`browser go ${id} --url U`)}`;
+            return canvas === null ? null : `drive it with ${command('browser_go', `${id} --url U`)}`;
         case 'device':
-            return canvas === null ? null : `operate it with ${command(`device shot ${id}`)} and the other device verbs`;
+            return canvas === null ? null : `operate it with ${command('device_shot', id)} and the other device tools`;
         case 'canvas':
-            return `read any node on it with ${command('read <id>')} · add nodes with ${command(`node new <kind> --view ${id}`)}`;
+            return `read any node on it with ${command('context_read', '<id>')} · add nodes with ${command('node_new', `<kind> --view ${id}`)}`;
         default:
             return null;
     }
@@ -211,9 +212,9 @@ function writeCommand(reference: Reference): string | null {
 
 /* In another project only what `--project` crosses with: reading, and a message to a terminal or a chat. */
 function crossingLine(reference: Reference, what: string, project: string): string {
-    const read = command(`read ${reference.id} --project ${project}`);
+    const read = command('context_read', `${reference.id} --project ${project}`);
     const write =
-        reference.kind === 'chat' || reference.kind === 'terminal' ? ` · message it with ${command(`notify ${reference.id} --project ${project}`)}` : '';
+        reference.kind === 'chat' || reference.kind === 'terminal' ? ` · message it with ${command('notify', `${reference.id} --project ${project}`)}` : '';
     return `- ${JSON.stringify(reference.name)} (${what} in project ${project}): ${read}${write}`;
 }
 
@@ -222,7 +223,7 @@ function referenceLine(reference: Reference): string {
     if (reference.project !== undefined) {
         return crossingLine(reference, what, reference.project);
     }
-    const read = command(`read ${reference.id}`);
+    const read = command('context_read', reference.id);
     const write = writeCommand(reference);
     return `- ${JSON.stringify(reference.name)} (${what}): ${read}${write === null ? '' : ` · ${write}`}`;
 }
@@ -233,7 +234,7 @@ export function referenceNote(references: readonly Reference[]): string | null {
         return null;
     }
     return [
-        `The person referenced views and nodes${references.some((reference) => reference.project !== undefined) ? '' : ' of this project'} in this message. Read each with the command beside it before you answer.`,
+        `The person referenced views and nodes${references.some((reference) => reference.project !== undefined) ? '' : ' of this project'} in this message. Read each with the tool call beside it before you answer.`,
         ...references.map(referenceLine),
         'When you refer back to one of them, write `#` and its name exactly as listed (#Name), and the person can open it from your answer.'
     ].join('\n');

@@ -10,7 +10,7 @@ const NEEDS_TITLE = '--title needs a title';
 
 const RENAME_USAGE = '(<nodeId> --title T | --json J) [--view V]';
 
-const RENAME_USAGE_LINES = [`usage\tnode rename\t${RENAME_USAGE}`, 'detail\truimte-context help node rename'];
+const RENAME_USAGE_LINES = [`usage\tnode rename\t${RENAME_USAGE}`];
 
 /* One node of a --json call: its id and the title, held to the same cap as --title. */
 const JsonRenameSchema = z.strictObject({
@@ -18,7 +18,7 @@ const JsonRenameSchema = z.strictObject({
     title: titleField('title', 'title needs a title')
 });
 
-const JSON_EXAMPLE = `ruimte-context node rename --json '[{"id":"note-1","title":"Plan"},{"id":"term-2","title":"Build the parser"}]'`;
+const JSON_EXAMPLE = `node_update --json '[{"id":"note-1","title":"Plan"},{"id":"term-2","title":"Build the parser"}]'`;
 
 export const renameAction = defineActionVerb('node', {
     name: 'rename',
@@ -33,7 +33,7 @@ export const renameAction = defineActionVerb('node', {
             text: `Several nodes in one call: an array of up to ${MAX_PER_CALL} objects, each with id and title`,
             more: '--json - takes the array from stdin, a heredoc included'
         },
-        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the nodes are on, by view id', more: 'ruimte-context view list lists them' }
+        { syntax: '--view V', need: 'optional', field: 'viewId', text: 'The canvas the nodes are on, by view id', more: 'view_list lists them' }
     ],
     detail: [
         'prints\tid\tkind\ttitle\tthe node as it now stands; one row per node, in the order given',
@@ -42,8 +42,8 @@ export const renameAction = defineActionVerb('node', {
         `example\t${JSON_EXAMPLE}`,
         "note\tA title set here is the node's for good: the session it holds never renames over it again, which is what a person typing a title does too",
         'note\tA rename to the title it already carries writes nothing and is not a refusal',
-        'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
-        'see\truimte-context view rename\trenaming a row in the sidebar instead of a node on a canvas',
+        'ids\tOnly ids, never titles; node_list lists the nodes of a canvas with theirs',
+        'see\tview_edit\trenaming a row in the sidebar instead of a node on a canvas',
         TITLE_LINE
     ],
     positionals: z.tuple([z.string().min(1, NEEDS_ID).optional()], {

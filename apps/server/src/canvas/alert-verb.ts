@@ -11,7 +11,7 @@ export const alertVerb = defineStandaloneActionVerb({
         'when\tOnly when the person asked for a notification, such as "notify me when you are done"; call it once at that moment',
         'where\tThe notification opens your own session and respects the device notification settings',
         'prints\talerted\tid\tThe notification was queued; this does not confirm delivery to a device',
-        'see\truimte-context notify <id> --text "..."\tsends a message to another agent'
+        'see\tnotify <id> --text "..."\tsends a message to another agent'
     ],
     positionals: z.tuple([]),
     flags: z.object({ text: z.string().transform(unescapeText).pipe(z.string().trim().min(1).max(500)) }),

@@ -15,6 +15,6 @@
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
-- Computer use is the desktop's own door, off per machine until a person turns it on. Then `ruimte-context computer` operates any app, Ruimte included, only after a person let the agent into that app (this time or always, in every mode), and never a terminal.
+- Computer use is the desktop's own door, off per machine until a person turns it on. Then the `computer_*` tools operate any app, Ruimte included, only after a person let the agent into that app (this time or always, in every mode), and never a terminal.
 - Letting an agent into Ruimte itself is the person's own risk. It can do there whatever the person can, and the daemon refuses nothing extra from the Ruimte window meanwhile.
 - Computer use stays as it is and gains no new abilities; Bas hopes to remove it once the agents' own computer use is good enough (2026-10-13).

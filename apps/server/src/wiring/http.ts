@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { Server } from 'bun';
 import { errorText } from '../error-text.ts';
 import {
@@ -23,19 +24,17 @@ import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, pr
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
-import { ARTIFACT_UPLOAD_BODY_BYTES, ARTIFACT_UPLOAD_PATH, handleArtifactUpload } from '../canvas/artifact-upload-route.ts';
-import { CANVAS_PATH, CANVAS_REQUEST_TIMEOUT_S, handleCanvasRequest } from '../canvas/canvas-route.ts';
+import { CANVAS_REQUEST_TIMEOUT_S } from '../canvas/run-verb.ts';
 import type { CanvasHost } from '../canvas/verb.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
-import { handleContextRequest } from '../context/context-route.ts';
-import { CONTEXT_PATH } from '../context/context-store.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import type { ClientAccess } from '../dispatcher.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
+import { handleMcpRequest, MCP_PATH } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
 import { takesNoteOnLine } from '../providers/launch.ts';
@@ -308,24 +307,18 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     });
                 })
         },
-        // Before the verbs, whose prefix it shares: an agent's files arrive here in raw pieces, never in a verb's body.
         {
-            below: ARTIFACT_UPLOAD_PATH,
-            bodyBytes: ARTIFACT_UPLOAD_BODY_BYTES,
-            handle: ({ request, url }) => handleArtifactUpload(request, url, { targetForToken: agents.targetForToken, artifacts: input.artifacts.artifacts })
-        },
-        {
-            below: CANVAS_PATH,
+            exact: [MCP_PATH],
             bodyBytes: MAX_VERB_BODY_BYTES,
-            handle: ({ request, url, server }) => {
+            handle: ({ request, server }) => {
                 server.timeout(request, CANVAS_REQUEST_TIMEOUT_S);
-                return handleCanvasRequest(request, url.pathname, { targetForToken: agents.targetForToken, host: canvasHost });
+                return handleMcpRequest(request, {
+                    targetForToken: agents.targetForToken,
+                    host: canvasHost,
+                    uploads: input.artifacts.artifacts,
+                    callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)]
+                });
             }
-        },
-        {
-            exact: [CONTEXT_PATH],
-            below: CONTEXT_PATH,
-            handle: ({ request, url }) => handleContextRequest(request, url.pathname, { targetForToken: agents.targetForToken, host: canvasHost })
         }
     ];
 }

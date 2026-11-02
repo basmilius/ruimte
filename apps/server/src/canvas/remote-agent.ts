@@ -96,7 +96,7 @@ export async function sourceCheckout(
 export const MACHINE_LINES: readonly string[] = [
     'machine\t--machine M runs the agent on another machine this project is linked to (a person links one from a node menu); M is its name or its id, and it needs --task',
     'machine\tThe node stands on your canvas as a node of that machine and is drawn from there; no line reaches it, so it reads nothing of yours and you read it only through its task result',
-    'machine\tThe task is owed until that machine takes it: while it is away the node says the task has not started, and it starts by itself once the machine answers; ruimte-context task list shows where it stands',
+    'machine\tThe task is owed until that machine takes it: while it is away the node says the task has not started, and it starts by itself once the machine answers; task_list shows where it stands',
     'machine\tThat machine bounds the agent itself: its mode is the narrowest of yours, the one the link there allows and the one you ask, it runs at most 4 tasks of yours at a time, the rest wait and start as places free up, and a launch in it waits for a person there',
     'machine\t--worktree makes the worktree there from your checkout, with your uncommitted files; the work comes back as a branch you can merge when the task settles. Not with --cwd, --reads, --model, --effort or --base'
 ];

@@ -23,13 +23,13 @@ import Testing
             name: "Data model", diagramID: "d1", request: " the tables and their relations \n", empty: true)
         #expect(
             text
-                == "Fill the empty diagram \"Data model\" with `ruimte-context view diagram d1`. It should show the tables and their relations"
+                == "Fill the empty diagram \"Data model\" with `view_diagram d1`. It should show the tables and their relations"
         )
     }
 
     @Test func aChangeNamesTheVerbAndTheFileItIsIn() {
         let text = DiagramAgentPrompt.text(name: "Architecture", diagramID: "d2", request: "Add Redis.", empty: false)
-        #expect(text.contains("`ruimte-context view diagram d2`"))
+        #expect(text.contains("`view_diagram d2`"))
         #expect(text.contains(".ruimte/diagrams/d2.json"))
         #expect(text.hasSuffix("Add Redis."))
     }

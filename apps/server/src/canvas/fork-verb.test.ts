@@ -86,7 +86,7 @@ describe('fork', () => {
         const lines = await runVerb(daemon, 'chat-lead', 'fork', ['chat-kid', '--title', 'Lexer B']);
         const [, forkId, viewId, branch] = lines[0]!.split('\t');
         expect([lines[0]!.split('\t')[0], viewId, branch]).toEqual(['fork', 'main', '-']);
-        expect(lines[1]).toBe(`next\tGive it work with ruimte-context task new ${forkId} --prompt T; its result wakes you once it settled`);
+        expect(lines[1]).toBe(`next\tGive it work with task_new ${forkId} --prompt T; its result wakes you once it settled`);
 
         expect(daemon.lineage.startedBy(forkId!)).toBe('chat-lead');
         expect(daemon.lineage.madeBy(forkId!)).toBe('chat-lead');

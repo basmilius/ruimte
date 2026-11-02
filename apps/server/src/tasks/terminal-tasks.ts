@@ -1,7 +1,7 @@
 import type { TaskCoordinator } from '@adecore/agents/coordination';
 import type { SessionEvent } from '../sessions/manager.ts';
 
-const TERMINAL_ENDED = 'It ended without a result: a terminal reports back with ruimte-context done.';
+const TERMINAL_ENDED = 'It ended without a result: a terminal reports back with task_done.';
 
 export interface TerminalTasks {
     /* A terminal whose shell went, with or without its agent saying so first. */

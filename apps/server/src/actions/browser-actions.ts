@@ -37,14 +37,14 @@ async function browserLines(host: CanvasHost, sources: readonly ContextSource[],
 /* What to say when the caller may drive no browser node at all, by where it stands. */
 function noBrowserNote(callerCanvas: string | null, chatView: boolean, arranged: ProjectCanvasView | null): string {
     if (arranged !== null) {
-        return `${arranged.id} has no browser node; ruimte-context node new browser --url U --view ${arranged.id} puts one there`;
+        return `${arranged.id} has no browser node; node_new browser --url U --view ${arranged.id} puts one there`;
     }
     if (chatView) {
-        return 'A chat view drives the browser nodes of a canvas it names with --view; ruimte-context node list --view <id> lists them';
+        return 'A chat view drives the browser nodes of a canvas it names with --view; node_list --view <id> lists them';
     }
     return callerCanvas === null
         ? 'No browser node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
-        : 'No browser node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas';
+        : 'No browser node is linked to you; link_new --to <id> draws the line to one on your canvas';
 }
 
 /*
@@ -58,11 +58,11 @@ function lineLines(id: string, url: string | undefined, callerCanvas: string | n
         ];
     }
     if (callerCanvas === pageCanvas) {
-        return [`see\truimte-context link new --to ${id}\tdraws it`];
+        return [`see\tlink_new --to ${id}\tdraws it`];
     }
     return [
         `note\t${id} stands on ${pageCanvas} and you on ${callerCanvas}, and a line only runs between two nodes of one canvas`,
-        `see\truimte-context node new browser --url ${url ?? '<url>'}\topens a page of your own on your canvas, with the line to it drawn`
+        `see\tnode_new browser --url ${url ?? '<url>'}\topens a page of your own on your canvas, with the line to it drawn`
     ];
 }
 
@@ -85,14 +85,14 @@ async function targetOf({ host, place, extension }: ServerActionContext, caller:
     }
     refuseOtherMachine(host, id);
     if (arranged !== null && arranged.id !== canvas.id) {
-        throw notOnView(id, canvas, arranged, `browser state ${id}`);
+        throw notOnView(id, canvas, arranged, `browser_state ${id}`);
     }
     if (node.kind !== 'browser') {
         throw new VerbRefusal('not-a-browser', `${id} is a ${node.kind} node, and only a browser node has a page to drive`, await lines());
     }
     if (extension !== true && !sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
         if (chatView) {
-            throw viewRequired(id, canvas, `browser state ${id}`);
+            throw viewRequired(id, canvas, `browser_state ${id}`);
         }
         throw new VerbRefusal('not-linked', `No line runs between you and ${id}, and that line is what lets you drive its page`, [
             ...lineLines(id, await addressOf(host, id, node.url), place.canvasId, canvas.id),

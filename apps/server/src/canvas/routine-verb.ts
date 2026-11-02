@@ -134,7 +134,7 @@ const FIELD_PARAMS = [
     { syntax: '--per-run R', need: 'kind agent', field: 'perRun', more: 'new when omitted on a new routine' },
     { syntax: '--command C', need: 'kind command', field: 'command' },
     { syntax: '--cwd D', need: 'kind command', field: 'cwd' },
-    { syntax: '--launch L', need: 'kind launch', field: 'launch', more: 'ruimte-context launches list names them' },
+    { syntax: '--launch L', need: 'kind launch', field: 'launch', more: 'launch_list names them' },
     { syntax: '--key K', need: 'optional', field: 'key', more: 'lowercase letters, digits and dashes' }
 ] as const satisfies readonly { syntax: string; need: string; field: FieldName; more?: string }[];
 
@@ -201,10 +201,7 @@ export function runStateOf(run: RoutineRun): string {
 }
 
 function routineTuple(word: string) {
-    return oneArgument(
-        `routine ${word} needs the id of a routine; ruimte-context routine list lists them`,
-        `routine ${word} takes one routine and nothing else`
-    );
+    return oneArgument(`routine ${word} needs the id of a routine; routine_list lists them`, `routine ${word} takes one routine and nothing else`);
 }
 
 const ROUTINE_PARAM = { syntax: '<routine>', need: 'required', field: 'routineId' } as const;
@@ -240,7 +237,7 @@ const listAction = defineActionVerb('routine', {
                         lastOf(entry)
                     ].join('\t')
                 ),
-                'This project has no routines yet; ruimte-context routine new adds one'
+                'This project has no routines yet; routine_new adds one'
             ),
             `timezone\t${timeZone}`
         ];
@@ -353,7 +350,7 @@ const runNowAction = defineActionVerb('routine', {
         APPROVAL_LINE,
         'refused\troutine-held\tnobody approved it here as it stands now: ask the person, who approves it in Routines',
         'refused\troutine-busy\tits previous run still runs or waits on a person',
-        'see\truimte-context artifact list\twhere the result of the run lands'
+        'see\tartifact_list\twhere the result of the run lands'
     ],
     positionals: routineTuple('run'),
     flags: z.object({}),

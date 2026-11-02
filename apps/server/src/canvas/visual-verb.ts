@@ -1,7 +1,7 @@
 import { VISUAL_LAYOUT_GUIDE, VISUAL_LIMITS, VISUAL_PAGE_RULES, VISUAL_THEME_GUIDE, VisualLayoutSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow, visualRows } from '../actions/visual-actions.ts';
-import { VISUAL_IMAGE_BYTES } from '../cli/visual-images.ts';
+import { VISUAL_IMAGE_BYTES } from '../mcp/visual-images.ts';
 import { CONSOLE_LIMITS } from '../visuals/page-console.ts';
 import { SHOT_MAX_HEIGHT } from '../visuals/render-protocol.ts';
 import { PREVIEW_LIMIT_MS, PREVIEW_WIDTH } from '../visuals/renderer.ts';
@@ -12,7 +12,7 @@ import { SCOPE_LINE, field, oneArgument } from './verb.ts';
 export const SHOWN_LINE =
     'shown\tThe person sees this page above your reply. Do not mention or describe it there: your reply adds only what the page does not say';
 
-/* The CLI embeds them before the page leaves (`cli/visual-images.ts`), so the daemon never reads a path an agent names. */
+/* The MCP tool embeds them before the visual is kept (`mcp/visual-images.ts`), reading only inside the folders of `mcp/files.ts`. */
 export const IMAGES_LINE =
     'images\tA local image may be written as its absolute file path, as the whole of a quoted attribute or JS string or the bare argument of a CSS url(), such as <img src="/tmp/before.png">. ' +
     `The CLI reads it in your own process and embeds it, so the page needs no file on this machine: at most ${VISUAL_IMAGE_BYTES / 1024 / 1024} MiB per image and ${VISUAL_LIMITS.bytes / 1024 / 1024} MiB for the page with its images. ` +
@@ -20,7 +20,7 @@ export const IMAGES_LINE =
 
 /* Each row one line of the shell command, so the heredoc reads the way it is typed. */
 const EXAMPLE_LINES: readonly string[] = [
-    `example\truimte-context visual show --title "Open issues per label" --height 160 <<'EOF'`,
+    `example\tvisual_show --title "Open issues per label" --height 160 <<'EOF'`,
     'example\t<!doctype html>',
     'example\t<div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center">',
     'example\t<span>Bugs</span><div style="height:16px;width:80%;background:var(--chart-1);border-radius:var(--radius)"></div><span>32</span>',
@@ -38,7 +38,7 @@ const write = defineActionVerb('visual', {
         { syntax: '--html H', need: 'optional', field: 'html', more: 'HTML on stdin when omitted; a heredoc needs no project file' }
     ],
     detail: [
-        "stdin\tGenerate the HTML directly into a heredoc: ruimte-context visual write --name chart.html <<'HTML' ... HTML",
+        "stdin\tGenerate the HTML directly into a heredoc: visual_write --name chart.html <<'HTML' ... HTML",
         "storage\tThe source lives under the machine's configured RUIMTE_HOME, in chats/<chatId>.visuals, and goes with a clear or deletion of the chat. The same name replaces that chat's source file",
         'prints\tfile\tpath\tthe absolute path to use as stdin for visual preview and visual show; this saves the source without publishing it',
         'refusals\tvisual-needs-chat\tvisuals-off\tvisual-invalid\tvisual-too-large\tthe codes this action refuses with'
@@ -80,7 +80,7 @@ const show = defineActionVerb('visual', {
         }
     ],
     detail: [
-        "stdin\tThe page, piped in or as a heredoc: ruimte-context visual show --title T <<'EOF' ... EOF; ruimte-context help visual has a whole example",
+        "stdin\tThe page, piped in or as a heredoc: visual_show --title T <<'EOF' ... EOF",
         IMAGES_LINE,
         'prints\tvisual\tid\ttitle\tsize\tthe visual shown, with the size of the stored page in bytes',
         SHOWN_LINE,
@@ -112,7 +112,7 @@ const show = defineActionVerb('visual', {
     }
 });
 
-const NEXT_LINE = 'next\tThis only checked the page; ruimte-context visual show --title T with the same page on stdin shows it above your reply';
+const NEXT_LINE = 'next\tThis only checked the page; visual_show --title T with the same page on stdin shows it above your reply';
 
 const preview = defineActionVerb('visual', {
     name: 'preview',
@@ -195,7 +195,7 @@ const remove = defineActionVerb('visual', {
         'prints\tremoved\tid\ttitle\tthe visual is gone from the thread of every client',
         'refusals\tvisual-needs-chat\tvisual-not-found\tthe codes this action refuses with'
     ],
-    positionals: oneArgument('visual remove needs the id of a visual; ruimte-context visual list lists them', 'visual remove takes one id and nothing else'),
+    positionals: oneArgument('visual remove needs the id of a visual; visual_list lists them', 'visual remove takes one id and nothing else'),
     flags: z.object({}),
     async run({ positionals: [visualId] }, call) {
         const removed = await runAction(call, 'visual.remove', { visualId });
@@ -208,14 +208,14 @@ export const VISUAL_ACTIONS = [write, preview, show, list, remove] as const;
 export const VISUAL_SUMMARY = 'Saves visual sources outside the project, previews and shows them in this chat, and lists and removes the ones it shows';
 
 export const VISUAL_DETAIL: readonly string[] = [
-    'when\tA free diagram, a collage of images, a mockup or local images that the ruimte-ui catalog cannot draw; numbers, tables, charts and statuses go in a ruimte-ui block (ruimte-context help ui). Never for what a sentence or a short list says',
+    'when\tA free diagram, a collage of images, a mockup or local images that the ruimte-ui catalog cannot draw; numbers, tables, charts and statuses go in a ruimte-ui block (ui_catalog). Never for what a sentence or a short list says',
     `page\t${VISUAL_PAGE_RULES}`,
-    'storage\tSave HTML directly with ruimte-context visual write --name chart.html and the page on stdin. Use its returned absolute path for preview and show, and the same name to update the source. Sources and previews live with this chat under RUIMTE_HOME, outside the project; only an explicit export belongs in a project file',
+    'storage\tSave HTML directly with visual_write --name chart.html and the page on stdin. Use its returned absolute path for preview and show, and the same name to update the source. Sources and previews live with this chat under RUIMTE_HOME, outside the project; only an explicit export belongs in a project file',
     IMAGES_LINE,
     `layout\t${VISUAL_LAYOUT_GUIDE}`,
     `theme\t${VISUAL_THEME_GUIDE}`,
     ...EXAMPLE_LINES,
-    `preview\tPreview first, then show: ruimte-context visual preview < page.html draws the page in a browser on this machine and prints a png of it, the height it takes and its console, so you fix what is off before the person sees it. Previews are ${PREVIEW_WIDTH.default}px wide and dark unless --width and --appearance say otherwise; the png covers at most ${SHOT_MAX_HEIGHT}px`,
+    `preview\tPreview first, then show: visual_preview < page.html draws the page in a browser on this machine and prints a png of it, the height it takes and its console, so you fix what is off before the person sees it. Previews are ${PREVIEW_WIDTH.default}px wide and dark unless --width and --appearance say otherwise; the png covers at most ${SHOT_MAX_HEIGHT}px`,
     'reply\tThe page shows above your reply, so the reply adds only what the page does not say and never describes it',
     'chat\tOnly an AI chat shows one, in any permission mode: it changes nothing but your own thread. A person can remove one, and can turn visual replies off for this machine',
     SCOPE_LINE
