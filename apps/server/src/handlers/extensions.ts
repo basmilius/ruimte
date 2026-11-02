@@ -27,6 +27,22 @@ function nodesIn(views: readonly ProjectView[], of: { nodeIds?: readonly string[
 }
 
 /* The last `limit` characters of a stream, read to its end so the process never waits on a full pipe. */
+/* An `agentStop` for a run, also one that comes before its CLI started. */
+class StreamStop {
+    stopped = false;
+
+    private child: { kill(): void } | null = null;
+
+    started(child: { kill(): void }): void {
+        this.child = child;
+    }
+
+    kill(): void {
+        this.stopped = true;
+        this.child?.kill();
+    }
+}
+
 async function tailOf(stream: ReadableStream<Uint8Array>, limit: number): Promise<string> {
     const decoder = new TextDecoder();
     let tail = '';
@@ -127,16 +143,38 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
         return { text: result.stdout };
     });
 
-    const streams = new Map<string, { kill(): void }>();
+    const streams = new Map<string, StreamStop>();
 
     // The same process as above, read as it writes rather than when it is done.
     dispatcher.register('extension.agentStream', async (payload) => {
+        // Taken before the first await, so an `agentStop` that comes while the provider is looked up still lands.
+        const stop = new StreamStop();
+
+        streams.set(payload.runId, stop);
+
+        try {
+            return await streamAgent(payload, stop);
+        } finally {
+            if (streams.get(payload.runId) === stop) {
+                streams.delete(payload.runId);
+            }
+        }
+    });
+
+    const streamAgent = async (
+        payload: { runId: string; prompt: string; projectId: string; provider?: string | undefined },
+        stop: StreamStop
+    ): Promise<object> => {
         const options = payload.provider === undefined ? {} : { provider: payload.provider as ChatProvider['kind'] };
         const provider = await oneShotProvider(deps.providers, options, 'answer an extension');
         const run = oneShotRun(provider, payload.prompt);
 
         if (run === null) {
             throw new ExtensionRefusal('unavailable', `${provider.name} cannot answer a single prompt`);
+        }
+
+        if (stop.stopped) {
+            return {};
         }
 
         const child = Bun.spawn([provider.command[0] as string, ...run.args], {
@@ -154,7 +192,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
             child.kill();
         }, AGENT_RUN_TIMEOUT_MS);
 
-        streams.set(payload.runId, child);
+        stop.started(child);
 
         try {
             for await (const piece of child.stdout) {
@@ -164,7 +202,6 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
             await child.exited;
         } finally {
             clearTimeout(timer);
-            streams.delete(payload.runId);
 
             // A read that broke off leaves the process running otherwise.
             if (child.exitCode === null && child.signalCode === null) {
@@ -182,7 +219,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
         }
 
         return {};
-    });
+    };
 
     dispatcher.register('extension.action', async ({ id, projectId, action, input }) => ({ output: await host.runAction(id, projectId, action, input) }));
     dispatcher.register('extension.clientFiles', ({ id }) => host.clientFiles(id));

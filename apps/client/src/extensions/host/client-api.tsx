@@ -1302,6 +1302,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         abort();
                     }
                 }
+                // Aborted before it began: no abort event comes any more, so the run would start and never be stopped.
+                if (options.signal?.aborted === true) {
+                    return;
+                }
+
             },
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
             start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) =>

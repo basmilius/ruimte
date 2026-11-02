@@ -81,3 +81,23 @@ describe('extension.contextRead', () => {
         expect(reads).toEqual(['shell']);
     });
 });
+
+describe('extension.agentStream', () => {
+    test('starts no CLI for a run stopped while its provider was looked up', async () => {
+        const handlers = new Map<string, Handler>();
+        const dispatcher = { register: (type: string, handler: Handler) => void handlers.set(type, handler) } as unknown as Dispatcher;
+        const { promise: looked, resolve: lookUp } = Promise.withResolvers<unknown>();
+        // A CLI that is not there: starting it at all fails the run.
+        const provider = { kind: 'claude', name: 'Probe', command: ['ruimte-no-such-cli'], oneShotArgs: (prompt: string) => [prompt] };
+        const deps = { providers: { oneShotProvider: () => looked }, folderOf: () => null } as unknown as ExtensionHandlerDeps;
+
+        registerExtensionHandlers(dispatcher, {} as ExtensionHost, deps);
+
+        const stream = (handlers.get('extension.agentStream') as Handler)({ runId: 'run-1', prompt: 'Hi', projectId: 'project-1' }, {});
+
+        await (handlers.get('extension.agentStop') as Handler)({ runId: 'run-1' }, {});
+        lookUp(provider);
+
+        expect(await stream).toEqual({});
+    });
+});

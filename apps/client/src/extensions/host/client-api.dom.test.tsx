@@ -208,6 +208,24 @@ describe('the client API', () => {
         expect(machine.requests('extension.agentStop')).toHaveLength(1);
     });
 
+    test('starts no run for a signal that was aborted already', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'agents.run': 'Answers' });
+
+        machine.answer('extension.agentStream', () => ({}));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        const pieces: unknown[] = [];
+
+        for await (const piece of api.agents.stream({ prompt: 'Hi', signal: AbortSignal.abort() })) {
+            pieces.push(piece);
+        }
+
+        expect(pieces).toEqual([]);
+        expect(machine.requests('extension.agentStream')).toEqual([]);
+    });
+
     test('asks a person in their own words before it removes nodes, and answers refused when they keep them', async () => {
         const { api } = loaded({ 'canvas.write': 'Tidies up' });
 
