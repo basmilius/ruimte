@@ -32,6 +32,21 @@ export function platformManifest(target: Target, version: string): Manifest {
     };
 }
 
+/* The types of the extension API go out at the app version, so an extension names the Ruimte it was written against. */
+export const EXTENSION_NAME = '@ruimte/extension';
+export const EXTENSION_DIR = 'extension';
+
+/* Its own `package.json` at this version, under its own license: the types are MIT, the app is not. */
+export function extensionManifest(source: Manifest, version: string): Manifest {
+    return {
+        ...source,
+        version,
+        author: COMMON.author,
+        homepage: COMMON.homepage,
+        repository: { ...COMMON.repository, directory: 'packages/extension' }
+    };
+}
+
 /* `targets` is what this release ships; a platform left out of it is left out of the install as well. */
 export function launcherManifest(version: string, targets: readonly Target[] = TARGETS): Manifest {
     return {

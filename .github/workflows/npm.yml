@@ -1,6 +1,6 @@
 name: npm
 
-# Publishes the launcher and its platform binaries. Shared libraries release from Adecore.
+# Publishes the launcher, its platform binaries and @ruimte/extension, all at the app version. Shared libraries release from Adecore.
 # npm trusts this workflow through OIDC; existing versions are skipped on a retry.
 on:
     release:
@@ -134,5 +134,5 @@ jobs:
                     skip=(--skip win32-x64)
                   fi
                   bun packages/npm/scripts/build.ts --version "$VERSION" --binaries binaries --out npm-packages "${skip[@]}"
-            - name: Publish platform packages before the launcher
+            - name: Publish platform packages and @ruimte/extension before the launcher
               run: bun packages/npm/scripts/publish.ts --out npm-packages

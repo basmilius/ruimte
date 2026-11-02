@@ -101,7 +101,7 @@ Still to set up before the store opens:
 1. Create the repository `ruimte-app/extensions`.
 2. Generate an ed25519 key and keep its private half out of every repository.
 3. Put the public half in `EXTENSION_STORE_PUBLIC_KEY` (`packages/pulsar/src/extension-store.ts`). While it is empty, the store shows as unavailable.
-4. Publish `@ruimte/extension` to npm (`packages/extension`).
+4. Publish the placeholder of `@ruimte/extension` and have npm trust `npm.yml` for it (`docs/RELEASE.md`, "npm"). From then on every release publishes it at the app version.
 
 ## Safe mode
 

@@ -1,8 +1,8 @@
-import { chmod, copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { launcherManifest, platformManifest } from '../src/manifest';
+import { EXTENSION_DIR, extensionManifest, launcherManifest, platformManifest } from '../src/manifest';
 import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
 /*
@@ -14,6 +14,7 @@ import { binaryNameOf, LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
  * wrote: `ruimte` (`ruimte.exe` and `ruimte-context.exe` on Windows), `ruimte-context` and `ruimte.build`. `--only darwin-arm64`
  * builds the packages for the binaries that exist, which is what a local try on one machine has.
  * `--skip win32-x64` leaves a platform out of the release, the launcher's dependencies included.
+ * `@ruimte/extension` goes in `extension/`, the types of `packages/extension` at the same version.
  */
 const { values } = parseArgs({
     args: process.argv.slice(2),
@@ -107,3 +108,14 @@ await writeJson(join(launcherDir, 'package.json'), launcherManifest(version, rel
 await copyFile(join(packageRoot, 'README.md'), join(launcherDir, 'README.md'));
 await copyFile(join(repoRoot, 'LICENSE'), join(launcherDir, 'LICENSE'));
 console.log(`Laid out ${launcherDir}`);
+
+// The types need no binary, so a try with `--only` lays them out as well.
+const extensionSource = join(repoRoot, 'packages', 'extension');
+const extensionDir = join(out, EXTENSION_DIR);
+await mkdir(extensionDir, { recursive: true });
+for (const name of new Bun.Glob('*.d.ts').scanSync({ cwd: extensionSource })) {
+    await copyFile(join(extensionSource, name), join(extensionDir, name));
+}
+const extensionSourceManifest = JSON.parse(await readFile(join(extensionSource, 'package.json'), 'utf8')) as Record<string, unknown>;
+await writeJson(join(extensionDir, 'package.json'), extensionManifest(extensionSourceManifest, version));
+console.log(`Laid out ${extensionDir}`);

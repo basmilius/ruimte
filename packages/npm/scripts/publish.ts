@@ -2,10 +2,11 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { EXTENSION_DIR } from '../src/manifest';
 import { latestFromView, planPublish, publishedFromView, type PackageToPublish } from '../src/publish-plan';
 import { LAUNCHER_NAME } from '../src/targets';
 
-/* Publishes the platform binaries before the launcher, skipping versions already on npm.
+/* Publishes the platform binaries and the extension API's types before the launcher, skipping versions already on npm.
    Shared libraries are published by Adecore's workflow. */
 const { values } = parseArgs({
     args: process.argv.slice(2),
@@ -29,7 +30,7 @@ if (!existsSync(launcherPath)) {
 }
 // The launcher names the platforms this release ships (`build.ts --skip` leaves one out), and each of them goes out with it.
 const launcher = JSON.parse(await readFile(launcherPath, 'utf8')) as { optionalDependencies?: Record<string, string> };
-const dirs = [...Object.keys(launcher.optionalDependencies ?? {}).map((name) => name.replace(/^@ruimte\//, '')), LAUNCHER_NAME];
+const dirs = [...Object.keys(launcher.optionalDependencies ?? {}).map((name) => name.replace(/^@ruimte\//, '')), EXTENSION_DIR, LAUNCHER_NAME];
 const packages: PackageToPublish[] = [];
 let version: string | null = null;
 for (const dir of dirs) {

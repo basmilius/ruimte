@@ -44,16 +44,16 @@ After `release.yml` publishes a Latest release it dispatches `station.yml` and `
 
 ## npm
 
-A published release puts `ruimte` and its three platform packages on npm at the app version (`win32-x64` once Windows ships). Shared libraries come from Adecore; this repository publishes none.
+A published release puts `ruimte`, its three platform packages (`win32-x64` once Windows ships) and `@ruimte/extension` on npm at the app version. `@ruimte/extension` holds the types of the extension API from `packages/extension`, and a project from `ruimte extension create` starts on the version of the Ruimte that made it. Shared libraries come from Adecore; this repository publishes none.
 
-`npm.yml` runs on `release: published`, on the dispatch from `release.yml`, or by hand for an existing tag (`gh workflow run npm.yml -f version=0.2.0`). With `release_run` it publishes the daemons that run compiled (artifacts kept 7 days). Without it, it compiles `darwin-arm64` on macOS and `linux-x64`, `linux-arm64` and `win32-x64` on Ubuntu. `packages/npm/scripts/build.ts` prepares the packages; `publish.ts` publishes the platform binaries before the launcher, skips versions already on npm and tags prereleases `next`. A macOS binary must compile on macOS, or `codesign` leaves it with a signature that is killed at launch.
+`npm.yml` runs on `release: published`, on the dispatch from `release.yml`, or by hand for an existing tag (`gh workflow run npm.yml -f version=0.2.0`). With `release_run` it publishes the daemons that run compiled (artifacts kept 7 days). Without it, it compiles `darwin-arm64` on macOS and `linux-x64`, `linux-arm64` and `win32-x64` on Ubuntu. `packages/npm/scripts/build.ts` prepares the packages; `publish.ts` publishes the platform binaries and `@ruimte/extension` before the launcher, refuses when one of them is missing or at another version, skips versions already on npm and tags prereleases `next`. A macOS binary must compile on macOS, or `codesign` leaves it with a signature that is killed at launch.
 
-There is no npm token. Every package uses Trusted Publishing (npmjs.com, Settings, Trusted publishing): GitHub Actions, owner `basmilius`, repository `ruimte`, workflow `npm.yml`, environment `npm`. npm offers that only for an existing package, so publish a new platform package's `0.0.0` placeholder once by hand first:
+There is no npm token. Every package uses Trusted Publishing (npmjs.com, Settings, Trusted publishing): GitHub Actions, owner `basmilius`, repository `ruimte`, workflow `npm.yml`, environment `npm`. npm offers that only for an existing package, so publish a new package's `0.0.0` placeholder once by hand, then have npm trust the workflow (`npm trust` needs npm 11.10 or newer). The placeholders are in `packages/npm/placeholders`, one folder per package: the platforms, and `extension` for `@ruimte/extension`.
 
 ```sh
 npm login
-cd packages/npm/placeholders/linux-x64
-npm publish --access public
+npm publish --access public packages/npm/placeholders/<name>
+npm trust github @ruimte/<name> --file npm.yml --repo basmilius/ruimte --env npm --allow-publish
 ```
 
 Try the packages without publishing:
