@@ -10,7 +10,10 @@ const server = serveDevExtensionFiles(
 afterAll(() => server.close());
 
 test('answers extension files for the dev origin, and nothing else', async () => {
-    await new Promise((resolve) => server.once('listening', resolve));
+    // On a fast machine the server listens before the test starts, and the event has passed.
+    if (!server.listening) {
+        await new Promise((resolve) => server.once('listening', resolve));
+    }
 
     const { port } = server.address() as { port: number };
     const file = await fetch(`http://127.0.0.1:${port}/__extensions/a.b/dev-1/client/index.js`);

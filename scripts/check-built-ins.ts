@@ -9,7 +9,10 @@ const CLIENT = 'apps/client/src';
 const BUILT_IN = /@extensions\//;
 const offenders: string[] = [];
 
-for (const path of new Glob('**/*.{ts,tsx}').scanSync(CLIENT)) {
+for (const found of new Glob('**/*.{ts,tsx}').scanSync(CLIENT)) {
+    // Windows hands back backslashes.
+    const path = found.replaceAll('\\', '/');
+
     if (path === 'extensions/built-in.ts') {
         continue;
     }
