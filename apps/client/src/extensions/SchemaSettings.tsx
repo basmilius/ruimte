@@ -10,7 +10,9 @@ function Field({ id, field }: { id: string; field: SettingField }) {
     const key = settingKey(id, field.key);
     const stored = useSyncExternalStore(subscribeStorage, () => storedText(key).read());
     const value = stored === null ? field.default : (JSON.parse(stored) as boolean | string);
-    const write = (next: boolean | string): void => writeExtensionStorage(key, next);
+    const write = (next: boolean | string): void => {
+        writeExtensionStorage(key, next);
+    };
 
     return (
         <SettingsRow

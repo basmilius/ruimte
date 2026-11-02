@@ -9,12 +9,15 @@ export function settingKey(id: string, key: string): string {
     return `${PREFIX}${id}.setting.${key}`;
 }
 
-export function writeExtensionStorage(key: string, value: unknown): void {
-    storedJson(key, z.unknown()).write(value);
+/* False when the browser refused it, so the caller can say the value was not kept. */
+export function writeExtensionStorage(key: string, value: unknown): boolean {
+    const kept = storedJson(key, z.unknown()).write(value);
 
     for (const listener of listeners) {
         listener();
     }
+
+    return kept;
 }
 
 /* `storage` fires in every window but the writer, so a key another window wrote is read again here too. */

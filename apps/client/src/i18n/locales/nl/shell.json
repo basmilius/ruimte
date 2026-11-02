@@ -1380,6 +1380,7 @@
     "extensions": {
         "failed": "Deze extensie kon niet worden getoond",
         "surfaceFailed": "{{name}} kon niet worden getoond",
+        "storageFailed": "{{name}} kon niet bewaren wat het bijhoudt",
         "nodeNeeds": "Hiervoor is een extensie nodig",
         "removeNodes": {
             "title_one": "{{count}} node verwijderen?",

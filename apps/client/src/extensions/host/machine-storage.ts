@@ -1,9 +1,13 @@
 import { useSyncExternalStore } from 'react';
 import { extensionRequest } from '@/extensions/machine-request';
-import type { Transport } from '@/transport';
+import { TransportError, type Transport } from '@/transport';
+
+type StorageLink = Pick<Transport, 'request' | 'connection' | 'subscribeStatus' | 'on'>;
 
 interface Entry {
     value: unknown;
+    // What the machine last said it holds, which a write it refused goes back to.
+    confirmed: unknown;
     readers: number;
     // Goes up with each write, so an answer to a read asked before it does not put the old value back.
     writes: number;
@@ -24,41 +28,62 @@ function changed(entry: Entry): void {
     }
 }
 
+// No machine, or one from before the extension API: it keeps what it had, or the initial value, as for a key never written.
+function unreachable(e: unknown): boolean {
+    return e instanceof TransportError && (e.code === 'unavailable' || e.code === 'not-connected');
+}
+
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
+
 /*
  * The first reader asks the machine, and again each time the connection opens, since what it said before may have
- * failed or changed meanwhile. The last one lets the value go, so a surface drawn later reads it fresh.
+ * failed or changed meanwhile. A write from anywhere else, another window or `server/`, comes as
+ * `extension.storageChanged`. The last reader lets the value go, so a surface drawn later reads it fresh.
  */
-function subscribe(
-    transport: Pick<Transport, 'request' | 'connection' | 'subscribeStatus'>,
-    full: string,
-    id: string,
-    key: string,
-    listener: () => void
-): () => void {
+function subscribe(link: StorageLink, full: string, id: string, key: string, report: (text: string) => void, listener: () => void): () => void {
     let entry = entries.get(full);
 
     if (entry === undefined) {
-        const created: Entry = { value: undefined, readers: 0, writes: 0, listeners: new Set(), stop: () => undefined };
+        const created: Entry = { value: undefined, confirmed: undefined, readers: 0, writes: 0, listeners: new Set(), stop: () => undefined };
         const read = (): void => {
             const writes = created.writes;
 
-            void extensionRequest(transport, 'extension.storageGet', { id, key }).then(
+            void extensionRequest(link, 'extension.storageGet', { id, key }).then(
                 ({ value }) => {
                     if (entries.get(full) === created && created.writes === writes) {
                         created.value = value;
+                        created.confirmed = value;
                         changed(created);
                     }
                 },
-                // Without a machine it keeps what it had, or the initial value, as for a key never written.
-                () => undefined
+                (e: unknown) => {
+                    // An answer it could not read is no empty key: it says so, and shows what it had.
+                    if (!unreachable(e)) {
+                        report(`storage ${key}: ${messageOf(e)}`);
+                    }
+                }
             );
         };
-
-        created.stop = transport.subscribeStatus((status) => {
+        const stopStatus = link.subscribeStatus((status) => {
             if (status === 'open') {
                 read();
             }
         });
+        const stopChanges = link.on('extension.storageChanged', (change) => {
+            if (change.id === id && change.key === key && entries.get(full) === created) {
+                created.value = change.value;
+                created.confirmed = change.value;
+                created.writes += 1;
+                changed(created);
+            }
+        });
+
+        created.stop = () => {
+            stopStatus();
+            stopChanges();
+        };
         entry = created;
         entries.set(full, created);
         read();
@@ -82,18 +107,20 @@ function subscribe(
 
 /*
  * A key an extension keeps on the machine in front, shared by every surface that reads it. Null for a key kept on this
- * computer, which reads nothing here.
+ * computer, which reads nothing here. A write shows at once; one the machine refuses goes back to what the machine
+ * holds, and `report` says why.
  */
 export function useMachineStorage<Value>(
-    transport: Pick<Transport, 'request' | 'connection' | 'subscribeStatus'>,
+    link: StorageLink,
     endpointId: string,
     id: string,
     key: string | null,
-    initial: Value
+    initial: Value,
+    report: (text: string) => void
 ): [Value, (next: Value) => void] {
     const full = key === null ? null : entryKey(endpointId, id, key);
     const value = useSyncExternalStore(
-        (listener) => (full === null || key === null ? () => undefined : subscribe(transport, full, id, key, listener)),
+        (listener) => (full === null || key === null ? () => undefined : subscribe(link, full, id, key, report, listener)),
         () => (full === null ? undefined : entries.get(full)?.value)
     );
 
@@ -105,14 +132,28 @@ export function useMachineStorage<Value>(
             }
 
             const entry = entries.get(full);
+            const writes = entry === undefined ? 0 : ++entry.writes;
 
             if (entry !== undefined) {
                 entry.value = next;
-                entry.writes += 1;
                 changed(entry);
             }
 
-            void extensionRequest(transport, 'extension.storageSet', { id, key, value: next }).catch(() => undefined);
+            void extensionRequest(link, 'extension.storageSet', { id, key, value: next }).then(
+                () => {
+                    if (entry !== undefined) {
+                        entry.confirmed = next;
+                    }
+                },
+                (e: unknown) => {
+                    if (entry !== undefined && entries.get(full) === entry && entry.writes === writes) {
+                        entry.value = entry.confirmed;
+                        changed(entry);
+                    }
+
+                    report(`storage ${key}: ${messageOf(e)}`);
+                }
+            );
         }
     ];
 }

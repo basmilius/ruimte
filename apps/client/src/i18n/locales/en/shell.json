@@ -1380,6 +1380,7 @@
     "extensions": {
         "failed": "This extension could not be shown",
         "surfaceFailed": "{{name}} could not be shown",
+        "storageFailed": "{{name}} could not keep what it stores",
         "nodeNeeds": "This needs an extension",
         "removeNodes": {
             "title_one": "Remove {{count}} node?",

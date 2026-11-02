@@ -12,6 +12,7 @@ import { folderWatches } from '@/state/fs-watch';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
@@ -513,6 +514,98 @@ describe('the client API', () => {
 
         await act(async () => machine.reopen());
         await until(() => mounted?.host.textContent === 'count 7');
+    });
+
+    test("shows what another client or server/ wrote to a machine's storage, and writes over it no older value", async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+
+        machine.answer('extension.storageGet', () => ({ value: 1 }));
+        disconnect = connectFakeMachine(machine);
+
+        function Count() {
+            const [count] = api.useStorage('count', 0, 'machine');
+
+            return <p>count {count}</p>;
+        }
+
+        api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/count');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+        await until(() => mounted?.host.textContent === 'count 1');
+        await act(async () => machine.emit('extension.storageChanged', { id: 'acme.probe', key: 'count', value: 5 }));
+
+        expect(mounted.host.textContent).toBe('count 5');
+
+        await act(async () => machine.emit('extension.storageChanged', { id: 'acme.probe', key: 'count' }));
+
+        expect(mounted.host.textContent).toBe('count 0');
+
+        await act(async () => machine.emit('extension.storageChanged', { id: 'acme.other', key: 'count', value: 9 }));
+
+        expect(mounted.host.textContent).toBe('count 0');
+    });
+
+    test('goes back to what the machine holds when it refuses a write, and says so', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+        let write = (_next: number): void => undefined;
+
+        machine.answer('extension.storageGet', () => ({ value: 1 }));
+        machine.answer('extension.storageSet', () => {
+            throw new TransportError('internal', 'The disk is full');
+        });
+        disconnect = connectFakeMachine(machine);
+
+        function Count() {
+            const [count, setCount] = api.useStorage('count', 0, 'machine');
+
+            write = setCount;
+
+            return <p>count {count}</p>;
+        }
+
+        api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/count');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+        await until(() => mounted?.host.textContent === 'count 1');
+        await act(async () => write(2));
+        await until(() => mounted?.host.textContent === 'count 1');
+
+        expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual([
+            'Probe could not keep what it stores',
+            'storage count: The disk is full'
+        ]);
+    });
+
+    test('says when it could not read what the machine answered for a key, rather than show it as never written', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+
+        machine.answer('extension.storageGet', () => {
+            throw new TransportError('bad-reply', 'The reply did not fit');
+        });
+        disconnect = connectFakeMachine(machine);
+
+        function Count() {
+            const [count] = api.useStorage('count', 0, 'machine');
+
+            return <p>count {count}</p>;
+        }
+
+        api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/count');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+        await until(() => useToasts.getState().toasts.some((toast) => toast.description === 'storage count: The reply did not fit'));
     });
 
     test("shows what another window wrote to this computer's storage and to a setting", async () => {

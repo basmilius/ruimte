@@ -505,6 +505,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
      * Why a call came back without its answer, under the code an extension reads. A refusal is no throw, so the terminal
      * of `extension dev` is where a person still sees it. An argument of the wrong shape is the one thing that throws.
      */
+    // A value the extension stored that was not kept, which a person would otherwise only miss after a reload.
+    const storageFailed = (text: string): void => {
+        reportFailure('useStorage')(text);
+        useToasts.getState().show({ kind: 'error', title: i18next.t('shell:extensions.storageFailed', { name: extension.manifest.name }), description: text });
+    };
     const refusalOf = (what: string, e: unknown): ExtensionRefusal => {
         if (e instanceof TypeError) {
             throw e;
@@ -996,9 +1001,14 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             const { transport, endpointId } = useFocusedMachine();
             const projectId = useProject((state) => state.current?.projectId ?? '');
             const remoteKey = scope === 'computer' ? null : scope === 'project' ? `project:${projectId}:${key}` : key;
-            const remote = useMachineStorage(transport, endpointId, extensionNow.manifest.id, remoteKey, initial);
+            const remote = useMachineStorage(transport, endpointId, extensionNow.manifest.id, remoteKey, initial, storageFailed);
+            const writeLocal = (next: Value): void => {
+                if (!writeExtensionStorage(full, next)) {
+                    storageFailed(`storage ${key}: this computer refused to keep it`);
+                }
+            };
 
-            return scope === 'computer' ? [local, (next) => writeExtensionStorage(full, next)] : remote;
+            return scope === 'computer' ? [local, writeLocal] : remote;
         },
         useProject() {
             const projectId = useProject((state) => state.current?.projectId ?? '');
