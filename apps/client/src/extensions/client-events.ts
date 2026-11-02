@@ -98,16 +98,16 @@ function start(): void {
         }
 
         for (const [key, row] of Object.entries(state.statusByKey)) {
-            const before = previous.statusByKey[key]?.info.status;
+            const before = previous.statusByKey[key]?.info;
+            const { id } = splitKey(key);
 
-            if (row.info.status !== before) {
-                const { id } = splitKey(key);
-
+            if (row.info.status !== before?.status) {
                 emit('agent.status', { nodeId: id, status: extensionChatOf(row.info).status });
+            }
 
-                if (before === 'running') {
-                    emit('chat.turnFinished', { chatId: id });
-                }
+            // The turn in flight ended, which waiting on a person does not do: it keeps its turn until it goes on.
+            if (before !== undefined && before.activeTurnId !== null && row.info.activeTurnId !== before.activeTurnId) {
+                emit('chat.turnFinished', { chatId: id });
             }
         }
     });
