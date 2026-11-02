@@ -321,15 +321,24 @@ function shortcutProblem(shortcut) {
   const parts = shortcut.toLowerCase().split("+");
   return parts.some((part) => part === "mod" || part === "alt") ? null : `${shortcut} has no modifier: a shortcut needs mod or alt`;
 }
+var WINDOWS_ABSOLUTE = /^([A-Za-z]:[\\/]|[\\/]{2})/;
+function joinedParts(path, separator) {
+  const split = path.split(/[\\/]/);
+  const leading = Math.max(split.findIndex((part) => part !== ""), 0);
+  const parts = split.filter((part, index) => part !== "" || index < leading);
+  return { parts, joined: parts.join(separator) };
+}
 function extensionProjectPath(folder, path) {
-  const full = path.startsWith("/") ? path : path === "." ? folder : `${folder}/${path}`;
-  const parts = full.split(/[\\/]/);
-  const inside = parts.join("/");
-  const root = folder.split(/[\\/]/).join("/");
-  if (inside !== root && (!inside.startsWith(`${root}/`) || parts.includes(".."))) {
+  const windows = WINDOWS_ABSOLUTE.test(folder);
+  const separator = windows ? "\\" : "/";
+  const absolute = path.startsWith("/") || path.startsWith("\\") || WINDOWS_ABSOLUTE.test(path);
+  const root = joinedParts(folder, separator).joined;
+  const { parts, joined } = joinedParts(absolute ? path : path === "." ? folder : `${folder}/${path}`, separator);
+  const same = (text) => windows ? text.toLowerCase() : text;
+  if (parts.includes("..") || same(joined) !== same(root) && !same(joined).startsWith(same(`${root}${separator}`))) {
     return null;
   }
-  return full;
+  return joined;
 }
 
 // node_modules/.bun/zod@4.6.7/node_modules/zod/v4/core/util.js
@@ -6210,7 +6219,11 @@ function actionRefusal(id, action, permissions) {
   }
   return missingPermission(id, permission, permissions);
 }
+var STORAGE_ASKS = new Set(["storage.get", "storage.set", "storage.delete"]);
 function askRefusal(id, method, args, permissions) {
+  if (STORAGE_ASKS.has(method)) {
+    return null;
+  }
   if (method === "action") {
     return actionRefusal(id, String(args[1]), permissions);
   }

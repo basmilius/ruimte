@@ -81,6 +81,7 @@ var EXTENSION_CLIENT_PERMISSIONS = {
 };
 
 // apps/server/src/extensions/policy.ts
+var STORAGE_ASKS = new Set(["storage.get", "storage.set", "storage.delete"]);
 var SCHEDULE_NEEDS_CLOCK = "schedule needs the permission clock in manifest.json";
 var UNITS = { s: 1000, m: 60000, h: 3600000 };
 var MIN_EVERY_MS = 1e4;
@@ -223,6 +224,16 @@ function send(message) {
 }
 console.log = (...args) => console.error(...args);
 console.info = console.log;
+var asked = new Map;
+var nextAsk = 1;
+function ask(method, args) {
+  const id = nextAsk;
+  nextAsk += 1;
+  return new Promise((resolve, reject) => {
+    asked.set(id, { resolve, reject });
+    send({ type: "ask", id, method, args });
+  });
+}
 function jsonFile(name) {
   try {
     return JSON.parse(readFileSync(join(folder, name), "utf8"));
@@ -237,7 +248,8 @@ function writeJsonFile(name, value) {
   writeFileSync(temporary, JSON.stringify(value), { mode: 384 });
   renameSync(temporary, file);
 }
-function keyValues(name) {
+function secretValues() {
+  const name = "secrets.json";
   return {
     get: async (key) => jsonFile(name)[key],
     set: async (key, value) => writeJsonFile(name, { ...jsonFile(name), [key]: value }),
@@ -247,15 +259,19 @@ function keyValues(name) {
     }
   };
 }
-var asked = new Map;
-var nextAsk = 1;
-function ask(method, args) {
-  const id = nextAsk;
-  nextAsk += 1;
-  return new Promise((resolve, reject) => {
-    asked.set(id, { resolve, reject });
-    send({ type: "ask", id, method, args });
-  });
+function storageValues() {
+  const asking = async (method, args) => {
+    const answer = await ask(method, args);
+    if (!answer.ok) {
+      throw new Error(answer.error.message);
+    }
+    return answer.value;
+  };
+  return {
+    get: async (key) => (await asking("storage.get", [key])).value,
+    set: async (key, value) => void await asking("storage.set", [key, value]),
+    delete: async (key) => void await asking("storage.delete", [key])
+  };
 }
 var core = createServerApi({
   dataFolder: folder,
@@ -264,8 +280,8 @@ var core = createServerApi({
   ask,
   clock: { every: (ms, run) => void setInterval(run, ms) },
   send,
-  storage: keyValues("storage.json"),
-  secrets: keyValues("secrets.json"),
+  storage: storageValues(),
+  secrets: secretValues(),
   log: {
     info: (message) => console.error(message),
     error: (message, error) => console.error(message, error ?? "")
@@ -274,8 +290,7 @@ var core = createServerApi({
 globalThis.__ruimteExtension = {
   for: () => ({ server: core.server })
 };
-var module = await import(entry);
-var handlers = module.default ?? {};
+var { promise: loaded, resolve: resolveLoaded } = Promise.withResolvers();
 async function answer(id, run) {
   try {
     send({ type: "result", id, result: await run() ?? null });
@@ -296,13 +311,19 @@ function handle(message) {
       waiting?.resolve({ ok: false, error: { code, message: error } });
     }
   } else if (message.type === "call") {
-    answer(message.id, () => callHandler(handlers, message.method, message.args));
+    answer(message.id, async () => callHandler(await loaded, message.method, message.args));
   } else if (message.type === "event") {
     core.deliver(message.name, message.payload);
   } else if (message.type === "tool") {
-    answer(message.id, () => core.runTool(message.method, message.payload, message.context));
+    answer(message.id, async () => {
+      await loaded;
+      return core.runTool(message.method, message.payload, message.context);
+    });
   } else if (message.type === "nodeContext") {
-    answer(message.id, () => core.readNodeContext(message.node, message.data));
+    answer(message.id, async () => {
+      await loaded;
+      return core.readNodeContext(message.node, message.data);
+    });
   }
 }
 var buffered = "";
@@ -317,4 +338,6 @@ process.stdin.on("data", (chunk) => {
     handle(JSON.parse(line));
   }
 });
+var module = await import(entry);
+resolveLoaded(module.default ?? {});
 send({ type: "ready" });
