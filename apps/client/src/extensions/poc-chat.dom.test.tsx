@@ -54,9 +54,9 @@ describe('a shortcut', () => {
 
 describe('activation', () => {
     test('loads with the app unless it names when', () => {
-        expect(wantsLoading(undefined)).toBe(true);
-        expect(wantsLoading(['start'])).toBe(true);
-        expect(wantsLoading(['node:never-on-this-canvas'])).toBe(false);
+        expect(wantsLoading('acme.chat', undefined)).toBe(true);
+        expect(wantsLoading('acme.chat', ['start'])).toBe(true);
+        expect(wantsLoading('acme.chat', ['node:never-on-this-canvas'])).toBe(false);
     });
 });
 

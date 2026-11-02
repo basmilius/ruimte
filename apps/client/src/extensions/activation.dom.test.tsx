@@ -26,8 +26,18 @@ describe('what loads an extension', () => {
 
         useDocument.setState({ views: [{ kind: 'unknown', id: 'view-1', name: 'Board', raw }], activeViewId: 'view-1' });
 
-        expect(wantsLoading(['view:board'])).toBe(true);
-        expect(wantsLoading(['view:list'])).toBe(false);
+        expect(wantsLoading('acme.board', ['view:board'])).toBe(true);
+        expect(wantsLoading('acme.board', ['view:list'])).toBe(false);
+        expect(wantsLoading('other.board', ['view:board'])).toBe(false);
+    });
+
+    test("loads for a node of the extension's type, and not for another extension's node of the same type", () => {
+        const raw = { kind: 'extension', id: 'card-1', extension: 'acme.board', type: 'card' };
+
+        focusedCanvas().setState({ nodes: { 'card-1': { ...note('card-1'), kind: 'unknown', raw } as CanvasNode } });
+
+        expect(wantsLoading('acme.board', ['node:card'])).toBe(true);
+        expect(wantsLoading('other.board', ['node:card'])).toBe(false);
     });
 });
 

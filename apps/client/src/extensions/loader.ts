@@ -64,7 +64,9 @@ export async function syncExtensions(): Promise<void> {
 
     await refreshExtensionTheme(installed);
 
-    const wanted = installed.filter((entry) => entry.enabled && entry.hasClient && (loaded.has(entry.manifest.id) || wantsLoading(entry.manifest.activation)));
+    const wanted = installed.filter(
+        (entry) => entry.enabled && entry.hasClient && (loaded.has(entry.manifest.id) || wantsLoading(entry.manifest.id, entry.manifest.activation))
+    );
 
     if (installed.some((entry) => entry.manifest.activation !== undefined) && stopActivation === null) {
         stopActivation = watchActivation(() => void syncExtensions());
