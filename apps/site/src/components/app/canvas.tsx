@@ -71,27 +71,33 @@ export function ClaudeMark({ size = 14, className = '' }: { readonly size?: numb
 export function CanvasNode({
     rect,
     kind,
+    icon,
     title,
     status,
     agent = false,
     selected = false,
     shown = true,
     delay = 0,
+    actions,
     className = '',
     children
 }: {
     readonly rect: Rect;
     readonly kind: NodeKind;
+    /** The icon an extension's node names, in place of its kind's. */
+    readonly icon?: LucideIcon;
     readonly title: ReactNode;
     readonly status?: AgentStatus;
     readonly agent?: boolean;
     readonly selected?: boolean;
     readonly shown?: boolean;
     readonly delay?: number;
+    /** What an extension adds to the header (`NodeHeaderSlot`): its running spinner and its `nodeHeader` buttons. */
+    readonly actions?: ReactNode;
     readonly className?: string;
     readonly children?: ReactNode;
 }) {
-    const Icon = KIND_ICON[kind];
+    const Icon = icon ?? KIND_ICON[kind];
     const group = kind === 'group';
     return (
         <motion.div
@@ -114,6 +120,7 @@ export function CanvasNode({
                 {agent ? <ClaudeMark /> : <Icon size={14} strokeWidth={1.75} />}
                 <span className="min-w-0 grow truncate text-[13px] leading-[19px] font-medium text-text">{title}</span>
                 {status && <StatusPill status={status} />}
+                {actions}
                 {!group && (
                     <span className="inline-flex items-center gap-px">
                         <span className="flex size-7 items-center justify-center rounded-md">

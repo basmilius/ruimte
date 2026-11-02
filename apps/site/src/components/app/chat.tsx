@@ -86,16 +86,20 @@ export function WorkingRow({ seconds }: { readonly seconds: number }) {
 export function Composer({
     draft,
     typing = false,
-    prompt
+    prompt,
+    menu
 }: {
     readonly draft?: string;
     readonly typing?: boolean;
+    /** The list `composer/ComposerMenu.tsx` opens inside the card, above the draft, such as the slash commands. */
+    readonly menu?: ReactNode;
     /** A question or approval of the chat, which `PromptComposer.tsx` shows inside the composer card, above the draft. */
     readonly prompt?: ReactNode;
 }) {
     return (
         <div className={FLOATING_CARD}>
             {prompt && <div className="border-b border-dashed border-border">{prompt}</div>}
+            {menu}
             <div className="min-h-[45px] pt-[18px] pr-[14px] pb-[6px] pl-5 text-[14px] leading-[21px]">
                 {draft ? (
                     <Typed shown text={draft} speed={typing ? 45 : 0} caret={typing} />

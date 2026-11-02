@@ -1,19 +1,20 @@
 'use client';
 
-import { FileText, Hash, LayoutGrid, MessageSquare, Plus, Sparkles, StickyNote, Terminal } from 'lucide-react';
+import { FileText, Hash, MessageSquare, Scan, Maximize, Sparkles, StickyNote, Terminal } from 'lucide-react';
+import { Icon, Kbd } from '@adecore/ui';
 import { CanvasNode } from '../../app/canvas.tsx';
 import { TerminalBody } from '../../app/bodies.tsx';
-import { AppWindow, Dock, FLOAT, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
-import { Button, IconButton, Separator } from '../../app/primitives.tsx';
+import { AppWindow, Dock, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
+import { Button, IconButton } from '../../app/primitives.tsx';
 import { usePlayback, useTimeline } from '../../film/playback.ts';
 import { Stage } from '../../film/Stage.tsx';
-import { SlotSpot } from './slot-parts.tsx';
+import { NoteText, SelectionBar, SlotSpot } from './parts.tsx';
 
 const SLOTS = ['viewToolbar', 'nodeHeader', 'selectionBar', 'canvasMenu', 'sidebarFooter'] as const;
 const STEPS = SLOTS.map(() => 1800);
 
-const NOTE = { x: 36, y: 36, w: 264, h: 160 };
-const TERMINAL = { x: 340, y: 36, w: 280, h: 160 };
+const NOTE = { x: 28, y: 68, w: 264, h: 156 };
+const TERMINAL = { x: 324, y: 68, w: 300, h: 156 };
 
 /* Ruimte with five of the places an extension adds to, each lit in its turn. */
 export function SlotMap() {
@@ -47,68 +48,89 @@ function SlotMapScene() {
                             'separator',
                             { id: 'readme', name: 'README.md', icon: FileText }
                         ]}
+                        footer={
+                            <SlotSpot name="sidebarFooter" lit={lit('sidebarFooter')} labelEnd>
+                                <IconButton icon={Sparkles} />
+                            </SlotSpot>
+                        }
                     />
                 }
-                toolbar={<TopRow view={{ icon: Hash, name: 'Signup' }} />}
+                toolbar={
+                    <TopRow
+                        view={{ icon: Hash, name: 'Signup' }}
+                        trailing={
+                            <SlotSpot name="viewToolbar" lit={lit('viewToolbar')} labelBelow labelEnd>
+                                <IconButton icon={Sparkles} size="sm" />
+                            </SlotSpot>
+                        }
+                    />
+                }
                 rail={<Rail />}
             >
                 <div className="canvas-dots absolute inset-0">
                     <CanvasNode rect={NOTE} kind="note" title="Brief" selected>
-                        <div className="px-3 py-2.5 text-[14px] leading-[21px]">
+                        <NoteText>
                             <p className="font-semibold">Signup keeps the email.</p>
                             <p className="mt-2 text-text-muted">A failed submit must not clear what a person typed.</p>
-                        </div>
+                        </NoteText>
                     </CanvasNode>
-                    <CanvasNode rect={TERMINAL} kind="terminal" title="tests" status="idle" selected>
+                    <CanvasNode
+                        rect={TERMINAL}
+                        kind="terminal"
+                        title="tests"
+                        selected
+                        actions={
+                            <SlotSpot name="nodeHeader" lit={lit('nodeHeader')} labelBelow labelEnd>
+                                <IconButton icon={Sparkles} size="sm" />
+                            </SlotSpot>
+                        }
+                    >
                         <TerminalBody>
                             <div className="text-term-dim">$ bun test signup</div>
                             <div className="mt-2 text-ansi-green">✓ keeps the email</div>
                             <div className="text-ansi-green">✓ shows the error</div>
                         </TerminalBody>
                     </CanvasNode>
-                    <div className={`absolute top-[250px] left-[430px] z-10 flex w-[208px] flex-col rounded-xl p-1 text-[13px] text-text ${FLOAT}`}>
-                        <span className="flex h-8 items-center gap-2 rounded-md px-2">
-                            <Plus size={14} strokeWidth={1.75} className="text-text-muted" />
-                            New node
-                        </span>
-                        <span className="flex h-8 items-center gap-2 rounded-md px-2">
-                            <LayoutGrid size={14} strokeWidth={1.75} className="text-text-muted" />
-                            Arrange
-                        </span>
-                        <span className="mx-2 my-1 h-px bg-border" />
-                        <span className="h-8" />
-                    </div>
+                    <SelectionBar>
+                        <SlotSpot name="selectionBar" lit={lit('selectionBar')} labelBelow>
+                            <Button>
+                                <Sparkles size={14} strokeWidth={1.75} />
+                                Summarize
+                            </Button>
+                        </SlotSpot>
+                    </SelectionBar>
+                    <CanvasMenu lit={lit('canvasMenu')} />
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
                         <Dock working={1} />
                     </div>
                 </div>
             </AppWindow>
-            <SlotSpot name="viewToolbar" lit={lit('viewToolbar')} x={822} y={10} width={30} height={28}>
-                <IconButton icon={Sparkles} size="sm" className="text-accent" />
-            </SlotSpot>
-            <SlotSpot name="nodeHeader" lit={lit('nodeHeader')} x={248 + NOTE.x + NOTE.w - 96} y={47 + NOTE.y + 6} width={28} height={28}>
-                <IconButton icon={Sparkles} size="sm" className="text-accent" />
-            </SlotSpot>
-            <SlotSpot name="selectionBar" lit={lit('selectionBar')} x={248 + 210} y={47 + 380} width={230} height={40} labelBelow={false}>
-                <div className={`flex h-10 items-center gap-1 rounded-xl px-1 text-[13px] ${FLOAT}`}>
-                    <span className="px-2 text-text-muted">2 selected</span>
-                    <Separator />
-                    <Button size="sm" className="text-text">
-                        <Sparkles size={14} strokeWidth={1.75} className="text-accent" />
-                        Summarize
-                    </Button>
-                </div>
-            </SlotSpot>
-            <SlotSpot name="canvasMenu" lit={lit('canvasMenu')} x={248 + 434} y={47 + 326} width={200} height={32} labelBelow>
-                <span className="flex h-8 items-center gap-2 rounded-md px-2 text-[13px] text-text">
-                    <MessageSquare size={14} strokeWidth={1.75} className="text-accent" />
-                    Ask about this canvas
-                </span>
-            </SlotSpot>
-            <SlotSpot name="sidebarFooter" lit={lit('sidebarFooter')} x={10} y={560 - 44} width={120} height={32}>
-                <span className="flex h-8 items-center gap-2 rounded-md px-2 text-[13px] text-text-muted">
-                    <Sparkles size={14} strokeWidth={1.75} className="text-accent" />
-                    Standup
+        </div>
+    );
+}
+
+/* `canvas/CanvasMenu.tsx`, shortened: what to add, what to do with the canvas, then the `canvasMenu` slot under a separator. */
+function CanvasMenu({ lit }: { readonly lit: boolean }) {
+    return (
+        // Visible overflow, so the label of the slot can hang under the menu.
+        <div className="menu-popup absolute top-[250px] left-[408px] z-10 flex w-[224px] flex-col overflow-visible">
+            <span className="menu-item">
+                <Icon icon={Terminal} size={14} /> Terminal <Kbd>⌥T</Kbd>
+            </span>
+            <span className="menu-item">
+                <Icon icon={MessageSquare} size={14} /> Chat <Kbd>⌥C</Kbd>
+            </span>
+            <span role="separator" className="-mx-1 my-1 h-px bg-border-soft" />
+            <span className="menu-item">
+                <Icon icon={Scan} size={14} /> Select all <Kbd>⌘A</Kbd>
+            </span>
+            <span className="menu-item">
+                <Icon icon={Maximize} size={14} /> Zoom to fit <Kbd>⇧1</Kbd>
+            </span>
+            <span role="separator" className="-mx-1 my-1 h-px bg-border-soft" />
+            <SlotSpot name="canvasMenu" lit={lit} labelBelow>
+                <span className="menu-item grow">
+                    <Icon icon={Sparkles} size={14} /> Ask about this canvas
                 </span>
             </SlotSpot>
         </div>

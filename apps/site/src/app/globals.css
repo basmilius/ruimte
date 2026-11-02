@@ -189,23 +189,3 @@
     }
 }
 
-/* The documentation's figures: a spinner as Ruimte draws one on a node, and a caption under a scene. */
-@keyframes docs-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.docs-spinner {
-    animation: docs-spin 0.9s linear infinite;
-}
-
-.docs-figure {
-    margin: 0 0 1.5rem;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .docs-spinner {
-        animation: none;
-    }
-}

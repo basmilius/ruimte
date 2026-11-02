@@ -1,18 +1,19 @@
 'use client';
 
 import { Sparkles } from 'lucide-react';
+import { Spinner } from '@adecore/ui';
 import { CanvasEdge, CanvasNode } from '../../app/canvas.tsx';
 import { TerminalBody } from '../../app/bodies.tsx';
-import { FLOAT, WindowBar } from '../../app/chrome.tsx';
-import { Button, Separator } from '../../app/primitives.tsx';
+import { WindowBar } from '../../app/chrome.tsx';
+import { Button } from '../../app/primitives.tsx';
 import { useTimeline } from '../../film/playback.ts';
 import { Stage } from '../../film/Stage.tsx';
-import { Spinner } from './slot-parts.tsx';
+import { NoteText, SceneFrame, SelectionBar } from './parts.tsx';
 
 const STEPS = [1600, 2400, 3600] as const;
-const NOTE = { x: 32, y: 32, w: 248, h: 150 };
-const TERMINAL = { x: 312, y: 32, w: 264, h: 150 };
-const SUMMARY = { x: 172, y: 236, w: 264, h: 132 };
+const NOTE = { x: 48, y: 72, w: 260, h: 140 };
+const TERMINAL = { x: 452, y: 72, w: 260, h: 140 };
+const SUMMARY = { x: 250, y: 262, w: 260, h: 130 };
 
 /* Summarize runs on two nodes: both show a spinner, then the summary arrives as a linked note. */
 export function ActionRun() {
@@ -27,47 +28,40 @@ function ActionRunScene() {
     const step = useTimeline(STEPS);
     const running = step === 1;
     const done = step === 2;
+    const sign = running && <Spinner size={14} />;
 
     return (
-        <div className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border border-white/10 bg-surface shadow-[0_24px_60px_rgb(0_0_0/0.45)]">
+        <SceneFrame>
             <WindowBar />
             <div className="canvas-dots relative grow">
                 <CanvasEdge from={NOTE} to={SUMMARY} shown={done} />
                 <CanvasEdge from={TERMINAL} to={SUMMARY} shown={done} delay={0.15} />
-                <CanvasNode rect={NOTE} kind="note" title="Brief" selected={!done}>
-                    <div className="px-3 py-2.5 text-[14px] leading-[21px]">
+                <CanvasNode rect={NOTE} kind="note" title="Brief" selected={!done} actions={sign}>
+                    <NoteText>
                         <p className="font-semibold">Signup keeps the email.</p>
                         <p className="mt-2 text-text-muted">A failed submit must not clear the form.</p>
-                    </div>
+                    </NoteText>
                 </CanvasNode>
-                <CanvasNode rect={TERMINAL} kind="terminal" title="tests" selected={!done}>
+                <CanvasNode rect={TERMINAL} kind="terminal" title="tests" selected={!done} actions={sign}>
                     <TerminalBody>
                         <div className="text-term-dim">$ bun test signup</div>
                         <div className="mt-2 text-ansi-red">✗ keeps the email</div>
                     </TerminalBody>
                 </CanvasNode>
-                {running && (
-                    <>
-                        <Spinner className="absolute z-10" style={{ left: NOTE.x + NOTE.w - 84, top: NOTE.y + 13 }} />
-                        <Spinner className="absolute z-10" style={{ left: TERMINAL.x + TERMINAL.w - 84, top: TERMINAL.y + 13 }} />
-                    </>
-                )}
                 <CanvasNode rect={SUMMARY} kind="note" title="Summary" shown={done}>
-                    <div className="px-3 py-2.5 text-[14px] leading-[21px]">
+                    <NoteText>
                         <p>The test fails because a failed submit resets the form. The brief asks to keep the email.</p>
-                    </div>
+                    </NoteText>
                 </CanvasNode>
                 {!done && (
-                    <div className={`absolute bottom-5 left-1/2 flex h-10 -translate-x-1/2 items-center gap-1 rounded-xl px-1 text-[13px] ${FLOAT}`}>
-                        <span className="px-2 text-text-muted">2 selected</span>
-                        <Separator />
-                        <Button size="sm" className={running ? 'text-text-faint' : 'text-text'}>
-                            {running ? <Spinner /> : <Sparkles size={14} strokeWidth={1.75} className="text-accent" />}
+                    <SelectionBar>
+                        <Button className={running ? 'opacity-50' : ''}>
+                            {running ? <Spinner size={14} /> : <Sparkles size={14} strokeWidth={1.75} />}
                             Summarize
                         </Button>
-                    </div>
+                    </SelectionBar>
                 )}
             </div>
-        </div>
+        </SceneFrame>
     );
 }

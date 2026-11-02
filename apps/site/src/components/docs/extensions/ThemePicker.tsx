@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 
-/* Settings, Appearance as the app draws it: Ruimte's own three themes, then a theme of an extension with its thumbnail. */
+/* `AppearancePane.tsx` in Settings: Ruimte's own three themes, then a theme of an extension with its thumbnail. */
 export function ThemePicker() {
     return (
-        <figure className="docs-figure" aria-label="The theme picker with System, Light, Dark and the extension theme Midnight, which is chosen.">
-            <div aria-hidden className="flex flex-wrap gap-3 rounded-xl border border-border bg-surface p-4">
+        <figure className="mb-6" aria-label="The theme picker with System, Light, Dark and the extension theme Midnight, which is chosen.">
+            <div aria-hidden className="flex flex-wrap gap-3.5 rounded-xl border border-border bg-surface p-4">
                 <Choice label="System">
                     <Sample side="light" half />
                     <Sample side="dark" half />
+                    <AccentMark className="absolute bottom-2.5 left-1/2 -translate-x-1/2" />
                 </Choice>
                 <Choice label="Light">
                     <Sample side="light" />
@@ -29,9 +30,13 @@ function Sample({ side, half = false }: { readonly side: 'light' | 'dark'; reado
         <span data-theme={side} className="flex min-w-0 grow flex-col gap-1.5 bg-surface-raised p-2.5">
             <span className={`h-1.5 rounded-full bg-surface-active ${half ? 'w-2/3' : 'w-3/5'}`} />
             <span className={`h-1.5 rounded-full bg-surface-hover ${half ? 'w-1/2' : 'w-2/5'}`} />
-            {!half && <span className="mt-auto h-3 w-7 self-end rounded-full bg-accent" />}
+            {!half && <AccentMark className="mt-auto self-end" />}
         </span>
     );
+}
+
+function AccentMark({ className }: { readonly className: string }) {
+    return <span className={`h-3 w-7 rounded-full bg-accent ${className}`} />;
 }
 
 function Choice({ label, chosen = false, children }: { readonly label: string; readonly chosen?: boolean; readonly children: ReactNode }) {
@@ -42,7 +47,7 @@ function Choice({ label, chosen = false, children }: { readonly label: string; r
             >
                 {children}
             </span>
-            <span className={`text-[13px] ${chosen ? 'text-text' : 'text-text-muted'}`}>{label}</span>
+            <span className={`text-xs ${chosen ? 'text-text' : 'text-text-muted'}`}>{label}</span>
         </span>
     );
 }
