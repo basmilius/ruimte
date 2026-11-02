@@ -2,7 +2,7 @@
 // Generated from apps/server/src/extensions/test-runtime.ts by apps/server/scripts/generate-extension-runtimes.ts. Do not edit.
 // apps/server/src/extensions/test-runtime.ts
 var {plugin } = globalThis.Bun;
-import { afterEach } from "bun:test";
+import { afterAll, afterEach } from "bun:test";
 
 // apps/server/src/extensions/test-react.ts
 import { realpathSync } from "fs";
@@ -153,9 +153,7 @@ async function render(target, options = {}) {
   };
   const after = async () => {
     await turn(module);
-    await settle(module, () => failure.error === null && container.querySelector(SUSPENDED) === null, () => "It is still waiting for what it suspends on").catch(() => {
-      return;
-    });
+    await settle(module, () => failure.error !== null || container.querySelector(SUSPENDED) === null, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
     if (failure.error !== null) {
       const { error } = failure;
       failure.error = null;
@@ -340,20 +338,28 @@ function shortcutProblem(shortcut) {
   return parts.some((part) => part === "mod" || part === "alt") ? null : `${shortcut} has no modifier: a shortcut needs mod or alt`;
 }
 var WINDOWS_ABSOLUTE = /^([A-Za-z]:[\\/]|[\\/]{2})/;
-function joinedParts(path, separator) {
-  const split = path.split(/[\\/]/);
-  const leading = Math.max(split.findIndex((part) => part !== ""), 0);
-  const parts = split.filter((part, index) => part !== "" || index < leading);
-  return { parts, joined: parts.join(separator) };
+function splitPath(path, separator) {
+  const drive = /^([A-Za-z]:)[\\/]/.exec(path)?.[1];
+  const root = drive !== undefined ? `${drive}${separator}` : /^[\\/]{2}/.test(path) ? `${separator}${separator}` : /^[\\/]/.test(path) ? separator : "";
+  return {
+    root,
+    parts: path.slice(drive === undefined ? 0 : 2).split(/[\\/]/).filter((part) => part !== "" && part !== ".")
+  };
+}
+function joinedPath({ root, parts }, separator) {
+  return `${root}${parts.join(separator)}`;
 }
 function extensionProjectPath(folder, path) {
   const windows = WINDOWS_ABSOLUTE.test(folder);
   const separator = windows ? "\\" : "/";
   const absolute = path.startsWith("/") || path.startsWith("\\") || WINDOWS_ABSOLUTE.test(path);
-  const root = joinedParts(folder, separator).joined;
-  const { parts, joined } = joinedParts(absolute ? path : path === "." ? folder : `${folder}/${path}`, separator);
+  const inFolder = splitPath(folder, separator);
+  const named = absolute ? splitPath(path, separator) : { root: inFolder.root, parts: [...inFolder.parts, ...splitPath(path, separator).parts] };
+  const root = joinedPath(inFolder, separator);
+  const joined = joinedPath(named, separator);
   const same = (text) => windows ? text.toLowerCase() : text;
-  if (parts.includes("..") || same(joined) !== same(root) && !same(joined).startsWith(same(`${root}${separator}`))) {
+  const within = same(root.endsWith(separator) ? root : `${root}${separator}`);
+  if (named.parts.includes("..") || same(joined) !== same(root) && !same(joined).startsWith(within)) {
     return null;
   }
   return joined;
@@ -6176,15 +6182,6 @@ function parseExtensionActionInput(name, input) {
   return { ok: true, input: parsed.data };
 }
 
-// apps/server/src/extensions/test-host.ts
-import { readFileSync as readFileSync2 } from "fs";
-import { join as join4 } from "path";
-
-// apps/server/src/extensions/test-server.ts
-import { readFileSync } from "fs";
-import { tmpdir } from "os";
-import { join as join3, resolve } from "path";
-
 // packages/contracts/src/extension-results.ts
 function extensionAgentStatus(status, needsYou = false) {
   if (needsYou || status === "needs-you") {
@@ -6413,6 +6410,66 @@ function createServerApi(options) {
   };
 }
 
+// apps/server/src/extensions/test-host.ts
+import { readFileSync as readFileSync2 } from "fs";
+import { join as join4 } from "path";
+
+// packages/contracts/src/node-defaults.ts
+var NODE_SIZE = {
+  terminal: { w: 560, h: 360 },
+  chat: { w: 480, h: 520 },
+  browser: { w: 720, h: 480 },
+  device: { w: 360, h: 720 },
+  group: { w: 800, h: 600 },
+  note: { w: 320, h: 240 },
+  drawing: { w: 480, h: 360 },
+  diagram: { w: 480, h: 360 },
+  file: { w: 520, h: 420 },
+  artifact: { w: 440, h: 520 },
+  routine: { w: 400, h: 560 },
+  design: { w: 480, h: 640 }
+};
+var GROUP_PADDING = 32;
+var GROUP_HEADER = 40;
+var CANVAS_GRID = 8;
+function snap(value) {
+  return Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+}
+function groupFrame(members) {
+  if (members.length === 0) {
+    return null;
+  }
+  const left = Math.min(...members.map((member) => member.x));
+  const top = Math.min(...members.map((member) => member.y));
+  const width = Math.max(...members.map((member) => member.x + member.w)) - left;
+  const height = Math.max(...members.map((member) => member.y + member.h)) - top;
+  return {
+    x: snap(left - GROUP_PADDING),
+    y: snap(top - GROUP_PADDING - GROUP_HEADER),
+    w: snap(width + GROUP_PADDING * 2),
+    h: snap(height + GROUP_PADDING * 2 + GROUP_HEADER)
+  };
+}
+var DEFAULT_TITLES = {
+  terminal: "Terminal",
+  chat: "New chat",
+  browser: "Browser",
+  device: "Simulator",
+  group: "Group",
+  drawing: "Drawing",
+  diagram: "Diagram",
+  note: "Note",
+  file: "File",
+  artifact: "Output",
+  routine: "Routine",
+  design: "Design"
+};
+
+// apps/server/src/extensions/test-server.ts
+import { mkdtempSync as mkdtempSync2, readFileSync, rmSync as rmSync2 } from "fs";
+import { tmpdir } from "os";
+import { join as join3, resolve } from "path";
+
 // apps/server/src/extensions/test-loader.ts
 import { mkdirSync, mkdtempSync, rmSync } from "fs";
 import { join as join2, relative } from "path";
@@ -6505,17 +6562,33 @@ function manifestIn(folder) {
     return {};
   }
 }
-function memory(values) {
+function memory(values, changed = () => {
+  return;
+}) {
   return {
     get: async (key) => Object.hasOwn(values, key) ? wire(values[key]) : undefined,
     set: async (key, value) => {
-      values[key] = wire(value);
+      if (value === undefined) {
+        delete values[key];
+      } else {
+        values[key] = wire(value);
+      }
+      changed();
     },
     delete: async (key) => {
       delete values[key];
+      changed();
     }
   };
 }
+var folders = new Set;
+function removeTestFolders() {
+  for (const folder of folders) {
+    rmSync2(folder, { recursive: true, force: true });
+  }
+  folders.clear();
+}
+var machineStorageOf = new WeakMap;
 function startOptions(start) {
   return {
     project: { id: start.projectId },
@@ -6532,6 +6605,7 @@ class TestMachine {
   storage;
   secrets;
   emitted = [];
+  storageListeners = new Set;
   asked = [];
   languageServers = [];
   logs = [];
@@ -6551,8 +6625,10 @@ class TestMachine {
     this.storage = wire(options.storage ?? {});
     this.secrets = { ...options.secrets };
     this.sends = new SendLimit(() => this.now);
+    const dataFolder = mkdtempSync2(join3(tmpdir(), `ruimte-extension-test-${this.id}-`));
+    folders.add(dataFolder);
     this.core = createServerApi({
-      dataFolder: join3(tmpdir(), `ruimte-extension-test-${this.id}`),
+      dataFolder,
       platform: process.platform,
       permissions: this.permissions,
       ask: (method, args) => this.ask(method, args),
@@ -6562,7 +6638,11 @@ class TestMachine {
         }
       },
       send: (message) => this.said(message),
-      storage: memory(this.storage),
+      storage: memory(this.storage, () => {
+        for (const listener of [...this.storageListeners]) {
+          listener();
+        }
+      }),
       secrets: memory(this.secrets),
       log: {
         info: (message) => void this.logs.push(message),
@@ -6601,7 +6681,7 @@ class TestMachine {
   }
   said(message) {
     if (message.type === "emit") {
-      this.emitted.push({ name: message.name, payload: wire(message.payload) });
+      this.emitted.push(message.payload === undefined ? { name: message.name } : { name: message.name, payload: wire(message.payload) });
     } else if (message.type === "tool") {
       this.tools.set(message.name, this.permissions.has("agents.tools"));
     } else {
@@ -6704,7 +6784,7 @@ async function createTestServer(options = {}) {
       return failure2(e instanceof MissingHandler ? "not-found" : "failed", e instanceof Error ? e.message : String(e));
     }
   };
-  return {
+  const server = {
     call,
     storage: machine.storage,
     secrets: machine.secrets,
@@ -6717,6 +6797,16 @@ async function createTestServer(options = {}) {
     tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? "test") }),
     nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
   };
+  machineStorageOf.set(server, {
+    values: machine.storage,
+    subscribe: (listener) => {
+      machine.storageListeners.add(listener);
+      return () => {
+        machine.storageListeners.delete(listener);
+      };
+    }
+  });
+  return server;
 }
 
 // apps/server/src/extensions/test-host.ts
@@ -6728,8 +6818,17 @@ class Refused extends Error {
   }
 }
 var NOTE = { width: 320, height: 200 };
+var NEW_NODE = { width: 420, height: 300 };
 var BESIDE_GAP = 240;
 var NODE_PLACES = ["node", "nodes", "from", "to"];
+var AGENT_KINDS = new Set(["terminal", "chat", "design"]);
+function snapped(value) {
+  return Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+}
+function sizeOfKind(kind) {
+  const size = NODE_SIZE[kind];
+  return size === undefined ? NEW_NODE : { width: size.w, height: size.h };
+}
 function wire2(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
@@ -6766,6 +6865,8 @@ class TestHost {
   project;
   views;
   nodes = new Map;
+  chats = new Map;
+  watches = new Set;
   edges = [];
   createdIds = [];
   notes = [];
@@ -6813,11 +6914,13 @@ class TestHost {
       name: view.name ?? ""
     }));
     this.activeViewId = this.views[0]?.id ?? null;
+    const server = this.answers.server === undefined ? undefined : machineStorageOf.get(this.answers.server);
     this.storage = {
       computer: wire2(options.storage?.computer ?? {}),
       project: wire2(options.storage?.project ?? {}),
-      machine: wire2(options.storage?.machine ?? {})
+      machine: server === undefined ? wire2(options.storage?.machine ?? {}) : Object.assign(server.values, wire2(options.storage?.machine ?? {}))
     };
+    server?.subscribe(() => this.changed());
     this.settings = { ...options.settings };
     this.words = wordsIn(folder, this.language);
     for (const node of options.project?.nodes ?? []) {
@@ -6836,6 +6939,17 @@ class TestHost {
         ...node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire2(node.extension.data ?? {}) },
         ...node.extension?.dataVersion === undefined ? {} : { dataVersion: node.extension.dataVersion }
       });
+      if (node.kind === "chat") {
+        this.chats.set(node.id, {
+          id: node.id,
+          title: node.title ?? "",
+          text: node.text ?? "",
+          provider: node.agent?.provider ?? "claude",
+          status: node.agent?.status ?? "idle"
+        });
+      }
+    }
+    for (const node of options.project?.nodes ?? []) {
       for (const to of node.linkedTo ?? []) {
         this.addEdge(node.id, to);
       }
@@ -6911,6 +7025,9 @@ class TestHost {
     if (e instanceof TypeError) {
       throw e;
     }
+    return this.failure(what, args, e);
+  }
+  failure(what, args, e) {
     const error = e instanceof Refused || e instanceof TestRefusal ? { code: e.code, message: e.message } : { code: "failed", message: errorText(e) };
     this.logs.push(`${what}: ${error.code}: ${error.message}`);
     this.calls.push({ method: what, args, result: { ok: false, error } });
@@ -6981,7 +7098,11 @@ class TestHost {
     const anchor = near?.[0] === undefined ? undefined : this.nodes.get(near[0].id);
     return anchor === undefined ? { x: 0, y: 0 } : { x: anchor.bounds.x + anchor.bounds.width + BESIDE_GAP, y: anchor.bounds.y + anchor.bounds.height / 2 };
   }
-  addNode(kind, at, size, details) {
+  addNode(kind, at, details, size = sizeOfKind(kind)) {
+    const bounds = { x: snapped(at.x - size.width / 2), y: snapped(at.y - size.height / 2), ...size };
+    return this.placeNode(kind, bounds, { title: DEFAULT_TITLES[kind] ?? "", ...details });
+  }
+  placeNode(kind, bounds, details) {
     const viewId = this.canvasInFront();
     let id = `${kind}-${this.nextId}`;
     while (this.nodes.has(id)) {
@@ -6989,11 +7110,42 @@ class TestHost {
       id = `${kind}-${this.nextId}`;
     }
     this.nextId += 1;
-    this.nodes.set(id, { id, kind, title: "", text: "", color: null, bounds: { ...at, ...size }, viewId, groupId: null, ...details });
+    this.nodes.set(id, { id, kind, title: "", text: "", color: null, bounds, viewId, groupId: null, ...details });
     this.createdIds.push(id);
     this.changed();
     this.deliver("node.added", { node: this.info(id) });
+    this.select([id]);
     return { id };
+  }
+  addGroup(ids) {
+    const viewId = this.canvasInFront();
+    const members = ids.flatMap((id) => {
+      const node = this.nodes.get(id);
+      return node === undefined || node.viewId !== viewId || node.kind === "group" ? [] : [node];
+    });
+    const frame = groupFrame(members.map(({ bounds }) => ({ x: bounds.x, y: bounds.y, w: bounds.width, h: bounds.height })));
+    if (frame === null) {
+      return null;
+    }
+    const group = this.placeNode("group", { x: frame.x, y: frame.y, width: frame.w, height: frame.h }, { title: DEFAULT_TITLES.group });
+    for (const member of members) {
+      this.changeNode(member.id, { groupId: group.id });
+    }
+    return group;
+  }
+  addChatView(title, provider) {
+    const view = this.addView("chat", title);
+    this.chats.set(view.id, { id: view.id, title, text: "", provider, status: "running" });
+    return view;
+  }
+  changeFile(path) {
+    const full = this.inProject(path);
+    for (const watch of [...this.watches]) {
+      const folder = /[\\/]$/.test(watch.path) ? watch.path : `${watch.path}/`;
+      if (full === watch.path || full.startsWith(folder) || full.startsWith(folder.replace(/\/$/, "\\"))) {
+        watch.listener();
+      }
+    }
   }
   migrateNode(definition, nodeId) {
     const { dataVersion, migrate } = definition;
@@ -7025,19 +7177,30 @@ class TestHost {
     }
   }
   addEdge(from, to) {
-    if (!this.edges.some((edge) => edge.from === from && edge.to === to)) {
-      this.edges.push({ from, to });
+    const start = this.nodes.get(from);
+    const end = this.nodes.get(to);
+    if (start === undefined || end === undefined || start.viewId !== end.viewId) {
+      return;
+    }
+    const draw = (tail, head) => {
+      if (tail !== head && !this.edges.some((edge) => edge.from === tail && edge.to === head)) {
+        this.edges.push({ from: tail, to: head });
+      }
+    };
+    draw(from, to);
+    if (AGENT_KINDS.has(start.kind) && AGENT_KINDS.has(end.kind)) {
+      draw(to, from);
     }
   }
   remove(ids) {
-    for (const id of ids) {
-      if (this.nodes.delete(id)) {
-        this.deliver("node.removed", { id });
-      }
+    const viewId = this.canvasInFront();
+    const gone = ids.filter((id) => this.nodes.get(id)?.viewId === viewId);
+    for (const id of gone) {
+      this.nodes.delete(id);
+      this.deliver("node.removed", { id });
     }
-    this.selection = this.selection.filter((id) => !ids.includes(id));
-    this.edges.splice(0, this.edges.length, ...this.edges.filter((edge) => !ids.includes(edge.from) && !ids.includes(edge.to)));
-    this.changed();
+    this.edges.splice(0, this.edges.length, ...this.edges.filter((edge) => !gone.includes(edge.from) && !gone.includes(edge.to)));
+    this.select([]);
   }
   select(ids) {
     this.selection = [...ids];
@@ -7045,24 +7208,30 @@ class TestHost {
     this.deliver("selection.changed", { nodes: this.selection.map((id) => this.info(id)) });
   }
   openView(id) {
+    if (id === this.activeViewId) {
+      return;
+    }
     this.activeViewId = id;
     this.changed();
     this.deliver("view.changed", { viewId: id });
   }
+  unknownNode(id, viewId) {
+    return {
+      id,
+      kind: "unknown",
+      title: "",
+      color: null,
+      bounds: { x: 0, y: 0, width: 0, height: 0 },
+      groupId: null,
+      viewId,
+      machine: null,
+      linkedTo: []
+    };
+  }
   info(id) {
     const node = this.nodes.get(id);
     if (node === undefined) {
-      return {
-        id,
-        kind: "unknown",
-        title: "",
-        color: null,
-        bounds: { x: 0, y: 0, width: 0, height: 0 },
-        groupId: null,
-        viewId: this.activeViewId ?? "",
-        machine: null,
-        linkedTo: []
-      };
+      return this.unknownNode(id, this.activeViewId ?? "");
     }
     const agent = node.kind === "chat" || node.kind === "terminal" || node.kind === "design" ? {
       provider: "claude",
@@ -7082,7 +7251,7 @@ class TestHost {
       groupId: node.groupId,
       viewId: node.viewId,
       machine: null,
-      linkedTo: this.edges.flatMap((edge) => edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : []),
+      linkedTo: [...new Set(this.edges.flatMap((edge) => edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : []))],
       ...agent === undefined ? {} : { agent },
       ...node.path === undefined ? {} : { path: node.path },
       ...node.url === undefined ? {} : { url: node.url },
@@ -7173,6 +7342,9 @@ class TestHost {
       await run({ ...context, slot, signal: new AbortController().signal });
       return { ok: true, value: undefined };
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        return { ok: true, value: undefined };
+      }
       const message = errorText(e);
       this.notifications.push({ text: title, detail: message, tone: "error" });
       this.logs.push(`${entry.id.slice(this.id.length + 1)}: ${message}`);
@@ -7255,8 +7427,6 @@ class TestHost {
 }
 
 // apps/server/src/extensions/test-client.ts
-var NEW_NODE = { width: 420, height: 300 };
-var NOTE2 = { width: 320, height: 200 };
 var ARRANGE_GAP = 40;
 function assertLazy(surface, what) {
   const problem = lazyComponentProblem(surface, what);
@@ -7284,11 +7454,14 @@ async function serverCall(host, method, args) {
     return result;
   }
   return host.settle(`server ${method}`, args, async () => {
-    const handler = server?.[method];
-    if (typeof handler !== "function") {
-      throw new Refused("not-found", `No method ${method}`);
+    try {
+      return wire2(await callHandler(server ?? {}, method, wire2(args))) ?? null;
+    } catch (e) {
+      if (e instanceof MissingHandler) {
+        throw new Refused("not-found", e.message);
+      }
+      throw e instanceof TypeError ? new Error(e.message) : e;
     }
-    return wire2(await handler(...wire2(args))) ?? null;
   });
 }
 function serverClient(host) {
@@ -7339,6 +7512,10 @@ function machineCalls(host, area, names) {
 }
 function nodeText(host, id, kind) {
   host.projectId();
+  const chat = kind === "chat" ? host.chats.get(id) : undefined;
+  if (chat !== undefined) {
+    return chat.text;
+  }
   const node = host.nodes.get(id);
   if (node?.kind !== kind) {
     throw new Refused("not-found", `No ${kind} ${id} in this project`);
@@ -7419,8 +7596,7 @@ function clientApi(host) {
       host.record("view", view);
       return {
         open: (params) => {
-          const id = `view-${host.views.length + 1}`;
-          host.views.push({ id, kind: "extension", name: view.title });
+          const { id } = host.addView("unknown", view.title);
           host.opened.push({ kind: "view", id: view.id, params });
           host.openView(id);
         }
@@ -7436,12 +7612,12 @@ function clientApi(host) {
         ...node.icon === undefined ? {} : { icon: node.icon },
         slots: node.addFrom ?? { canvasMenu: true, commandPalette: true },
         run: (context) => {
-          host.addNode("extension", context.at ?? { x: 0, y: 0 }, node.size ?? NEW_NODE, {
+          host.addNode("extension", context.at ?? { x: 0, y: 0 }, {
             title: node.title,
             extension: { id: host.id, type: node.id },
             data: wire2(node.initialData ?? {}),
             ...node.dataVersion === undefined ? {} : { dataVersion: node.dataVersion }
-          });
+          }, node.size ?? NEW_NODE);
         }
       });
     },
@@ -7560,7 +7736,11 @@ function clientApi(host) {
       return [
         Object.hasOwn(values, key) ? values[key] : initial,
         (next) => {
-          values[key] = wire2(next);
+          if (next === undefined) {
+            delete values[key];
+          } else {
+            values[key] = wire2(next);
+          }
           host.changed();
         }
       ];
@@ -7589,22 +7769,25 @@ function clientApi(host) {
     useTheme: () => ({ side: host.theme }),
     useChat(chatId) {
       useHost(host);
-      const node = host.nodes.get(chatId);
-      if (node?.kind !== "chat") {
+      const chat = host.chats.get(chatId);
+      if (chat === undefined) {
         return null;
       }
-      const agent = host.info(chatId).agent;
+      const agent = host.nodes.has(chatId) ? host.info(chatId).agent : undefined;
       return {
         id: chatId,
-        provider: agent?.provider ?? "claude",
-        status: agent?.status ?? "idle",
+        provider: agent?.provider ?? chat.provider,
+        status: agent?.status ?? chat.status,
         model: null,
         cwd: agent?.cwd ?? host.project?.folder ?? ""
       };
     },
     useNode: (id) => {
+      const module = react();
+      const nodeId = module.useContext(nodeContextOf(module));
       useHost(host);
-      return host.info(id);
+      const canvas = (nodeId === null ? undefined : host.nodes.get(nodeId)?.viewId) ?? host.activeViewId ?? "";
+      return host.nodes.get(id)?.viewId === canvas ? host.info(id) : host.unknownNode(id, canvas);
     },
     useNodes: (filter) => {
       useHost(host);
@@ -7674,10 +7857,11 @@ function clientApi(host) {
         await host.scripted("files.write", [path, text]);
       }),
       list: (folder) => inFolder("files.list", folder, [folder]),
-      watch: (path, _listener) => host.attempt("files.watch", [path], () => {
-        host.inProject(path);
+      watch: (path, listener) => host.attempt("files.watch", [path], () => {
+        const watch = { path: host.inProject(path), listener };
+        host.watches.add(watch);
         return () => {
-          return;
+          host.watches.delete(watch);
         };
       }),
       open(path) {
@@ -7715,8 +7899,8 @@ function clientApi(host) {
     ]),
     terminals: {
       read: (terminal) => host.settle("terminals.read", [terminal], () => host.scripted("terminals.read", [terminal], () => nodeText(host, terminal.id, "terminal"))),
-      open: (options = {}) => host.attempt("terminals.open", [options], () => host.addNode("terminal", host.beside(options.near), NEW_NODE, {
-        title: options.title ?? "Terminal",
+      open: (options = {}) => host.attempt("terminals.open", [options], () => host.addNode("terminal", host.beside(options.near), {
+        ...options.title === undefined ? {} : { title: options.title },
         ...options.cwd === undefined ? {} : { path: options.cwd }
       }))
     },
@@ -7740,10 +7924,9 @@ function clientApi(host) {
       },
       createCanvas: (name) => host.attempt("views.createCanvas", [name], () => {
         host.projectId();
-        const id = `view-${host.views.length + 1}`;
-        host.views.push({ id, kind: "canvas", name });
-        host.changed();
-        return { id };
+        const view = host.addView("canvas", name);
+        host.openView(view.id);
+        return view;
       }),
       rename: (view, name) => host.attempt("views.rename", [view, name], () => {
         const found = host.views.find((each) => each.id === view.id);
@@ -7782,52 +7965,85 @@ function clientApi(host) {
         if (signal?.aborted === true && !refused()) {
           return;
         }
+        const stop = new AbortController;
+        const stopRun = () => stop.abort(signal?.reason);
+        const answer = host.answers["agents.stream"];
         const pieces = await host.settle("agents.stream", [asked], () => {
           host.projectId();
-          return host.scripted("agents.stream", [asked]);
+          if (typeof answer !== "function") {
+            return host.scripted("agents.stream", [asked]);
+          }
+          return answer({ ...wire2(asked), signal: stop.signal });
         });
         if (!pieces.ok) {
           yield pieces;
           return;
         }
-        for (const text of pieces.value) {
-          yield { ok: true, value: { text } };
+        const source = Symbol.asyncIterator in pieces.value ? pieces.value[Symbol.asyncIterator]() : pieces.value[Symbol.iterator]();
+        const stopped = new Promise((resolve) => {
+          stop.signal.addEventListener("abort", () => resolve({ done: true, value: undefined }));
+        });
+        signal?.addEventListener("abort", stopRun);
+        try {
+          while (!stop.signal.aborted) {
+            let next;
+            try {
+              next = await Promise.race([source.next(), stopped]);
+            } catch (e) {
+              yield host.failure("agents.stream", [asked], e);
+              return;
+            }
+            if (next.done === true || stop.signal.aborted) {
+              return;
+            }
+            yield { ok: true, value: { text: String(next.value) } };
+          }
+        } finally {
+          signal?.removeEventListener("abort", stopRun);
+          stop.abort();
+          Promise.resolve(source.return?.()).catch(() => {
+            return;
+          });
         }
       },
       start: (options) => host.settle("agents.start", [options], () => {
         host.projectId();
         return host.scripted("agents.start", [options], () => {
           const title = options.title ?? "Chat";
+          const provider = options.provider ?? "claude";
           if (host.views.find((view) => view.id === host.activeViewId)?.kind !== "canvas") {
-            return host.addView("chat", title);
+            return host.addChatView(title, provider);
           }
-          return host.addNode("chat", host.beside(options.near), NEW_NODE, {
-            title,
-            agent: { provider: options.provider ?? "claude", status: "running" }
-          });
+          const created = host.addNode("chat", host.beside(options.near), { title, agent: { provider, status: "running" } });
+          host.chats.set(created.id, { id: created.id, title, text: "", provider, status: "running" });
+          return created;
         });
       })
     },
     canvas: {
       createNote: (note) => host.attempt("canvas.createNote", [note], () => {
-        const created = host.addNode("note", host.beside(note.near), NOTE2, { title: note.title ?? "", text: note.text, color: note.color ?? null });
+        const created = host.addNode("note", host.beside(note.near), {
+          ...note.title === undefined ? {} : { title: note.title },
+          text: note.text,
+          color: note.color ?? null
+        });
         host.notes.push(created.id);
         return created;
       }),
-      createFile: (path, options = {}) => host.attempt("canvas.createFile", [path, options], () => host.addNode("file", host.beside(options.near), NEW_NODE, { title: path, path })),
-      createBrowser: (url, options = {}) => host.attempt("canvas.createBrowser", [url, options], () => host.addNode("browser", host.beside(options.near), NEW_NODE, { title: url, url })),
+      createFile: (path, options = {}) => host.attempt("canvas.createFile", [path, options], () => host.addNode("file", host.beside(options.near), { path })),
+      createBrowser: (url, options = {}) => host.attempt("canvas.createBrowser", [url, options], () => host.addNode("browser", host.beside(options.near), { url })),
       createNode: (type, options = {}) => {
         const node = host.definitions.find((each) => each.kind === "node" && each.definition.id === type);
         if (node === undefined) {
           throw new TypeError(`${host.name} has no node ${type}`);
         }
         const defined = node.definition;
-        return host.attempt("canvas.createNode", [type, options], () => host.addNode("extension", options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), defined.size ?? NEW_NODE, {
+        return host.attempt("canvas.createNode", [type, options], () => host.addNode("extension", options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), {
           title: options.title ?? defined.title,
           extension: { id: host.id, type },
           data: wire2(options.data ?? defined.initialData ?? {}),
           ...defined.dataVersion === undefined ? {} : { dataVersion: defined.dataVersion }
-        }));
+        }, defined.size ?? NEW_NODE));
       },
       update: (node, patch) => host.attempt("canvas.update", [node, patch], () => {
         const { bounds, title } = host.nodeOnCanvas(node);
@@ -7874,14 +8090,9 @@ function clientApi(host) {
         host.remove(nodes.map((node) => node.id));
       }),
       group: (nodes) => host.attempt("canvas.group", [nodes], () => {
-        host.canvasInFront();
-        const members = nodes.filter((node) => host.nodes.has(node.id));
-        if (members.length === 0) {
+        const group = host.addGroup(nodes.map((node) => node.id));
+        if (group === null) {
           throw new Refused("refused", "These nodes make no group on the canvas in front");
-        }
-        const group = host.addNode("group", host.beside(undefined), NEW_NODE, { title: "Group" });
-        for (const member of members) {
-          host.changeNode(member.id, { groupId: group.id });
         }
         return group;
       }),
@@ -7961,9 +8172,14 @@ function publicHost(host, api) {
       host.changed();
     },
     setStorage(scope, key, value) {
-      host.storage[scope][key] = wire2(value);
+      if (value === undefined) {
+        delete host.storage[scope][key];
+      } else {
+        host.storage[scope][key] = wire2(value);
+      }
       host.changed();
     },
+    changeFile: (path) => host.changeFile(path),
     reconnect() {
       host.serverCache.clear();
       host.changed();
@@ -8050,6 +8266,7 @@ var server = {
 };
 var testing = { createTestHost, createTestServer, refusal };
 afterEach(unmountAll);
+afterAll(removeTestFolders);
 plugin({
   name: "ruimte-extension-fakes",
   setup(build) {
