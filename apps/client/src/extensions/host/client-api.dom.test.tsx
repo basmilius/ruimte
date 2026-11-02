@@ -1,22 +1,25 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { act, createElement, type ComponentType } from 'react';
+import { useChats } from '@adecore/agents-react/state';
 import type { ExtensionManifest, ProjectSummary } from '@ruimte/contracts';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
-import { focusedCanvas } from '@/state/canvas';
+import { nodeInfoOf } from '@/extensions/slots';
+import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { folderWatches } from '@/state/fs-watch';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { idleChatInfo } from '../../../testing/project-fixtures';
 
 const PROJECT: ProjectSummary = {
     projectId: 'project-a',
@@ -461,6 +464,40 @@ describe('the client API', () => {
         await until(() => mounted?.host.textContent === 'count 5');
 
         expect(focusedCanvas().getState().nodes['node-1']?.raw).toMatchObject({ data: { count: 5 }, dataVersion: 2 });
+    });
+
+    test('renames a node of an extension, whose title lives in what the extension stored', () => {
+        const { api } = loaded({ 'canvas.write': 'Renames' });
+        const raw = { kind: 'extension', id: 'node-1', extension: 'acme.probe', type: 'counter', title: 'Counter' };
+
+        const canvas = defaultCanvases.of('view-rename');
+
+        canvas.setState({
+            viewId: 'view-rename',
+            nodes: { 'node-1': { id: 'node-1', kind: 'unknown', title: 'Counter', x: 0, y: 0, w: 280, h: 160, raw } as CanvasNode }
+        });
+
+        try {
+            expect(api.canvas.update({ id: 'node-1' }, { title: 'Tally' })).toEqual({ ok: true, value: undefined });
+            expect(canvas.getState().nodes['node-1']).toMatchObject({ title: 'Tally', raw: { title: 'Tally' } });
+        } finally {
+            defaultCanvases.release('view-rename');
+        }
+    });
+
+    test('names the CLI a chat runs on by its thread when the chat stores none', () => {
+        const chat = { id: 'chat-1', kind: 'chat', title: 'Chat', x: 0, y: 0, w: 400, h: 300 } as CanvasNode;
+
+        focusedCanvas().setState({ nodes: { 'chat-1': chat } });
+        useChats.setState({
+            statusByKey: { [endpointKey(currentEndpointId(), 'chat-1')]: { info: { ...idleChatInfo('chat-1'), provider: 'codex' } } }
+        } as never);
+
+        try {
+            expect(nodeInfoOf('chat-1').agent?.provider).toBe('codex');
+        } finally {
+            useChats.setState({ statusByKey: {} });
+        }
     });
 
     test.each(['project', 'machine'] as const)('a write to %s storage shows in every surface already drawn that reads the key', async (scope) => {

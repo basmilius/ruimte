@@ -1525,7 +1525,10 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         throw new Refused('not-found', `No node ${node.id} on a canvas of this window`);
                     }
 
-                    if (patch.title !== undefined) {
+                    // A node of an extension is kept as `unknown`, which `renameNode` leaves alone; its title lives in `raw`.
+                    if (patch.title !== undefined && current.kind === 'unknown') {
+                        store.updateExtensionNode(node.id, { title: patch.title });
+                    } else if (patch.title !== undefined) {
                         store.renameNode(node.id, patch.title);
                     }
 

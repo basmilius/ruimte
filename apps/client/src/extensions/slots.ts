@@ -8,7 +8,7 @@ import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/stat
 import { useDocument } from '@/state/document';
 import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
+import { nodeProvider, nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
 
 export interface AgentInfo {
     provider: string;
@@ -63,7 +63,8 @@ function agentOf(node: ProjectNode, group: ProjectNode | undefined, sources: Nod
     const needsYou = nodeWaitAsk(node, sessions, chats, endpointId) !== null;
 
     return {
-        provider: node.provider ?? 'claude',
+        // A chat opened on the default stores no CLI; its thread says which one it runs on.
+        provider: nodeProvider(node, chats, endpointId) ?? 'claude',
         account: node.account ?? null,
         status: extensionAgentStatus(status, needsYou),
         cwd: node.cwd ?? group?.worktree?.path ?? null,
