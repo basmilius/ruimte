@@ -1,3 +1,4 @@
+import { desktop } from '@/desktop/bridge';
 import { followDevLinks, syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
 import { IS_STATION } from '@/station';
@@ -35,8 +36,12 @@ export function startExtensions(): () => void {
         return { onOpen: follow, subscriptions: [link.on('extension.changed', follow)] };
     });
 
+    // Another window installed, removed or turned one off in the shell; this one may be on no machine to hear it otherwise.
+    const stopShell = desktop()?.extensions?.onChanged?.(() => void syncExtensions());
+
     return () => {
         stopFollowing?.();
         stopWatching();
+        stopShell?.();
     };
 }

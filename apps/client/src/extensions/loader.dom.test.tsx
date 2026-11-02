@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
+import { startExtensions } from '@/extensions/watch';
 import { until } from '../../testing/dom';
 import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
 
@@ -116,6 +117,39 @@ describe('loading extensions', () => {
         await syncExtensions();
 
         expect(hasCommand('acme.chunked')).toBe(true);
+    });
+
+    test('takes down what another window turned off in the shell, without a machine to say so', async () => {
+        let changed = (): void => undefined;
+
+        installed = [
+            writeExtension(
+                'acme.shared',
+                "globalThis.__ruimteExtension.for('acme.shared').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+            )
+        ];
+        installDesktop({
+            extensions: {
+                list: async () => installed,
+                onChanged: (listener: () => void) => {
+                    changed = listener;
+
+                    return () => undefined;
+                }
+            } as never
+        });
+
+        const stop = startExtensions();
+
+        try {
+            await until(() => hasCommand('acme.shared'));
+            turn('acme.shared', false);
+            changed();
+            await until(() => !hasCommand('acme.shared'));
+        } finally {
+            stop();
+            installDesktop({ extensions: { list: async () => installed } as never });
+        }
     });
 
     test('applies no list that came in after a newer one, so a slow answer does not load what was turned off', async () => {
