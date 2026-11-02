@@ -12,7 +12,9 @@ export function wantsLoading(activation: readonly string[] | undefined): boolean
 
     const nodes = Object.keys(focusedCanvas().getState().nodes).map(nodeInfoOf);
     const { views, activeViewId } = useDocument.getState();
-    const raw = views.find((view) => view.id === activeViewId) as { extension?: string; type?: string } | undefined;
+    // A view of an extension is kept as `unknown`, with what the extension stored under `raw`.
+    const active = views.find((view) => view.id === activeViewId);
+    const raw = active?.kind === 'unknown' ? active.raw : undefined;
     const files = useFiles.getState().tabs.map((tab) => tab.key.toLowerCase());
 
     return activation.some((event) => {

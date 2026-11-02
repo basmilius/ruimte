@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, jest, test } from 'bun:test';
-import { watchActivation } from '@/extensions/activation';
+import { wantsLoading, watchActivation } from '@/extensions/activation';
 import { focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
+import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 
 let stop: (() => void) | null = null;
@@ -16,6 +17,18 @@ afterEach(() => {
     jest.useRealTimers();
     focusedCanvas().setState({ nodes: {} });
     useFiles.setState({ tabs: [] });
+    useDocument.setState({ views: [], activeViewId: null });
+});
+
+describe('what loads an extension', () => {
+    test("loads for a view of the extension's type, read from the view as the project file keeps it", () => {
+        const raw = { kind: 'extension', id: 'view-1', name: 'Board', extension: 'acme.board', type: 'board' };
+
+        useDocument.setState({ views: [{ kind: 'unknown', id: 'view-1', name: 'Board', raw }], activeViewId: 'view-1' });
+
+        expect(wantsLoading(['view:board'])).toBe(true);
+        expect(wantsLoading(['view:list'])).toBe(false);
+    });
 });
 
 describe('watching what loads an extension', () => {
