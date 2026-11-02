@@ -36,7 +36,7 @@ export function DocsHeader() {
                                 key={section.href}
                                 href={section.href}
                                 aria-current={current ? 'page' : undefined}
-                                className={`rounded-full px-3 py-1.5 transition-colors ${current ? 'bg-surface-active text-text' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
+                                className={`rounded-md px-3 py-1.5 transition-colors ${current ? 'bg-surface-active text-text' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
                             >
                                 {section.title}
                             </Link>
@@ -49,7 +49,7 @@ export function DocsHeader() {
                     </a>
                     <a
                         href={SITE_URL}
-                        className="inline-flex items-center rounded-full border border-border-strong px-3.5 py-1.5 font-medium text-text transition-colors hover:bg-surface-hover"
+                        className="inline-flex items-center rounded-md border border-border-strong px-3.5 py-1.5 font-medium text-text transition-colors hover:bg-surface-hover"
                     >
                         ruimte.app
                     </a>
