@@ -33,7 +33,12 @@ Under Settings, Extensions, your extension shows in the Development group at the
 ```ts
 import { definePanel } from '@ruimte/extension/client';
 
-definePanel({ id: 'main', title: 'Standup', icon: 'calendar', component: () => import('./Main') });
+definePanel({
+    id: 'main',
+    title: 'Standup',
+    icon: 'calendar',
+    component: () => import('./Main')
+});
 ```
 
 ```tsx

@@ -38,7 +38,9 @@ Each slot gets a function that receives what is true at that place and answers:
 
 ```ts
 slots: {
-    nodeHeader: ({ node }) => node.kind === 'terminal' && { badge: 'new' }
+    nodeHeader: ({ node }) => node.kind === 'terminal' && {
+        badge: 'new'
+    }
 }
 ```
 
@@ -56,7 +58,14 @@ defineMenu({
     title: 'Standup',
     icon: 'calendar',
     slots: { nodeMenu: true, canvasMenu: true },
-    items: (context) => [summarize, 'separator', { title: 'Settings', run: () => host.openSettings() }]
+    items: (context) => [
+        summarize,
+        'separator',
+        {
+            title: 'Settings',
+            run: () => host.openSettings()
+        }
+    ]
 });
 ```
 
@@ -88,8 +97,16 @@ Every slot also gets the base context: the `project`, the `view` in front, the `
 definePaletteSource({
     id: 'issues',
     title: 'Issues',
-    search: async (query) =>
-        (await findIssues(query)).map((issue) => ({ id: issue.id, title: issue.title, detail: issue.state, run: () => host.openUrl(issue.url) }))
+    search: async (query) => {
+        const issues = await findIssues(query);
+
+        return issues.map((issue) => ({
+            id: issue.id,
+            title: issue.title,
+            detail: issue.state,
+            run: () => host.openUrl(issue.url)
+        }));
+    }
 });
 ```
 

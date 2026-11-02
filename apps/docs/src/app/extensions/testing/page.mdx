@@ -18,10 +18,18 @@ import { definitions, slotAnswer } from '@ruimte/extension/testing';
 import '../client/index';
 
 test('summarize shows for two nodes or more', () => {
-    const summarize = definitions().find((each) => each.kind === 'action')?.definition as { slots: object };
+    const action = definitions().find((each) => each.kind === 'action');
+    const summarize = action?.definition as { slots: object };
 
-    expect(slotAnswer(summarize, 'selectionBar', { nodes: [nodeA] })).toBe(false);
-    expect(slotAnswer(summarize, 'selectionBar', { nodes: [nodeA, nodeB] })).toBe(true);
+    const one = slotAnswer(summarize, 'selectionBar', {
+        nodes: [nodeA]
+    });
+    const two = slotAnswer(summarize, 'selectionBar', {
+        nodes: [nodeA, nodeB]
+    });
+
+    expect(one).toBe(false);
+    expect(two).toBe(true);
 });
 ```
 
@@ -36,7 +44,11 @@ import { renderSurface } from '@ruimte/extension/testing';
 import Main from '../client/Main';
 
 test('the panel greets', () => {
-    const html = renderSurface(Main, { server: { greeting: async () => 'Good morning' } });
+    const html = renderSurface(Main, {
+        server: {
+            greeting: async () => 'Good morning'
+        }
+    });
 
     expect(html).toContain('Good morning');
 });

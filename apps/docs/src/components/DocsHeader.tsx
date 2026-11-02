@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Pill } from '@adecore/ui';
 import { SECTIONS } from '@/lib/navigation';
 
 const SITE_URL = 'https://ruimte.app';
@@ -23,8 +24,8 @@ export function DocsHeader() {
                         alt=""
                         draggable={false}
                     />
-                    <span className="text-[18px] font-semibold tracking-[-0.01em] text-text">Ruimte</span>
-                    <span className="rounded-full border border-accent/40 bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent-text">Docs</span>
+                    <span className="font-brand text-lg font-semibold text-text">Ruimte</span>
+                    <Pill>Docs</Pill>
                 </Link>
                 <nav aria-label="Sections" className="hidden items-center gap-1 text-sm sm:flex">
                     {SECTIONS.map((section) => {

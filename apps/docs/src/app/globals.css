@@ -1,46 +1,23 @@
 @import "tailwindcss";
+@import "@adecore/ui/theme.css";
 
-/* The dark tokens of `apps/site`, so the documentation reads as the same product. */
+/* The components of @adecore/ui carry their classes in its own folder, outside the one Tailwind scans. */
+@source "../../node_modules/@adecore/ui/src";
+
+/* What the docs add to ADE CORE's tokens: links that read on the dark ground, and Geist for the wordmark alone. */
 :root {
-    color-scheme: dark;
-    --bg: #0d0d10;
-    --surface: #131316;
-    --surface-raised: #18181c;
-    --surface-sunken: #08080a;
-    --surface-hover: #202024;
-    --surface-active: #28282e;
-    --border: rgb(255 255 255 / 0.07);
-    --border-strong: rgb(255 255 255 / 0.13);
-    --text: #ececf1;
-    --text-muted: #9a9aa6;
-    --text-faint: #5f5f6b;
-    --accent: #155dfc;
-    --accent-text: #79b8ff;
+    --link: #79b8ff;
 }
 
 @theme inline {
-    --color-*: initial;
-    --color-bg: var(--bg);
-    --color-surface: var(--surface);
-    --color-surface-raised: var(--surface-raised);
-    --color-surface-sunken: var(--surface-sunken);
-    --color-surface-hover: var(--surface-hover);
-    --color-surface-active: var(--surface-active);
-    --color-border: var(--border);
-    --color-border-strong: var(--border-strong);
-    --color-text: var(--text);
-    --color-text-muted: var(--text-muted);
-    --color-text-faint: var(--text-faint);
-    --color-accent: var(--accent);
-    --color-accent-text: var(--accent-text);
-    --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    --color-link: var(--link);
+    --font-brand: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
     --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
 html {
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     scroll-padding-top: 5.5rem;
 }
@@ -105,7 +82,7 @@ html {
 }
 
 .prose a:not(.anchor) {
-    color: var(--accent-text);
+    color: var(--link);
 }
 
 .prose a:not(.anchor):hover {

@@ -21,7 +21,11 @@ const project = useProject();
 With `canvas.write`:
 
 ```ts
-const note = canvas.createNote({ title: 'Summary', text, near: selection });
+const note = canvas.createNote({
+    title: 'Summary',
+    text,
+    near: selection
+});
 canvas.link(selection[0], note);
 canvas.arrange(selection, 'grid');
 ```
@@ -47,7 +51,10 @@ With `database.read`, an extension runs one `SELECT` or `WITH` statement on a re
 
 ```ts
 const [connection] = await database.connections();
-const { columns, rows } = await database.query(connection.id, 'select count(*) from orders');
+const { columns, rows } = await database.query(
+    connection.id,
+    'select count(*) from orders'
+);
 ```
 
 ## What the machine runs
@@ -77,11 +84,18 @@ With `context.read`, `context.read({ nodes })` answers what an agent would read 
 `host` shows things to the person and asks them things:
 
 ```ts
-host.notify('Saved', { action: { title: 'Open', run: () => files.open('notes.md') } });
+host.notify('Saved', {
+    action: {
+        title: 'Open',
+        run: () => files.open('notes.md')
+    }
+});
 
-if (await host.confirm({ title: 'Remove 3 notes?', body: 'This cannot be undone.', danger: true })) {
-    // ...
-}
+const confirmed = await host.confirm({
+    title: 'Remove 3 notes?',
+    body: 'This cannot be undone.',
+    danger: true
+});
 ```
 
 `host.prompt`, `host.pick`, `host.pickFolder`, `host.openUrl`, `host.copy` and `host.openSettings` do what their names say.

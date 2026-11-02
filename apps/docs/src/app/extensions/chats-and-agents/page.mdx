@@ -9,7 +9,10 @@ export const metadata = { title: 'Chats and agents' };
 `defineMarkdownBlock` draws a fenced block of a language of yours. When an agent writes a `chart` fence, your component draws it instead of the code:
 
 ```ts
-defineMarkdownBlock({ language: 'chart', component: () => import('./Chart') });
+defineMarkdownBlock({
+    language: 'chart',
+    component: () => import('./Chart')
+});
 ```
 
 The component gets the fence's `source`. On a client without the extension the block stays code.
@@ -17,7 +20,11 @@ The component gets the fence's `source`. On a client without the extension the b
 `defineToolResult` draws the calls of tools, by their exact name, instead of the thread's own view of them:
 
 ```ts
-defineToolResult({ id: 'reads', tools: ['Read'], component: () => import('./ReadCall') });
+defineToolResult({
+    id: 'reads',
+    tools: ['Read'],
+    component: () => import('./ReadCall')
+});
 ```
 
 The `threadHeader`, `emptyThread`, `composer`, `messageActions` and `toolActions` slots add buttons and widgets around the thread.
@@ -40,7 +47,14 @@ defineSlashCommand({
 defineReference({
     id: 'tickets',
     title: 'Tickets',
-    list: async () => (await openTickets()).map((ticket) => ({ id: ticket.id, name: ticket.title })),
+    list: async () => {
+        const tickets = await openTickets();
+
+        return tickets.map((ticket) => ({
+            id: ticket.id,
+            name: ticket.title
+        }));
+    },
     read: async (item) => (await ticket(item.id)).body
 });
 ```
@@ -50,7 +64,10 @@ defineReference({
 `agents.run` runs one hidden prompt on one of the person's own CLIs and answers the text whole. `agents.stream` gives the same answer in pieces as the CLI writes them. Both need `agents.run`.
 
 ```ts
-const { text } = await agents.run({ prompt: 'Summarize these notes', context: [note.id] });
+const { text } = await agents.run({
+    prompt: 'Summarize these notes',
+    context: [note.id]
+});
 
 for await (const piece of agents.stream({ prompt, signal })) {
     append(piece.text);
@@ -75,7 +92,11 @@ import { defineAgentTool } from '@ruimte/extension/server';
 defineAgentTool({
     id: 'tickets',
     description: 'Lists the open tickets of this project',
-    run: async () => (await openTickets()).map((ticket) => `${ticket.id}\t${ticket.title}`).join('\n')
+    run: async () => {
+        const tickets = await openTickets();
+
+        return tickets.map((ticket) => `${ticket.id}\t${ticket.title}`).join('\n');
+    }
 });
 ```
 

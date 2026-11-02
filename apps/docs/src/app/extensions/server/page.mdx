@@ -42,7 +42,11 @@ In the client, `useServer<Api>()` makes those methods typed.
 With the permission `clock`, `schedule` runs work every so often, at least every 10 seconds:
 
 ```ts
-schedule({ id: 'sync', every: '5m', run: () => sync() });
+schedule({
+    id: 'sync',
+    every: '5m',
+    run: () => sync()
+});
 ```
 
 ## What agents read of your nodes
@@ -50,7 +54,9 @@ schedule({ id: 'sync', every: '5m', run: () => sync() });
 `defineNodeContext` tells agents what a node of yours holds, also when no client is open:
 
 ```ts
-defineNodeContext<{ items: string[] }>('checklist', (node) => [{ text: node.data.items.join('\n') }]);
+defineNodeContext<{ items: string[] }>('checklist', (node) => [
+    { text: node.data.items.join('\n') }
+]);
 ```
 
 ## Agents and chats
@@ -66,7 +72,12 @@ defineNodeContext<{ items: string[] }>('checklist', (node) => [{ text: node.data
 With `languages.servers`, an extension adds a language server for a language Ruimte does not know:
 
 ```ts
-await defineLanguageServer({ name: 'Zig', command: 'zls', languages: ['zig'], patterns: ['*.zig'] });
+await defineLanguageServer({
+    name: 'Zig',
+    command: 'zls',
+    languages: ['zig'],
+    patterns: ['*.zig']
+});
 ```
 
 It shows in Settings like one the person added and starts without asking: installing the extension was the approval. Calling it again with the same name changes it, and removing the extension removes it, unless the person edited it. It rejects when `command` is not on the machine.

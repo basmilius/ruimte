@@ -9,13 +9,25 @@ Every surface takes its component as a lazy import, `() => import('./Panel')`, s
 Instead of `component`, a surface can name a `frame`: an HTML file in your pack that runs in a sandboxed frame with an origin of its own and no storage. It reaches the network only on the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS. Use it for code you would rather keep apart from the app's page. The frame works in the desktop app only.
 
 ```ts
-definePanel({ id: 'frame', title: 'Report', icon: 'frame', frame: 'views/report.html' });
+definePanel({
+    id: 'frame',
+    title: 'Report',
+    icon: 'frame',
+    frame: 'views/report.html'
+});
 ```
 
 The frame calls your server part by posting a message to its parent, and gets the answer the same way:
 
 ```ts
-parent.postMessage({ ruimte: 1, method: 'summary', args: [] }, '*');
+parent.postMessage(
+    {
+        ruimte: 1,
+        method: 'summary',
+        args: []
+    },
+    '*'
+);
 
 window.addEventListener('message', (event) => {
     if (event.data?.ruimte === 1) {
@@ -47,7 +59,12 @@ The component gets `params`, the value the panel was last opened with.
 A view fills the window and shows up in the sidebar beside canvases, chats and files. `open(params)` opens it.
 
 ```ts
-const dashboard = defineView({ id: 'dashboard', title: 'Dashboard', icon: 'gauge', component: () => import('./Dashboard') });
+const dashboard = defineView({
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: 'gauge',
+    component: () => import('./Dashboard')
+});
 ```
 
 ## Nodes
@@ -69,7 +86,11 @@ defineNode<{ count: number }>({
 export default function Counter() {
     const [data, setData] = useNodeData<{ count: number }>();
 
-    return <button onClick={() => setData({ count: data.count + 1 })}>{data.count}</button>;
+    return (
+        <button onClick={() => setData({ count: data.count + 1 })}>
+            {data.count}
+        </button>
+    );
 }
 ```
 
@@ -80,7 +101,11 @@ An agent reads a node of yours along a line once the server part says what it ho
 ## Sidebar cards
 
 ```ts
-defineSidebarCard({ id: 'today', title: 'Today', component: () => import('./Today') });
+defineSidebarCard({
+    id: 'today',
+    title: 'Today',
+    component: () => import('./Today')
+});
 ```
 
 ## Overlays
@@ -105,9 +130,24 @@ For a plain question, `host.confirm`, `host.prompt` and `host.pick` ask through 
 ## File and diff viewers
 
 ```ts
-defineFileViewer({ id: 'csv', title: 'Table', extensions: ['csv'], component: () => import('./CsvTable') });
-defineDiffViewer({ id: 'csv', title: 'Table diff', extensions: ['csv'], component: () => import('./CsvDiff') });
-defineFileIcon({ extensions: ['csv'], path: 'assets/csv.svg' });
+defineFileViewer({
+    id: 'csv',
+    title: 'Table',
+    extensions: ['csv'],
+    component: () => import('./CsvTable')
+});
+
+defineDiffViewer({
+    id: 'csv',
+    title: 'Table diff',
+    extensions: ['csv'],
+    component: () => import('./CsvDiff')
+});
+
+defineFileIcon({
+    extensions: ['csv'],
+    path: 'assets/csv.svg'
+});
 ```
 
 A viewer opens every file with those extensions, with Ruimte's own view one click away. The file viewer gets `file` with its `text`; the diff viewer gets `file` and the `diff`.
@@ -119,7 +159,16 @@ Settings, Extensions shows a page for every extension. Give it fields and Ruimte
 ```ts
 defineExtensionSettings({
     fields: [
-        { key: 'tone', type: 'select', label: 'Tone', default: 'short', options: [{ value: 'short', label: 'Short' }, { value: 'long', label: 'Long' }] }
+        {
+            key: 'tone',
+            type: 'select',
+            label: 'Tone',
+            default: 'short',
+            options: [
+                { value: 'short', label: 'Short' },
+                { value: 'long', label: 'Long' }
+            ]
+        }
     ]
 });
 
