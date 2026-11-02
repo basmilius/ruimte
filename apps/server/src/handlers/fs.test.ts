@@ -144,6 +144,52 @@ describe('a read within a folder', () => {
     });
 });
 
+describe('a write within a folder', () => {
+    const outside = { ok: false, error: { code: 'outside-project' } };
+    let project: string;
+
+    beforeEach(async () => {
+        // The sibling is inside the client's boundary, as another open project or a worktree is, but not inside the project.
+        project = join(root, 'project');
+        await mkdir(join(root, 'sibling'), { recursive: true });
+        await mkdir(project);
+        await writeFile(join(root, 'sibling', 'notes.md'), 'sibling');
+        await symlink(join(root, 'sibling'), join(project, 'sibling'));
+    });
+
+    test('follows no symlink out of the folder, into the rest of the boundary', async () => {
+        const read = await request('fs.read', { path: join(project, 'sibling', 'notes.md') });
+        const mtime = read.ok ? (read.result as { mtime: number }).mtime : 0;
+
+        expect(await request('fs.write', { path: join(project, 'sibling', 'notes.md'), text: 'changed', expectedMtime: mtime, within: project })).toMatchObject(
+            outside
+        );
+        expect(await request('fs.create', { path: join(project, 'sibling', 'new.md'), kind: 'file', text: 'new', within: project })).toMatchObject(outside);
+        expect(await readFile(join(root, 'sibling', 'notes.md'), 'utf8')).toBe('sibling');
+        expect(await stat(join(root, 'sibling', 'new.md')).catch(() => null)).toBeNull();
+    });
+
+    test('refuses a folder outside the boundary itself', async () => {
+        const elsewhere = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-fs-elsewhere-')));
+
+        try {
+            expect(await request('fs.create', { path: join(elsewhere, 'new.md'), kind: 'file', within: elsewhere })).toMatchObject(outside);
+        } finally {
+            await rm(elsewhere, { recursive: true, force: true });
+        }
+    });
+
+    test('writes and creates what is really inside it', async () => {
+        expect(await request('fs.create', { path: join(project, 'notes.md'), kind: 'file', text: 'a', within: project })).toMatchObject({ ok: true });
+
+        const read = await request('fs.read', { path: join(project, 'notes.md') });
+        const mtime = read.ok ? (read.result as { mtime: number }).mtime : 0;
+
+        expect(await request('fs.write', { path: join(project, 'notes.md'), text: 'b', expectedMtime: mtime, within: project })).toMatchObject({ ok: true });
+        expect(await readFile(join(project, 'notes.md'), 'utf8')).toBe('b');
+    });
+});
+
 describe('files that go past the language servers', () => {
     function withLanguage(): { calls: string[]; edits: boolean[] } {
         const calls: string[] = [];

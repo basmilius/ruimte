@@ -1034,12 +1034,13 @@ export function clientApiFor(extension: LoadedExtension) {
             write: (path: string, text: string) =>
                 settle('files.write', async () => {
                     const full = inProject(path);
-                    const existing = await activeTransport.request('fs.read', { path: full }).catch(() => null);
+                    const within = projectFolder();
+                    const existing = await activeTransport.request('fs.read', { path: full, within }).catch(() => null);
 
                     if (existing?.kind !== 'text') {
-                        await activeTransport.request('fs.create', { path: full, kind: 'file', text });
+                        await activeTransport.request('fs.create', { path: full, kind: 'file', text, within });
                     } else {
-                        await activeTransport.request('fs.write', { path: full, text, expectedMtime: existing.mtime });
+                        await activeTransport.request('fs.write', { path: full, text, expectedMtime: existing.mtime, within });
                     }
                 }),
             list: (folder: string) =>

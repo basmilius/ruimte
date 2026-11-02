@@ -16,7 +16,7 @@ import { listSearchableFiles, searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
 import { TextUploads } from '../fs/text-uploads.ts';
 import { refuseOutside } from '../fs/within.ts';
-import { writeTextFile, type WriteBoundary } from '../fs/write.ts';
+import { narrowTo, writeTextFile, type WriteBoundary } from '../fs/write.ts';
 
 /* How the host writes and makes the files a server's edit touches, inside the boundary of the client that asked. */
 function editsOf(boundary: WriteBoundary): Omit<FileMove, 'move'> {
@@ -86,7 +86,8 @@ export function registerFsHandlers(
 
     dispatcher.register('fs.write', async (payload, client) => {
         await machineHome.refuse(payload.path);
-        const written = await writeTextFile(payload.path, payload.text, payload.expectedMtime, await boundaryOf(client.id));
+        const boundary = await narrowTo(await boundaryOf(client.id), payload.within);
+        const written = await writeTextFile(payload.path, payload.text, payload.expectedMtime, boundary);
 
         // The reply never waits on the servers.
         void language?.saved(payload.path, payload.text).catch(() => undefined);
@@ -128,7 +129,7 @@ export function registerFsHandlers(
 
     dispatcher.register('fs.create', async (payload, client) => {
         await machineHome.refuse(payload.path);
-        const boundary = await boundaryOf(client.id);
+        const boundary = await narrowTo(await boundaryOf(client.id), payload.within);
         const plan = await planCreate(payload, boundary);
         if (payload.projectId === undefined || language === undefined) {
             return plan.run();

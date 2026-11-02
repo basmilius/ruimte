@@ -43,6 +43,24 @@ export async function realRoots(boundary: WriteBoundary): Promise<string[]> {
     return [...folders, ...worktrees].filter((root): root is string => root !== null);
 }
 
+/*
+ * The boundary of one folder alone, which has to lie inside `boundary` itself. Without `within` it is
+ * `boundary`; with it, no other open project and no worktree counts, as an extension's own project promises.
+ */
+export async function narrowTo(boundary: WriteBoundary, within: string | undefined): Promise<WriteBoundary> {
+    if (within === undefined) {
+        return boundary;
+    }
+
+    const real = await realOrNull(within);
+
+    if (real === null || !(await realRoots(boundary)).some((root) => isInside(root, real))) {
+        throw new BoundaryError('outside-project', `${within} is outside the projects open here and their worktrees`);
+    }
+
+    return { folders: [real], worktreesOf: async () => [], worktreesRoot: boundary.worktreesRoot };
+}
+
 /* The real path of an entry; a link keeps its own name, so it is handled as the link and never followed. */
 export async function realEntryPath(path: string): Promise<string | null> {
     const entry = await lstat(path).catch(() => null);

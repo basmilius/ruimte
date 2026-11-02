@@ -220,7 +220,9 @@ export const FsWritePayloadSchema = z.object({
     path: z.string().min(1),
     text: z.string(),
     // The `mtime` the read answered with; overwriting a file that moved is a new write at its fresh mtime.
-    expectedMtime: z.number()
+    expectedMtime: z.number(),
+    // A folder the real target must stay in, past every symlink, instead of the client's whole boundary with its worktrees (`outside-project`).
+    within: z.string().min(1).optional()
 });
 export type FsWritePayload = z.infer<typeof FsWritePayloadSchema>;
 
@@ -271,7 +273,9 @@ export const FsCreatePayloadSchema = z.object({
     edits: z.boolean().optional(),
     overwrite: z.boolean().optional(),
     // The permission bits a file is made with, exactly and before its text is in it, also over a file that was there.
-    mode: z.number().int().min(0).max(0o777).optional()
+    mode: z.number().int().min(0).max(0o777).optional(),
+    // As for `fs.write`.
+    within: z.string().min(1).optional()
 });
 export type FsCreatePayload = z.infer<typeof FsCreatePayloadSchema>;
 
