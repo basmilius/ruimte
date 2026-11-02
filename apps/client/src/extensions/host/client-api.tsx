@@ -314,6 +314,16 @@ function readInProject(path: string): { path: string; within: string } {
     return { path: inProject(path), within: projectFolder() };
 }
 
+/*
+ * `within` is an optional field a machine from before it leaves out without a word, so a symlink would lead there out
+ * of the project. It came in the release that brought the extension API, which is what says a machine holds to it.
+ */
+function assertBoundedFiles(link: Transport): void {
+    if (!machineAnswers(link.connection, 'extension.call')) {
+        throw new Refused('unavailable', 'This machine cannot keep a file request inside the project folder');
+    }
+}
+
 /* The canvas a new node goes on. A view that is no canvas reads a blank store without a view, which saves nothing. */
 function canvasInFront(): CanvasState {
     const canvas = focusedCanvas().getState();
@@ -1168,7 +1178,12 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         files: {
             readText: (path: string) =>
                 settle('files.readText', async () => {
-                    const answer = await callScope().link.request('fs.read', readInProject(path));
+                    const { link } = callScope();
+                    const read = readInProject(path);
+
+                    assertBoundedFiles(link);
+
+                    const answer = await link.request('fs.read', read);
 
                     if (answer.kind !== 'text') {
                         throw new Refused('refused', `${path} is not a text file`);
@@ -1181,6 +1196,9 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     const scope = callScope();
                     const full = inProject(path);
                     const within = projectFolder();
+
+                    assertBoundedFiles(scope.link);
+
                     const existing = await scope.link.request('fs.read', { path: full, within }).catch(() => null);
 
                     // The path and mtime are of the first machine's file; written on another, they could overwrite a file there.
@@ -1194,7 +1212,12 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }),
             list: (folder: string) =>
                 settle('files.list', async () => {
-                    const { entries } = await callScope().link.request('fs.list', readInProject(folder));
+                    const { link } = callScope();
+                    const list = readInProject(folder);
+
+                    assertBoundedFiles(link);
+
+                    const { entries } = await link.request('fs.list', list);
 
                     return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
                 }),

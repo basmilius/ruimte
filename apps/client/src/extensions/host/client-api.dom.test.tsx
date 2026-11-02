@@ -164,6 +164,20 @@ describe('the client API', () => {
         expect(heard).toBe(1);
     });
 
+    test('reads, lists and writes no file on a machine that would leave out the project folder it is held to', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'files.read': 'Reads notes', 'files.write': 'Writes notes' });
+
+        disconnect = connectFakeMachine(machine);
+        machine.answersOnly(['fs.read', 'fs.list', 'fs.write', 'fs.create']);
+        useProject.setState({ current: PROJECT });
+
+        expect(await api.files.readText('link.md')).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(await api.files.list('.')).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(await api.files.write('notes.md', 'Hi')).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+        expect(machine.sent.filter((request) => request.type.startsWith('fs.'))).toEqual([]);
+    });
+
     test('asks a machine from before the extension API nothing of it, and answers unavailable', async () => {
         const machine = new FakeMachine();
         const { api } = loaded({ 'launches.read': 'Lists launches', 'agents.run': 'Answers', 'context.read': 'Reads' });
