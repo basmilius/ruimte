@@ -16,13 +16,19 @@ function fromProject(name) {
     throw new Error(`This test needs ${name}, which this project does not have: bun add -d ${name.startsWith("@") ? name.split("/").slice(0, 2).join("/") : name.split("/")[0]}`);
   }
 }
-function formatModule() {
+function besideExtension(name) {
   const extension = join(process.cwd(), "node_modules", "@ruimte", "extension", "package.json");
   try {
-    return createRequire(realpathSync(extension))("@adecore/ui/format");
+    return createRequire(realpathSync(extension))(name);
   } catch {
-    return fromProject("@adecore/ui/format");
+    return fromProject(name);
   }
+}
+function formatModule() {
+  return besideExtension("@adecore/ui/format");
+}
+function uiModule() {
+  return besideExtension("@adecore/ui");
 }
 function react() {
   return fromProject("react");
@@ -6827,7 +6833,8 @@ class TestHost {
         ...node.agent === undefined ? {} : { agent: node.agent },
         ...node.path === undefined ? {} : { path: node.path },
         ...node.url === undefined ? {} : { url: node.url },
-        ...node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire2(node.extension.data ?? {}) }
+        ...node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire2(node.extension.data ?? {}) },
+        ...node.extension?.dataVersion === undefined ? {} : { dataVersion: node.extension.dataVersion }
       });
       for (const to of node.linkedTo ?? []) {
         this.addEdge(node.id, to);
@@ -6986,6 +6993,27 @@ class TestHost {
     this.createdIds.push(id);
     this.changed();
     this.deliver("node.added", { node: this.info(id) });
+    return { id };
+  }
+  migrateNode(definition, nodeId) {
+    const { dataVersion, migrate } = definition;
+    const node = this.nodes.get(nodeId);
+    if (node === undefined || typeof dataVersion !== "number" || typeof migrate !== "function") {
+      return;
+    }
+    const from = node.dataVersion ?? 1;
+    if (from < dataVersion) {
+      this.changeNode(nodeId, { data: wire2(migrate(node.data, from)), dataVersion });
+    }
+  }
+  addView(kind, name) {
+    let count = this.views.length + 1;
+    while (this.views.some((view) => view.id === `view-${count}`)) {
+      count += 1;
+    }
+    const id = `view-${count}`;
+    this.views.push({ id, kind, name });
+    this.changed();
     return { id };
   }
   changeNode(id, change) {
@@ -7309,11 +7337,11 @@ function machineCalls(host, area, names) {
     ];
   }));
 }
-function nodeText(host, id) {
+function nodeText(host, id, kind) {
   host.projectId();
   const node = host.nodes.get(id);
-  if (node === undefined) {
-    throw new Refused("not-found", `No node ${id} in this project`);
+  if (node?.kind !== kind) {
+    throw new Refused("not-found", `No ${kind} ${id} in this project`);
   }
   return node.text;
 }
@@ -7411,7 +7439,8 @@ function clientApi(host) {
           host.addNode("extension", context.at ?? { x: 0, y: 0 }, node.size ?? NEW_NODE, {
             title: node.title,
             extension: { id: host.id, type: node.id },
-            data: wire2(node.initialData ?? {})
+            data: wire2(node.initialData ?? {}),
+            ...node.dataVersion === undefined ? {} : { dataVersion: node.dataVersion }
           });
         }
       });
@@ -7685,7 +7714,7 @@ function clientApi(host) {
       "device.launch"
     ]),
     terminals: {
-      read: (terminal) => host.settle("terminals.read", [terminal], () => host.scripted("terminals.read", [terminal], () => nodeText(host, terminal.id))),
+      read: (terminal) => host.settle("terminals.read", [terminal], () => host.scripted("terminals.read", [terminal], () => nodeText(host, terminal.id, "terminal"))),
       open: (options = {}) => host.attempt("terminals.open", [options], () => host.addNode("terminal", host.beside(options.near), NEW_NODE, {
         title: options.title ?? "Terminal",
         ...options.cwd === undefined ? {} : { path: options.cwd }
@@ -7700,7 +7729,7 @@ function clientApi(host) {
     },
     chats: {
       list: () => host.settle("chats.list", [], () => host.scripted("chats.list", [])),
-      read: (chatId) => host.settle("chats.read", [chatId], () => host.scripted("chats.read", [chatId], () => nodeText(host, chatId))),
+      read: (chatId) => host.settle("chats.read", [chatId], () => host.scripted("chats.read", [chatId], () => nodeText(host, chatId, "chat"))),
       send: (chatId, text) => host.settle("chats.send", [chatId, text], async () => {
         await host.scripted("chats.send", [chatId, text]);
       })
@@ -7740,7 +7769,19 @@ function clientApi(host) {
         return host.scripted("agents.run", [options]);
       }),
       async* stream(options) {
-        const { signal: _signal, ...asked } = options;
+        const { signal, ...asked } = options;
+        const refused = () => {
+          try {
+            host.permitCall("agents.stream");
+            host.projectId();
+            return false;
+          } catch {
+            return true;
+          }
+        };
+        if (signal?.aborted === true && !refused()) {
+          return;
+        }
         const pieces = await host.settle("agents.stream", [asked], () => {
           host.projectId();
           return host.scripted("agents.stream", [asked]);
@@ -7755,10 +7796,16 @@ function clientApi(host) {
       },
       start: (options) => host.settle("agents.start", [options], () => {
         host.projectId();
-        return host.scripted("agents.start", [options], () => host.addNode("chat", host.beside(options.near), NEW_NODE, {
-          title: options.title ?? "Chat",
-          agent: { provider: options.provider ?? "claude", status: "running" }
-        }));
+        return host.scripted("agents.start", [options], () => {
+          const title = options.title ?? "Chat";
+          if (host.views.find((view) => view.id === host.activeViewId)?.kind !== "canvas") {
+            return host.addView("chat", title);
+          }
+          return host.addNode("chat", host.beside(options.near), NEW_NODE, {
+            title,
+            agent: { provider: options.provider ?? "claude", status: "running" }
+          });
+        });
       })
     },
     canvas: {
@@ -7774,10 +7821,12 @@ function clientApi(host) {
         if (node === undefined) {
           throw new TypeError(`${host.name} has no node ${type}`);
         }
-        return host.attempt("canvas.createNode", [type, options], () => host.addNode("extension", options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), NEW_NODE, {
-          title: options.title ?? node.definition.title,
+        const defined = node.definition;
+        return host.attempt("canvas.createNode", [type, options], () => host.addNode("extension", options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), defined.size ?? NEW_NODE, {
+          title: options.title ?? defined.title,
           extension: { id: host.id, type },
-          data: wire2(options.data ?? {})
+          data: wire2(options.data ?? defined.initialData ?? {}),
+          ...defined.dataVersion === undefined ? {} : { dataVersion: defined.dataVersion }
         }));
       },
       update: (node, patch) => host.attempt("canvas.update", [node, patch], () => {
@@ -7911,8 +7960,19 @@ function publicHost(host, api) {
       host.settings[key] = value;
       host.changed();
     },
+    setStorage(scope, key, value) {
+      host.storage[scope][key] = wire2(value);
+      host.changed();
+    },
+    reconnect() {
+      host.serverCache.clear();
+      host.changed();
+    },
     render: (drawable, options) => {
       current2 = { host, api };
+      if (options?.node !== undefined) {
+        host.migrateNode(drawable, options.node);
+      }
       return render(drawable, options);
     },
     canvas: {
@@ -7996,5 +8056,6 @@ plugin({
     build.module("@ruimte/extension/client", () => ({ exports: client, loader: "object" }));
     build.module("@ruimte/extension/server", () => ({ exports: server, loader: "object" }));
     build.module("@ruimte/extension/testing", () => ({ exports: testing, loader: "object" }));
+    build.module("@ruimte/extension/ui", () => ({ exports: uiModule(), loader: "object" }));
   }
 });
