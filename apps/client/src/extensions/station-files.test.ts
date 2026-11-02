@@ -35,20 +35,44 @@ class FakeCache {
     }
 }
 
-/* The locks every window of one page shares, held until the promise of their holder settles. */
+/* The locks every window of one page shares, held until the promise of their holder settles; an exclusive one waits its turn. */
 class FakeLocks {
     readonly held = new Map<string, number>();
+    readonly #turns = new Map<string, Promise<unknown>>();
+    // Told how many exclusive requests the page made so far.
+    onExclusive: (made: number) => void = () => undefined;
+    #exclusive = 0;
 
-    async request(name: string, _options: object, hold: () => Promise<void>): Promise<void> {
+    async request<T>(name: string, options: { mode?: 'shared' | 'exclusive' }, hold: () => Promise<T>): Promise<T> {
+        if (options.mode === 'shared') {
+            return this.#hold(name, hold);
+        }
+
+        this.onExclusive(++this.#exclusive);
+
+        const turn = (this.#turns.get(name) ?? Promise.resolve()).then(() => this.#hold(name, hold));
+
+        this.#turns.set(
+            name,
+            turn.catch(() => undefined)
+        );
+
+        return turn;
+    }
+
+    async #hold<T>(name: string, hold: () => Promise<T>): Promise<T> {
         this.held.set(name, (this.held.get(name) ?? 0) + 1);
-        await hold();
 
-        const left = (this.held.get(name) ?? 1) - 1;
+        try {
+            return await hold();
+        } finally {
+            const left = (this.held.get(name) ?? 1) - 1;
 
-        if (left === 0) {
-            this.held.delete(name);
-        } else {
-            this.held.set(name, left);
+            if (left === 0) {
+                this.held.delete(name);
+            } else {
+                this.held.set(name, left);
+            }
         }
     }
 
@@ -239,6 +263,61 @@ describe('the extension files of Station', () => {
 
         expect(installed.map((entry) => entry.manifest.id)).toEqual(['acme.notes']);
         expect(failures).toEqual({ 'acme.dev': 'The build is not done' });
+    });
+
+    test('keeps the version of an extension whose files did not come only from the same machine, and turns it off when the new list does', async () => {
+        const { installed: previous } = await machineExtensions(machine([extension('acme.notes', 'aaa', 'one')]), 'machine-a');
+        const unreachable = { ...extension('acme.notes', 'bbb', 'two', { enabled: false }), fails: true };
+        const elsewhere = await machineExtensions(machine([unreachable]), 'machine-b', { previous });
+        const here = await machineExtensions(machine([unreachable]), 'machine-a', { previous });
+
+        expect(elsewhere).toEqual({ installed: [], failures: { 'acme.notes': 'The build is not done' } });
+        expect(here.installed).toEqual([{ ...(previous[0] as (typeof previous)[number]), enabled: false }]);
+        expect(cache.paths()).toContain('/__extensions/machine-a/acme.notes/aaa/client/index.js');
+    });
+
+    test('lets a sync a newer one overtook touch neither the locks nor the files of the newer one', async () => {
+        const locks = new FakeLocks();
+        let answerOlder = (): void => undefined;
+        const olderAnswered = new Promise<void>((resolve) => {
+            answerOlder = resolve;
+        });
+        let newerBegan = false;
+        const olderList = machine([extension('acme.overtaken', 'aaa', 'one')]);
+        const slowMachine = {
+            ...olderList,
+            request: async <T extends RequestType>(type: T, payload: RequestMap[T]['payload']) => {
+                if (type === 'extension.list') {
+                    await olderAnswered;
+                }
+
+                return olderList.request(type, payload);
+            }
+        };
+        const newerWaits = new Promise<void>((resolve) => {
+            locks.onExclusive = (made) => {
+                if (made === 2) {
+                    resolve();
+                }
+            };
+        });
+
+        Object.defineProperty(navigator, 'locks', { configurable: true, value: locks });
+
+        const older = machineExtensions(slowMachine, 'machine-a', { current: () => !newerBegan });
+
+        newerBegan = true;
+
+        const newer = machineExtensions(machine([extension('acme.overtaken', 'ccc', 'three')]), 'machine-a');
+
+        // The older list comes in last: after the newer sync is done, or once it waits for the older to finish its fill.
+        await Promise.race([newer, newerWaits]);
+        answerOlder();
+        await Promise.all([older, newer]);
+
+        expect(cache.paths()).toContain('/__extensions/machine-a/acme.overtaken/ccc/client/index.js');
+        expect(cache.paths().filter((path) => path.includes('/aaa/'))).toEqual([]);
+        expect([...locks.held.keys()]).toEqual(['ruimte-extension-files:/__extensions/machine-a/acme.overtaken/ccc/']);
     });
 
     test('serves a WebAssembly file as WebAssembly', async () => {

@@ -46,9 +46,9 @@ function failed(id: string, e: unknown): void {
 
 /*
  * What this computer has. On Station that is what the machine in front has, over that machine's own link for the whole
- * read; an extension whose files did not come keeps the version it had, with why on its row.
+ * read; an extension whose files did not come keeps the version it had of that machine, with why on its row.
  */
-async function installedNow(): Promise<{ installed: readonly InstalledClientExtension[]; failures: Record<string, string> } | null> {
+async function installedNow(current: () => boolean): Promise<{ installed: readonly InstalledClientExtension[]; failures: Record<string, string> } | null> {
     if (!IS_STATION) {
         const installed = (await desktop()?.extensions?.list()) ?? null;
 
@@ -56,25 +56,15 @@ async function installedNow(): Promise<{ installed: readonly InstalledClientExte
     }
 
     const endpointId = useEndpoints.getState().activeId;
-    const answer = await machineExtensions(machineTransport(endpointId), endpointId).catch(() => null);
+    const previous = useInstalledExtensions.getState().installed;
 
-    if (answer === null) {
-        return null;
-    }
-
-    const kept = useInstalledExtensions
-        .getState()
-        .installed.filter(
-            (entry) => Object.hasOwn(answer.failures, entry.manifest.id) && !answer.installed.some((each) => each.manifest.id === entry.manifest.id)
-        );
-
-    return { installed: [...answer.installed, ...kept], failures: answer.failures };
+    return machineExtensions(machineTransport(endpointId), endpointId, { previous, current }).catch(() => null);
 }
 
 /* Loads what is on and new, and takes down what went or moved to another version. One extension failing leaves the others alone. */
 export async function syncExtensions(): Promise<void> {
     const sync = ++syncs;
-    const answer = await installedNow();
+    const answer = await installedNow(() => sync === syncs);
 
     if (answer === null || sync !== syncs) {
         return;

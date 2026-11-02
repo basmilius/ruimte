@@ -10,6 +10,7 @@ const WORKER = '/extension-files-sw.js';
 // Put after every other file of a version, so a version without it was never filled to the end.
 const COMPLETE = '.complete';
 const LOCK_PREFIX = 'ruimte-extension-files:';
+const FILL_LOCK_PREFIX = 'ruimte-extension-files-fill:';
 // A list that moved on while its files were fetched is read again, a few times at most.
 const LIST_ATTEMPTS = 3;
 
@@ -163,7 +164,7 @@ async function dropOtherVersions(root: string, bases: readonly string[]): Promis
     }
 }
 
-async function read(link: Link, root: string): Promise<MachineExtensions> {
+async function read(link: Link, root: string): Promise<{ answer: MachineExtensions; listed: ExtensionInfo[] }> {
     for (let attempt = 1; ; attempt++) {
         const { extensions } = await extensionRequest(link, 'extension.list', {});
         const settled = await Promise.allSettled(extensions.map((info) => cached(link, info, root)));
@@ -192,12 +193,64 @@ async function read(link: Link, root: string): Promise<MachineExtensions> {
             }
         });
 
-        return { installed, failures };
+        return { answer: { installed, failures }, listed: extensions };
     }
 }
 
+// By machine root, the last fill of this window, for a page without locks; it never rejects.
+const fills = new Map<string, Promise<unknown>>();
+
+/*
+ * One fill of a machine's files at a time across the page's windows, so one window never drops what another just put
+ * and has not held yet.
+ */
+async function exclusively<T>(root: string, work: () => Promise<T>): Promise<T> {
+    const locks = pageLocks();
+
+    if (locks !== null) {
+        return locks.request(`${FILL_LOCK_PREFIX}${root}`, { mode: 'exclusive' }, work);
+    }
+
+    const run = (fills.get(root) ?? Promise.resolve()).then(work);
+
+    fills.set(
+        root,
+        run.catch(() => undefined)
+    );
+
+    return run;
+}
+
+/*
+ * An extension whose files did not come keeps the version this window runs, if it came from this same machine, and
+ * is on or off as the new list says.
+ */
+function keptFrom(
+    previous: readonly InstalledClientExtension[],
+    root: string,
+    failures: MachineExtensions['failures'],
+    listed: readonly ExtensionInfo[]
+): InstalledClientExtension[] {
+    return previous.flatMap((entry) => {
+        const info = listed.find((each) => each.manifest.id === entry.manifest.id);
+
+        if (info === undefined || !Object.hasOwn(failures, entry.manifest.id) || !entry.base.startsWith(root)) {
+            return [];
+        }
+
+        return [{ ...entry, enabled: info.enabled }];
+    });
+}
+
+export interface MachineSync {
+    // What this window runs now, of which an extension whose files did not come keeps its version.
+    previous?: readonly InstalledClientExtension[];
+    // False once a newer sync began, which then holds and drops instead.
+    current?: () => boolean;
+}
+
 /* What the machine in front has, for a client with no shell to keep files. */
-export async function machineExtensions(link: Link, endpointId: string): Promise<MachineExtensions> {
+export async function machineExtensions(link: Link, endpointId: string, { previous = [], current = () => true }: MachineSync = {}): Promise<MachineExtensions> {
     if (!machineAnswers(link.connection, 'extension.clientFiles')) {
         return { installed: [], failures: {} };
     }
@@ -205,12 +258,21 @@ export async function machineExtensions(link: Link, endpointId: string): Promise
     await workerReady();
 
     const root = `${EXTENSION_FILES_PATH}${encodeURIComponent(endpointId)}/`;
-    const answer = await read(link, root);
-    const bases = answer.installed.map((entry) => entry.base);
 
-    holdVersions(bases);
-    // An extension whose files did not come keeps what it had, which this window may still run.
-    await dropOtherVersions(root, [...bases, ...Object.keys(answer.failures).map((id) => `${root}${id}/`)]);
+    return exclusively(root, async () => {
+        const { answer, listed } = await read(link, root);
+        const installed = [...answer.installed, ...keptFrom(previous, root, answer.failures, listed)];
 
-    return answer;
+        if (!current()) {
+            return { installed, failures: answer.failures };
+        }
+
+        const bases = installed.map((entry) => entry.base);
+
+        holdVersions(bases);
+        // A version another window runs of an extension whose files did not come stays as well.
+        await dropOtherVersions(root, [...bases, ...Object.keys(answer.failures).map((id) => `${root}${id}/`)]);
+
+        return { installed, failures: answer.failures };
+    });
 }
