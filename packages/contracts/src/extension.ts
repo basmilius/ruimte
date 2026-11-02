@@ -63,33 +63,74 @@ export type ExtensionManifest = z.infer<typeof ExtensionManifestSchema>;
 export const EXTENSION_THEME_THUMBNAIL = /^[^/.][^:]*\.(png|jpe?g|webp|svg)$/i;
 export const MAX_THEME_THUMBNAIL_BYTES = 256 * 1024;
 
+// A URL parser drops tabs and line breaks anywhere and reads `https:host` as `https://host`.
+function remote(target: string): boolean {
+    return /^\s*(\/\/|[a-z][a-z0-9+.-]*:\/\/|(https?|wss?|ftp):)/i.test(target.replaceAll(/[\t\n\r]/g, ''));
+}
+
+function outsideThePack(target: string): boolean {
+    const url = target.replaceAll(/[\t\n\r]/g, '');
+
+    return /^\s*([a-z][a-z0-9+.-]*:|\/|\.\.)/i.test(url) || url.includes('/../');
+}
+
+/*
+ * A theme's stylesheet and token values read only from its own pack, so a theme never phones home. A
+ * quoted string may name no other host, since `image-set()` and `src()` load one, and an escape is
+ * refused whole, since `\75rl(` is `url(` to the browser.
+ */
+export function extensionThemeCssProblem(css: string): string | null {
+    if (css.includes('\\')) {
+        return 'escapes are not allowed';
+    }
+
+    const text = css.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
+
+    if (/@import/i.test(text)) {
+        return '@import is not allowed';
+    }
+
+    for (const match of text.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi)) {
+        const target = match[2] ?? '';
+
+        if (outsideThePack(target)) {
+            return `url(${target}) points outside the pack`;
+        }
+    }
+
+    for (const match of text.matchAll(/"([^"]*)"|'([^']*)'/g)) {
+        const target = match[1] ?? match[2] ?? '';
+
+        if (remote(target)) {
+            return `${target} points to another host`;
+        }
+    }
+
+    return null;
+}
+
 /* A theme is data, read before any extension code runs. Tokens override the base of one side. */
 export const ExtensionThemeSchema = z.object({
     name: z.string().min(1).max(80),
     side: z.enum(['light', 'dark']),
     // What the picker shows beside System, Light and Dark: a picture in the pack, 16:10.
     thumbnail: z.string().regex(EXTENSION_THEME_THUMBNAIL),
-    tokens: z.record(z.string().regex(/^--[a-z0-9-]+$/), z.string().regex(/^[^;{}]+$/)),
+    tokens: z.record(
+        z.string().regex(/^--[a-z0-9-]+$/),
+        z
+            .string()
+            .regex(/^[^;{}]+$/)
+            .superRefine((value, context) => {
+                const problem = extensionThemeCssProblem(value);
+
+                if (problem !== null) {
+                    context.addIssue({ code: 'custom', message: problem });
+                }
+            })
+    ),
     css: z.string().min(1).optional()
 });
 export type ExtensionTheme = z.infer<typeof ExtensionThemeSchema>;
-
-/* A theme's stylesheet reads only from its own pack, so a theme never phones home. */
-export function extensionThemeCssProblem(css: string): string | null {
-    if (/@import/i.test(css)) {
-        return '@import is not allowed';
-    }
-
-    for (const match of css.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi)) {
-        const target = match[2] ?? '';
-
-        if (/^([a-z][a-z0-9+.-]*:|\/|\.\.)/i.test(target) || target.includes('/../')) {
-            return `url(${target}) points outside the pack`;
-        }
-    }
-
-    return null;
-}
 
 /* A `.rex` is this object as gzipped JSON, with every file's bytes in base64. */
 export const ExtensionPackSchema = z.object({

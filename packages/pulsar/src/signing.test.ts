@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import {
+    EXTENSION_STORE_PURPOSE,
     SIGNING_PURPOSES,
     accessRequestMessage,
     accessStatementMessage,
     accessStatementV2Message,
     brokerHelloMessage,
     deviceLinkStartMessage,
+    extensionStoreMessage,
     lanDoorMessage,
     machineRegistrationMessage,
     mapsTicketBytes,
@@ -123,6 +125,11 @@ describe('signed bytes', () => {
         expect(pushMessage(activity)).toBe(
             `pulsar-push-v1\n${JSON.stringify(['machine-1', key, otherKey, 0, 120_000, key, 'liveactivity', 'Mac', 'needs-you', 1, 2, null, 1, 'n1', 'chat', 'Review', 'running', 3])}`
         );
+    });
+
+    test("the extension store's index signs the very bytes it signed before it moved here", () => {
+        expect(extensionStoreMessage('{"extensions":[]}')).toBe('ruimte-extension-store-v1\n{"extensions":[]}');
+        expect(Object.values(SIGNING_PURPOSES)).not.toContain(EXTENSION_STORE_PURPOSE);
     });
 
     test('a statement binds its expiry', () => {

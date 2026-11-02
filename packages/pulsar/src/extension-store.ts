@@ -27,8 +27,3 @@ export const ExtensionStoreEntrySchema = z.object({
 export type ExtensionStoreEntry = z.infer<typeof ExtensionStoreEntrySchema>;
 
 export const ExtensionStoreIndexSchema = z.object({ extensions: z.array(ExtensionStoreEntrySchema) });
-
-/* What the store's key signs, with a prefix of its own, so this signature never verifies as another. */
-export function extensionStoreMessage(index: string): string {
-    return `ruimte-extension-store-v1\n${index}`;
-}
