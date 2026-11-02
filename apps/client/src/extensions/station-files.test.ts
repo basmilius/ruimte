@@ -265,6 +265,20 @@ describe('the extension files of Station', () => {
         expect(failures).toEqual({ 'acme.dev': 'The build is not done' });
     });
 
+    test('lists one the machine cannot read as off with why, asks none of its files, and runs no version of before', async () => {
+        const { installed: previous } = await machineExtensions(machine([extension('acme.notes', 'aaa', 'one')]), 'machine-a');
+        const damaged = {
+            ...extension('acme.notes', 'damaged', '', { enabled: false, hasClient: false, status: 'disabled', error: 'manifest.json is no JSON' }),
+            fails: true
+        };
+        const { installed, failures } = await machineExtensions(machine([damaged]), 'machine-a', { previous });
+
+        expect(installed).toEqual([
+            { manifest: damaged.info.manifest, base: '/__extensions/machine-a/acme.notes/damaged/', enabled: false, hasClient: false, dev: false }
+        ]);
+        expect(failures).toEqual({ 'acme.notes': 'manifest.json is no JSON' });
+    });
+
     test('keeps the version of an extension whose files did not come only from the same machine, and turns it off when the new list does', async () => {
         const { installed: previous } = await machineExtensions(machine([extension('acme.notes', 'aaa', 'one')]), 'machine-a');
         const unreachable = { ...extension('acme.notes', 'bbb', 'two', { enabled: false }), fails: true };

@@ -27,6 +27,16 @@ export interface StoredExtension {
     revision?: number;
 }
 
+/* An extension whose `current.json` or manifest could not be read, which runs nothing until it is fixed or removed. */
+export interface DamagedExtension {
+    id: string;
+    error: string;
+}
+
+export function isDamaged(entry: StoredExtension | DamagedExtension): entry is DamagedExtension {
+    return 'error' in entry;
+}
+
 const CurrentSchema = z.object({ hash: z.string().min(1), enabled: z.boolean() });
 const LinksSchema = z.record(z.string(), z.string());
 const IDS_FILE = 'installed.json';
@@ -141,9 +151,15 @@ export class ExtensionStore {
         await writeJson(join(this.root, LINKS_OFF_FILE), off ? [...ids, id] : ids);
     }
 
-    async list(): Promise<StoredExtension[]> {
+    /*
+     * One extension whose files cannot be read is listed with why, so the others still are and a person can remove it.
+     * An index that cannot be read still refuses the whole list.
+     */
+    async list(): Promise<(StoredExtension | DamagedExtension)[]> {
         const [ids, links] = await Promise.all([this.installedIds(), this.links()]);
-        const stored = await Promise.all([...new Set([...ids, ...Object.keys(links)])].map((id) => this.get(id)));
+        const stored = await Promise.all(
+            [...new Set([...ids, ...Object.keys(links)])].map((id) => this.get(id).catch((e: unknown): DamagedExtension => ({ id, error: errorText(e) })))
+        );
 
         return stored.filter((entry) => entry !== null);
     }

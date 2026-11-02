@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isNotFound } from '@adecore/agents';
-import type { ExtensionActionName, ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
+import { EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { z } from 'zod';
 import { VerbRefusal } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
@@ -26,7 +26,7 @@ import {
 } from './policy.ts';
 import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
 import { ownValue, parseKeyValues } from './server-api.ts';
-import { manifestOfPack, type ExtensionStore, type StoredExtension } from './store.ts';
+import { isDamaged, manifestOfPack, type DamagedExtension, type ExtensionStore, type StoredExtension } from './store.ts';
 
 // Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
 const CALL_TIMEOUT_MS = 50_000;
@@ -63,6 +63,22 @@ function protocolMessage(line: string): ProtocolMessage | null {
     const parsed = ProtocolMessageSchema.safeParse(value);
 
     return parsed.success ? parsed.data : null;
+}
+
+/*
+ * A row for one whose files cannot be read: off, with nothing to load, and named only by its id. A client from before
+ * `error` shows it as turned off, which it is, and can still remove it.
+ */
+function damagedInfo({ id, error }: DamagedExtension): ExtensionInfo {
+    return {
+        manifest: { id, name: id, version: '0.0.0', api: EXTENSION_API_VERSION },
+        hash: 'damaged',
+        enabled: false,
+        hasServer: false,
+        hasClient: false,
+        status: 'disabled',
+        error
+    };
 }
 
 function stopped(): ExtensionRefusal {
@@ -189,12 +205,13 @@ export class ExtensionHost {
     }
 
     async startAutostarted(): Promise<void> {
-        const extensions = await this.options.store.list().catch((e: unknown) => {
+        const listed = await this.options.store.list().catch((e: unknown): DamagedExtension[] => {
             console.warn(`No extension started with the machine: ${errorText(e)}`);
 
             return [];
         });
-
+        // One whose files cannot be read runs nothing, its language servers neither.
+        const extensions = listed.flatMap((entry) => (isDamaged(entry) ? [] : [entry]));
         const active = new Set(extensions.filter((extension) => extension.enabled).map((extension) => extension.manifest.id));
 
         // Turned off or removed while its language servers could not be taken off the list, or by a Ruimte that kept them.
@@ -228,7 +245,11 @@ export class ExtensionHost {
     async list(): Promise<ExtensionInfo[]> {
         const extensions = await this.options.store.list();
 
-        return extensions.map((extension) => ({
+        return extensions.map((extension) => (isDamaged(extension) ? damagedInfo(extension) : this.infoOf(extension)));
+    }
+
+    private infoOf(extension: StoredExtension): ExtensionInfo {
+        return {
             manifest: extension.manifest,
             hash: extension.hash,
             enabled: extension.enabled,
@@ -236,7 +257,7 @@ export class ExtensionHost {
             hasClient: existsSync(join(extension.folder, 'client', 'index.js')),
             status: this.statusOf(extension),
             ...(extension.devFolder === undefined ? {} : { devFolder: extension.devFolder, revision: extension.revision ?? 0 })
-        }));
+        };
     }
 
     async call(id: string, method: string, args: unknown[]): Promise<unknown> {

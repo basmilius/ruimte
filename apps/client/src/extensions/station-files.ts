@@ -167,7 +167,7 @@ async function dropOtherVersions(root: string, bases: readonly string[]): Promis
 async function read(link: Link, root: string): Promise<{ answer: MachineExtensions; listed: ExtensionInfo[] }> {
     for (let attempt = 1; ; attempt++) {
         const { extensions } = await extensionRequest(link, 'extension.list', {});
-        const settled = await Promise.allSettled(extensions.map((info) => cached(link, info, root)));
+        const settled = await Promise.allSettled(extensions.map((info) => (info.error === undefined ? cached(link, info, root) : null)));
 
         if (attempt < LIST_ATTEMPTS && settled.some((outcome) => outcome.status === 'rejected' && outcome.reason instanceof MovedOn)) {
             continue;
@@ -179,7 +179,11 @@ async function read(link: Link, root: string): Promise<{ answer: MachineExtensio
         extensions.forEach((info, i) => {
             const outcome = settled[i];
 
-            if (outcome?.status === 'fulfilled') {
+            // Listed so a person sees why and can remove it, with nothing to load.
+            if (info.error !== undefined) {
+                installed.push({ manifest: info.manifest, base: `${root}${info.manifest.id}/${info.hash}/`, enabled: false, hasClient: false, dev: false });
+                failures[info.manifest.id] = info.error;
+            } else if (outcome?.status === 'fulfilled' && outcome.value !== null) {
                 installed.push({
                     manifest: info.manifest,
                     base: outcome.value.base,
@@ -188,7 +192,7 @@ async function read(link: Link, root: string): Promise<{ answer: MachineExtensio
                     hasIcon: outcome.value.hasIcon,
                     dev: info.devFolder !== undefined
                 });
-            } else if (outcome !== undefined) {
+            } else if (outcome?.status === 'rejected') {
                 failures[info.manifest.id] = outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
             }
         });
@@ -234,7 +238,8 @@ function keptFrom(
     return previous.flatMap((entry) => {
         const info = listed.find((each) => each.manifest.id === entry.manifest.id);
 
-        if (info === undefined || !Object.hasOwn(failures, entry.manifest.id) || !entry.base.startsWith(root)) {
+        // One the machine cannot read itself has its own row, and runs no version of before.
+        if (info === undefined || info.error !== undefined || !Object.hasOwn(failures, entry.manifest.id) || !entry.base.startsWith(root)) {
             return [];
         }
 

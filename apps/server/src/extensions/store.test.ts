@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { EXTENSION_API_VERSION } from '@ruimte/contracts';
-import { ExtensionStore } from './store.ts';
+import { ExtensionHost } from './extension-host.ts';
+import { ExtensionStore, isDamaged } from './store.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'ruimte-extension-store-'));
 const IDS = Array.from({ length: 8 }, (_, index) => `acme.probe${index}`);
@@ -22,7 +23,7 @@ function packOf(id: string, version?: string): string {
 }
 
 async function idsIn(store: ExtensionStore): Promise<string[]> {
-    return (await store.list()).map((extension) => extension.manifest.id).sort();
+    return (await store.list()).map((extension) => (isDamaged(extension) ? extension.id : extension.manifest.id)).sort();
 }
 
 describe('ExtensionStore', () => {
@@ -85,6 +86,27 @@ describe('ExtensionStore', () => {
         await expect(store.setEnabled(id, false)).rejects.toMatchObject({ code: 'store-damaged' });
         await expect(store.get(id)).rejects.toMatchObject({ code: 'store-damaged' });
         expect(readFileSync(current, 'utf8')).toBe('{ "hash": ');
+    });
+
+    test('lists the others beside one it cannot read, which a person sees with why, can remove, and which never runs', async () => {
+        const home = join(root, 'damaged-list');
+        const store = new ExtensionStore(home);
+        const host = new ExtensionHost({ store });
+
+        await store.install(packOf('acme.kept'));
+        await store.install(packOf('acme.broken'));
+        writeFileSync(join(home, 'extensions', 'acme.broken', 'versions', (await store.get('acme.broken'))?.hash ?? '', 'manifest.json'), '{ "id": ');
+
+        expect(await idsIn(store)).toEqual(['acme.broken', 'acme.kept']);
+        expect(await host.list()).toMatchObject([
+            { manifest: { id: 'acme.kept' }, enabled: true },
+            { manifest: { id: 'acme.broken', name: 'acme.broken' }, enabled: false, status: 'disabled', error: expect.stringContaining('manifest.json') }
+        ]);
+        await expect(host.call('acme.broken', 'ping', [])).rejects.toMatchObject({ code: 'store-damaged' });
+
+        await host.remove('acme.broken');
+
+        expect(await idsIn(store)).toEqual(['acme.kept']);
     });
 
     test('unlinks a dev link only for the run that set it last', async () => {

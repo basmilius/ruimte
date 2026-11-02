@@ -128,7 +128,9 @@ export const ExtensionInfoSchema = z.object({
     status: ExtensionStatusSchema,
     // Linked from a folder by `ruimte extension dev`, which is where a client on this machine reads it from.
     devFolder: z.string().optional(),
-    revision: z.number().int().nonnegative().optional()
+    revision: z.number().int().nonnegative().optional(),
+    // Why its files could not be read. It does not run, and its manifest only names it by its id, so a person can remove it.
+    error: z.string().optional()
 });
 export type ExtensionInfo = z.infer<typeof ExtensionInfoSchema>;
 
