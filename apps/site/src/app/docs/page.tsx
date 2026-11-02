@@ -23,8 +23,8 @@ export default function DocsHome() {
         <main className="mx-auto max-w-[1040px] px-5 py-14 sm:px-8">
             <h1 className="text-4xl font-semibold tracking-tight text-text">Ruimte documentation</h1>
             <p className="mt-4 max-w-2xl text-lg text-text-muted">
-                Ruimte runs your terminals, coding agents, browsers and devices side by side on a canvas. Sessions run on your machine, so they keep going when
-                you close the window, and you see at once which agent waits for you.
+                Your terminals, coding agents, browsers and devices, side by side on a canvas. Sessions run on your machine and keep going when you close the
+                window.
             </p>
 
             <div className="mt-10">
@@ -60,11 +60,7 @@ export default function DocsHome() {
             <Heading>For developers</Heading>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Card title="Extensions" href="/docs/extensions" text="Add panels, nodes, commands, themes and agent tools to Ruimte." />
-                <Card
-                    title="Getting started with extensions"
-                    href="/docs/extensions/getting-started"
-                    text="Build an extension and load it into a running Ruimte."
-                />
+                <Card title="Build an extension" href="/docs/extensions/getting-started" text="Write one and load it into a running Ruimte." />
             </div>
         </main>
     );

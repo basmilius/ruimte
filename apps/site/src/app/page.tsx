@@ -54,7 +54,7 @@ export default function Home() {
                                     <span className="font-bold text-text">AI Engineering.</span>
                                 </h1>
                                 <p className="mt-6 max-w-[43ch] text-[17px] leading-relaxed text-text-muted sm:text-[19px]">
-                                    Your agents, terminals and browsers. One workspace. Connect their context, follow the work, and pick up where you left off.
+                                    Your agents, terminals and browsers in one workspace. Connect their context and pick up where you left off.
                                 </p>
                                 <div className="mt-8 flex flex-wrap items-start gap-x-6 gap-y-4">
                                     <DownloadButton />
@@ -73,51 +73,48 @@ export default function Home() {
                     <div className="mb-12 max-w-[620px]">
                         <p className="mb-4 text-[14px] font-medium text-text-muted">Context, connected</p>
                         <h2 className="font-display text-[34px] leading-[1.1] font-medium tracking-[-0.035em] sm:text-[46px]">
-                            Less repeating yourself.
+                            Say it once.
                             <br />
-                            More building together.
+                            Build together.
                         </h2>
                         <p className="mt-5 text-[17px] leading-relaxed text-text-muted">
-                            Put the brief next to the work. Give an agent the context it needs, then follow its progress without digging through a conversation.
+                            Put the brief next to the work, and follow an agent without digging through its chat.
                         </p>
                     </div>
                     <div className="grid gap-6 lg:grid-cols-2">
                         <PreviewCard title="Draw a line. Share the context." picture={<ContextVignette />}>
-                            Link a note, terminal or another chat to an agent. It can read the sources you connected when it needs them.
+                            Link a note, terminal or chat to an agent, and it reads them when it needs to.
                         </PreviewCard>
                         <PreviewCard title="A plan you can follow." picture={<PlanVignette />}>
-                            Open the agent's plan beside the chat. See the current step, check the results and leave notes along the way.
+                            Open the agent's plan beside the chat. See the current step and leave notes on it.
                         </PreviewCard>
                     </div>
                 </section>
 
                 <div className="mx-auto max-w-[1240px] space-y-24 border-t border-border px-5 py-24 sm:space-y-32 sm:px-8 sm:py-32">
                     <Feature title="Give the task to a team" eyebrow="Agent teams" picture={<TeamVignette />}>
-                        Ask an agent to investigate a slow checkout. It can send request tracing and query analysis to other agents, then read their results and
-                        bring you one answer.
+                        Ask an agent why checkout is slow. It hands request tracing and query analysis to other agents and brings you one answer.
                     </Feature>
                     <Feature title="Keep the decisions that matter" eyebrow="Questions and answers" picture={<QuestionVignette />} flip>
-                        Your agent can build saved carts, but how long should they last? Answer its question right on the canvas, or write your own answer. It
-                        continues with your choice.
+                        How long should saved carts last? Answer the agent's question on the canvas, or write your own, and it carries on.
                     </Feature>
                     <Feature title="Close the window, keep the work" eyebrow="Persistent sessions" picture={<SessionsVignette />}>
-                        Terminals and agents run on your machine, not in the window. Quit Ruimte halfway through a test run, open it tomorrow, and the terminal
-                        is where you left it, scrollback included.
+                        Terminals and agents run on your machine, not in the window. Quit halfway through a test run, and tomorrow the terminal is where you
+                        left it, scrollback included.
                     </Feature>
                     <Feature title="Every machine, and your phone" eyebrow="Connected machines" picture={<MachinesVignette />} flip>
-                        Sign in to Ruimte on another computer and its projects open as if they were local. Answer an agent from your iPhone, or open any of your
-                        machines at{' '}
+                        Sign in on another computer and its projects open as if they were local. Answer an agent from your iPhone, or open any machine at{' '}
                         <a href={STATION_URL} className="text-text underline decoration-border-strong underline-offset-4 hover:decoration-text">
                             station.ruimte.app
                         </a>
                         .
                     </Feature>
                     <Feature title="Sketch it, and the agent reads it" eyebrow="Visual context" picture={<DrawingVignette />}>
-                        Draw boxes and arrows next to your code. Link the drawing to a chat and the agent reads what you drew, in the order you meant it.
+                        Draw boxes and arrows next to your code. Link the drawing to a chat and the agent reads it in the order you meant.
                     </Feature>
                     <Feature title="Let an agent use an app" eyebrow="Computer use" picture={<ComputerUseVignette />} flip>
-                        Give an agent a Mac app to work in and it gets a cursor of its own, so yours stays free. You decide which apps it may use. Press ⌥Space
-                        to pause it and take over.
+                        Give an agent a Mac app and it gets a cursor of its own, so yours stays free. You pick the apps it may use, and ⌥Space pauses it so you
+                        can take over.
                     </Feature>
                 </div>
 
@@ -131,7 +128,7 @@ export default function Home() {
                             <h2 className="font-display text-[40px] leading-[1.05] font-semibold tracking-[-0.035em] sm:text-[56px]">Download Ruimte</h2>
                             <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-text-muted">
                                 Every download is the latest release, and the app updates itself. The Mac app is signed and notarized. The Windows app is not
-                                signed yet, so Windows warns about it the first time.
+                                signed yet, so Windows warns the first time.
                             </p>
                             <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-text-muted">
                                 On a server without a screen,{' '}
@@ -194,7 +191,9 @@ function Feature({
         >
             <div className={flip ? 'lg:order-2' : ''}>
                 <p className="mb-4 text-[14px] font-medium text-text-muted">{eyebrow}</p>
-                <h2 className="font-display text-[34px] leading-[1.1] font-medium tracking-[-0.035em] text-balance sm:text-[46px]">{title}</h2>
+                <h2 className="font-display text-[34px] leading-[1.1] font-medium tracking-[-0.035em] text-balance sm:text-[46px] lg:text-[40px] xl:text-[46px]">
+                    {title}
+                </h2>
                 <p className="mt-5 max-w-[48ch] text-[17px] leading-relaxed text-text-muted sm:text-[18px]">{children}</p>
             </div>
             <div className="relative min-w-0">{picture}</div>
@@ -206,7 +205,7 @@ function PreviewCard({ title, picture, children }: { readonly title: string; rea
     return (
         <article className="min-w-0">
             <div className="relative">{picture}</div>
-            <div className="px-5 pt-6 sm:px-6">
+            <div className="pt-6 sm:px-6">
                 <h3 className="font-display text-[23px] font-medium tracking-[-0.025em]">{title}</h3>
                 <p className="mt-3 max-w-[48ch] text-[16px] leading-relaxed text-text-muted">{children}</p>
             </div>
