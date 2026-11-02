@@ -100,15 +100,34 @@ export function registerExtensionHandlers(dispatcher: Dispatcher, host: Extensio
             stderr: 'ignore'
         });
         const decoder = new TextDecoder();
+        let timedOut = false;
+        // This request has no deadline on the client, so the run gets the one `extension.agentRun` has.
+        const timer = setTimeout(() => {
+            timedOut = true;
+            child.kill();
+        }, AGENT_RUN_TIMEOUT_MS);
 
         streams.set(payload.runId, child);
 
-        for await (const piece of child.stdout) {
-            host.emitChunk(payload.runId, decoder.decode(piece, { stream: true }));
+        try {
+            for await (const piece of child.stdout) {
+                host.emitChunk(payload.runId, decoder.decode(piece, { stream: true }));
+            }
+
+            await child.exited;
+        } finally {
+            clearTimeout(timer);
+            streams.delete(payload.runId);
+
+            // A read that broke off leaves the process running otherwise.
+            if (child.exitCode === null && child.signalCode === null) {
+                child.kill();
+            }
         }
 
-        await child.exited;
-        streams.delete(payload.runId);
+        if (timedOut) {
+            throw new Error(`${provider.name} did not answer within ${AGENT_RUN_TIMEOUT_MS / 1000} seconds`);
+        }
 
         return {};
     });
