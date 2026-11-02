@@ -7,6 +7,7 @@ interface Entry {
     // Goes up with each write, so an answer to a read asked before it does not put the old value back.
     writes: number;
     listeners: Set<() => void>;
+    stop: () => void;
 }
 
 /* What an extension keeps on a machine, one per machine, extension and key, so every surface that reads a key sees one value. */
@@ -22,25 +23,38 @@ function changed(entry: Entry): void {
     }
 }
 
-/* The first reader asks the machine, and the last one lets the value go, so a surface drawn later reads it fresh. */
-function subscribe(transport: Pick<Transport, 'request'>, full: string, id: string, key: string, listener: () => void): () => void {
+/*
+ * The first reader asks the machine, and again each time the connection opens, since what it said before may have
+ * failed or changed meanwhile. The last one lets the value go, so a surface drawn later reads it fresh.
+ */
+function subscribe(transport: Pick<Transport, 'request' | 'subscribeStatus'>, full: string, id: string, key: string, listener: () => void): () => void {
     let entry = entries.get(full);
 
     if (entry === undefined) {
-        const created: Entry = { value: undefined, readers: 0, writes: 0, listeners: new Set() };
+        const created: Entry = { value: undefined, readers: 0, writes: 0, listeners: new Set(), stop: () => undefined };
+        const read = (): void => {
+            const writes = created.writes;
 
+            void transport.request('extension.storageGet', { id, key }).then(
+                ({ value }) => {
+                    if (entries.get(full) === created && created.writes === writes) {
+                        created.value = value;
+                        changed(created);
+                    }
+                },
+                // Without a machine it keeps what it had, or the initial value, as for a key never written.
+                () => undefined
+            );
+        };
+
+        created.stop = transport.subscribeStatus((status) => {
+            if (status === 'open') {
+                read();
+            }
+        });
         entry = created;
         entries.set(full, created);
-        void transport.request('extension.storageGet', { id, key }).then(
-            ({ value }) => {
-                if (entries.get(full) === created && created.writes === 0) {
-                    created.value = value;
-                    changed(created);
-                }
-            },
-            // Without a machine it starts from the initial value, as for a key never written.
-            () => undefined
-        );
+        read();
     }
 
     const held = entry;
@@ -53,6 +67,7 @@ function subscribe(transport: Pick<Transport, 'request'>, full: string, id: stri
         held.readers -= 1;
 
         if (held.readers === 0 && entries.get(full) === held) {
+            held.stop();
             entries.delete(full);
         }
     };
@@ -63,7 +78,7 @@ function subscribe(transport: Pick<Transport, 'request'>, full: string, id: stri
  * computer, which reads nothing here.
  */
 export function useMachineStorage<Value>(
-    transport: Pick<Transport, 'request'>,
+    transport: Pick<Transport, 'request' | 'subscribeStatus'>,
     endpointId: string,
     id: string,
     key: string | null,

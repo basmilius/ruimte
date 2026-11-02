@@ -338,6 +338,69 @@ describe('the client API', () => {
         expect(mounted.host.textContent).toBe('count 0');
     });
 
+    test("reads a machine's storage again once the connection opens, after a first read that failed", async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+
+        machine.answer('extension.storageGet', () => ({ value: 7 }));
+        disconnect = connectFakeMachine(machine);
+        machine.drop();
+
+        function Count() {
+            const [count] = api.useStorage('count', 0, 'machine');
+
+            return <p>count {count}</p>;
+        }
+
+        api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/count');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+
+        expect(mounted.host.textContent).toBe('count 0');
+
+        await act(async () => machine.reopen());
+        await until(() => mounted?.host.textContent === 'count 7');
+    });
+
+    test("shows what another window wrote to this computer's storage and to a setting", async () => {
+        const { api } = loaded();
+
+        function Values() {
+            const [count] = api.useStorage('count', 0);
+            const mode = api.useSetting<string | undefined>('mode');
+
+            return (
+                <p>
+                    count {count} mode {mode ?? 'none'}
+                </p>
+            );
+        }
+
+        api.defineSidebarCard({ id: 'values', title: 'Values', component: async () => ({ default: Values }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/values');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+
+        expect(mounted.host.textContent).toBe('count 0 mode none');
+
+        // What another window does: it writes the key, and only the other windows hear `storage`.
+        await act(async () => {
+            localStorage.setItem('ruimte.extension.acme.probe.count', '3');
+            localStorage.setItem('ruimte.extension.acme.probe.setting.mode', '"dark"');
+            window.dispatchEvent(new StorageEvent('storage', { key: 'ruimte.extension.acme.probe.count' }));
+        });
+
+        expect(mounted.host.textContent).toBe('count 3 mode dark');
+
+        localStorage.removeItem('ruimte.extension.acme.probe.count');
+        localStorage.removeItem('ruimte.extension.acme.probe.setting.mode');
+    });
+
     test('asks server/ again for what .use() kept once reload drops it, also after a failure', async () => {
         const machine = new FakeMachine();
         const { api } = loaded();
