@@ -7,7 +7,7 @@ export const metadata = { title: 'Server and secrets' };
 
 <p className="lead">Keep an API key on the machine, where only your server part reads it, and call an outside service from there.</p>
 
-This page builds a Tickets panel that lists the open tickets of a tracker. The person types the tracker's key once in Settings. The key stays on the machine, and the window never holds it after it is saved.
+This page builds a Tickets panel with the open tickets of a tracker. The person types the tracker's key once in Settings. From then on only the machine holds it.
 
 ## The files
 
@@ -174,7 +174,7 @@ When `tickets` throws, the panel shows the error in its own rectangle, and the r
 
 ## Watch it work
 
-With `bun run dev` running, every save builds both parts and restarts the server part. The terminal prints what `log` and `console.*` write on the server, and the client's `console.*` marked `[client]`. Afterwards, `ruimte extension logs` prints what the server part wrote.
+With `bun run dev` running, every save builds both parts, restarts the server part and prints what both log. Afterwards, `ruimte extension logs` prints what the server part wrote.
 
 ## More on the machine
 

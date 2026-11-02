@@ -4,7 +4,7 @@ export const metadata = { title: 'Make a theme' };
 
 # Make a theme
 
-<p className="lead">Change Ruimte's colors with a theme: a file of tokens, a thumbnail, and a stylesheet if tokens are not enough. No code.</p>
+<p className="lead">A file of tokens, a thumbnail and, where tokens fall short, a stylesheet. No code.</p>
 
 This page builds Midnight, a dark theme in deep blue.
 
@@ -62,7 +62,7 @@ Start from `bunx ruimte extension create` with the parts `client` and the surfac
 
 ## The thumbnail
 
-`thumbnail` is required. It is a PNG, JPEG, WebP or SVG in the pack, of at most 256 KB, drawn at 16:10. Draw Ruimte as a person would see it in your theme, so they can tell it apart from the others. A person picks the theme under Settings, Appearance:
+`thumbnail` is required. It is a PNG, JPEG, WebP or SVG in the pack, of at most 256 KB, drawn at 16:10. Draw Ruimte in your theme, so a person can tell it apart from the others. A person picks the theme under Settings, Appearance:
 
 <ThemePicker />
 
@@ -94,4 +94,4 @@ A `url()` reaches only files in the pack, and `@import` is refused, by `pack` an
 
 ## Check it
 
-Run `bun run dev` and choose Midnight under Settings, Appearance. Each save applies the theme again. If a theme breaks the window, open it with `?safe-mode` in its address: Ruimte starts without any theme or extension.
+Run `bun run dev` and choose Midnight under Settings, Appearance. Each save applies the theme again. If a theme breaks the window, add `?safe-mode` to its address to start without themes or extensions.

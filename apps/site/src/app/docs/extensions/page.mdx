@@ -4,9 +4,9 @@ export const metadata = { title: 'Extensions' };
 
 # Extensions
 
-<p className="lead">An extension adds to Ruimte what it does not do by itself: a panel, a node on the canvas, a button in a menu, a theme, a tool an agent can call.</p>
+<p className="lead">An extension adds a panel, a node, a button, a theme or a tool for agents to Ruimte.</p>
 
-An extension is a folder with a manifest, a client part that runs in Ruimte's window, and optionally a server part that runs as a process on the machine. You write both in TypeScript and React. `@ruimte/extension` holds the types; Ruimte supplies the code when your extension loads.
+It is a folder with a manifest, a client part that runs in Ruimte's window and, if you need one, a server part that runs on the machine. You write both in TypeScript and React. `@ruimte/extension` holds the types; Ruimte supplies the code when the extension loads.
 
 <Surfaces />
 
@@ -19,11 +19,11 @@ An extension is a folder with a manifest, a client part that runs in Ruimte's wi
 - **Keep running on the machine.** Follow events, keep secrets, run on a clock, add a language server. See [The server part](/docs/extensions/server).
 - **Change how Ruimte looks.** A theme is data and needs no code. See [Themes](/docs/extensions/themes).
 
-The How to pages each build one of these from the manifest to the result on screen, such as [a panel from the rail](/docs/extensions/how-to/panel), [a node](/docs/extensions/how-to/node) or [a tool for agents](/docs/extensions/how-to/agent-tool).
+Each How to page builds one of these end to end, such as [a panel from the rail](/docs/extensions/how-to/panel), [a node](/docs/extensions/how-to/node) or [a tool for agents](/docs/extensions/how-to/agent-tool).
 
 ## What an extension is trusted with
 
-An extension runs as trusted code, like a plugin in an IDE. Its client part runs in Ruimte's page, and its server part runs as the person who runs the machine. Permissions in the manifest tell a person what the extension does before they install it, and the API refuses what the manifest does not ask for.
+An extension is trusted code, like a plugin in an IDE. Its client part runs in Ruimte's page, its server part as the person who runs the machine. Permissions tell a person what it does before they install it, and the API refuses what the manifest does not ask for.
 
 <Note tone="warning">Permissions are no sandbox. Install only extensions you trust.</Note>
 
@@ -54,10 +54,10 @@ defineCommand({
 });
 ```
 
-[Getting started](/docs/extensions/getting-started) builds one from scratch and loads it into a running Ruimte.
+[Getting started](/docs/extensions/getting-started) builds one and loads it into a running Ruimte.
 
 ## Where extensions run
 
-The desktop app loads the extensions you installed, and runs their server parts on its machine. Station, the web app, runs the extensions of the machine it is connected to, without `frame` surfaces.
+The desktop app loads the extensions you installed and runs their server parts on its machine. Station, the web app, runs the extensions of the machine it is connected to, without `frame` surfaces.
 
-Open a window with `?safe-mode` in its address to start without any extension or theme, and remove one that breaks the app.
+Add `?safe-mode` to a window's address to start without extensions or themes, and remove one that breaks the app.

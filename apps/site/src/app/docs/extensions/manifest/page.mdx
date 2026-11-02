@@ -46,7 +46,7 @@ Ruimte draws `assets/icon.svg`, up to 64 KB, as one ink on `color`, so only its 
 
 ## Activation
 
-By default the client part loads with the app. `activation` delays it until it is needed:
+`activation` delays the client part until it is needed:
 
 - `node:<type>` loads it when a node of that type of yours is on the canvas.
 - `view:<id>` loads it when that view of yours opens.
@@ -85,6 +85,6 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `clock` | Run work on a clock of its own. |
 | `net:<host>` | Let a `frame` surface reach that host over HTTPS, such as `net:api.example.com`. |
 
-Write the reason for a person, not a developer. "Writes the summary as a note" says more than "Needs canvas access". A person reads each reason before installing, and again on the extension's page under Settings, Extensions:
+Write the reason for a person: "Writes the summary as a note", not "Needs canvas access". They read it before installing, and again under Settings, Extensions:
 
 <InstallPermissions />

@@ -15,9 +15,9 @@ You need [Bun](https://bun.sh) and Ruimte running on the same computer.
 bunx ruimte extension create
 ```
 
-It asks for a name, an id, which parts you want and which surface to start with, then writes a project that builds as it is. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
+It asks for a name, an id, the parts you want and a first surface, then writes a project that builds. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
 
-The id is two parts joined by a dot, such as `acme.standup`. The first part says who made it, the second what it is. Once people install the extension, the id never changes.
+The id is who made it and what it is, joined by a dot: `acme.standup`. Once people install the extension, the id never changes.
 
 ## Run it while you work
 
@@ -25,11 +25,11 @@ The id is two parts joined by a dot, such as `acme.standup`. The first part says
 bun run dev
 ```
 
-`dev` builds on every save and loads the result into the running Ruimte, which reloads the extension in place. It also prints what the extension logs. That is `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on a port other than the default.
+`dev` builds on every save and reloads the extension in the running Ruimte. It prints `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on another port.
 
 <DevLog />
 
-Under Settings, Extensions, your extension shows in the In development group at the top. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
+Your extension shows under Settings, Extensions, in the In development group. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
 
 ## The client part
 
@@ -81,14 +81,14 @@ export default defineServer({
 bun run pack
 ```
 
-`pack` builds a `.rex` file, the form in which extensions reach other people. Packing checks your icon and themes, and refuses a client part that imports from `server/`.
+`pack` builds a `.rex` file, the form you share an extension in. It checks your icon and themes, and refuses a client part that imports from `server/`.
 
-To install a `.rex`, open Settings, Extensions, Browse store and press "Install from file…". Ruimte shows its name and what it asks for before anything runs. While you work, `dev` is the quicker way to run your extension.
+To install a `.rex`, open Settings, Extensions, Browse store and press "Install from file…". Ruimte shows its name and what it asks for before anything runs.
 
 <InstallPermissions />
 
 ## Next
 
-- The How to pages each walk one task from the manifest to the result on screen, starting with [Open a panel](/docs/extensions/how-to/panel).
+- Each How to page builds one task end to end, starting with [Open a panel](/docs/extensions/how-to/panel).
 - [The manifest](/docs/extensions/manifest) lists every field and permission.
 - `extensions/limits` in the Ruimte repository is a complete extension built on the public API alone.

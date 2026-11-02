@@ -45,7 +45,7 @@ window.addEventListener('message', (event) => {
 
 ## Panels
 
-A panel opens from the rail on the right of the window, like Ruimte's own Files and Git panels. Its button in the rail shows your `icon` and the badge you set.
+A panel opens from the rail on the right, like Ruimte's own Files and Git panels.
 
 ```ts
 const panel = definePanel<{ chatId: string }>({
@@ -59,11 +59,11 @@ panel.open({ chatId: 'chat-1' });
 panel.setBadge('3');
 ```
 
-The component gets `params`, the value the panel was last opened with. The badge shows on the toggle in the rail and after the panel's name in its header:
+The component gets `params`, the value the panel was last opened with. The toggle in the rail shows your `icon`, and the badge you set shows on it and after the panel's name:
 
 <RailPanel />
 
-[Open a panel](/docs/extensions/how-to/panel) builds this panel from start to end.
+[Open a panel](/docs/extensions/how-to/panel) builds this panel end to end.
 
 ## Views
 

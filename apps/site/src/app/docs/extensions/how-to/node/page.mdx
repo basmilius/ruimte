@@ -4,7 +4,7 @@ export const metadata = { title: 'Add a node' };
 
 # Add a node
 
-<p className="lead">Give the canvas a node of your own, with data that lives in the project, and let agents read it along a line.</p>
+<p className="lead">A node of your own, with data in the project that agents read along a line.</p>
 
 This page builds a Counter: a node that shows a number and a button that raises it.
 
@@ -54,7 +54,7 @@ defineNode<{ count: number }>({
 });
 ```
 
-`size` is the size of a new node, 420 by 300 when you leave it out. `initialData` is what a new node holds. Ruimte draws the frame, with the `icon`, the `title`, and the buttons to zoom to the node and close it. Your component fills the body.
+`size` is the size of a new node, 420 by 300 when you leave it out. `initialData` is what a new node holds. Ruimte draws the frame with the `icon`, the `title` and the zoom and close buttons; your component fills the body.
 
 ## Draw the body
 

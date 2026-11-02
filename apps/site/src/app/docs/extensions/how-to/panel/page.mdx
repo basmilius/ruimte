@@ -4,7 +4,7 @@ export const metadata = { title: 'Open a panel' };
 
 # Open a panel
 
-<p className="lead">Add a panel with a toggle in the rail on the right of the window, open it from your code, and put a badge on its toggle.</p>
+<p className="lead">A panel with a toggle in the rail, opened from your code, with a badge on its toggle.</p>
 
 This page builds a Review panel: a checklist per project, and a badge that counts the chats that finished since the person last looked.
 
@@ -17,7 +17,7 @@ client/index.ts
 client/ReviewPanel.tsx
 ```
 
-`manifest.json` asks for no permission. Hearing that a chat finished and keeping data per project need none:
+The manifest asks for no permission; hearing that a chat finished and keeping data per project need none:
 
 ```json
 {
@@ -67,7 +67,7 @@ defineCommand({
 
 `icon` names a [Lucide](https://lucide.dev/icons) icon. Without one, the toggle shows `assets/icon.svg`. `minWidth` is the narrowest the person can drag the panel, 280 when you leave it out.
 
-Your toggle sits in a group of its own in the rail, after Ruimte's panels and Routines. Pressing it opens the panel, and pressing it again closes it. Ruimte draws the panel's header with your `title`, so your component draws only what comes under it.
+The toggle sits in a group of its own, after Ruimte's panels and Routines, and opens and closes the panel. Ruimte draws the header with your `title`; your component draws what comes under it.
 
 ## Draw the body
 
@@ -114,11 +114,11 @@ export default function ReviewPanel({ params }: { params: { from: string } | und
 }
 ```
 
-The panel's code loads the first time the person opens it, not with the app. The `project` scope of `useStorage` keeps the checklist on the machine, per project, so every computer that opens the project sees the same ticks.
+The panel's code loads when the person first opens it. The `project` scope of `useStorage` keeps the checklist on the machine, per project, so every computer that opens the project sees the same ticks.
 
 ## Badge and title
 
-`setBadge(text)` puts a short text on the toggle, and `setBadge(null)` takes it off. The badge shows in the panel's header too, after the title. `setTitle(title)` renames the panel. Both work while the panel is closed, which is when a badge is worth the most:
+`setBadge(text)` puts a short text on the toggle and after the panel's title, and `setBadge(null)` takes it off. `setTitle(title)` renames the panel. Both work while the panel is closed:
 
 <RailPanel />
 

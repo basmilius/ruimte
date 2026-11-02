@@ -4,7 +4,7 @@ export const metadata = { title: 'Add a command' };
 
 # Add a command
 
-<p className="lead">Put a command in the command palette, and give it a key a person can press anywhere in the window.</p>
+<p className="lead">A command in the palette, with a key a person can press anywhere in the window.</p>
 
 This page builds two rows for the palette. "Open the standup" opens a panel. "Write the standup" asks an agent to write a standup note from the canvas in front, and also runs on <Shortcut keys="Mod+Alt+Y" />.
 
@@ -103,8 +103,8 @@ Open the palette and type a word of either title:
 
 Write a shortcut as its parts joined by `+`, such as `mod+alt+y` or `mod+shift+k`. `mod` is Cmd on macOS and Ctrl elsewhere, so `mod+alt+y` is <Shortcut keys="Mod+Alt+Y" /> on this computer.
 
-- A shortcut needs `mod` or `alt`. Ruimte refuses one without, as it does for its own: no shortcut in Ruimte is a single key.
-- Ruimte's own shortcuts come first. A key Ruimte already uses never reaches your action, so pick one that is free, such as a combination with `mod+alt`. [Keyboard shortcuts](/docs/guide/shortcuts) lists Ruimte's.
+- A shortcut needs `mod` or `alt`. Ruimte refuses one without, as it does for its own.
+- Ruimte's own shortcuts come first, so pick a free key, such as one with `mod+alt`. [Keyboard shortcuts](/docs/guide/shortcuts) lists Ruimte's.
 - Pressed, the action runs with the context of the command palette: the base context and `nodes`, the selection on the canvas in front.
 
 ## Only when it can act
