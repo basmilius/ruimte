@@ -5490,6 +5490,9 @@ var ZodBase64 = /* @__PURE__ */ $constructor("ZodBase64", (inst, def) => {
   $ZodBase64.init(inst, def);
   ZodStringFormat.init(inst, def);
 });
+function base642(params) {
+  return _base64(ZodBase64, params);
+}
 var ZodBase64URL = /* @__PURE__ */ $constructor("ZodBase64URL", (inst, def) => {
   $ZodBase64URL.init(inst, def);
   ZodStringFormat.init(inst, def);
@@ -6124,6 +6127,10 @@ var NodeRefSchema = object({ id: string2().min(1) });
 var nodeInput = object({ node: NodeRefSchema });
 var launchInput = object({ launch: string2().trim().min(1) });
 var routineInput = object({ routine: string2().min(1) });
+var publishedName = string2().min(1).max(ARTIFACT_LIMITS.fileNameLength);
+var PublishedTextSchema = object({ name: publishedName, text: string2() });
+var PublishedBytesSchema = object({ name: publishedName, base64: base642() });
+var EXTENSION_PUBLISH_MAX_BYTES = 2 * 1024 * 1024;
 var EXTENSION_ACTION_INPUTS = {
   "launch.list": object({}),
   "launch.read": launchInput.extend({ tail: number2().int().min(1).optional() }),
@@ -6137,12 +6144,11 @@ var EXTENSION_ACTION_INPUTS = {
   "artifact.list": object({}),
   "artifact.read": object({ artifact: string2().min(1), version: string2().min(1).optional(), file: number2().int().nonnegative().optional() }),
   "artifact.publish": object({
-    upload: string2().min(1),
-    files: array(object({ name: string2().min(1), size: number2().int().nonnegative() })).min(1),
-    title: string2().min(1).optional(),
+    files: array(union([PublishedTextSchema, PublishedBytesSchema])).min(1).max(ARTIFACT_LIMITS.filesPerVersion),
+    title: string2().trim().min(1).max(ARTIFACT_LIMITS.titleLength).optional(),
     kind: KnownArtifactKindSchema.optional(),
-    key: string2().min(1).optional(),
-    requestId: string2().min(1)
+    key: ArtifactKeySchema.optional(),
+    requestId: ArtifactRequestIdSchema.optional()
   }),
   "browser.inspect": nodeInput,
   "browser.navigate": nodeInput.extend({ url: string2().min(1) }),
@@ -7272,6 +7278,11 @@ function serverClient(host) {
             host.serverCache.set(key, pending);
           }
           return react().use(pending);
+        },
+        reload(...args) {
+          if (host.serverCache.delete(JSON.stringify([method, args]))) {
+            host.changed();
+          }
         }
       });
     }
@@ -7494,7 +7505,10 @@ function clientApi(host) {
       host.record("widget", widget);
       entry(widget, { id: fullId(widget.id), kind: "widget", title: widget.id, slots: widget.slots });
     },
-    useServer: () => serverClient(host),
+    useServer: () => {
+      useHost(host);
+      return serverClient(host);
+    },
     useServerEvent(name, listener) {
       react().useEffect(() => host.listen(`server:${name}`, listener), [name, listener]);
     },
