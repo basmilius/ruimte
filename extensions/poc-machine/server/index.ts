@@ -4,7 +4,7 @@ const api = defineServer({
     async addServer() {
         await defineLanguageServer({ name: 'POC language server', command: 'cat', languages: ['poc'], patterns: ['*.poc'] });
 
-        return 'Look in Settings, Language servers: it waits for you to approve it';
+        return 'Look in Settings, Language servers';
     }
 });
 

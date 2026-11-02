@@ -52,7 +52,7 @@ export const machine: {
     run(projectId: string, action: string, input?: object): Promise<any>;
 };
 
-/** Needs `languages.servers`. Offers a server, which shows as held in Settings and starts only once a person saves it there. Calling it again with the same name changes the offer, and removing the extension removes an offer nobody approved. Rejects when the command is not on this machine. */
+/** Needs `languages.servers`. Adds a server, listed in Settings like one a person added, and started without asking: installing the extension was the approval. Calling it again with the same name changes it, and removing the extension removes it unless a person edited it. Rejects when the command is not on this machine. */
 export function defineLanguageServer(server: { name: string; command: string; args?: string[]; env?: Record<string, string>; languages: string[]; patterns: string[] }): Promise<void>;
 
 export const log: {

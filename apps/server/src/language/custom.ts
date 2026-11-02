@@ -131,8 +131,7 @@ export class CustomLanguageServers {
             ...(input.initializationOptions === undefined ? {} : { initializationOptions: input.initializationOptions }),
             ...(input.projects === undefined || input.projects.length === 0 ? {} : { projects: [...new Set(input.projects)] })
         };
-        // Only a person approves a command: an extension's server stays held until one saves it.
-        const stored: StoredServer = { ...server, approval: extension === undefined ? approvalOf(server) : 'held' };
+        const stored: StoredServer = { ...server, approval: approvalOf(server) };
         const index = this.servers.findIndex((candidate) => candidate.id === id);
         await this.write(index === -1 ? [...this.servers, stored] : this.servers.map((candidate) => (candidate.id === id ? stored : candidate)));
         return server;

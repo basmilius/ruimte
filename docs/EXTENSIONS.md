@@ -106,7 +106,7 @@ Opening a window with `?safe-mode` loads no extension and no theme, so a person 
 
 `terminals.read(node)` returns a terminal's screen and `terminals.open()` opens a shell. Nothing types into one.
 
-`defineLanguageServer` in `server/` offers a server. It shows as held in Settings and starts only once a person saves it there, because only a person approves a command. The same name changes the offer, and removing the extension removes an offer nobody approved.
+`defineLanguageServer` in `server/` adds a server like one a person added, and it starts without asking: installing the extension was the approval. The same name changes it, and removing the extension removes it, unless a person edited it in Settings.
 
 ## Station
 
