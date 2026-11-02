@@ -45,7 +45,7 @@ function hostsOf(manifest: ExtensionManifest): string[] {
  */
 export class ClientExtensions {
     private readonly root: string;
-    private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest }>();
+    private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest; enabled: boolean }>();
     private changes: Promise<unknown> = Promise.resolve();
     private temporaryCounter = 0;
     // Every window shares these installations, also one in machine mode `none` or on another machine, so each hears of a change.
@@ -165,7 +165,7 @@ export class ClientExtensions {
         const linked = [...this.links.entries()].map(([id, link]) => ({
             manifest: link.manifest,
             base: `${EXTENSION_FILES_PATH}${id}/dev-${link.revision}/`,
-            enabled: true,
+            enabled: link.enabled,
             hasClient: existsSync(join(link.folder, 'client', 'index.js')),
             hasIcon: existsSync(join(link.folder, EXTENSION_ICON_PATH)),
             dev: true
@@ -223,16 +223,27 @@ export class ClientExtensions {
         return this.installedOf(entry, manifest);
     }
 
+    /* A dev link of the id goes with it, or the folder it reads would run on as before. */
     remove(id: string): Promise<void> {
         return this.change(async (touched) => {
+            this.links.delete(id);
             await this.writeIndex((await this.index()).filter((entry) => entry.id !== id));
             touched();
             await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
 
+    /* A dev link of the id is turned on or off with it, and keeps that through its next builds. */
     async setEnabled(id: string, enabled: boolean): Promise<void> {
-        await this.changeIndex((entries) => ({ entries: entries.map((entry) => (entry.id === id ? { ...entry, enabled } : entry)), result: undefined }));
+        await this.changeIndex((entries) => {
+            const link = this.links.get(id);
+
+            if (link !== undefined) {
+                this.links.set(id, { ...link, enabled });
+            }
+
+            return { entries: entries.map((entry) => (entry.id === id ? { ...entry, enabled } : entry)), result: undefined };
+        });
     }
 
     /* In the order windows asked, so an unlink or a newer link while the manifest is read is never undone by it. */
@@ -244,7 +255,7 @@ export class ClientExtensions {
                 throw new Error(`No valid manifest.json in ${folder}`);
             }
 
-            this.links.set(manifest.id, { folder, revision, manifest });
+            this.links.set(manifest.id, { folder, revision, manifest, enabled: this.links.get(manifest.id)?.enabled ?? true });
             touched();
         });
     }

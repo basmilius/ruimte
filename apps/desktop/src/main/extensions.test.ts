@@ -84,6 +84,25 @@ describe('the client extensions of the shell', () => {
         expect((await store.answer('/__extensions/acme.dev/dev-1~2/client/secret.js', ORIGIN)).status).toBe(404);
     });
 
+    test('turn a dev link off through its next builds, and drop it when the extension is removed', async () => {
+        const store = extensions();
+        const folder = join(root, 'dev');
+
+        mkdirSync(join(folder, 'client'), { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.dev', name: 'Dev', version: '1.0.0', api: 1 }));
+        writeFileSync(join(folder, 'client', 'index.js'), 'export {};');
+        await store.link(folder, 1);
+        await store.setEnabled('acme.dev', false);
+        await store.link(folder, 2);
+
+        const rebuilt = await store.list();
+
+        await store.remove('acme.dev');
+
+        expect(rebuilt.map((entry) => [entry.base, entry.enabled])).toEqual([['/__extensions/acme.dev/dev-2/', false]]);
+        expect(await store.list()).toEqual([]);
+    });
+
     test('keep both of two changes to the index made at once', async () => {
         const store = extensions();
         const other = gzipSync(
