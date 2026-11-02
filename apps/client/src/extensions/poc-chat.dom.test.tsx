@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { LoadedExtension } from '@/extensions/host/client-api';
 import { assertShortcut, matchesExtensionShortcut } from '@/extensions/action-shortcuts';
+import { useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
 import { wantsLoading } from '@/extensions/activation';
+import { useToasts } from '@/state/toasts';
 import { loadPoc } from '../../testing/poc';
 
 let extension: LoadedExtension;
@@ -75,5 +77,40 @@ describe('settings in groups', () => {
         expect(text.indexOf('Style')).toBeLessThan(text.indexOf('Tone'));
         expect(useContributions.getState().extensionSchemas[0]?.groups.map((group) => group.title)).toEqual(['Greeting', 'Style']);
         await page.unmount();
+    });
+
+    test('says when the browser refused a setting, and keeps the switch where it was', async () => {
+        const { SchemaSettings } = await import('@/extensions/SchemaSettings');
+        const { clickOn, mount } = await import('../../testing/dom');
+        const page = mount();
+        const before = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+        // A browser whose storage is full, or turned off for the page.
+        const full: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> = {
+            getItem: () => null,
+            setItem: () => {
+                throw new DOMException('The quota has been exceeded', 'QuotaExceededError');
+            },
+            removeItem: () => undefined
+        };
+
+        Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: full });
+        useInstalledExtensions.setState({ installed: [{ manifest: extension.manifest, base: '/', enabled: true, hasClient: true, dev: false }] });
+
+        try {
+            await page.render(<SchemaSettings id="poc.chat" />);
+            await clickOn(page.host.querySelector('[role="switch"]'));
+
+            expect(page.host.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
+            expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual([
+                'POC chat could not keep what it stores',
+                'Loud'
+            ]);
+        } finally {
+            await page.unmount();
+
+            if (before !== undefined) {
+                Object.defineProperty(globalThis, 'localStorage', before);
+            }
+        }
     });
 });

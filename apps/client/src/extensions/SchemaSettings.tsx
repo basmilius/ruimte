@@ -1,17 +1,25 @@
 import { useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input, Select, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { settingKey, subscribeStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
+import { useInstalledExtensions } from '@/extensions/loader';
 import { useContributions, type SettingField } from '@/extensions/registry';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { storedText } from '@/state/stored-json';
+import { useToasts } from '@/state/toasts';
 
 function Field({ id, field }: { id: string; field: SettingField }) {
+    const { t } = useTranslation('shell');
+    const name = useInstalledExtensions((state) => state.installed.find((entry) => entry.manifest.id === id)?.manifest.name ?? id);
     const key = settingKey(id, field.key);
     const stored = useSyncExternalStore(subscribeStorage, () => storedText(key).read());
     const value = stored === null ? field.default : (JSON.parse(stored) as boolean | string);
+    // The row reads back what is kept, so a refused write leaves the old value in view; this says why.
     const write = (next: boolean | string): void => {
-        writeExtensionStorage(key, next);
+        if (!writeExtensionStorage(key, next)) {
+            useToasts.getState().show({ kind: 'error', title: t('extensions.storageFailed', { name }), description: field.label });
+        }
     };
 
     return (
