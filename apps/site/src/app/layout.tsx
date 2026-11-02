@@ -29,7 +29,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
     return (
-        <html lang="en" data-theme="dark" className={`${geist.variable} ${jetbrains.variable} ${kalam.variable}`}>
+        // `globals.css` scrolls smoothly; with this Next turns that off while it moves to the top of a new page, which it otherwise animates and leaves short.
+        <html lang="en" data-theme="dark" data-scroll-behavior="smooth" className={`${geist.variable} ${jetbrains.variable} ${kalam.variable}`}>
             <body>
                 <MotionProvider>{children}</MotionProvider>
             </body>

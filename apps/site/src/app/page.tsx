@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AppIcon } from '@/components/AppIcon.tsx';
+import { ArrowUpRight } from 'lucide-react';
 import { Backdrop } from '@/components/Backdrop.tsx';
 import { DownloadButton } from '@/components/DownloadButton.tsx';
 import { ComputerUseVignette } from '@/components/features/ComputerUseVignette.tsx';
@@ -12,11 +12,9 @@ import { ContextVignette } from '@/components/features/ContextVignette.tsx';
 import { PlanVignette } from '@/components/features/PlanVignette.tsx';
 import { TeamVignette } from '@/components/features/TeamVignette.tsx';
 import { QuestionVignette } from '@/components/features/QuestionVignette.tsx';
-import { ArrowUpRight } from 'lucide-react';
+import { SiteFooter } from '@/components/SiteFooter.tsx';
 import { SiteHeader } from '@/components/SiteHeader.tsx';
-import { PLATFORMS, type Platform, REPOSITORY_URL, SPONSOR_URL } from '@/lib/release.ts';
-
-const STATION_URL = 'https://station.ruimte.app';
+import { PLATFORMS, type Platform, REPOSITORY_URL, STATION_URL } from '@/lib/release.ts';
 
 const LINUX_BUILDS: readonly (readonly [Platform, Platform])[] = [
     ['appimage-x64', 'appimage-arm64'],
@@ -30,36 +28,9 @@ export default function Home() {
             <a href="#content" className="fixed top-3 left-3 z-50 -translate-y-24 rounded-lg bg-text px-4 py-3 text-bg focus:translate-y-0">
                 Skip to content
             </a>
-            <SiteHeader>
-                <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-5 sm:px-8">
-                    <a href="#top" className="flex items-center gap-2.5">
-                        <AppIcon size={30} />
-                        <span className="font-brand text-[19px] font-semibold tracking-[-0.01em]">Ruimte</span>
-                    </a>
-                    <nav aria-label="Site" className="ml-auto flex items-center gap-3 text-[14px] sm:gap-6">
-                        <a href="#features" className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text md:inline-flex">
-                            Features
-                        </a>
-                        <a href="/docs" className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text sm:inline-flex">
-                            Docs
-                        </a>
-                        <a href={STATION_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text sm:inline-flex">
-                            Web app
-                        </a>
-                        <a href={REPOSITORY_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text md:inline-flex">
-                            GitHub
-                        </a>
-                        <a
-                            href="#download"
-                            className="inline-flex min-h-10 items-center rounded-full border border-border-strong px-3.5 py-1.5 font-medium transition-colors hover:bg-surface-hover"
-                        >
-                            Download
-                        </a>
-                    </nav>
-                </div>
-            </SiteHeader>
+            <SiteHeader />
 
-            <main id="top">
+            <main>
                 <section id="content" className="relative isolate overflow-hidden">
                     <Backdrop />
                     <div className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8">
@@ -177,6 +148,14 @@ export default function Home() {
                                     <DownloadLink platform="mac" label="Download" primary />
                                 </li>
                             </DownloadGroup>
+                            <DownloadGroup title="Windows">
+                                <li className="flex items-center gap-4 px-4 py-3">
+                                    <span className="flex-1">
+                                        {PLATFORMS.windows.format} <span className="text-text-muted">for {PLATFORMS.windows.arch}</span>
+                                    </span>
+                                    <DownloadLink platform="windows" label="Download" />
+                                </li>
+                            </DownloadGroup>
                             <DownloadGroup title="Linux">
                                 {LINUX_BUILDS.map(([x64, arm64]) => (
                                     <li key={x64} className="flex items-center gap-4 px-4 py-3">
@@ -191,35 +170,7 @@ export default function Home() {
                 </section>
             </main>
 
-            <footer className="border-t border-border">
-                <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-3 px-5 py-10 text-[15px] text-text-muted sm:px-8">
-                    <AppIcon size={22} />
-                    <span>
-                        Made by{' '}
-                        <a href="https://bas.dev" className="text-text hover:underline">
-                            Bas Milius
-                        </a>
-                        . Ruimte is Dutch for space, and room.
-                    </span>
-                    <span className="ml-auto flex gap-6">
-                        <a href={REPOSITORY_URL} className="hover:text-text">
-                            Source
-                        </a>
-                        <a href={`${REPOSITORY_URL}/blob/main/LICENSE`} className="hover:text-text">
-                            License
-                        </a>
-                        <a href={`${REPOSITORY_URL}/releases`} className="hover:text-text">
-                            Releases
-                        </a>
-                        <a href="/privacy" className="hover:text-text">
-                            Privacy
-                        </a>
-                        <a href={SPONSOR_URL} className="hover:text-text">
-                            Sponsor
-                        </a>
-                    </span>
-                </div>
-            </footer>
+            <SiteFooter />
         </>
     );
 }

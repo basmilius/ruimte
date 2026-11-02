@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { DocsHeader } from '@/components/docs/DocsHeader';
+import { SiteFooter } from '@/components/SiteFooter.tsx';
+import { SiteHeader } from '@/components/SiteHeader.tsx';
 import './docs.css';
 
 export const metadata: Metadata = {
@@ -11,8 +12,9 @@ export const metadata: Metadata = {
 export default function DocsLayout({ children }: { readonly children: ReactNode }) {
     return (
         <>
-            <DocsHeader />
+            <SiteHeader />
             {children}
+            <SiteFooter />
         </>
     );
 }
