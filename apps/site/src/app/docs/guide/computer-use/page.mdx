@@ -1,4 +1,6 @@
 import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { ComputerPrompt } from '@/components/docs/guide/ComputerPrompt.tsx';
+import { ComputerUseVignette } from '@/components/features/ComputerUseVignette.tsx';
 import { Note } from '@/components/docs/guide/ui.tsx';
 
 export const metadata = { title: 'Computer use' };
@@ -18,6 +20,8 @@ export const metadata = { title: 'Computer use' };
 
 The first time an agent wants an app, Ruimte asks **Let an agent use Mail?** (or the app it wants):
 
+<ComputerPrompt />
+
 | Choice | Effect |
 | --- | --- |
 | Allow this time | Until the agent's turn ends |
@@ -31,6 +35,8 @@ Ruimte asks in every permission mode, Full access included. Settings, Agents, Co
 ## While an agent works
 
 The agent works with its own cursor, behind your windows where it can. One agent operates the Mac at a time.
+
+<ComputerUseVignette />
 
 | Shortcut | Action |
 | --- | --- |

@@ -1,3 +1,4 @@
+import { RemoteNode } from '@/components/docs/guide/RemoteNode.tsx';
 import { Note } from '@/components/docs/guide/ui.tsx';
 
 export const metadata = { title: 'Work on another machine' };
@@ -26,6 +27,8 @@ The repository needs a remote. Push it first if it has none.
 4. Choose where to **Start from**: your files here, uncommitted work included; the last commit here; a branch on origin; or the checkout as it is there.
 5. Optionally turn on **Work in a git worktree**.
 6. Click **Create**.
+
+<RemoteNode />
 
 The node shows on your canvas with a pill that names its machine. It keeps running there while your laptop sleeps. Adding the node also links the project on that machine.
 

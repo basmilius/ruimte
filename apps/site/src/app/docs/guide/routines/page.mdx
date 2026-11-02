@@ -1,4 +1,5 @@
 import { Shortcut } from '@/components/docs/Shortcut.tsx';
+import { OutputPanel } from '@/components/docs/guide/OutputPanel.tsx';
 import { Note } from '@/components/docs/guide/ui.tsx';
 
 export const metadata = { title: 'Routines and Output' };
@@ -43,6 +44,8 @@ An agent's run happens in a chat of its own, out of sight, and publishes its res
 ## Output
 
 Run **Toggle output panel** from the command palette. Output holds what agents published and the pages and images you saved from a chat: reports, images, builds, exports, recordings and pages.
+
+<OutputPanel />
 
 Each item keeps its versions, newest first, with where each came from. Filter by project, kind, source or routine, or search.
 
