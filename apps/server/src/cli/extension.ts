@@ -10,6 +10,7 @@ import { BUILD_FOLDER, buildExtension, packExtension, readManifest } from '../ex
 import { logTail } from '../extensions/log-tail.ts';
 import { sourceSignature } from '../extensions/source-signature.ts';
 import { scaffoldFiles, type ScaffoldAnswers } from '../extensions/scaffold.ts';
+import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
 import { commandIo, homeSecret, startFirst, type LocalDaemonOptions } from './local-daemon.ts';
@@ -190,16 +191,41 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
 }
 
 async function test(args: string[]): Promise<number> {
+    const project = process.cwd();
+    const page = hasDomTests(project);
+    const missing = page ? missingDom(project) : null;
+
+    if (missing !== null) {
+        console.error(missing);
+
+        return 1;
+    }
+
+    const warning = reactWarning(project);
+
+    if (warning !== null) {
+        console.warn(warning);
+    }
+
     // Inside the project, so the fakes import the project's own React.
     await mkdir(join('node_modules', '.cache'), { recursive: true });
 
     const folder = mkdtempSync(join('node_modules', '.cache', 'ruimte-extension-test-'));
     const preload = resolve(folder, 'preload.js');
+    const preloads = ['--preload', preload];
 
     await writeFile(preload, testRuntime);
 
+    // The page goes first: React DOM reads `document` as it loads.
+    if (page) {
+        const dom = resolve(folder, 'dom.js');
+
+        await writeFile(dom, DOM_PRELOAD);
+        preloads.unshift('--preload', dom);
+    }
+
     const runtime = bunRuntime();
-    const child = spawn(runtime.command, [...runtime.args, 'test', '--preload', preload, ...args], {
+    const child = spawn(runtime.command, [...runtime.args, 'test', ...preloads, ...args], {
         stdio: 'inherit',
         env: { ...process.env, ...runtime.env }
     });

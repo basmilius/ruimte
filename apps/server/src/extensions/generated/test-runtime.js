@@ -2,313 +2,335 @@
 // Generated from apps/server/src/extensions/test-runtime.ts by apps/server/scripts/generate-extension-runtimes.ts. Do not edit.
 // apps/server/src/extensions/test-runtime.ts
 var {plugin } = globalThis.Bun;
+import { afterEach } from "bun:test";
 
-// apps/server/src/extensions/test-client.ts
-import { readFileSync } from "fs";
+// apps/server/src/extensions/test-react.ts
+import { realpathSync } from "fs";
 import { createRequire } from "module";
 import { join } from "path";
-var fromProject = createRequire(import.meta.url);
-var defined = [];
-var fakeServer = {};
-var nodeData = {};
-var stored = new Map;
-function done(value) {
-  return { ok: true, value };
-}
-function answers(value) {
-  return async () => done(value);
-}
-function failed(e) {
-  return { ok: false, error: { code: "failed", message: e instanceof Error ? e.message : String(e) } };
-}
-function serverAnswer(method, args) {
-  const handler = fakeServer[method];
-  if (handler === undefined) {
-    return { ok: false, error: { code: "not-found", message: `No method ${method}` } };
-  }
+var nodeContext = null;
+function fromProject(name) {
   try {
-    const value = handler(...args);
-    return value instanceof Promise ? value.then(done, failed) : done(value);
-  } catch (e) {
-    return failed(e);
-  }
-}
-function record(kind, definition) {
-  defined.push({ kind, definition });
-}
-function recording(kind) {
-  return (definition) => record(kind, definition);
-}
-function settingDefault(key) {
-  for (const { kind, definition } of defined) {
-    if (kind !== "settings") {
-      continue;
-    }
-    const settings = definition;
-    const fields = settings.fields ?? settings.groups?.flatMap((group) => group.fields) ?? [];
-    const field = fields.find((each) => each.key === key);
-    if (field !== undefined) {
-      return field.default;
-    }
-  }
-  return;
-}
-function englishWords() {
-  try {
-    return JSON.parse(readFileSync(join(process.cwd(), "locales", "en.json"), "utf8"));
+    return createRequire(join(process.cwd(), "package.json"))(name);
   } catch {
-    return {};
+    throw new Error(`This test needs ${name}, which this project does not have: bun add -d ${name.startsWith("@") ? name.split("/").slice(0, 2).join("/") : name.split("/")[0]}`);
   }
 }
-var NO_GIT_STATUS = { repository: false, root: null, branch: null, upstream: null, ahead: 0, behind: 0, files: [], truncated: false };
-var NO_BROWSER = (node) => ({ node, open: false, page: null, error: null });
-var NO_ARTIFACT = { id: "artifact", title: "", kind: "report", key: null, createdAt: 0 };
-var NO_DEVICE = {
-  node: { id: "device" },
-  device: { name: "", platform: "ios", kind: "simulator", runtime: "" },
-  present: false,
-  state: null,
-  screen: null,
-  buttons: [],
-  can: { shot: false, input: false, type: false, launch: false }
-};
-var NODE = { id: "node" };
-function launch(input) {
-  return { id: input.launch, name: input.launch };
-}
-function routine(input) {
-  return { id: input.routine, title: input.routine };
-}
-var client = {
-  definePanel(panel) {
-    record("panel", panel);
-    return { open: () => {
-      return;
-    }, close: () => {
-      return;
-    }, setBadge: () => {
-      return;
-    }, setTitle: () => {
-      return;
-    } };
-  },
-  defineSidebarCard: recording("sidebarCard"),
-  defineView(view) {
-    record("view", view);
-    return { open: () => {
-      return;
-    } };
-  },
-  defineNode: recording("node"),
-  defineCanvasOverlay: recording("canvasOverlay"),
-  defineFileViewer: recording("fileViewer"),
-  defineMarkdownBlock: recording("markdownBlock"),
-  defineOverlay(overlay) {
-    record("overlay", overlay);
-    return { open: async () => null, close: () => {
-      return;
-    } };
-  },
-  defineToolResult: recording("toolResult"),
-  definePaletteSource: recording("paletteSource"),
-  defineSlashCommand: recording("slashCommand"),
-  defineReference: recording("reference"),
-  defineDiffViewer: recording("diffViewer"),
-  defineFileIcon: recording("fileIcon"),
-  defineVoiceAction: recording("voiceAction"),
-  defineTemplate: recording("template"),
-  defineCommand: recording("command"),
-  defineExtensionSettings: recording("settings"),
-  useSetting: (key) => settingDefault(key),
-  useMachine: () => ({ id: "test-machine" }),
-  useTheme: () => ({ side: "dark" }),
-  useChat: (_id) => null,
-  defineAction(action) {
-    record("action", action);
-    return { run: async () => {
-      return;
-    }, useRunning: () => false };
-  },
-  defineMenu: recording("menu"),
-  defineWidget: recording("widget"),
-  useServer: () => new Proxy({}, {
-    get: (_target, method) => Object.assign(async (...args) => serverAnswer(method, args), {
-      use: (...args) => serverAnswer(method, args)
-    })
-  }),
-  useServerEvent: (_name, _listener) => {
-    return;
-  },
-  useNodeData: () => [nodeData, (next) => void (nodeData = next)],
-  useStorage: (key, initial, scope = "computer") => [
-    stored.has(`${scope}:${key}`) ? stored.get(`${scope}:${key}`) : initial,
-    (next) => void stored.set(`${scope}:${key}`, next)
-  ],
-  useProject: () => ({ id: "test-project", name: "Test" }),
-  useActiveView: () => ({ id: "test-view" }),
-  useViews: () => [],
-  useSelection: () => [],
-  useNode: (id) => ({
-    id,
-    kind: "note",
-    title: "",
-    color: null,
-    bounds: { x: 0, y: 0, width: 0, height: 0 },
-    groupId: null,
-    viewId: "test-view",
-    machine: null,
-    linkedTo: []
-  }),
-  useNodes: (_filter) => [],
-  useLocale() {
-    const words = englishWords();
-    return {
-      language: "en",
-      format: {},
-      t: (key, values) => Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
-    };
-  },
-  useEvent: (_name, _listener) => {
-    return;
-  },
-  onEvent: (_name, _listener) => () => {
-    return;
-  },
-  useAgents: () => [],
-  useUsageLimits: () => [],
-  host: {
-    busy: async (_work, run) => run(new AbortController().signal),
-    notify: () => {
-      return;
-    },
-    pickFolder: async () => null,
-    openSettings: () => {
-      return;
-    },
-    confirm: async () => true,
-    prompt: async () => null,
-    pick: async () => null,
-    openUrl: () => {
-      return;
-    },
-    copy: () => {
-      return;
-    }
-  },
-  files: {
-    readText: answers(""),
-    write: answers(undefined),
-    list: answers([]),
-    watch: () => done(() => {
-      return;
-    }),
-    open: () => {
-      return;
-    }
-  },
-  git: {
-    status: answers(NO_GIT_STATUS),
-    diff: async ({ path }) => done({ path, diff: "", added: 0, deleted: 0, binary: false, kind: null }),
-    log: answers([])
-  },
-  chats: { list: answers([]), read: answers(""), send: answers(undefined) },
-  launches: {
-    list: answers({ launches: [] }),
-    read: async (input) => done({ ...launch(input), text: null }),
-    start: async (input) => done(launch(input)),
-    restart: async (input) => done(launch(input)),
-    stop: async (input) => done({ ...launch(input), stopping: 0 })
-  },
-  routines: {
-    list: answers({ routines: [] }),
-    run: async (input) => done({ ...routine(input), runId: "run" }),
-    pause: async (input) => done(routine(input)),
-    resume: async (input) => done(routine(input))
-  },
-  artifacts: {
-    list: answers({ artifacts: [] }),
-    read: answers({
-      artifact: NO_ARTIFACT,
-      version: { id: "version", number: 1 },
-      file: { name: "", mime: "text/plain", size: 0 },
-      text: null,
-      truncated: false
-    }),
-    publish: answers({ artifact: NO_ARTIFACT, version: { id: "version", number: 1 }, existing: false })
-  },
-  browser: {
-    inspect: async ({ node }) => done(NO_BROWSER(node)),
-    navigate: async ({ node }) => done(NO_BROWSER(node)),
-    back: async ({ node }) => done(NO_BROWSER(node)),
-    forward: async ({ node }) => done(NO_BROWSER(node)),
-    reload: async ({ node }) => done(NO_BROWSER(node)),
-    screenshot: async ({ node }) => done({ ...NO_BROWSER(node), path: null })
-  },
-  devices: {
-    list: answers({ devices: [] }),
-    inspect: async ({ node }) => done({ ...NO_DEVICE, node }),
-    screenshot: async ({ node }) => done({ node, path: "", width: 0, height: 0 }),
-    tap: async ({ node }) => done({ node }),
-    launch: async ({ node }) => done({ node })
-  },
-  terminals: { read: answers(""), open: () => done({ id: "terminal" }) },
-  database: {
-    connections: answers([]),
-    query: answers({ columns: [], rows: [], hasMore: false })
-  },
-  views: { open: () => {
-    return;
-  }, createCanvas: () => done({ id: "view" }), rename: () => done(undefined) },
-  context: { read: answers([]) },
-  agents: {
-    run: answers({ text: "" }),
-    async* stream() {
-      yield done({ text: "" });
-    },
-    start: answers({ id: "chat" })
-  },
-  canvas: {
-    createNote: () => done(NODE),
-    arrange: () => done(undefined),
-    remove: answers(undefined),
-    createFile: () => done(NODE),
-    createBrowser: () => done(NODE),
-    createNode: () => done(NODE),
-    update: () => done(undefined),
-    writeNote: () => done(undefined),
-    group: () => done(NODE),
-    link: () => done(undefined),
-    unlink: () => done(undefined),
-    select: () => {
-      return;
-    },
-    reveal: () => {
-      return;
-    }
+function formatModule() {
+  const extension = join(process.cwd(), "node_modules", "@ruimte", "extension", "package.json");
+  try {
+    return createRequire(realpathSync(extension))("@adecore/ui/format");
+  } catch {
+    return fromProject("@adecore/ui/format");
   }
-};
-var clientTesting = {
-  definitions: () => defined,
-  slotAnswer(definition, slot, context) {
-    const answer = definition.slots?.[slot];
-    if (typeof answer === "function") {
-      return answer(context);
-    }
-    return answer === true;
-  },
-  renderSurface(component, options = {}) {
-    const { createElement } = fromProject("react");
-    const { renderToStaticMarkup } = fromProject("react-dom/server");
-    fakeServer = options.server ?? {};
-    nodeData = options.data ?? {};
-    return renderToStaticMarkup(createElement(component, options.props ?? {}));
-  }
-};
+}
+function react() {
+  return fromProject("react");
+}
+function nodeContextOf(module) {
+  nodeContext ??= module.createContext(null);
+  return nodeContext;
+}
 
-// apps/server/src/extensions/test-server.ts
-import { readFileSync as readFileSync2 } from "fs";
-import { tmpdir } from "os";
-import { join as join3, resolve } from "path";
+// apps/server/src/extensions/test-dom.ts
+var MAX_TURNS = 200;
+var SUSPENDED = "ruimte-suspended";
+var PRESSABLE = 'button, a, [role="button"], [role="menuitem"], [role="tab"], [role="option"], [role="checkbox"], [role="switch"], summary, label';
+var mounted = new Set;
+function turn() {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+function unmountAll() {
+  for (const unmount of [...mounted]) {
+    unmount();
+  }
+}
+function textOf(element) {
+  return (element.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+function findIn(container, text, preferred) {
+  const saying = (element) => textOf(element).includes(text) || element.getAttribute("aria-label") === text;
+  const among = [...container.querySelectorAll(preferred)].filter(saying);
+  if (among.length > 0) {
+    return among.at(-1) ?? null;
+  }
+  const all = [...container.querySelectorAll("*")].filter(saying);
+  return all.find((element) => ![...element.children].some(saying)) ?? null;
+}
+function fieldIn(container, name) {
+  const fields = [...container.querySelectorAll("input, textarea")];
+  const labelled = fields.find((field) => field.placeholder === name || field.name === name || field.getAttribute("aria-label") === name || field.id !== "" && textOf(container.querySelector(`label[for="${field.id}"]`) ?? document.createElement("i")) === name || field.closest("label") !== null && textOf(field.closest("label")).includes(name));
+  return labelled ?? null;
+}
+async function settle(check, failure) {
+  let last = null;
+  for (let step = 0;step < MAX_TURNS; step++) {
+    try {
+      if (check() !== false) {
+        return;
+      }
+      last = null;
+    } catch (e) {
+      last = e;
+    }
+    await turn();
+  }
+  throw last instanceof Error ? last : new Error(failure());
+}
+function needsPage() {
+  if (typeof document === "undefined") {
+    throw new Error("render draws into a page: name the test file *.dom.test.tsx, and ruimte extension test gives it one");
+  }
+}
+async function drawable(target, options) {
+  if ("frame" in target) {
+    throw new Error("A frame surface runs in its own page in Ruimte; render draws component surfaces");
+  }
+  if (typeof target === "object" && "component" in target && typeof target.component === "function") {
+    const loaded = (await target.component()).default;
+    return [loaded, { params: options.params, ...options.context === undefined ? {} : { context: options.context }, ...options.props }];
+  }
+  return [
+    target,
+    {
+      ...options.params === undefined ? {} : { params: options.params },
+      ...options.context === undefined ? {} : { context: options.context },
+      ...options.props
+    }
+  ];
+}
+async function render(target, options = {}) {
+  needsPage();
+  const module = react();
+  const { createRoot } = fromProject("react-dom/client");
+  const [component, props] = await drawable(target, options);
+  const container = document.createElement("div");
+  const failure = { error: null };
+  const drawn = { committed: false };
+  const Committed = () => {
+    module.useEffect(() => {
+      drawn.committed = true;
+    });
+    return null;
+  };
+
+  class Boundary extends module.Component {
+    static getDerivedStateFromError(error) {
+      failure.error = error;
+      return { failed: true };
+    }
+    render() {
+      return this.state?.failed === true ? null : this.props.children;
+    }
+  }
+  document.body.append(container);
+  const root = createRoot(container, { onCaughtError: () => {
+    return;
+  } });
+  const unmount = () => {
+    if (mounted.delete(unmount)) {
+      root.unmount();
+      container.remove();
+    }
+  };
+  const after = async () => {
+    await turn();
+    await settle(() => failure.error === null && container.querySelector(SUSPENDED) === null, () => "It is still waiting for what it suspends on").catch(() => {
+      return;
+    });
+    if (failure.error !== null) {
+      const { error } = failure;
+      failure.error = null;
+      throw error;
+    }
+  };
+  mounted.add(unmount);
+  root.render(module.createElement(Boundary, null, module.createElement(module.Suspense, { fallback: module.createElement(SUSPENDED) }, module.createElement(nodeContextOf(module).Provider, { value: options.node ?? null }, module.createElement(component, props)), module.createElement(Committed))));
+  try {
+    await settle(() => failure.error !== null || drawn.committed, () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`);
+    await after();
+  } catch (e) {
+    unmount();
+    throw e;
+  }
+  return {
+    container,
+    text: () => textOf(container),
+    find: (text) => findIn(container, text, PRESSABLE),
+    async click(target) {
+      const element = typeof target === "string" ? findIn(container, target, PRESSABLE) : target;
+      if (element === null) {
+        throw new Error(`Nothing says ${target} here. The page says: ${textOf(container)}`);
+      }
+      element.click();
+      await after();
+    },
+    async type(target, text) {
+      const field = typeof target === "string" ? fieldIn(container, target) : target;
+      if (field === null || !("value" in field)) {
+        throw new Error(`No field ${String(target)} here`);
+      }
+      const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(field, text);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      await after();
+    },
+    until: (check) => settle(check, () => `Still not so after ${MAX_TURNS} turns. The page says: ${textOf(container)}`),
+    unmount
+  };
+}
+
+// apps/server/src/extensions/test-hosts.ts
+import { existsSync } from "fs";
+import { join as join5, resolve as resolve2 } from "path";
+
+// packages/contracts/src/extension-permissions.ts
+var EXTENSION_ACTIONS = {
+  "launch.list": "launches.read",
+  "launch.read": "launches.read",
+  "launch.start": "launches.run",
+  "launch.restart": "launches.run",
+  "launch.stop": "launches.run",
+  "routine.list": "routines.read",
+  "routine.run": "routines.run",
+  "routine.pause": "routines.run",
+  "routine.resume": "routines.run",
+  "artifact.list": "artifacts.read",
+  "artifact.read": "artifacts.read",
+  "artifact.publish": "artifacts.write",
+  "browser.inspect": "browser.control",
+  "browser.navigate": "browser.control",
+  "browser.back": "browser.control",
+  "browser.forward": "browser.control",
+  "browser.reload": "browser.control",
+  "browser.screenshot": "browser.control",
+  "device.list": "devices.control",
+  "device.inspect": "devices.control",
+  "device.screenshot": "devices.control",
+  "device.tap": "devices.control",
+  "device.launch": "devices.control"
+};
+function extensionActionPermission(action) {
+  return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
+}
+
+// packages/contracts/src/extension-client.ts
+var EXTENSION_SLOT_NAMES = [
+  "selectionBar",
+  "nodeHeader",
+  "nodeMenu",
+  "canvasMenu",
+  "lineMenu",
+  "viewToolbar",
+  "viewMenu",
+  "panelHeader",
+  "commandPalette",
+  "projectMenu",
+  "sidebarFooter",
+  "editorStatusBar",
+  "sidebarRow",
+  "tabMenu",
+  "emptyCanvas",
+  "startScreen",
+  "projectBanner",
+  "threadHeader",
+  "emptyThread",
+  "toolActions",
+  "fileRowBadge",
+  "fileBreadcrumb",
+  "terminalMenu",
+  "browserMenu",
+  "textMenu",
+  "noteToolbar",
+  "routineMenu",
+  "composer",
+  "messageActions",
+  "fileMenu",
+  "editorToolbar",
+  "editorMenu",
+  "diffToolbar",
+  "terminalToolbar",
+  "browserToolbar"
+];
+function isExtensionSlotName(name) {
+  return EXTENSION_SLOT_NAMES.includes(name);
+}
+var MACHINE_AREAS = {
+  launch: "launches",
+  routine: "routines",
+  artifact: "artifacts",
+  browser: "browser",
+  device: "devices"
+};
+function extensionActionCall(action) {
+  const dot = action.indexOf(".");
+  return `${MACHINE_AREAS[action.slice(0, dot)] ?? action.slice(0, dot)}${action.slice(dot)}`;
+}
+var EXTENSION_CLIENT_PERMISSIONS = {
+  "files.readText": "files.read",
+  "files.write": "files.write",
+  "files.list": "files.read",
+  "files.watch": "files.read",
+  "git.status": "git.read",
+  "git.diff": "git.read",
+  "git.log": "git.read",
+  "terminals.read": "terminals.read",
+  "terminals.open": "canvas.write",
+  "database.connections": "database.read",
+  "database.query": "database.read",
+  "chats.list": "chats.read",
+  "chats.read": "chats.read",
+  "chats.send": "chats.send",
+  "views.createCanvas": "views.write",
+  "views.rename": "views.write",
+  "context.read": "context.read",
+  "agents.run": "agents.run",
+  "agents.stream": "agents.run",
+  "agents.start": "agents.start",
+  "canvas.createNote": "canvas.write",
+  "canvas.createFile": "canvas.write",
+  "canvas.createBrowser": "canvas.write",
+  "canvas.createNode": "canvas.write",
+  "canvas.update": "canvas.write",
+  "canvas.writeNote": "canvas.write",
+  "canvas.arrange": "canvas.write",
+  "canvas.remove": "canvas.write",
+  "canvas.group": "canvas.write",
+  "canvas.link": "canvas.write",
+  "canvas.unlink": "canvas.write",
+  useAgents: "agents.status",
+  useUsageLimits: "usage.read",
+  ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
+};
+function extensionCallPermission(call) {
+  return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? EXTENSION_CLIENT_PERMISSIONS[call] ?? null : null;
+}
+function missingPermissionMessage(extension, permission) {
+  return `${extension} did not ask for the permission ${permission} in its manifest`;
+}
+function lazyComponentProblem(surface, what) {
+  const { component } = surface;
+  if (surface.frame !== undefined || typeof component === "function" && component.length === 0 && !/^(class|function [A-Z])/.test(String(component))) {
+    return null;
+  }
+  return `${what}: component must be a lazy import, such as () => import('./Panel')`;
+}
+function shortcutProblem(shortcut) {
+  const parts = shortcut.toLowerCase().split("+");
+  return parts.some((part) => part === "mod" || part === "alt") ? null : `${shortcut} has no modifier: a shortcut needs mod or alt`;
+}
+function extensionProjectPath(folder, path) {
+  const full = path.startsWith("/") ? path : path === "." ? folder : `${folder}/${path}`;
+  const parts = full.split(/[\\/]/);
+  const inside = parts.join("/");
+  const root = folder.split(/[\\/]/).join("/");
+  if (inside !== root && (!inside.startsWith(`${root}/`) || parts.includes(".."))) {
+    return null;
+  }
+  return full;
+}
 
 // node_modules/.bun/zod@4.6.7/node_modules/zod/v4/core/util.js
 function getEnumValues(entries) {
@@ -3293,9 +3315,9 @@ function isRecursive(inst, stack, resolve) {
     }
   }
   stack.delete(inst);
-  return settle(inst, result);
+  return settle2(inst, result);
 }
-function settle(inst, answer) {
+function settle2(inst, answer) {
   if (answer !== ASSUMED)
     recursive.set(inst, answer === PROVEN);
   return answer;
@@ -6115,35 +6137,14 @@ function parseExtensionActionInput(name, input) {
   return { ok: true, input: parsed.data };
 }
 
-// packages/contracts/src/extension-permissions.ts
-var EXTENSION_ACTIONS = {
-  "launch.list": "launches.read",
-  "launch.read": "launches.read",
-  "launch.start": "launches.run",
-  "launch.restart": "launches.run",
-  "launch.stop": "launches.run",
-  "routine.list": "routines.read",
-  "routine.run": "routines.run",
-  "routine.pause": "routines.run",
-  "routine.resume": "routines.run",
-  "artifact.list": "artifacts.read",
-  "artifact.read": "artifacts.read",
-  "artifact.publish": "artifacts.write",
-  "browser.inspect": "browser.control",
-  "browser.navigate": "browser.control",
-  "browser.back": "browser.control",
-  "browser.forward": "browser.control",
-  "browser.reload": "browser.control",
-  "browser.screenshot": "browser.control",
-  "device.list": "devices.control",
-  "device.inspect": "devices.control",
-  "device.screenshot": "devices.control",
-  "device.tap": "devices.control",
-  "device.launch": "devices.control"
-};
-function extensionActionPermission(action) {
-  return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
-}
+// apps/server/src/extensions/test-host.ts
+import { readFileSync as readFileSync2 } from "fs";
+import { join as join4 } from "path";
+
+// apps/server/src/extensions/test-server.ts
+import { readFileSync } from "fs";
+import { tmpdir } from "os";
+import { join as join3, resolve } from "path";
 
 // packages/contracts/src/extension-results.ts
 function extensionAgentStatus(status, needsYou = false) {
@@ -6200,7 +6201,7 @@ function missingPermission(id, permission, permissions) {
   if (permissions.has(permission)) {
     return null;
   }
-  return { code: "permission-denied", message: `${id} did not ask for the permission ${permission} in its manifest` };
+  return { code: "permission-denied", message: missingPermissionMessage(id, permission) };
 }
 function actionRefusal(id, action, permissions) {
   const permission = extensionActionPermission(action);
@@ -6455,7 +6456,7 @@ function durationMs(duration) {
 }
 function manifestIn(folder) {
   try {
-    return JSON.parse(readFileSync2(join3(folder, "manifest.json"), "utf8"));
+    return JSON.parse(readFileSync(join3(folder, "manifest.json"), "utf8"));
   } catch {
     return {};
   }
@@ -6674,11 +6675,1253 @@ async function createTestServer(options = {}) {
   };
 }
 
+// apps/server/src/extensions/test-host.ts
+class Refused extends Error {
+  code;
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+var NOTE = { width: 320, height: 200 };
+var BESIDE_GAP = 240;
+var NODE_PLACES = ["node", "nodes", "from", "to"];
+function wire2(value) {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+function manifestIn2(folder) {
+  try {
+    return JSON.parse(readFileSync2(join4(folder, "manifest.json"), "utf8"));
+  } catch {
+    return {};
+  }
+}
+function wordsIn(folder, language) {
+  const read = (name) => {
+    try {
+      return JSON.parse(readFileSync2(join4(folder, "locales", `${name}.json`), "utf8"));
+    } catch {
+      return {};
+    }
+  };
+  return { ...read("en"), ...read(language) };
+}
+function errorText(e) {
+  return e instanceof Error ? e.message : String(e);
+}
+
+class TestHost {
+  id;
+  name;
+  folder;
+  permissions;
+  answers;
+  language;
+  theme;
+  machineId;
+  project;
+  views;
+  nodes = new Map;
+  edges = [];
+  createdIds = [];
+  notes = [];
+  revealed = [];
+  definitions = [];
+  entries = [];
+  entryOf = new WeakMap;
+  notifications = [];
+  dialogs = [];
+  opened = [];
+  panels = {};
+  copied = [];
+  calls = [];
+  logs = [];
+  storage;
+  settings;
+  words;
+  serverCache = new Map;
+  runs = [];
+  activeViewId;
+  selection;
+  listeners = new Map;
+  changes = new Set;
+  version = 0;
+  nextId = 1;
+  constructor(options, folder) {
+    const manifest = { ...manifestIn2(folder), ...options.manifest };
+    const project = options.project === null ? null : {
+      id: options.project?.id ?? "test-project",
+      name: options.project?.name ?? "Test",
+      folder: options.project?.folder === undefined ? "/test/project" : options.project.folder
+    };
+    this.id = manifest.id ?? "test.extension";
+    this.name = manifest.name ?? this.id;
+    this.folder = folder;
+    this.permissions = new Set(Object.keys(manifest.permissions ?? {}));
+    this.answers = options.answers ?? {};
+    this.language = options.language ?? "en";
+    this.theme = options.theme ?? "dark";
+    this.machineId = options.machine?.id ?? "local";
+    this.project = project;
+    this.views = project === null ? [] : (options.project?.views ?? [{ id: "test-view", kind: "canvas", name: "Canvas" }]).map((view) => ({
+      id: view.id,
+      kind: view.kind ?? "canvas",
+      name: view.name ?? ""
+    }));
+    this.activeViewId = this.views[0]?.id ?? null;
+    this.storage = {
+      computer: wire2(options.storage?.computer ?? {}),
+      project: wire2(options.storage?.project ?? {}),
+      machine: wire2(options.storage?.machine ?? {})
+    };
+    this.settings = { ...options.settings };
+    this.words = wordsIn(folder, this.language);
+    for (const node of options.project?.nodes ?? []) {
+      this.nodes.set(node.id, {
+        id: node.id,
+        kind: node.extension === undefined ? node.kind ?? "note" : "extension",
+        title: node.title ?? "",
+        text: node.text ?? "",
+        color: node.color ?? null,
+        bounds: node.bounds ?? { ...NOTE, x: 0, y: 0 },
+        viewId: node.view ?? this.activeViewId ?? "",
+        groupId: null,
+        ...node.agent === undefined ? {} : { agent: node.agent },
+        ...node.path === undefined ? {} : { path: node.path },
+        ...node.url === undefined ? {} : { url: node.url },
+        ...node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire2(node.extension.data ?? {}) }
+      });
+      for (const to of node.linkedTo ?? []) {
+        this.addEdge(node.id, to);
+      }
+    }
+    this.selection = [...options.selection ?? []];
+  }
+  subscribe(listener) {
+    this.changes.add(listener);
+    return () => {
+      this.changes.delete(listener);
+    };
+  }
+  snapshot() {
+    return this.version;
+  }
+  changed() {
+    this.version += 1;
+    for (const listener of [...this.changes]) {
+      listener();
+    }
+  }
+  listen(name, listener) {
+    const group = this.listeners.get(name) ?? new Set;
+    group.add(listener);
+    this.listeners.set(name, group);
+    return () => {
+      group.delete(listener);
+    };
+  }
+  deliver(name, payload) {
+    for (const listener of [...this.listeners.get(name) ?? []]) {
+      listener(payload);
+    }
+  }
+  record(kind, definition) {
+    this.definitions.push({ kind, definition });
+  }
+  addEntry(definition, entry) {
+    const at = this.entries.findIndex((each) => each.id === entry.id);
+    if (at >= 0) {
+      this.entries.splice(at, 1);
+    }
+    this.entries.push(entry);
+    this.entryOf.set(definition, entry);
+  }
+  defined(kind, id) {
+    const ofKind = this.definitions.filter((each) => each.kind === kind);
+    const found = ofKind.find((each) => each.definition.id === id);
+    if (found === undefined) {
+      const ids = ofKind.map((each) => each.definition.id);
+      throw new Error(`No ${kind} ${id}. ${ids.length === 0 ? `The extension defined no ${kind}` : `There is ${ids.join(", ")}`}`);
+    }
+    return found.definition;
+  }
+  permitCall(what) {
+    const permission = extensionCallPermission(what);
+    if (permission !== null) {
+      this.permit(permission);
+    }
+  }
+  permit(permission) {
+    if (!this.permissions.has(permission)) {
+      throw new Refused("permission-denied", missingPermissionMessage(this.name, permission));
+    }
+  }
+  hookPermission(hook) {
+    const permission = extensionCallPermission(hook);
+    if (permission !== null && !this.permissions.has(permission)) {
+      throw new Error(missingPermissionMessage(this.name, permission));
+    }
+  }
+  refusalOf(what, args, e) {
+    if (e instanceof TypeError) {
+      throw e;
+    }
+    const error = e instanceof Refused || e instanceof TestRefusal ? { code: e.code, message: e.message } : { code: "failed", message: errorText(e) };
+    this.logs.push(`${what}: ${error.code}: ${error.message}`);
+    this.calls.push({ method: what, args, result: { ok: false, error } });
+    return { ok: false, error };
+  }
+  attempt(what, args, run) {
+    try {
+      this.permitCall(what);
+      const value = run();
+      this.calls.push({ method: what, args, result: { ok: true, value } });
+      return { ok: true, value };
+    } catch (e) {
+      return this.refusalOf(what, args, e);
+    }
+  }
+  async settle(what, args, run) {
+    try {
+      this.permitCall(what);
+      const value = await run();
+      this.calls.push({ method: what, args, result: { ok: true, value } });
+      return { ok: true, value };
+    } catch (e) {
+      return this.refusalOf(what, args, e);
+    }
+  }
+  async scripted(path, args, fallback) {
+    const answer = this.answers[path];
+    if (typeof answer === "function") {
+      return wire2(await answer(...wire2(args)));
+    }
+    if (fallback !== undefined) {
+      return fallback();
+    }
+    throw new Refused("unavailable", `Nothing answers ${path} in this test. Give it under answers`);
+  }
+  projectId() {
+    if (this.project === null) {
+      throw new Refused("no-project", "This needs an open project");
+    }
+    return this.project.id;
+  }
+  inProject(path) {
+    const folder = this.project?.folder;
+    if (folder === null || folder === undefined) {
+      throw new Refused("no-project", "This needs a project with a folder");
+    }
+    const full = extensionProjectPath(folder, path);
+    if (full === null) {
+      throw new Refused("outside-project", `${path} is outside the project folder`);
+    }
+    return full;
+  }
+  canvasInFront() {
+    const view = this.views.find((each) => each.id === this.activeViewId);
+    if (view?.kind !== "canvas") {
+      throw new Refused("no-canvas", "This needs a canvas in front");
+    }
+    return view.id;
+  }
+  nodeOnCanvas(node) {
+    const found = this.nodes.get(node.id);
+    if (found === undefined) {
+      throw new Refused("not-found", `No node ${node.id} on a canvas of this window`);
+    }
+    return found;
+  }
+  beside(near) {
+    const anchor = near?.[0] === undefined ? undefined : this.nodes.get(near[0].id);
+    return anchor === undefined ? { x: 0, y: 0 } : { x: anchor.bounds.x + anchor.bounds.width + BESIDE_GAP, y: anchor.bounds.y + anchor.bounds.height / 2 };
+  }
+  addNode(kind, at, size, details) {
+    const viewId = this.canvasInFront();
+    let id = `${kind}-${this.nextId}`;
+    while (this.nodes.has(id)) {
+      this.nextId += 1;
+      id = `${kind}-${this.nextId}`;
+    }
+    this.nextId += 1;
+    this.nodes.set(id, { id, kind, title: "", text: "", color: null, bounds: { ...at, ...size }, viewId, groupId: null, ...details });
+    this.createdIds.push(id);
+    this.changed();
+    this.deliver("node.added", { node: this.info(id) });
+    return { id };
+  }
+  changeNode(id, change) {
+    const node = this.nodes.get(id);
+    if (node !== undefined) {
+      Object.assign(node, change);
+      this.changed();
+      this.deliver("node.changed", { node: this.info(id) });
+    }
+  }
+  addEdge(from, to) {
+    if (!this.edges.some((edge) => edge.from === from && edge.to === to)) {
+      this.edges.push({ from, to });
+    }
+  }
+  remove(ids) {
+    for (const id of ids) {
+      if (this.nodes.delete(id)) {
+        this.deliver("node.removed", { id });
+      }
+    }
+    this.selection = this.selection.filter((id) => !ids.includes(id));
+    this.edges.splice(0, this.edges.length, ...this.edges.filter((edge) => !ids.includes(edge.from) && !ids.includes(edge.to)));
+    this.changed();
+  }
+  select(ids) {
+    this.selection = [...ids];
+    this.changed();
+    this.deliver("selection.changed", { nodes: this.selection.map((id) => this.info(id)) });
+  }
+  openView(id) {
+    this.activeViewId = id;
+    this.changed();
+    this.deliver("view.changed", { viewId: id });
+  }
+  info(id) {
+    const node = this.nodes.get(id);
+    if (node === undefined) {
+      return {
+        id,
+        kind: "unknown",
+        title: "",
+        color: null,
+        bounds: { x: 0, y: 0, width: 0, height: 0 },
+        groupId: null,
+        viewId: this.activeViewId ?? "",
+        machine: null,
+        linkedTo: []
+      };
+    }
+    const agent = node.kind === "chat" || node.kind === "terminal" || node.kind === "design" ? {
+      provider: "claude",
+      account: null,
+      status: "idle",
+      cwd: null,
+      branch: null,
+      worktree: null,
+      ...node.agent
+    } : undefined;
+    return {
+      id,
+      kind: node.kind,
+      title: node.title,
+      color: node.color,
+      bounds: { ...node.bounds },
+      groupId: node.groupId,
+      viewId: node.viewId,
+      machine: null,
+      linkedTo: this.edges.flatMap((edge) => edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : []),
+      ...agent === undefined ? {} : { agent },
+      ...node.path === undefined ? {} : { path: node.path },
+      ...node.url === undefined ? {} : { url: node.url },
+      ...node.extension === undefined ? {} : { extension: { ...node.extension } }
+    };
+  }
+  nodesInFront() {
+    return [...this.nodes.values()].filter((node) => node.viewId === this.activeViewId).map((node) => this.info(node.id));
+  }
+  baseContext() {
+    const view = this.views.find((each) => each.id === this.activeViewId);
+    return {
+      project: { id: this.project?.id ?? "", name: this.project?.name ?? "", folder: this.project?.folder ?? null },
+      view: view === undefined ? null : { ...view },
+      machine: { id: this.machineId },
+      theme: this.theme
+    };
+  }
+  context(place, extra = {}) {
+    if (!isExtensionSlotName(place)) {
+      throw new TypeError(`${place} is no slot. The slots are ${EXTENSION_SLOT_NAMES.join(", ")}`);
+    }
+    const current = (value) => {
+      if (Array.isArray(value)) {
+        return value.map(current);
+      }
+      if (typeof value === "string") {
+        return this.info(value);
+      }
+      return typeof value === "object" && value !== null && typeof value.id === "string" ? this.info(value.id) : value;
+    };
+    const told = Object.fromEntries(Object.entries(extra).map(([key, value]) => [key, NODE_PLACES.includes(key) ? current(value) : value]));
+    const selected = () => this.selection.map((id) => this.info(id));
+    const defaults = {};
+    if (place === "selectionBar" || place === "commandPalette") {
+      defaults.nodes = selected();
+    }
+    if (place === "canvasMenu") {
+      defaults.at = { x: 0, y: 0 };
+    }
+    if (place === "nodeMenu" && told.node !== undefined && told.nodes === undefined) {
+      const { id } = told.node;
+      defaults.nodes = this.selection.includes(id) ? selected() : [told.node];
+    }
+    return { ...this.baseContext(), ...defaults, ...told };
+  }
+  shown(entry, place, context) {
+    const slot = entry.slots[place];
+    if (slot === undefined) {
+      return null;
+    }
+    try {
+      const answer = slot === true ? true : slot(context);
+      if (answer === false) {
+        return null;
+      }
+      const details = answer === true ? {} : answer;
+      return {
+        title: details.title ?? entry.title,
+        icon: details.icon ?? entry.icon ?? null,
+        disabled: details.disabled ?? false,
+        badge: details.badge ?? null,
+        order: details.order ?? 0
+      };
+    } catch (e) {
+      this.logs.push(`${entry.id}: ${errorText(e)}`);
+      return null;
+    }
+  }
+  entry(definition) {
+    const entry = this.entryOf.get(definition);
+    if (entry === undefined) {
+      throw new TypeError("This is no action, menu, widget or node the extension defined. Take one from host.action(id) and its kind");
+    }
+    return entry;
+  }
+  async runEntry(entry, title, context, slot) {
+    const nodeIds = (context.nodes ?? (context.node === undefined ? [] : [context.node])).map((node) => node.id);
+    const run = entry.run;
+    const busy = this.runs.some((each) => each.actionId === entry.id && (nodeIds.length === 0 || each.nodeIds.length === 0 || each.nodeIds.some((id) => nodeIds.includes(id))));
+    if (run === undefined || busy) {
+      return { ok: false, error: { code: "refused", message: `${title} is running on these nodes already` } };
+    }
+    const tracked = { actionId: entry.id, nodeIds };
+    this.runs.push(tracked);
+    this.changed();
+    try {
+      await run({ ...context, slot, signal: new AbortController().signal });
+      return { ok: true, value: undefined };
+    } catch (e) {
+      const message = errorText(e);
+      this.notifications.push({ text: title, detail: message, tone: "error" });
+      this.logs.push(`${entry.id.slice(this.id.length + 1)}: ${message}`);
+      return { ok: false, error: { code: "failed", message } };
+    } finally {
+      this.runs.splice(this.runs.indexOf(tracked), 1);
+      this.changed();
+    }
+  }
+  slot(definition, place, extra) {
+    const context = this.context(place, extra);
+    return this.shown(this.entry(definition), place, context);
+  }
+  async run(definition, place, extra) {
+    const context = this.context(place, extra);
+    const entry = this.entry(definition);
+    const shown = this.shown(entry, place, context);
+    if (shown === null) {
+      return { ok: false, error: { code: "refused", message: `${entry.title} does not show in ${place} here` } };
+    }
+    if (shown.disabled !== false) {
+      return {
+        ok: false,
+        error: { code: "refused", message: typeof shown.disabled === "string" ? shown.disabled : `${shown.title} is disabled in ${place} here` }
+      };
+    }
+    return this.runEntry(entry, shown.title, context, place);
+  }
+  menuItems(menu, place, extra) {
+    const context = this.context(place, extra);
+    const entry = this.entry(menu);
+    if (entry.kind !== "menu") {
+      throw new TypeError(`${entry.title} is no menu`);
+    }
+    if (this.shown(entry, place, context) === null) {
+      return { ok: false, error: { code: "refused", message: `${entry.title} does not show in ${place} here` } };
+    }
+    try {
+      const items = typeof entry.items === "function" ? entry.items(context) : entry.items ?? [];
+      return { ok: true, value: this.rows(items, context, place) };
+    } catch (e) {
+      const message = errorText(e);
+      this.logs.push(`${entry.id.slice(this.id.length + 1)}: ${message}`);
+      return { ok: false, error: { code: "failed", message } };
+    }
+  }
+  rows(items, context, place) {
+    return items.flatMap((item) => {
+      if (item === "separator") {
+        return ["separator"];
+      }
+      if (typeof item === "object" && item !== null && "actionId" in item) {
+        const action = this.entries.find((each) => each.id === item.actionId);
+        return action === undefined ? [] : [{ title: action.title, run: () => this.runEntry(action, action.title, context, place) }];
+      }
+      const row = item;
+      if (row.items !== undefined) {
+        return [{ title: row.title, items: this.rows(row.items, context, place) }];
+      }
+      return [
+        {
+          title: row.title,
+          ...row.checked === undefined ? {} : { checked: row.checked },
+          run: async () => {
+            try {
+              row.run?.();
+              return { ok: true, value: undefined };
+            } catch (e) {
+              return { ok: false, error: { code: "failed", message: errorText(e) } };
+            }
+          }
+        }
+      ];
+    });
+  }
+  ask(kind, title, answer, body) {
+    this.dialogs.push({ kind, title, ...body === undefined ? {} : { body }, answer });
+    return answer;
+  }
+}
+
+// apps/server/src/extensions/test-client.ts
+var NEW_NODE = { width: 420, height: 300 };
+var NOTE2 = { width: 320, height: 200 };
+var ARRANGE_GAP = 40;
+function assertLazy(surface, what) {
+  const problem = lazyComponentProblem(surface, what);
+  if (problem !== null) {
+    throw new TypeError(problem);
+  }
+}
+function useHost(host) {
+  react().useSyncExternalStore((listener) => host.subscribe(listener), () => host.snapshot());
+}
+function removeTitle(count) {
+  return count === 1 ? "Remove 1 node?" : `Remove ${count} nodes?`;
+}
+function removeBody(count, name) {
+  return count === 1 ? `${name} asks to remove it.` : `${name} asks to remove them.`;
+}
+async function serverCall(host, method, args) {
+  const server = host.answers.server;
+  if (server !== undefined && typeof server.call === "function" && "asked" in server) {
+    const result = await server.call(method, ...args);
+    host.calls.push({ method: `server ${method}`, args, result });
+    if (!result.ok) {
+      host.logs.push(`server ${method}: ${result.error.code}: ${result.error.message}`);
+    }
+    return result;
+  }
+  return host.settle(`server ${method}`, args, async () => {
+    const handler = server?.[method];
+    if (typeof handler !== "function") {
+      throw new Refused("not-found", `No method ${method}`);
+    }
+    return wire2(await handler(...wire2(args))) ?? null;
+  });
+}
+function serverClient(host) {
+  return new Proxy({}, {
+    get(_target, method) {
+      if (typeof method !== "string") {
+        return;
+      }
+      return Object.assign((...args) => serverCall(host, method, args), {
+        use(...args) {
+          const key = JSON.stringify([method, args]);
+          let pending = host.serverCache.get(key);
+          if (pending === undefined) {
+            pending = serverCall(host, method, args);
+            host.serverCache.set(key, pending);
+          }
+          return react().use(pending);
+        }
+      });
+    }
+  });
+}
+function machineCalls(host, area, names) {
+  return Object.fromEntries(names.map((action) => {
+    const verb = action.slice(action.indexOf(".") + 1);
+    const path = `${area}.${verb}`;
+    return [
+      verb,
+      (input = {}) => host.settle(path, [input], async () => {
+        const project = host.projectId();
+        const parsed = parseExtensionActionInput(action, wire2(input));
+        if (!parsed.ok) {
+          throw new TypeError(`${path}: ${parsed.message}`);
+        }
+        const run = host.answers["machine.run"]?.[action];
+        if (run === undefined) {
+          throw new Refused("unavailable", `Nothing answers ${action} in this test. Give it under answers['machine.run']`);
+        }
+        return wire2(await run(parsed.input, { id: project }));
+      })
+    ];
+  }));
+}
+function nodeText(host, id) {
+  host.projectId();
+  const node = host.nodes.get(id);
+  if (node === undefined) {
+    throw new Refused("not-found", `No node ${id} in this project`);
+  }
+  return node.text;
+}
+function settingDefault(host, key) {
+  for (const { kind, definition } of host.definitions) {
+    if (kind !== "settings") {
+      continue;
+    }
+    const settings = definition;
+    const field = (settings.fields ?? settings.groups?.flatMap((group) => group.fields) ?? []).find((each) => each.key === key);
+    if (field !== undefined) {
+      return field.default;
+    }
+  }
+  return;
+}
+function ask(answer, options, fallback) {
+  if (typeof answer === "function") {
+    return answer(options);
+  }
+  return answer === undefined ? fallback : answer;
+}
+function clientApi(host) {
+  const fullId = (id) => `${host.id}/${id}`;
+  const inFolder = (what, path, args) => host.settle(what, args, () => {
+    host.inProject(path);
+    return host.scripted(what, args);
+  });
+  const entry = (definition, details) => host.addEntry(definition, { ...details, slots: details.slots ?? {} });
+  const actionHandle = (id) => ({
+    actionId: id,
+    run: async (context) => {
+      const found = host.entries.find((each) => each.id === id);
+      if (found !== undefined) {
+        await host.runEntry(found, found.title, { ...host.baseContext(), ...context }, "code");
+      }
+    },
+    useRunning: () => {
+      useHost(host);
+      return host.runs.some((run) => run.actionId === id);
+    }
+  });
+  return {
+    definePanel(panel) {
+      assertLazy(panel, `definePanel ${panel.id}`);
+      host.record("panel", panel);
+      host.panels[panel.id] = { title: panel.title, badge: null, open: false, params: undefined };
+      const state = () => host.panels[panel.id];
+      return {
+        open: (params) => {
+          Object.assign(state(), { open: true, params });
+          host.opened.push({ kind: "panel", id: panel.id, params });
+          host.changed();
+        },
+        close: () => {
+          state().open = false;
+          host.changed();
+        },
+        setBadge: (text) => {
+          state().badge = text;
+          host.changed();
+        },
+        setTitle: (title) => {
+          state().title = title;
+          host.changed();
+        }
+      };
+    },
+    defineSidebarCard(card) {
+      assertLazy(card, `defineSidebarCard ${card.id}`);
+      host.record("sidebarCard", card);
+    },
+    defineView(view) {
+      assertLazy(view, `defineView ${view.id}`);
+      host.record("view", view);
+      return {
+        open: (params) => {
+          const id = `view-${host.views.length + 1}`;
+          host.views.push({ id, kind: "extension", name: view.title });
+          host.opened.push({ kind: "view", id: view.id, params });
+          host.openView(id);
+        }
+      };
+    },
+    defineNode(node) {
+      assertLazy(node, `defineNode ${node.id}`);
+      host.record("node", node);
+      entry(node, {
+        id: fullId(`node/${node.id}`),
+        kind: "action",
+        title: node.title,
+        ...node.icon === undefined ? {} : { icon: node.icon },
+        slots: node.addFrom ?? { canvasMenu: true, commandPalette: true },
+        run: (context) => {
+          host.addNode("extension", context.at ?? { x: 0, y: 0 }, node.size ?? NEW_NODE, {
+            title: node.title,
+            extension: { id: host.id, type: node.id },
+            data: wire2(node.initialData ?? {})
+          });
+        }
+      });
+    },
+    defineCanvasOverlay(overlay) {
+      assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
+      host.record("canvasOverlay", overlay);
+    },
+    defineFileViewer(viewer) {
+      assertLazy(viewer, `defineFileViewer ${viewer.id}`);
+      host.record("fileViewer", viewer);
+    },
+    defineMarkdownBlock(block) {
+      assertLazy(block, `defineMarkdownBlock ${block.language}`);
+      host.record("markdownBlock", block);
+    },
+    defineOverlay(overlay) {
+      assertLazy(overlay, `defineOverlay ${overlay.id}`);
+      host.record("overlay", overlay);
+      return {
+        open: async (params) => {
+          host.opened.push({ kind: "overlay", id: overlay.id, params });
+          const answer = host.answers.overlays?.[overlay.id];
+          return answer === undefined ? null : await answer(params) ?? null;
+        },
+        close: () => {
+          return;
+        }
+      };
+    },
+    defineToolResult(result) {
+      assertLazy(result, `defineToolResult ${result.id}`);
+      host.record("toolResult", result);
+    },
+    definePaletteSource: (source) => host.record("paletteSource", source),
+    defineSlashCommand: (command) => host.record("slashCommand", command),
+    defineReference: (reference) => host.record("reference", reference),
+    defineDiffViewer(viewer) {
+      assertLazy(viewer, `defineDiffViewer ${viewer.id}`);
+      host.record("diffViewer", viewer);
+    },
+    defineFileIcon: (icon) => host.record("fileIcon", icon),
+    defineVoiceAction: (action) => host.record("voiceAction", action),
+    defineTemplate(template) {
+      host.record("template", template);
+      entry(template, {
+        id: fullId(`template/${template.id}`),
+        kind: "action",
+        title: template.title,
+        ...template.icon === undefined ? {} : { icon: template.icon },
+        slots: { canvasMenu: true },
+        run: template.create
+      });
+    },
+    defineCommand: (command) => host.record("command", command),
+    defineExtensionSettings(settings) {
+      if (settings.fields === undefined && settings.groups === undefined) {
+        assertLazy(settings, `defineExtensionSettings ${host.id}`);
+      }
+      host.record("settings", settings);
+    },
+    defineAction(action) {
+      const problem = action.shortcut === undefined ? null : shortcutProblem(action.shortcut);
+      if (problem !== null) {
+        throw new Error(problem);
+      }
+      host.record("action", action);
+      entry(action, {
+        id: fullId(action.id),
+        kind: "action",
+        title: action.title,
+        ...action.icon === undefined ? {} : { icon: action.icon },
+        slots: action.slots ?? {},
+        run: action.run
+      });
+      return actionHandle(fullId(action.id));
+    },
+    defineMenu(menu) {
+      host.record("menu", menu);
+      entry(menu, {
+        id: fullId(menu.id),
+        kind: "menu",
+        title: menu.title,
+        ...menu.icon === undefined ? {} : { icon: menu.icon },
+        slots: menu.slots,
+        items: menu.items
+      });
+    },
+    defineWidget(widget) {
+      assertLazy(widget, `defineWidget ${widget.id}`);
+      host.record("widget", widget);
+      entry(widget, { id: fullId(widget.id), kind: "widget", title: widget.id, slots: widget.slots });
+    },
+    useServer: () => serverClient(host),
+    useServerEvent(name, listener) {
+      react().useEffect(() => host.listen(`server:${name}`, listener), [name, listener]);
+    },
+    useUsageLimits() {
+      host.hookPermission("useUsageLimits");
+      return host.answers["usage.limits"] ?? [];
+    },
+    useNodeData() {
+      const module = react();
+      const nodeId = module.useContext(nodeContextOf(module));
+      useHost(host);
+      if (nodeId === null) {
+        throw new Error("useNodeData only works in a node");
+      }
+      return [host.nodes.get(nodeId)?.data, (next) => host.changeNode(nodeId, { data: wire2(next) })];
+    },
+    useStorage(key, initial, scope = "computer") {
+      useHost(host);
+      const values = host.storage[scope];
+      return [
+        Object.hasOwn(values, key) ? values[key] : initial,
+        (next) => {
+          values[key] = wire2(next);
+          host.changed();
+        }
+      ];
+    },
+    useProject: () => {
+      useHost(host);
+      return { id: host.project?.id ?? "", name: host.project?.name ?? "" };
+    },
+    useActiveView: () => {
+      useHost(host);
+      return { id: host.activeViewId ?? "" };
+    },
+    useViews: () => {
+      useHost(host);
+      return host.views.map((view) => ({ ...view }));
+    },
+    useSelection: () => {
+      useHost(host);
+      return host.selection.map((id) => host.info(id));
+    },
+    useSetting(key) {
+      useHost(host);
+      return Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, key);
+    },
+    useMachine: () => ({ id: host.machineId }),
+    useTheme: () => ({ side: host.theme }),
+    useChat(chatId) {
+      useHost(host);
+      const node = host.nodes.get(chatId);
+      if (node?.kind !== "chat") {
+        return null;
+      }
+      const agent = host.info(chatId).agent;
+      return {
+        id: chatId,
+        provider: agent?.provider ?? "claude",
+        status: agent?.status ?? "idle",
+        model: null,
+        cwd: agent?.cwd ?? host.project?.folder ?? ""
+      };
+    },
+    useNode: (id) => {
+      useHost(host);
+      return host.info(id);
+    },
+    useNodes: (filter) => {
+      useHost(host);
+      const nodes = host.nodesInFront();
+      return filter === undefined ? nodes : nodes.filter(filter);
+    },
+    useLocale() {
+      const { words } = host;
+      return {
+        language: host.language,
+        get format() {
+          const format = formatModule();
+          format.setFormatSource({ language: () => host.language, region: () => format.FORMAT_LANGUAGE, subscribe: () => () => {
+            return;
+          } });
+          return format;
+        },
+        t: (key, values) => Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
+      };
+    },
+    useEvent(name, listener) {
+      react().useEffect(() => host.listen(name, listener), [name, listener]);
+    },
+    onEvent: (name, listener) => host.listen(name, listener),
+    useAgents() {
+      host.hookPermission("useAgents");
+      useHost(host);
+      return host.nodesInFront().filter((node) => node.kind === "chat" || node.kind === "terminal").map((node) => ({ id: node.id, title: node.title, status: node.agent?.status ?? "idle" }));
+    },
+    host: {
+      async busy(work, run) {
+        const tracked = { actionId: null, nodeIds: (work.nodes ?? []).map((node) => node.id) };
+        host.runs.push(tracked);
+        host.changed();
+        try {
+          return await run(new AbortController().signal);
+        } finally {
+          host.runs.splice(host.runs.indexOf(tracked), 1);
+          host.changed();
+        }
+      },
+      notify(text, options) {
+        host.notifications.push({ text, tone: options?.tone ?? "neutral", ...options?.action === undefined ? {} : { action: options.action.title } });
+      },
+      pickFolder: async (initial) => host.ask("folder", initial ?? "", host.answers.pickFolder ?? null),
+      openSettings() {
+        host.opened.push({ kind: "settings" });
+      },
+      confirm: async (options) => host.ask("confirm", options.title, ask(host.answers.confirm, options, true), options.body),
+      prompt: async (options) => host.ask("prompt", options.title, ask(host.answers.prompt, options, null)),
+      async pick(options) {
+        const labels = options.items.map(options.label);
+        const answer = host.ask("pick", options.title, ask(host.answers.pick, { title: options.title, labels }, null));
+        return answer === null ? null : options.items[labels.indexOf(answer)] ?? null;
+      },
+      openUrl(url) {
+        host.opened.push({ kind: "url", id: url });
+      },
+      copy(text) {
+        host.copied.push(text);
+      }
+    },
+    files: {
+      readText: (path) => inFolder("files.readText", path, [path]),
+      write: (path, text) => host.settle("files.write", [path, text], async () => {
+        host.inProject(path);
+        await host.scripted("files.write", [path, text]);
+      }),
+      list: (folder) => inFolder("files.list", folder, [folder]),
+      watch: (path, _listener) => host.attempt("files.watch", [path], () => {
+        host.inProject(path);
+        return () => {
+          return;
+        };
+      }),
+      open(path) {
+        host.opened.push({ kind: "file", id: path });
+      }
+    },
+    git: {
+      status: (options = {}) => inFolder("git.status", options.repository ?? ".", [options]),
+      diff: (options) => inFolder("git.diff", options.repository ?? ".", [options]),
+      log: (options = {}) => inFolder("git.log", options.repository ?? ".", [options])
+    },
+    launches: machineCalls(host, "launches", [
+      "launch.list",
+      "launch.read",
+      "launch.start",
+      "launch.restart",
+      "launch.stop"
+    ]),
+    routines: machineCalls(host, "routines", ["routine.list", "routine.run", "routine.pause", "routine.resume"]),
+    artifacts: machineCalls(host, "artifacts", ["artifact.list", "artifact.read", "artifact.publish"]),
+    browser: machineCalls(host, "browser", [
+      "browser.inspect",
+      "browser.navigate",
+      "browser.back",
+      "browser.forward",
+      "browser.reload",
+      "browser.screenshot"
+    ]),
+    devices: machineCalls(host, "devices", [
+      "device.list",
+      "device.inspect",
+      "device.screenshot",
+      "device.tap",
+      "device.launch"
+    ]),
+    terminals: {
+      read: (terminal) => host.settle("terminals.read", [terminal], () => host.scripted("terminals.read", [terminal], () => nodeText(host, terminal.id))),
+      open: (options = {}) => host.attempt("terminals.open", [options], () => host.addNode("terminal", host.beside(options.near), NEW_NODE, {
+        title: options.title ?? "Terminal",
+        ...options.cwd === undefined ? {} : { path: options.cwd }
+      }))
+    },
+    database: {
+      connections: () => host.settle("database.connections", [], () => host.scripted("database.connections", [])),
+      query: (connection, sql) => host.settle("database.query", [connection, sql], () => {
+        host.projectId();
+        return host.scripted("database.query", [connection, sql]);
+      })
+    },
+    chats: {
+      list: () => host.settle("chats.list", [], () => host.scripted("chats.list", [])),
+      read: (chatId) => host.settle("chats.read", [chatId], () => host.scripted("chats.read", [chatId], () => nodeText(host, chatId))),
+      send: (chatId, text) => host.settle("chats.send", [chatId, text], async () => {
+        await host.scripted("chats.send", [chatId, text]);
+      })
+    },
+    views: {
+      open(view) {
+        host.openView(view.id);
+      },
+      createCanvas: (name) => host.attempt("views.createCanvas", [name], () => {
+        host.projectId();
+        const id = `view-${host.views.length + 1}`;
+        host.views.push({ id, kind: "canvas", name });
+        host.changed();
+        return { id };
+      }),
+      rename: (view, name) => host.attempt("views.rename", [view, name], () => {
+        const found = host.views.find((each) => each.id === view.id);
+        if (found === undefined) {
+          throw new Refused("not-found", `No view ${view.id} in this project`);
+        }
+        found.name = name;
+        host.changed();
+      })
+    },
+    context: {
+      read: (of) => host.settle("context.read", [of], () => {
+        host.projectId();
+        return host.scripted("context.read", [of], () => {
+          const ids = of.nodes?.map((node) => node.id) ?? [...host.nodes.values()].filter((node) => node.viewId === (of.view?.id ?? host.activeViewId)).map((node) => node.id);
+          return ids.flatMap((id) => {
+            const node = host.nodes.get(id);
+            return node === undefined ? [] : [{ id, kind: node.kind, title: node.title, text: node.text }];
+          });
+        });
+      })
+    },
+    agents: {
+      run: (options) => host.settle("agents.run", [options], () => {
+        host.projectId();
+        return host.scripted("agents.run", [options]);
+      }),
+      async* stream(options) {
+        const { signal: _signal, ...asked } = options;
+        const pieces = await host.settle("agents.stream", [asked], () => {
+          host.projectId();
+          return host.scripted("agents.stream", [asked]);
+        });
+        if (!pieces.ok) {
+          yield pieces;
+          return;
+        }
+        for (const text of pieces.value) {
+          yield { ok: true, value: { text } };
+        }
+      },
+      start: (options) => host.settle("agents.start", [options], () => {
+        host.projectId();
+        return host.scripted("agents.start", [options], () => host.addNode("chat", host.beside(options.near), NEW_NODE, {
+          title: options.title ?? "Chat",
+          agent: { provider: options.provider ?? "claude", status: "running" }
+        }));
+      })
+    },
+    canvas: {
+      createNote: (note) => host.attempt("canvas.createNote", [note], () => {
+        const created = host.addNode("note", host.beside(note.near), NOTE2, { title: note.title ?? "", text: note.text, color: note.color ?? null });
+        host.notes.push(created.id);
+        return created;
+      }),
+      createFile: (path, options = {}) => host.attempt("canvas.createFile", [path, options], () => host.addNode("file", host.beside(options.near), NEW_NODE, { title: path, path })),
+      createBrowser: (url, options = {}) => host.attempt("canvas.createBrowser", [url, options], () => host.addNode("browser", host.beside(options.near), NEW_NODE, { title: url, url })),
+      createNode: (type, options = {}) => {
+        const node = host.definitions.find((each) => each.kind === "node" && each.definition.id === type);
+        if (node === undefined) {
+          throw new TypeError(`${host.name} has no node ${type}`);
+        }
+        return host.attempt("canvas.createNode", [type, options], () => host.addNode("extension", options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), NEW_NODE, {
+          title: options.title ?? node.definition.title,
+          extension: { id: host.id, type },
+          data: wire2(options.data ?? {})
+        }));
+      },
+      update: (node, patch) => host.attempt("canvas.update", [node, patch], () => {
+        const { bounds, title } = host.nodeOnCanvas(node);
+        host.changeNode(node.id, {
+          title: patch.title ?? title,
+          bounds: { x: patch.x ?? bounds.x, y: patch.y ?? bounds.y, width: patch.width ?? bounds.width, height: patch.height ?? bounds.height }
+        });
+      }),
+      writeNote: (node, text) => host.attempt("canvas.writeNote", [node, text], () => {
+        host.nodeOnCanvas(node);
+        host.changeNode(node.id, { text });
+      }),
+      arrange: (nodes, layout) => host.attempt("canvas.arrange", [nodes, layout], () => {
+        const viewId = host.canvasInFront();
+        const placed = nodes.flatMap((node) => {
+          const found = host.nodes.get(node.id);
+          return found?.viewId === viewId ? [found] : [];
+        });
+        const first = placed[0];
+        if (first === undefined) {
+          throw new Refused("not-found", "None of these nodes is on the canvas in front");
+        }
+        const columns = layout === "row" ? placed.length : layout === "column" ? 1 : Math.ceil(Math.sqrt(placed.length));
+        const width = Math.max(...placed.map((node) => node.bounds.width));
+        const height = Math.max(...placed.map((node) => node.bounds.height));
+        const { x, y } = first.bounds;
+        placed.forEach((node, index) => {
+          host.changeNode(node.id, {
+            bounds: {
+              ...node.bounds,
+              x: x + index % columns * (width + ARRANGE_GAP),
+              y: y + Math.floor(index / columns) * (height + ARRANGE_GAP)
+            }
+          });
+        });
+      }),
+      remove: (nodes) => host.settle("canvas.remove", [nodes], () => {
+        host.canvasInFront();
+        const title = removeTitle(nodes.length);
+        const body = removeBody(nodes.length, host.name);
+        if (!host.ask("confirm", title, ask(host.answers.confirm, { title, body }, true), body)) {
+          throw new Refused("refused", "The person kept them");
+        }
+        host.remove(nodes.map((node) => node.id));
+      }),
+      group: (nodes) => host.attempt("canvas.group", [nodes], () => {
+        host.canvasInFront();
+        const members = nodes.filter((node) => host.nodes.has(node.id));
+        if (members.length === 0) {
+          throw new Refused("refused", "These nodes make no group on the canvas in front");
+        }
+        const group = host.addNode("group", host.beside(undefined), NEW_NODE, { title: "Group" });
+        for (const member of members) {
+          host.changeNode(member.id, { groupId: group.id });
+        }
+        return group;
+      }),
+      link: (from, to) => host.attempt("canvas.link", [from, to], () => {
+        host.nodeOnCanvas(from);
+        host.addEdge(from.id, to.id);
+        host.changed();
+      }),
+      unlink: (from, to) => host.attempt("canvas.unlink", [from, to], () => {
+        host.nodeOnCanvas(from);
+        const at = host.edges.findIndex((edge) => edge.from === from.id && edge.to === to.id || edge.from === to.id && edge.to === from.id);
+        if (at >= 0) {
+          host.edges.splice(at, 1);
+          host.changed();
+        }
+      }),
+      select(nodes) {
+        host.select(nodes.map((node) => node.id));
+      },
+      reveal(target) {
+        host.revealed.push(target.id);
+      }
+    }
+  };
+}
+
+// apps/server/src/extensions/test-hosts.ts
+var current2 = null;
+function currentApi() {
+  if (current2 === null) {
+    const host = new TestHost({}, process.cwd());
+    current2 = { host, api: clientApi(host) };
+  }
+  return current2.api;
+}
+function forwarded() {
+  const template = clientApi(new TestHost({}, process.cwd()));
+  return Object.fromEntries(Object.entries(template).map(([name, member]) => [
+    name,
+    typeof member === "function" ? (...args) => currentApi()[name](...args) : new Proxy(member, {
+      get: (_target, key) => {
+        const target = currentApi()[name];
+        const value = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      }
+    })
+  ]));
+}
+var client = forwarded();
+function entryIn(folder, entry) {
+  if (entry !== undefined) {
+    return resolve2(folder, entry);
+  }
+  return ["index.ts", "index.tsx"].map((name) => join5(folder, "client", name)).find((path) => existsSync(path)) ?? null;
+}
+function publicHost(host, api) {
+  const created = () => host.createdIds.filter((id) => host.nodes.has(id)).map((id) => host.info(id));
+  return {
+    definitions: host.definitions,
+    action: (id) => host.defined("action", id),
+    menu: (id) => host.defined("menu", id),
+    widget: (id) => host.defined("widget", id),
+    panel: (id) => host.defined("panel", id),
+    view: (id) => host.defined("view", id),
+    node: (id) => host.defined("node", id),
+    card: (id) => host.defined("sidebarCard", id),
+    overlay: (id) => host.defined("overlay", id),
+    context: (place, extra) => host.context(place, extra),
+    slot: (definition, place, extra) => host.slot(definition, place, extra),
+    run: (definition, place, extra) => host.run(definition, place, extra),
+    menuItems: (menu, place, extra) => host.menuItems(menu, place, extra),
+    fire: (name, payload) => host.deliver(name, payload),
+    emit: (name, payload) => host.deliver(`server:${name}`, payload),
+    select: (ids) => host.select(ids),
+    setSetting(key, value) {
+      host.settings[key] = value;
+      host.changed();
+    },
+    render: (drawable, options) => {
+      current2 = { host, api };
+      return render(drawable, options);
+    },
+    canvas: {
+      nodes: () => host.nodesInFront(),
+      notes: () => host.notes.flatMap((id) => {
+        const note = host.nodes.get(id);
+        return note === undefined ? [] : [{ id, title: note.title, text: note.text, color: note.color }];
+      }),
+      links: () => host.edges.map((edge) => ({ ...edge })),
+      created,
+      selection: () => [...host.selection],
+      revealed: () => [...host.revealed]
+    },
+    views: () => host.views.map((view) => ({ ...view, active: view.id === host.activeViewId })),
+    notifications: host.notifications,
+    dialogs: host.dialogs,
+    opened: host.opened,
+    panels: host.panels,
+    copied: host.copied,
+    server: {
+      get calls() {
+        return host.calls.filter((call) => call.method.startsWith("server "));
+      }
+    },
+    agents: {
+      get calls() {
+        return host.calls.filter((call) => call.method.startsWith("agents."));
+      }
+    },
+    calls: host.calls,
+    storage: host.storage,
+    settings: host.settings,
+    logs: host.logs
+  };
+}
+async function createTestHost(options = {}) {
+  const folder = process.cwd();
+  const host = new TestHost(options, folder);
+  const api = clientApi(host);
+  const entry = entryIn(folder, options.entry);
+  current2 = { host, api };
+  if (entry !== null) {
+    await loadFresh(entry, { "@ruimte/extension/client": api });
+  }
+  return publicHost(host, api);
+}
+
 // apps/server/src/extensions/test-runtime.ts
 function through(name) {
   return (...args) => currentServer()[name](...args);
 }
-function forwarded(name) {
+function forwarded2(name) {
   return new Proxy({}, {
     get: (_target, key) => {
       const target = currentServer()[name];
@@ -6695,14 +7938,15 @@ var server = {
   defineAgentTool: through("defineAgentTool"),
   schedule: through("schedule"),
   defineLanguageServer: through("defineLanguageServer"),
-  agents: forwarded("agents"),
-  chats: forwarded("chats"),
-  storage: forwarded("storage"),
-  secrets: forwarded("secrets"),
-  machine: forwarded("machine"),
-  log: forwarded("log")
+  agents: forwarded2("agents"),
+  chats: forwarded2("chats"),
+  storage: forwarded2("storage"),
+  secrets: forwarded2("secrets"),
+  machine: forwarded2("machine"),
+  log: forwarded2("log")
 };
-var testing = { ...clientTesting, createTestServer, refusal };
+var testing = { createTestHost, createTestServer, refusal };
+afterEach(unmountAll);
 plugin({
   name: "ruimte-extension-fakes",
   setup(build) {

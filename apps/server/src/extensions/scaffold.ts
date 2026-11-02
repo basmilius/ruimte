@@ -9,6 +9,9 @@ export interface ScaffoldAnswers {
     git: boolean;
 }
 
+/* The major of React the client draws extensions with, which a test holds to `apps/client/package.json`. */
+export const CLIENT_REACT_MAJOR = 19;
+
 const GITIGNORE = 'node_modules\ndist\n';
 
 const TSCONFIG = `${JSON.stringify(
@@ -70,16 +73,24 @@ const KIND_OF: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
     card: 'sidebarCard'
 };
 
-/* An example test for each part, run by `bun run test` against the fake host. */
+const HOST_LOOKUP: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
+    panel: 'panel',
+    node: 'node',
+    view: 'view',
+    card: 'card'
+};
+
+/* An example test for each part, run by `bun run test` against the test host. */
 function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withServer: boolean, name: string): string {
-    const testing = [...(surface === null ? [] : ['definitions']), ...(withServer ? ['createTestServer'] : [])];
+    const testing = [...(surface === null ? [] : ['createTestHost']), ...(withServer ? ['createTestServer'] : [])];
     const imports = ["import { describe, expect, test } from 'bun:test';", `import { ${testing.join(', ')} } from '@ruimte/extension/testing';`];
     const tests: string[] = [];
 
     if (surface !== null) {
-        imports.push("import '../client/index';");
-        tests.push(`    test('defines its ${KIND_OF[surface]}', () => {
-        expect(definitions()).toEqual([{ kind: '${KIND_OF[surface]}', definition: expect.objectContaining({ id: 'main' }) }]);
+        tests.push(`    test('defines its ${KIND_OF[surface]}', async () => {
+        const host = await createTestHost();
+
+        expect(host.${HOST_LOOKUP[surface]}('main')).toMatchObject({ title: ${JSON.stringify(name)} });
     });`);
     }
 
@@ -111,11 +122,13 @@ export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> 
                 private: true,
                 scripts: { dev: 'bunx ruimte extension dev', test: 'bunx ruimte extension test', pack: 'bunx ruimte extension pack' },
                 devDependencies: {
+                    // A `*.dom.test.tsx` file draws into the page this registers.
+                    '@happy-dom/global-registrator': '^21.0.0',
                     '@ruimte/extension': `^${EXTENSION_API_VERSION}.0.0`,
                     '@types/bun': 'latest',
-                    '@types/react': '^19.0.0',
-                    react: '^19.0.0',
-                    'react-dom': '^19.0.0',
+                    '@types/react': `^${CLIENT_REACT_MAJOR}.0.0`,
+                    react: `^${CLIENT_REACT_MAJOR}.0.0`,
+                    'react-dom': `^${CLIENT_REACT_MAJOR}.0.0`,
                     typescript: '^5.0.0'
                 }
             },

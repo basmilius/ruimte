@@ -1,74 +1,160 @@
 /*
- * `@ruimte/extension/client` under `ruimte extension test`, as a fake: a `define*` is recorded so a test can read
- * what was defined, a call answers done with an empty value of its shape, and a surface draws to a string with
- * the project's own React. Held to the public types, so a member the API gains and the fake lacks breaks the
- * check rather than an author's test.
+ * `@ruimte/extension/client` under `ruimte extension test`, over one test host: each `define*` is recorded, a call answers
+ * what the host holds or what the test scripted, and a hook reads the host as React draws. Held to the public types, so a
+ * member the API gains and the fake lacks breaks the check rather than an author's test.
  */
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
+import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/contracts/extension-actions';
 import type * as PublicClient from '../../../../packages/extension/client';
+import { formatModule, nodeContextOf, react } from './test-react.ts';
+import { Refused, wire, type Entry, type TestHost } from './test-host.ts';
 
 type Result<Value> = PublicClient.Result<Value>;
-type Machine = PublicClient.MachineActions;
+type NodeRef = PublicClient.NodeRef;
 type Format = ReturnType<typeof PublicClient.useLocale>['format'];
+type Slots = Record<string, unknown>;
+type Lazy = { component?: unknown; frame?: unknown };
 
-// Resolved from the preload, which sits in the project; a bundler leaves a require through this alone.
-const fromProject = createRequire(import.meta.url);
+const NEW_NODE = { width: 420, height: 300 };
+const NOTE = { width: 320, height: 200 };
+const ARRANGE_GAP = 40;
 
-const defined: { kind: string; definition: object }[] = [];
-let fakeServer: Record<string, (...args: never[]) => unknown> = {};
-let nodeData: unknown = {};
-const stored = new Map<string, unknown>();
+function assertLazy(surface: Lazy, what: string): void {
+    const problem = lazyComponentProblem(surface, what);
 
-function done<Value>(value: Value): Result<Value> {
-    return { ok: true, value };
-}
-
-/* What a call of the API answers here: done, with an empty value of its shape and nothing behind it. */
-function answers<Value>(value: Value): () => Promise<Result<Value>> {
-    return async () => done(value);
-}
-
-function failed(e: unknown): Result<never> {
-    return { ok: false, error: { code: 'failed', message: e instanceof Error ? e.message : String(e) } };
-}
-
-/* A fake method of `server/` answers as `useServer` would: its value, `failed` for a throw, `not-found` for none. */
-function serverAnswer(method: string, args: unknown[]): Result<unknown> | Promise<Result<unknown>> {
-    const handler = fakeServer[method] as ((...values: unknown[]) => unknown) | undefined;
-
-    if (handler === undefined) {
-        return { ok: false, error: { code: 'not-found', message: `No method ${method}` } };
-    }
-
-    try {
-        const value = handler(...args);
-
-        return value instanceof Promise ? value.then(done, failed) : done(value);
-    } catch (e) {
-        return failed(e);
+    if (problem !== null) {
+        throw new TypeError(problem);
     }
 }
 
-function record(kind: string, definition: object): void {
-    defined.push({ kind, definition });
+/* Reads the host again whenever it changes, so a hook draws what it holds now. */
+function useHost(host: TestHost): void {
+    react().useSyncExternalStore(
+        (listener) => host.subscribe(listener),
+        () => host.snapshot()
+    );
 }
 
-function recording(kind: string): (definition: object) => void {
-    return (definition) => record(kind, definition);
+function removeTitle(count: number): string {
+    return count === 1 ? 'Remove 1 node?' : `Remove ${count} nodes?`;
 }
 
-/* The default of a field that `defineExtensionSettings` named, as `useSetting` reads before a person changed it. */
-function settingDefault(key: string): unknown {
-    for (const { kind, definition } of defined) {
+function removeBody(count: number, name: string): string {
+    return count === 1 ? `${name} asks to remove it.` : `${name} asks to remove them.`;
+}
+
+/* A method of `server/` answers as `useServer` reads it: the value as JSON, `failed` for a throw, `not-found` for none. */
+async function serverCall(host: TestHost, method: string, args: unknown[]): Promise<Result<unknown>> {
+    const server = host.answers.server;
+
+    if (server !== undefined && typeof (server as { call?: unknown }).call === 'function' && 'asked' in server) {
+        const result = (await (server as { call(method: string, ...args: unknown[]): Promise<Result<unknown>> }).call(method, ...args)) as Result<unknown>;
+
+        host.calls.push({ method: `server ${method}`, args, result });
+
+        if (!result.ok) {
+            host.logs.push(`server ${method}: ${result.error.code}: ${result.error.message}`);
+        }
+
+        return result;
+    }
+
+    return host.settle(`server ${method}`, args, async () => {
+        const handler = (server as Record<string, unknown> | undefined)?.[method];
+
+        if (typeof handler !== 'function') {
+            throw new Refused('not-found', `No method ${method}`);
+        }
+
+        return wire(await (handler as (...values: unknown[]) => unknown)(...wire<unknown[]>(args))) ?? null;
+    });
+}
+
+function serverClient(host: TestHost): unknown {
+    return new Proxy(
+        {},
+        {
+            get(_target, method) {
+                if (typeof method !== 'string') {
+                    return undefined;
+                }
+
+                return Object.assign((...args: unknown[]) => serverCall(host, method, args), {
+                    use(...args: unknown[]) {
+                        const key = JSON.stringify([method, args]);
+                        let pending = host.serverCache.get(key);
+
+                        if (pending === undefined) {
+                            pending = serverCall(host, method, args);
+                            host.serverCache.set(key, pending);
+                        }
+
+                        return react().use(pending);
+                    }
+                });
+            }
+        }
+    );
+}
+
+/* `launches.start` for `launch.start`, each behind the permission of its action and checked by the machine's own schema. */
+function machineCalls<Name extends ExtensionActionName>(
+    host: TestHost,
+    area: string,
+    names: readonly Name[]
+): Record<string, (input?: object) => Promise<Result<unknown>>> {
+    return Object.fromEntries(
+        names.map((action) => {
+            const verb = action.slice(action.indexOf('.') + 1);
+            const path = `${area}.${verb}`;
+
+            return [
+                verb,
+                (input: object = {}) =>
+                    host.settle(path, [input], async () => {
+                        const project = host.projectId();
+                        const parsed = parseExtensionActionInput(action, wire(input));
+
+                        if (!parsed.ok) {
+                            throw new TypeError(`${path}: ${parsed.message}`);
+                        }
+
+                        const run = (host.answers['machine.run'] as Record<string, ((input: unknown, project: NodeRef) => unknown) | undefined> | undefined)?.[
+                            action
+                        ];
+
+                        if (run === undefined) {
+                            throw new Refused('unavailable', `Nothing answers ${action} in this test. Give it under answers['machine.run']`);
+                        }
+
+                        return wire(await run(parsed.input, { id: project }));
+                    })
+            ];
+        })
+    );
+}
+
+/* What an agent reads of a node: its `text`, which a test seeds. */
+function nodeText(host: TestHost, id: string): string {
+    host.projectId();
+
+    const node = host.nodes.get(id);
+
+    if (node === undefined) {
+        throw new Refused('not-found', `No node ${id} in this project`);
+    }
+
+    return node.text;
+}
+
+function settingDefault(host: TestHost, key: string): unknown {
+    for (const { kind, definition } of host.definitions) {
         if (kind !== 'settings') {
             continue;
         }
 
         const settings = definition as { fields?: PublicClient.SettingField[]; groups?: PublicClient.SettingGroup[] };
-        const fields = settings.fields ?? settings.groups?.flatMap((group) => group.fields) ?? [];
-        const field = fields.find((each) => each.key === key);
+        const field = (settings.fields ?? settings.groups?.flatMap((group) => group.fields) ?? []).find((each) => each.key === key);
 
         if (field !== undefined) {
             return field.default;
@@ -78,240 +164,658 @@ function settingDefault(key: string): unknown {
     return undefined;
 }
 
-/* The project's `locales/en.json`, so a test reads the words a person reads. */
-function englishWords(): Record<string, string> {
-    try {
-        return JSON.parse(readFileSync(join(process.cwd(), 'locales', 'en.json'), 'utf8')) as Record<string, string>;
-    } catch {
-        return {};
+function ask<Value>(answer: Value | ((options: never) => Value) | undefined, options: object, fallback: Value): Value {
+    if (typeof answer === 'function') {
+        return (answer as (options: object) => Value)(options);
     }
+
+    return answer === undefined ? fallback : answer;
 }
 
-const NO_GIT_STATUS: PublicClient.GitStatus = { repository: false, root: null, branch: null, upstream: null, ahead: 0, behind: 0, files: [], truncated: false };
-const NO_BROWSER = (node: PublicClient.NodeRef): PublicClient.BrowserState => ({ node, open: false, page: null, error: null });
-const NO_ARTIFACT: PublicClient.ArtifactInfo = { id: 'artifact', title: '', kind: 'report', key: null, createdAt: 0 };
-const NO_DEVICE: PublicClient.DeviceState = {
-    node: { id: 'device' },
-    device: { name: '', platform: 'ios', kind: 'simulator', runtime: '' },
-    present: false,
-    state: null,
-    screen: null,
-    buttons: [],
-    can: { shot: false, input: false, type: false, launch: false }
-};
-const NODE = { id: 'node' };
+export function clientApi(host: TestHost) {
+    const fullId = (id: string): string => `${host.id}/${id}`;
+    // A call that reads under a folder of the project, which the client host checks before it asks the machine.
+    const inFolder = <Value>(what: string, path: string, args: unknown[]): Promise<Result<Value>> =>
+        host.settle(what, args, () => {
+            host.inProject(path);
 
-function launch(input: { launch: string }): Machine['launch.start']['output'] {
-    return { id: input.launch, name: input.launch };
-}
+            return host.scripted<Value>(what, args);
+        });
+    const entry = (definition: object, details: Omit<Entry, 'slots'> & { slots?: Slots }): void =>
+        host.addEntry(definition, { ...details, slots: details.slots ?? {} });
+    const actionHandle = (id: string): PublicClient.ActionHandle & { actionId: string } => ({
+        actionId: id,
+        run: async (context?: object) => {
+            const found = host.entries.find((each) => each.id === id);
 
-function routine(input: { routine: string }): Machine['routine.pause']['output'] {
-    return { id: input.routine, title: input.routine };
-}
-
-export const client = {
-    definePanel<Params>(panel: object): PublicClient.PanelHandle<Params> {
-        record('panel', panel);
-
-        return { open: () => undefined, close: () => undefined, setBadge: () => undefined, setTitle: () => undefined };
-    },
-    defineSidebarCard: recording('sidebarCard'),
-    defineView<Params>(view: object): { open(params?: Params): void } {
-        record('view', view);
-
-        return { open: () => undefined };
-    },
-    defineNode: recording('node'),
-    defineCanvasOverlay: recording('canvasOverlay'),
-    defineFileViewer: recording('fileViewer'),
-    defineMarkdownBlock: recording('markdownBlock'),
-    defineOverlay<Params, Answer>(overlay: object): { open(params: Params): Promise<Answer | null>; close(): void } {
-        record('overlay', overlay);
-
-        return { open: async () => null, close: () => undefined };
-    },
-    defineToolResult: recording('toolResult'),
-    definePaletteSource: recording('paletteSource'),
-    defineSlashCommand: recording('slashCommand'),
-    defineReference: recording('reference'),
-    defineDiffViewer: recording('diffViewer'),
-    defineFileIcon: recording('fileIcon'),
-    defineVoiceAction: recording('voiceAction'),
-    defineTemplate: recording('template'),
-    defineCommand: recording('command'),
-    defineExtensionSettings: recording('settings'),
-    useSetting: <Value extends boolean | string>(key: string): Value => settingDefault(key) as Value,
-    useMachine: () => ({ id: 'test-machine' }),
-    useTheme: () => ({ side: 'dark' as const }),
-    useChat: (_id: string): PublicClient.ChatSummary | null => null,
-    defineAction(action: object): PublicClient.ActionHandle {
-        record('action', action);
-
-        return { run: async () => undefined, useRunning: () => false };
-    },
-    defineMenu: recording('menu'),
-    defineWidget: recording('widget'),
-    useServer: <Server>(): PublicClient.ServerClient<Server> =>
-        new Proxy({} as PublicClient.ServerClient<Server>, {
-            get: (_target, method: string) =>
-                Object.assign(async (...args: unknown[]) => serverAnswer(method, args), {
-                    // Answers at once here, since a string render does not wait for a promise; a fake for `.use()` answers without one.
-                    use: (...args: unknown[]) => serverAnswer(method, args)
-                })
-        }),
-    useServerEvent: (_name: string, _listener: (payload: never) => void): void => undefined,
-    useNodeData: <Data>(): [Data, (next: Data) => void] => [nodeData as Data, (next: Data) => void (nodeData = next)],
-    useStorage: <Value>(key: string, initial: Value, scope: 'computer' | 'project' | 'machine' = 'computer'): [Value, (next: Value) => void] => [
-        (stored.has(`${scope}:${key}`) ? stored.get(`${scope}:${key}`) : initial) as Value,
-        (next: Value) => void stored.set(`${scope}:${key}`, next)
-    ],
-    useProject: () => ({ id: 'test-project', name: 'Test' }),
-    useActiveView: () => ({ id: 'test-view' }),
-    useViews: (): { id: string; kind: string; name: string }[] => [],
-    useSelection: (): PublicClient.NodeInfo[] => [],
-    useNode: (id: string): PublicClient.NodeInfo => ({
-        id,
-        kind: 'note',
-        title: '',
-        color: null,
-        bounds: { x: 0, y: 0, width: 0, height: 0 },
-        groupId: null,
-        viewId: 'test-view',
-        machine: null,
-        linkedTo: []
-    }),
-    useNodes: (_filter?: (node: PublicClient.NodeInfo) => boolean): PublicClient.NodeInfo[] => [],
-    useLocale() {
-        const words = englishWords();
-
-        return {
-            language: 'en',
-            // The formatters come with Ruimte; a test of a surface that formats reads them in `ruimte extension dev`.
-            format: {} as Format,
-            t: (key: string, values?: Record<string, string | number>) =>
-                Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
-        };
-    },
-    useEvent: (_name: keyof PublicClient.ClientEvents, _listener: (event: never) => void): void => undefined,
-    onEvent: (_name: keyof PublicClient.ClientEvents, _listener: (event: never) => void) => () => undefined,
-    useAgents: (): { id: string; title: string; status: PublicClient.AgentStatus }[] => [],
-    useUsageLimits: (): ReturnType<typeof PublicClient.useUsageLimits> => [],
-    host: {
-        busy: async <Value>(_work: object, run: (signal: AbortSignal) => Value | Promise<Value>): Promise<Value> => run(new AbortController().signal),
-        notify: () => undefined,
-        pickFolder: async () => null,
-        openSettings: () => undefined,
-        confirm: async () => true,
-        prompt: async () => null,
-        pick: async <Item>(): Promise<Item | null> => null,
-        openUrl: () => undefined,
-        copy: () => undefined
-    },
-    files: {
-        readText: answers(''),
-        write: answers(undefined),
-        list: answers<PublicClient.FileEntry[]>([]),
-        watch: () => done(() => undefined),
-        open: () => undefined
-    },
-    git: {
-        status: answers(NO_GIT_STATUS),
-        diff: async ({ path }: { path: string }) => done<PublicClient.GitFileDiff>({ path, diff: '', added: 0, deleted: 0, binary: false, kind: null }),
-        log: answers<PublicClient.GitCommit[]>([])
-    },
-    chats: { list: answers<PublicClient.ChatSummary[]>([]), read: answers(''), send: answers(undefined) },
-    launches: {
-        list: answers<Machine['launch.list']['output']>({ launches: [] }),
-        read: async (input: { launch: string }) => done({ ...launch(input), text: null }),
-        start: async (input: { launch: string }) => done(launch(input)),
-        restart: async (input: { launch: string }) => done(launch(input)),
-        stop: async (input: { launch: string }) => done({ ...launch(input), stopping: 0 })
-    },
-    routines: {
-        list: answers<Machine['routine.list']['output']>({ routines: [] }),
-        run: async (input: { routine: string }) => done({ ...routine(input), runId: 'run' }),
-        pause: async (input: { routine: string }) => done(routine(input)),
-        resume: async (input: { routine: string }) => done(routine(input))
-    },
-    artifacts: {
-        list: answers<Machine['artifact.list']['output']>({ artifacts: [] }),
-        read: answers<Machine['artifact.read']['output']>({
-            artifact: NO_ARTIFACT,
-            version: { id: 'version', number: 1 },
-            file: { name: '', mime: 'text/plain', size: 0 },
-            text: null,
-            truncated: false
-        }),
-        publish: answers<Machine['artifact.publish']['output']>({ artifact: NO_ARTIFACT, version: { id: 'version', number: 1 }, existing: false })
-    },
-    browser: {
-        inspect: async ({ node }: { node: PublicClient.NodeRef }) => done(NO_BROWSER(node)),
-        navigate: async ({ node }: { node: PublicClient.NodeRef }) => done(NO_BROWSER(node)),
-        back: async ({ node }: { node: PublicClient.NodeRef }) => done(NO_BROWSER(node)),
-        forward: async ({ node }: { node: PublicClient.NodeRef }) => done(NO_BROWSER(node)),
-        reload: async ({ node }: { node: PublicClient.NodeRef }) => done(NO_BROWSER(node)),
-        screenshot: async ({ node }: { node: PublicClient.NodeRef }) => done({ ...NO_BROWSER(node), path: null })
-    },
-    devices: {
-        list: answers<Machine['device.list']['output']>({ devices: [] }),
-        inspect: async ({ node }: { node: PublicClient.NodeRef }) => done({ ...NO_DEVICE, node }),
-        screenshot: async ({ node }: { node: PublicClient.NodeRef }) => done({ node, path: '', width: 0, height: 0 }),
-        tap: async ({ node }: { node: PublicClient.NodeRef }) => done({ node }),
-        launch: async ({ node }: { node: PublicClient.NodeRef }) => done({ node })
-    },
-    terminals: { read: answers(''), open: () => done({ id: 'terminal' }) },
-    database: {
-        connections: answers<{ id: string; name: string }[]>([]),
-        query: answers<{ columns: string[]; rows: PublicClient.DatabaseValue[][]; hasMore: boolean }>({ columns: [], rows: [], hasMore: false })
-    },
-    views: { open: () => undefined, createCanvas: () => done({ id: 'view' }), rename: () => done(undefined) },
-    context: { read: answers<PublicClient.ContextSource[]>([]) },
-    agents: {
-        run: answers({ text: '' }),
-        async *stream() {
-            yield done({ text: '' });
+            if (found !== undefined) {
+                await host.runEntry(found, found.title, { ...host.baseContext(), ...context }, 'code');
+            }
         },
-        start: answers({ id: 'chat' })
-    },
-    canvas: {
-        createNote: () => done(NODE),
-        arrange: () => done(undefined),
-        remove: answers(undefined),
-        createFile: () => done(NODE),
-        createBrowser: () => done(NODE),
-        createNode: () => done(NODE),
-        update: () => done(undefined),
-        writeNote: () => done(undefined),
-        group: () => done(NODE),
-        link: () => done(undefined),
-        unlink: () => done(undefined),
-        select: () => undefined,
-        reveal: () => undefined
-    }
-} satisfies typeof PublicClient;
+        useRunning: () => {
+            useHost(host);
 
-export const clientTesting = {
-    definitions: () => defined,
-    slotAnswer(definition: { slots?: object }, slot: PublicClient.SlotName, context: object): PublicClient.SlotAnswer {
-        const answer = (definition.slots as Record<string, unknown> | undefined)?.[slot];
-
-        if (typeof answer === 'function') {
-            return (answer as (context: object) => PublicClient.SlotAnswer)(context);
+            return host.runs.some((run) => run.actionId === id);
         }
+    });
 
-        return answer === true;
-    },
-    renderSurface<Props extends object>(
-        component: unknown,
-        options: { server?: Record<string, (...args: never[]) => unknown>; data?: object; props?: Props } = {}
-    ): string {
-        // The project's own React, loaded only here, so a project of `server/` alone needs none.
-        const { createElement } = fromProject('react') as { createElement(component: unknown, props: object): unknown };
-        const { renderToStaticMarkup } = fromProject('react-dom/server') as { renderToStaticMarkup(element: unknown): string };
+    return {
+        definePanel<Params>(panel: { id: string; title: string } & Lazy): PublicClient.PanelHandle<Params> {
+            assertLazy(panel, `definePanel ${panel.id}`);
+            host.record('panel', panel);
+            host.panels[panel.id] = { title: panel.title, badge: null, open: false, params: undefined };
 
-        fakeServer = options.server ?? {};
-        nodeData = options.data ?? {};
+            const state = () => host.panels[panel.id] as (typeof host.panels)[string];
 
-        return renderToStaticMarkup(createElement(component, options.props ?? {}));
-    }
-};
+            return {
+                open: (params?: Params) => {
+                    Object.assign(state(), { open: true, params });
+                    host.opened.push({ kind: 'panel', id: panel.id, params });
+                    host.changed();
+                },
+                close: () => {
+                    state().open = false;
+                    host.changed();
+                },
+                setBadge: (text: string | null) => {
+                    state().badge = text;
+                    host.changed();
+                },
+                setTitle: (title: string) => {
+                    state().title = title;
+                    host.changed();
+                }
+            };
+        },
+        defineSidebarCard(card: { id: string; title: string; component: unknown }): void {
+            assertLazy(card, `defineSidebarCard ${card.id}`);
+            host.record('sidebarCard', card);
+        },
+        defineView<Params>(view: { id: string; title: string } & Lazy): { open(params?: Params): void } {
+            assertLazy(view, `defineView ${view.id}`);
+            host.record('view', view);
+
+            return {
+                open: (params?: Params) => {
+                    const id = `view-${host.views.length + 1}`;
+
+                    host.views.push({ id, kind: 'extension', name: view.title });
+                    host.opened.push({ kind: 'view', id: view.id, params });
+                    host.openView(id);
+                }
+            };
+        },
+        defineNode(node: {
+            id: string;
+            title: string;
+            icon?: string;
+            size?: { width: number; height: number };
+            initialData?: unknown;
+            addFrom?: Slots;
+            component?: unknown;
+            frame?: unknown;
+        }): void {
+            assertLazy(node, `defineNode ${node.id}`);
+            host.record('node', node);
+            // Adding is an action like any other, by default where a person adds nodes.
+            entry(node, {
+                id: fullId(`node/${node.id}`),
+                kind: 'action',
+                title: node.title,
+                ...(node.icon === undefined ? {} : { icon: node.icon }),
+                slots: node.addFrom ?? { canvasMenu: true, commandPalette: true },
+                run: (context) => {
+                    host.addNode('extension', (context as { at?: { x: number; y: number } }).at ?? { x: 0, y: 0 }, node.size ?? NEW_NODE, {
+                        title: node.title,
+                        extension: { id: host.id, type: node.id },
+                        data: wire(node.initialData ?? {})
+                    });
+                }
+            });
+        },
+        defineCanvasOverlay(overlay: { id: string; component: unknown }): void {
+            assertLazy(overlay, `defineCanvasOverlay ${overlay.id}`);
+            host.record('canvasOverlay', overlay);
+        },
+        defineFileViewer(viewer: { id: string; component: unknown }): void {
+            assertLazy(viewer, `defineFileViewer ${viewer.id}`);
+            host.record('fileViewer', viewer);
+        },
+        defineMarkdownBlock(block: { language: string; component: unknown }): void {
+            assertLazy(block, `defineMarkdownBlock ${block.language}`);
+            host.record('markdownBlock', block);
+        },
+        defineOverlay<Params, Answer>(overlay: { id: string; component: unknown }): { open(params: Params): Promise<Answer | null>; close(): void } {
+            assertLazy(overlay, `defineOverlay ${overlay.id}`);
+            host.record('overlay', overlay);
+
+            return {
+                open: async (params: Params) => {
+                    host.opened.push({ kind: 'overlay', id: overlay.id, params });
+
+                    const answer = host.answers.overlays?.[overlay.id] as ((params: Params) => Answer | null) | undefined;
+
+                    return answer === undefined ? null : ((await answer(params)) ?? null);
+                },
+                close: () => undefined
+            };
+        },
+        defineToolResult(result: { id: string; component: unknown }): void {
+            assertLazy(result, `defineToolResult ${result.id}`);
+            host.record('toolResult', result);
+        },
+        definePaletteSource: (source: object): void => host.record('paletteSource', source),
+        defineSlashCommand: (command: object): void => host.record('slashCommand', command),
+        defineReference: (reference: object): void => host.record('reference', reference),
+        defineDiffViewer(viewer: { id: string; component: unknown }): void {
+            assertLazy(viewer, `defineDiffViewer ${viewer.id}`);
+            host.record('diffViewer', viewer);
+        },
+        defineFileIcon: (icon: object): void => host.record('fileIcon', icon),
+        defineVoiceAction: (action: object): void => host.record('voiceAction', action),
+        defineTemplate(template: { id: string; title: string; icon?: string; create(context: never): void | Promise<void> }): void {
+            host.record('template', template);
+            entry(template, {
+                id: fullId(`template/${template.id}`),
+                kind: 'action',
+                title: template.title,
+                ...(template.icon === undefined ? {} : { icon: template.icon }),
+                slots: { canvasMenu: true },
+                run: template.create as (context: object) => unknown
+            });
+        },
+        defineCommand: (command: object): void => host.record('command', command),
+        defineExtensionSettings(settings: { component?: unknown; fields?: unknown; groups?: unknown }): void {
+            if (settings.fields === undefined && settings.groups === undefined) {
+                assertLazy(settings, `defineExtensionSettings ${host.id}`);
+            }
+
+            host.record('settings', settings);
+        },
+        defineAction(action: { id: string; title: string; icon?: string; shortcut?: string; slots?: Slots; run(context: never): void | Promise<void> }) {
+            const problem = action.shortcut === undefined ? null : shortcutProblem(action.shortcut);
+
+            if (problem !== null) {
+                throw new Error(problem);
+            }
+
+            host.record('action', action);
+            entry(action, {
+                id: fullId(action.id),
+                kind: 'action',
+                title: action.title,
+                ...(action.icon === undefined ? {} : { icon: action.icon }),
+                slots: action.slots ?? {},
+                run: action.run as (context: object) => unknown
+            });
+
+            return actionHandle(fullId(action.id));
+        },
+        defineMenu(menu: { id: string; title: string; icon?: string; slots: object; items: unknown }): void {
+            host.record('menu', menu);
+            entry(menu, {
+                id: fullId(menu.id),
+                kind: 'menu',
+                title: menu.title,
+                ...(menu.icon === undefined ? {} : { icon: menu.icon }),
+                slots: menu.slots as Slots,
+                items: menu.items
+            });
+        },
+        defineWidget(widget: { id: string; slots: object; component: unknown }): void {
+            assertLazy(widget, `defineWidget ${widget.id}`);
+            host.record('widget', widget);
+            entry(widget, { id: fullId(widget.id), kind: 'widget', title: widget.id, slots: widget.slots as Slots });
+        },
+        useServer: <Server>(): PublicClient.ServerClient<Server> => serverClient(host) as PublicClient.ServerClient<Server>,
+        useServerEvent<Payload>(name: string, listener: (payload: Payload) => void): void {
+            react().useEffect(() => host.listen(`server:${name}`, listener as (payload: never) => void), [name, listener]);
+        },
+        useUsageLimits(): ReturnType<typeof PublicClient.useUsageLimits> {
+            host.hookPermission('useUsageLimits');
+
+            return host.answers['usage.limits'] ?? [];
+        },
+        useNodeData<Data>(): [Data, (next: Data) => void] {
+            const module = react();
+            const nodeId = module.useContext<string | null>(nodeContextOf(module));
+
+            useHost(host);
+
+            if (nodeId === null) {
+                throw new Error('useNodeData only works in a node');
+            }
+
+            return [host.nodes.get(nodeId)?.data as Data, (next) => host.changeNode(nodeId, { data: wire(next) })];
+        },
+        useStorage<Value>(key: string, initial: Value, scope: 'computer' | 'project' | 'machine' = 'computer'): [Value, (next: Value) => void] {
+            useHost(host);
+
+            const values = host.storage[scope];
+
+            return [
+                (Object.hasOwn(values, key) ? values[key] : initial) as Value,
+                (next) => {
+                    values[key] = wire(next);
+                    host.changed();
+                }
+            ];
+        },
+        useProject: () => {
+            useHost(host);
+
+            return { id: host.project?.id ?? '', name: host.project?.name ?? '' };
+        },
+        useActiveView: () => {
+            useHost(host);
+
+            return { id: host.activeViewId ?? '' };
+        },
+        useViews: () => {
+            useHost(host);
+
+            return host.views.map((view) => ({ ...view }));
+        },
+        useSelection: () => {
+            useHost(host);
+
+            return host.selection.map((id) => host.info(id));
+        },
+        useSetting<Value extends boolean | string>(key: string): Value {
+            useHost(host);
+
+            return (Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, key)) as Value;
+        },
+        useMachine: () => ({ id: host.machineId }),
+        useTheme: () => ({ side: host.theme }),
+        useChat(chatId: string): PublicClient.ChatSummary | null {
+            useHost(host);
+
+            const node = host.nodes.get(chatId);
+
+            if (node?.kind !== 'chat') {
+                return null;
+            }
+
+            const agent = host.info(chatId).agent;
+
+            return {
+                id: chatId,
+                provider: agent?.provider ?? 'claude',
+                status: agent?.status ?? 'idle',
+                model: null,
+                cwd: agent?.cwd ?? host.project?.folder ?? ''
+            };
+        },
+        useNode: (id: string) => {
+            useHost(host);
+
+            return host.info(id);
+        },
+        useNodes: (filter?: (node: PublicClient.NodeInfo) => boolean) => {
+            useHost(host);
+
+            const nodes = host.nodesInFront();
+
+            return filter === undefined ? nodes : nodes.filter(filter);
+        },
+        useLocale() {
+            const { words } = host;
+
+            return {
+                language: host.language,
+                // The same formatters a surface reads in Ruimte, in the language of this host.
+                get format(): Format {
+                    const format = formatModule<Format & { setFormatSource(source: object): unknown; FORMAT_LANGUAGE: string }>();
+
+                    format.setFormatSource({ language: () => host.language, region: () => format.FORMAT_LANGUAGE, subscribe: () => () => undefined });
+
+                    return format;
+                },
+                t: (key: string, values?: Record<string, string | number>) =>
+                    Object.entries(values ?? {}).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)), words[key] ?? key)
+            };
+        },
+        useEvent<Name extends keyof PublicClient.ClientEvents>(name: Name, listener: (event: PublicClient.ClientEvents[Name]) => void): void {
+            react().useEffect(() => host.listen(name, listener as (payload: never) => void), [name, listener]);
+        },
+        onEvent: <Name extends keyof PublicClient.ClientEvents>(name: Name, listener: (event: PublicClient.ClientEvents[Name]) => void) =>
+            host.listen(name, listener as (payload: never) => void),
+        useAgents() {
+            host.hookPermission('useAgents');
+            useHost(host);
+
+            return host
+                .nodesInFront()
+                .filter((node) => node.kind === 'chat' || node.kind === 'terminal')
+                .map((node) => ({ id: node.id, title: node.title, status: node.agent?.status ?? 'idle' }));
+        },
+        host: {
+            async busy<Value>(work: { title: string; nodes?: NodeRef[] }, run: (signal: AbortSignal) => Value | Promise<Value>): Promise<Value> {
+                const tracked = { actionId: null, nodeIds: (work.nodes ?? []).map((node) => node.id) };
+
+                host.runs.push(tracked);
+                host.changed();
+
+                try {
+                    return await run(new AbortController().signal);
+                } finally {
+                    host.runs.splice(host.runs.indexOf(tracked), 1);
+                    host.changed();
+                }
+            },
+            notify(text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run(): void } }): void {
+                host.notifications.push({ text, tone: options?.tone ?? 'neutral', ...(options?.action === undefined ? {} : { action: options.action.title }) });
+            },
+            pickFolder: async (initial?: string) => host.ask('folder', initial ?? '', host.answers.pickFolder ?? null),
+            openSettings(): void {
+                host.opened.push({ kind: 'settings' });
+            },
+            confirm: async (options: { title: string; body: string; danger?: boolean }) =>
+                host.ask('confirm', options.title, ask(host.answers.confirm, options, true), options.body),
+            prompt: async (options: { title: string; placeholder?: string; initial?: string }) =>
+                host.ask('prompt', options.title, ask(host.answers.prompt, options, null)),
+            async pick<Item>(options: { title: string; items: readonly Item[]; label(item: Item): string }): Promise<Item | null> {
+                const labels = options.items.map(options.label);
+                const answer = host.ask('pick', options.title, ask(host.answers.pick, { title: options.title, labels }, null));
+
+                return answer === null ? null : (options.items[labels.indexOf(answer)] ?? null);
+            },
+            openUrl(url: string): void {
+                host.opened.push({ kind: 'url', id: url });
+            },
+            copy(text: string): void {
+                host.copied.push(text);
+            }
+        },
+        files: {
+            readText: (path: string) => inFolder<string>('files.readText', path, [path]),
+            write: (path: string, text: string) =>
+                host.settle('files.write', [path, text], async () => {
+                    host.inProject(path);
+                    await host.scripted<void>('files.write', [path, text]);
+                }),
+            list: (folder: string) => inFolder<PublicClient.FileEntry[]>('files.list', folder, [folder]),
+            watch: (path: string, _listener: () => void) =>
+                host.attempt('files.watch', [path], () => {
+                    host.inProject(path);
+
+                    return () => undefined;
+                }),
+            open(path: string): void {
+                host.opened.push({ kind: 'file', id: path });
+            }
+        },
+        git: {
+            status: (options: { repository?: string } = {}) => inFolder<PublicClient.GitStatus>('git.status', options.repository ?? '.', [options]),
+            diff: (options: { path: string; repository?: string; staged?: boolean }) =>
+                inFolder<PublicClient.GitFileDiff>('git.diff', options.repository ?? '.', [options]),
+            log: (options: { repository?: string; limit?: number } = {}) => inFolder<PublicClient.GitCommit[]>('git.log', options.repository ?? '.', [options])
+        },
+        launches: machineCalls(host, 'launches', [
+            'launch.list',
+            'launch.read',
+            'launch.start',
+            'launch.restart',
+            'launch.stop'
+        ]) as unknown as typeof PublicClient.launches,
+        routines: machineCalls(host, 'routines', ['routine.list', 'routine.run', 'routine.pause', 'routine.resume']) as unknown as typeof PublicClient.routines,
+        artifacts: machineCalls(host, 'artifacts', ['artifact.list', 'artifact.read', 'artifact.publish']) as unknown as typeof PublicClient.artifacts,
+        browser: machineCalls(host, 'browser', [
+            'browser.inspect',
+            'browser.navigate',
+            'browser.back',
+            'browser.forward',
+            'browser.reload',
+            'browser.screenshot'
+        ]) as unknown as typeof PublicClient.browser,
+        devices: machineCalls(host, 'devices', [
+            'device.list',
+            'device.inspect',
+            'device.screenshot',
+            'device.tap',
+            'device.launch'
+        ]) as unknown as typeof PublicClient.devices,
+        terminals: {
+            read: (terminal: NodeRef) =>
+                host.settle('terminals.read', [terminal], () => host.scripted('terminals.read', [terminal], () => nodeText(host, terminal.id))),
+            open: (options: { title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
+                host.attempt('terminals.open', [options], () =>
+                    host.addNode('terminal', host.beside(options.near), NEW_NODE, {
+                        title: options.title ?? 'Terminal',
+                        ...(options.cwd === undefined ? {} : { path: options.cwd })
+                    })
+                )
+        },
+        database: {
+            connections: () => host.settle('database.connections', [], () => host.scripted<{ id: string; name: string }[]>('database.connections', [])),
+            query: (connection: string, sql: string) =>
+                host.settle('database.query', [connection, sql], () => {
+                    host.projectId();
+
+                    return host.scripted<{ columns: string[]; rows: PublicClient.DatabaseValue[][]; hasMore: boolean }>('database.query', [connection, sql]);
+                })
+        },
+        chats: {
+            list: () => host.settle('chats.list', [], () => host.scripted<PublicClient.ChatSummary[]>('chats.list', [])),
+            read: (chatId: string) => host.settle('chats.read', [chatId], () => host.scripted('chats.read', [chatId], () => nodeText(host, chatId))),
+            send: (chatId: string, text: string) =>
+                host.settle('chats.send', [chatId, text], async () => {
+                    await host.scripted<void>('chats.send', [chatId, text]);
+                })
+        },
+        views: {
+            open(view: { id: string }): void {
+                host.openView(view.id);
+            },
+            createCanvas: (name: string) =>
+                host.attempt('views.createCanvas', [name], () => {
+                    host.projectId();
+
+                    const id = `view-${host.views.length + 1}`;
+
+                    host.views.push({ id, kind: 'canvas', name });
+                    host.changed();
+
+                    return { id };
+                }),
+            rename: (view: { id: string }, name: string) =>
+                host.attempt('views.rename', [view, name], () => {
+                    const found = host.views.find((each) => each.id === view.id);
+
+                    if (found === undefined) {
+                        throw new Refused('not-found', `No view ${view.id} in this project`);
+                    }
+
+                    found.name = name;
+                    host.changed();
+                })
+        },
+        context: {
+            read: (of: { nodes?: NodeRef[]; view?: { id: string } }) =>
+                host.settle('context.read', [of], () => {
+                    host.projectId();
+
+                    return host.scripted<PublicClient.ContextSource[]>('context.read', [of], () => {
+                        const ids =
+                            of.nodes?.map((node) => node.id) ??
+                            [...host.nodes.values()].filter((node) => node.viewId === (of.view?.id ?? host.activeViewId)).map((node) => node.id);
+
+                        return ids.flatMap((id) => {
+                            const node = host.nodes.get(id);
+
+                            return node === undefined ? [] : [{ id, kind: node.kind, title: node.title, text: node.text }];
+                        });
+                    });
+                })
+        },
+        agents: {
+            run: (options: { prompt: string; context?: string[]; provider?: string }) =>
+                host.settle('agents.run', [options], () => {
+                    host.projectId();
+
+                    return host.scripted<{ text: string }>('agents.run', [options]);
+                }),
+            async *stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncGenerator<Result<{ text: string }>> {
+                const { signal: _signal, ...asked } = options;
+                const pieces = await host.settle('agents.stream', [asked], () => {
+                    host.projectId();
+
+                    return host.scripted<string[]>('agents.stream', [asked]);
+                });
+
+                if (!pieces.ok) {
+                    yield pieces;
+
+                    return;
+                }
+
+                for (const text of pieces.value) {
+                    yield { ok: true, value: { text } };
+                }
+            },
+            // A chat a person can see, beside the node it is about, unless the test answers otherwise.
+            start: (options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }) =>
+                host.settle('agents.start', [options], () => {
+                    host.projectId();
+
+                    return host.scripted<NodeRef>('agents.start', [options], () =>
+                        host.addNode('chat', host.beside(options.near), NEW_NODE, {
+                            title: options.title ?? 'Chat',
+                            agent: { provider: options.provider ?? 'claude', status: 'running' }
+                        })
+                    );
+                })
+        },
+        canvas: {
+            createNote: (note: { title?: string; text: string; near?: NodeRef[]; color?: PublicClient.NodeColor }) =>
+                host.attempt('canvas.createNote', [note], () => {
+                    const created = host.addNode('note', host.beside(note.near), NOTE, { title: note.title ?? '', text: note.text, color: note.color ?? null });
+
+                    host.notes.push(created.id);
+
+                    return created;
+                }),
+            createFile: (path: string, options: { near?: NodeRef[] } = {}) =>
+                host.attempt('canvas.createFile', [path, options], () => host.addNode('file', host.beside(options.near), NEW_NODE, { title: path, path })),
+            createBrowser: (url: string, options: { near?: NodeRef[] } = {}) =>
+                host.attempt('canvas.createBrowser', [url, options], () => host.addNode('browser', host.beside(options.near), NEW_NODE, { title: url, url })),
+            createNode: <Data>(type: string, options: { data?: Data; title?: string; near?: NodeRef[] } = {}) => {
+                const node = host.definitions.find((each) => each.kind === 'node' && (each.definition as { id: string }).id === type);
+
+                // A type the extension never defined is its own mistake, as a wrong argument is.
+                if (node === undefined) {
+                    throw new TypeError(`${host.name} has no node ${type}`);
+                }
+
+                return host.attempt('canvas.createNode', [type, options], () =>
+                    host.addNode('extension', options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), NEW_NODE, {
+                        title: options.title ?? (node.definition as { title: string }).title,
+                        extension: { id: host.id, type },
+                        data: wire(options.data ?? {})
+                    })
+                );
+            },
+            update: (node: NodeRef, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }) =>
+                host.attempt('canvas.update', [node, patch], () => {
+                    const { bounds, title } = host.nodeOnCanvas(node);
+
+                    host.changeNode(node.id, {
+                        title: patch.title ?? title,
+                        bounds: { x: patch.x ?? bounds.x, y: patch.y ?? bounds.y, width: patch.width ?? bounds.width, height: patch.height ?? bounds.height }
+                    });
+                }),
+            writeNote: (node: NodeRef, text: string) =>
+                host.attempt('canvas.writeNote', [node, text], () => {
+                    host.nodeOnCanvas(node);
+                    host.changeNode(node.id, { text });
+                }),
+            arrange: (nodes: NodeRef[], layout: 'row' | 'column' | 'grid') =>
+                host.attempt('canvas.arrange', [nodes, layout], () => {
+                    const viewId = host.canvasInFront();
+                    const placed = nodes.flatMap((node) => {
+                        const found = host.nodes.get(node.id);
+
+                        return found?.viewId === viewId ? [found] : [];
+                    });
+                    const first = placed[0];
+
+                    if (first === undefined) {
+                        throw new Refused('not-found', 'None of these nodes is on the canvas in front');
+                    }
+
+                    const columns = layout === 'row' ? placed.length : layout === 'column' ? 1 : Math.ceil(Math.sqrt(placed.length));
+                    const width = Math.max(...placed.map((node) => node.bounds.width));
+                    const height = Math.max(...placed.map((node) => node.bounds.height));
+                    const { x, y } = first.bounds;
+
+                    placed.forEach((node, index) => {
+                        host.changeNode(node.id, {
+                            bounds: {
+                                ...node.bounds,
+                                x: x + (index % columns) * (width + ARRANGE_GAP),
+                                y: y + Math.floor(index / columns) * (height + ARRANGE_GAP)
+                            }
+                        });
+                    });
+                }),
+            // A person confirms, as anywhere a node goes away.
+            remove: (nodes: NodeRef[]) =>
+                host.settle('canvas.remove', [nodes], () => {
+                    host.canvasInFront();
+
+                    const title = removeTitle(nodes.length);
+                    const body = removeBody(nodes.length, host.name);
+
+                    if (!host.ask('confirm', title, ask(host.answers.confirm, { title, body }, true), body)) {
+                        throw new Refused('refused', 'The person kept them');
+                    }
+
+                    host.remove(nodes.map((node) => node.id));
+                }),
+            group: (nodes: NodeRef[]) =>
+                host.attempt('canvas.group', [nodes], () => {
+                    host.canvasInFront();
+
+                    const members = nodes.filter((node) => host.nodes.has(node.id));
+
+                    if (members.length === 0) {
+                        throw new Refused('refused', 'These nodes make no group on the canvas in front');
+                    }
+
+                    const group = host.addNode('group', host.beside(undefined), NEW_NODE, { title: 'Group' });
+
+                    for (const member of members) {
+                        host.changeNode(member.id, { groupId: group.id });
+                    }
+
+                    return group;
+                }),
+            link: (from: NodeRef, to: NodeRef) =>
+                host.attempt('canvas.link', [from, to], () => {
+                    host.nodeOnCanvas(from);
+                    host.addEdge(from.id, to.id);
+                    host.changed();
+                }),
+            unlink: (from: NodeRef, to: NodeRef) =>
+                host.attempt('canvas.unlink', [from, to], () => {
+                    host.nodeOnCanvas(from);
+
+                    const at = host.edges.findIndex((edge) => (edge.from === from.id && edge.to === to.id) || (edge.from === to.id && edge.to === from.id));
+
+                    if (at >= 0) {
+                        host.edges.splice(at, 1);
+                        host.changed();
+                    }
+                }),
+            select(nodes: NodeRef[]): void {
+                host.select(nodes.map((node) => node.id));
+            },
+            reveal(target: NodeRef): void {
+                host.revealed.push(target.id);
+            }
+        }
+    } satisfies typeof PublicClient;
+}
+
+export type ClientApi = ReturnType<typeof clientApi>;

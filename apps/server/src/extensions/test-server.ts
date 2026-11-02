@@ -19,7 +19,7 @@ type Answers = PublicTesting.TestServerAnswers;
 
 const DURATION_UNITS: Readonly<Record<string, number>> = { ms: 1, s: 1000, m: 60_000, h: 3_600_000 };
 
-class TestRefusal extends Error {
+export class TestRefusal extends Error {
     readonly code: PublicServer.ExtensionErrorCode;
 
     constructor(code: PublicServer.ExtensionErrorCode, message: string) {

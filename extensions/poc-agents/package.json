@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "RUIMTE_HOME=$HOME/.ruimte-dev bun ../../apps/server/src/main.ts extension dev --port 4211",
+        "test": "bun ../../apps/server/src/main.ts extension test",
         "pack": "bun ../../apps/server/src/main.ts extension pack"
     },
     "dependencies": {
@@ -12,6 +13,8 @@
         "react": "^19.3.1"
     },
     "devDependencies": {
-        "@types/react": "^19.3.0"
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/react": "^19.3.0",
+        "react-dom": "^19.3.1"
     }
 }
