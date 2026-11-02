@@ -61,6 +61,7 @@ import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useFocusedMachine } from '@/transport/connections';
+import { machineAnswers } from '@/transport/features';
 import { transport as activeTransport, TransportError, type Transport } from '@/transport';
 
 export interface LoadedExtension {
@@ -268,16 +269,28 @@ function createdNode(nodeId: string | null): { id: string } {
     return { id: nodeId };
 }
 
-/* What an agent reads of one node of the project in front: a terminal's screen or a chat's thread. */
-async function readNodeText(nodeId: string): Promise<string> {
+/*
+ * What an agent reads of one node of the project in front, only when it is of this kind: each kind takes its own
+ * permission, so a chat's id handed to `terminals.read` reads nothing.
+ */
+async function readNodeText(nodeId: string, kind: 'terminal' | 'chat'): Promise<string> {
     const { sources } = await activeTransport.request('extension.contextRead', { projectId: currentProjectId(), nodeIds: [nodeId] });
     const source = sources[0];
 
-    if (source === undefined) {
-        throw new Refused('not-found', `No node ${nodeId} in this project`);
+    if (source?.kind !== kind) {
+        throw new Refused('not-found', `No ${kind} ${nodeId} in this project`);
     }
 
     return source.text;
+}
+
+/* A chat as `server/` reads it, also one in a view of its own. A machine from before that request only reads one on a canvas. */
+async function readChatText(chatId: string): Promise<string> {
+    if (!machineAnswers(activeTransport.connection, 'extension.chatRead')) {
+        return readNodeText(chatId, 'chat');
+    }
+
+    return (await activeTransport.request('extension.chatRead', { chatId })).text;
 }
 
 function nodeStore(node: { id: string }): CanvasState {
@@ -1100,7 +1113,7 @@ export function clientApiFor(extension: LoadedExtension) {
         terminals: {
             read: (terminal: { id: string }) =>
                 settle('terminals.read', () => {
-                    return readNodeText(terminal.id);
+                    return readNodeText(terminal.id, 'terminal');
                 }),
             // Opens a shell and types nothing: only a person types in a terminal.
             open: (options?: { title?: string; cwd?: string; near?: { id: string }[] }) =>
@@ -1142,7 +1155,7 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             read: (chatId: string) =>
                 settle('chats.read', () => {
-                    return readNodeText(chatId);
+                    return readChatText(chatId);
                 }),
             send: (chatId: string, text: string) =>
                 settle('chats.send', async () => {

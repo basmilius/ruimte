@@ -6850,6 +6850,31 @@
       "sources"
     ]
   },
+  "request.extension.chatRead.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId"
+    ]
+  },
+  "request.extension.chatRead.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  },
   "request.extension.agentRun.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

@@ -23,6 +23,7 @@ import { repairChatMoves } from './wiring/chat-move.ts';
 import { ExtensionHost } from './extensions/extension-host.ts';
 import { ExtensionStore } from './extensions/store.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
+import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
 import { serverActionCall, voiceActionCall } from './actions/context.ts';
 import { runMachineAction, outputOf } from './extensions/machine-actions.ts';
@@ -299,15 +300,18 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
 
         await language.host.customSaveFor(id, input.data);
     };
+    const readExtensionChat = async (chatId: string): Promise<string> =>
+        (await agents.context.answerSource('extension', { id: chatId, kind: 'chat', title: chatId }, null, null)).text ?? '';
+
     extensionAsks = {
         'agents.run': (options: { prompt: string; context?: string[]; provider?: string }) => runExtensionPrompt(providers.providers, options),
         'chats.send': async (chatId: string, text: string) => {
             await chats.send(chatId, text);
         },
         'chats.list': async () => (await chats.list()).map(extensionChatOf),
-        'chats.read': async (chatId: string) =>
-            (await agents.context.answerSource('extension', { id: chatId, kind: 'chat', title: chatId }, null, null)).text ?? ''
+        'chats.read': readExtensionChat
     };
+    registerExtensionChatRead(dispatcher, readExtensionChat);
     registerExtensionHandlers(dispatcher, extensions, {
         viewsOf: (projectId) => projects.store.index.viewsOf(projectId),
         folderOf: (projectId) => projects.store.index.folderOf(projectId),

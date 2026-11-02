@@ -225,6 +225,13 @@ export const ExtensionContextReadResultSchema = z.object({
 });
 export type ExtensionContextReadResult = z.infer<typeof ExtensionContextReadResultSchema>;
 
+/* A chat as `chats.read` in `server/` reads it, also one in a view of its own. */
+export const ExtensionChatReadPayloadSchema = z.object({ chatId: z.string().min(1) });
+export type ExtensionChatReadPayload = z.infer<typeof ExtensionChatReadPayloadSchema>;
+
+export const ExtensionChatReadResultSchema = z.object({ text: z.string() });
+export type ExtensionChatReadResult = z.infer<typeof ExtensionChatReadResultSchema>;
+
 export const ExtensionAgentRunPayloadSchema = z.object({
     prompt: z.string().min(1),
     projectId: z.string().min(1),
@@ -237,6 +244,7 @@ export type ExtensionAgentRunResult = z.infer<typeof ExtensionAgentRunResultSche
 
 export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.contextRead': { payload: ExtensionContextReadPayloadSchema, result: ExtensionContextReadResultSchema },
+    'extension.chatRead': { payload: ExtensionChatReadPayloadSchema, result: ExtensionChatReadResultSchema },
     'extension.agentRun': { payload: ExtensionAgentRunPayloadSchema, result: ExtensionAgentRunResultSchema },
     'extension.list': { payload: EmptySchema, result: ExtensionListResultSchema },
     'extension.install': { payload: ExtensionInstallPayloadSchema, result: ExtensionInfoSchema },

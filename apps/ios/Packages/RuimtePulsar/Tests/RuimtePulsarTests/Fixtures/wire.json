@@ -93,6 +93,7 @@
   },
   "requestTypes": [
     "extension.contextRead",
+    "extension.chatRead",
     "extension.agentRun",
     "extension.list",
     "extension.install",

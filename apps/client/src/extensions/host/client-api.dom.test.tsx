@@ -105,6 +105,29 @@ describe('the client API', () => {
         await expect(api.chats.send('chat-1', '')).rejects.toThrow(TypeError);
     });
 
+    test("reads no chat for terminals.read, which only covers a terminal's screen", async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'terminals.read': 'Reads a screen' });
+
+        machine.answer('extension.contextRead', () => ({ sources: [{ id: 'chat-1', kind: 'chat', title: 'Chat', text: 'The thread' }] }));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        expect(await api.terminals.read({ id: 'chat-1' })).toEqual({ ok: false, error: { code: 'not-found', message: 'No terminal chat-1 in this project' } });
+    });
+
+    test('reads a chat with chats.read the way server/ does, also one that is no node on a canvas', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'chats.read': 'Reads a chat' });
+
+        machine.answer('extension.contextRead', () => ({ sources: [] }));
+        machine.answer('extension.chatRead', ({ chatId }) => ({ text: `The thread of ${chatId}` }));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        expect(await api.chats.read('chat-1')).toEqual({ ok: true, value: 'The thread of chat-1' });
+    });
+
     test('asks a person in their own words before it removes nodes, and answers refused when they keep them', async () => {
         const { api } = loaded({ 'canvas.write': 'Tidies up' });
 
