@@ -2,7 +2,8 @@
  * What `server/` of an extension does, held the same way against `createTestServer` (`test/server.test.ts`) and the
  * `ExtensionHost` of the machine with a real process (`apps/server/src/extensions/contract.integration.test.ts`).
  * Each world runs `poc.contract`'s own `server/` with the permissions a scenario asks for, answers `chats.send`,
- * and answers `launch.start` with the launch it was given.
+ * answers `launch.start` with the launch it was given, and starts a chat in `project`, which the machine's world
+ * does with its own chat start and action registry.
  */
 import { describe, expect, test } from 'bun:test';
 import type * as Server from '../../../packages/extension/server';
@@ -10,6 +11,8 @@ import type * as Server from '../../../packages/extension/server';
 export const ID = 'poc.contract';
 
 export interface ServerWorld {
+    /* The project a chat starts in. */
+    project: string;
     /* A method of `server/`, answered as the client reads it. */
     call(method: string, ...args: unknown[]): Promise<Server.Result<unknown>>;
     /* A machine event, as the machine hands it on. */
@@ -100,6 +103,17 @@ export function serverContract(open: OpenServerWorld): void {
 
             expect(await world.call('finish')).toEqual({ ok: true, value: null });
             expect(await world.emitted()).toStrictEqual([{ name: 'done' }, { name: 'counted', payload: { count: 1 } }]);
+        });
+
+        test('starts a chat a person sees with agents.start, and none without it', async () => {
+            const allowed = await open({ 'agents.start': 'Starts a chat' });
+            const refused = await open({});
+
+            expect(await allowed.call('startsChat', allowed.project)).toEqual({ ok: true, value: { ok: true, value: { id: expect.any(String) } } });
+            expect(await refused.call('startsChat', refused.project)).toEqual({
+                ok: true,
+                value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission agents.start in its manifest` } }
+            });
         });
 
         test("checks a machine action's input, and throws for one of the wrong shape", async () => {

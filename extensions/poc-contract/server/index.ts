@@ -1,4 +1,4 @@
-import { chats, defineAgentTool, defineServer, emit, machine, onEvent, storage } from '@ruimte/extension/server';
+import { agents, chats, defineAgentTool, defineServer, emit, machine, onEvent, storage } from '@ruimte/extension/server';
 import { hear, heard } from './heard';
 
 // As the module loads, as an extension that sets itself up from what it kept does.
@@ -44,6 +44,9 @@ const api = defineServer({
         const sent = await chats.send(chatId, 'Hello');
 
         return sent.ok ? { ok: true, keys: Object.keys(sent), value: String(sent.value) } : sent;
+    },
+    async startsChat(projectId: string) {
+        return agents.start({ project: { id: projectId }, prompt: 'Hello', title: 'Helper' });
     },
     async start(input: object) {
         try {

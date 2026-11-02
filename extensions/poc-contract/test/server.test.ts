@@ -7,12 +7,14 @@ serverContract(async (permissions) => {
     const server = await createTestServer<ContractServer>({
         manifest: { permissions },
         answers: {
+            'agents.start': () => ({ id: 'chat-1' }),
             'chats.send': () => undefined,
             'machine.run': { 'launch.start': ({ launch }) => ({ id: launch, name: launch }) }
         }
     });
 
     return {
+        project: 'project-a',
         call: (method, ...args) => server.call(method as never, ...(args as [never])),
         fire: (name, payload) => server.fire(name as 'chat.event', payload as { chatId: string }),
         tool: (id, input, caller) => server.tool(id).run(input, { caller }),

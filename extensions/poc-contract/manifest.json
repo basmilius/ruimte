@@ -10,6 +10,7 @@
         "chats.read": "Hears a chat change",
         "chats.send": "Says hello to a chat",
         "agents.tools": "Offers an agent a tool that echoes",
+        "agents.start": "Starts a chat",
         "launches.run": "Starts a launch"
     }
 }

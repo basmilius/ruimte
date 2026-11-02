@@ -237,6 +237,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     refuseUntrustedStart(host, caller.caller, checkedCwd, [{ provider: kind, chat }], voice || context.origin !== undefined ? place.folder : undefined);
     const runtimeMode = chat ? (input.mode ?? undefined) : terminalMode(caller, input.mode ?? undefined, ceiling);
     const account = inheritedAccount(caller, kind, place.projectId);
+    context.stillAllowed?.();
     const worktrees = input.worktree
         ? await startWorktrees(caller, place, remote !== null, dryRun, () => {
               const want = input.branch == null ? { fresh: branchSlug(input.task ?? input.title ?? kind) } : { branch: input.branch };
@@ -251,6 +252,8 @@ const startAgentNow: StartHandler = async (input, call) => {
             // Counted again under the lock the last start wrote its node down in: a call at the same moment read the same count.
             depthForOpening(caller, 'agent', 1);
             await requireStillReached(context, caller.caller);
+            // After the last await before the node is written, under the lock it is written in.
+            context.stillAllowed?.();
             if (input.task != null && context.origin === undefined) {
                 requireChatParent(content, caller.caller, host.hiddenAgents?.get(caller.caller)?.node.kind);
             }

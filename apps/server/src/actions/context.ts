@@ -17,6 +17,11 @@ export interface ServerActionContext {
     voice?: VoiceCaller;
     /* Set only for an extension whose manifest names the permission: it has no node, so no line can run to it. */
     extension?: true;
+    /*
+     * Throws once whoever asked may no longer, such as an extension turned off since. Set for an extension's chat start,
+     * which calls it after every await of its own before what it makes, the last time under the project's lock.
+     */
+    stillAllowed?: () => void;
 }
 
 /* A project in use on this machine, as Voice lists it and moves to it. */

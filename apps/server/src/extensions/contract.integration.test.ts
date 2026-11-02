@@ -1,9 +1,15 @@
-import { afterAll, afterEach } from 'bun:test';
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { afterAll, afterEach, beforeAll } from 'bun:test';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ExtensionMessageEventSchema } from '@ruimte/contracts';
+import { ManualClock } from '@adecore/agents/testing';
+import { ExtensionMessageEventSchema, type ProjectContent } from '@ruimte/contracts';
 import { serverContract, ID } from '../../../../extensions/poc-contract/contract/server.ts';
+import { serverActions } from '../actions/server-actions.ts';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
+import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
+import { extensionChatStarter } from './extension-chat.ts';
 import { ExtensionHost } from './extension-host.ts';
 import { runMachineAction } from './machine-actions.ts';
 import { packExtension } from './pack.ts';
@@ -14,9 +20,31 @@ const PROBE = join(import.meta.dir, '..', '..', '..', '..', 'extensions', 'poc-c
 const root = mkdtempSync(join(process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT ?? tmpdir(), 'ruimte-extension-contract-'));
 const hosts: ExtensionHost[] = [];
 let worlds = 0;
+let projects: ProjectStore;
+let projectId: string;
+let daemon: TestDaemon;
+
+// One daemon of fake CLIs behind every world, so a chat start goes the way the machine's own does.
+beforeAll(async () => {
+    const folder = join(root, 'project');
+
+    mkdirSync(folder, { recursive: true });
+    projects = new ProjectStore(join(root, 'daemon'), projectLinks());
+
+    const opened = await projects.openProject({ folder });
+
+    await projects.save(opened.summary.projectId, opened.document.rev, { name: 'Shop', color: '#123456', views: [] } as ProjectContent);
+    projects.release(opened.summary.projectId);
+    projectId = opened.summary.projectId;
+    daemon = await bootTestDaemon({ home: join(root, 'daemon'), store: projects, clock: new ManualClock() });
+});
 
 afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+afterAll(async () => {
+    await daemon.stop();
+    projects.closeAll();
+    rmSync(root, { recursive: true, force: true });
+});
 
 /* The machine's own host with `poc.contract` packed under these permissions, in a process of its own. */
 serverContract(async (permissions) => {
@@ -32,6 +60,7 @@ serverContract(async (permissions) => {
     const host = new ExtensionHost({
         store,
         asks: () => ({ 'chats.send': async () => undefined }),
+        startChat: extensionChatStarter({ host: daemon.host, actions: serverActions, folderOf: (id) => projects.index.folderOf(id) }),
         runAction: (_id, _projectId, action, input) =>
             runMachineAction(
                 action,
@@ -75,6 +104,7 @@ serverContract(async (permissions) => {
     };
 
     return {
+        project: projectId,
         call,
         fire: (name, payload) => host.forwardEvent(name, payload),
         async tool(id, input, caller) {
