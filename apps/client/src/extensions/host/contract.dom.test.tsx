@@ -1,6 +1,6 @@
 import { afterEach } from 'bun:test';
 import { createElement, type ComponentType } from 'react';
-import type { ExtensionManifest, ProjectView } from '@ruimte/contracts';
+import type { ExtensionManifest } from '@ruimte/contracts';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
@@ -13,6 +13,7 @@ import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { clientContract, NAME, SEED } from '../../../../../extensions/poc-contract/contract/client';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
+import { emptyCanvas } from '../../../testing/project-fixtures';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 
 const ID = 'poc.contract';
@@ -65,10 +66,12 @@ clientContract(async (permissions) => {
     disconnect = connectFakeMachine(machine);
     registerExtension(extension);
     useProject.setState({ current: { ...useProject.getState().current, ...PROJECT } });
-    useDocument.setState({ views: [{ id: SEED.view.id, kind: 'canvas', name: SEED.view.name } as ProjectView], activeViewId: SEED.view.id });
-    // A canvas on screen, so a node on it is on a canvas of this window.
+    // A canvas on screen, so a node on it is on a canvas of this window. The client's events follow the canvas in front
+    // once the view in front changes, which an earlier test file may have left on this one.
     defaultCanvases.of(SEED.view.id);
     defaultCanvases.focus(SEED.view.id);
+    useDocument.setState({ views: [emptyCanvas(SEED.view.id, SEED.view.name)], activeViewId: null });
+    useDocument.setState({ activeViewId: SEED.view.id });
     document.documentElement.dataset.theme = 'dark';
     focusedCanvas().setState({
         viewId: SEED.view.id,
