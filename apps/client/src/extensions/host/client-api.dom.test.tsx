@@ -6,6 +6,7 @@ import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { focusedCanvas } from '@/state/canvas';
+import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { folderWatches } from '@/state/fs-watch';
 import { currentEndpointId } from '@/state/keys';
@@ -220,6 +221,37 @@ describe('the client API', () => {
         useHostDialog.getState().request?.answer(null);
 
         expect(await removing).toMatchObject({ ok: false, error: { code: 'refused' } });
+    });
+
+    test('moves what an older version of a node stored up before it draws, and saves it with the version it is now', async () => {
+        const { api } = loaded();
+
+        function Counter() {
+            const [data] = api.useNodeData<{ count: number }>();
+
+            return <p>count {data.count}</p>;
+        }
+
+        api.defineNode<{ count: number }>({
+            id: 'counter',
+            title: 'Counter',
+            dataVersion: 2,
+            migrate: (stored) => ({ count: typeof stored === 'number' ? stored : 0 }),
+            component: async () => ({ default: Counter })
+        });
+
+        const raw = { kind: 'extension', id: 'node-1', extension: 'acme.probe', type: 'counter', data: 5 };
+        const node = { id: 'node-1', kind: 'unknown', title: 'Counter', x: 0, y: 0, w: 280, h: 160, raw } as CanvasNode;
+
+        focusedCanvas().setState({ nodes: { 'node-1': node } });
+
+        const contribution = useContributions.getState().extensionNodes.find((each) => each.id === 'acme.probe/counter');
+
+        mounted = mount();
+        await mounted.render(createElement(contribution?.component as ComponentType<{ nodeId: string }>, { nodeId: 'node-1' }));
+        await until(() => mounted?.host.textContent === 'count 5');
+
+        expect(focusedCanvas().getState().nodes['node-1']?.raw).toMatchObject({ data: { count: 5 }, dataVersion: 2 });
     });
 
     test("a project's storage starts over in another project that has none", async () => {

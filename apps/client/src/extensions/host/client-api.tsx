@@ -194,6 +194,36 @@ function surfaceOf<Props extends object>(extension: LoadedExtension, surface: Su
     };
 }
 
+/*
+ * A node whose data an older `dataVersion` stored, moved up by the extension's `migrate` before it draws, and saved
+ * with the version it is now. A node from before any version counts as 1. Inside the surface, so a throw stays there.
+ */
+function migratedNode(load: LazyComponent, version: number, migrate: (stored: unknown, from: number) => unknown): LazyComponent {
+    return async () => {
+        const { default: Inner } = await load();
+
+        // oxlint-disable-next-line react/only-export-components -- Made per extension, and never hot-reloaded.
+        function MigratedNode(props: object) {
+            const nodeId = useContext(NodeContext);
+            const raw = useCanvas((state) => (nodeId === null ? undefined : state.nodes[nodeId]?.raw));
+            const store = useCanvasStore();
+            const from = typeof raw?.dataVersion === 'number' ? raw.dataVersion : 1;
+            const stale = nodeId !== null && raw !== undefined && from < version;
+            const data = stale ? migrate(raw.data, from) : undefined;
+
+            useEffect(() => {
+                if (stale) {
+                    store.getState().updateExtensionNode(nodeId, { data, dataVersion: version });
+                }
+            }, [stale, store, nodeId, data]);
+
+            return stale ? null : createElement(Inner, props);
+        }
+
+        return { default: MigratedNode };
+    };
+}
+
 type PublicSlots = Partial<
     Record<SlotName, true | ((context: never) => boolean | { title?: string; icon?: string; disabled?: boolean | string; badge?: string; order?: number })>
 >;
@@ -550,15 +580,19 @@ export function clientApiFor(extension: LoadedExtension) {
             } & Surface
         ) {
             assertLazy(node, `defineNode ${node.id}`);
+
+            const { migrate, dataVersion } = node;
+            const surface: Surface =
+                'component' in node && migrate !== undefined && dataVersion !== undefined
+                    ? { component: migratedNode(node.component, dataVersion, migrate as (stored: unknown, from: number) => unknown) }
+                    : node;
+
             add('extensionNodes', {
                 id: `${id}/${node.id}`,
                 title: node.title,
                 icon: iconOf(node.icon, extension),
-                component: surfaceOf(extension, node) as ComponentType<ExtensionSurfaceProps>,
-                // What an older version stored came out of the project file, so it is JSON.
-                ...(node.migrate === undefined || node.dataVersion === undefined
-                    ? {}
-                    : { migrate: node.migrate as (stored: unknown, from: number) => unknown, dataVersion: node.dataVersion })
+                component: surfaceOf(extension, surface) as ComponentType<ExtensionSurfaceProps>,
+                ...(dataVersion === undefined ? {} : { dataVersion })
             });
             // Adding is an action like any other, so an extension chooses where it shows; by default where a person adds nodes.
             add('slotEntries', {
@@ -1345,7 +1379,7 @@ export function clientApiFor(extension: LoadedExtension) {
                             options?.title ?? contribution.title,
                             { width: 420, height: 300 },
                             options?.data ?? {},
-                            undefined,
+                            contribution.dataVersion,
                             options?.near === undefined ? undefined : besideNode(options.near[0]?.id)
                         )
                     );

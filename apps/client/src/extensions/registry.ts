@@ -80,8 +80,8 @@ export interface ExtensionNodeContribution {
     title: string;
     icon: LucideIcon;
     component: ComponentType<ExtensionSurfaceProps>;
+    // What a node made now stores, so it is not taken for one an older version made.
     dataVersion?: number;
-    migrate?: (stored: unknown, fromVersion: number) => unknown;
 }
 
 export interface ExtensionViewContribution {
