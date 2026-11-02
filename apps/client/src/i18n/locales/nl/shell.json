@@ -1379,6 +1379,7 @@
     },
     "extensions": {
         "failed": "Deze extensie kon niet worden getoond",
+        "surfaceFailed": "{{name}} kon niet worden getoond",
         "nodeNeeds": "Hiervoor is een extensie nodig",
         "removeNodes": {
             "title_one": "{{count}} node verwijderen?",

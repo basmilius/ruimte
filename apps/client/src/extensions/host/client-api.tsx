@@ -147,10 +147,12 @@ function surfaceOf<Props extends object>(extension: LoadedExtension, surface: Su
 
     // oxlint-disable-next-line react/only-export-components -- Made per extension, and never hot-reloaded.
     return function ExtensionSurface(props) {
+        const { t } = useTranslation('shell');
+
         return (
             <ExtensionContext value={extension}>
                 <NodeContext value={props.nodeId ?? null}>
-                    <ErrorBoundary label={`${extension.manifest.name} could not be shown`} resetKeys={[extension.base]} compact>
+                    <ErrorBoundary label={t('extensions.surfaceFailed', { name: extension.manifest.name })} resetKeys={[extension.base]} compact>
                         <DevReport id={extension.manifest.id} dev={extension.dev === true}>
                             <Suspense fallback={null}>{createElement(Body as ComponentType<object>, props)}</Suspense>
                         </DevReport>

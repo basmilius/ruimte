@@ -1,7 +1,10 @@
 /** What the client can call. The default export of `server/index.ts`. */
 export function defineServer<Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api;
 
-/** A machine event, such as `chat.status`. Set `"autostart": true` to follow them with no client open. */
+/**
+ * A machine event, such as `chat.status`. A `chat.*` event needs the `chats.read` permission and a `session.*` event
+ * `terminals.read`; any other name is refused. Set `"autostart": true` to follow them with no client open.
+ */
 export function onEvent(name: string, listener: (payload: unknown) => void): () => void;
 
 /** Says something to every client of this machine. */

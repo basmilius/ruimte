@@ -1379,6 +1379,7 @@
     },
     "extensions": {
         "failed": "This extension could not be shown",
+        "surfaceFailed": "{{name}} could not be shown",
         "nodeNeeds": "This needs an extension",
         "removeNodes": {
             "title_one": "Remove {{count}} node?",
