@@ -169,11 +169,12 @@ export async function render(target: object, options: { node?: string; params?: 
     };
     const after = async (): Promise<void> => {
         await turn(module);
+        // A surface that still shows its fallback rejects the step, so a click never resolves on a page that is not there yet.
         await settle(
             module,
-            () => failure.error === null && container.querySelector(SUSPENDED) === null,
-            () => 'It is still waiting for what it suspends on'
-        ).catch(() => undefined);
+            () => failure.error !== null || container.querySelector(SUSPENDED) === null,
+            () => `It is still waiting for what it suspends on, after ${MAX_TURNS} turns`
+        );
 
         if (failure.error !== null) {
             const { error } = failure;

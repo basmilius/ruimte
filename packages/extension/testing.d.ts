@@ -68,11 +68,17 @@ export interface TestHostAnswers {
     pickFolder?: string | null;
     /** What an overlay closes with, by the id it gave `defineOverlay`. Null, by default, is a dismissed one. */
     overlays?: Record<string, (params: never) => unknown>;
-    /** `server/` as `useServer` reaches it: methods that answer, or a test server from `createTestServer`. */
+    /**
+     * `server/` as `useServer` reaches it: methods that answer, or a test server from `createTestServer`, whose `storage` is
+     * then the `machine` storage of `useStorage`, as on one machine.
+     */
     server?: Record<string, (...args: never[]) => unknown> | TestServer<unknown>;
     'agents.run'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<{ text: string }>;
-    /** The pieces of the answer, in order. */
-    'agents.stream'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<string[]>;
+    /**
+     * The pieces of the answer, in order. An async iterable is read piece by piece: a throw after some pieces ends the
+     * stream with that failure, and `signal` aborts once the extension stops the stream, which then yields no more.
+     */
+    'agents.stream'?(options: { prompt: string; context?: string[]; provider?: string; signal: AbortSignal }): Answer<string[]> | AsyncIterable<string>;
     /** A chat node on the canvas in front by default. */
     'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Answer<NodeRef>;
     'chats.list'?(): Answer<ChatSummary[]>;
@@ -177,21 +183,24 @@ export interface TestHost {
     slot<Place extends SlotName>(definition: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): TestSlotShown | null;
     /**
      * Presses an action, or the node of a `defineNode`, at this place as a person would: `refused` where it does not show or is
-     * disabled, `failed` with what it threw, which also shows the person an error, as in Ruimte.
+     * disabled, `failed` with what it threw, which also shows the person an error, as in Ruimte. An `AbortError` is the
+     * person stopping it, which is no failure.
      */
     run<Place extends SlotName>(definition: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): Promise<Result<void>>;
     /** A menu's rows at this place: `refused` where it does not show, `failed` with what its `items` threw. */
     menuItems<Place extends SlotName>(menu: object, place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): Result<TestMenuItem[]>;
     /** Hands a client event to `useEvent` and `onEvent`. */
     fire<Name extends keyof ClientEvents>(name: Name, payload: ClientEvents[Name]): void;
-    /** What `emit` in `server/` says, to `useServerEvent`. */
-    emit(name: string, payload: Json): void;
+    /** What `emit` in `server/` says, to `useServerEvent`. Without a payload, the listener hears undefined. */
+    emit(name: string, payload?: Json): void;
     /** Selects these nodes, as a person would, which also fires `selection.changed`. */
     select(ids: string[]): void;
     /** Changes a setting, as a person would. */
     setSetting(key: string, value: boolean | string): void;
-    /** Writes a stored value as another window or `server/` would, and draws again what reads it. */
-    setStorage(scope: 'computer' | 'project' | 'machine', key: string, value: Json): void;
+    /** Writes a stored value as another window or `server/` would, and draws again what reads it. Undefined deletes the key. */
+    setStorage(scope: 'computer' | 'project' | 'machine', key: string, value: Json | undefined): void;
+    /** A file of the project changing on the machine, which calls back each `files.watch` of it or of a folder above it. */
+    changeFile(path: string): void;
     /** The connection to the machine dropping and coming back: every answer `.use()` kept is dropped, so what read one asks again. */
     reconnect(): void;
     /**
@@ -288,8 +297,8 @@ export interface TestServer<Api> {
     clock: { now(): number; advance(duration: string | number): Promise<void> };
     /** Hands a machine event to `onEvent`, if the manifest has its permission, as the machine would. */
     fire<Name extends keyof ServerEvents>(name: Name, payload: ServerEvents[Name]): void;
-    /** What `emit` said, in order. */
-    emitted: { name: string; payload: Json }[];
+    /** What `emit` said, in order. An `emit` without a payload has none here either, as it crosses to a client. */
+    emitted: { name: string; payload?: Json }[];
     /** What `server/` asked the machine, in order. */
     asked: TestAsk[];
     /** What `defineLanguageServer` added. */

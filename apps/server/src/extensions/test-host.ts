@@ -13,9 +13,11 @@ import {
     isExtensionSlotName,
     missingPermissionMessage
 } from '@ruimte/contracts/extension-client';
+import { CANVAS_GRID, DEFAULT_TITLES, groupFrame, NODE_SIZE } from '@ruimte/contracts/node-defaults';
 import type * as PublicClient from '../../../../packages/extension/client';
+import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { TestRefusal } from './test-server.ts';
+import { machineStorageOf, TestRefusal } from './test-server.ts';
 
 type Result<Value> = PublicClient.Result<Value>;
 type ErrorCode = PublicClient.ExtensionErrorCode;
@@ -64,8 +66,34 @@ export interface Entry {
 }
 
 const NOTE = { width: 320, height: 200 };
+// A node of the extension's own without a `size`, as the client host makes it.
+export const NEW_NODE = { width: 420, height: 300 };
 const BESIDE_GAP = 240;
 const NODE_PLACES = ['node', 'nodes', 'from', 'to'];
+// The kinds a line runs both ways between, as `isAgentKind` of the client's canvas reads them.
+const AGENT_KINDS = new Set(['terminal', 'chat', 'design']);
+
+type Bounds = HostNode['bounds'];
+
+function snapped(value: number): number {
+    return Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+}
+
+/* The size a new node of a built-in kind takes, as a person's click makes it. */
+export function sizeOfKind(kind: string): { width: number; height: number } {
+    const size = (NODE_SIZE as Partial<Record<string, { w: number; h: number }>>)[kind];
+
+    return size === undefined ? NEW_NODE : { width: size.w, height: size.h };
+}
+
+/* A chat the machine runs, on a canvas or in a view of its own, which `chats.read` and `useChat` find either way. */
+export interface HostChat {
+    id: string;
+    title: string;
+    text: string;
+    provider: string;
+    status: PublicServer.AgentStatus;
+}
 
 /* As it crosses to the machine and back. */
 export function wire<Value>(value: unknown): Value {
@@ -109,6 +137,8 @@ export class TestHost {
     readonly project: { id: string; name: string; folder: string | null } | null;
     readonly views: { id: string; kind: string; name: string }[];
     readonly nodes = new Map<string, HostNode>();
+    readonly chats = new Map<string, HostChat>();
+    readonly watches = new Set<{ path: string; listener: () => void }>();
     readonly edges: { from: string; to: string }[] = [];
     readonly createdIds: string[] = [];
     readonly notes: string[] = [];
@@ -166,11 +196,16 @@ export class TestHost {
                       name: view.name ?? ''
                   }));
         this.activeViewId = this.views[0]?.id ?? null;
+
+        // A test server's `storage` is this host's `machine` storage, as on one machine: what either writes, the other reads.
+        const server = this.answers.server === undefined ? undefined : machineStorageOf.get(this.answers.server);
+
         this.storage = {
             computer: wire(options.storage?.computer ?? {}),
             project: wire(options.storage?.project ?? {}),
-            machine: wire(options.storage?.machine ?? {})
+            machine: server === undefined ? wire(options.storage?.machine ?? {}) : Object.assign(server.values, wire(options.storage?.machine ?? {}))
         };
+        server?.subscribe(() => this.changed());
         this.settings = { ...options.settings };
         this.words = wordsIn(folder, this.language);
 
@@ -191,6 +226,19 @@ export class TestHost {
                 ...(node.extension?.dataVersion === undefined ? {} : { dataVersion: node.extension.dataVersion })
             });
 
+            if (node.kind === 'chat') {
+                this.chats.set(node.id, {
+                    id: node.id,
+                    title: node.title ?? '',
+                    text: node.text ?? '',
+                    provider: node.agent?.provider ?? 'claude',
+                    status: node.agent?.status ?? 'idle'
+                });
+            }
+        }
+
+        // Once every node is there, so a line to one seeded later is drawn too.
+        for (const node of options.project?.nodes ?? []) {
             for (const to of node.linkedTo ?? []) {
                 this.addEdge(node.id, to);
             }
@@ -293,6 +341,11 @@ export class TestHost {
             throw e;
         }
 
+        return this.failure(what, args, e);
+    }
+
+    /* A call that failed on the machine's side, recorded and logged: any throw there, a TypeError too, is a Result. */
+    failure(what: string, args: unknown[], e: unknown): Result<never> {
         const error =
             e instanceof Refused || e instanceof TestRefusal ? { code: e.code, message: e.message } : { code: 'failed' as const, message: errorText(e) };
 
@@ -397,7 +450,22 @@ export class TestHost {
         return anchor === undefined ? { x: 0, y: 0 } : { x: anchor.bounds.x + anchor.bounds.width + BESIDE_GAP, y: anchor.bounds.y + anchor.bounds.height / 2 };
     }
 
-    addNode(kind: string, at: { x: number; y: number }, size: { width: number; height: number }, details: Partial<HostNode>): { id: string } {
+    /*
+     * A node on the canvas in front as the client's canvas adds one: centered on `at` and on the grid, the size of its
+     * kind, the title of its kind unless it has one, and the only node selected.
+     */
+    addNode(
+        kind: string,
+        at: { x: number; y: number },
+        details: Partial<HostNode>,
+        size: { width: number; height: number } = sizeOfKind(kind)
+    ): { id: string } {
+        const bounds = { x: snapped(at.x - size.width / 2), y: snapped(at.y - size.height / 2), ...size };
+
+        return this.placeNode(kind, bounds, { title: (DEFAULT_TITLES as Partial<Record<string, string>>)[kind] ?? '', ...details });
+    }
+
+    private placeNode(kind: string, bounds: Bounds, details: Partial<HostNode>): { id: string } {
         const viewId = this.canvasInFront();
         let id = `${kind}-${this.nextId}`;
 
@@ -407,12 +475,61 @@ export class TestHost {
         }
 
         this.nextId += 1;
-        this.nodes.set(id, { id, kind, title: '', text: '', color: null, bounds: { ...at, ...size }, viewId, groupId: null, ...details });
+        this.nodes.set(id, { id, kind, title: '', text: '', color: null, bounds, viewId, groupId: null, ...details });
         this.createdIds.push(id);
         this.changed();
         this.deliver('node.added', { node: this.info(id) });
+        this.select([id]);
 
         return { id };
+    }
+
+    /*
+     * A group around these nodes of the canvas in front, as a person's grouping draws it: groups and nodes elsewhere stay
+     * out, the frame is the shared one, and the group is what is selected after. Null when none of them is there.
+     */
+    addGroup(ids: readonly string[]): { id: string } | null {
+        const viewId = this.canvasInFront();
+        const members = ids.flatMap((id) => {
+            const node = this.nodes.get(id);
+
+            return node === undefined || node.viewId !== viewId || node.kind === 'group' ? [] : [node];
+        });
+        const frame = groupFrame(members.map(({ bounds }) => ({ x: bounds.x, y: bounds.y, w: bounds.width, h: bounds.height })));
+
+        if (frame === null) {
+            return null;
+        }
+
+        const group = this.placeNode('group', { x: frame.x, y: frame.y, width: frame.w, height: frame.h }, { title: DEFAULT_TITLES.group });
+
+        for (const member of members) {
+            this.changeNode(member.id, { groupId: group.id });
+        }
+
+        return group;
+    }
+
+    /* A chat the machine started in a view of its own, with no canvas in front to put it on. */
+    addChatView(title: string, provider: string): { id: string } {
+        const view = this.addView('chat', title);
+
+        this.chats.set(view.id, { id: view.id, title, text: '', provider, status: 'running' });
+
+        return view;
+    }
+
+    /* Tells every watch of this path, or of a folder above it, that it changed. */
+    changeFile(path: string): void {
+        const full = this.inProject(path);
+
+        for (const watch of [...this.watches]) {
+            const folder = /[\\/]$/.test(watch.path) ? watch.path : `${watch.path}/`;
+
+            if (full === watch.path || full.startsWith(folder) || full.startsWith(folder.replace(/\/$/, '\\'))) {
+                watch.listener();
+            }
+        }
     }
 
     /*
@@ -459,22 +576,43 @@ export class TestHost {
         }
     }
 
+    /*
+     * A line as the client's canvas draws one: between two nodes of one canvas, never from a node to itself or twice, and
+     * both ways between two agents, since a line lets only its head read its tail.
+     */
     addEdge(from: string, to: string): void {
-        if (!this.edges.some((edge) => edge.from === from && edge.to === to)) {
-            this.edges.push({ from, to });
+        const start = this.nodes.get(from);
+        const end = this.nodes.get(to);
+
+        if (start === undefined || end === undefined || start.viewId !== end.viewId) {
+            return;
+        }
+
+        const draw = (tail: string, head: string): void => {
+            if (tail !== head && !this.edges.some((edge) => edge.from === tail && edge.to === head)) {
+                this.edges.push({ from: tail, to: head });
+            }
+        };
+
+        draw(from, to);
+
+        if (AGENT_KINDS.has(start.kind) && AGENT_KINDS.has(end.kind)) {
+            draw(to, from);
         }
     }
 
+    /* Removes these nodes of the canvas in front, as a person deleting them there, which leaves nothing selected. */
     remove(ids: readonly string[]): void {
-        for (const id of ids) {
-            if (this.nodes.delete(id)) {
-                this.deliver('node.removed', { id });
-            }
+        const viewId = this.canvasInFront();
+        const gone = ids.filter((id) => this.nodes.get(id)?.viewId === viewId);
+
+        for (const id of gone) {
+            this.nodes.delete(id);
+            this.deliver('node.removed', { id });
         }
 
-        this.selection = this.selection.filter((id) => !ids.includes(id));
-        this.edges.splice(0, this.edges.length, ...this.edges.filter((edge) => !ids.includes(edge.from) && !ids.includes(edge.to)));
-        this.changed();
+        this.edges.splice(0, this.edges.length, ...this.edges.filter((edge) => !gone.includes(edge.from) && !gone.includes(edge.to)));
+        this.select([]);
     }
 
     select(ids: readonly string[]): void {
@@ -484,9 +622,29 @@ export class TestHost {
     }
 
     openView(id: string): void {
+        // The view in front already: nothing changes, so nothing is told.
+        if (id === this.activeViewId) {
+            return;
+        }
+
         this.activeViewId = id;
         this.changed();
         this.deliver('view.changed', { viewId: id });
+    }
+
+    /* What the client host says of a node that is not on the canvas it reads. */
+    unknownNode(id: string, viewId: string): NodeInfo {
+        return {
+            id,
+            kind: 'unknown',
+            title: '',
+            color: null,
+            bounds: { x: 0, y: 0, width: 0, height: 0 },
+            groupId: null,
+            viewId,
+            machine: null,
+            linkedTo: []
+        };
     }
 
     /* A readable copy, as the client host hands out: an extension never holds the host's own node. */
@@ -494,17 +652,7 @@ export class TestHost {
         const node = this.nodes.get(id);
 
         if (node === undefined) {
-            return {
-                id,
-                kind: 'unknown',
-                title: '',
-                color: null,
-                bounds: { x: 0, y: 0, width: 0, height: 0 },
-                groupId: null,
-                viewId: this.activeViewId ?? '',
-                machine: null,
-                linkedTo: []
-            };
+            return this.unknownNode(id, this.activeViewId ?? '');
         }
 
         const agent =
@@ -529,7 +677,8 @@ export class TestHost {
             groupId: node.groupId,
             viewId: node.viewId,
             machine: null,
-            linkedTo: this.edges.flatMap((edge) => (edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : [])),
+            // Once each, also where a pair of lines runs both ways between two agents.
+            linkedTo: [...new Set(this.edges.flatMap((edge) => (edge.from === id ? [edge.to] : edge.to === id ? [edge.from] : [])))],
             ...(agent === undefined ? {} : { agent }),
             ...(node.path === undefined ? {} : { path: node.path }),
             ...(node.url === undefined ? {} : { url: node.url }),
@@ -658,6 +807,11 @@ export class TestHost {
 
             return { ok: true, value: undefined };
         } catch (e) {
+            // A person stopping it is no failure of the action, as in Ruimte.
+            if (e instanceof DOMException && e.name === 'AbortError') {
+                return { ok: true, value: undefined };
+            }
+
             const message = errorText(e);
 
             this.notifications.push({ text: title, detail: message, tone: 'error' });

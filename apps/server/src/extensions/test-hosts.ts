@@ -80,9 +80,15 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
             host.changed();
         },
         setStorage(scope, key, value) {
-            host.storage[scope][key] = wire(value);
+            if (value === undefined) {
+                delete host.storage[scope][key];
+            } else {
+                host.storage[scope][key] = wire(value);
+            }
+
             host.changed();
         },
+        changeFile: (path) => host.changeFile(path),
         reconnect() {
             host.serverCache.clear();
             host.changed();

@@ -7,8 +7,9 @@ import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extensi
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/contracts/extension-actions';
 import type * as PublicClient from '../../../../packages/extension/client';
+import { callHandler, MissingHandler } from './server-api.ts';
 import { formatModule, nodeContextOf, react } from './test-react.ts';
-import { Refused, wire, type Entry, type TestHost } from './test-host.ts';
+import { NEW_NODE, Refused, wire, type Entry, type TestHost } from './test-host.ts';
 
 type Result<Value> = PublicClient.Result<Value>;
 type NodeRef = PublicClient.NodeRef;
@@ -16,8 +17,6 @@ type Format = ReturnType<typeof PublicClient.useLocale>['format'];
 type Slots = Record<string, unknown>;
 type Lazy = { component?: unknown; frame?: unknown };
 
-const NEW_NODE = { width: 420, height: 300 };
-const NOTE = { width: 320, height: 200 };
 const ARRANGE_GAP = 40;
 
 function assertLazy(surface: Lazy, what: string): void {
@@ -61,13 +60,16 @@ async function serverCall(host: TestHost, method: string, args: unknown[]): Prom
     }
 
     return host.settle(`server ${method}`, args, async () => {
-        const handler = (server as Record<string, unknown> | undefined)?.[method];
+        try {
+            return wire(await callHandler((server ?? {}) as Record<string, unknown>, method, wire<unknown[]>(args))) ?? null;
+        } catch (e) {
+            if (e instanceof MissingHandler) {
+                throw new Refused('not-found', e.message);
+            }
 
-        if (typeof handler !== 'function') {
-            throw new Refused('not-found', `No method ${method}`);
+            // Any throw of `server/` answers `failed` on the machine, a TypeError too.
+            throw e instanceof TypeError ? new Error(e.message) : e;
         }
-
-        return wire(await (handler as (...values: unknown[]) => unknown)(...wire<unknown[]>(args))) ?? null;
     });
 }
 
@@ -143,6 +145,13 @@ function machineCalls<Name extends ExtensionActionName>(
 /* What an agent reads of a node of this kind: its `text`, which a test seeds. Each kind takes its own permission, so another kind reads nothing. */
 function nodeText(host: TestHost, id: string, kind: 'terminal' | 'chat'): string {
     host.projectId();
+
+    // A chat is the machine's, with or without a node, so one in a view of its own reads too.
+    const chat = kind === 'chat' ? host.chats.get(id) : undefined;
+
+    if (chat !== undefined) {
+        return chat.text;
+    }
 
     const node = host.nodes.get(id);
 
@@ -243,9 +252,9 @@ export function clientApi(host: TestHost) {
 
             return {
                 open: (params?: Params) => {
-                    const id = `view-${host.views.length + 1}`;
+                    // Kept as a view of a kind Ruimte does not know, as the client's project keeps it, and so `useViews` reads it.
+                    const { id } = host.addView('unknown', view.title);
 
-                    host.views.push({ id, kind: 'extension', name: view.title });
                     host.opened.push({ kind: 'view', id: view.id, params });
                     host.openView(id);
                 }
@@ -272,12 +281,17 @@ export function clientApi(host: TestHost) {
                 ...(node.icon === undefined ? {} : { icon: node.icon }),
                 slots: node.addFrom ?? { canvasMenu: true, commandPalette: true },
                 run: (context) => {
-                    host.addNode('extension', (context as { at?: { x: number; y: number } }).at ?? { x: 0, y: 0 }, node.size ?? NEW_NODE, {
-                        title: node.title,
-                        extension: { id: host.id, type: node.id },
-                        data: wire(node.initialData ?? {}),
-                        ...(node.dataVersion === undefined ? {} : { dataVersion: node.dataVersion })
-                    });
+                    host.addNode(
+                        'extension',
+                        (context as { at?: { x: number; y: number } }).at ?? { x: 0, y: 0 },
+                        {
+                            title: node.title,
+                            extension: { id: host.id, type: node.id },
+                            data: wire(node.initialData ?? {}),
+                            ...(node.dataVersion === undefined ? {} : { dataVersion: node.dataVersion })
+                        },
+                        node.size ?? NEW_NODE
+                    );
                 }
             });
         },
@@ -409,7 +423,13 @@ export function clientApi(host: TestHost) {
             return [
                 (Object.hasOwn(values, key) ? values[key] : initial) as Value,
                 (next) => {
-                    values[key] = wire(next);
+                    // Undefined crosses as no value at all, so the key reads its initial value again.
+                    if (next === undefined) {
+                        delete values[key];
+                    } else {
+                        values[key] = wire(next);
+                    }
+
                     host.changed();
                 }
             ];
@@ -441,29 +461,36 @@ export function clientApi(host: TestHost) {
         },
         useMachine: () => ({ id: host.machineId }),
         useTheme: () => ({ side: host.theme }),
+        // Any chat of the machine, on a canvas or in a view of its own, as the client reads it from the chats it hears of.
         useChat(chatId: string): PublicClient.ChatSummary | null {
             useHost(host);
 
-            const node = host.nodes.get(chatId);
+            const chat = host.chats.get(chatId);
 
-            if (node?.kind !== 'chat') {
+            if (chat === undefined) {
                 return null;
             }
 
-            const agent = host.info(chatId).agent;
+            const agent = host.nodes.has(chatId) ? host.info(chatId).agent : undefined;
 
             return {
                 id: chatId,
-                provider: agent?.provider ?? 'claude',
-                status: agent?.status ?? 'idle',
+                provider: agent?.provider ?? chat.provider,
+                status: agent?.status ?? chat.status,
                 model: null,
                 cwd: agent?.cwd ?? host.project?.folder ?? ''
             };
         },
+        // Only a node of the canvas the surface is on, the one in front unless it draws a node: any other reads as unknown.
         useNode: (id: string) => {
+            const module = react();
+            const nodeId = module.useContext<string | null>(nodeContextOf(module));
+
             useHost(host);
 
-            return host.info(id);
+            const canvas = (nodeId === null ? undefined : host.nodes.get(nodeId)?.viewId) ?? host.activeViewId ?? '';
+
+            return host.nodes.get(id)?.viewId === canvas ? host.info(id) : host.unknownNode(id, canvas);
         },
         useNodes: (filter?: (node: PublicClient.NodeInfo) => boolean) => {
             useHost(host);
@@ -549,11 +576,16 @@ export function clientApi(host: TestHost) {
                     await host.scripted<void>('files.write', [path, text]);
                 }),
             list: (folder: string) => inFolder<PublicClient.FileEntry[]>('files.list', folder, [folder]),
-            watch: (path: string, _listener: () => void) =>
+            // Called back by `changeFile` of the test host, for this path or anything under it.
+            watch: (path: string, listener: () => void) =>
                 host.attempt('files.watch', [path], () => {
-                    host.inProject(path);
+                    const watch = { path: host.inProject(path), listener };
 
-                    return () => undefined;
+                    host.watches.add(watch);
+
+                    return () => {
+                        host.watches.delete(watch);
+                    };
                 }),
             open(path: string): void {
                 host.opened.push({ kind: 'file', id: path });
@@ -594,8 +626,8 @@ export function clientApi(host: TestHost) {
                 host.settle('terminals.read', [terminal], () => host.scripted('terminals.read', [terminal], () => nodeText(host, terminal.id, 'terminal'))),
             open: (options: { title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
                 host.attempt('terminals.open', [options], () =>
-                    host.addNode('terminal', host.beside(options.near), NEW_NODE, {
-                        title: options.title ?? 'Terminal',
+                    host.addNode('terminal', host.beside(options.near), {
+                        ...(options.title === undefined ? {} : { title: options.title }),
                         ...(options.cwd === undefined ? {} : { path: options.cwd })
                     })
                 )
@@ -625,12 +657,12 @@ export function clientApi(host: TestHost) {
                 host.attempt('views.createCanvas', [name], () => {
                     host.projectId();
 
-                    const id = `view-${host.views.length + 1}`;
+                    // Opened as it is made, as a person's new canvas is, so a node made next lands on it.
+                    const view = host.addView('canvas', name);
 
-                    host.views.push({ id, kind: 'canvas', name });
-                    host.changed();
+                    host.openView(view.id);
 
-                    return { id };
+                    return view;
                 }),
             rename: (view: { id: string }, name: string) =>
                 host.attempt('views.rename', [view, name], () => {
@@ -684,10 +716,22 @@ export function clientApi(host: TestHost) {
                     return;
                 }
 
+                // The run sees the signal, so a fixture that waits on its own can end once it is stopped.
+                const stop = new AbortController();
+                const stopRun = (): void => stop.abort(signal?.reason);
+                const answer = (host.answers as Record<string, unknown>)['agents.stream'];
                 const pieces = await host.settle('agents.stream', [asked], () => {
                     host.projectId();
 
-                    return host.scripted<string[]>('agents.stream', [asked]);
+                    if (typeof answer !== 'function') {
+                        return host.scripted<string[] | AsyncIterable<string>>('agents.stream', [asked]);
+                    }
+
+                    // An iterable is read as it goes, so a fixture can give some pieces and then fail.
+                    return (answer as (options: object) => unknown)({ ...wire<object>(asked), signal: stop.signal }) as
+                        | string[]
+                        | AsyncIterable<string>
+                        | Promise<string[]>;
                 });
 
                 if (!pieces.ok) {
@@ -696,8 +740,40 @@ export function clientApi(host: TestHost) {
                     return;
                 }
 
-                for (const text of pieces.value) {
-                    yield { ok: true, value: { text } };
+                const source: AsyncIterator<string> | Iterator<string> =
+                    Symbol.asyncIterator in pieces.value ? pieces.value[Symbol.asyncIterator]() : pieces.value[Symbol.iterator]();
+
+                const stopped = new Promise<IteratorResult<string>>((resolve) => {
+                    stop.signal.addEventListener('abort', () => resolve({ done: true, value: undefined }));
+                });
+
+                signal?.addEventListener('abort', stopRun);
+
+                try {
+                    while (!stop.signal.aborted) {
+                        let next: IteratorResult<string>;
+
+                        try {
+                            next = await Promise.race([source.next(), stopped]);
+                        } catch (e) {
+                            yield host.failure('agents.stream', [asked], e);
+
+                            return;
+                        }
+
+                        // A run stopped while a piece was on its way says no more, and no error, as in Ruimte.
+                        if (next.done === true || stop.signal.aborted) {
+                            return;
+                        }
+
+                        yield { ok: true, value: { text: String(next.value) } };
+                    }
+                } finally {
+                    signal?.removeEventListener('abort', stopRun);
+
+                    // A loop that broke off stops the run with it, without waiting on a fixture that never ends.
+                    stop.abort();
+                    void Promise.resolve(source.return?.()).catch(() => undefined);
                 }
             },
             // A chat a person can see, unless the test answers otherwise: beside the node it is about on the canvas in front, or a view of its own with none there.
@@ -708,30 +784,37 @@ export function clientApi(host: TestHost) {
                     return host.scripted<NodeRef>('agents.start', [options], () => {
                         const title = options.title ?? 'Chat';
 
+                        const provider = options.provider ?? 'claude';
+
                         if (host.views.find((view) => view.id === host.activeViewId)?.kind !== 'canvas') {
-                            return host.addView('chat', title);
+                            return host.addChatView(title, provider);
                         }
 
-                        return host.addNode('chat', host.beside(options.near), NEW_NODE, {
-                            title,
-                            agent: { provider: options.provider ?? 'claude', status: 'running' }
-                        });
+                        const created = host.addNode('chat', host.beside(options.near), { title, agent: { provider, status: 'running' } });
+
+                        host.chats.set(created.id, { id: created.id, title, text: '', provider, status: 'running' });
+
+                        return created;
                     });
                 })
         },
         canvas: {
             createNote: (note: { title?: string; text: string; near?: NodeRef[]; color?: PublicClient.NodeColor }) =>
                 host.attempt('canvas.createNote', [note], () => {
-                    const created = host.addNode('note', host.beside(note.near), NOTE, { title: note.title ?? '', text: note.text, color: note.color ?? null });
+                    const created = host.addNode('note', host.beside(note.near), {
+                        ...(note.title === undefined ? {} : { title: note.title }),
+                        text: note.text,
+                        color: note.color ?? null
+                    });
 
                     host.notes.push(created.id);
 
                     return created;
                 }),
             createFile: (path: string, options: { near?: NodeRef[] } = {}) =>
-                host.attempt('canvas.createFile', [path, options], () => host.addNode('file', host.beside(options.near), NEW_NODE, { title: path, path })),
+                host.attempt('canvas.createFile', [path, options], () => host.addNode('file', host.beside(options.near), { path })),
             createBrowser: (url: string, options: { near?: NodeRef[] } = {}) =>
-                host.attempt('canvas.createBrowser', [url, options], () => host.addNode('browser', host.beside(options.near), NEW_NODE, { title: url, url })),
+                host.attempt('canvas.createBrowser', [url, options], () => host.addNode('browser', host.beside(options.near), { url })),
             createNode: <Data>(type: string, options: { data?: Data; title?: string; near?: NodeRef[] } = {}) => {
                 const node = host.definitions.find((each) => each.kind === 'node' && (each.definition as { id: string }).id === type);
 
@@ -743,12 +826,17 @@ export function clientApi(host: TestHost) {
                 const defined = node.definition as { title: string; size?: { width: number; height: number }; initialData?: unknown; dataVersion?: number };
 
                 return host.attempt('canvas.createNode', [type, options], () =>
-                    host.addNode('extension', options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), defined.size ?? NEW_NODE, {
-                        title: options.title ?? defined.title,
-                        extension: { id: host.id, type },
-                        data: wire(options.data ?? defined.initialData ?? {}),
-                        ...(defined.dataVersion === undefined ? {} : { dataVersion: defined.dataVersion })
-                    })
+                    host.addNode(
+                        'extension',
+                        options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near),
+                        {
+                            title: options.title ?? defined.title,
+                            extension: { id: host.id, type },
+                            data: wire(options.data ?? defined.initialData ?? {}),
+                            ...(defined.dataVersion === undefined ? {} : { dataVersion: defined.dataVersion })
+                        },
+                        defined.size ?? NEW_NODE
+                    )
                 );
             },
             update: (node: NodeRef, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }) =>
@@ -810,18 +898,10 @@ export function clientApi(host: TestHost) {
                 }),
             group: (nodes: NodeRef[]) =>
                 host.attempt('canvas.group', [nodes], () => {
-                    host.canvasInFront();
+                    const group = host.addGroup(nodes.map((node) => node.id));
 
-                    const members = nodes.filter((node) => host.nodes.has(node.id));
-
-                    if (members.length === 0) {
+                    if (group === null) {
                         throw new Refused('refused', 'These nodes make no group on the canvas in front');
-                    }
-
-                    const group = host.addNode('group', host.beside(undefined), NEW_NODE, { title: 'Group' });
-
-                    for (const member of members) {
-                        host.changeNode(member.id, { groupId: group.id });
                     }
 
                     return group;

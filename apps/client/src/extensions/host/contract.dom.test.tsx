@@ -1,10 +1,11 @@
 import { afterEach } from 'bun:test';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import * as ui from '@adecore/ui';
-import type { ExtensionManifest, ProjectView } from '@ruimte/contracts';
+import { REQUEST_SCHEMAS, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
+import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { baseContext, nodeInfoOf, resolveSlot } from '@/extensions/slots';
@@ -22,6 +23,7 @@ import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 const ID = 'poc.contract';
 const mounts: Mounted[] = [];
 let disconnect: (() => void) | null = null;
+let stopAnswering: (() => void) | null = null;
 
 afterEach(async () => {
     for (const mounted of mounts.splice(0)) {
@@ -30,6 +32,8 @@ afterEach(async () => {
 
     disconnect?.();
     disconnect = null;
+    stopAnswering?.();
+    stopAnswering = null;
     forgetExtension(ID);
     delete document.documentElement.dataset.theme;
 
@@ -75,6 +79,14 @@ function screenOf(mounted: Mounted): ContractScreen {
     };
 }
 
+function viewOf(node: SeedNode | typeof SEED.node): string {
+    return 'view' in node && node.view !== undefined ? node.view : SEED.view.id;
+}
+
+function throughJson<Value>(value: Value): Value {
+    return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as Value);
+}
+
 function canvasNodeOf(node: SeedNode): CanvasNode {
     const frame = { id: node.id, x: 0, y: 400, w: 320, h: 200 };
 
@@ -102,47 +114,97 @@ clientContract(async (permissions, seed = {}) => {
     const stored = new Map<string, unknown>();
     const before = useToasts.getState().toasts.length;
     const nodes = [{ ...SEED.node, text: '' }, ...(seed.nodes ?? []).flatMap((node) => (node.kind === 'extension' ? [] : [node]))];
+    const stops = new Map<string, () => void>();
+    // A chat the machine runs, with or without a node, as `extension.chatRead` finds it.
+    const chats = new Map(nodes.flatMap((node) => (node.kind === 'chat' ? [[node.id, node.text] as const] : [])));
+    // What a request carries and answers crosses as JSON and is checked against its schema, as over a real link.
+    const answer = <T extends RequestType>(type: T, run: (payload: RequestMap[T]['payload']) => unknown): void => {
+        machine.answer(type, async (payload) => {
+            const result = REQUEST_SCHEMAS[type].result.safeParse(JSON.parse(JSON.stringify((await run(throughJson(payload))) ?? null)));
 
-    machine.answer('extension.storageGet', ({ key }) => ({ value: stored.get(key) }));
-    machine.answer('extension.storageSet', ({ key, value }) => {
-        stored.set(key, value);
+            if (!result.success) {
+                throw new TransportError('bad-reply', `The machine answered ${type} in a shape the client does not read`);
+            }
+
+            return result.data as RequestMap[T]['result'];
+        });
+    };
+
+    answer('extension.storageGet', ({ key }) => ({ value: stored.get(key) }));
+    answer('extension.storageSet', ({ key, value }) => {
+        if (value === undefined) {
+            stored.delete(key);
+        } else {
+            stored.set(key, value);
+        }
 
         return {};
     });
     // The machine's own rule over the nodes of the seed: it skips another kind before it reads.
-    machine.answer('extension.contextRead', (of) => ({
+    answer('extension.contextRead', (of) => ({
         sources: nodes
-            .filter((node) => contextSelection(of)(node.id, SEED.view.id) && (of.kind === undefined || node.kind === of.kind))
+            .filter((node) => contextSelection(of)(node.id, viewOf(node)) && (of.kind === undefined || node.kind === of.kind))
             .map((node) => ({ id: node.id, kind: node.kind, title: node.title, text: node.text }))
     }));
-    machine.answer('extension.chatRead', ({ chatId }) => {
-        const chat = nodes.find((node) => node.id === chatId && node.kind === 'chat');
+    answer('extension.chatRead', ({ chatId }) => {
+        const text = chats.get(chatId);
 
-        if (chat === undefined) {
+        if (text === undefined) {
             throw new TransportError('not-found', `No chat ${chatId} on this machine`);
         }
 
-        return { text: chat.text };
+        return { text };
     });
     // A canvas node where the client names the canvas, a chat view of its own where it names none.
-    machine.answer('extension.agentStart', ({ viewId }) => ({ nodeId: viewId === undefined ? 'chat-view' : 'chat-node' }));
-    machine.answer('extension.call', async ({ method, args }) => {
-        const run = seed.server?.[method];
+    answer('extension.agentStart', ({ viewId }) => {
+        const nodeId = viewId === undefined ? 'chat-view' : 'chat-node';
+
+        chats.set(nodeId, '');
+
+        return { nodeId };
+    });
+    // As the machine's runtime calls `server/`: only a method of its own, and any throw answers `failed`.
+    answer('extension.call', async ({ method, args }) => {
+        const run = seed.server !== undefined && Object.hasOwn(seed.server, method) ? seed.server[method] : undefined;
 
         if (run === undefined) {
             throw new TransportError('not-found', `No method ${method}`);
         }
 
-        return { result: await (run as (...values: unknown[]) => unknown)(...args) };
+        try {
+            return { result: (await (run as (...values: unknown[]) => unknown)(...args)) ?? null };
+        } catch (e) {
+            throw new TransportError('failed', e instanceof Error ? e.message : String(e));
+        }
     });
-    machine.answer('extension.agentStream', ({ runId }) => {
+    answer('extension.agentStream', async ({ runId }) => {
         for (const text of seed.stream ?? []) {
             machine.emit('extension.agentChunk', { runId, text });
         }
 
+        const end = seed.streamEnd;
+
+        if (end === 'waits') {
+            const { promise, resolve } = Promise.withResolvers<void>();
+
+            stops.set(runId, resolve);
+            await promise;
+        } else if (end !== undefined) {
+            throw new TransportError('failed', end.fails);
+        }
+
+        return {};
+    });
+    // A run that waits ends once it is stopped, as the machine's own run does.
+    answer('extension.agentStop', ({ runId }) => {
+        stops.get(runId)?.();
+
         return {};
     });
     disconnect = connectFakeMachine(machine);
+    // A person says yes to what the extension asks, as a test host answers by default.
+    stopAnswering?.();
+    stopAnswering = useHostDialog.subscribe(({ request }) => request?.answer(''));
     registerExtension(extension);
     useProject.setState({ current: { ...useProject.getState().current, ...PROJECT } });
     // A canvas on screen, so a node on it is on a canvas of this window. The client's events follow the canvas in front
@@ -150,7 +212,11 @@ clientContract(async (permissions, seed = {}) => {
     defaultCanvases.of(SEED.view.id);
     defaultCanvases.focus(SEED.view.id);
     useDocument.setState({
-        views: [emptyCanvas(SEED.view.id, SEED.view.name), ...(seed.views ?? []).map((view) => ({ ...view, url: '' }) as ProjectView)],
+        views: [
+            emptyCanvas(SEED.view.id, SEED.view.name),
+            ...(seed.views ?? []).map((view) => ({ ...view, url: '' }) as ProjectView),
+            ...[...new Set(nodes.map(viewOf))].filter((view) => view !== SEED.view.id).map((view) => emptyCanvas(view, view))
+        ],
         activeViewId: null
     });
     useDocument.setState({ activeViewId: SEED.view.id });
@@ -158,9 +224,10 @@ clientContract(async (permissions, seed = {}) => {
     focusedCanvas().setState({
         viewId: SEED.view.id,
         nodes: Object.fromEntries(
-            [{ id: SEED.node.id, kind: 'note', title: SEED.node.title, x: 0, y: 0, w: 320, h: 200 } as CanvasNode, ...(seed.nodes ?? []).map(canvasNodeOf)].map(
-                (node) => [node.id, node]
-            )
+            [
+                { id: SEED.node.id, kind: 'note', title: SEED.node.title, x: 0, y: 0, w: 320, h: 200 } as CanvasNode,
+                ...(seed.nodes ?? []).filter((node) => viewOf(node) === SEED.view.id).map(canvasNodeOf)
+            ].map((node) => [node.id, node])
         ),
         edges: [],
         selection: []
@@ -207,7 +274,25 @@ clientContract(async (permissions, seed = {}) => {
                 window.dispatchEvent(new StorageEvent('storage', { key }));
             });
         },
+        async fromServer(write) {
+            await act(async () => {
+                if (write.value === undefined) {
+                    stored.delete(write.storage);
+                } else {
+                    stored.set(write.storage, write.value);
+                }
+            });
+        },
+        async fileChanged(path) {
+            const full = `${SEED.project.folder}/${path}`;
+
+            await act(async () => {
+                machine.emit('fs.changed', { root: full.slice(0, full.lastIndexOf('/')), paths: [full], changedPaths: [full] });
+            });
+        },
         started: () => machine.requests('extension.agentStart').map(({ viewId }) => (viewId === undefined ? 'view' : 'canvas')),
+        streamStopped: () => machine.requests('extension.agentStop').length > 0,
+        nodes: () => Object.keys(focusedCanvas().getState().nodes),
         slot: (action, place, extra) => resolveSlot([entryOf(action)], place, contextOf(extra))[0]?.title ?? null,
         async run(action, place, extra) {
             const entry = entryOf(action);

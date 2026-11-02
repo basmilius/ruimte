@@ -25,9 +25,12 @@ export interface ContractScreen {
     until(check: () => unknown): Promise<void>;
 }
 
-/* A node beside `SEED.node` on `SEED.view`: one an agent reads `text` of, or one of the extension's own as it was stored. */
+/*
+ * A node beside `SEED.node` on `SEED.view`: one an agent reads `text` of, or one of the extension's own as it was stored.
+ * One with a `view` sits on that canvas of the project instead, which is not in front.
+ */
 export type SeedNode =
-    | { id: string; kind: 'terminal' | 'chat'; title: string; text: string }
+    | { id: string; kind: 'terminal' | 'chat'; title: string; text: string; view?: string }
     | { id: string; kind: 'extension'; type: string; data: Client.Json; dataVersion?: number };
 
 /* What a scenario needs beside `SEED`: what the machine answers is the machine's own rule over it. */
@@ -39,6 +42,8 @@ export interface WorldSeed {
     server?: Record<string, (...args: never[]) => unknown>;
     /* The pieces `agents.stream` answers. */
     stream?: string[];
+    /* What the run does after its pieces: fail with this message, or wait until it is stopped. It ends by default. */
+    streamEnd?: { fails: string } | 'waits';
 }
 
 export interface ClientWorld {
@@ -54,8 +59,16 @@ export interface ClientWorld {
     reconnect(): Promise<void>;
     /* Another window of the same computer writing a key of this extension's storage or a setting. */
     fromOtherWindow(write: { storage: string; value: Client.Json } | { setting: string; value: boolean | string }): Promise<void>;
+    /* `server/` writing a key of the machine's storage, or deleting it without a value. */
+    fromServer(write: { storage: string; value?: Client.Json }): Promise<void>;
+    /* A file of the project changing on the machine. */
+    fileChanged(path: string): Promise<void>;
     /* Where each chat `agents.start` started went, in order. */
     started(): ('canvas' | 'view')[];
+    /* Whether the machine was told to stop a run of `agents.stream`. */
+    streamStopped(): boolean;
+    /* The ids of the nodes on the canvas in front. */
+    nodes(): string[];
     /* The title an action shows with at a place, or null where it does not show. */
     slot(action: string, place: Client.SlotName, extra: object): string | null;
     /* Presses an action at a place as a person would: a throw is `failed`, which a person is shown. */
@@ -417,6 +430,257 @@ export function clientContract(open: OpenClientWorld): void {
 
             expect(await read(AbortSignal.abort())).toEqual([]);
             expect(await read()).toEqual(['First', 'Second']);
+        });
+
+        test('ends a stream that fails after some pieces with that failure', async () => {
+            const { api } = await open({ 'agents.run': 'Answers' }, { stream: ['First', 'Second'], streamEnd: { fails: 'Broke' } });
+            const pieces: string[] = [];
+
+            for await (const piece of api.agents.stream({ prompt: 'Hi' })) {
+                pieces.push(piece.ok ? piece.value.text : `${piece.error.code}: ${piece.error.message}`);
+            }
+
+            expect(pieces).toEqual(['First', 'Second', 'failed: Broke']);
+        });
+
+        test('stops the run of a stream aborted after its first piece, which then says no more', async () => {
+            const world = await open({ 'agents.run': 'Answers' }, { stream: ['First'], streamEnd: 'waits' });
+            const controller = new AbortController();
+            const pieces: string[] = [];
+
+            for await (const piece of world.api.agents.stream({ prompt: 'Hi', signal: controller.signal })) {
+                pieces.push(piece.ok ? piece.value.text : piece.error.code);
+                controller.abort();
+            }
+
+            expect(pieces).toEqual(['First']);
+            expect(world.streamStopped()).toBe(true);
+        });
+
+        test('answers failed for any throw of server/, and not-found for a name it only inherits', async () => {
+            const world = await open(
+                {},
+                {
+                    server: {
+                        breaks: () => {
+                            throw new TypeError('On purpose');
+                        }
+                    }
+                }
+            );
+            type Probe = { breaks(): Promise<void>; toString(): Promise<string> };
+            const held: { server?: Client.ServerClient<Probe> } = {};
+
+            await world.render(() => {
+                held.server = world.api.useServer<Probe>();
+
+                return null;
+            });
+
+            const server = held.server as Client.ServerClient<Probe>;
+
+            expect(await server.breaks()).toStrictEqual({ ok: false, error: { code: 'failed', message: 'On purpose' } });
+            expect(await server.toString()).toStrictEqual({ ok: false, error: { code: 'not-found', message: 'No method toString' } });
+        });
+
+        test('reads its initial value for a key deleted with undefined, here or by server/, also after the connection comes back', async () => {
+            const world = await open({});
+            const { api, createElement: h } = world;
+            const Count = () => {
+                const [count, setCount] = api.useStorage<number | undefined>('count', 0, 'machine');
+
+                return h('button', { type: 'button', onClick: () => setCount(count === 1 ? undefined : 1) }, `count ${count}`);
+            };
+            const screen = await world.render(Count);
+
+            await screen.click('count 0');
+            await screen.until(() => screen.text() === 'count 1');
+            await screen.click('count 1');
+            await screen.until(() => screen.text() === 'count 0');
+            await screen.click('count 0');
+            await screen.until(() => screen.text() === 'count 1');
+            await world.fromServer({ storage: 'count' });
+            await world.reconnect();
+            await screen.until(() => screen.text() === 'count 0');
+        });
+
+        test('opens a canvas it makes, so the note it makes next lands there', async () => {
+            const world = await open({ ...ALL, 'views.write': 'Makes' });
+            const { api, createElement: h } = world;
+            const made = api.views.createCanvas('Next');
+
+            if (!made.ok) {
+                throw new Error(made.error.message);
+            }
+
+            const note = api.canvas.createNote({ text: 'Hi' });
+
+            if (!note.ok) {
+                throw new Error(note.error.message);
+            }
+
+            const Where = () => h('p', null, `${api.useActiveView().id} ${api.useNode(note.value.id).viewId}`);
+            const screen = await world.render(Where);
+
+            expect(screen.text()).toBe(`${made.value.id} ${made.value.id}`);
+        });
+
+        test('makes a note the size and title of a note, centered beside its node on the grid, and selects it', async () => {
+            const world = await open(ALL);
+            const { api, createElement: h } = world;
+            const note = api.canvas.createNote({ text: 'Hi', near: [REF] });
+
+            if (!note.ok) {
+                throw new Error(note.error.message);
+            }
+
+            const Made = () => {
+                const { title, bounds } = api.useNode(note.value.id);
+                const selected = api.useSelection().map((node) => node.id);
+
+                return h('p', null, JSON.stringify({ title, bounds, selected }));
+            };
+            const screen = await world.render(Made);
+
+            expect(JSON.parse(screen.text())).toEqual({ title: 'Note', bounds: { x: 400, y: -16, width: 320, height: 240 }, selected: [note.value.id] });
+        });
+
+        test('groups only nodes of the canvas in front in the frame a person would draw, and selects the group', async () => {
+            const world = await open(ALL, { nodes: [{ id: 'far-1', kind: 'terminal', title: 'Far', text: '', view: 'view-2' }] });
+            const { api, createElement: h } = world;
+            const group = api.canvas.group([REF, { id: 'far-1' }]);
+
+            if (!group.ok) {
+                throw new Error(group.error.message);
+            }
+
+            const Made = () => {
+                const { kind, bounds } = api.useNode(group.value.id);
+                const selected = api.useSelection().map((node) => node.id);
+
+                return h('p', null, JSON.stringify({ kind, bounds, selected }));
+            };
+            const screen = await world.render(Made);
+
+            expect(JSON.parse(screen.text())).toEqual({ kind: 'group', bounds: { x: -32, y: -72, width: 384, height: 304 }, selected: [group.value.id] });
+            expect(api.canvas.group([{ id: 'far-1' }])).toStrictEqual({
+                ok: false,
+                error: { code: 'refused', message: 'These nodes make no group on the canvas in front' }
+            });
+        });
+
+        test('draws no line from a node to itself, and both ways between two agents', async () => {
+            const world = await open(ALL, {
+                nodes: [
+                    { id: 'shell-1', kind: 'terminal', title: 'Shell', text: '' },
+                    { id: 'chat-1', kind: 'chat', title: 'Chat', text: '' }
+                ]
+            });
+
+            world.api.canvas.link(REF, REF);
+            world.api.canvas.link({ id: 'shell-1' }, { id: 'chat-1' });
+
+            expect(world.links()).toEqual([
+                { from: 'shell-1', to: 'chat-1' },
+                { from: 'chat-1', to: 'shell-1' }
+            ]);
+        });
+
+        test('removes only what is on the canvas in front, and leaves nothing selected', async () => {
+            const world = await open(ALL, { nodes: [{ id: 'shell-1', kind: 'terminal', title: 'Shell', text: '' }] });
+            const { api, createElement: h } = world;
+
+            world.select(['note-1', 'shell-1']);
+
+            expect(await api.canvas.remove([REF])).toStrictEqual({ ok: true, value: undefined });
+
+            const Selected = () => h('p', null, `selected ${api.useSelection().length}`);
+            const screen = await world.render(Selected);
+
+            expect(screen.text()).toBe('selected 0');
+            expect(world.nodes()).toEqual(['shell-1']);
+        });
+
+        test('reads a node of another canvas as unknown', async () => {
+            const world = await open({}, { nodes: [{ id: 'far-1', kind: 'terminal', title: 'Far', text: '', view: 'view-2' }] });
+            const { api, createElement: h } = world;
+            const Far = () => h('p', null, api.useNode('far-1').kind);
+            const screen = await world.render(Far);
+
+            expect(screen.text()).toBe('unknown');
+        });
+
+        test('reads a chat it started in a view of its own', async () => {
+            const world = await open({ 'agents.start': 'Starts', 'chats.read': 'Reads' }, { views: [{ id: 'page', kind: 'browser', name: 'Page' }] });
+
+            world.api.views.open({ id: 'page' });
+
+            const started = await world.api.agents.start({ prompt: 'Hi' });
+
+            if (!started.ok) {
+                throw new Error(started.error.message);
+            }
+
+            expect(await world.api.chats.read(started.value.id)).toMatchObject({ ok: true });
+        });
+
+        test('keeps a view of its own as a view of a kind Ruimte does not know, as useViews reads it', async () => {
+            const world = await open({});
+            const { api, createElement: h } = world;
+
+            api.defineView({ id: 'board', title: 'Board', component: async () => ({ default: () => null }) }).open();
+
+            const Kinds = () =>
+                h(
+                    'p',
+                    null,
+                    api
+                        .useViews()
+                        .map((view) => `${view.name} ${view.kind}`)
+                        .join(', ')
+                );
+            const screen = await world.render(Kinds);
+
+            expect(screen.text()).toBe('Plan canvas, Board unknown');
+        });
+
+        test('tells a watch of a folder that a file under it changed, until it stops', async () => {
+            const world = await open({ 'files.read': 'Reads' });
+            let heard = 0;
+            const watch = world.api.files.watch('notes', () => {
+                heard += 1;
+            });
+
+            if (!watch.ok) {
+                throw new Error(watch.error.message);
+            }
+
+            await world.fileChanged('notes/today.md');
+            await world.fileChanged('other.md');
+            watch.value();
+            await world.fileChanged('notes/today.md');
+
+            expect(heard).toBe(1);
+        });
+
+        test('says nothing when it opens the view in front, and shows no failure for an action a person stopped', async () => {
+            const world = await open({});
+            const heard: (string | null)[] = [];
+
+            world.api.onEvent('view.changed', ({ viewId }) => void heard.push(viewId));
+            world.api.views.open({ id: 'view-1' });
+            world.api.defineAction({
+                id: 'stops',
+                title: 'Stops',
+                slots: { viewToolbar: true },
+                run: () => {
+                    throw new DOMException('Stopped', 'AbortError');
+                }
+            });
+
+            expect(heard).toEqual([]);
+            expect(await world.run('stops', 'viewToolbar', {})).toStrictEqual({ ok: true, value: undefined });
+            expect(world.failures()).toEqual([]);
         });
     });
 }
