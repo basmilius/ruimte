@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -64,6 +64,28 @@ describe('building an extension', () => {
 
         await expect(buildExtension(refused)).rejects.toThrow('may only share types');
         await expect(buildExtension(allowed)).resolves.toBeDefined();
+    });
+
+    test('refuses server/ in client/ also through an absolute import, an alias or a link', async () => {
+        const absolute = project('absolute', {
+            'client/index.ts': `import { secret } from ${JSON.stringify(join(root, 'absolute', 'server', 'secret.ts'))};\nconsole.info(secret);`,
+            'server/secret.ts': `export const secret = 'S3CRET';`
+        });
+        const aliased = project('aliased', {
+            'tsconfig.json': JSON.stringify({ compilerOptions: { paths: { '@secret': ['./server/secret.ts'] } } }),
+            'client/index.ts': `import { secret } from '@secret';\nconsole.info(secret);`,
+            'server/secret.ts': `export const secret = 'S3CRET';`
+        });
+        const linked = project('linked', {
+            'client/index.ts': `import { secret } from './shared/secret';\nconsole.info(secret);`,
+            'server/secret.ts': `export const secret = 'S3CRET';`
+        });
+
+        symlinkSync(join(linked, 'server'), join(linked, 'client', 'shared'));
+
+        await expect(buildExtension(absolute)).rejects.toThrow('may only share types');
+        await expect(buildExtension(aliased)).rejects.toThrow('may only share types');
+        await expect(buildExtension(linked)).rejects.toThrow('may only share types');
     });
 
     test('refuses an icon that is no svg', async () => {

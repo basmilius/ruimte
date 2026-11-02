@@ -105,24 +105,29 @@ function entryIn(folder: string): string | null {
     return ['index.ts', 'index.tsx'].map((name) => join(folder, name)).find((path) => existsSync(path)) ?? null;
 }
 
-/* Leaves what Ruimte supplies out of the bundle, and keeps `client/` and `server/` apart: they run in different places, so only types cross. */
+function realPathOf(path: string): string {
+    return existsSync(path) ? realpathSync(path) : path;
+}
+
+/*
+ * Leaves what Ruimte supplies out of the bundle, and keeps `client/` and `server/` apart: they run in different places, so
+ * only types cross. Checked on every file the bundle loads, by its real path, so no absolute import, alias or link
+ * carries `server/` and its secrets into the public client bundle.
+ */
 function hostPlugin(id: string, hosted: Readonly<Record<string, string>>, forbidden: string, part: string, violations: string[]): BunPlugin {
+    const forbiddenFolder = realPathOf(forbidden);
+
     return {
         name: 'ruimte-extension-host',
         setup(build) {
-            build.onResolve({ filter: /.*/ }, (args) => {
-                if (hosted[args.path] !== undefined) {
-                    return { path: args.path, namespace: 'ruimte-host' };
-                }
+            build.onResolve({ filter: /.*/ }, (args) => (hosted[args.path] !== undefined ? { path: args.path, namespace: 'ruimte-host' } : undefined));
+            build.onLoad({ filter: /.*/, namespace: 'file' }, (args) => {
+                const target = realPathOf(args.path);
 
-                if (args.path.startsWith('.') && args.importer !== '') {
-                    const target = resolve(dirname(args.importer), args.path);
-
-                    if (target === forbidden || target.startsWith(`${forbidden}${sep}`)) {
-                        violations.push(
-                            `${relative(process.cwd(), args.importer)} imports ${args.path}: ${part} may only share types with it. Use \`import type\`, or move shared code to shared/.`
-                        );
-                    }
+                if (target === forbiddenFolder || target.startsWith(`${forbiddenFolder}${sep}`)) {
+                    violations.push(
+                        `${part} bundles ${relative(dirname(forbiddenFolder), target)}: ${part} may only share types with it. Use \`import type\`, or move shared code to shared/.`
+                    );
                 }
 
                 return undefined;
