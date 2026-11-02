@@ -14,7 +14,7 @@ const terminals = useNodes((node) => node.kind === 'terminal');
 const project = useProject();
 ```
 
-`useNode`, `useViews`, `useActiveView`, `useMachine` and `useTheme` read the rest. `useEvent('node.added', listener)` hears changes in a component and `onEvent` outside one; [the reference](/docs/extensions/reference/client#ClientEvents) lists every event.
+`useNode`, `useViews`, `useActiveView`, `useMachine` and `useTheme` read the rest. [Events](/docs/extensions/events) tells you when any of it changes.
 
 ## The canvas
 

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import reference from '@/generated/reference.json';
 import { CodeBlock } from '@/components/docs/CodeBlock';
 import { InlineDoc } from '@/components/docs/InlineDoc';
+import { Heading3 } from '@/components/docs/MdxElements';
 import type { ReferenceModule } from '@/lib/docs/reference';
 
 const MODULES = reference as ReferenceModule[];
@@ -38,14 +39,12 @@ export default async function ReferencePage({ params }: { params: Promise<{ modu
             <p className="lead">
                 <InlineDoc text={INTROS[module] ?? ''} />
             </p>
-            <p>This page comes from the types themselves, so it always matches what your editor shows.</p>
+            <p>Generated from the type declarations your editor reads, so a name here is a name you can import.</p>
             {found.entries.map((entry) => (
                 <section key={`${entry.kind}-${entry.name}`}>
-                    <h3 id={entry.name}>
-                        <a href={`#${entry.name}`} className="anchor">
-                            <code>{entry.name}</code>
-                        </a>
-                    </h3>
+                    <Heading3 id={entry.name}>
+                        <code>{entry.name}</code>
+                    </Heading3>
                     {entry.doc !== null && (
                         <p>
                             <InlineDoc text={entry.doc} />

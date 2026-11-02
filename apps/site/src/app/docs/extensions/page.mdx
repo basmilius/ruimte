@@ -6,7 +6,7 @@ export const metadata = { title: 'Extensions' };
 
 <p className="lead">An extension adds to Ruimte what it does not do by itself: a panel, a node on the canvas, a button in a menu, a theme, a tool an agent can call.</p>
 
-An extension is a folder with a manifest, a client part that runs in Ruimte's page, and optionally a server part that runs as a process on the machine. You write both in TypeScript and React. The API comes from one package, `@ruimte/extension`, which holds only the types; Ruimte supplies the code when your extension loads.
+An extension is a folder with a manifest, a client part that runs in Ruimte's window, and optionally a server part that runs as a process on the machine. You write both in TypeScript and React. `@ruimte/extension` holds the types; Ruimte supplies the code when your extension loads.
 
 <Surfaces />
 
@@ -25,9 +25,9 @@ An extension runs as trusted code, like a plugin in an IDE. Its client part runs
 
 <Note tone="warning">Permissions are no sandbox. Install only extensions you trust.</Note>
 
-The one isolated place is a `frame` surface. It runs in a sandboxed frame with an origin of its own, and reaches the extension's server part only through Ruimte.
+Only a `frame` surface is isolated. It runs sandboxed and reaches your server part through Ruimte.
 
-Some things no extension can do. It never types into a terminal or answers a permission prompt for a person, and `chats.send` from the server part stops at 20 messages per chat per hour.
+No extension types into a terminal or answers a permission prompt for a person. `chats.send` from the server part stops at 20 messages per chat per hour.
 
 ## A package
 
@@ -54,6 +54,8 @@ defineCommand({
 
 [Getting started](/docs/extensions/getting-started) builds one from scratch and loads it into a running Ruimte.
 
-## Safe mode
+## Where extensions run
 
-Opening a window with `?safe-mode` in its address loads no extension and no theme, so you can always remove one that breaks the app.
+The desktop app loads the extensions you installed, and runs their server parts on its machine. Station, the web app, runs the extensions of the machine it is connected to, without `frame` surfaces.
+
+Open a window with `?safe-mode` in its address to start without any extension or theme, and remove one that breaks the app.

@@ -8,9 +8,9 @@ export const metadata = { title: 'Surfaces' };
 
 <Surfaces />
 
-Every surface takes its component as a lazy import, `() => import('./Panel')`, so its code loads only when a person opens it. Each one sits inside an error boundary of its own. A surface that throws shows the error in its own rectangle, and the rest of Ruimte goes on.
+Every surface takes its component as a lazy import, `() => import('./Panel')`, so its code loads when a person opens it. A surface that throws shows the error in its own rectangle; the rest of Ruimte goes on.
 
-Instead of `component`, a surface can name a `frame`. That is an HTML file in your pack, which runs in a sandboxed frame with an origin of its own and no storage. It reaches the network only on the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS. Use it for code you would rather keep apart from the app's page.
+Instead of `component`, a surface can name a `frame`. That is an HTML file in your pack, which runs sandboxed with an origin of its own and no storage. It reaches only the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS.
 
 <Note>A `frame` surface works in the desktop app only.</Note>
 
@@ -44,7 +44,7 @@ window.addEventListener('message', (event) => {
 
 ## Panels
 
-A panel docks beside the canvas, like Ruimte's own files and git panels.
+A panel opens from the rail on the right of the window, like Ruimte's own Files and Git panels. Its button in the rail shows your `icon` and the badge you set.
 
 ```ts
 const panel = definePanel<{ chatId: string }>({
@@ -158,33 +158,6 @@ defineFileIcon({
 
 A viewer opens every file with those extensions, with Ruimte's own view one click away. The file viewer gets `file` with its `text`; the diff viewer gets `file` and the `diff`.
 
-## Settings
+## Settings, storage and words
 
-Settings, Extensions shows a page for every extension. Give it fields and Ruimte draws them, or draw your own:
-
-```ts
-defineExtensionSettings({
-    fields: [
-        {
-            key: 'tone',
-            type: 'select',
-            label: 'Tone',
-            default: 'short',
-            options: [
-                { value: 'short', label: 'Short' },
-                { value: 'long', label: 'Long' }
-            ]
-        }
-    ]
-});
-
-const tone = useSetting<string>('tone');
-```
-
-## Words and numbers
-
-`useLocale()` gives `t` for words from `locales/<language>.json`, with English as the fallback, and `format` for every number and date, in the language and region the person chose.
-
-## Storage
-
-`useStorage(key, initial, scope)` keeps a value. `computer` stays on this computer; `project` and `machine` live on the machine, where the server part reads `machine` keys too.
+They have a page of their own: [Settings and storage](/docs/extensions/settings).

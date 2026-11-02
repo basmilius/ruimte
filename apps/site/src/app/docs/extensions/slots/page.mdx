@@ -116,11 +116,35 @@ definePaletteSource({
 });
 ```
 
-It runs after a pause in the typing. A source that is slow or fails costs only its own rows. `defineCommand` adds a plain command with no slots.
+It runs after a pause in the typing. A source that is slow or fails costs only its own rows.
+
+`defineCommand` adds a plain command to the palette, with no slots and no context:
+
+```ts
+defineCommand({
+    id: 'standup',
+    title: 'Open the standup',
+    run: () => standup.open()
+});
+```
 
 ## Templates
 
-`defineTemplate` adds an entry under Extensions in the canvas menu that builds something at the spot a person clicked.
+`defineTemplate` adds an entry under Extensions in the canvas menu. `create` gets the spot the person clicked as `at`, and builds there with the `canvas` calls:
+
+```ts
+defineTemplate({
+    id: 'review',
+    title: 'Review setup',
+    icon: 'list-checks',
+    create: ({ at }) => {
+        canvas.createNote({
+            title: 'Review',
+            text: 'What to check'
+        });
+    }
+});
+```
 
 ## Finding the slots
 

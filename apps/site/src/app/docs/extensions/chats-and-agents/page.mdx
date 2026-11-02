@@ -108,4 +108,16 @@ A tool answers in text. Offering one needs `agents.tools`, and starts the server
 
 ## Voice
 
-`defineVoiceAction` makes something an extension does available by voice. It describes itself like a tool and answers in words.
+`defineVoiceAction` lets a person ask for something by voice. Describe it like a tool. Voice reads `description` and `parameters` to decide when to call it, and speaks what `run` answers.
+
+```ts
+defineVoiceAction({
+    id: 'open-tickets',
+    description: 'Says how many tickets are open in this project',
+    run: async () => {
+        const tickets = await openTickets();
+
+        return `${tickets.length} tickets are open`;
+    }
+});
+```
