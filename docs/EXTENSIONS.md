@@ -127,7 +127,7 @@ The host makes one change to what an extension runs at a time: turning it on or 
 
 ## Station
 
-Station has no shell, so it runs what the machine in front has. `extension.clientFiles` hands over everything but `server/`, the page caches it, and `extension-files-sw.js` answers it on the page's own origin, under the same `script-src 'self'`. A window runs the extensions of its own machine. A `frame` surface shows a notice there: a sandboxed frame gets no policy from the worker.
+Station has no shell, so it runs what the machine in front has. `extension.clientFiles` hands over everything but `server/`, the page caches it under the machine it came from (a dev link under a digest of its files, since its build number starts over with the machine), and `extension-files-sw.js` answers it on the page's own origin, under the same `script-src 'self'`. A window runs the extensions of its own machine. A `frame` surface shows a notice there: a sandboxed frame gets no policy from the worker.
 
 ## Choices against the report
 
