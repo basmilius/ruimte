@@ -1252,7 +1252,9 @@ export function clientApiFor(extension: LoadedExtension) {
                     wake();
                 });
 
-                options.signal?.addEventListener('abort', () => void activeTransport.request('extension.agentStop', { runId }).catch(() => undefined));
+                const abort = (): void => void activeTransport.request('extension.agentStop', { runId }).catch(() => undefined);
+
+                options.signal?.addEventListener('abort', abort);
 
                 try {
                     while (!done || pieces.length > 0) {
@@ -1274,6 +1276,12 @@ export function clientApiFor(extension: LoadedExtension) {
                     }
                 } finally {
                     stop();
+                    options.signal?.removeEventListener('abort', abort);
+
+                    // A loop that broke off leaves no one to read the rest, so the process stops with it.
+                    if (!done) {
+                        abort();
+                    }
                 }
             },
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.

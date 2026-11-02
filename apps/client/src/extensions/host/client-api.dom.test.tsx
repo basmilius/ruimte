@@ -145,6 +145,39 @@ describe('the client API', () => {
         expect(await api.chats.read('chat-1')).toEqual({ ok: true, value: 'The thread of chat-1' });
     });
 
+    test('stops the run behind a stream that a loop broke off, and only that once', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'agents.run': 'Answers' });
+        let finish = (): void => undefined;
+
+        machine.answer('extension.agentStream', ({ runId }) => {
+            machine.emit('extension.agentChunk', { runId, text: 'First' });
+
+            return new Promise((resolve) => {
+                finish = () => resolve({});
+            });
+        });
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        const signal = new AbortController();
+        const pieces: string[] = [];
+
+        for await (const piece of api.agents.stream({ prompt: 'Hi', signal: signal.signal })) {
+            pieces.push(piece.ok ? piece.value.text : piece.error.code);
+            break;
+        }
+
+        const stopped = machine.requests('extension.agentStop');
+
+        signal.abort();
+        finish();
+
+        expect(pieces).toEqual(['First']);
+        expect(stopped).toEqual([{ runId: machine.requests('extension.agentStream')[0]?.runId ?? '' }]);
+        expect(machine.requests('extension.agentStop')).toHaveLength(1);
+    });
+
     test('asks a person in their own words before it removes nodes, and answers refused when they keep them', async () => {
         const { api } = loaded({ 'canvas.write': 'Tidies up' });
 
