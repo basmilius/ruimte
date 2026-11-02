@@ -1,0 +1,57 @@
+import { Surfaces } from '@/components/docs/extensions/Surfaces.tsx';
+
+export const metadata = { title: 'Extensions' };
+
+# Extensions
+
+<p className="lead">An extension adds to Ruimte what it does not do by itself: a panel, a node on the canvas, a button in a menu, a theme, a tool an agent can call.</p>
+
+An extension is a folder with a manifest, a client part that runs in Ruimte's page, and optionally a server part that runs as a process on the machine. You write both in TypeScript and React. The API comes from one package, `@ruimte/extension`, which holds only the types; Ruimte supplies the code when your extension loads.
+
+<Surfaces />
+
+## What an extension can do
+
+- **Draw its own surfaces.** A panel, a view, a node, a sidebar card, an overlay, a viewer for a file type. See [Surfaces](/docs/extensions/surfaces).
+- **Add to Ruimte's own places.** A button in a node's header, an item in the canvas menu, a widget in the editor's status bar. Ruimte calls each of these a slot. See [Slots and actions](/docs/extensions/slots).
+- **Work with chats and agents.** Draw a fenced block in a chat, add a slash command, run a hidden prompt, start a chat a person sees, offer agents a tool. See [Chats and agents](/docs/extensions/chats-and-agents).
+- **Read and change the project.** Notes, files, git, databases, launches, terminals and browsers on the canvas. See [The project and the machine](/docs/extensions/machine).
+- **Keep running on the machine.** Follow events, keep secrets, run on a clock, add a language server. See [The server part](/docs/extensions/server).
+- **Change how Ruimte looks.** A theme is data and needs no code. See [Themes](/docs/extensions/themes).
+
+## What an extension is trusted with
+
+An extension runs as trusted code, like a plugin in an IDE. Its client part runs in Ruimte's page, and its server part runs as the person who runs the machine. Permissions in the manifest tell a person what the extension does before they install it, and the API refuses what the manifest does not ask for. They are no sandbox: install only what you trust.
+
+The one isolated place is a `frame` surface. It runs in a sandboxed frame with an origin of its own, and reaches the extension's server part only through Ruimte.
+
+Some things no extension can do. It never types into a terminal or answers a permission prompt for a person, and `chats.send` from the server part stops at 20 messages per chat per hour.
+
+## A package
+
+```text
+manifest.json     id, name, version, api, color, permissions, themes
+assets/icon.svg   its mark, always at this path
+client/index.ts   runs in the client and calls define*
+server/index.ts   runs on the machine, optional
+locales/          words per language, such as locales/nl.json
+themes/ views/    copied into the pack as they are
+```
+
+The smallest extension is a manifest and a `client/index.ts`:
+
+```ts
+import { defineCommand, host } from '@ruimte/extension/client';
+
+defineCommand({
+    id: 'hello',
+    title: 'Say hello',
+    run: () => host.notify('Hello from an extension')
+});
+```
+
+[Your first extension](/docs/extensions/getting-started) builds one from scratch and loads it into a running Ruimte.
+
+## Safe mode
+
+Opening a window with `?safe-mode` in its address loads no extension and no theme, so you can always remove one that breaks the app.

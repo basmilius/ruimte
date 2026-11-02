@@ -1,6 +1,6 @@
 # Extensions
 
-What an author reads lives at https://docs.ruimte.app/extensions (`apps/docs`). This file keeps what only matters to working on Ruimte itself: the POCs, the store's setup and the choices behind the API.
+What an author reads lives at https://ruimte.app/docs/extensions (`apps/site/src/app/docs/extensions`). This file keeps what only matters to working on Ruimte itself: the POCs, the store's setup and the choices behind the API.
 
 An extension adds panels, canvas nodes, views, sidebar cards, commands or themes to Ruimte, optionally with a process on the machine. It runs as trusted code, like a plugin in an IDE: its React sits in the client's page and its `server/` runs as the person who runs the machine. A `frame:` surface is the one place with isolation. Permissions in the manifest tell a person what it does and gate the API, but they are no sandbox.
 

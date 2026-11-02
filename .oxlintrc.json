@@ -34,7 +34,7 @@
     },
     {
       // Next.js reads these exports from a layout or page, beside the component.
-      "files": ["apps/site/src/app/**", "apps/docs/src/app/**", "apps/docs/src/mdx-components.tsx"],
+      "files": ["apps/site/src/app/**", "apps/site/src/mdx-components.tsx"],
       "rules": {
         "react/only-export-components": [
           "warn",

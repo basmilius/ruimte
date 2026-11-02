@@ -1,0 +1,52 @@
+export const metadata = { title: 'Git and worktrees' };
+
+# Git and worktrees
+
+<p className="lead">The Git panel commits, pulls and pushes every repository in the project folder. Merge conflicts are solved in the app, and worktrees keep agents out of each other's way.</p>
+
+## The Git panel
+
+Open it with **Toggle git panel** in the command palette. The panel covers every repository in the project folder: the folder's own repository, its submodules, and repositories one level down. With one repository you see that one; with several, each has its own row and branch menu.
+
+- Stage files, or stage all, and write a commit message. **Let Claude Code write the message** (or another CLI) writes a suggestion from the staged changes.
+- **Commit** commits what is staged in every repository at once. **Commit and push** pushes right after. **Amend** changes the last commit.
+- **Pull**, **Push**, **Sync** (pull, then push) and **Fetch** work on every repository, with an "all" version for several.
+- The branch menu switches, creates, renames and deletes branches. Deleting a branch leaves its remote branch alone.
+- **Merge branch…**, **Rebase onto…**, **Stash changes…** and **Pop stash** sit in the actions menu of a repository.
+
+A pull only fast-forwards. When a branch moved both here and on the remote, Ruimte asks how to bring them together before it does anything.
+
+Changes are sorted into code, tests, mocks and generated files, so you see the real change first. Click a file to see its diff.
+
+## Merge conflicts
+
+A merge, rebase, cherry-pick or revert that stops on a conflict opens the conflict view. You never edit conflict markers by hand. For each conflict you take one side, or both in the order you choose, and then mark the file resolved. Conflicts that need no choice resolve with one click.
+
+**Ask AI for this file** and **Ask AI for all** let an agent propose resolutions. A proposal is only a suggestion in the view. Nothing is written, staged or committed until you accept it. When every file is resolved, finish or continue the operation from the bottom of the view, or abort it.
+
+## Pull requests
+
+With the GitHub CLI (`gh`) installed and logged in on the machine:
+
+- **Create pull request…** opens one for the current branch.
+- **Show pull request** shows its state, checks and review threads. Bot and resolved threads can be hidden.
+- **Copy to chat…** adds a review thread to a chat's draft. Nothing is sent.
+- **Watch for chat…** wakes a chat each time the checks of the latest commit finish or a new review comes in. The watch never merges or pushes. It ends when you stop it, when the pull request is merged or closed, or after 7 days.
+
+**Start from GitHub issue** in the command palette takes a link or `owner/repo#12`. It makes a worktree and starts a chat in it, with the issue as its first prompt.
+
+## Worktrees
+
+A worktree is a second checkout of the same repository, on its own branch, in its own folder. Two agents in two worktrees never edit the same files.
+
+- **New chat in worktree** makes a branch from the base you choose and starts a chat in its checkout.
+- **Bind to worktree** on a group gives it a checkout. Every terminal and chat you add to the group starts in it.
+- An agent can open another agent in a worktree of its own. See [Agents working together](/docs/guide/delegation#worktrees).
+
+New worktrees go in Ruimte's data folder, or in a folder you choose under Settings, Files and Git, Worktree folder.
+
+**Merge worktree…** brings a worktree's branch into another branch. It can commit what is still uncommitted first, choose a strategy, and remove the worktree and its branch afterwards. A conflict waits for you to resolve.
+
+**Remove worktree…** deletes the checkout, and its branch if Ruimte made it. If an agent still works there, Ruimte stops it first. Nothing removes a worktree on its own.
+
+You can run one task of the project each time a chat in a worktree finishes its turn, such as the tests. See [Launches](/docs/guide/launches#after-a-worktree-chat-finishes).

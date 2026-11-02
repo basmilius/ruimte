@@ -1,0 +1,86 @@
+export const metadata = { title: 'Your first extension' };
+
+# Your first extension
+
+<p className="lead">From an empty folder to an extension running in Ruimte, with a panel and a server part.</p>
+
+You need [Bun](https://bun.sh) and Ruimte running on the same computer.
+
+## Create the project
+
+```bash
+bunx ruimte extension create
+```
+
+It asks for a name, an id, which parts you want and which surface to start with, then writes a project that builds as it is. Pass `--yes` with `--name`, `--id`, `--parts` and `--surface` to skip the questions.
+
+The id is two parts joined by a dot, such as `acme.standup`. The first part says who made it, the second what it is. Once people install the extension, the id never changes.
+
+## Run it while you work
+
+```bash
+bun run dev
+```
+
+`dev` builds on every save and loads the result into the running Ruimte, which reloads the extension in place. It also prints what the extension logs. That is `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on a port other than the default.
+
+Under Settings, Extensions, your extension shows in the In development group at the top. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
+
+## The client part
+
+`client/index.ts` runs when the extension loads and calls `define*` functions. A surface is always a lazy import, so its code loads only when a person opens it:
+
+```ts
+import { definePanel } from '@ruimte/extension/client';
+
+definePanel({
+    id: 'main',
+    title: 'Standup',
+    icon: 'calendar',
+    component: () => import('./Main')
+});
+```
+
+```tsx
+import { useServer } from '@ruimte/extension/client';
+import type server from '../server';
+
+export default function Main() {
+    const greeting = useServer<typeof server>().greeting.use();
+
+    return <p>{greeting}</p>;
+}
+```
+
+`icon` names a [Lucide](https://lucide.dev/icons) icon. Without one, the panel shows your extension's mark.
+
+## The server part
+
+`server/index.ts` exports what the client can call. Ruimte starts it on the first call, and again after a crash.
+
+```ts
+import { defineServer } from '@ruimte/extension/server';
+
+export default defineServer({
+    async greeting() {
+        return 'Good morning';
+    }
+});
+```
+
+`useServer().greeting()` returns a promise. `.use()` suspends the component until the answer arrives, so you need no loading state of your own.
+
+## Pack it
+
+```bash
+bun run pack
+```
+
+`pack` builds a `.rex` file, the form in which extensions reach other people. Packing checks your icon and themes, and refuses a client part that imports from `server/`.
+
+To install a `.rex`, open Settings, Extensions, Browse store and press "Install from file…". Ruimte shows its name and what it asks for before anything runs. While you work, `dev` is the quicker way to run your extension.
+
+## Next
+
+- [The manifest](/docs/extensions/manifest) lists every field and permission.
+- `extensions/limits` in the Ruimte repository is a complete extension built on the public API alone.

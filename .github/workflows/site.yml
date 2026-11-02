@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'apps/site/**'
+      - 'packages/extension/**'
       - 'bun.lock'
       - '.github/workflows/site.yml'
   workflow_dispatch:

@@ -1,0 +1,78 @@
+import { ChatMockup } from '@/components/docs/mockups/ChatMockup';
+
+export const metadata = { title: 'AI chats' };
+
+# AI chats
+
+<p className="lead">An AI chat runs the same agent CLI as a terminal, in a conversation Ruimte draws. You answer its questions and approvals with a click, here or on your phone.</p>
+
+<ChatMockup />
+
+## Terminal or chat
+
+Both run the agent CLI installed on your machine, with its own login. A terminal shows the CLI's own interface, exactly as you know it. A chat shows the conversation as messages, with cards for questions and permission requests, a plan beside it, and replies that can hold tables, maps and pictures. Only a chat can be answered from the app or your phone.
+
+Chats work with Claude Code, Codex, GitHub Copilot, Grok and Antigravity. Settings, Providers adds more:
+
+- **Claude API**, with an Anthropic API key you type in.
+- **NanoGPT**, with a key for its subscription.
+- **Apple on-device model**, on a Mac with Apple silicon.
+- Other agents from the public registry of agents, under **Add provider**.
+
+## Start a chat
+
+On a canvas, press `Option+C` or pick a chat under Agents. For a chat as a view of its own, run **New Claude Code chat view** (or another CLI) from the command palette. A chat outside any project starts with `Cmd+Option+N`.
+
+The menu beside the composer picks the model, the reasoning effort, the account and the permissions. `Cmd+Shift+.` and `Cmd+Shift+,` raise and lower the effort. A pick becomes the default for new chats of that CLI.
+
+## Write a message
+
+Type in the composer. A few keys open a picker:
+
+- `/` for the CLI's commands
+- `@` for a file of the project
+- `$` for a skill
+- `#` for a view or node of the project
+
+A `#` reference lets the agent read and work in that view or node, as if a line ran to it on the canvas. A terminal you point at stays read-only.
+
+Attach files with the button or by dropping them on the chat. Settings, Chats, Send with picks whether `Enter` or another key sends. `Option+Up` and `Option+Down` bring back messages you sent before.
+
+A message you send while the agent works reaches it at its next step and can change its course. Hold `Option` to queue the message until the turn ends instead. Settings, Chats, Send to a working agent right away swaps the two.
+
+## Permissions
+
+Every chat runs in one of four modes:
+
+| Mode | What the agent may do without asking |
+| --- | --- |
+| Supervised | Nothing. It asks before commands and file changes. |
+| Auto-accept edits | Change files. Commands still ask. |
+| Auto | Routine actions, which it reviews itself. |
+| Full access | Everything. It never asks. |
+
+Settings, Agents sets the defaults for new agents. An agent that opens another agent can never give it a wider mode than its own.
+
+## Questions and approvals
+
+When the agent wants permission, a **Permission request** card shows what it wants to do: a command to run, or the changes to files, with the full diff. Choose **Allow** or **Deny**, and add a reason to a denial if you like.
+
+When it asks a question, a **Question** card shows the choices. Pick one or more, or write your own under **Something else…**, then press **Answer**.
+
+The chat's status reads Needs you until you answer. You can answer from the sidebar, from the Needs you list, or from your phone. See [Needs you](/docs/guide/attention).
+
+## While it works
+
+The thread shows the files the agent reads and the commands it runs, unless you turn that off under Settings, Chats. Sub-agents and background work appear as their own rows, which you can open.
+
+- **Stop** ends the turn. Shift-click it to stop the sub-agents too.
+- **Clear** deletes the conversation, its attachments and its plans, and keeps the chat.
+- **Restart agent session** picks up new skills, plugins, commands and MCP servers for the next message, and keeps the conversation.
+- Bookmark a message to find it again. `Cmd+F` finds text in the chat.
+- **Search chats** in the command palette searches every chat of the project.
+
+## Usage limits
+
+When a chat stops on a usage limit, it says when the limit resets. Turn on **Continue after a usage limit** (Settings, Agents) and it goes on by itself once the limit lifts. A turn that failed on an overloaded model then also tries again later. Each chat can turn this off for itself.
+
+You can also move a limited chat to another account of the same CLI from the account menu. Ruimte never switches accounts by itself.

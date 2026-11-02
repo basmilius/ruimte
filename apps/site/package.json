@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "watch": "next dev --port 4230",
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "typecheck": "bun check --no-script"
+    "typecheck": "bun check --no-script",
+    "reference": "bun scripts/reference.ts",
+    "dev": "next dev --port 4230"
   },
   "dependencies": {
     "@adecore/ui": "0.50.5",

@@ -40,6 +40,9 @@ export default function Home() {
                         <a href="#features" className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text md:inline-flex">
                             Features
                         </a>
+                        <a href="/docs" className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text sm:inline-flex">
+                            Docs
+                        </a>
                         <a href={STATION_URL} className="hidden min-h-11 items-center text-text-muted transition-colors hover:text-text sm:inline-flex">
                             Web app
                         </a>

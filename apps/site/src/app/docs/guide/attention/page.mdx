@@ -1,0 +1,51 @@
+import { NeedsYouMockup } from '@/components/docs/mockups/NeedsYouMockup';
+
+export const metadata = { title: 'Needs you' };
+
+# Needs you
+
+<p className="lead">With several agents at work, the hard part is knowing which one waits for you. Ruimte keeps that list for you, across views, projects and devices.</p>
+
+## Status at a glance
+
+Every terminal and chat with an agent shows a status in its header and beside its row in the sidebar. **Needs you** means the agent waits on a question or a permission. A tab in a grid cell shows the same.
+
+The dock under a canvas shows how many agents are working and how many wait. Hover it to read what each one asks.
+
+## The Needs you list
+
+The sidebar lists everything that waits, oldest first, with what each agent asks: a command it wants to run, a file it wants to edit, or its question. Settings, General, Needs you across projects adds what waits in your other open projects, grouped by project.
+
+<NeedsYouMockup />
+
+For an agent in a chat, answer right there in the list. For an agent in a terminal, the list takes you to the terminal, since you answer in its own interface.
+
+## Jump to what waits
+
+| Shortcut | What it does |
+| --- | --- |
+| `Cmd+Option+P` | Go to the next node that needs you, in any view, oldest first |
+| `Cmd+Option+Shift+P` | Open the attention queue: what waits on you, and turns that finished while you were away |
+| `Cmd+Shift+P` | Move the keyboard to the questions and approvals on this canvas |
+
+On a canvas, waiting questions and approvals stack in a card you can step through, fold, or follow to their node with **Go to node**.
+
+## Snooze
+
+Not now? **Snooze** a waiting agent for 10 minutes, 1 hour or until tomorrow. It leaves the list and raises nothing until the snooze ends.
+
+## Notifications
+
+Ruimte notifies you when an agent needs you or finishes, with a sound you choose under Settings, Agents, Notifications.
+
+With the iPhone app, an alert goes to your phone, but only once you step away. While you use a computer with Ruimte, a question waits a minute and a permission request ten seconds before it reaches your phone. Answer it in that time and your phone stays quiet. See [Phone and web](/docs/guide/phone-and-web).
+
+## Keep the computer awake
+
+When a computer sleeps, every agent on it pauses. Settings, Agents, Keep awake chooses:
+
+- **Off**
+- **While agents work**
+- **Always**
+
+You can also let it stay awake on battery, keep the display on, and keep a Mac running with its lid closed. That last one needs a one-time permission from an administrator.
