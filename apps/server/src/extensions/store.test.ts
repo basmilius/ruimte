@@ -180,65 +180,99 @@ describe('ExtensionStore', () => {
     });
 
     // Each write of the file a link makes fails in turn, until a link makes no write of it that fails and lands.
-    test.each(['dev-link-owners.json', 'dev-links.json'])(
-        'a link whose write of %s fails changes nothing, tells no client, and stays the run of before',
-        async (file) => {
-            const first = join(root, 'projects', `failed-first-${file}`);
-            const second = join(root, 'projects', `failed-second-${file}`);
-            const id = 'acme.failed';
+    test.each([
+        ['another folder', 'dev-link-owners.json', 1],
+        ['another folder', 'dev-links.json', 1],
+        ['the same folder', 'dev-link-owners.json', 1],
+        ['the same folder', 'dev-links.json', 0]
+    ] as const)('a link from %s whose write of %s fails changes nothing, tells no client, and stays the run of before', async (from, file, failingWrites) => {
+        const first = join(root, 'projects', `failed-first-${from}-${file}`);
+        const second = from === 'the same folder' ? first : join(root, 'projects', `failed-second-${from}-${file}`);
+        const id = 'acme.failed';
 
-            for (const folder of [first, second]) {
-                mkdirSync(folder, { recursive: true });
-                writeFileSync(join(folder, 'manifest.json'), manifestOf(id));
-            }
+        for (const folder of [first, second]) {
+            mkdirSync(folder, { recursive: true });
+            writeFileSync(join(folder, 'manifest.json'), manifestOf(id));
+        }
 
-            for (let failing = 1; ; failing++) {
-                const home = join(root, `failed-${file}-${failing}`);
-                let writes: number | null = null;
-                const store = new ExtensionStore(home, async (path, text) => {
-                    if (writes !== null && basename(path).startsWith(`${file}.`) && ++writes === failing) {
-                        throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
-                    }
-
-                    await writeFile(path, text);
-                });
-                const host = new ExtensionHost({ store });
-                const heard: unknown[] = [];
-
-                await host.linked(first, 'run-a');
-                host.subscribe('client-a', (event) => void heard.push(event));
-                writes = 0;
-
-                const failure = await host.linked(second, 'run-b').then(
-                    () => null,
-                    (e: unknown) => e
-                );
-
-                writes = null;
-
-                if (failure === null) {
-                    expect(failing).toBeGreaterThan(1);
-                    expect((await store.get(id))?.devFolder).toBe(second);
-                    expect(await store.unlink(id, 'run-b')).toBe(true);
-
-                    break;
+        for (let failing = 1; ; failing++) {
+            const home = join(root, `failed-${from}-${file}-${failing}`);
+            let writes: number | null = null;
+            const store = new ExtensionStore(home, async (path, text) => {
+                if (writes !== null && basename(path).startsWith(`${file}.`) && ++writes === failing) {
+                    throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
                 }
 
-                expect(failure).toMatchObject({ code: 'ENOSPC' });
-                expect((await new ExtensionStore(home).get(id))?.devFolder).toBe(first);
-                expect(heard).toEqual([]);
+                await writeFile(path, text);
+            });
+            const host = new ExtensionHost({ store });
+            const heard: unknown[] = [];
 
-                await host.unlink(id, 'run-b');
+            await host.linked(first, 'run-a');
+            host.subscribe('client-a', (event) => void heard.push(event));
+            writes = 0;
 
-                expect((await store.get(id))?.devFolder).toBe(first);
+            const failure = await host.linked(second, 'run-b').then(
+                () => null,
+                (e: unknown) => e
+            );
 
-                await host.unlink(id, 'run-a');
+            writes = null;
 
-                expect(await store.get(id)).toBeNull();
-                expect(heard).toEqual([{ event: 'extension.changed', payload: {} }]);
+            if (failure === null) {
+                expect(failing - 1).toBe(failingWrites);
+                expect((await store.get(id))?.devFolder).toBe(second);
+                expect(await store.unlink(id, 'run-b')).toBe(true);
+
+                break;
             }
+
+            expect(failure).toMatchObject({ code: 'ENOSPC' });
+            expect((await new ExtensionStore(home).get(id))?.devFolder).toBe(first);
+            expect(heard).toEqual([]);
+
+            await host.unlink(id, 'run-b');
+
+            expect((await store.get(id))?.devFolder).toBe(first);
+
+            await host.unlink(id, 'run-a');
+
+            expect(await store.get(id)).toBeNull();
+            expect(heard).toEqual([{ event: 'extension.changed', payload: {} }]);
         }
-    );
+    });
+
+    test('reads owners in the shape of one token per extension as links no run owns, which a link takes over and a person unlinks or removes', async () => {
+        const home = join(root, 'owners-token-shape');
+        const ownersFile = join(home, 'extensions', 'dev-link-owners.json');
+        const ids = ['acme.removed', 'acme.taken', 'acme.unlinked'];
+        const folderOf = (id: string): string => join(root, 'projects', `token-shape-${id}`);
+
+        for (const id of ids) {
+            mkdirSync(folderOf(id), { recursive: true });
+            writeFileSync(join(folderOf(id), 'manifest.json'), manifestOf(id));
+        }
+
+        const before = new ExtensionStore(home);
+
+        await Promise.all(ids.map((id) => before.link(folderOf(id))));
+        writeFileSync(ownersFile, JSON.stringify(Object.fromEntries(ids.map((id) => [id, 'run-old']))));
+
+        const store = new ExtensionStore(home);
+
+        expect(await store.unlink('acme.taken', 'run-old')).toBe(false);
+        expect(await idsIn(store)).toEqual(ids);
+
+        await store.link(folderOf('acme.taken'), 'run-new');
+
+        expect(await store.unlink('acme.unlinked')).toBe(true);
+
+        await store.remove('acme.removed');
+
+        expect(await idsIn(store)).toEqual(['acme.taken']);
+        expect(await store.unlink('acme.taken', 'run-new')).toBe(true);
+        expect(await idsIn(store)).toEqual([]);
+    });
 
     test('a removal after an install takes it away, also while the install still unpacks', async () => {
         const store = new ExtensionStore(join(root, 'install-remove'));

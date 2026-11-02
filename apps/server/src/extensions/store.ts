@@ -46,7 +46,12 @@ const LINKS_OFF_FILE = 'dev-links-off.json';
 // The `extension dev` run that set each dev link, by its token per folder, kept on disk so a restart of the machine keeps it too.
 const LINK_OWNERS_FILE = 'dev-link-owners.json';
 const IdsSchema = z.array(z.string());
-const OwnersSchema = z.record(z.string(), z.record(z.string(), z.string()));
+// A token alone per id is the shape of before owners were kept per folder, read as a link no run owns.
+const OwnersSchema = z
+    .record(z.string(), z.union([z.record(z.string(), z.string()), z.string()]))
+    .transform((owners) =>
+        Object.fromEntries(Object.entries(owners).filter((entry): entry is [string, Record<string, string>] => typeof entry[1] !== 'string'))
+    );
 
 /*
  * Only a file that is not there is the fallback. One that cannot be read or is damaged refuses, so a change never
@@ -330,9 +335,14 @@ export class ExtensionStore {
             const next = owner === undefined ? kept : { ...kept, [folder]: owner };
 
             // Who owns the new folder lands beside who owns the one linked now, and the link after it: a write that fails
-            // leaves the link and its owner as they were, and the link is the one write that changes what runs.
+            // leaves the link and its owner as they were, and the link is the one write that changes what runs. A link
+            // of the folder linked now changes nothing in `dev-links.json`, so its owner is its one write.
             await this.writeJson(join(this.root, LINK_OWNERS_FILE), Object.keys(next).length === 0 ? owners : { ...owners, [id]: next });
-            await this.writeJson(join(this.root, LINKS_FILE), { ...links, [id]: folder });
+
+            if (linkedNow !== folder) {
+                await this.writeJson(join(this.root, LINKS_FILE), { ...links, [id]: folder });
+            }
+
             this.revisions.set(id, (this.revisions.get(id) ?? 0) + 1);
 
             return manifest;
