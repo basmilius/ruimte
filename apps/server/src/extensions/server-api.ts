@@ -15,7 +15,8 @@ export interface KeyValues {
 }
 
 export interface ServerClock {
-    every(ms: number, run: () => void): void;
+    /* `run` settles once the task has, and never rejects, so a test's clock can wait for it. */
+    every(ms: number, run: () => Promise<void>): void;
 }
 
 /* What `server/` says to the daemon without waiting for an answer. */
@@ -136,9 +137,11 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                 throw new Error(SCHEDULE_NEEDS_CLOCK);
             }
 
-            options.clock.every(everyMs(task.every), () => {
-                void (async () => task.run())().catch((e: unknown) => options.log.error(`${task.id} failed:`, e));
-            });
+            options.clock.every(everyMs(task.every), () =>
+                (async () => {
+                    await task.run();
+                })().catch((e: unknown) => options.log.error(`${task.id} failed:`, e))
+            );
         },
         defineServer: <Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api => api,
         onEvent<Name extends keyof PublicServer.ServerEvents>(name: Name, listener: (event: PublicServer.ServerEvents[Name]) => void): () => void {

@@ -772,25 +772,6 @@
     },
     {
         "module": "testing",
-        "entries": [
-            {
-                "name": "definitions",
-                "kind": "function",
-                "doc": "What `client/index.ts` defined so far, in order, with the object each `define*` was given. Available under `ruimte extension test`.",
-                "code": "export function definitions(): { kind: string; definition: object }[];"
-            },
-            {
-                "name": "slotAnswer",
-                "kind": "function",
-                "doc": "What a slot of an action, menu or widget answers for this context.",
-                "code": "export function slotAnswer(definition: { slots?: object }, slot: SlotName, context: object): SlotAnswer;"
-            },
-            {
-                "name": "renderSurface",
-                "kind": "function",
-                "doc": "Draws a component to a string, with `server` standing in for `server/`: its methods answer as `useServer` would, a throw as `failed`.",
-                "code": "export function renderSurface<Props extends object>(\n    component: ComponentType<Props>,\n    options?: { server?: Record<string, (...args: never[]) => unknown>; data?: object; props?: Props }\n): string;"
-            }
-        ]
+        "entries": []
     }
 ]

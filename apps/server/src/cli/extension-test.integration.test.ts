@@ -18,8 +18,8 @@ async function extensionTest(folder: string): Promise<{ code: number; output: st
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 describe('ruimte extension test', () => {
-    test('runs the tests of extensions/limits against the fake host', async () => {
-        const { code, output } = await extensionTest(join(import.meta.dir, '../../../../extensions/limits'));
+    test.each(['limits', 'poc-server'])('runs the tests of extensions/%s against the test host', async (name) => {
+        const { code, output } = await extensionTest(join(import.meta.dir, '../../../../extensions', name));
 
         expect(output).toContain(' 0 fail');
         expect(code).toBe(0);

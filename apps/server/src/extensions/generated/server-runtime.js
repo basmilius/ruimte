@@ -84,9 +84,9 @@ function createServerApi(options) {
       if (!permissions.has("clock")) {
         throw new Error(SCHEDULE_NEEDS_CLOCK);
       }
-      options.clock.every(everyMs(task.every), () => {
-        (async () => task.run())().catch((e) => options.log.error(`${task.id} failed:`, e));
-      });
+      options.clock.every(everyMs(task.every), () => (async () => {
+        await task.run();
+      })().catch((e) => options.log.error(`${task.id} failed:`, e)));
     },
     defineServer: (api) => api,
     onEvent(name, listener) {

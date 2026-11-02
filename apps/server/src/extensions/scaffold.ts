@@ -72,20 +72,23 @@ const KIND_OF: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
 
 /* An example test for each part, run by `bun run test` against the fake host. */
 function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withServer: boolean, name: string): string {
-    const imports = ["import { describe, expect, test } from 'bun:test';"];
+    const testing = [...(surface === null ? [] : ['definitions']), ...(withServer ? ['createTestServer'] : [])];
+    const imports = ["import { describe, expect, test } from 'bun:test';", `import { ${testing.join(', ')} } from '@ruimte/extension/testing';`];
     const tests: string[] = [];
 
     if (surface !== null) {
-        imports.push("import { definitions } from '@ruimte/extension/testing';", "import '../client/index';");
+        imports.push("import '../client/index';");
         tests.push(`    test('defines its ${KIND_OF[surface]}', () => {
         expect(definitions()).toEqual([{ kind: '${KIND_OF[surface]}', definition: expect.objectContaining({ id: 'main' }) }]);
     });`);
     }
 
     if (withServer) {
-        imports.push("import server from '../server';");
+        imports.push("import type server from '../server';");
         tests.push(`    test('greets', async () => {
-        expect(await server.greeting()).toBe(${JSON.stringify(`Hello from ${name}`)});
+        const machine = await createTestServer<typeof server>();
+
+        expect(await machine.call('greeting')).toEqual({ ok: true, value: ${JSON.stringify(`Hello from ${name}`)} });
     });`);
     }
 

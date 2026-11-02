@@ -23,11 +23,13 @@ Types come from `@ruimte/extension` on npm (`/client`, `/server`, `/ui`, `/testi
 ```
 bunx ruimte extension create    scaffold a project
 ruimte extension dev            build on save and load it into the running Ruimte
-ruimte extension test           bun test against a fake host
+ruimte extension test           bun test against a test host
 ruimte extension pack           build a .rex
 ruimte extension publish        open a pull request on the store
 ruimte extension logs           what server/ wrote
 ```
+
+`test` writes the preload into the project's `node_modules/.cache`, so it imports the project's own React, and runs `bun test` with it. The client is a fake that records each `define*` and answers done. `createTestServer` loads `server/index.ts` in the test's own process on the API and policy of the machine (below, under Failure). An extension in this repository keeps its tests in `test/`, which `bun run test` leaves out: `apps/server/src/cli/extension-test.integration.test.ts` runs those of `limits` and `poc-server`, and the test a new project starts with.
 
 `extensions/limits` is a worked example on the public API alone. Try it with `bun run dev` in that folder while Ruimte runs.
 
@@ -110,7 +112,7 @@ Opening a window with `?safe-mode` loads no extension and no theme, so a person 
 
 A call that can fail answers a `Result`, under one of `EXTENSION_ERROR_CODES` (`packages/contracts/src/extension-results.ts`), which a test holds to the `ExtensionErrorCode` of both `.d.ts` files. The daemon refuses with `ExtensionRefusal` (`apps/server/src/extensions/refusal.ts`); the client host maps any other wire code with `extensionErrorCodeOf`. Only `invalid-input` or `bad-request`, an argument of the wrong shape, reaches an extension as a throw. A refusal is no throw, so the host writes it to the log of `extension dev`: the client with `sendDevLog`, the daemon to the extension's log file for what `server/` asked. `client-api.tsx`, `server-api.ts` and the fakes of `test-runtime.ts` each `satisfies` their `.d.ts`, so the types and the hosts cannot drift apart.
 
-What `server/` may do is decided in `apps/server/src/extensions/policy.ts`: which events it follows and what of them it hears, the permission of each ask and action, the sends per chat and the clock of `schedule`. It is pure, so the host refuses with it and `ruimte extension test` holds an author's code to the same answers. `server-api.ts` is `@ruimte/extension/server` with its pipes, files and clock handed in; `server-runtime.ts` hands in the real ones inside the extension's process. A compiled daemon has no source tree, so `apps/server/scripts/generate-extension-runtimes.ts` bundles the runtime into `apps/server/src/extensions/generated`, which the daemon carries as text. Run `bun run generate:extension-runtimes` after a change; `bun run check` fails on a stale bundle.
+What `server/` may do is decided in `apps/server/src/extensions/policy.ts`: which events it follows and what of them it hears, the permission of each ask and action, the sends per chat and the clock of `schedule`. It is pure, so the host refuses with it and `ruimte extension test` holds an author's code to the same answers. `server-api.ts` is `@ruimte/extension/server` with its pipes, files and clock handed in; `server-runtime.ts` hands in the real ones inside the extension's process. A compiled daemon has no source tree, so `apps/server/scripts/generate-extension-runtimes.ts` bundles it, and the preload of `ruimte extension test`, into `apps/server/src/extensions/generated`, which the daemon and the CLI carry as text. Run `bun run generate:extension-runtimes` after a change; `bun run check` fails on a stale bundle.
 
 `terminals.read(node)` returns a terminal's screen and `terminals.open()` opens a shell. Nothing types into one.
 

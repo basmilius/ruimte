@@ -11,7 +11,7 @@ import { logTail } from '../extensions/log-tail.ts';
 import { sourceSignature } from '../extensions/source-signature.ts';
 import { scaffoldFiles, type ScaffoldAnswers } from '../extensions/scaffold.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
-import testRuntime from '../extensions/test-runtime.ts' with { type: 'text' };
+import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
 import { commandIo, homeSecret, startFirst, type LocalDaemonOptions } from './local-daemon.ts';
 
 const STORE_REPOSITORY = 'ruimte-app/extensions';
@@ -194,7 +194,7 @@ async function test(args: string[]): Promise<number> {
     await mkdir(join('node_modules', '.cache'), { recursive: true });
 
     const folder = mkdtempSync(join('node_modules', '.cache', 'ruimte-extension-test-'));
-    const preload = resolve(folder, 'preload.ts');
+    const preload = resolve(folder, 'preload.js');
 
     await writeFile(preload, testRuntime);
 
