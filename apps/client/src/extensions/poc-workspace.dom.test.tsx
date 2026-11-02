@@ -23,10 +23,26 @@ function action(id: string) {
     return entry;
 }
 
+const realFetch = globalThis.fetch;
+
 beforeAll(async () => {
+    // The panel's words come from the pack's `locales/`: answered from the folder, so no request to a page that
+    // is not there decides how long the panel takes to draw.
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+        const name = /locales\/(\w+)\.json$/.exec(String(input))?.[1];
+
+        if (name === undefined) {
+            return realFetch(input);
+        }
+
+        return new Response(Bun.file(`${import.meta.dir}/../../../../extensions/poc-workspace/locales/${name}.json`));
+    }) as typeof fetch;
     extension = await loadPoc('workspace');
 });
-afterAll(() => extension.disposers.forEach((dispose) => dispose()));
+afterAll(() => {
+    globalThis.fetch = realFetch;
+    extension.disposers.forEach((dispose) => dispose());
+});
 afterEach(async () => {
     await mounted?.unmount();
     mounted = null;
@@ -44,6 +60,9 @@ describe('poc-workspace', () => {
         expect(entry()?.badge?.()).toBe('3');
 
         await runAction(action('open-panel'), baseContext(), 'commandPalette');
+        // Loaded ahead, so the lazy panel resolves from the module cache: reading and compiling the file is
+        // disk work, which no count of event-loop turns bounds on a busy machine.
+        await import('../../../../extensions/poc-workspace/client/WorkspacePanel');
         mounted = mount();
 
         const Panel = entry()?.component as ComponentType;
