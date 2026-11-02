@@ -4,12 +4,32 @@
  * extension's data, so a compiled daemon can run it. It speaks one JSON line per message over stdin and stdout, so the
  * extension's `console.log` goes to stderr.
  */
+import { Console } from 'node:console';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type * as PublicServer from '../../../../packages/extension/server';
-import { callHandler, createServerApi, MissingHandler, type KeyValues } from './server-api.ts';
+import { callHandler, createServerApi, MissingHandler, ownValue, parseKeyValues, type KeyValues } from './server-api.ts';
 
 type Result<Value> = PublicServer.Result<Value>;
+
+const PRINTING_METHODS = [
+    'log',
+    'info',
+    'debug',
+    'dir',
+    'dirxml',
+    'table',
+    'count',
+    'countReset',
+    'group',
+    'groupCollapsed',
+    'groupEnd',
+    'time',
+    'timeLog',
+    'timeEnd',
+    'trace',
+    'assert'
+] as const;
 
 const [entry, dataFolder] = process.argv.slice(2);
 
@@ -18,14 +38,20 @@ if (entry === undefined || dataFolder === undefined) {
 }
 
 const folder = dataFolder;
-const protocol = process.stdout;
+const protocol = process.stdout.write.bind(process.stdout);
 
 function send(message: object): void {
-    protocol.write(`${JSON.stringify(message)}\n`);
+    protocol(`${JSON.stringify(message)}\n`);
 }
 
-console.log = (...args: unknown[]) => console.error(...args);
-console.info = console.log;
+// Every way the extension's own code prints goes to stderr, so stdout carries only messages.
+const toStderr = new Console({ stdout: process.stderr, stderr: process.stderr });
+
+for (const name of PRINTING_METHODS) {
+    console[name] = toStderr[name].bind(toStderr) as never;
+}
+
+process.stdout.write = process.stderr.write.bind(process.stderr) as typeof process.stdout.write;
 
 const asked = new Map<number, { resolve(value: Result<unknown>): void; reject(error: Error): void }>();
 let nextAsk = 1;
@@ -41,12 +67,27 @@ function ask(method: string, args: unknown[]): Promise<Result<unknown>> {
     });
 }
 
+/* Only a file that is not there is empty: a write over one that could not be read would keep the new key and lose every other. */
 function jsonFile(name: string): Record<string, unknown> {
+    let text: string;
+
     try {
-        return JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>;
-    } catch {
-        return {};
+        text = readFileSync(join(folder, name), 'utf8');
+    } catch (e) {
+        if ((e as { code?: unknown }).code === 'ENOENT') {
+            return {};
+        }
+
+        throw e;
     }
+
+    const values = parseKeyValues(text);
+
+    if (values === null) {
+        throw new Error(`${name} is damaged, so nothing is read or written until it is fixed or removed`);
+    }
+
+    return values;
 }
 
 /* Through a file of its own and a rename, so a read never meets half of it. */
@@ -64,7 +105,7 @@ function secretValues(): KeyValues {
     const name = 'secrets.json';
 
     return {
-        get: async (key) => jsonFile(name)[key],
+        get: async (key) => ownValue(jsonFile(name), key),
         set: async (key, value) => writeJsonFile(name, { ...jsonFile(name), [key]: value }),
         async delete(key) {
             const { [key]: _gone, ...rest } = jsonFile(name);

@@ -29,7 +29,7 @@ class FakeChild extends EventEmitter {
         });
     }
 
-    say(message: object): void {
+    say(message: unknown): void {
         this.stdout.write(`${JSON.stringify(message)}\n`);
     }
 
@@ -47,7 +47,10 @@ interface Hosted {
     log: () => string;
 }
 
-function hostWith(manifest: Partial<ExtensionManifest>, options: Partial<Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now'>> = {}): Hosted {
+function hostWith(
+    manifest: Partial<ExtensionManifest>,
+    options: Partial<Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now' | 'files' | 'runAction' | 'startChat'>> = {}
+): Hosted {
     const folder = mkdtempSync(join(root, 'extension-'));
     const children: FakeChild[] = [];
     const extension: StoredExtension = {
@@ -243,5 +246,79 @@ describe('ExtensionHost', () => {
         await Promise.all(['one', 'two', 'three'].map((key) => host.storageSet('acme.builds', key, key)));
 
         expect(await Promise.all(['one', 'two', 'three'].map((key) => host.storageGet('acme.builds', key)))).toEqual(['one', 'two', 'three']);
+    });
+
+    test('a storage file it cannot read is refused, never written over', async () => {
+        const writes: string[] = [];
+        let failure: Error = Object.assign(new Error('EIO: i/o error'), { code: 'EIO' });
+        const { host } = hostWith(
+            {},
+            {
+                files: {
+                    mkdir: async () => undefined,
+                    readText: async () => {
+                        throw failure;
+                    },
+                    write: async (_file, text) => void writes.push(text),
+                    rename: async () => undefined,
+                    append: async () => undefined
+                }
+            }
+        );
+
+        await expect(host.storageSet('acme.builds', 'key', 1)).rejects.toMatchObject({ code: 'failed' });
+        await expect(host.storageDelete('acme.builds', 'key')).rejects.toMatchObject({ code: 'failed' });
+        await expect(host.storageGet('acme.builds', 'key')).rejects.toMatchObject({ code: 'failed' });
+
+        failure = Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' });
+
+        await host.storageSet('acme.builds', 'key', 1);
+
+        expect(writes).toEqual(['{"key":1}']);
+    });
+
+    test('a storage file that is no JSON object is refused, never written over', async () => {
+        const { host } = hostWith({});
+        const file = join(root, 'damaged-storage.json');
+
+        await Bun.write(file, '{ "kept": tr');
+
+        const damaged = hostWith(
+            {},
+            {
+                files: {
+                    mkdir: async () => undefined,
+                    readText: async () => readFileSync(file, 'utf8'),
+                    write: async () => {
+                        throw new Error('Wrote over a damaged file');
+                    },
+                    rename: async () => undefined,
+                    append: async () => undefined
+                }
+            }
+        );
+
+        await expect(damaged.host.storageSet('acme.builds', 'key', 1)).rejects.toMatchObject({ code: 'failed' });
+        expect(await host.storageGet('acme.builds', 'constructor')).toBeUndefined();
+        expect(await host.storageGet('acme.builds', '__proto__')).toBeUndefined();
+
+        await host.storageSet('acme.builds', '__proto__', 'own');
+
+        expect(await host.storageGet('acme.builds', '__proto__')).toBe('own');
+    });
+
+    test('a line on stdout that is no message neither stops the machine nor the extension', async () => {
+        const hosted = hostWith({});
+        const child = await runningChild(hosted);
+
+        child.stdout.write('null\n42\n"text"\n[]\n{"type":"result"}\n{"type":"ask","id":"x"}\n{"type":"emit"}\nplain words\n');
+
+        const call = hosted.host.call('acme.builds', 'add', []);
+
+        await until(() => child.told.filter((message) => message.type === 'call').length === 2);
+        child.say({ type: 'result', id: child.told.at(-1)?.id, result: 2 });
+
+        expect(await call).toBe(2);
+        await until(() => hosted.log().includes('plain words'));
     });
 });

@@ -40,6 +40,21 @@ export default defineServer({
 });
 `;
 
+const NOISY = `
+import { defineServer, secrets } from '@ruimte/extension/server';
+
+console.debug('null');
+console.dir(42);
+console.table([1]);
+console.count('{"type":"ready"}');
+process.stdout.write('7\\n');
+
+export default defineServer({
+    async keep(value: string) { await secrets.set('token', value); return secrets.get('token'); },
+    async inherited() { return typeof (await secrets.get('constructor')); }
+});
+`;
+
 afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
@@ -63,6 +78,22 @@ describe('an extension with a server part', () => {
         await expect(host.call('acme.builds', 'fail', [])).rejects.toThrow('On purpose');
         expect(await host.call('acme.builds', 'add', [1, 1])).toBe(2);
         await expect(host.call('acme.builds', 'missing', [])).rejects.toThrow('No method missing');
+    });
+
+    test('prints of its own stay off the pipe, and a secrets file it cannot read is never written over', async () => {
+        const host = hostIn('noisy');
+        const store = new ExtensionStore(join(root, 'noisy'));
+
+        await host.install(await packOf('noisy', NOISY));
+
+        expect(await host.call('acme.builds', 'keep', ['one'])).toBe('one');
+        expect(await host.call('acme.builds', 'inherited', [])).toBe('undefined');
+        expect(readFileSync(store.logFile('acme.builds'), 'utf8')).toContain('null');
+
+        writeFileSync(join(store.dataFolder('acme.builds'), 'secrets.json'), '{ "token": "one", "other"');
+
+        await expect(host.call('acme.builds', 'keep', ['two'])).rejects.toThrow('damaged');
+        expect(readFileSync(join(store.dataFolder('acme.builds'), 'secrets.json'), 'utf8')).toBe('{ "token": "one", "other"');
     });
 
     test('stays down after three crashes in a row, until a person turns it on again', async () => {

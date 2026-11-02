@@ -64,6 +64,22 @@ function mapResult<Value, Next>(result: Result<Value>, next: (value: Value) => N
     return result.ok ? { ok: true, value: next(result.value) } : result;
 }
 
+/* The values of `storage.json` or `secrets.json`, or null for a file that is no JSON object and must not be written over. */
+export function parseKeyValues(text: string): Record<string, unknown> | null {
+    try {
+        const values: unknown = JSON.parse(text);
+
+        return typeof values === 'object' && values !== null && !Array.isArray(values) ? (values as Record<string, unknown>) : null;
+    } catch {
+        return null;
+    }
+}
+
+/* Only a key that was written: `constructor` or `__proto__` would otherwise answer with what every object has. */
+export function ownValue(values: Readonly<Record<string, unknown>>, key: string): unknown {
+    return Object.hasOwn(values, key) ? values[key] : undefined;
+}
+
 /* A method of the default export of `server/index.ts`, as the client calls it. */
 export function callHandler(handlers: Readonly<Record<string, unknown>>, method: string, args: unknown[]): unknown {
     const handler = Object.hasOwn(handlers, method) ? handlers[method] : undefined;

@@ -2,7 +2,9 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { isNotFound } from '@adecore/agents';
 import type { ExtensionActionName, ExtensionInfo, ExtensionStatus } from '@ruimte/contracts';
+import { z } from 'zod';
 import { VerbRefusal } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
@@ -22,6 +24,7 @@ import {
     type Refusal
 } from './policy.ts';
 import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
+import { ownValue, parseKeyValues } from './server-api.ts';
 import type { ExtensionStore, StoredExtension } from './store.ts';
 
 // Under the client's 60 seconds, so a person reads this answer rather than a dropped request.
@@ -35,6 +38,31 @@ function refuse(refusal: Refusal | null): void {
     if (refusal !== null) {
         throw new ExtensionRefusal(refusal.code, refusal.message);
     }
+}
+
+const ProtocolMessageSchema = z.discriminatedUnion('type', [
+    z.object({ type: z.literal('ask'), id: z.number(), method: z.string(), args: z.array(z.unknown()) }),
+    z.object({ type: z.literal('tool'), name: z.string(), description: z.string(), parameters: z.unknown().optional() }),
+    z.object({ type: z.literal('ready') }),
+    z.object({ type: z.literal('subscribe'), name: z.string() }),
+    z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
+    z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
+]);
+type ProtocolMessage = z.infer<typeof ProtocolMessageSchema>;
+
+/* A line of the process's stdout as a message, or null for anything else its code wrote there. */
+function protocolMessage(line: string): ProtocolMessage | null {
+    let value: unknown;
+
+    try {
+        value = JSON.parse(line);
+    } catch {
+        return null;
+    }
+
+    const parsed = ProtocolMessageSchema.safeParse(value);
+
+    return parsed.success ? parsed.data : null;
 }
 
 function stopped(): ExtensionRefusal {
@@ -320,13 +348,29 @@ export class ExtensionHost {
         return next;
     }
 
-    /* The same file `storage` in `server/` writes, so both ends of an extension read one truth. */
+    /*
+     * The same file `storage` in `server/` writes, so both ends of an extension read one truth. Only a file that is not
+     * there is empty: a write over one that could not be read would keep the new key and lose every other.
+     */
     private async storageOf(id: string): Promise<{ file: string; values: Record<string, unknown> }> {
         const file = join(this.options.store.dataFolder(id), 'storage.json');
-        const values = await this.files
-            .readText(file)
-            .then((text) => JSON.parse(text) as Record<string, unknown>)
-            .catch(() => ({}));
+        let text: string;
+
+        try {
+            text = await this.files.readText(file);
+        } catch (e) {
+            if (isNotFound(e)) {
+                return { file, values: {} };
+            }
+
+            throw new ExtensionRefusal('failed', `The storage of ${id} could not be read: ${errorText(e)}`);
+        }
+
+        const values = parseKeyValues(text);
+
+        if (values === null) {
+            throw new ExtensionRefusal('failed', `The storage of ${id} is damaged, so nothing is read or written until ${file} is fixed or removed`);
+        }
 
         return { file, values };
     }
@@ -335,7 +379,7 @@ export class ExtensionHost {
     async storageGet(id: string, key: string): Promise<unknown> {
         await this.storageWrites.get(id)?.catch(() => undefined);
 
-        return (await this.storageOf(id)).values[key];
+        return ownValue((await this.storageOf(id)).values, key);
     }
 
     storageSet(id: string, key: string, value: unknown): Promise<void> {
@@ -624,47 +668,44 @@ export class ExtensionHost {
     }
 
     private handle(id: string, running: Running, line: string, markReady: () => void): void {
-        let message: { type?: string; id?: number; result?: unknown; error?: string; code?: string; name?: string; payload?: unknown };
-
-        try {
-            message = JSON.parse(line) as typeof message;
-        } catch {
-            return;
-        }
+        const message = protocolMessage(line);
 
         // A process that was stopped can still have lines in the pipe; nothing it asks or says counts any more.
         if (this.running.get(id) !== running) {
             return;
         }
 
-        if (message.type === 'ask' && message.id !== undefined) {
-            const asked = message as unknown as { id: number; method: string; args: unknown[] };
+        // Its own code can still write to stdout around the console, and a line that is no message is only noise.
+        if (message === null) {
+            void this.files.append(this.options.store.logFile(id), `${line}\n`).catch(() => undefined);
 
-            void this.answerAsk(id, running, asked.method, asked.args).then(
-                (result) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, result: result ?? null })}\n`),
+            return;
+        }
+
+        if (message.type === 'ask') {
+            void this.answerAsk(id, running, message.method, message.args).then(
+                (result) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: message.id, result: result ?? null })}\n`),
                 (e: unknown) => {
                     const { code, message: reason } = extensionFailureOf(e);
 
                     // A refusal answers as a Result, so the terminal of `extension dev` is where a person still sees it.
-                    void this.files.append(this.options.store.logFile(id), `${asked.method} answered ${code}: ${reason}\n`).catch(() => undefined);
-                    running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, error: reason, code })}\n`);
+                    void this.files.append(this.options.store.logFile(id), `${message.method} answered ${code}: ${reason}\n`).catch(() => undefined);
+                    running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: message.id, error: reason, code })}\n`);
                 }
             );
         } else if (message.type === 'tool') {
-            const tool = message as unknown as { name: string; description: string; parameters: unknown };
-
             // The permissions it started with, read at once, so a stop cannot come between and leave the tool listed.
             if (running.permissions.has('agents.tools')) {
-                this.tools.set(`${id}/${tool.name}`, { description: tool.description, parameters: tool.parameters });
+                this.tools.set(`${id}/${message.name}`, { description: message.description, parameters: message.parameters });
             }
         } else if (message.type === 'ready') {
             // Loading proves nothing: one that loads and dies on every call would never count three in a row.
             markReady();
-        } else if (message.type === 'subscribe' && message.name !== undefined) {
+        } else if (message.type === 'subscribe') {
             this.followEvent(id, running, message.name);
-        } else if (message.type === 'emit' && message.name !== undefined) {
+        } else if (message.type === 'emit') {
             this.sinks.emit({ event: 'extension.message', payload: { id, name: message.name, payload: message.payload } });
-        } else if (message.type === 'result' && message.id !== undefined) {
+        } else {
             const pending = running.pending.get(message.id);
 
             if (pending !== undefined) {

@@ -236,7 +236,7 @@ export class GatedHost {
 
                 return gates.hold('fs.read', file, () => {
                     if (text === undefined) {
-                        throw new Error(`ENOENT ${file}`);
+                        throw Object.assign(new Error(`ENOENT ${file}`), { code: 'ENOENT' });
                     }
 
                     return text;

@@ -1,6 +1,7 @@
 // @bun
 // Generated from apps/server/src/extensions/server-runtime.ts by apps/server/scripts/generate-extension-runtimes.ts. Do not edit.
 // apps/server/src/extensions/server-runtime.ts
+import { Console } from "console";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { join } from "path";
 
@@ -100,6 +101,17 @@ class MissingHandler extends Error {
 }
 function mapResult(result, next) {
   return result.ok ? { ok: true, value: next(result.value) } : result;
+}
+function parseKeyValues(text) {
+  try {
+    const values = JSON.parse(text);
+    return typeof values === "object" && values !== null && !Array.isArray(values) ? values : null;
+  } catch {
+    return null;
+  }
+}
+function ownValue(values, key) {
+  return Object.hasOwn(values, key) ? values[key] : undefined;
 }
 function callHandler(handlers, method, args) {
   const handler = Object.hasOwn(handlers, method) ? handlers[method] : undefined;
@@ -213,18 +225,39 @@ function createServerApi(options) {
 }
 
 // apps/server/src/extensions/server-runtime.ts
+var PRINTING_METHODS = [
+  "log",
+  "info",
+  "debug",
+  "dir",
+  "dirxml",
+  "table",
+  "count",
+  "countReset",
+  "group",
+  "groupCollapsed",
+  "groupEnd",
+  "time",
+  "timeLog",
+  "timeEnd",
+  "trace",
+  "assert"
+];
 var [entry, dataFolder] = process.argv.slice(2);
 if (entry === undefined || dataFolder === undefined) {
   throw new Error("Expected the extension entry and its data folder");
 }
 var folder = dataFolder;
-var protocol = process.stdout;
+var protocol = process.stdout.write.bind(process.stdout);
 function send(message) {
-  protocol.write(`${JSON.stringify(message)}
+  protocol(`${JSON.stringify(message)}
 `);
 }
-console.log = (...args) => console.error(...args);
-console.info = console.log;
+var toStderr = new Console({ stdout: process.stderr, stderr: process.stderr });
+for (const name of PRINTING_METHODS) {
+  console[name] = toStderr[name].bind(toStderr);
+}
+process.stdout.write = process.stderr.write.bind(process.stderr);
 var asked = new Map;
 var nextAsk = 1;
 function ask(method, args) {
@@ -236,11 +269,20 @@ function ask(method, args) {
   });
 }
 function jsonFile(name) {
+  let text;
   try {
-    return JSON.parse(readFileSync(join(folder, name), "utf8"));
-  } catch {
-    return {};
+    text = readFileSync(join(folder, name), "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return {};
+    }
+    throw e;
   }
+  const values = parseKeyValues(text);
+  if (values === null) {
+    throw new Error(`${name} is damaged, so nothing is read or written until it is fixed or removed`);
+  }
+  return values;
 }
 function writeJsonFile(name, value) {
   const file = join(folder, name);
@@ -252,7 +294,7 @@ function writeJsonFile(name, value) {
 function secretValues() {
   const name = "secrets.json";
   return {
-    get: async (key) => jsonFile(name)[key],
+    get: async (key) => ownValue(jsonFile(name), key),
     set: async (key, value) => writeJsonFile(name, { ...jsonFile(name), [key]: value }),
     async delete(key) {
       const { [key]: _gone, ...rest } = jsonFile(name);
