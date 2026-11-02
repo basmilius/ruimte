@@ -288,7 +288,12 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
 
         call.context.extension = true;
 
-        return runMachineAction(action, input, async (name, translated) => outputOf(await serverActions.execute(name, translated, call)));
+        return runMachineAction(
+            action,
+            input,
+            async (name, translated) => outputOf(await serverActions.execute(name, translated, call)),
+            (files) => artifacts.artifacts.publishFor(projectId, files)
+        );
     };
     // Saved like one a person added, so it is listed in Settings and held when its file changes.
     addExtensionLanguageServer = async (id, server) => {

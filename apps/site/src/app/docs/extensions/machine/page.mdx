@@ -144,6 +144,22 @@ if (page.ok && page.value.page !== null) {
 
 An agent may only drive a browser or device it has a line to. An extension has no node for a line to reach, so with the permission it drives any of the project's.
 
+`artifacts.publish` puts files in the Output of the project in front. Give each file as `text` or as `base64` bytes, up to 2 MB together:
+
+```ts
+const published = await artifacts.publish({
+    files: [
+        {
+            name: 'weekly.md',
+            text: report
+        }
+    ],
+    key: 'weekly-report'
+});
+```
+
+The same `key` adds a new version to the same artifact. Pass a `requestId` of your own when you may retry, and the retry lands once.
+
 ## Terminals
 
 `terminals.read(node)` answers what a terminal shows, with `terminals.read`. `terminals.open()` opens a shell beside the nodes you name, with `canvas.write`. Only a person types into a terminal.

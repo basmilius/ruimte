@@ -53,6 +53,18 @@ describe('Artifacts', () => {
         expect((await artifacts.uploadState('chat-1', 'up-1', 'req-1')).done).toMatchObject({ artifactId: published.result.artifactId });
     });
 
+    test("an extension's files land in the project its call came from, as the person's, and a retry lands once", async () => {
+        const { artifacts } = await setup();
+        const input = { files: [{ name: 'weekly.md', bytes: bytes('# Weekly') }], key: 'weekly', requestId: 'req-1' };
+        const first = await artifacts.publishFor('project-1', input);
+        const retry = await artifacts.publishFor('project-1', input);
+
+        expect(first.artifact).toMatchObject({ title: 'weekly', kind: 'report', projectId: 'project-1', key: 'weekly' });
+        expect(first.version.provenance).toEqual({ maker: 'person', machineId: 'machine-1' });
+        expect(retry.result).toEqual({ ...first.result, existing: true });
+        await expect(artifacts.publishFor('project-2', { ...input, requestId: 'req-2' })).rejects.toMatchObject({ code: 'not-found' });
+    });
+
     test('a retry of a publish lands on the version it made', async () => {
         const { artifacts } = await setup();
         await artifacts.uploadAppend('chat-1', 'up-1', 0, 0, bytes('one'));

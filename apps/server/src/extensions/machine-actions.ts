@@ -1,9 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { CodedError } from '@adecore/agents';
 import type { ActionInput, ActionName, ActionOutput, ActionResult } from '@ruimte/actions';
 import {
+    EXTENSION_PUBLISH_MAX_BYTES,
     isExtensionActionName,
     parseExtensionActionInput,
+    type Artifact,
     type ArtifactSummary,
+    type ArtifactVersion,
     type ExtensionActionInput,
     type ExtensionActionName,
     type ExtensionActionOutput,
@@ -11,6 +15,7 @@ import {
     type ExtensionBrowserState,
     type RoutineEntry
 } from '@ruimte/contracts';
+import type { ExtensionPublishInput } from '../artifacts/artifacts.ts';
 import { asExtensionRefusal, ExtensionRefusal } from './refusal.ts';
 
 /* Runs one action of the machine and answers its output, or throws why it did not run. */
@@ -65,7 +70,7 @@ const routineNamed = (output: { routineId: string; title: string }) => ({ id: ou
  * Each action an extension may call, in the shape its API gives it: refs instead of ids, and only what the
  * extension reads. A new entry needs its permission in `EXTENSION_ACTIONS` and its types in `@ruimte/extension`.
  */
-const MACHINE_ACTIONS: { [Name in ExtensionActionName]: Entry<Name, ActionName> } = {
+const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish'>]: Entry<Name, ActionName> } = {
     'launch.list': entry('launch.list', {
         input: () => ({}),
         output: ({ launches }) => ({ launches: launches.map(({ launchId, ...launch }) => ({ id: launchId, ...launch })) })
@@ -115,10 +120,6 @@ const MACHINE_ACTIONS: { [Name in ExtensionActionName]: Entry<Name, ActionName> 
             text,
             truncated
         })
-    }),
-    'artifact.publish': entry('artifact.publish', {
-        input: (input) => input,
-        output: ({ artifact, version, existing }) => ({ artifact: artifactOf(artifact), version: { id: version.versionId, number: version.number }, existing })
     }),
     'browser.inspect': entry('browser.inspect', { input: node, output: browserOf }),
     'browser.navigate': entry('browser.navigate', { input: (input) => ({ ...node(input), url: input.url }), output: browserOf }),
@@ -172,8 +173,33 @@ export function outputOf<Action extends ActionName>(result: ActionResult<Action>
     return result.output;
 }
 
+/* Publishes an extension's files to the Output of the project its call came from. */
+export type PublishFiles = (input: ExtensionPublishInput) => Promise<{ artifact: Artifact; version: ArtifactVersion; result: { existing: boolean } }>;
+
+/* An extension's publish: its files come with the call, since an agent's upload route is not open to it. */
+async function publishOf(input: ExtensionActionInput<'artifact.publish'>, publish: PublishFiles): Promise<ExtensionActionOutput<'artifact.publish'>> {
+    const files = input.files.map((file) => ({
+        name: file.name,
+        bytes: 'text' in file ? new TextEncoder().encode(file.text) : Uint8Array.from(Buffer.from(file.base64, 'base64'))
+    }));
+
+    if (files.reduce((sum, file) => sum + file.bytes.byteLength, 0) > EXTENSION_PUBLISH_MAX_BYTES) {
+        throw new ExtensionRefusal('limit', `An extension publishes at most ${EXTENSION_PUBLISH_MAX_BYTES / 1024 / 1024} MB at once`);
+    }
+
+    const { artifact, version, result } = await publish({
+        files,
+        requestId: input.requestId ?? randomUUID(),
+        ...(input.title === undefined ? {} : { title: input.title }),
+        ...(input.kind === undefined ? {} : { kind: input.kind }),
+        ...(input.key === undefined ? {} : { key: input.key })
+    });
+
+    return { artifact: artifactOf(artifact), version: { id: version.versionId, number: version.number }, existing: result.existing };
+}
+
 /* An action an extension names, with an input of its own shape, translated to the machine's action and back. */
-export async function runMachineAction(name: string, input: unknown, execute: ExecuteAction): Promise<unknown> {
+export async function runMachineAction(name: string, input: unknown, execute: ExecuteAction, publish: PublishFiles): Promise<unknown> {
     if (!isExtensionActionName(name)) {
         throw new ExtensionRefusal('not-found', `An extension cannot ask for ${name}`);
     }
@@ -182,6 +208,10 @@ export async function runMachineAction(name: string, input: unknown, execute: Ex
 
     if (!parsed.ok) {
         throw new ExtensionRefusal('invalid-input', parsed.message);
+    }
+
+    if (name === 'artifact.publish') {
+        return publishOf(parsed.input as ExtensionActionInput<'artifact.publish'>, publish);
     }
 
     const translate = MACHINE_ACTIONS[name] as Entry<ExtensionActionName, ActionName>;

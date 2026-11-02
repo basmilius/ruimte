@@ -32,15 +32,22 @@ serverContract(async (permissions) => {
         store,
         asks: () => ({ 'chats.send': async () => undefined }),
         runAction: (_id, _projectId, action, input) =>
-            runMachineAction(action, input, async (name, given) => {
-                if (name !== 'launch.start') {
-                    throw new Error(`No ${name} here`);
+            runMachineAction(
+                action,
+                input,
+                async (name, given) => {
+                    if (name !== 'launch.start') {
+                        throw new Error(`No ${name} here`);
+                    }
+
+                    const { launch } = given as { launch: string };
+
+                    return { launchId: launch, name: launch } as never;
+                },
+                async () => {
+                    throw new Error('No Output here');
                 }
-
-                const { launch } = given as { launch: string };
-
-                return { launchId: launch, name: launch } as never;
-            })
+            )
     });
     const { path } = await packExtension(folder);
 

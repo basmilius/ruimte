@@ -96,7 +96,7 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'routines.resume': (api) => api.routines.resume({ routine: 'nightly' }),
     'artifacts.list': (api) => api.artifacts.list(),
     'artifacts.read': (api) => api.artifacts.read({ artifact: 'report' }),
-    'artifacts.publish': (api) => api.artifacts.publish({ upload: 'u', files: [{ name: 'a.txt', size: 1 }], requestId: 'r' }),
+    'artifacts.publish': (api) => api.artifacts.publish({ files: [{ name: 'a.txt', text: 'a' }] }),
     'browser.inspect': (api) => api.browser.inspect({ node: REF }),
     'browser.navigate': (api) => api.browser.navigate({ node: REF, url: 'https://ruimte.app' }),
     'browser.back': (api) => api.browser.back({ node: REF }),

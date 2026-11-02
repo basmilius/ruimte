@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { KnownArtifactKindSchema } from './artifact.ts';
+import { ARTIFACT_LIMITS, ArtifactKeySchema, ArtifactRequestIdSchema, KnownArtifactKindSchema } from './artifact.ts';
 
 /*
  * What an extension gives each action of the machine it may call, and what it reads back: the `MachineActions` of
@@ -9,6 +9,13 @@ const NodeRefSchema = z.object({ id: z.string().min(1) });
 const nodeInput = z.object({ node: NodeRefSchema });
 const launchInput = z.object({ launch: z.string().trim().min(1) });
 const routineInput = z.object({ routine: z.string().min(1) });
+const publishedName = z.string().min(1).max(ARTIFACT_LIMITS.fileNameLength);
+// A file an extension publishes goes in the call itself: it has no upload route of its own.
+const PublishedTextSchema = z.object({ name: publishedName, text: z.string() });
+const PublishedBytesSchema = z.object({ name: publishedName, base64: z.base64() });
+
+// What one publish of an extension holds, every file together: as much as one frame carries.
+export const EXTENSION_PUBLISH_MAX_BYTES = 2 * 1024 * 1024;
 
 export const EXTENSION_ACTION_INPUTS = {
     'launch.list': z.object({}),
@@ -23,12 +30,14 @@ export const EXTENSION_ACTION_INPUTS = {
     'artifact.list': z.object({}),
     'artifact.read': z.object({ artifact: z.string().min(1), version: z.string().min(1).optional(), file: z.number().int().nonnegative().optional() }),
     'artifact.publish': z.object({
-        upload: z.string().min(1),
-        files: z.array(z.object({ name: z.string().min(1), size: z.number().int().nonnegative() })).min(1),
-        title: z.string().min(1).optional(),
+        files: z
+            .array(z.union([PublishedTextSchema, PublishedBytesSchema]))
+            .min(1)
+            .max(ARTIFACT_LIMITS.filesPerVersion),
+        title: z.string().trim().min(1).max(ARTIFACT_LIMITS.titleLength).optional(),
         kind: KnownArtifactKindSchema.optional(),
-        key: z.string().min(1).optional(),
-        requestId: z.string().min(1)
+        key: ArtifactKeySchema.optional(),
+        requestId: ArtifactRequestIdSchema.optional()
     }),
     'browser.inspect': nodeInput,
     'browser.navigate': nodeInput.extend({ url: z.string().min(1) }),

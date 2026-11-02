@@ -95,6 +95,14 @@ interface DeliverInput {
     files: ReadonlyArray<{ name: string; bytes: Uint8Array }>;
 }
 
+export interface ExtensionPublishInput {
+    title?: string;
+    kind?: ArtifactKind;
+    key?: string;
+    requestId: string;
+    files: ReadonlyArray<{ name: string; bytes: Uint8Array }>;
+}
+
 export interface UploadState {
     /* The bytes each staged file holds, by its place. */
     sizes: number[];
@@ -331,6 +339,38 @@ export class Artifacts {
             });
             return this.published(committed);
         });
+    }
+
+    /*
+     * An extension's files, sent with its call, as a version in the project the call came from, which the
+     * daemon read off the call and never off the input. The person runs the extension, so the version is theirs.
+     */
+    async publishFor(projectId: string, input: ExtensionPublishInput): Promise<{ result: CommitResult; artifact: Artifact; version: ArtifactVersion }> {
+        const project = await this.requireProject(projectId);
+        const earlier = this.store.findRequest(projectId, input.requestId);
+        if (earlier) {
+            return this.published(earlier);
+        }
+        const bytes = input.files.reduce((sum, file) => sum + file.bytes.byteLength, 0);
+        const committed = await this.store.saveNew(
+            bytes,
+            async (stagingId) => {
+                for (const [index, file] of input.files.entries()) {
+                    await this.store.stageAppend(stagingId, index, file.bytes);
+                }
+            },
+            {
+                projectId,
+                projectName: project.name,
+                title: input.title ?? titleOf(basename(input.files[0]!.name)),
+                ...(input.kind === undefined ? {} : { kind: input.kind }),
+                ...(input.key === undefined ? {} : { key: input.key }),
+                requestId: input.requestId,
+                provenance: { maker: 'person', machineId: this.deps.machineId },
+                names: input.files.map((file) => file.name)
+            }
+        );
+        return this.published(committed);
     }
 
     /*

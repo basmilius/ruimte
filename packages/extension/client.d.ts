@@ -503,15 +503,17 @@ export interface MachineActions {
         input: { artifact: string; version?: string; file?: number };
         output: { artifact: ArtifactInfo; version: { id: string; number: number }; file: ArtifactFileInfo; text: string | null; truncated: boolean };
     };
-    /** Files sent beforehand under `upload`; the same `key` makes a new version of the same artifact. */
+    /**
+     * The files themselves, as `text` or as `base64` bytes, up to 2 MB together, in the project in front. The same `key`
+     * makes a new version of the same artifact, and the same `requestId` makes a retry land once.
+     */
     'artifact.publish': {
         input: {
-            upload: string;
-            files: { name: string; size: number }[];
+            files: ({ name: string; text: string } | { name: string; base64: string })[];
             title?: string;
             kind?: 'report' | 'image' | 'build' | 'export' | 'recording' | 'page';
             key?: string;
-            requestId: string;
+            requestId?: string;
         };
         output: { artifact: ArtifactInfo; version: { id: string; number: number }; existing: boolean };
     };
