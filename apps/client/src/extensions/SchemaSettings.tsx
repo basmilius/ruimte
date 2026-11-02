@@ -29,7 +29,7 @@ function Field({ id, field }: { id: string; field: SettingField }) {
     );
 }
 
-/* Fields an extension named, in rows like any other setting, so a simple one needs no React. */
+/* Fields an extension named, in rows like any other setting and in sections when it groups them, so a simple one needs no React. */
 export function SchemaSettings({ id }: { id: string }) {
     const schema = useContributions((state) => state.extensionSchemas.find((each) => each.id === id));
 
@@ -37,11 +37,15 @@ export function SchemaSettings({ id }: { id: string }) {
         return null;
     }
 
-    return (
-        <SettingsSection>
-            {schema.fields.map((field) => (
+    return schema.groups.map((group, index) => (
+        <SettingsSection
+            key={group.title ?? index}
+            {...(group.title === undefined ? {} : { title: group.title })}
+            {...(group.description === undefined ? {} : { description: group.description })}
+        >
+            {group.fields.map((field) => (
                 <Field key={field.key} id={id} field={field} />
             ))}
         </SettingsSection>
-    );
+    ));
 }

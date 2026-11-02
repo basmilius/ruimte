@@ -59,3 +59,21 @@ describe('activation', () => {
         expect(wantsLoading(['node:never-on-this-canvas'])).toBe(false);
     });
 });
+
+describe('settings in groups', () => {
+    test('draws a titled card per group, and every key still reads by itself', async () => {
+        const { SchemaSettings } = await import('@/extensions/SchemaSettings');
+        const { mount } = await import('../../testing/dom');
+        const page = mount();
+
+        await page.render(<SchemaSettings id="poc.chat" />);
+
+        const text = page.host.textContent ?? '';
+
+        expect(text.indexOf('Greeting')).toBeLessThan(text.indexOf('Loud'));
+        expect(text.indexOf('Loud')).toBeLessThan(text.indexOf('Style'));
+        expect(text.indexOf('Style')).toBeLessThan(text.indexOf('Tone'));
+        expect(useContributions.getState().extensionSchemas[0]?.groups.map((group) => group.title)).toEqual(['Greeting', 'Style']);
+        await page.unmount();
+    });
+});

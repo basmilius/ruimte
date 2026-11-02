@@ -141,10 +141,16 @@
                 "code": "export interface SettingField {\n    key: string;\n    type: 'boolean' | 'text' | 'select';\n    label: string;\n    description?: string;\n    default: boolean | string;\n    options?: { value: string; label: string }[];\n}"
             },
             {
+                "name": "SettingGroup",
+                "kind": "interface",
+                "doc": "A section of an extension's settings page: a title over a card of fields, like Ruimte's own settings.",
+                "code": "export interface SettingGroup {\n    title?: string;\n    description?: string;\n    fields: SettingField[];\n}"
+            },
+            {
                 "name": "defineExtensionSettings",
                 "kind": "function",
-                "doc": "Your own component, or `fields` that Ruimte draws. Read a field with `useSetting`.",
-                "code": "export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] }): void;"
+                "doc": "Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. Read a field with `useSetting`; keys are unique across groups.",
+                "code": "export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }): void;"
             },
             {
                 "name": "useSetting",

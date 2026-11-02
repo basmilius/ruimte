@@ -228,9 +228,17 @@ export interface SettingField {
     options?: readonly { value: string; label: string }[];
 }
 
+export interface SettingGroup {
+    title?: string;
+    description?: string;
+    fields: readonly SettingField[];
+}
+
 export interface ExtensionSchemaContribution {
     id: string;
+    // Every field of every group, for a lookup by key.
     fields: readonly SettingField[];
+    groups: readonly SettingGroup[];
 }
 
 export interface BuiltInContribution {

@@ -36,6 +36,44 @@ defineExtensionSettings({
 
 A field is `boolean` (a switch), `text` (an input) or `select` (a menu with `options`). `default` is the value until the person changes it.
 
+With more than a few fields, sort them into groups. Each group is a card with its title above it, as in Ruimte's own settings:
+
+```ts
+defineExtensionSettings({
+    groups: [
+        {
+            title: 'Summaries',
+            description: 'What Summarize writes.',
+            fields: [
+                {
+                    key: 'summaryLength',
+                    type: 'select',
+                    label: 'Summary length',
+                    default: 'short',
+                    options: [
+                        { value: 'short', label: 'Short' },
+                        { value: 'long', label: 'Long' }
+                    ]
+                }
+            ]
+        },
+        {
+            title: 'Sources',
+            fields: [
+                {
+                    key: 'includeTerminals',
+                    type: 'boolean',
+                    label: 'Include terminals',
+                    default: true
+                }
+            ]
+        }
+    ]
+});
+```
+
+A key is unique across all groups, and `useSetting` reads it the same way.
+
 Read a setting in a component with `useSetting`. The component draws again when the person changes it.
 
 ```tsx

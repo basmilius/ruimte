@@ -15,17 +15,28 @@ import {
 } from '@ruimte/extension/client';
 
 defineExtensionSettings({
-    fields: [
-        { key: 'greeting', type: 'text', label: 'Greeting', description: 'What /greet says', default: 'Hello' },
-        { key: 'loud', type: 'boolean', label: 'Loud', default: false },
+    groups: [
         {
-            key: 'tone',
-            type: 'select',
-            label: 'Tone',
-            default: 'plain',
-            options: [
-                { value: 'plain', label: 'Plain' },
-                { value: 'formal', label: 'Formal' }
+            title: 'Greeting',
+            description: 'What /greet says.',
+            fields: [
+                { key: 'greeting', type: 'text', label: 'Greeting', description: 'What /greet says', default: 'Hello' },
+                { key: 'loud', type: 'boolean', label: 'Loud', default: false }
+            ]
+        },
+        {
+            title: 'Style',
+            fields: [
+                {
+                    key: 'tone',
+                    type: 'select',
+                    label: 'Tone',
+                    default: 'plain',
+                    options: [
+                        { value: 'plain', label: 'Plain' },
+                        { value: 'formal', label: 'Formal' }
+                    ]
+                }
             ]
         }
     ]

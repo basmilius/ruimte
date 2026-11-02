@@ -18,7 +18,15 @@ import { ExtensionGlyph } from '@/extensions/ExtensionTile';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
-import { contribute, useContributions, type ExtensionSurfaceProps, type SettingField, type SlotEntry, type SlotName } from '@/extensions/registry';
+import {
+    contribute,
+    useContributions,
+    type ExtensionSurfaceProps,
+    type SettingField,
+    type SettingGroup,
+    type SlotEntry,
+    type SlotName
+} from '@/extensions/registry';
 import { baseContext, nodeInfoOf, type NodeInfo } from '@/extensions/slots';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
@@ -501,9 +509,11 @@ export function clientApiFor(extension: LoadedExtension) {
         defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }) {
             add('commands', { id: `extension:${id}/${command.id}`, title: command.title, run: command.run });
         },
-        defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] }) {
-            if ('fields' in settings) {
-                add('extensionSchemas', { id, fields: settings.fields });
+        defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }) {
+            if ('fields' in settings || 'groups' in settings) {
+                const groups = 'groups' in settings ? settings.groups : [{ fields: settings.fields }];
+
+                add('extensionSchemas', { id, groups, fields: groups.flatMap((group) => group.fields) });
 
                 return;
             }

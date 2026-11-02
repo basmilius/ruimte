@@ -75,8 +75,15 @@ export interface SettingField {
     options?: { value: string; label: string }[];
 }
 
-/** Your own component, or `fields` that Ruimte draws. Read a field with `useSetting`. */
-export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] }): void;
+/** A section of an extension's settings page: a title over a card of fields, like Ruimte's own settings. */
+export interface SettingGroup {
+    title?: string;
+    description?: string;
+    fields: SettingField[];
+}
+
+/** Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. Read a field with `useSetting`; keys are unique across groups. */
+export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }): void;
 export function useSetting<Value>(key: string): Value;
 export function useMachine(): { id: string };
 export function useTheme(): { side: 'light' | 'dark' };
