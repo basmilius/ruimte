@@ -82,7 +82,8 @@ describe('ExtensionStore', () => {
         expect(existsSync(join(root, 'install-remove', 'extensions', id))).toBe(false);
     });
 
-    test('keeps the version in use when the index cannot be written', async () => {
+    // Windows keeps a folder writable whatever its mode says, so the write this test makes fail would succeed there.
+    test.skipIf(process.platform === 'win32')('keeps the version in use when the index cannot be written', async () => {
         const home = join(root, 'unwritable');
         const store = new ExtensionStore(home);
         const id = 'acme.unwritable';
