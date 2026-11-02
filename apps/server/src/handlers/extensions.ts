@@ -1,7 +1,7 @@
 import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { ChatProvider } from '@adecore/agents/providers';
 import { contextSelection } from '@ruimte/contracts/extension-context';
-import type { Dispatcher } from '../dispatcher.ts';
+import { sendEvent, type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { asExtensionRefusal, ExtensionRefusal } from '../extensions/refusal.ts';
@@ -26,7 +26,6 @@ function nodesIn(views: readonly ProjectView[], of: { nodeIds?: readonly string[
     return views.filter(isCanvasView).flatMap((view) => view.nodes.filter((node) => selects(node.id, view.id)));
 }
 
-/* The last `limit` characters of a stream, read to its end so the process never waits on a full pipe. */
 /* An `agentStop` for a run, also one that comes before its CLI started. */
 class StreamStop {
     stopped = false;
@@ -43,6 +42,46 @@ class StreamStop {
     }
 }
 
+/*
+ * The runs under way, each by the client that started it and its run id: a client chooses the id, so another client's
+ * stop or a second run under the same id never reaches a run that is not its own.
+ */
+export class AgentStreams {
+    private readonly runs = new Map<string, StreamStop>();
+
+    /* Refused while the client has a run under that id. */
+    claim(clientId: string, runId: string): StreamStop {
+        const key = AgentStreams.keyOf(clientId, runId);
+
+        if (this.runs.has(key)) {
+            throw new ExtensionRefusal('refused', `A run ${runId} is already under way`);
+        }
+
+        const stop = new StreamStop();
+
+        this.runs.set(key, stop);
+
+        return stop;
+    }
+
+    release(clientId: string, runId: string, stop: StreamStop): void {
+        const key = AgentStreams.keyOf(clientId, runId);
+
+        if (this.runs.get(key) === stop) {
+            this.runs.delete(key);
+        }
+    }
+
+    stop(clientId: string, runId: string): void {
+        this.runs.get(AgentStreams.keyOf(clientId, runId))?.kill();
+    }
+
+    private static keyOf(clientId: string, runId: string): string {
+        return JSON.stringify([clientId, runId]);
+    }
+}
+
+/* The last `limit` characters of a stream, read to its end so the process never waits on a full pipe. */
 async function tailOf(stream: ReadableStream<Uint8Array>, limit: number): Promise<string> {
     const decoder = new TextDecoder();
     let tail = '';
@@ -143,27 +182,28 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
         return { text: result.stdout };
     });
 
-    const streams = new Map<string, StreamStop>();
+    const streams = new AgentStreams();
 
-    // The same process as above, read as it writes rather than when it is done.
-    dispatcher.register('extension.agentStream', async (payload) => {
+    // The same process as above, read as it writes rather than when it is done, its pieces only to the client that asked.
+    dispatcher.register('extension.agentStream', async (payload, client) => {
         // Taken before the first await, so an `agentStop` that comes while the provider is looked up still lands.
-        const stop = new StreamStop();
-
-        streams.set(payload.runId, stop);
+        const stop = streams.claim(client.id, payload.runId);
 
         try {
-            return await streamAgent(payload, stop);
+            return await streamAgent(payload, stop, (text) => {
+                if (client.closed !== true) {
+                    sendEvent(client, 'extension.agentChunk', { runId: payload.runId, text });
+                }
+            });
         } finally {
-            if (streams.get(payload.runId) === stop) {
-                streams.delete(payload.runId);
-            }
+            streams.release(client.id, payload.runId, stop);
         }
     });
 
     const streamAgent = async (
         payload: { runId: string; prompt: string; projectId: string; provider?: string | undefined },
-        stop: StreamStop
+        stop: StreamStop,
+        chunk: (text: string) => void
     ): Promise<Record<string, never>> => {
         const options = payload.provider === undefined ? {} : { provider: payload.provider as ChatProvider['kind'] };
         const provider = await oneShotProvider(deps.providers, options, 'answer an extension');
@@ -196,7 +236,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
 
         try {
             for await (const piece of child.stdout) {
-                host.emitChunk(payload.runId, decoder.decode(piece, { stream: true }));
+                chunk(decoder.decode(piece, { stream: true }));
             }
 
             await child.exited;
@@ -226,8 +266,8 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
 
     dispatcher.register('extension.agentStart', async ({ id, ...start }) => host.startAgent(id, start));
 
-    dispatcher.register('extension.agentStop', async (payload) => {
-        streams.get(payload.runId)?.kill();
+    dispatcher.register('extension.agentStop', async (payload, client) => {
+        streams.stop(client.id, payload.runId);
 
         return {};
     });

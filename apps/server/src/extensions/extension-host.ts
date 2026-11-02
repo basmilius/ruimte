@@ -439,10 +439,6 @@ export class ExtensionHost {
         return typeof answer === 'string' ? answer : JSON.stringify(answer);
     }
 
-    emitChunk(runId: string, text: string): void {
-        this.sinks.emit({ event: 'extension.agentChunk', payload: { runId, text } });
-    }
-
     /* What a client of an extension in development says. Nothing keeps it for one that is installed. */
     async appendDevLog(id: string, text: string): Promise<void> {
         const extension = await this.options.store.get(id);
