@@ -129,6 +129,35 @@ describe('ExtensionStore', () => {
         expect(await store.get(id)).toBeNull();
     });
 
+    test('keeps who owns a dev link over a restart of the machine, and unlinks only for exactly that run', async () => {
+        const home = join(root, 'owned-restart');
+        const first = join(root, 'projects', 'restart-first');
+        const second = join(root, 'projects', 'restart-second');
+        const id = 'acme.restarted';
+
+        for (const folder of [first, second]) {
+            mkdirSync(folder, { recursive: true });
+            writeFileSync(join(folder, 'manifest.json'), manifestOf(id));
+        }
+
+        const before = new ExtensionStore(home);
+
+        await before.link(first, 'run-a');
+        await before.link(second, 'run-b');
+
+        const after = new ExtensionStore(home);
+
+        expect(await after.unlink(id, 'run-a')).toBe(false);
+        expect((await after.get(id))?.devFolder).toBe(second);
+        expect(await after.unlink(id, 'run-b')).toBe(true);
+        expect(await after.get(id)).toBeNull();
+
+        await after.link(first);
+
+        expect(await new ExtensionStore(home).unlink(id, 'run-b')).toBe(false);
+        expect((await after.get(id))?.devFolder).toBe(first);
+    });
+
     test('a removal after an install takes it away, also while the install still unpacks', async () => {
         const store = new ExtensionStore(join(root, 'install-remove'));
         const [id] = IDS as [string];

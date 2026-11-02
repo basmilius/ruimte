@@ -43,6 +43,8 @@ const IDS_FILE = 'installed.json';
 const LINKS_FILE = 'dev-links.json';
 // Beside the links, so a Ruimte that only knows `dev-links.json` still reads that one as it is.
 const LINKS_OFF_FILE = 'dev-links-off.json';
+// The `extension dev` run that set each dev link, by its token, kept on disk so a restart of the machine keeps it too.
+const LINK_OWNERS_FILE = 'dev-link-owners.json';
 const IdsSchema = z.array(z.string());
 
 /*
@@ -96,8 +98,6 @@ async function writeJson(path: string, value: unknown): Promise<void> {
 export class ExtensionStore {
     private readonly root: string;
     private readonly revisions = new Map<string, number>();
-    // The `extension dev` run that set each dev link, by the token it gave, changed only with the link itself.
-    private readonly linkOwners = new Map<string, string>();
     private changes: Promise<unknown> = Promise.resolve();
 
     constructor(home: string) {
@@ -149,6 +149,16 @@ export class ExtensionStore {
         const ids = (await this.linksOff()).filter((entry) => entry !== id);
 
         await writeJson(join(this.root, LINKS_OFF_FILE), off ? [...ids, id] : ids);
+    }
+
+    private linkOwners(): Promise<Record<string, string>> {
+        return readJson(join(this.root, LINK_OWNERS_FILE), LinksSchema, {});
+    }
+
+    private async writeLinkOwner(id: string, owner: string | undefined): Promise<void> {
+        const { [id]: _previous, ...owners } = await this.linkOwners();
+
+        await writeJson(join(this.root, LINK_OWNERS_FILE), owner === undefined ? owners : { ...owners, [id]: owner });
     }
 
     /*
@@ -252,7 +262,7 @@ export class ExtensionStore {
                 join(this.root, IDS_FILE),
                 ids.filter((entry) => entry !== id)
             );
-            this.linkOwners.delete(id);
+            await this.writeLinkOwner(id, undefined);
             await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
@@ -290,13 +300,14 @@ export class ExtensionStore {
         }
 
         return this.change(async () => {
+            // The old owner goes before the folder changes and the new one comes after, so a write that fails between
+            // them leaves a link no run owns rather than one the previous run could still take away.
+            await this.writeLinkOwner(manifest.id, undefined);
             await writeJson(join(this.root, LINKS_FILE), { ...(await this.links()), [manifest.id]: folder });
             this.revisions.set(manifest.id, (this.revisions.get(manifest.id) ?? 0) + 1);
 
-            if (owner === undefined) {
-                this.linkOwners.delete(manifest.id);
-            } else {
-                this.linkOwners.set(manifest.id, owner);
+            if (owner !== undefined) {
+                await this.writeLinkOwner(manifest.id, owner);
             }
 
             return manifest;
@@ -304,14 +315,13 @@ export class ExtensionStore {
     }
 
     /*
-     * Whether it unlinked. With `owner`, only while the link is still that run's: a later `extension dev` of the same
-     * extension took it over. Checked in the same change as the write, so a link on its way lands before or after it.
+     * Whether it unlinked. With `owner`, only while the link is exactly that run's: a later `extension dev` of the same
+     * extension took it over, or no run owns it. Checked in the same change as the write, so a link on its way lands
+     * before or after it.
      */
     unlink(id: string, owner?: string): Promise<boolean> {
         return this.change(async () => {
-            const current = this.linkOwners.get(id);
-
-            if (owner !== undefined && current !== undefined && current !== owner) {
+            if (owner !== undefined && (await this.linkOwners())[id] !== owner) {
                 return false;
             }
 
@@ -319,7 +329,7 @@ export class ExtensionStore {
 
             await writeJson(join(this.root, LINKS_FILE), rest);
             await this.writeLinksOff(id, false);
-            this.linkOwners.delete(id);
+            await this.writeLinkOwner(id, undefined);
 
             return true;
         });
