@@ -1,7 +1,8 @@
 import { useChats } from '@adecore/agents-react/state';
 import { extensionAgentStatus, extensionChatOf, type ExtensionAgentStatus } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
 import { nodeInfoOf, type NodeInfo } from '@/extensions/slots';
-import { focusedCanvas } from '@/state/canvas';
+import { defaultCanvases, focusedCanvas, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { splitKey } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -38,10 +39,18 @@ function start(): void {
 
     started = true;
 
+    let following: StoreApi<CanvasState> | null = null;
     let stopCanvas = (): void => undefined;
     const followCanvas = (): void => {
+        const canvas = focusedCanvas();
+
+        if (canvas === following) {
+            return;
+        }
+
+        following = canvas;
         stopCanvas();
-        stopCanvas = focusedCanvas().subscribe((state, previous) => {
+        stopCanvas = canvas.subscribe((state, previous) => {
             if (state.selection !== previous.selection) {
                 emit('selection.changed', { nodes: state.selection.map(nodeInfoOf) });
             }
@@ -67,9 +76,13 @@ function start(): void {
     };
 
     followCanvas();
+    /*
+     * The registry, not `activeViewId`: the document names the new view before the registry moves its focus there,
+     * and a reload makes a new editor for a view whose id stays.
+     */
+    defaultCanvases.subscribeShape(followCanvas);
     useDocument.subscribe((state, previous) => {
         if (state.activeViewId !== previous.activeViewId) {
-            followCanvas();
             emit('view.changed', { viewId: state.activeViewId });
         }
     });
