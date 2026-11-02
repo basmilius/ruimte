@@ -38,10 +38,11 @@
 .prose ul,
 .prose ol,
 .prose table,
-.prose .code-block {
+.prose .code-block,
+.prose .note,
+.prose .slot-list {
     margin: 0 0 1.25rem;
 }
-
 .prose ul {
     padding-left: 1.25rem;
     list-style: disc;
@@ -76,6 +77,7 @@
     font-family: var(--font-mono);
     font-size: 0.85em;
     color: var(--text);
+    overflow-wrap: anywhere;
 }
 
 .prose .code-block pre {
@@ -96,10 +98,6 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
-}
-
-.prose :not(pre) > code {
-    overflow-wrap: anywhere;
 }
 
 .prose th {
@@ -125,8 +123,13 @@
     color: var(--text);
 }
 
+.prose .slot-list p {
+    margin: 0.25rem 0 0;
+}
+
 /* A name in the first column stays whole; the description beside it wraps instead. */
-.prose td:first-child code {
+.prose td:first-child code,
+.prose .slot-list dt code {
     overflow-wrap: normal;
     white-space: nowrap;
 }

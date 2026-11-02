@@ -5,7 +5,7 @@ import { parseDeclarations, slotsOf } from './reference.ts';
 import { referenceModules } from './reference-source.ts';
 
 describe('the reference', () => {
-    test('matches the types of @ruimte/extension; run `bun run --cwd apps/docs reference` after changing them', () => {
+    test('matches the types of @ruimte/extension; run `bun run --cwd apps/site reference` after changing them', () => {
         const committed = JSON.parse(readFileSync(join(import.meta.dir, '../../generated/reference.json'), 'utf8'));
 
         expect(committed).toEqual(referenceModules());

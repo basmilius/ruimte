@@ -1,11 +1,22 @@
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 
-const LANGUAGES = new Set(['ts', 'tsx', 'json', 'jsonc', 'css', 'bash', 'sh', 'text']);
+const THEME = 'github-dark-default';
+
+/* A fence's language, and the grammar that draws it. */
+const GRAMMARS: Readonly<Record<string, string>> = {
+    ts: 'typescript',
+    tsx: 'tsx',
+    json: 'json',
+    jsonc: 'jsonc',
+    css: 'css',
+    bash: 'shellscript',
+    sh: 'shellscript'
+};
 
 let highlighter: Promise<HighlighterCore> | null = null;
 
-/* The languages the documentation shows, and nothing else: every grammar and theme here lands in the site's worker. */
+/* Only the grammars in `GRAMMARS`: every grammar and theme here lands in the site's worker. */
 function highlighterOnce(): Promise<HighlighterCore> {
     highlighter ??= createHighlighterCore({
         themes: [import('shiki/themes/github-dark-default.mjs')],
@@ -23,12 +34,10 @@ function highlighterOnce(): Promise<HighlighterCore> {
     return highlighter;
 }
 
-const ALIASES: Readonly<Record<string, string>> = { ts: 'typescript', bash: 'shellscript', sh: 'shellscript' };
-
 /* Highlighted when the page is prerendered, so a page carries no highlighter. */
 export async function CodeBlock({ code, language = 'text' }: { readonly code: string; readonly language?: string }) {
-    const lang = LANGUAGES.has(language) ? (ALIASES[language] ?? language) : 'text';
-    const html = (await highlighterOnce()).codeToHtml(code.replace(/\n$/, ''), { lang, theme: 'github-dark-default' });
+    const lang = GRAMMARS[language] ?? 'text';
+    const html = (await highlighterOnce()).codeToHtml(code.replace(/\n$/, ''), { lang, theme: THEME });
 
     // oxlint-disable-next-line react/no-danger -- Shiki's own markup of code from this repository.
     return <div className="code-block" dangerouslySetInnerHTML={{ __html: html }} />;

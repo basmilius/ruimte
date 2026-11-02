@@ -10,6 +10,12 @@ export interface ReferenceModule {
     entries: ReferenceEntry[];
 }
 
+export interface SlotEntry {
+    name: string;
+    context: string;
+    doc: string | null;
+}
+
 const DECLARATION = /^(?:export\s+)?(?:declare\s+)?(function|const|interface|type)\s+(\w+)/;
 const REEXPORT = /^export\s+\*\s+from\s+'([^']+)'/;
 
@@ -113,14 +119,14 @@ export function parseDeclarations(source: string): ReferenceEntry[] {
 }
 
 /* What each slot tells, read off `SlotContexts`, so the table of slots follows the types. */
-export function slotsOf(entries: readonly ReferenceEntry[]): { name: string; context: string; doc: string | null }[] {
+export function slotsOf(entries: readonly ReferenceEntry[]): SlotEntry[] {
     const contexts = entries.find((entry) => entry.name === 'SlotContexts');
 
     if (contexts === undefined) {
         return [];
     }
 
-    const slots: { name: string; context: string; doc: string | null }[] = [];
+    const slots: SlotEntry[] = [];
     let doc: string | null = null;
 
     for (const line of contexts.code.split('\n').slice(1, -1)) {
