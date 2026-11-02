@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import {
@@ -44,6 +44,8 @@ function hostsOf(manifest: ExtensionManifest): string[] {
 export class ClientExtensions {
     private readonly root: string;
     private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest }>();
+    private indexChanges: Promise<unknown> = Promise.resolve();
+    private temporaryCounter = 0;
 
     constructor(root: string) {
         this.root = root;
@@ -57,13 +59,31 @@ export class ClientExtensions {
         }
     }
 
-    private async writeIndex(entries: IndexEntry[]): Promise<void> {
-        await mkdir(this.root, { recursive: true });
+    /* One read, change and write at a time, so two switches flipped together both land. */
+    private changeIndex<T>(change: (entries: IndexEntry[]) => { entries: IndexEntry[]; result: T }): Promise<T> {
+        const run = async (): Promise<T> => {
+            const { entries, result } = change(await this.index());
 
-        const temporary = join(this.root, 'index.json.tmp');
+            await mkdir(this.root, { recursive: true });
 
-        await writeFile(temporary, JSON.stringify(entries));
-        await rename(temporary, join(this.root, 'index.json'));
+            const temporary = join(this.root, `index.json.${process.pid}-${this.temporaryCounter++}.tmp`);
+
+            try {
+                await writeFile(temporary, JSON.stringify(entries));
+                await rename(temporary, join(this.root, 'index.json'));
+            } catch (e) {
+                await rm(temporary, { force: true });
+                throw e;
+            }
+
+            return result;
+        };
+
+        const next = this.indexChanges.then(run, run);
+
+        this.indexChanges = next.catch(() => undefined);
+
+        return next;
     }
 
     private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
@@ -128,21 +148,22 @@ export class ClientExtensions {
             await writeFile(join(folder, path), Buffer.from(parsed.files[path] as string, 'base64'));
         }
 
-        const entries = await this.index();
-        const entry = { id: manifest.id, hash, enabled: entries.find((each) => each.id === manifest.id)?.enabled ?? true };
+        const entry = await this.changeIndex((entries) => {
+            const added = { id: manifest.id, hash, enabled: entries.find((each) => each.id === manifest.id)?.enabled ?? true };
 
-        await this.writeIndex([...entries.filter((each) => each.id !== manifest.id), entry]);
+            return { entries: [...entries.filter((each) => each.id !== manifest.id), added], result: added };
+        });
 
         return this.installedOf(entry, manifest);
     }
 
     async remove(id: string): Promise<void> {
-        await this.writeIndex((await this.index()).filter((entry) => entry.id !== id));
+        await this.changeIndex((entries) => ({ entries: entries.filter((entry) => entry.id !== id), result: undefined }));
         await rm(join(this.root, id), { recursive: true, force: true });
     }
 
     async setEnabled(id: string, enabled: boolean): Promise<void> {
-        await this.writeIndex((await this.index()).map((entry) => (entry.id === id ? { ...entry, enabled } : entry)));
+        await this.changeIndex((entries) => ({ entries: entries.map((entry) => (entry.id === id ? { ...entry, enabled } : entry)), result: undefined }));
     }
 
     async link(folder: string, revision: number): Promise<void> {
@@ -198,6 +219,13 @@ export class ClientExtensions {
         }
 
         try {
+            const [real, folder] = await Promise.all([realpath(path), realpath(found.folder)]);
+
+            // A symlink in a dev folder would otherwise hand a sandboxed frame any file this person can read.
+            if (!real.startsWith(`${folder}${sep}`)) {
+                return new Response('Not found', { status: 404 });
+            }
+
             const extension = extname(path);
             const headers: Record<string, string> = {
                 'content-type': MIME[extension] ?? 'application/octet-stream',
@@ -210,7 +238,7 @@ export class ClientExtensions {
                 headers['content-security-policy'] = extensionFrameCsp(origin, hostsOf(found.manifest));
             }
 
-            return new Response(await readFile(path), { headers });
+            return new Response(await readFile(real), { headers });
         } catch {
             return new Response('Not found', { status: 404 });
         }
