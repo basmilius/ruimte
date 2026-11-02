@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
     return (
-        <html lang="en" className={`${geist.variable} ${jetbrains.variable} ${kalam.variable}`}>
+        <html lang="en" data-theme="dark" className={`${geist.variable} ${jetbrains.variable} ${kalam.variable}`}>
             <body>
                 <MotionProvider>{children}</MotionProvider>
             </body>
