@@ -256,3 +256,52 @@ describe('ExtensionHost under forced orders', () => {
         expect(host.agentTools().map((tool) => tool.id)).toEqual(['acme.one/fact']);
     });
 });
+
+describe('ExtensionHost counting crashes', () => {
+    /* A call that the process takes in and dies on, after it loaded fine. */
+    async function crashOnCall(gated: GatedHost): Promise<string | undefined> {
+        const call = outcome(gated.host.call('acme.one', 'add', []));
+
+        await gated.gates.drain((hold) => hold.label === 'process.answer');
+        const [child] = gated.live('acme.one');
+
+        if (child !== undefined) {
+            child.exited = true;
+            child.emit('exit', 1);
+        }
+
+        return (await call).error;
+    }
+
+    async function answeredCall(gated: GatedHost): Promise<unknown> {
+        const call = outcome(gated.host.call('acme.one', 'add', []));
+
+        await gated.gates.drain();
+
+        return (await call).value;
+    }
+
+    test('stays down after three crashes in a row, also when each start loaded fine', async () => {
+        const gated = gatedHost();
+
+        expect([await crashOnCall(gated), await crashOnCall(gated), await crashOnCall(gated)]).toEqual([
+            'The extension stopped',
+            'The extension stopped',
+            'The extension stopped'
+        ]);
+        expect(await crashOnCall(gated)).toContain('crashed 3 times in a row');
+        expect(gated.children).toHaveLength(3);
+    });
+
+    test('starts counting again after a call it answered', async () => {
+        const gated = gatedHost();
+
+        await crashOnCall(gated);
+        await crashOnCall(gated);
+        expect(await answeredCall(gated)).toBeNumber();
+        await crashOnCall(gated);
+        await crashOnCall(gated);
+
+        expect(await answeredCall(gated)).toBeNumber();
+    });
+});

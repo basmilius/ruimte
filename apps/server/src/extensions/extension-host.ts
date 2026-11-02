@@ -111,7 +111,7 @@ const NODE_FILES: ExtensionHostFiles = {
 /*
  * Runs each extension's `server/` as a process of its own, as the person who runs the machine: a crash
  * stays out of the daemon and its sessions. It starts on the first call, or with the machine for
- * `autostart`. After three crashes in a row it stays down until a person turns it on again.
+ * `autostart`. After three crashes in a row, with no call answered between them, it stays down until a person turns it on again.
  *
  * Stopping one is the host's to do, unlike a person's own processes: it started this one and nothing
  * else depends on it.
@@ -658,7 +658,7 @@ export class ExtensionHost {
                 this.tools.set(`${id}/${tool.name}`, { description: tool.description, parameters: tool.parameters });
             }
         } else if (message.type === 'ready') {
-            this.crashes.delete(id);
+            // Loading proves nothing: one that loads and dies on every call would never count three in a row.
             markReady();
         } else if (message.type === 'subscribe' && message.name !== undefined) {
             this.followEvent(id, running, message.name);
@@ -672,6 +672,7 @@ export class ExtensionHost {
                 clearTimeout(pending.timer);
 
                 if (message.error === undefined) {
+                    this.crashes.delete(id);
                     pending.resolve(message.result);
                 } else {
                     pending.reject(new ExtensionRefusal(message.code === 'not-found' ? 'not-found' : 'failed', message.error));
