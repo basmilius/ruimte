@@ -70,6 +70,23 @@ describe('the client API', () => {
         });
     });
 
+    test('has the machine hold a read to the real project folder, so a symlink in it cannot lead out', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'files.read': 'Reads notes' });
+
+        machine.answer('fs.read', () => {
+            throw new TransportError('outside-project', 'Outside');
+        });
+        machine.answer('fs.list', () => ({ path: '/work/a/src', entries: [], truncated: false }));
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        expect(await api.files.readText('link.md')).toMatchObject({ ok: false, error: { code: 'outside-project' } });
+        expect(await api.files.list('src')).toMatchObject({ ok: true });
+        expect(machine.requests('fs.read')).toEqual([{ path: '/work/a/link.md', within: '/work/a' }]);
+        expect(machine.requests('fs.list')).toEqual([{ path: '/work/a/src', within: '/work/a' }]);
+    });
+
     test('answers permission-denied for a call its manifest does not ask for, before anything else', async () => {
         const { api } = loaded();
 

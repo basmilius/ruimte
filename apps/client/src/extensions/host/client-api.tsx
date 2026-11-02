@@ -233,21 +233,30 @@ function currentProjectId(): string {
     return projectId;
 }
 
-/* A file request stays inside the project folder, whatever an extension asks for. */
-function inProject(path: string): string {
+function projectFolder(): string {
     const folder = useProject.getState().current?.folder;
 
     if (folder === undefined) {
         throw new Refused('no-project', 'This needs a project with a folder');
     }
 
-    const full = extensionProjectPath(folder, path);
+    return folder;
+}
+
+/* A file request stays inside the project folder, whatever an extension asks for. */
+function inProject(path: string): string {
+    const full = extensionProjectPath(projectFolder(), path);
 
     if (full === null) {
         throw new Refused('outside-project', `${path} is outside the project folder`);
     }
 
     return full;
+}
+
+/* The same for a read, where the machine also holds the real path, past any symlink, to the real project folder. */
+function readInProject(path: string): { path: string; within: string } {
+    return { path: inProject(path), within: projectFolder() };
 }
 
 /* The canvas a new node goes on. A view that is no canvas reads a blank store without a view, which saves nothing. */
@@ -1011,7 +1020,7 @@ export function clientApiFor(extension: LoadedExtension) {
         files: {
             readText: (path: string) =>
                 settle('files.readText', async () => {
-                    const answer = await activeTransport.request('fs.read', { path: inProject(path) });
+                    const answer = await activeTransport.request('fs.read', readInProject(path));
 
                     if (answer.kind !== 'text') {
                         throw new Refused('refused', `${path} is not a text file`);
@@ -1032,7 +1041,7 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             list: (folder: string) =>
                 settle('files.list', async () => {
-                    const { entries } = await activeTransport.request('fs.list', { path: inProject(folder) });
+                    const { entries } = await activeTransport.request('fs.list', readInProject(folder));
 
                     return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
                 }),

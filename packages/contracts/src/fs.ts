@@ -144,7 +144,9 @@ export type FsEntry = z.infer<typeof FsEntrySchema>;
 export const FsListPayloadSchema = z.object({
     path: z.string().min(1),
     depth: z.number().int().positive().max(FS_LIST_MAX_DEPTH).optional(),
-    hidden: z.boolean().optional()
+    hidden: z.boolean().optional(),
+    // A folder the real path must stay in, so a symlink inside it cannot lead out (`outside-project`).
+    within: z.string().min(1).optional()
 });
 export type FsListPayload = z.infer<typeof FsListPayloadSchema>;
 
@@ -176,7 +178,9 @@ export type FsChangedEvent = z.infer<typeof FsChangedEventSchema>;
 export const FS_READ_MAX_TEXT_BYTES = 2 * 1024 * 1024;
 
 export const FsReadPayloadSchema = z.object({
-    path: z.string().min(1)
+    path: z.string().min(1),
+    // As for `fs.list`.
+    within: z.string().min(1).optional()
 });
 export type FsReadPayload = z.infer<typeof FsReadPayloadSchema>;
 

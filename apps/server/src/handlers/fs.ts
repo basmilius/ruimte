@@ -15,6 +15,7 @@ import { grepFiles } from '../fs/grep.ts';
 import { listSearchableFiles, searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
 import { TextUploads } from '../fs/text-uploads.ts';
+import { refuseOutside } from '../fs/within.ts';
 import { writeTextFile, type WriteBoundary } from '../fs/write.ts';
 
 /* How the host writes and makes the files a server's edit touches, inside the boundary of the client that asked. */
@@ -72,10 +73,14 @@ export function registerFsHandlers(
         });
     });
 
-    dispatcher.register('fs.list', (payload) => listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden }));
+    dispatcher.register('fs.list', async (payload) => {
+        await refuseOutside(payload.path, payload.within);
+        return listDirectory(payload.path, { depth: payload.depth, hidden: payload.hidden });
+    });
 
     dispatcher.register('fs.read', async (payload) => {
         await machineHome.refuse(payload.path);
+        await refuseOutside(payload.path, payload.within);
         return readFile(payload.path);
     });
 

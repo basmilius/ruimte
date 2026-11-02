@@ -56251,6 +56251,10 @@
       },
       "hidden": {
         "type": "boolean"
+      },
+      "within": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
@@ -56326,6 +56330,10 @@
     "type": "object",
     "properties": {
       "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "within": {
         "type": "string",
         "minLength": 1
       }

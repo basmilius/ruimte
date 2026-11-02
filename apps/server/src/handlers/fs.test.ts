@@ -118,6 +118,32 @@ describe('the machine home', () => {
     });
 });
 
+describe('a read within a folder', () => {
+    const outside = { ok: false, error: { code: 'outside-project' } };
+    let project: string;
+
+    beforeEach(async () => {
+        project = join(root, 'project');
+        await mkdir(join(root, 'private'), { recursive: true });
+        await mkdir(project);
+        await writeFile(join(root, 'private', 'secret.txt'), 'secret');
+        await writeFile(join(project, 'notes.md'), '# Notes');
+        await symlink(join(root, 'private', 'secret.txt'), join(project, 'secret.txt'));
+        await symlink(join(root, 'private'), join(project, 'private'));
+    });
+
+    test('follows no symlink out of the folder', async () => {
+        expect(await request('fs.read', { path: join(project, 'secret.txt'), within: project })).toMatchObject(outside);
+        expect(await request('fs.list', { path: join(project, 'private'), within: project })).toMatchObject(outside);
+    });
+
+    test('reads what is really inside it, and leaves a read without one as it was', async () => {
+        expect(await request('fs.read', { path: join(project, 'notes.md'), within: project })).toMatchObject({ ok: true, result: { text: '# Notes' } });
+        expect(await request('fs.list', { path: project, within: project })).toMatchObject({ ok: true });
+        expect(await request('fs.read', { path: join(project, 'secret.txt') })).toMatchObject({ ok: true, result: { text: 'secret' } });
+    });
+});
+
 describe('files that go past the language servers', () => {
     function withLanguage(): { calls: string[]; edits: boolean[] } {
         const calls: string[] = [];
