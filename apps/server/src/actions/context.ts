@@ -20,7 +20,8 @@ export interface ServerActionContext {
     /*
      * Throws once whoever asked may no longer, such as an extension turned off since. Set for an extension's chat start,
      * which calls it after every await of its own up to the agent's start. A refusal after the node is written takes the
-     * node away again, and its lineage and held prompt with it.
+     * node away again, and its lineage and held prompt with it. A node a person changed since, or one whose removal fails,
+     * stays, and the start fails naming it.
      */
     stillAllowed?: () => void;
 }

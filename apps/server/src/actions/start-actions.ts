@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
@@ -22,7 +23,18 @@ import { groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from '.
 import { checkCwd } from '../canvas/project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../canvas/tasks.ts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
-import { NEW_NODE, OPENING_OFF_CANVAS, VerbRefusal, canvasFor, canvasLines, field, newNode, type VerbCall, type WorktreeWant } from '../canvas/verb.ts';
+import {
+    NEW_NODE,
+    OPENING_OFF_CANVAS,
+    VerbRefusal,
+    canvasFor,
+    canvasLines,
+    field,
+    newNode,
+    type ProjectHost,
+    type VerbCall,
+    type WorktreeWant
+} from '../canvas/verb.ts';
 import { reachedPlace } from '../canvas/reach.ts';
 import { KeyedQueue } from '../keyed-queue.ts';
 import { MAX_PROJECT_VIEWS } from '../canvas/views.ts';
@@ -167,6 +179,29 @@ function withoutStarted(content: ProjectContent, id: string): ProjectContent {
     return { ...content, views };
 }
 
+/* Whether the project still holds `written` with every field the start set, so a person's change since is never what goes. */
+function stillWritten(content: ProjectContent, written: ProjectNode | ProjectChatView): boolean {
+    const found = content.views.flatMap((view): readonly object[] =>
+        view.id === written.id ? [view] : isCanvasView(view) ? view.nodes.filter((node) => node.id === written.id) : []
+    );
+    return found.length === 1 && Object.entries(written).every(([key, value]) => isDeepStrictEqual((found[0] as Record<string, unknown>)[key], value));
+}
+
+/*
+ * Takes away what a refused start wrote, under the project's lock and only while it is still exactly that. False when it
+ * stays, in which case its lineage and held prompt go once the node does (`outbox/wiring.ts`).
+ */
+async function withdrawStarted(projects: ProjectHost, projectId: string, written: ProjectNode | ProjectChatView): Promise<boolean> {
+    return projects
+        .mutate(projectId, (content) =>
+            stillWritten(content, written) ? { content: withoutStarted(content, written.id), result: true } : { content: null, result: false }
+        )
+        .catch((failure: unknown) => {
+            console.warn(`The agent node ${written.id} stays without its agent: ${errorText(failure)}`);
+            return false;
+        });
+}
+
 /*
  * The worktrees a start asks for. One on another machine is made there from this checkout when its
  * task starts; one here is made now, before the lock, so a slow repository holds up no save.
@@ -276,8 +311,8 @@ const startAgentNow: StartHandler = async (input, call) => {
         : null;
     const source = worktrees?.source;
     const cwd = worktrees?.paths[0] ?? checkedCwd;
-    // The node a refusal of `stillAllowed` found already on disk, which is taken away again before the refusal answers.
-    let withdrawn: string | null = null;
+    // What a refusal of `stillAllowed` found already on disk, which is taken away again before the refusal answers.
+    let withdrawn: ProjectNode | ProjectChatView | null = null;
 
     return host.projects
         .mutate<{ output: ActionOutput<'agent.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
@@ -376,12 +411,13 @@ const startAgentNow: StartHandler = async (input, call) => {
                 taskId: null
             };
 
+            const chatView = loose ? looseChatView(node, caller.caller) : null;
             // Off a canvas the start runs before the write, so a refusal there leaves nothing in the project to take away.
             const stillAllowed = (): void => {
                 try {
                     context.stillAllowed?.();
                 } catch (e) {
-                    withdrawn = hidden ? null : id;
+                    withdrawn = hidden ? null : (chatView ?? node);
                     throw e;
                 }
             };
@@ -464,8 +500,8 @@ const startAgentNow: StartHandler = async (input, call) => {
                               view.id === canvas.id ? { ...canvas, nodes, edges: [...canvas.edges, ...(edge ? [edge] : []), ...reading] } : view
                           )
                       }
-                    : loose
-                      ? { ...content, views: withView(content.views, looseChatView(node, caller.caller)) }
+                    : chatView
+                      ? { ...content, views: withView(content.views, chatView) }
                       : null,
                 ...(remote === null ? {} : { bindMachines: new Map([[id, remote.machineId]]) }),
                 // Started is not done: the outbox starts the agent, and its task or its first turn says how it went.
@@ -473,14 +509,16 @@ const startAgentNow: StartHandler = async (input, call) => {
             };
         })
         .catch(async (e: unknown) => {
-            // Outside the lock `landed` ran under. A node whose removal fails stays without an agent, and the refusal still answers.
-            const id = withdrawn;
-            if (id !== null) {
-                await host.projects
-                    .mutate(place.projectId, (content) => ({ content: withoutStarted(content, id), result: undefined }))
-                    .catch((failure: unknown) => console.warn(`The agent node ${id} stays without its agent: ${errorText(failure)}`));
-            }
+            // Outside the lock `landed` ran under, so a person's change may have landed in between.
+            const written = withdrawn;
+            const stays = written !== null && !(await withdrawStarted(host.projects, place.projectId, written)) ? written.id : null;
             await worktrees?.undo();
+            if (stays !== null) {
+                throw new VerbRefusal(
+                    'failed',
+                    `The start was refused after its node ${stays} was written, and ${stays} stays in the project without its agent`
+                );
+            }
             throw e;
         });
 };

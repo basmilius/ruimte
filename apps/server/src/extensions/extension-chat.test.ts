@@ -177,6 +177,73 @@ describe('an extension starts a chat', () => {
             expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toEqual([]);
         }
     );
+
+    test.each([
+        [
+            'its removal fails',
+            'chat',
+            async (): Promise<void> => {
+                throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
+            }
+        ],
+        [
+            'a person replaced it with a note first',
+            'note',
+            async (nodeId: string): Promise<void> => {
+                await daemon.host.projects.mutate(projectId, (content) => ({
+                    content: {
+                        ...content,
+                        views: content.views.map((view) =>
+                            view.kind === 'canvas'
+                                ? { ...view, nodes: [{ id: nodeId, kind: 'note', title: 'Mine', x: 0, y: 0, w: 320, h: 240 }], edges: [] }
+                                : view
+                        )
+                    },
+                    result: undefined
+                }));
+            }
+        ]
+    ] as const)('fails naming the node it leaves once it is turned off after the write and %s', async (_, kind, beforeRollback) => {
+        let reached = (): void => undefined;
+        let release = (): void => undefined;
+        const waiting = new Promise<void>((resolve) => (reached = resolve));
+        const held = new Promise<void>((resolve) => (release = resolve));
+        let nodeId = '';
+        const { projects, lineage } = daemon.host;
+        const gated: CanvasHost = {
+            ...daemon.host,
+            // Once the node is written, the next change of the project is the one that takes it away again.
+            projects: withMethod(projects, 'mutate', async (id: string, apply: Parameters<CanvasHost['projects']['mutate']>[1]) => {
+                if (nodeId !== '') {
+                    await beforeRollback(nodeId);
+                }
+
+                return projects.mutate(id, apply);
+            }),
+            lineage: withMethod(lineage, 'put', async (record: Parameters<CanvasHost['lineage']['put']>[0]) => {
+                nodeId = record.nodeId;
+                reached();
+                await held;
+                await lineage.put(record);
+            })
+        };
+        const extensions = await extensionOn(gated);
+        const starting = extensions.startAgent(ID, { projectId, viewId: 'main', prompt: 'Hello' });
+
+        await waiting;
+        await extensions.setEnabled(ID, false);
+        release();
+
+        const failure = await starting.then(
+            () => null,
+            (e: unknown) => e
+        );
+        const canvas = (await store.read(projectId)).views.find((view) => view.id === 'main');
+
+        expect(failure).toMatchObject({ code: 'failed', message: expect.stringContaining(nodeId) });
+        expect(canvas?.kind === 'canvas' ? canvas.nodes.map((node) => [node.id, node.kind]) : []).toEqual([[nodeId, kind]]);
+        expect(daemon.enqueued.filter((work) => work.kind === 'start-agent')).toEqual([]);
+    });
 });
 
 /* `target` with one method in place of its own, the rest of it as it is. */
