@@ -6,6 +6,7 @@ import { ContextMenu } from '@adecore/ui';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { NodeHeaderSlot, SelectionBar, SlotMenuItems, SlotRow } from '@/extensions/SlotSurfaces';
 import { focusedCanvas } from '@/state/canvas';
+import type { CanvasNode } from '@/state/canvas-model';
 import { useToasts } from '@/state/toasts';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
@@ -72,6 +73,43 @@ describe('a slot', () => {
         expect(mounted.host.textContent).not.toContain('Broken');
     });
 
+    test('a menu whose items throw costs only itself', async () => {
+        const reported: string[] = [];
+
+        add({ slots: { viewToolbar: true } });
+        add({
+            id: 'a/m',
+            kind: 'menu',
+            title: 'Broken menu',
+            slots: { viewToolbar: true },
+            items: () => {
+                throw new Error('No items');
+            },
+            onFailure: (text) => reported.push(text)
+        });
+        mounted = mount();
+        await mounted.render(<SlotRow place="viewToolbar" context={{}} words />);
+
+        expect(mounted.host.textContent).toContain('Summarize');
+        expect(reported).toContain('No items');
+    });
+
+    test('reads a node again when it changes, also where the host drew it a render ago', async () => {
+        add({ slots: { nodeHeader: (context) => ({ title: `About ${(context as { node: { title: string } }).node.title}` }) } });
+        focusedCanvas().setState({ nodes: { one: { id: 'one', kind: 'note', title: 'First', x: 0, y: 0, w: 100, h: 100 } as CanvasNode } });
+        mounted = mount();
+        await mounted.render(<NodeHeaderSlot nodeId="one" />);
+
+        expect(mounted.host.querySelector('button[aria-label="About First"]')).not.toBeNull();
+
+        await act(async () =>
+            focusedCanvas().setState({ nodes: { one: { id: 'one', kind: 'note', title: 'Second', x: 0, y: 0, w: 100, h: 100 } as CanvasNode } })
+        );
+
+        expect(mounted.host.querySelector('button[aria-label="About Second"]')).not.toBeNull();
+        focusedCanvas().setState({ nodes: {} });
+    });
+
     test('tells a person when an action fails', async () => {
         const reported: string[] = [];
 
@@ -117,7 +155,7 @@ describe('every slot', () => {
 
         await act(async () => useSlotOutlines.setState({ on: true }));
 
-        expect(mounted.host.querySelector('[data-slot-outline="emptyCanvas"]')?.getAttribute('title')).toContain('at');
+        expect(mounted.host.querySelector('[data-slot-outline="emptyCanvas"]')).not.toBeNull();
 
         useSlotOutlines.setState({ on: false });
     });

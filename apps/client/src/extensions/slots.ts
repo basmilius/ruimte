@@ -1,13 +1,14 @@
-import { useChats } from '@adecore/agents-react/state';
+import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import type { LucideIcon } from 'lucide-react';
-import type { ProjectNode } from '@ruimte/contracts';
+import type { ProjectNode, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
-import { canvasOfNode, focusedCanvas } from '@/state/canvas';
+import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
+import { nodeStatus, nodeWaitAsk, useSessions, type SessionsByKey } from '@/state/sessions';
+import { useTheme } from '@/state/theme';
 
 export interface AgentInfo {
     provider: string;
@@ -41,14 +42,23 @@ export interface BaseContext {
     theme: 'light' | 'dark';
 }
 
-function agentOf(node: ProjectNode, group: ProjectNode | undefined): AgentInfo | undefined {
+/* What a node's info is read from. In a render each comes from a hook, so a compiled component never keeps an old one. */
+export interface NodeSources {
+    canvas: Pick<CanvasState, 'nodes' | 'edges' | 'viewId'>;
+    sessions: SessionsByKey;
+    chats: ChatStatuses;
+    endpointId: string;
+}
+
+// Every info handed out, so a slot can tell one in its context and read it again.
+const issued = new WeakSet<object>();
+
+function agentOf(node: ProjectNode, group: ProjectNode | undefined, sources: NodeSources): AgentInfo | undefined {
     if (node.kind !== 'terminal' && node.kind !== 'chat' && node.kind !== 'design') {
         return undefined;
     }
 
-    const endpointId = currentEndpointId();
-    const sessions = useSessions.getState().byKey;
-    const chats = useChats.getState().byKey;
+    const { sessions, chats, endpointId } = sources;
     const status = nodeStatus(node, sessions, chats, endpointId);
     const needsYou = nodeWaitAsk(node, sessions, chats, endpointId) !== null;
 
@@ -63,9 +73,41 @@ function agentOf(node: ProjectNode, group: ProjectNode | undefined): AgentInfo |
 }
 
 /* A readable copy, so an extension never holds the store and the store stays ours to change. */
+export function nodeInfoIn(sources: NodeSources, id: string): NodeInfo {
+    const info = readNodeInfo(sources, id);
+
+    issued.add(info);
+
+    return info;
+}
+
+/* The same, read from the stores as they are now, for code outside a render. */
 export function nodeInfoOf(id: string): NodeInfo {
-    const store = canvasOfNode(id) ?? focusedCanvas();
-    const canvas = store.getState();
+    const canvas = (canvasOfNode(id) ?? focusedCanvas()).getState();
+
+    return nodeInfoIn({ canvas, sessions: useSessions.getState().byKey, chats: useChats.getState().statusByKey, endpointId: currentEndpointId() }, id);
+}
+
+/* `null` while `active` is false, so a host with nothing to show subscribes to nothing that moves. */
+export function useNodeSources(): NodeSources;
+export function useNodeSources(active: boolean): NodeSources | null;
+export function useNodeSources(active = true): NodeSources | null {
+    const nodes = useCanvas((state) => (active ? state.nodes : null));
+    const edges = useCanvas((state) => (active ? state.edges : null));
+    const viewId = useCanvas((state) => state.viewId);
+    const sessions = useSessions(useShallow((state) => (active ? state.byKey : null)));
+    const chats = useChats(useShallow((state) => (active ? state.statusByKey : null)));
+    const endpointId = useEndpointId();
+
+    if (nodes === null || edges === null || sessions === null || chats === null) {
+        return null;
+    }
+
+    return { canvas: { nodes, edges, viewId }, sessions, chats, endpointId };
+}
+
+function readNodeInfo(sources: NodeSources, id: string): NodeInfo {
+    const { canvas } = sources;
     const node = canvas.nodes[id];
 
     if (node === undefined) {
@@ -84,7 +126,7 @@ export function nodeInfoOf(id: string): NodeInfo {
 
     const group = Object.values(canvas.nodes).find((each) => each.kind === 'group' && each.memberIds?.includes(id));
     const raw = node.raw as { kind?: unknown; extension?: unknown; type?: unknown } | undefined;
-    const agent = agentOf(node, group);
+    const agent = agentOf(node, group, sources);
 
     return {
         id,
@@ -103,18 +145,58 @@ export function nodeInfoOf(id: string): NodeInfo {
     };
 }
 
-export function baseContext(): BaseContext {
-    const { current } = useProject.getState();
-    const { views, activeViewId } = useDocument.getState();
+function contextOf(
+    current: ProjectSummary | null,
+    views: readonly ProjectView[],
+    activeViewId: string | null,
+    endpointId: string,
+    theme: BaseContext['theme']
+): BaseContext {
     const view = views.find((each) => each.id === activeViewId);
 
     return {
         project: { id: current?.projectId ?? '', name: current?.name ?? '', folder: current?.folder ?? null },
         view: view === undefined ? null : { id: view.id, kind: view.kind, name: view.name ?? '' },
-        machine: { id: currentEndpointId() },
-        // Read off the page, since the theme's store takes a document just to load.
-        theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+        machine: { id: endpointId },
+        theme
     };
+}
+
+/* For code outside a render, such as a shortcut or a command. */
+export function baseContext(): BaseContext {
+    const { views, activeViewId } = useDocument.getState();
+
+    return contextOf(useProject.getState().current, views, activeViewId, currentEndpointId(), useTheme.getState().resolved);
+}
+
+export function useBaseContext(): BaseContext {
+    const current = useProject((state) => state.current);
+    const views = useDocument((state) => state.views);
+    const activeViewId = useDocument((state) => state.activeViewId);
+    const endpointId = useEndpointId();
+    const theme = useTheme((state) => state.resolved);
+
+    return contextOf(current, views, activeViewId, endpointId, theme);
+}
+
+/* A node's info in a context came from whoever drew the host, perhaps a render ago; this reads it again. */
+function withCurrentNodes(context: object, sources: NodeSources): object {
+    const current = (value: unknown): unknown => {
+        if (Array.isArray(value)) {
+            return value.map(current);
+        }
+
+        if (typeof value !== 'object' || value === null || !issued.has(value)) {
+            return value;
+        }
+
+        const { id } = value as NodeInfo;
+
+        // A node on another canvas than this host's, such as a row in the sidebar.
+        return sources.canvas.nodes[id] === undefined ? nodeInfoOf(id) : nodeInfoIn(sources, id);
+    };
+
+    return Object.fromEntries(Object.entries(context).map(([key, value]) => [key, current(value)]));
 }
 
 export interface SlotAnswer {
@@ -182,16 +264,14 @@ export function resolveSlot(entries: readonly SlotEntry[], place: SlotName, cont
 export function useSlot(place: SlotName, context: object): { resolved: ResolvedEntry[]; full: object } {
     const entries = useContributions((state) => state.slotEntries);
     const here = entries.filter((entry) => entry.slots[place] !== undefined);
+    const sources = useNodeSources(here.length > 0);
+    const base = useBaseContext();
 
-    useSessions(useShallow((state) => (here.length === 0 ? null : state.byKey)));
-    useChats(useShallow((state) => (here.length === 0 ? null : state.byKey)));
-    useEndpointId();
-
-    if (here.length === 0) {
+    if (sources === null) {
         return { resolved: [], full: context };
     }
 
-    const full = { ...baseContext(), ...context };
+    const full = { ...base, ...withCurrentNodes(context, sources) };
 
     return { resolved: resolveSlot(here, place, full), full };
 }

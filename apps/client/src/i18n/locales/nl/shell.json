@@ -1379,6 +1379,13 @@
     },
     "extensions": {
         "failed": "Deze extensie kon niet worden getoond",
-        "nodeNeeds": "Hiervoor is een extensie nodig"
+        "nodeNeeds": "Hiervoor is een extensie nodig",
+        "removeNodes": {
+            "title_one": "{{count}} node verwijderen?",
+            "title_other": "{{count}} nodes verwijderen?",
+            "body_one": "{{extension}} vraagt om hem te verwijderen.",
+            "body_other": "{{extension}} vraagt om ze te verwijderen."
+        },
+        "stopRun": "{{title}} stoppen"
     }
 }

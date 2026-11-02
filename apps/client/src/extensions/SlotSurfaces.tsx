@@ -1,7 +1,7 @@
 import { createElement, type ReactNode } from 'react';
 import { Blocks, Package, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, ContextMenu, Icon, IconButton, Menu, Pill, Spinner } from '@adecore/ui';
+import { Button, ContextMenu, Icon, IconButton, Menu, Pill, Spinner, Tooltip } from '@adecore/ui';
 import { isRunning, nodeIdsOf, runAction, useActionRuns } from '@/extensions/action-runs';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { useContributions, type SlotEntry, type SlotMenuItem, type SlotName } from '@/extensions/registry';
@@ -14,8 +14,19 @@ function useEntryRunning(entry: SlotEntry, context: object): boolean {
     return useActionRuns((state) => isRunning(state.runs, entry.id, nodeIdsOf(context)));
 }
 
+/* Asked in render, so a throw is caught here as `resolveSlot` catches one: it costs only this menu's items. */
 function menuItemsOf(entry: SlotEntry, context: object): readonly SlotMenuItem[] {
-    return typeof entry.items === 'function' ? entry.items(context) : (entry.items ?? []);
+    if (typeof entry.items !== 'function') {
+        return entry.items ?? [];
+    }
+
+    try {
+        return entry.items(context);
+    } catch (e) {
+        entry.onFailure?.(e instanceof Error ? e.message : String(e));
+
+        return [];
+    }
 }
 
 /* An item that names an action which is gone, or one a menu's own context has no use for, is left out. */
@@ -121,13 +132,14 @@ function RowEntry({ resolved, context, slot, words }: { resolved: ResolvedEntry;
 
 function SlotLabel({ place, context }: { place: SlotName; context: object }) {
     return (
-        <span
-            data-slot-outline={place}
-            title={Object.keys(context).join(', ')}
-            className="inline-flex shrink-0 items-center rounded-sm border border-dashed border-accent px-1 text-xs text-accent"
-        >
-            {place}
-        </span>
+        <Tooltip label={Object.keys(context).join(', ')}>
+            <span
+                data-slot-outline={place}
+                className="inline-flex shrink-0 items-center rounded-sm border border-dashed border-accent px-1 text-xs text-accent"
+            >
+                {place}
+            </span>
+        </Tooltip>
     );
 }
 
@@ -255,6 +267,7 @@ export function SelectionBar() {
 
 /* The sign that an extension works on this node, which also stops it. */
 function RunSign({ nodeId }: { nodeId: string }) {
+    const { t } = useTranslation('shell');
     const run = useActionRuns((state) => state.runs.find((each) => each.nodeIds.includes(nodeId)));
 
     if (run === undefined) {
@@ -267,7 +280,7 @@ function RunSign({ nodeId }: { nodeId: string }) {
             <IconButton
                 icon={Square}
                 size="sm"
-                label={`Stop ${run.title}`}
+                label={t('extensions.stopRun', { title: run.title })}
                 className="absolute inset-0 opacity-0 group-hover/run:opacity-100"
                 onClick={() => run.controller.abort()}
             />

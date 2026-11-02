@@ -1379,6 +1379,13 @@
     },
     "extensions": {
         "failed": "This extension could not be shown",
-        "nodeNeeds": "This needs an extension"
+        "nodeNeeds": "This needs an extension",
+        "removeNodes": {
+            "title_one": "Remove {{count}} node?",
+            "title_other": "Remove {{count}} nodes?",
+            "body_one": "{{extension}} asks to remove it.",
+            "body_other": "{{extension}} asks to remove them."
+        },
+        "stopRun": "Stop {{title}}"
     }
 }

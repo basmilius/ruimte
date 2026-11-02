@@ -77,9 +77,14 @@ function start(): void {
             emit('project.opened', { projectId: state.current.projectId });
         }
     });
+    // Only the statuses, which stay put while a chat streams its answer.
     useChats.subscribe((state, previous) => {
-        for (const [key, row] of Object.entries(state.byKey)) {
-            const before = previous.byKey[key]?.info.status;
+        if (state.statusByKey === previous.statusByKey) {
+            return;
+        }
+
+        for (const [key, row] of Object.entries(state.statusByKey)) {
+            const before = previous.statusByKey[key]?.info.status;
 
             if (row.info.status !== before) {
                 const { id } = splitKey(key);
