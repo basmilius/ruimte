@@ -85,7 +85,25 @@ export interface ExtensionHostOptions {
     removeLanguageServers?: (extensionId: string) => Promise<void>;
     now?: () => number;
     spawnProcess?: typeof spawn;
+    files?: ExtensionHostFiles;
 }
+
+/* The files a start, a storage write and a log touch, handed in so a test can hold each step. */
+export interface ExtensionHostFiles {
+    mkdir(folder: string): Promise<unknown>;
+    readText(file: string): Promise<string>;
+    write(file: string, text: string, mode?: number): Promise<void>;
+    rename(from: string, to: string): Promise<void>;
+    append(file: string, text: string | Uint8Array): Promise<void>;
+}
+
+const NODE_FILES: ExtensionHostFiles = {
+    mkdir: (folder) => mkdir(folder, { recursive: true }),
+    readText: (file) => readFile(file, 'utf8'),
+    write: (file, text, mode) => writeFile(file, text, mode === undefined ? {} : { mode }),
+    rename,
+    append: (file, text) => appendFile(file, text)
+};
 
 /*
  * Runs each extension's `server/` as a process of its own, as the person who runs the machine: a crash
@@ -102,12 +120,17 @@ export class ExtensionHost {
     private readonly crashes = new Map<string, number>();
     private readonly sinks = new ClientSinks();
     private readonly tools = new Map<string, { description: string; parameters: unknown }>();
+    private readonly lifecycles = new Map<string, Promise<void>>();
+    // Moves with every stop, so a start that read the store before one knows to read it again.
+    private readonly generations = new Map<string, number>();
 
     private readonly options: ExtensionHostOptions;
+    private readonly files: ExtensionHostFiles;
     private readonly sends: SendLimit;
 
     constructor(options: ExtensionHostOptions) {
         this.options = options;
+        this.files = options.files ?? NODE_FILES;
         this.sends = new SendLimit(() => (options.now ?? Date.now)());
     }
 
@@ -123,7 +146,9 @@ export class ExtensionHost {
         for (const extension of await this.options.store.list()) {
             // A tool only exists once its process said so, and an agent cannot ask for what it does not see.
             if (extension.enabled && startsWithMachine(extension.manifest)) {
-                await this.start(extension).catch((e: unknown) => console.warn(`Extension ${extension.manifest.id} did not start: ${errorText(e)}`));
+                await this.runningFor(extension.manifest.id).catch((e: unknown) =>
+                    console.warn(`Extension ${extension.manifest.id} did not start: ${errorText(e)}`)
+                );
             } else if (!extension.enabled) {
                 // Turned off by a Ruimte that still kept its language servers.
                 await this.dropLanguageServers(extension.manifest.id);
@@ -186,21 +211,23 @@ export class ExtensionHost {
     }
 
     async setEnabled(id: string, enabled: boolean): Promise<void> {
-        await this.options.store.setEnabled(id, enabled);
-        this.crashes.delete(id);
-        this.stop(id);
+        await this.lifecycle(id, async () => {
+            await this.options.store.setEnabled(id, enabled);
+            this.crashes.delete(id);
+            this.stop(id);
 
-        if (!enabled) {
-            await this.dropLanguageServers(id);
-        } else {
-            const extension = await this.options.store.get(id);
-
-            if (extension !== null && startsWithMachine(extension.manifest)) {
-                await this.start(extension);
-            } else if (extension !== null && Object.hasOwn(extension.manifest.permissions ?? {}, 'languages.servers')) {
-                // Its language servers left when it was turned off, and only its own process adds them again.
-                await this.start(extension).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
+            if (!enabled) {
+                await this.dropLanguageServers(id);
             }
+        });
+
+        const extension = enabled ? await this.options.store.get(id) : null;
+
+        if (extension !== null && startsWithMachine(extension.manifest)) {
+            await this.runningFor(id);
+        } else if (extension !== null && permissionsOf(extension.manifest).has('languages.servers')) {
+            // Its language servers left when it was turned off, and only its own process adds them again.
+            await this.runningFor(id).catch((e: unknown) => console.warn(`Extension ${id} did not start: ${errorText(e)}`));
         }
 
         this.changed();
@@ -212,48 +239,79 @@ export class ExtensionHost {
 
     async install(pack: string): Promise<ExtensionInfo> {
         const extension = await this.options.store.install(pack);
+        const { id } = extension.manifest;
 
-        this.crashes.delete(extension.manifest.id);
-        this.stop(extension.manifest.id);
+        await this.lifecycle(id, async () => {
+            this.crashes.delete(id);
+            this.stop(id);
+        });
 
         if (extension.enabled && startsWithMachine(extension.manifest)) {
-            await this.start(extension);
+            await this.runningFor(id);
         }
 
         this.changed();
 
-        return (await this.list()).find((entry) => entry.manifest.id === extension.manifest.id) as ExtensionInfo;
+        return (await this.list()).find((entry) => entry.manifest.id === id) as ExtensionInfo;
     }
 
     async remove(id: string): Promise<void> {
-        this.stop(id);
-        await this.options.store.remove(id);
-        await this.options.removeLanguageServers?.(id);
-        this.crashes.delete(id);
+        await this.lifecycle(id, async () => {
+            this.stop(id);
+            await this.options.store.remove(id);
+            await this.options.removeLanguageServers?.(id);
+            this.crashes.delete(id);
+        });
         this.changed();
     }
 
     /* A save in dev: a fresh process over what was just built, and word so a client loads it again. */
     async linked(folder: string): Promise<string> {
-        const manifest = await this.options.store.link(folder);
+        const { id } = await this.options.store.link(folder);
 
-        this.crashes.delete(manifest.id);
-        this.stop(manifest.id);
+        await this.lifecycle(id, async () => {
+            this.crashes.delete(id);
+            this.stop(id);
+        });
         this.changed();
 
-        return manifest.id;
+        return id;
     }
 
     async unlink(id: string): Promise<void> {
-        this.stop(id);
-        await this.options.store.unlink(id);
+        await this.lifecycle(id, async () => {
+            this.stop(id);
+            await this.options.store.unlink(id);
+        });
         this.changed();
+    }
+
+    /*
+     * One change of what an extension runs at a time: turning it on or off, a new version, its removal, and a language server
+     * its process adds. A start waits for one under way, so it never reads the store from before the change.
+     */
+    private lifecycle<Value>(id: string, work: () => Promise<Value>): Promise<Value> {
+        const next = (this.lifecycles.get(id) ?? Promise.resolve()).then(work, work);
+        const settled = next.then(
+            () => undefined,
+            () => undefined
+        );
+
+        this.lifecycles.set(id, settled);
+        void settled.then(() => {
+            if (this.lifecycles.get(id) === settled) {
+                this.lifecycles.delete(id);
+            }
+        });
+
+        return next;
     }
 
     /* The same file `storage` in `server/` writes, so both ends of an extension read one truth. */
     private async storageOf(id: string): Promise<{ file: string; values: Record<string, unknown> }> {
         const file = join(this.options.store.dataFolder(id), 'storage.json');
-        const values = await readFile(file, 'utf8')
+        const values = await this.files
+            .readText(file)
             .then((text) => JSON.parse(text) as Record<string, unknown>)
             .catch(() => ({}));
 
@@ -270,9 +328,9 @@ export class ExtensionHost {
             const { file, values } = await this.storageOf(id);
             const temporary = `${file}.${process.pid}.tmp`;
 
-            await mkdir(dirname(file), { recursive: true });
-            await writeFile(temporary, JSON.stringify({ ...values, [key]: value }), { mode: 0o600 });
-            await rename(temporary, file);
+            await this.files.mkdir(dirname(file));
+            await this.files.write(temporary, JSON.stringify({ ...values, [key]: value }), 0o600);
+            await this.files.rename(temporary, file);
         };
         const next = (this.storageWrites.get(id) ?? Promise.resolve()).then(write, write);
 
@@ -324,8 +382,8 @@ export class ExtensionHost {
 
         const file = this.options.store.logFile(id);
 
-        await mkdir(dirname(file), { recursive: true });
-        await appendFile(file, `${text}\n`);
+        await this.files.mkdir(dirname(file));
+        await this.files.append(file, `${text}\n`);
     }
 
     stopAll(): void {
@@ -343,6 +401,8 @@ export class ExtensionHost {
     }
 
     private stop(id: string): void {
+        this.generations.set(id, (this.generations.get(id) ?? 0) + 1);
+
         const starting = this.starting.get(id);
 
         if (starting !== undefined) {
@@ -372,7 +432,15 @@ export class ExtensionHost {
             return running;
         }
 
+        await this.lifecycles.get(id);
+
+        const generation = this.generations.get(id);
         const extension = await this.options.store.get(id);
+
+        // A stop or a change while the store answered makes what it said old: read it again once the change is done.
+        if (this.generations.get(id) !== generation || this.lifecycles.has(id)) {
+            return this.runningFor(id);
+        }
 
         if (extension === null) {
             throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
@@ -428,8 +496,8 @@ export class ExtensionHost {
         const dataFolder = store.dataFolder(id);
         const runtimePath = join(dataFolder, '.runtime', RUNTIME_FILE);
 
-        await mkdir(dirname(runtimePath), { recursive: true });
-        await writeFile(runtimePath, runtimeSource);
+        await this.files.mkdir(dirname(runtimePath));
+        await this.files.write(runtimePath, runtimeSource);
 
         if (attempt.cancelled) {
             throw stopped();
@@ -474,7 +542,7 @@ export class ExtensionHost {
         child.stdout.setEncoding('utf8');
         child.stdout.on('data', (chunk: string) => this.read(id, running, chunk, markReady));
         child.stderr.on('data', (chunk: Buffer) => {
-            void appendFile(store.logFile(id), chunk).catch(() => undefined);
+            void this.files.append(store.logFile(id), chunk).catch(() => undefined);
         });
         // A pipe that breaks with the process says so here; the exit below is what acts on it.
         child.stdin.on('error', () => undefined);
@@ -506,27 +574,31 @@ export class ExtensionHost {
             return;
         }
 
+        // A process that was stopped can still have lines in the pipe; nothing it asks or says counts any more.
+        if (this.running.get(id) !== running) {
+            return;
+        }
+
         if (message.type === 'ask' && message.id !== undefined) {
             const asked = message as unknown as { id: number; method: string; args: unknown[] };
 
-            void this.answerAsk(id, asked.method, asked.args).then(
+            void this.answerAsk(id, running, asked.method, asked.args).then(
                 (result) => running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, result: result ?? null })}\n`),
                 (e: unknown) => {
                     const { code, message: reason } = extensionFailureOf(e);
 
                     // A refusal answers as a Result, so the terminal of `extension dev` is where a person still sees it.
-                    void appendFile(this.options.store.logFile(id), `${asked.method} answered ${code}: ${reason}\n`).catch(() => undefined);
+                    void this.files.append(this.options.store.logFile(id), `${asked.method} answered ${code}: ${reason}\n`).catch(() => undefined);
                     running.child.stdin.write(`${JSON.stringify({ type: 'answer', id: asked.id, error: reason, code })}\n`);
                 }
             );
         } else if (message.type === 'tool') {
             const tool = message as unknown as { name: string; description: string; parameters: unknown };
 
-            void this.options.store.get(id).then((extension) => {
-                if (Object.hasOwn(extension?.manifest.permissions ?? {}, 'agents.tools')) {
-                    this.tools.set(`${id}/${tool.name}`, { description: tool.description, parameters: tool.parameters });
-                }
-            });
+            // The permissions it started with, read at once, so a stop cannot come between and leave the tool listed.
+            if (running.permissions.has('agents.tools')) {
+                this.tools.set(`${id}/${tool.name}`, { description: tool.description, parameters: tool.parameters });
+            }
         } else if (message.type === 'ready') {
             this.crashes.delete(id);
             markReady();
@@ -559,7 +631,7 @@ export class ExtensionHost {
             return;
         }
 
-        void appendFile(this.options.store.logFile(id), `${reason}\n`).catch(() => undefined);
+        void this.files.append(this.options.store.logFile(id), `${reason}\n`).catch(() => undefined);
     }
 
     /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */
@@ -622,7 +694,7 @@ export class ExtensionHost {
         return { hash: extension.hash, files };
     }
 
-    private async answerAsk(id: string, method: string, args: unknown[]): Promise<unknown> {
+    private async answerAsk(id: string, running: Running, method: string, args: unknown[]): Promise<unknown> {
         refuse(askRefusal(id, method, args, await this.permissionsOf(id)));
 
         if (method === 'action') {
@@ -632,11 +704,20 @@ export class ExtensionHost {
         }
 
         if (method === 'languages.add') {
-            if (this.options.addLanguageServer === undefined) {
+            const add = this.options.addLanguageServer;
+
+            if (add === undefined) {
                 throw new ExtensionRefusal('unavailable', 'This machine does not add language servers for an extension');
             }
 
-            return this.options.addLanguageServer(id, args[0] as object);
+            // Between the changes of what runs, so a turn off either waits for it and takes it away, or comes first and refuses it.
+            return this.lifecycle(id, async () => {
+                if (this.running.get(id) !== running) {
+                    throw stopped();
+                }
+
+                return add(id, args[0] as object);
+            });
         }
 
         if (method === 'agents.start') {
