@@ -14,7 +14,7 @@
     "adecore:npm": "bun scripts/adecore.ts npm",
     "adecore:status": "bun scripts/adecore.ts status",
     "adecore:bump": "bun scripts/adecore.ts bump",
-    "dev": "bun scripts/adecore.ts status --brief && bun run --filter './apps/*' dev",
+    "dev": "bun scripts/adecore.ts status --brief && bun run --filter './apps/*' --filter '!./apps/site' dev",
     "dev:built": "bun scripts/adecore.ts status --brief && bun run --cwd apps/client build && bun run --parallel dev:client:built dev:server dev:desktop:built",
     "dev:client": "bun run --cwd apps/client dev",
     "dev:client:built": "bun run --cwd apps/client preview --port 4212 --strictPort",
