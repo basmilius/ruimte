@@ -1,7 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Blocks, ChevronRight, Maximize, MessageSquare, Scan, StickyNote, Terminal } from 'lucide-react';
 import { motion } from 'motion/react';
+import { Icon, Kbd } from '@adecore/ui';
 import { EASE } from '../../film/playback.ts';
 
 /* A place an extension adds to: dashed while another one has the turn, lit with its name while it has it. */
@@ -60,6 +62,57 @@ export function SceneFrame({ children }: { readonly children: ReactNode }) {
     return (
         <div className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border border-white/10 bg-surface shadow-[0_24px_60px_rgb(0_0_0/0.45)]">
             {children}
+        </div>
+    );
+}
+
+/*
+ * `canvas/CanvasMenu.tsx`, shortened: what to add, the Extensions submenu with the nodes extensions add,
+ * what to do with the canvas, then the `canvasMenu` slot under a separator. Its overflow stays visible, so
+ * an open submenu or the label of a slot can stand beside or under it.
+ */
+export function CanvasMenu({
+    className,
+    nodes,
+    slot
+}: {
+    readonly className: string;
+
+    /* The open Extensions submenu's rows. */
+    readonly nodes?: ReactNode;
+    readonly slot?: ReactNode;
+}) {
+    return (
+        <div className={`menu-popup absolute z-10 flex w-[224px] flex-col overflow-visible ${className}`}>
+            <span className="menu-item">
+                <Icon icon={Terminal} size={14} /> Terminal <Kbd>⌥T</Kbd>
+            </span>
+            <span className="menu-item">
+                <Icon icon={MessageSquare} size={14} /> Chat <Kbd>⌥C</Kbd>
+            </span>
+            <span className="menu-item">
+                <Icon icon={StickyNote} size={14} /> Note <Kbd>⌥N</Kbd>
+            </span>
+            {nodes !== undefined && (
+                <span className="menu-item relative bg-surface-active">
+                    <Icon icon={Blocks} size={14} /> Extensions
+                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
+                    <span className="menu-popup absolute top-[-5px] left-[calc(100%+8px)] flex min-w-44 flex-col">{nodes}</span>
+                </span>
+            )}
+            <span role="separator" className="-mx-1 my-1 h-px bg-border-soft" />
+            <span className="menu-item">
+                <Icon icon={Scan} size={14} /> Select all <Kbd>⌘A</Kbd>
+            </span>
+            <span className="menu-item">
+                <Icon icon={Maximize} size={14} /> Zoom to fit <Kbd>⇧1</Kbd>
+            </span>
+            {slot !== undefined && (
+                <>
+                    <span role="separator" className="-mx-1 my-1 h-px bg-border-soft" />
+                    {slot}
+                </>
+            )}
         </div>
     );
 }

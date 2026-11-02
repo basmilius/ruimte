@@ -1,21 +1,26 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Gauge, Hash, ListChecks, StickyNote, X } from 'lucide-react';
+import { Gauge, Hash, ListChecks, StickyNote, Ticket, X, type LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
-import { PanelHeader } from '@adecore/ui';
+import { ListRow, PanelHeader, Switch } from '@adecore/ui';
 import { CanvasNode } from '../../app/canvas.tsx';
 import { AppWindow, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
 import { Button, IconButton } from '../../app/primitives.tsx';
 import { EASE, useTimeline } from '../../film/playback.ts';
-import { Stage } from '../../film/Stage.tsx';
+import { Scaled, Stage } from '../../film/Stage.tsx';
 import { NoteText } from './parts.tsx';
 
 const STEPS = [1400, 1800, 1600, 1600, 2800] as const;
 const NOTE = { x: 28, y: 28, w: 236, h: 132 };
 const COUNTER = { x: 96, y: 196, w: 200, h: 148 };
-const PANEL_WIDTH = 260;
+// An extension's panel opens no narrower than its `minWidth`, 280 unless it names one.
+const PANEL_WIDTH = 280;
 const CHECKS = ['Keeps the email', 'Shows the error', 'Focus moves to it'] as const;
+const TICKETS = [
+    ['ACME-412', 'Login forgets the email after a failed submit'],
+    ['ACME-418', 'Login button stays disabled on Safari']
+] as const;
 
 /* What an extension draws itself, arriving one by one: a node, a panel, a view, a sidebar card and an overlay. */
 export function Surfaces() {
@@ -27,6 +32,65 @@ export function Surfaces() {
         >
             <SurfacesScene />
         </Stage>
+    );
+}
+
+/*
+ * The how-to's result: the Review panel open from its toggle in the rail, which carries the badge the extension
+ * set. The panel's name in its header carries the badge too, as `label()` in `client-api.tsx` writes it.
+ */
+export function RailPanel() {
+    return (
+        <PanelWindow
+            icon={ListChecks}
+            badge="1"
+            label="A Ruimte window with the Review panel open between the canvas and the rail. The panel's toggle in the rail is pressed and carries the badge 1."
+            panel={<ReviewPanel open title="Review (1)" />}
+        />
+    );
+}
+
+/* The server how-to's result: a panel that lists what the server part fetched from a tracker with the stored key. */
+export function TicketsPanel() {
+    return (
+        <PanelWindow
+            icon={Ticket}
+            label="A Ruimte window with the Tickets panel open beside the canvas. It lists two open tickets, ACME-412 and ACME-418, each with its title."
+            panel={
+                <aside className="flex shrink-0 flex-col overflow-hidden" style={{ width: PANEL_WIDTH }}>
+                    <PanelHeader title="Tickets" />
+                    <div className="flex flex-col gap-px p-2 text-2xs">
+                        {TICKETS.map(([key, title]) => (
+                            <span key={key} className="flex h-8 items-center gap-2 rounded-md px-2">
+                                <span className="shrink-0 font-mono text-text-faint">{key}</span>
+                                <span className="min-w-0 truncate text-text-muted">{title}</span>
+                            </span>
+                        ))}
+                    </div>
+                </aside>
+            }
+        />
+    );
+}
+
+function PanelWindow({ icon, badge, label, panel }: { readonly icon: LucideIcon; readonly badge?: string; readonly label: string; readonly panel: ReactNode }) {
+    return (
+        <Scaled width={960} height={540} label={label}>
+            <AppWindow
+                sidebar={<Sidebar waiting={[]} rows={[{ id: 'signup', name: 'Signup', icon: Hash, selected: true }]} />}
+                toolbar={<TopRow view={{ icon: Hash, name: 'Signup' }} />}
+                rail={<Rail extension={{ icon, open: true, ...(badge === undefined ? {} : { badge }) }} />}
+                sidePanel={panel}
+            >
+                <div className="canvas-dots absolute inset-0">
+                    <CanvasNode rect={NOTE} kind="note" title="Brief">
+                        <NoteText>
+                            <p className="text-text-muted">Keep the email after a failed submit.</p>
+                        </NoteText>
+                    </CanvasNode>
+                </div>
+            </AppWindow>
+        </Scaled>
     );
 }
 
@@ -86,7 +150,7 @@ function SurfacesScene() {
 }
 
 /* `shell/Panel.tsx`: behind the sheet, its name in the header, closed again from its toggle in the rail. */
-function ReviewPanel({ open }: { readonly open: boolean }) {
+function ReviewPanel({ open, title = 'Review' }: { readonly open: boolean; readonly title?: string }) {
     return (
         <motion.aside
             className="flex shrink-0 flex-col overflow-hidden"
@@ -95,13 +159,13 @@ function ReviewPanel({ open }: { readonly open: boolean }) {
             transition={{ duration: 0.45, ease: EASE }}
         >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
-                <PanelHeader title="Review" />
+                <PanelHeader title={title} />
                 <div className="flex flex-col gap-px p-2 text-2xs">
                     {CHECKS.map((check, index) => (
-                        <span key={check} className="flex h-8 items-center gap-2 rounded-md px-2 text-text-muted">
-                            <span className={`size-2 rounded-full ${index < 2 ? 'bg-status-idle' : 'bg-text-faint'}`} />
+                        <ListRow key={check} variant="inset" className="gap-2 text-text-muted">
+                            <Switch checked={index < 2} label={check} onCheckedChange={() => undefined} />
                             {check}
-                        </span>
+                        </ListRow>
                     ))}
                 </div>
             </div>

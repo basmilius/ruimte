@@ -1,4 +1,4 @@
-import { ThemePicker } from '@/components/docs/extensions/ThemePicker.tsx';
+import { ThemePicker, ThemedWindow } from '@/components/docs/extensions/ThemePicker.tsx';
 
 export const metadata = { title: 'Themes' };
 
@@ -31,7 +31,11 @@ List each theme file in the manifest:
 }
 ```
 
-`side` says whether the theme builds on Ruimte's light or dark base. `tokens` overrides that base, token by token. A name starts with `--`, and a value holds no `;`, `{` or `}`.
+`side` says whether the theme builds on Ruimte's light or dark base. `tokens` overrides that base, token by token. A name starts with `--`, and a value holds no `;`, `{` or `}`. Every surface that uses a token follows it:
+
+<ThemedWindow />
+
+[Make a theme](/docs/extensions/how-to/theme) builds this one from start to end.
 
 <ThemePicker />
 

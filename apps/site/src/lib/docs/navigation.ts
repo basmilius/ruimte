@@ -87,6 +87,20 @@ export const SECTIONS: readonly NavigationSection[] = [
                 ]
             },
             {
+                title: 'How to',
+                pages: [
+                    { title: 'Open a panel from the rail', href: '/docs/extensions/how-to/panel' },
+                    { title: 'Add a node to the canvas', href: '/docs/extensions/how-to/node' },
+                    { title: 'Add a button to a node or a menu', href: '/docs/extensions/how-to/button' },
+                    { title: 'Add a command with a shortcut', href: '/docs/extensions/how-to/command' },
+                    { title: 'Add a settings page', href: '/docs/extensions/how-to/settings' },
+                    { title: 'Call your server part and keep a secret', href: '/docs/extensions/how-to/server' },
+                    { title: 'Give agents a tool', href: '/docs/extensions/how-to/agent-tool' },
+                    { title: 'React when an agent finishes', href: '/docs/extensions/how-to/agent' },
+                    { title: 'Make a theme', href: '/docs/extensions/how-to/theme' }
+                ]
+            },
+            {
                 title: 'Build',
                 pages: [
                     { title: 'Surfaces', href: '/docs/extensions/surfaces' },

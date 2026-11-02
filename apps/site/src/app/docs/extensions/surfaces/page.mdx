@@ -1,4 +1,5 @@
-import { Surfaces } from '@/components/docs/extensions/Surfaces.tsx';
+import { NodeType } from '@/components/docs/extensions/CanvasScenes.tsx';
+import { RailPanel, Surfaces } from '@/components/docs/extensions/Surfaces.tsx';
 
 export const metadata = { title: 'Surfaces' };
 
@@ -58,7 +59,11 @@ panel.open({ chatId: 'chat-1' });
 panel.setBadge('3');
 ```
 
-The component gets `params`, the value the panel was last opened with.
+The component gets `params`, the value the panel was last opened with. The badge shows on the toggle in the rail and after the panel's name in its header:
+
+<RailPanel />
+
+[Open a panel from the rail](/docs/extensions/how-to/panel) builds this panel from start to end.
 
 ## Views
 
@@ -100,7 +105,11 @@ export default function Counter() {
 }
 ```
 
-A person adds it from the Extensions submenu of the canvas menu, or from the command palette. `addFrom` places that "Add" elsewhere. When the shape of the data changes, raise `dataVersion` and give `migrate`, which gets the stored data and its version.
+A person adds it from the Extensions submenu of the canvas menu, or from the command palette. `addFrom` places that "Add" elsewhere.
+
+<NodeType />
+
+When the shape of the data changes, raise `dataVersion` and give `migrate`, which gets the stored data and its version. [Add a node to the canvas](/docs/extensions/how-to/node) walks through both.
 
 An agent reads a node of yours along a line once the server part says what it holds. `defineNodeContext` in [The server part](/docs/extensions/server) does that.
 

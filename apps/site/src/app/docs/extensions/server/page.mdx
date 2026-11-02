@@ -1,3 +1,5 @@
+import { TicketsPanel } from '@/components/docs/extensions/Surfaces.tsx';
+
 export const metadata = { title: 'The server part' };
 
 # The server part
@@ -25,7 +27,9 @@ export type Api = typeof api;
 export default api;
 ```
 
-In the client, `useServer<Api>()` makes those methods typed.
+In the client, `useServer<Api>()` makes those methods typed. [Call your server part and keep a secret](/docs/extensions/how-to/server) builds a panel on a server part that calls an outside service with a stored key:
+
+<TicketsPanel />
 
 ## Events
 

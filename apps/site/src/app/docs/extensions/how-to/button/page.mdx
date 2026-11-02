@@ -1,0 +1,129 @@
+import { NodeButton } from '@/components/docs/extensions/CanvasScenes.tsx';
+
+export const metadata = { title: 'Add a button to a node or a menu' };
+
+# Add a button to a node or a menu
+
+<p className="lead">Put a button in the header of a terminal and an item in the canvas menu, each running an action of yours on what it stands on.</p>
+
+This page builds two actions. "Explain the failures" sits in a terminal's header and asks an agent why the tests in it fail. "Summarize this canvas" sits in the canvas menu and writes a summary note.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+client/index.ts
+```
+
+Each permission is for one call below. The person reads the reasons before installing:
+
+```json
+{
+    "id": "acme.explain",
+    "name": "Explain",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "Asks an agent about a terminal or a canvas.",
+    "color": "#7c3aed",
+    "permissions": {
+        "terminals.read": "Reads the terminal you ask about",
+        "context.read": "Reads the canvas you ask about",
+        "agents.run": "Asks one of your agents",
+        "canvas.write": "Writes the answer as a note"
+    }
+}
+```
+
+## A button in a node's header
+
+In `client/index.ts`, `defineAction` names its slots. For each slot, a function decides whether the action shows there:
+
+```ts
+import { agents, canvas, context, defineAction, terminals } from '@ruimte/extension/client';
+
+defineAction({
+    id: 'explain',
+    title: 'Explain the failures',
+    icon: 'sparkles',
+    slots: {
+        nodeHeader: ({ node }) => node.kind === 'terminal',
+        terminalMenu: true
+    },
+    async run({ node }) {
+        const screen = await terminals.read(node);
+        const { text } = await agents.run({
+            prompt: 'Explain why the tests in this terminal fail.',
+            context: [screen]
+        });
+
+        canvas.createNote({
+            title: 'Why it fails',
+            text,
+            near: [node]
+        });
+    }
+});
+```
+
+A header is tight, so the action shows as its icon alone, with the `title` as its tooltip. Without an `icon` it gets a package symbol. `terminalMenu` puts the same action in the terminal's right-click menu, with its title in words.
+
+While `run` is pending, the node shows a spinner in its header, and the button waits. Pointing at the spinner turns it into a stop button, which aborts the `signal` that `run` gets. A `run` that throws shows the error to the person.
+
+## An item in the canvas menu
+
+`canvasMenu` puts an item at the foot of the menu a right-click on the empty canvas opens, below Ruimte's own items:
+
+```ts
+defineAction({
+    id: 'summarize',
+    title: 'Summarize this canvas',
+    icon: 'sparkles',
+    slots: {
+        canvasMenu: ({ view }) => view?.kind === 'canvas'
+    },
+    async run({ view }) {
+        if (view === null) {
+            return;
+        }
+
+        const sources = await context.read({ view });
+        const { text } = await agents.run({
+            prompt: 'Summarize this canvas in five lines.',
+            context: sources.map((source) => `# ${source.title}\n${source.text}`)
+        });
+        const note = canvas.createNote({
+            title: 'Summary',
+            text
+        });
+
+        if (note !== null) {
+            canvas.reveal(note);
+        }
+    }
+});
+```
+
+Every slot also tells the base context: the `project`, the `view` in front, the `machine` and the `theme`. `canvasMenu` adds `at`, the spot the person clicked on the canvas.
+
+<NodeButton />
+
+## Change what it shows
+
+A slot function can answer an object instead of `true`, to change the action at that place only:
+
+```ts
+slots: {
+    nodeHeader: ({ node }) => node.kind === 'terminal' && {
+        title: `Explain ${node.title}`,
+        disabled: node.agent?.status === 'running' && 'Wait until the agent is done'
+    }
+}
+```
+
+`disabled` with a text greys the button out and shows the text as its tooltip. `badge` shows a short text beside the title in a bar with room for words, such as the selection bar. `order` sorts the entries of a slot, lowest first, 0 when you leave it out.
+
+## More places
+
+The same action can go in more slots at once: `nodeMenu` for a right-click on any node, `selectionBar` for the bar over a selection, `commandPalette` for the palette. [Slots and actions](/docs/extensions/slots) lists every slot and what it tells. While `bun run dev` runs, "Show extension slots" in the command palette outlines each one on screen.

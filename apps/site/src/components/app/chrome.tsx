@@ -207,6 +207,9 @@ export function TopRow({
     );
 }
 
+/** The panels with a button in the rail (`shell/panels.ts`, `toolbar: true`). */
+export type RailPanel = 'files' | 'git' | 'databases' | 'devices' | 'output';
+
 function RailSeparator() {
     return <span className="my-1 h-px w-5 shrink-0 bg-border" />;
 }
@@ -215,7 +218,13 @@ function RailSeparator() {
  * `shell/ShellRail.tsx`: search, the launches, the panels and Routines, and at the foot Usage and Settings.
  * An extension's panel gets a toggle in a group of its own, after Routines (`PanelControls.tsx`).
  */
-export function Rail({ panel, extension }: { readonly panel?: 'git' | 'files'; readonly extension?: { readonly icon: LucideIcon; readonly open: boolean } }) {
+export function Rail({
+    panel,
+    extension
+}: {
+    readonly panel?: RailPanel;
+    readonly extension?: { readonly icon: LucideIcon; readonly open: boolean; readonly badge?: string };
+}) {
     // `.ade-workspace[data-side-panel] > .ade-workspace-rail`: an open panel gets a line between it and the rail.
     const panelOpen = panel !== undefined || extension?.open === true;
 
@@ -230,15 +239,22 @@ export function Rail({ panel, extension }: { readonly panel?: 'git' | 'files'; r
             <IconButton icon={Folder} active={panel === 'files'} />
             <IconButton icon={GitBranch} active={panel === 'git'} />
             <RailSeparator />
-            <IconButton icon={Database} />
-            <IconButton icon={TabletSmartphone} />
+            <IconButton icon={Database} active={panel === 'databases'} />
+            <IconButton icon={TabletSmartphone} active={panel === 'devices'} />
             <RailSeparator />
-            <IconButton icon={Package} />
+            <IconButton icon={Package} active={panel === 'output'} />
             <IconButton icon={Clock} />
             {extension && (
                 <>
                     <RailSeparator />
-                    <IconButton icon={extension.icon} active={extension.open} />
+                    <span className="relative">
+                        <IconButton icon={extension.icon} active={extension.open} />
+                        {extension.badge !== undefined && (
+                            <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-xs text-accent-text">
+                                {extension.badge}
+                            </span>
+                        )}
+                    </span>
                 </>
             )}
             <span className="grow" />

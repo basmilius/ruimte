@@ -1,4 +1,58 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import type { CSSProperties, ReactNode } from 'react';
+import { Hash, StickyNote } from 'lucide-react';
+import { CanvasNode } from '../../app/canvas.tsx';
+import { AppWindow, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
+import { Scaled } from '../../film/Stage.tsx';
+import { NoteText } from './parts.tsx';
+
+/* The tokens of the how-to's `themes/midnight.json`, set on the window as Ruimte sets a theme's on the page. */
+const MIDNIGHT = {
+    '--bg': '#050a1f',
+    '--surface': '#0b1538',
+    '--surface-raised': '#14204d',
+    '--surface-sunken': '#060c26',
+    '--surface-hover': '#1b2a60',
+    '--surface-active': '#24367a',
+    '--canvas-bg': '#050a1f',
+    '--canvas-dot': '#22306b'
+} as CSSProperties;
+
+/* The window in the Midnight theme: Ruimte's dark base with the theme's tokens over it. */
+export function ThemedWindow() {
+    return (
+        <Scaled
+            width={960}
+            height={540}
+            label="A Ruimte window in the Midnight theme: the sidebar, the canvas and a note in deep blue instead of Ruimte's gray."
+        >
+            <div data-theme="dark" className="absolute inset-0" style={MIDNIGHT}>
+                <AppWindow
+                    sidebar={
+                        <Sidebar
+                            waiting={[]}
+                            rows={[
+                                { id: 'signup', name: 'Signup', icon: Hash, selected: true },
+                                { id: 'brief', name: 'Brief', icon: StickyNote, nested: true }
+                            ]}
+                        />
+                    }
+                    toolbar={<TopRow view={{ icon: Hash, name: 'Signup' }} />}
+                    rail={<Rail />}
+                >
+                    <div className="canvas-dots absolute inset-0">
+                        <CanvasNode rect={{ x: 40, y: 40, w: 260, h: 140 }} kind="note" title="Brief">
+                            <NoteText>
+                                <p className="text-text-muted">Keep the email after a failed submit.</p>
+                            </NoteText>
+                        </CanvasNode>
+                    </div>
+                </AppWindow>
+            </div>
+        </Scaled>
+    );
+}
 
 /* `AppearancePane.tsx` in Settings: Ruimte's own three themes, then a theme of an extension with its thumbnail. */
 export function ThemePicker() {

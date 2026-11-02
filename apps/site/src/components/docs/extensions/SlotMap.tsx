@@ -1,14 +1,14 @@
 'use client';
 
-import { FileText, Hash, MessageSquare, Scan, Maximize, Sparkles, StickyNote, Terminal } from 'lucide-react';
-import { Icon, Kbd } from '@adecore/ui';
+import { FileText, Hash, Sparkles, StickyNote, Terminal } from 'lucide-react';
+import { Icon } from '@adecore/ui';
 import { CanvasNode } from '../../app/canvas.tsx';
 import { TerminalBody } from '../../app/bodies.tsx';
 import { AppWindow, Dock, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
 import { Button, IconButton } from '../../app/primitives.tsx';
 import { usePlayback, useTimeline } from '../../film/playback.ts';
 import { Stage } from '../../film/Stage.tsx';
-import { NoteText, SelectionBar, SlotSpot } from './parts.tsx';
+import { CanvasMenu, NoteText, SelectionBar, SlotSpot } from './parts.tsx';
 
 const SLOTS = ['viewToolbar', 'nodeHeader', 'selectionBar', 'canvasMenu', 'sidebarFooter'] as const;
 const STEPS = SLOTS.map(() => 1800);
@@ -99,40 +99,21 @@ function SlotMapScene() {
                             </Button>
                         </SlotSpot>
                     </SelectionBar>
-                    <CanvasMenu lit={lit('canvasMenu')} />
+                    <CanvasMenu
+                        className="top-[224px] left-[408px]"
+                        slot={
+                            <SlotSpot name="canvasMenu" lit={lit('canvasMenu')} labelBelow>
+                                <span className="menu-item grow">
+                                    <Icon icon={Sparkles} size={14} /> Ask about this canvas
+                                </span>
+                            </SlotSpot>
+                        }
+                    />
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
                         <Dock working={1} />
                     </div>
                 </div>
             </AppWindow>
-        </div>
-    );
-}
-
-/* `canvas/CanvasMenu.tsx`, shortened: what to add, what to do with the canvas, then the `canvasMenu` slot under a separator. */
-function CanvasMenu({ lit }: { readonly lit: boolean }) {
-    return (
-        // Visible overflow, so the label of the slot can hang under the menu.
-        <div className="menu-popup absolute top-[250px] left-[408px] z-10 flex w-[224px] flex-col overflow-visible">
-            <span className="menu-item">
-                <Icon icon={Terminal} size={14} /> Terminal <Kbd>⌥T</Kbd>
-            </span>
-            <span className="menu-item">
-                <Icon icon={MessageSquare} size={14} /> Chat <Kbd>⌥C</Kbd>
-            </span>
-            <span role="separator" className="-mx-1 my-1 h-px bg-border-soft" />
-            <span className="menu-item">
-                <Icon icon={Scan} size={14} /> Select all <Kbd>⌘A</Kbd>
-            </span>
-            <span className="menu-item">
-                <Icon icon={Maximize} size={14} /> Zoom to fit <Kbd>⇧1</Kbd>
-            </span>
-            <span role="separator" className="-mx-1 my-1 h-px bg-border-soft" />
-            <SlotSpot name="canvasMenu" lit={lit} labelBelow>
-                <span className="menu-item grow">
-                    <Icon icon={Sparkles} size={14} /> Ask about this canvas
-                </span>
-            </SlotSpot>
         </div>
     );
 }

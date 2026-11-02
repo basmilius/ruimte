@@ -1,3 +1,6 @@
+import { InstallPermissions } from '@/components/docs/extensions/SettingsScenes.tsx';
+import { DevLog } from '@/components/docs/extensions/TerminalScenes.tsx';
+
 export const metadata = { title: 'Getting started' };
 
 # Getting started
@@ -23,6 +26,8 @@ bun run dev
 ```
 
 `dev` builds on every save and loads the result into the running Ruimte, which reloads the extension in place. It also prints what the extension logs. That is `console.*` and `log` from the server part, `console.*` from the client part marked `[client]`, and every action or surface that failed. Pass `--port` when your Ruimte listens on a port other than the default.
+
+<DevLog />
 
 Under Settings, Extensions, your extension shows in the In development group at the top. While `dev` runs, "Show extension slots" in the command palette outlines every place an extension can add to.
 
@@ -80,7 +85,10 @@ bun run pack
 
 To install a `.rex`, open Settings, Extensions, Browse store and press "Install from file…". Ruimte shows its name and what it asks for before anything runs. While you work, `dev` is the quicker way to run your extension.
 
+<InstallPermissions />
+
 ## Next
 
+- The How to pages each walk one task from the manifest to the result on screen, starting with [Open a panel from the rail](/docs/extensions/how-to/panel).
 - [The manifest](/docs/extensions/manifest) lists every field and permission.
 - `extensions/limits` in the Ruimte repository is a complete extension built on the public API alone.

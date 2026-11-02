@@ -1,6 +1,7 @@
 import { SlotTable } from '@/components/docs/SlotTable';
 import { SlotMap } from '@/components/docs/extensions/SlotMap.tsx';
 import { ActionRun } from '@/components/docs/extensions/ActionRun.tsx';
+import { PaletteCommands, PaletteSource } from '@/components/docs/extensions/PaletteScenes.tsx';
 
 export const metadata = { title: 'Slots and actions' };
 
@@ -23,7 +24,7 @@ defineAction({
     id: 'summarize',
     title: 'Summarize',
     icon: 'sparkles',
-    shortcut: 'mod+alt+s',
+    shortcut: 'mod+alt+u',
     slots: {
         selectionBar: ({ nodes }) => nodes.length > 1,
         nodeMenu: true
@@ -50,11 +51,11 @@ slots: {
 
 <ActionRun />
 
-While `run` is pending, the nodes it is about show a spinner, which also stops the action through `signal`, and its button is disabled for those nodes. When `run` throws, the person sees the error. For work that is no action, `host.busy` shows the same spinner.
+While `run` is pending, the nodes it is about show a spinner, which also stops the action through `signal`, and its button is disabled for those nodes. When `run` throws, the person sees the error. For work that is no action, `host.busy` shows the same spinner. [Add a button to a node or a menu](/docs/extensions/how-to/button) builds an action for a terminal's header and the canvas menu.
 
 An action without `slots` shows only where a menu of yours puts it, and gets that menu's context. Type that context yourself with `defineAction<{ node: NodeInfo }>`.
 
-A `shortcut` needs `mod` or `alt`. `mod` is Cmd on macOS and Ctrl elsewhere, so `'mod+alt+s'` is <Shortcut keys="Mod+Alt+S" /> on this computer. Pressed, it runs with the context of the command palette.
+A `shortcut` needs `mod` or `alt`. `mod` is Cmd on macOS and Ctrl elsewhere, so `'mod+alt+u'` is <Shortcut keys="Mod+Alt+U" /> on this computer. Pressed, it runs with the context of the command palette. Ruimte's own shortcuts come first, so a key Ruimte uses never reaches an action. [Add a command with a shortcut](/docs/extensions/how-to/command) walks through one.
 
 ## Menus
 
@@ -116,7 +117,9 @@ definePaletteSource({
 });
 ```
 
-It runs after a pause in the typing. A source that is slow or fails costs only its own rows.
+It runs after a pause in the typing. A source that is slow or fails costs only its own rows. Each row shows its `detail` beside the title, or the source's `title` without one:
+
+<PaletteSource />
 
 `defineCommand` adds a plain command to the palette, with no slots and no context:
 
@@ -127,6 +130,10 @@ defineCommand({
     run: () => standup.open()
 });
 ```
+
+A person finds a command and an action alike, by a word of the title:
+
+<PaletteCommands />
 
 ## Templates
 

@@ -1,3 +1,5 @@
+import { SettingsFields, SettingsOwnPage } from '@/components/docs/extensions/SettingsScenes.tsx';
+
 export const metadata = { title: 'Settings and storage' };
 
 # Settings and storage
@@ -72,6 +74,8 @@ defineExtensionSettings({
 });
 ```
 
+<SettingsFields />
+
 A key is unique across all groups, and `useSetting` reads it the same way.
 
 Read a setting in a component with `useSetting`. The component draws again when the person changes it.
@@ -97,7 +101,11 @@ defineExtensionSettings({
 });
 ```
 
-`keywords` let the search in Settings find your page.
+`keywords` let the search in Settings find your page. Ruimte draws your component under the permissions, where the fields would go:
+
+<SettingsOwnPage />
+
+[Add a settings page](/docs/extensions/how-to/settings) builds both kinds of page from start to end.
 
 ## Storage
 

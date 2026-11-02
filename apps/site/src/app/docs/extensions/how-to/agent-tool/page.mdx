@@ -1,0 +1,94 @@
+import { AgentTool } from '@/components/docs/extensions/TerminalScenes.tsx';
+
+export const metadata = { title: 'Give agents a tool' };
+
+# Give agents a tool
+
+<p className="lead">Offer every agent on the machine a tool of yours, which it finds and calls through `ruimte-context`, in a chat or a terminal.</p>
+
+This page gives agents a `tickets` tool that answers the open tickets of a tracker. It builds on the server part of [Call your server part and keep a secret](/docs/extensions/how-to/server), which keeps the tracker's key.
+
+## The files
+
+```text
+manifest.json
+server/index.ts
+```
+
+A tool needs the permission `agents.tools`:
+
+```json
+{
+    "id": "acme.tickets",
+    "name": "Tickets",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "Your tracker's open tickets, for you and your agents.",
+    "color": "#ea580c",
+    "permissions": {
+        "agents.tools": "Lets your agents read the open tickets"
+    }
+}
+```
+
+With `agents.tools`, Ruimte starts the server part with the machine, since an agent can only find a tool that runs.
+
+## Define the tool
+
+In `server/index.ts`, `defineAgentTool` takes a `description` the agent reads to decide when to call it, and `parameters` as a JSON Schema of its input:
+
+```ts
+import { defineAgentTool, secrets } from '@ruimte/extension/server';
+
+defineAgentTool({
+    id: 'tickets',
+    description: 'Lists the tickets of this project in the tracker, one per line: key, state, title',
+    parameters: {
+        type: 'object',
+        properties: {
+            state: {
+                type: 'string',
+                enum: ['open', 'closed']
+            }
+        }
+    },
+    run: async ({ state = 'open' }, { caller }) => {
+        const key = await secrets.get('trackerKey');
+
+        if (key === undefined) {
+            return 'No tracker key yet. Ask the person to add it under Settings, Extensions, Tickets.';
+        }
+
+        const response = await fetch(`https://tracker.example.com/api/tickets?state=${state}`, {
+            headers: {
+                Authorization: `Bearer ${key}`
+            }
+        });
+        const tickets: { key: string; state: string; title: string }[] = await response.json();
+
+        return tickets.map((ticket) => `${ticket.key}\t${ticket.state}\t${ticket.title}`).join('\n');
+    }
+});
+```
+
+A tool answers in text, since an agent reads text. Anything else is sent as JSON. `caller` names the agent that called it. Write a failure as an answer the agent can act on, like the missing key above.
+
+## How an agent finds it
+
+Every agent Ruimte starts knows `ruimte-context`. `tool list` prints each tool on the machine with its id, its description and the schema of its input. `tool run` calls one by its id, which is your extension's id and the tool's joined by a slash:
+
+```bash
+ruimte-context tool list
+ruimte-context tool run acme.tickets/tickets --input '{"state":"open"}'
+```
+
+Without `--input`, the tool gets `{}`. In a chat, it looks like this:
+
+<AgentTool />
+
+## Check it
+
+Run `bun run dev`, then ask a chat on the machine which tickets are open. It runs `tool list`, finds yours, and calls it. When it does not, check that the manifest names `agents.tools`, and that `bun run dev` printed no error from the server part.
+
+A person can reach the same work by voice. [Chats and agents](/docs/extensions/chats-and-agents#voice) has `defineVoiceAction`, which you describe the same way.

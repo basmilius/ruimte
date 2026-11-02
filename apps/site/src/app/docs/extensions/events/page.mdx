@@ -1,3 +1,5 @@
+import { AgentFinished } from '@/components/docs/extensions/CanvasScenes.tsx';
+
 export const metadata = { title: 'Events' };
 
 # Events
@@ -31,6 +33,23 @@ const stop = onEvent('node.added', ({ node }) => {
     console.info('added', node.title);
 });
 ```
+
+An event often ends in something the person sees. Here a finished chat shows a toast, whose Show button brings the chat into view:
+
+```ts
+onEvent('chat.turnFinished', ({ chatId }) => {
+    host.notify('A chat finished its turn', {
+        action: {
+            title: 'Show',
+            run: () => canvas.reveal({ id: chatId })
+        }
+    });
+});
+```
+
+<AgentFinished />
+
+[React when an agent finishes](/docs/extensions/how-to/agent) builds this from start to end.
 
 ## The events
 

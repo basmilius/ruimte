@@ -1,4 +1,5 @@
 import { ChatBlocks } from '@/components/docs/extensions/ChatBlocks.tsx';
+import { AgentTool } from '@/components/docs/extensions/TerminalScenes.tsx';
 
 export const metadata = { title: 'Chats and agents' };
 
@@ -70,7 +71,7 @@ defineReference({
 ```ts
 const { text } = await agents.run({
     prompt: 'Summarize these notes',
-    context: [note.id]
+    context: [notes]
 });
 
 for await (const piece of agents.stream({ prompt, signal })) {
@@ -78,7 +79,17 @@ for await (const piece of agents.stream({ prompt, signal })) {
 }
 ```
 
-`context` takes node ids. The agent reads those nodes as it would along a line.
+`context` takes texts, which go after the prompt. To hand the agent nodes, read them first with `context.read`, which needs the permission `context.read`:
+
+```ts
+const sources = await context.read({ nodes: selection });
+const { text } = await agents.run({
+    prompt: 'Summarize these notes',
+    context: sources.map((source) => `# ${source.title}\n${source.text}`)
+});
+```
+
+The agent runs in the project folder, on the person's own CLI and plan.
 
 `agents.start` starts a chat a person sees and can stop, supervised at most. It lands beside `near` on the canvas in front, or as a view of its own when no canvas is open. It needs `agents.start`.
 
@@ -105,6 +116,10 @@ defineAgentTool({
 ```
 
 A tool answers in text. Offering one needs `agents.tools`, and starts the server part with the machine, since an agent can only find what runs.
+
+<AgentTool />
+
+[Give agents a tool](/docs/extensions/how-to/agent-tool) builds one with an input schema.
 
 ## Voice
 

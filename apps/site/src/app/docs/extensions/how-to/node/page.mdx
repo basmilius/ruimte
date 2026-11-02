@@ -1,0 +1,134 @@
+import { NodeType } from '@/components/docs/extensions/CanvasScenes.tsx';
+
+export const metadata = { title: 'Add a node to the canvas' };
+
+# Add a node to the canvas
+
+<p className="lead">Give the canvas a node of your own, with data that lives in the project, and let agents read it along a line.</p>
+
+This page builds a Counter: a node that shows a number and a button that raises it.
+
+## The files
+
+```text
+manifest.json
+assets/icon.svg
+client/index.ts
+client/Counter.tsx
+server/index.ts      only for what agents read
+```
+
+A node needs no permission. The person adds it, and its data is the node's own:
+
+```json
+{
+    "id": "acme.counter",
+    "name": "Counter",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Acme",
+    "description": "A number on the canvas you can count up.",
+    "color": "#7c3aed"
+}
+```
+
+## Define the node
+
+In `client/index.ts`:
+
+```ts
+import { defineNode } from '@ruimte/extension/client';
+
+defineNode<{ count: number }>({
+    id: 'counter',
+    title: 'Counter',
+    icon: 'hash',
+    size: {
+        width: 240,
+        height: 170
+    },
+    initialData: {
+        count: 0
+    },
+    component: () => import('./Counter')
+});
+```
+
+`size` is the size of a new node, 420 by 300 when you leave it out. `initialData` is what a new node holds. Ruimte draws the frame, with the `icon`, the `title`, and the buttons to zoom to the node and close it. Your component fills the body.
+
+## Draw the body
+
+`useNodeData` reads the node's data and writes it back:
+
+```tsx
+import { Button } from '@ruimte/extension/ui';
+import { useNodeData } from '@ruimte/extension/client';
+
+export default function Counter() {
+    const [data, setData] = useNodeData<{ count: number }>();
+
+    return (
+        <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+            <strong style={{ fontSize: 36 }}>{data.count}</strong>
+            <Button
+                variant="secondary"
+                onClick={() => setData({ count: data.count + 1 })}
+            >
+                +1
+            </Button>
+        </div>
+    );
+}
+```
+
+The data goes into the project file with the node. It survives a reload, shows on every computer that opens the project, and goes to git with the project if the view is shared. Keep it to what JSON can hold.
+
+## Add one
+
+Right-click the canvas. Your node is under Extensions, at the spot you clicked:
+
+<NodeType />
+
+The command palette offers "Add Counter" as well. To offer it elsewhere, give `addFrom` the [slots](/docs/extensions/slots) it should show in, such as `{ emptyCanvas: true }`. `addFrom` replaces both defaults, so name `canvasMenu` and `commandPalette` too if you want to keep them.
+
+Your code can add one as well, with `canvas.write`: `canvas.createNode('counter', { data: { count: 10 } })`.
+
+## Let agents read it
+
+An agent reads a node along a line once your server part says what the node holds. In `server/index.ts`:
+
+```ts
+import { defineNodeContext } from '@ruimte/extension/server';
+
+defineNodeContext<{ count: number }>('counter', (node) => [
+    {
+        text: `The counter stands at ${node.data.count}.`
+    }
+]);
+```
+
+Ruimte starts the server part when an agent asks, so this works with no window open.
+
+## Change the data later
+
+When the shape of the data changes, raise `dataVersion` and give `migrate`. It gets what a node stored and the version it stored it with:
+
+```ts
+defineNode<{ count: number; step: number }>({
+    id: 'counter',
+    title: 'Counter',
+    icon: 'hash',
+    initialData: {
+        count: 0,
+        step: 1
+    },
+    dataVersion: 2,
+    migrate: (stored) => ({
+        ...(stored as { count: number }),
+        step: 1
+    }),
+    component: () => import('./Counter')
+});
+```
+
+Keep the `id` as it is. Every node in a project file refers to its type by it.
