@@ -1,6 +1,6 @@
-import { createElement, useEffect, useState } from 'react';
+import { createElement, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Store, type LucideIcon } from 'lucide-react';
+import { FileUp, Store, type LucideIcon } from 'lucide-react';
 import { Button, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
@@ -13,11 +13,14 @@ import { readDisabled } from '@/extensions/internal';
 import { useContributions } from '@/extensions/registry';
 import {
     installFromStore,
+    installPack,
+    readPack,
     readStore,
     removeExtension,
     setExtensionEnabled,
     storeIconUrl,
     type ExtensionStoreEntry,
+    type PackPreview,
     type StoreAnswer
 } from '@/extensions/store';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -71,6 +74,90 @@ function PermissionsSection({ permissions }: { permissions: Readonly<Record<stri
                 entries.map(([permission, reason]) => <SettingsRow key={permission} label={reason} description={permission} control={null} />)
             )}
         </SettingsSection>
+    );
+}
+
+/* A pack a person picked, shown as the store shows an entry: what it is and what it asks for, before it runs. */
+function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShown: (id: string) => void; onBack: () => void }) {
+    const { t } = useTranslation('settings');
+    const { manifest } = preview;
+
+    return (
+        <div className={DETAIL}>
+            <ExtensionHeader
+                icon={preview.icon}
+                color={manifest.color}
+                name={manifest.name}
+                meta={[manifest.publisher, manifest.version]}
+                description={manifest.description}
+            />
+            <PermissionsSection permissions={manifest.permissions} />
+            <p className="text-sm text-text-muted">{t('extensions.fromFileTrust')}</p>
+            <div className="flex gap-2">
+                <Button
+                    variant="primary"
+                    onClick={() => {
+                        void installPack(preview.bytes).then(
+                            ({ onMachine }) => {
+                                if (!onMachine) {
+                                    useToasts.getState().show({ kind: 'success', title: t('extensions.notOnMachine', { name: manifest.name }) });
+                                }
+
+                                onShown(manifest.id);
+                            },
+                            (e: unknown) =>
+                                useToasts
+                                    .getState()
+                                    .show({ kind: 'error', title: t('extensions.installFailed', { name: manifest.name }), description: String(e) })
+                        );
+                    }}
+                >
+                    {t('extensions.install')}
+                </Button>
+                <Button onClick={onBack}>{t('extensions.back')}</Button>
+            </div>
+        </div>
+    );
+}
+
+/* The store, and beside it a pack from a file: one an author sent, or one the store has not reviewed yet. */
+function BrowseDetail({ onShown }: { onShown: (id: string) => void }) {
+    const { t } = useTranslation('settings');
+    const input = useRef<HTMLInputElement>(null);
+    const [preview, setPreview] = useState<PackPreview | null>(null);
+
+    if (preview !== null) {
+        return <FileDetail preview={preview} onShown={onShown} onBack={() => setPreview(null)} />;
+    }
+
+    return (
+        <div className={DETAIL}>
+            <div>
+                <Button onClick={() => input.current?.click()}>
+                    <Icon icon={FileUp} size={14} />
+                    {t('extensions.fromFile')}
+                </Button>
+                <input
+                    ref={input}
+                    type="file"
+                    accept=".rex"
+                    hidden
+                    aria-label={t('extensions.fromFile')}
+                    onChange={(event) => {
+                        const file = event.target.files?.[0];
+
+                        event.target.value = '';
+
+                        if (file !== undefined) {
+                            void readPack(file).then(setPreview, (e: unknown) =>
+                                useToasts.getState().show({ kind: 'error', title: t('extensions.fromFileUnreadable'), description: String(e) })
+                            );
+                        }
+                    }}
+                />
+            </div>
+            <StoreDetail onShown={onShown} />
+        </div>
     );
 }
 
@@ -336,7 +423,7 @@ export function ExtensionsPane() {
                 <>
                     {extensionsInSafeMode() && <p className="text-sm text-text-muted">{t('extensions.safeMode')}</p>}
                     {selected === BROWSE ? (
-                        <StoreDetail onShown={setSelected} />
+                        <BrowseDetail onShown={setSelected} />
                     ) : builtIns.some((entry) => entry.id === selected) ? (
                         <BuiltInDetail id={selected} />
                     ) : (

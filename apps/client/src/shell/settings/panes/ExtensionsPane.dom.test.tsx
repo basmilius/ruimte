@@ -37,3 +37,34 @@ describe('the list of extensions', () => {
         expect(places).toEqual([...places].sort((left, right) => left - right));
     });
 });
+
+describe('installing from a file', () => {
+    test('shows what the pack is and asks for before it installs it', async () => {
+        const manifest = { id: 'acme.local', name: 'Local pack', version: '0.2.0', api: 1, permissions: { 'files.read': 'Reads your notes' } };
+        const pack = { files: { 'manifest.json': Buffer.from(JSON.stringify(manifest)).toString('base64') } };
+        const installs: Uint8Array[] = [];
+
+        windowWithBridge.ruimteDesktop = {
+            extensions: {
+                list: async () => INSTALLED,
+                install: async (bytes: Uint8Array) => void installs.push(bytes)
+            }
+        };
+        await mounted.render(<ExtensionsPane />);
+
+        const input = mounted.host.querySelector<HTMLInputElement>('input[type="file"]');
+        const file = new File([Bun.gzipSync(JSON.stringify(pack))], 'local.rex');
+
+        Object.defineProperty(input, 'files', { value: [file], configurable: true });
+        input?.dispatchEvent(new Event('change', { bubbles: true }));
+        await until(() => mounted.host.textContent?.includes('Local pack') ?? false);
+
+        expect(mounted.host.textContent).toContain('Reads your notes');
+        expect(installs).toHaveLength(0);
+
+        const install = [...mounted.host.querySelectorAll('button')].find((button) => button.textContent === 'Install');
+
+        install?.click();
+        await until(() => installs.length === 1);
+    });
+});

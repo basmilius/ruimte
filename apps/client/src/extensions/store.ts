@@ -1,5 +1,6 @@
 import { EXTENSION_STORE_PUBLIC_KEY, extensionStoreMessage, ExtensionStoreIndexSchema, type ExtensionStoreEntry } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
+import { ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { transport } from '@/transport';
@@ -79,6 +80,36 @@ export async function installFromStore(entry: ExtensionStoreEntry, fetcher: type
     }
 
     return installPack(bytes);
+}
+
+export interface PackPreview {
+    bytes: Uint8Array;
+    manifest: ExtensionManifest;
+    icon: string | null;
+}
+
+function textOf(base64: string): string {
+    return new TextDecoder().decode(Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)));
+}
+
+/* What a `.rex` from a file says it is, so a person sees its name and permissions before it runs anywhere. */
+export async function readPack(file: Blob): Promise<PackPreview> {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const unzipped = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const pack = ExtensionPackSchema.parse(JSON.parse(await new Response(unzipped).text()));
+    const manifest = pack.files['manifest.json'];
+
+    if (manifest === undefined) {
+        throw new Error('This file holds no manifest.json');
+    }
+
+    const icon = pack.files['assets/icon.svg'];
+
+    return {
+        bytes,
+        manifest: ExtensionManifestSchema.parse(JSON.parse(textOf(manifest))),
+        icon: icon === undefined ? null : `data:image/svg+xml;base64,${icon}`
+    };
 }
 
 export async function removeExtension(id: string): Promise<void> {
