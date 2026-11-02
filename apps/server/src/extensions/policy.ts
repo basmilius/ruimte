@@ -138,14 +138,16 @@ export const SCHEDULE_NEEDS_CLOCK = 'schedule needs the permission clock in mani
 
 const UNITS: Readonly<Record<string, number>> = { s: 1000, m: 60_000, h: 3_600_000 };
 const MIN_EVERY_MS = 10_000;
+// The longest delay a timer holds; past it Bun and Node fire after 1 ms instead.
+const MAX_EVERY_MS = 2 ** 31 - 1;
 
-/* How often `schedule` runs a task, from like 30s, 5m or 1h, of at least 10 seconds. A wrong one is the author's mistake. */
+/* How often `schedule` runs a task, from like 30s, 5m or 1h, of at least 10 seconds and at most 596 hours. A wrong one is the author's mistake. */
 export function everyMs(every: string): number {
     const match = /^(\d+)([smh])$/.exec(every);
     const ms = match === null ? 0 : Number(match[1]) * (UNITS[match[2] as string] as number);
 
-    if (ms < MIN_EVERY_MS) {
-        throw new Error(`schedule takes something like 30s, 5m or 1h, of at least 10 seconds, not ${every}`);
+    if (!Number.isFinite(ms) || ms < MIN_EVERY_MS || ms > MAX_EVERY_MS) {
+        throw new Error(`schedule takes something like 30s, 5m or 1h, of at least 10 seconds and at most 596h, not ${every}`);
     }
 
     return ms;

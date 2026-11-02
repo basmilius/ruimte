@@ -6274,11 +6274,12 @@ class SendLimit {
 var SCHEDULE_NEEDS_CLOCK = "schedule needs the permission clock in manifest.json";
 var UNITS = { s: 1000, m: 60000, h: 3600000 };
 var MIN_EVERY_MS = 1e4;
+var MAX_EVERY_MS = 2 ** 31 - 1;
 function everyMs(every) {
   const match = /^(\d+)([smh])$/.exec(every);
   const ms = match === null ? 0 : Number(match[1]) * UNITS[match[2]];
-  if (ms < MIN_EVERY_MS) {
-    throw new Error(`schedule takes something like 30s, 5m or 1h, of at least 10 seconds, not ${every}`);
+  if (!Number.isFinite(ms) || ms < MIN_EVERY_MS || ms > MAX_EVERY_MS) {
+    throw new Error(`schedule takes something like 30s, 5m or 1h, of at least 10 seconds and at most 596h, not ${every}`);
   }
   return ms;
 }

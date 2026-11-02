@@ -23,8 +23,14 @@ describe('SendLimit', () => {
 
 describe('everyMs', () => {
     test('reads seconds, minutes and hours, and refuses anything under ten seconds', () => {
-        expect([everyMs('10s'), everyMs('5m'), everyMs('1h')]).toEqual([10_000, 300_000, 3_600_000]);
-        expect(() => everyMs('9s')).toThrow('of at least 10 seconds, not 9s');
+        expect([everyMs('10s'), everyMs('5m'), everyMs('1h'), everyMs('596h')]).toEqual([10_000, 300_000, 3_600_000, 2_145_600_000]);
+        expect(() => everyMs('9s')).toThrow('not 9s');
         expect(() => everyMs('5 minutes')).toThrow('not 5 minutes');
+    });
+
+    test('refuses an interval longer than a timer holds, which would fire at once', () => {
+        expect(() => everyMs('597h')).toThrow('at most 596h, not 597h');
+        expect(() => everyMs('999999999h')).toThrow('not 999999999h');
+        expect(() => everyMs(`${'9'.repeat(400)}s`)).toThrow('at most 596h');
     });
 });

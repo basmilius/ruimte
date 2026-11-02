@@ -87,7 +87,7 @@ export function defineAgentTool<Input extends object = { [key: string]: Json | u
     run(input: Input, context: { caller: string }): string | Promise<string>;
 }): void;
 
-/** Needs the permission `clock`. Runs on this process's own clock: `every` is like 30s, 5m or 1h, of at least 10 seconds. */
+/** Needs the permission `clock`. Runs on this process's own clock: `every` is like 30s, 5m or 1h, of at least 10 seconds and at most 596 hours. */
 export function schedule(task: { id: string; every: string; run(): void | Promise<void> }): void;
 
 export const agents: {
