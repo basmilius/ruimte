@@ -139,13 +139,46 @@ async function create(values: {
     console.log(`Created ${folder}\n\nNext: cd ${basename(folder)} && bun run dev`);
 }
 
+/*
+ * Runs `work` one at a time. Calls while it runs ask for a single run after it, so two builds never
+ * write the same folder at once and the last save is still built.
+ */
+export function oneAtATime(work: () => Promise<void>): () => Promise<void> {
+    let running: Promise<void> | null = null;
+    let again = false;
+
+    const loop = async (): Promise<void> => {
+        try {
+            do {
+                again = false;
+                await work();
+            } while (again);
+        } finally {
+            running = null;
+        }
+    };
+
+    return () => {
+        if (running !== null) {
+            again = true;
+
+            return running;
+        }
+
+        running = loop();
+
+        return running;
+    };
+}
+
 /* Builds on every save and tells the machine, which restarts `server/` and has the client load the new build. */
 async function dev(options: LocalDaemonOptions): Promise<void> {
     const folder = resolve('.');
     const manifest = readManifest(folder);
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const rebuild = async (): Promise<void> => {
+    // A build is linked only once it finished, and the next one starts only after that.
+    const rebuild = oneAtATime(async () => {
         try {
             const { outdir } = await buildExtension(folder);
 
@@ -154,7 +187,7 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
         } catch (e) {
             console.error(e instanceof Error ? e.message : e);
         }
-    };
+    });
 
     let built = sourceSignature(folder);
 
