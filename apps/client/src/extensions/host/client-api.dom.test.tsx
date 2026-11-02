@@ -684,7 +684,6 @@ describe('the client API', () => {
     test('goes back to what the machine holds when it refuses a write, and says so', async () => {
         const machine = new FakeMachine();
         const { api } = loaded();
-        let write = (_next: number): void => undefined;
 
         machine.answer('extension.storageGet', () => ({ value: 1 }));
         machine.answer('extension.storageSet', () => {
@@ -695,9 +694,7 @@ describe('the client API', () => {
         function Count() {
             const [count, setCount] = api.useStorage('count', 0, 'machine');
 
-            write = setCount;
-
-            return <p>count {count}</p>;
+            return <button onClick={() => setCount(2)}>count {count}</button>;
         }
 
         api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
@@ -707,7 +704,7 @@ describe('the client API', () => {
         mounted = mount();
         await mounted.render(createElement(card?.component as ComponentType));
         await until(() => mounted?.host.textContent === 'count 1');
-        await act(async () => write(2));
+        await clickOn(mounted.host.querySelector('button'));
         await until(() => mounted?.host.textContent === 'count 1');
 
         expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual([
