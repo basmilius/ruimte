@@ -24,7 +24,7 @@ const TSCONFIG = `${JSON.stringify(
             skipLibCheck: true,
             types: ['bun']
         },
-        include: ['client', 'server']
+        include: ['client', 'server', 'test']
     },
     null,
     4
@@ -63,7 +63,36 @@ export default function Main() {
 `;
 }
 
-/* A project that builds and runs as it is, with an example of what was asked for. */
+const KIND_OF: Readonly<Record<'panel' | 'node' | 'view' | 'card', string>> = {
+    panel: 'panel',
+    node: 'node',
+    view: 'view',
+    card: 'sidebarCard'
+};
+
+/* An example test for each part, run by `bun run test` against the fake host. */
+function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withServer: boolean, name: string): string {
+    const imports = ["import { describe, expect, test } from 'bun:test';"];
+    const tests: string[] = [];
+
+    if (surface !== null) {
+        imports.push("import { definitions } from '@ruimte/extension/testing';", "import '../client/index';");
+        tests.push(`    test('defines its ${KIND_OF[surface]}', () => {
+        expect(definitions()).toEqual([{ kind: '${KIND_OF[surface]}', definition: expect.objectContaining({ id: 'main' }) }]);
+    });`);
+    }
+
+    if (withServer) {
+        imports.push("import server from '../server';");
+        tests.push(`    test('greets', async () => {
+        expect(await server.greeting()).toBe(${JSON.stringify(`Hello from ${name}`)});
+    });`);
+    }
+
+    return `${imports.join('\n')}\n\ndescribe(${JSON.stringify(name)}, () => {\n${tests.join('\n\n')}\n});\n`;
+}
+
+/* A project that builds and runs as it is, with an example of what was asked for and a test of it. */
 export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> {
     const withClient = answers.parts !== 'server' && answers.surface !== 'none';
     const withServer = answers.parts !== 'client';
@@ -108,6 +137,12 @@ export default defineServer({
     }
 });
 `;
+    }
+
+    const surface = withClient && answers.surface !== 'none' ? answers.surface : null;
+
+    if (surface !== null || withServer) {
+        files['test/extension.test.ts'] = exampleTest(surface, withServer, answers.name);
     }
 
     return files;

@@ -1,12 +1,8 @@
 import { useUsageLimits } from '@ruimte/extension/client';
-
-const NEAR_LIMIT = 0.7;
+import { limitRows } from './limit-rows';
 
 export default function LimitsCard() {
-    const providers = useUsageLimits();
-    const rows = providers.flatMap((provider) =>
-        provider.windows.map((window) => ({ key: `${provider.provider}/${window.label}`, label: `${provider.provider}, ${window.label}`, used: window.used }))
-    );
+    const rows = limitRows(useUsageLimits());
 
     if (rows.length === 0) {
         return <div style={{ color: 'var(--text-muted)' }}>No plan windows yet.</div>;
@@ -18,16 +14,10 @@ export default function LimitsCard() {
                 <div key={row.key}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                         <span>{row.label}</span>
-                        <span>{Math.round(row.used * 100)}%</span>
+                        <span>{row.percent}%</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 2, overflow: 'hidden', background: 'var(--surface-active)' }}>
-                        <div
-                            style={{
-                                height: '100%',
-                                width: `${Math.round(row.used * 100)}%`,
-                                background: row.used >= NEAR_LIMIT ? 'var(--status-needs-you)' : 'var(--accent)'
-                            }}
-                        />
+                        <div style={{ height: '100%', width: `${row.percent}%`, background: row.near ? 'var(--status-needs-you)' : 'var(--accent)' }} />
                     </div>
                 </div>
             ))}

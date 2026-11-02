@@ -190,8 +190,11 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
 }
 
 async function test(args: string[]): Promise<number> {
-    const folder = mkdtempSync(join(tmpdir(), 'ruimte-extension-test-'));
-    const preload = join(folder, 'preload.ts');
+    // Inside the project, so the fakes import the project's own React.
+    await mkdir(join('node_modules', '.cache'), { recursive: true });
+
+    const folder = mkdtempSync(join('node_modules', '.cache', 'ruimte-extension-test-'));
+    const preload = resolve(folder, 'preload.ts');
 
     await writeFile(preload, testRuntime);
 
