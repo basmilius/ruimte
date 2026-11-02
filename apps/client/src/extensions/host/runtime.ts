@@ -11,28 +11,49 @@ import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api
  * client without any carries none of this. A module of an extension is fully trusted code in this page; this is
  * not a boundary, only how it finds what it shares with Ruimte.
  */
-const extensions = new Map<string, { extension: LoadedExtension; generation: number }>();
-const apis = new Map<string, ReturnType<typeof clientApiFor>>();
+type ClientApi = ReturnType<typeof clientApiFor>;
+
+interface Load {
+    extension: LoadedExtension;
+    generation: number;
+    api?: ClientApi;
+}
+
+const extensions = new Map<string, Load>();
 let generations = 0;
+
+// Bound to this load, so a module that registers after it was taken down adds nothing.
+function apiOf(id: string, load: Load): ClientApi {
+    load.api ??= clientApiFor(load.extension, () => extensions.get(id)?.generation === load.generation);
+
+    return load.api;
+}
+
+/*
+ * A version turned on again imports only its entry anew: a chunk the page ran before keeps the client it was handed
+ * then. That client speaks for the load in place while it is of the same version, so the chunk registers and calls
+ * through it; a load of another version, or none, leaves it the load it began with, which adds nothing.
+ */
+function clientOf(id: string, load: Load): ClientApi {
+    return new Proxy(apiOf(id, load), {
+        get(own, property) {
+            const current = extensions.get(id);
+            const api = current !== undefined && current.extension === load.extension ? apiOf(id, current) : own;
+
+            return Reflect.get(api, property);
+        }
+    });
+}
 
 (globalThis as Record<string, unknown>).__ruimteExtension = {
     for(id: string) {
-        const loaded = extensions.get(id);
+        const load = extensions.get(id);
 
-        if (loaded === undefined) {
+        if (load === undefined) {
             throw new Error(`Extension ${id} is not loaded`);
         }
 
-        const { extension, generation } = loaded;
-        let client = apis.get(id);
-
-        if (client === undefined) {
-            // Bound to this load, so a module that registers after it was taken down adds nothing.
-            client = clientApiFor(extension, () => extensions.get(id)?.generation === generation);
-            apis.set(id, client);
-        }
-
-        return { react: React, jsxRuntime, reactDom, ui, client, console: consoleFor(id, extension.dev === true) };
+        return { react: React, jsxRuntime, reactDom, ui, client: clientOf(id, load), console: consoleFor(id, load.extension.dev === true) };
     }
 };
 
@@ -42,7 +63,6 @@ export function registerExtension(extension: LoadedExtension): () => boolean {
     const generation = ++generations;
 
     extensions.set(id, { extension, generation });
-    apis.delete(id);
 
     return () => extensions.get(id)?.generation === generation;
 }
@@ -56,5 +76,4 @@ export function forgetExtension(id: string): void {
     }
 
     extensions.delete(id);
-    apis.delete(id);
 }

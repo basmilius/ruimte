@@ -101,6 +101,94 @@ describe('loading extensions', () => {
         delete scope.__listenLater;
     });
 
+    test('registers again when turned back on, also when the API came in through a chunk the page ran before', async () => {
+        const entry = writeExtension(
+            'acme.chunked',
+            "import { client } from './shared.js';\nclient.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+        );
+
+        writeFileSync(join(folder, 'acme.chunked', 'client', 'shared.js'), "export const { client } = globalThis.__ruimteExtension.for('acme.chunked');\n");
+        installed = [entry];
+        await syncExtensions();
+        turn('acme.chunked', false);
+        await syncExtensions();
+        turn('acme.chunked', true);
+        await syncExtensions();
+
+        expect(hasCommand('acme.chunked')).toBe(true);
+    });
+
+    test('applies no list that came in after a newer one, so a slow answer does not load what was turned off', async () => {
+        const answers: ((entries: InstalledClientExtension[]) => void)[] = [];
+        const entry = writeExtension(
+            'acme.stale',
+            "globalThis.__ruimteExtension.for('acme.stale').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+        );
+
+        installDesktop({ extensions: { list: () => new Promise((resolve) => answers.push(resolve)) } as never });
+
+        try {
+            const older = syncExtensions();
+            const newer = syncExtensions();
+
+            answers[1]?.([{ ...entry, enabled: false }]);
+            await newer;
+            answers[0]?.([entry]);
+            await older;
+
+            expect(hasCommand('acme.stale')).toBe(false);
+            expect(useInstalledExtensions.getState().installed).toEqual([{ ...entry, enabled: false }]);
+        } finally {
+            installDesktop({ extensions: { list: async () => installed } as never });
+        }
+    });
+
+    test('loads the others while one waits on a top-level await that never ends', async () => {
+        installed = [
+            writeExtension('acme.stuck', 'await new Promise(() => undefined);\n'),
+            writeExtension(
+                'acme.free',
+                "globalThis.__ruimteExtension.for('acme.free').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+            )
+        ];
+
+        void syncExtensions();
+        await until(() => hasCommand('acme.free'));
+    });
+
+    test('runs the code only once its stylesheet loaded', async () => {
+        installed = [
+            writeExtension(
+                'acme.styled',
+                "globalThis.__ruimteExtension.for('acme.styled').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+            )
+        ];
+
+        // The page keeps the sheet loading until the test says it loaded.
+        let sheet: Node | null = null;
+        const fetched = spyOn(globalThis, 'fetch').mockImplementationOnce((async () => new Response(null, { status: 200 })) as unknown as typeof fetch);
+        const appended = spyOn(document.head, 'append').mockImplementationOnce((node) => {
+            sheet = node as Node;
+        });
+
+        try {
+            const synced = syncExtensions();
+
+            await until(() => sheet !== null);
+
+            const before = hasCommand('acme.styled');
+
+            (sheet as Node | null)?.dispatchEvent(new Event('load'));
+            await synced;
+
+            expect(before).toBe(false);
+            expect(hasCommand('acme.styled')).toBe(true);
+        } finally {
+            fetched.mockRestore();
+            appended.mockRestore();
+        }
+    });
+
     test('shows no failure and adds nothing for a load that was taken down while its files came in', async () => {
         installed = [
             writeExtension(
