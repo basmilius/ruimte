@@ -202,6 +202,23 @@ describe('an extension starts a chat', () => {
                     result: undefined
                 }));
             }
+        ],
+        [
+            'a person gave it a color first',
+            'chat',
+            async (nodeId: string): Promise<void> => {
+                await daemon.host.projects.mutate(projectId, (content) => ({
+                    content: {
+                        ...content,
+                        views: content.views.map((view) =>
+                            view.kind === 'canvas'
+                                ? { ...view, nodes: view.nodes.map((node) => (node.id === nodeId ? { ...node, accent: 'blue' } : node)) }
+                                : view
+                        )
+                    },
+                    result: undefined
+                }));
+            }
         ]
     ] as const)('fails naming the node it leaves once it is turned off after the write and %s', async (_, kind, beforeRollback) => {
         let reached = (): void => undefined;

@@ -180,11 +180,17 @@ function withoutStarted(content: ProjectContent, id: string): ProjectContent {
 }
 
 /* Whether the project still holds `written` with every field the start set, so a person's change since is never what goes. */
+/* A key set to undefined is not stored, so both sides drop it before they are compared. */
+function asStored(value: unknown): unknown {
+    return JSON.parse(JSON.stringify(value));
+}
+
 function stillWritten(content: ProjectContent, written: ProjectNode | ProjectChatView): boolean {
     const found = content.views.flatMap((view): readonly object[] =>
         view.id === written.id ? [view] : isCanvasView(view) ? view.nodes.filter((node) => node.id === written.id) : []
     );
-    return found.length === 1 && Object.entries(written).every(([key, value]) => isDeepStrictEqual((found[0] as Record<string, unknown>)[key], value));
+    // The whole node as it is stored, so a field a person added since counts as a change too.
+    return found.length === 1 && isDeepStrictEqual(asStored(found[0]), asStored(written));
 }
 
 /*
