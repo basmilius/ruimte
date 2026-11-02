@@ -1,4 +1,4 @@
-import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, type ComponentType } from 'react';
+import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
 import i18next from 'i18next';
 import { icons, Package, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -381,13 +381,42 @@ function hookPermission(extension: LoadedExtension, hook: 'useAgents' | 'useUsag
 
 type Settle = <Value>(what: string, run: () => Promise<Value>) => Promise<ExtensionResult<Value>>;
 
-/* The `.use()` of a server method suspends, so its answers are kept by what was asked. */
-function serverClient(extension: LoadedExtension, transport: Pick<Transport, 'request'>, settle: Settle): unknown {
+interface KeptServer {
+    methods: unknown;
+    subscribe(listener: () => void): () => void;
+    version(): number;
+    stop(): void;
+}
+
+/*
+ * The `.use()` of a server method suspends, so its answers are kept by what was asked. `reload` drops one, and the link
+ * coming back drops them all, a failure too, so every surface that read one asks again.
+ */
+function serverClient(extension: LoadedExtension, transport: Pick<Transport, 'request' | 'status' | 'subscribeStatus'>, settle: Settle): KeptServer {
     const cache = new Map<string, Promise<ExtensionResult<unknown>>>();
+    const listeners = new Set<() => void>();
+    let version = 0;
     const call = (method: string, args: unknown[]): Promise<ExtensionResult<unknown>> =>
         settle(`server ${method}`, () => transport.request('extension.call', { id: extension.manifest.id, method, args }).then(({ result }) => result));
+    const dropped = (): void => {
+        version += 1;
 
-    return new Proxy(
+        for (const listener of listeners) {
+            listener();
+        }
+    };
+    let open = transport.status === 'open';
+    const stop = transport.subscribeStatus((status) => {
+        const reopened = status === 'open' && !open;
+
+        open = status === 'open';
+
+        if (reopened && cache.size > 0) {
+            cache.clear();
+            dropped();
+        }
+    });
+    const methods = new Proxy(
         {},
         {
             get(_target, method) {
@@ -406,17 +435,35 @@ function serverClient(extension: LoadedExtension, transport: Pick<Transport, 're
                         }
 
                         return use(pending);
+                    },
+                    reload(...args: unknown[]) {
+                        if (cache.delete(JSON.stringify([method, args]))) {
+                            dropped();
+                        }
                     }
                 });
             }
         }
     );
+
+    return {
+        methods,
+        subscribe(listener) {
+            listeners.add(listener);
+
+            return () => {
+                listeners.delete(listener);
+            };
+        },
+        version: () => version,
+        stop
+    };
 }
 
 /* `live` says whether the load this API belongs to is still in place; once it is not, what the extension adds is let go at once. */
 export function clientApiFor(extension: LoadedExtension, live: () => boolean = () => true) {
     const { id } = extension.manifest;
-    const servers = new WeakMap<object, unknown>();
+    const servers = new WeakMap<object, KeptServer>();
     const reportFailure = (what: string) => (text: string) => {
         if (extension.dev === true) {
             sendDevLog(id, 'error', [`${what}: ${text}`]);
@@ -842,11 +889,17 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             let server = servers.get(transport);
 
             if (server === undefined) {
-                server = serverClient(extensionNow, transport, settle);
-                servers.set(transport, server);
+                const kept = serverClient(extensionNow, transport, settle);
+
+                server = kept;
+                servers.set(transport, kept);
+                hold(kept.stop);
             }
 
-            return server as ServerClient<Server>;
+            // Drawn again when a kept answer is dropped, so `.use()` asks once more.
+            useSyncExternalStore(server.subscribe, server.version);
+
+            return server.methods as ServerClient<Server>;
         },
         useServerEvent<Payload>(name: string, listener: (payload: Payload) => void) {
             const extensionNow = useExtension();
@@ -1249,6 +1302,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     return;
                 }
 
+                // Aborted before it began: no abort event comes any more, so the run would start and never be stopped.
+                if (options.signal?.aborted === true) {
+                    return;
+                }
+
                 const runId = crypto.randomUUID();
                 const pieces: string[] = [];
                 let wake = (): void => undefined;
@@ -1302,11 +1360,6 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         abort();
                     }
                 }
-                // Aborted before it began: no abort event comes any more, so the run would start and never be stopped.
-                if (options.signal?.aborted === true) {
-                    return;
-                }
-
             },
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
             start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) =>

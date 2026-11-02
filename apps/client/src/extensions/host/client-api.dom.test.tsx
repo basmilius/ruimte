@@ -337,4 +337,86 @@ describe('the client API', () => {
 
         expect(mounted.host.textContent).toBe('count 0');
     });
+
+    test('asks server/ again for what .use() kept once reload drops it, also after a failure', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+        let key: string | null = null;
+
+        machine.answer('extension.call', ({ method, args }) => {
+            if (method === 'saveKey') {
+                key = String(args[0]);
+
+                return { result: null };
+            }
+
+            if (key === null) {
+                throw new TransportError('failed', 'Add your tracker key');
+            }
+
+            return { result: ['FOO-1'] };
+        });
+        disconnect = connectFakeMachine(machine);
+
+        function Tickets() {
+            const tickets = api.useServer<{ tickets(): Promise<string[]> }>().tickets.use();
+
+            return <p>{tickets.ok ? tickets.value.join(', ') : tickets.error.message}</p>;
+        }
+
+        function Settings() {
+            const server = api.useServer<{ saveKey(key: string): Promise<void>; tickets(): Promise<string[]> }>();
+            const save = async () => {
+                await server.saveKey('secret');
+                server.tickets.reload();
+            };
+
+            return <button onClick={() => void save()}>Save</button>;
+        }
+
+        api.defineSidebarCard({ id: 'tickets', title: 'Tickets', component: async () => ({ default: Tickets }) });
+        api.defineSidebarCard({ id: 'settings', title: 'Settings', component: async () => ({ default: Settings }) });
+
+        const cards = useContributions.getState().sidebarCards.filter((each) => each.id.startsWith('acme.probe/'));
+
+        mounted = mount();
+        await mounted.render(<>{cards.map((card) => createElement(card.component, { key: card.id }))}</>);
+        await until(() => mounted?.host.textContent === 'Add your tracker keySave');
+        await clickOn(mounted.host.querySelector('button'));
+        await until(() => mounted?.host.textContent === 'FOO-1Save');
+
+        expect(machine.requests('extension.call').map(({ method }) => method)).toEqual(['tickets', 'saveKey', 'tickets']);
+    });
+
+    test('asks server/ again for what .use() kept once the connection to the machine comes back', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded();
+        let calls = 0;
+
+        machine.answer('extension.call', () => {
+            calls += 1;
+
+            return { result: calls };
+        });
+        disconnect = connectFakeMachine(machine);
+
+        function Count() {
+            const count = api.useServer<{ count(): Promise<number> }>().count.use();
+
+            return <p>call {count.ok ? count.value : count.error.code}</p>;
+        }
+
+        api.defineSidebarCard({ id: 'count', title: 'Count', component: async () => ({ default: Count }) });
+
+        const card = useContributions.getState().sidebarCards.find((each) => each.id === 'acme.probe/count');
+
+        mounted = mount();
+        await mounted.render(createElement(card?.component as ComponentType));
+        await until(() => mounted?.host.textContent === 'call 1');
+        await act(async () => {
+            machine.drop();
+            machine.reopen();
+        });
+        await until(() => mounted?.host.textContent === 'call 2');
+    });
 });

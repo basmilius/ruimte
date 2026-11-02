@@ -91,6 +91,11 @@ function serverClient(host: TestHost): unknown {
                         }
 
                         return react().use(pending);
+                    },
+                    reload(...args: unknown[]) {
+                        if (host.serverCache.delete(JSON.stringify([method, args]))) {
+                            host.changed();
+                        }
                     }
                 });
             }
@@ -368,7 +373,12 @@ export function clientApi(host: TestHost) {
             host.record('widget', widget);
             entry(widget, { id: fullId(widget.id), kind: 'widget', title: widget.id, slots: widget.slots as Slots });
         },
-        useServer: <Server>(): PublicClient.ServerClient<Server> => serverClient(host) as PublicClient.ServerClient<Server>,
+        useServer: <Server>(): PublicClient.ServerClient<Server> => {
+            // Drawn again when `reload` drops a kept answer, so `.use()` asks once more.
+            useHost(host);
+
+            return serverClient(host) as PublicClient.ServerClient<Server>;
+        },
         useServerEvent<Payload>(name: string, listener: (payload: Payload) => void): void {
             react().useEffect(() => host.listen(`server:${name}`, listener as (payload: never) => void), [name, listener]);
         },

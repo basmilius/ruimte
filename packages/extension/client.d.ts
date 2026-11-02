@@ -275,12 +275,13 @@ export function defineWidget<Place extends SlotName>(widget: { id: string; slots
 
 /**
  * Each method calls `server/` on the machine in front and answers a Result: `failed` with the message of what it threw,
- * `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers. The value crosses
- * as JSON, see {@link Returned}.
+ * `not-found` for a method it lacks, `unavailable` while it cannot run. `.use()` suspends until it answers, and keeps that
+ * answer for the same arguments until `.reload()` with them drops it, or the connection to the machine comes back. Every
+ * surface that read it then asks again. The value crosses as JSON, see {@link Returned}.
  */
 export type ServerClient<Server> = {
     [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>
-        ? ((...args: Args) => Promise<Result<Returned<Value>>>) & { use(...args: Args): Result<Returned<Value>> }
+        ? ((...args: Args) => Promise<Result<Returned<Value>>>) & { use(...args: Args): Result<Returned<Value>>; reload(...args: Args): void }
         : never;
 };
 

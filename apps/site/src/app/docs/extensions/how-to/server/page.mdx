@@ -124,6 +124,7 @@ export default function Settings() {
         }
 
         setKey('');
+        server.tickets.reload();
         host.notify('Saved the tracker key');
     };
 
@@ -183,7 +184,9 @@ export default function Tickets() {
 
 <TicketsPanel />
 
-When `tickets` throws, `ok` is false with the code `failed` and the message it threw, such as the missing key. The panel shows that message. A call goes to the machine the window works on, so on another computer the panel still reads the key from that machine.
+When `tickets` throws, `ok` is false with the code `failed` and the message it threw, such as the missing key. The panel shows that message.
+
+`.use()` keeps its answer, a failure too, so the panel asks only once. That is why `save` calls `server.tickets.reload()`: it drops the kept answer, and the panel asks the server part again with the new key. A connection to the machine that comes back drops every kept answer the same way. A call goes to the machine the window works on, so on another computer the panel still reads the key from that machine.
 
 ## Watch it work
 
