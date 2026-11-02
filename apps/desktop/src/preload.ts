@@ -69,7 +69,7 @@ const bridge = {
         install: (pack: Uint8Array) => ipcRenderer.invoke('extensions:install', pack),
         remove: (id: string) => ipcRenderer.invoke('extensions:remove', id),
         setEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('extensions:set-enabled', id, enabled),
-        link: (folder: string, revision: number) => ipcRenderer.invoke('extensions:link', folder, revision),
+        link: (folder: string, revision: number, enabled?: boolean) => ipcRenderer.invoke('extensions:link', folder, revision, enabled),
         unlink: (id: string) => ipcRenderer.invoke('extensions:unlink', id),
         onChanged: subscribe<[]>('extensions:changed')
     },

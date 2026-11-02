@@ -3,9 +3,9 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { ComponentType } from 'react';
-import type { ExtensionManifest } from '@ruimte/contracts';
+import type { ExtensionInfo, ExtensionManifest } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
-import { syncExtensions, useInstalledExtensions } from '@/extensions/loader';
+import { followDevLinks, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
 import { startExtensions } from '@/extensions/watch';
 import { useToasts } from '@/state/toasts';
@@ -281,6 +281,41 @@ describe('loading extensions', () => {
 
             expect(hasCommand('acme.stale')).toBe(false);
             expect(useInstalledExtensions.getState().installed).toEqual([{ ...entry, enabled: false }]);
+        } finally {
+            installDesktop({ extensions: { list: async () => installed } as never });
+        }
+    });
+
+    test('links a dev folder the machine keeps off as off, so another window never sees it on', async () => {
+        const entry = writeExtension(
+            'acme.devoff',
+            "globalThis.__ruimteExtension.for('acme.devoff').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+        );
+        let links: InstalledClientExtension[] = [];
+        // What another window lists once the shell tells it of each change, in the order the calls reach the shell.
+        const otherWindow: boolean[][] = [];
+        const told = (): void => void otherWindow.push(links.map((each) => each.enabled));
+
+        installDesktop({
+            extensions: {
+                list: async () => links,
+                link: async (_folder: string, _revision: number, enabled?: boolean) => {
+                    links = [{ ...entry, dev: true, enabled: enabled ?? links[0]?.enabled ?? true }];
+                    told();
+                },
+                unlink: async () => undefined,
+                setEnabled: async (_id: string, enabled: boolean) => {
+                    links = links.map((each) => ({ ...each, enabled }));
+                    told();
+                }
+            } as never
+        });
+
+        try {
+            await followDevLinks([{ manifest: entry.manifest, enabled: false, hash: 'dev-1', devFolder: folder, revision: 1 } as ExtensionInfo]);
+
+            expect(otherWindow).toEqual([[false]]);
+            expect(hasCommand('acme.devoff')).toBe(false);
         } finally {
             installDesktop({ extensions: { list: async () => installed } as never });
         }

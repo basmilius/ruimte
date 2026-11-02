@@ -223,15 +223,9 @@ export async function followDevLinks(machineExtensions: readonly ExtensionInfo[]
         await bridge.unlink(entry.manifest.id);
     }
 
+    // On or off as the machine keeps it, in the link itself: no window ever hears of a link a person turned off as on.
     for (const entry of linked) {
-        await bridge.link(entry.devFolder as string, entry.revision ?? 0);
-    }
-
-    // On or off as the machine keeps it, so a shell that started again does not run a dev link a person turned off.
-    const shown = await bridge.list();
-
-    for (const entry of linked.filter((link) => shown.some((each) => each.dev && each.manifest.id === link.manifest.id && each.enabled !== link.enabled))) {
-        await bridge.setEnabled(entry.manifest.id, entry.enabled);
+        await bridge.link(entry.devFolder as string, entry.revision ?? 0, entry.enabled);
     }
 
     await syncExtensions();

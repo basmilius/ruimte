@@ -607,7 +607,9 @@ ipc.handle('extensions:list', () => clientExtensions.list());
 ipc.handle('extensions:install', (_event, pack: Uint8Array) => clientExtensions.install(pack));
 ipc.handle('extensions:remove', (_event, id: string) => clientExtensions.remove(id));
 ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => clientExtensions.setEnabled(id, enabled));
-ipc.handle('extensions:link', (_event, folder: string, revision: number) => clientExtensions.link(folder, revision));
+ipc.handle('extensions:link', (_event, folder: string, revision: number, enabled?: unknown) =>
+    clientExtensions.link(folder, revision, typeof enabled === 'boolean' ? enabled : undefined)
+);
 ipc.handle('extensions:unlink', (_event, id: string) => clientExtensions.unlink(id));
 const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });

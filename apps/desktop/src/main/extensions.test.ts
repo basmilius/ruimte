@@ -103,6 +103,20 @@ describe('the client extensions of the shell', () => {
         expect(await store.list()).toEqual([]);
     });
 
+    test('link a dev folder that is off as off from the first word to the windows', async () => {
+        const seen: Promise<boolean[]>[] = [];
+        const store: ClientExtensions = extensions(() => void seen.push(store.list().then((entries) => entries.map((entry) => entry.enabled))));
+        const folder = join(root, 'dev');
+
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.dev', name: 'Dev', version: '1.0.0', api: 1 }));
+
+        await store.link(folder, 1, false);
+        await store.link(folder, 2);
+
+        expect(await Promise.all(seen)).toEqual([[false], [false]]);
+    });
+
     test('keep both of two changes to the index made at once', async () => {
         const store = extensions();
         const other = gzipSync(

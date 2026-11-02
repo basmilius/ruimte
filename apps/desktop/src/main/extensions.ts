@@ -243,8 +243,11 @@ export class ClientExtensions {
         });
     }
 
-    /* In the order windows asked, so an unlink or a newer link while the manifest is read is never undone by it. */
-    link(folder: string, revision: number): Promise<void> {
+    /*
+     * In the order windows asked, so an unlink or a newer link while the manifest is read is never undone by it. With
+     * `enabled` the link is on or off from the first word the windows get of it, so none runs a link that is off.
+     */
+    link(folder: string, revision: number, enabled?: boolean): Promise<void> {
         return this.change(async (touched) => {
             const manifest = await this.manifestIn(folder);
 
@@ -252,7 +255,7 @@ export class ClientExtensions {
                 throw new Error(`No valid manifest.json in ${folder}`);
             }
 
-            this.links.set(manifest.id, { folder, revision, manifest, enabled: this.links.get(manifest.id)?.enabled ?? true });
+            this.links.set(manifest.id, { folder, revision, manifest, enabled: enabled ?? this.links.get(manifest.id)?.enabled ?? true });
             touched();
         });
     }

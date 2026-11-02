@@ -17,8 +17,11 @@ export interface ExtensionsBridge {
     install(pack: Uint8Array): Promise<InstalledClientExtension>;
     remove(id: string): Promise<void>;
     setEnabled(id: string, enabled: boolean): Promise<void>;
-    /* The folder `ruimte extension dev` builds into, on this computer. A new revision is a new `base`. */
-    link(folder: string, revision: number): Promise<void>;
+    /*
+     * The folder `ruimte extension dev` builds into, on this computer. A new revision is a new `base`. `enabled` is on or
+     * off as the machine keeps it, in the same change; left out, a link keeps what it had, or is on.
+     */
+    link(folder: string, revision: number, enabled?: boolean): Promise<void>;
     unlink(id: string): Promise<void>;
 
     /* After any window installed, removed, turned on or off, linked or unlinked one, so every window loads what is there now. */
