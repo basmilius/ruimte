@@ -37,6 +37,21 @@ describe('building an extension', () => {
         expect(readFileSync(join(outdir, 'server', 'index.js'), 'utf8')).toContain('globalThis.__ruimteExtension.for("acme.builds").server');
     });
 
+    test('gathers every stylesheet the client imports, also a lazy one, into index.css beside index.js', async () => {
+        const folder = project('styles', {
+            'client/index.ts': `import './base.css';\nexport const load = () => import('./Panel');`,
+            'client/base.css': '.builds-base { color: red; }',
+            'client/Panel.tsx': `import './panel.css';\nexport default function Panel() { return null; }`,
+            'client/panel.css': '.builds-panel { color: blue; }'
+        });
+        const { outdir } = await buildExtension(folder);
+        const css = readFileSync(join(outdir, 'client', 'index.css'), 'utf8');
+
+        expect(css).toContain('.builds-base');
+        expect(css).toContain('.builds-panel');
+        expect(readFileSync(join(outdir, 'client', 'index.js'), 'utf8')).toContain('import(');
+    });
+
     test('refuses code of server/ in client/, and takes its types', async () => {
         const refused = project('crossing', {
             'client/index.ts': `import { secret } from '../server/secret';\nconsole.info(secret);`,

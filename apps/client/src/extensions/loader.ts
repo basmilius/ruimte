@@ -72,6 +72,7 @@ export async function syncExtensions(): Promise<void> {
     for (const [id, base] of [...loaded]) {
         if (!wanted.some((entry) => entry.manifest.id === id && entry.base === base)) {
             forgetExtension(id);
+            dropStylesheet(id);
             loaded.delete(id);
         }
     }
@@ -85,10 +86,12 @@ export async function syncExtensions(): Promise<void> {
         loaded.set(entry.manifest.id, entry.base);
 
         try {
+            await linkStylesheet(entry.manifest.id, entry.base);
             await import(/* @vite-ignore */ `${entry.base}client/index.js`);
             useInstalledExtensions.setState(({ failures: { [entry.manifest.id]: _cleared, ...failures } }) => ({ failures }));
         } catch (e) {
             forgetExtension(entry.manifest.id);
+            dropStylesheet(entry.manifest.id);
             loaded.delete(entry.manifest.id);
             failed(entry.manifest.id, e);
 
@@ -99,6 +102,34 @@ export async function syncExtensions(): Promise<void> {
             }
         }
     }
+}
+
+function stylesheetId(id: string): string {
+    return `ruimte-extension-css-${id}`;
+}
+
+/* The CSS the client part imported, bundled into one file. Linked before the code runs, so its first frame is styled. */
+async function linkStylesheet(id: string, base: string): Promise<void> {
+    const href = `${base}client/index.css`;
+    const exists = await fetch(href, { method: 'HEAD' }).then(
+        (answer) => answer.ok,
+        () => false
+    );
+
+    if (!exists) {
+        return;
+    }
+
+    const link = document.createElement('link');
+
+    link.id = stylesheetId(id);
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.append(link);
+}
+
+function dropStylesheet(id: string): void {
+    document.getElementById(stylesheetId(id))?.remove();
 }
 
 /* What `ruimte extension dev` linked on this machine. A window on another machine has no such folder to read. */

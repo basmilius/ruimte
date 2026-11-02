@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useServer } from '@ruimte/extension/client';
 import type { MachineServer } from '../server/index';
 import { LISTS } from './index';
+import './machine.css';
 
 export default function MachinePanel() {
     const server = useServer<MachineServer>();
@@ -14,7 +15,7 @@ export default function MachinePanel() {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, padding: 8 }}>
+        <div className="poc-machine-panel">
             {Object.entries(LISTS).map(([name, area]) => (
                 <button key={name} type="button" onClick={ask(() => area.list())}>
                     List {name}

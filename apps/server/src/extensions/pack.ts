@@ -152,7 +152,8 @@ async function bundle(
         // Never minified: a person reads every version in the store's review.
         minify: false,
         splitting: true,
-        naming: { entry: 'index.js', chunk: 'chunks/[name]-[hash].js', asset: 'assets/[name]-[hash].[ext]' },
+        // Every stylesheet the code imports lands in one `index.css` beside `index.js`, which the client links.
+        naming: { entry: '[name].[ext]', chunk: 'chunks/[name]-[hash].js', asset: 'assets/[name]-[hash].[ext]' },
         define: { 'process.env.NODE_ENV': '"production"' },
         jsx: { runtime: 'automatic', development: false },
         plugins: [plugin],
