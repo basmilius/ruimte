@@ -12,6 +12,13 @@
     line-height: 1.2;
     letter-spacing: -0.02em;
     color: var(--text);
+    overflow-wrap: break-word;
+}
+
+@media (width < 40rem) {
+    .prose h1 {
+        font-size: 1.75rem;
+    }
 }
 
 .prose h2 {
@@ -89,6 +96,16 @@
     font-family: var(--font-mono);
     font-size: 13px;
     line-height: 1.6;
+}
+
+/* On a phone a code block runs to the screen's edges, which leaves more of each line in view before it scrolls. */
+@media (width < 40rem) {
+    .prose .code-block pre {
+        margin-inline: -1.25rem;
+        padding-inline: 1.25rem;
+        border-inline: 0;
+        border-radius: 0;
+    }
 }
 
 /* A wide table scrolls on its own on a phone instead of pushing the page sideways. */

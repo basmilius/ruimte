@@ -11,7 +11,7 @@ import { SECTIONS } from '@/lib/docs/navigation';
 import { REPOSITORY_URL, STATION_URL } from '@/lib/release.ts';
 
 /* The display of an item is set where it is used, since some only show from a breakpoint on. */
-const ITEM = 'h-9 items-center rounded-md px-3 whitespace-nowrap transition-colors';
+const ITEM = 'h-9 items-center rounded-md px-2.5 whitespace-nowrap transition-colors sm:px-3';
 const ITEM_IDLE = 'text-text-muted hover:bg-surface-hover hover:text-text';
 const ITEM_CURRENT = 'bg-surface-active text-text';
 

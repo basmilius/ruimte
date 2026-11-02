@@ -21,7 +21,7 @@ export function SiteFooter() {
                     </a>
                     . Ruimte is Dutch for space, and room.
                 </span>
-                <span className="ml-auto flex gap-6">
+                <span className="flex flex-wrap gap-x-6 gap-y-2 md:ml-auto">
                     {LINKS.map((link) => (
                         <a key={link.title} href={link.href} className="hover:text-text">
                             {link.title}
