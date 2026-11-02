@@ -36,12 +36,12 @@ With `agents.tools`, Ruimte starts the server part with the machine, since an ag
 
 ## Define the tool
 
-In `server/index.ts`, `defineAgentTool` takes a `description` the agent reads to decide when to call it, and `parameters` as a JSON Schema of its input:
+In `server/index.ts`, `defineAgentTool` takes a `description` the agent reads to decide when to call it, and `parameters` as a JSON Schema of its input. The type between the angle brackets types that input in `run`:
 
 ```ts
 import { defineAgentTool, secrets } from '@ruimte/extension/server';
 
-defineAgentTool({
+defineAgentTool<{ state?: 'open' | 'closed' }>({
     id: 'tickets',
     description: 'Lists the tickets of this project in the tracker, one per line: key, state, title',
     parameters: {

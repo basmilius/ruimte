@@ -6,6 +6,41 @@ export const metadata = { title: 'The project and the machine' };
 
 Every call works on the project of the window. Reading what is on screen needs no permission; the rest names its permission below.
 
+## When a call fails
+
+A call that can fail answers a `Result`. Check `ok` before you read `value`:
+
+```ts
+const readme = await files.readText('README.md');
+
+if (!readme.ok) {
+    host.notify(readme.error.message, {
+        tone: 'error'
+    });
+
+    return;
+}
+
+render(readme.value);
+```
+
+`error.code` says why, so you can act on one reason and report the rest:
+
+| Code | Why |
+| --- | --- |
+| `permission-denied` | The manifest does not ask for the permission. |
+| `no-project` | No project with a folder is open. |
+| `no-canvas` | No canvas is in front to put a node on. |
+| `not-found` | The node, file, chat or launch is not there. |
+| `outside-project` | A path leaves the project folder. |
+| `refused` | The machine or the person said no, such as a person who keeps the nodes `canvas.remove` asked about. |
+| `limit` | Too many calls in a while, such as a 21st `chats.send` to one chat within an hour. |
+| `timeout` | No answer in time. |
+| `unavailable` | The machine, or your server part, cannot answer now. |
+| `failed` | Anything else; `message` says what. |
+
+A call throws only for an argument of the wrong shape, which is a mistake in your code. Hooks such as `useNodes`, the `define*` functions and `host.notify`, `host.copy` and `host.openUrl` answer no Result. While `ruimte extension dev` runs, every failed call also shows in its terminal.
+
 ## What is on screen
 
 ```ts
@@ -26,40 +61,66 @@ const note = canvas.createNote({
     text,
     near: selection
 });
-canvas.link(selection[0], note);
-canvas.arrange(selection, 'grid');
+
+if (note.ok) {
+    canvas.link(selection[0], note.value);
+    canvas.arrange(selection, 'grid');
+}
 ```
 
-`canvas` also creates file, browser and your own nodes, groups and moves nodes, and links and unlinks them. `canvas.remove` asks the person first and answers whether they agreed. `select` and `reveal` need no permission.
+`canvas` also creates file, browser and your own nodes, groups and moves nodes, and links and unlinks them. Each answers a `Result`, with `no-canvas` when no canvas is in front. `canvas.remove` asks the person first and answers `refused` when they keep the nodes. `select` and `reveal` need no permission.
 
 With `views.write`, `views.createCanvas` and `views.rename` change views; `views.open` needs nothing.
 
 ## Files and git
 
-Paths are relative to the project folder, and nothing outside it is reachable.
+Paths are relative to the project folder. A path outside it answers `outside-project`.
 
 ```ts
 const readme = await files.readText('README.md');
-const stop = files.watch('src', () => refresh());
+const watching = files.watch('src', () => refresh());
+
+if (watching.ok) {
+    stopLater(watching.value);
+}
 ```
 
-`files.readText` and `list` need `files.read`, `write` needs `files.write`, and `open` shows a file in the editor without either. `git.status`, `git.diff` and `git.log` need `git.read`.
+`files.readText` and `list` need `files.read`, `write` needs `files.write`, and `open` shows a file in the editor without either. `git.status`, `git.diff` and `git.log` need `git.read`:
+
+```ts
+const status = await git.status();
+const diff = await git.diff({
+    path: 'src/app.ts'
+});
+const log = await git.log({
+    limit: 5
+});
+```
+
+`git.diff` reads one file of the working tree, or of the index with `staged: true`. `git.log` answers the newest commits first, each with `at` in milliseconds.
 
 ## Databases
 
 With `database.read`, an extension runs one `SELECT` or `WITH` statement on a read-only session, as an agent does:
 
 ```ts
-const [connection] = await database.connections();
-const { columns, rows } = await database.query(
-    connection.id,
-    'select count(*) from orders'
-);
+const connections = await database.connections();
+const [connection] = connections.ok ? connections.value : [];
+
+if (connection !== undefined) {
+    const result = await database.query(connection.id, 'select count(*) from orders');
+
+    if (result.ok) {
+        render(result.value.rows);
+    }
+}
 ```
+
+A cell is a string, number, boolean or null. A large number, a decimal or a date comes as the text the database writes for it.
 
 ## What the machine runs
 
-Each of these calls the machine action of the same name, so `launches.start({ name: 'web' })` is `launch.start`, and answers its output.
+Each of these calls the machine action of the same name, so `launches.start({ launch: 'web' })` is `launch.start`. Each answers a `Result` with a typed `value`, listed under `MachineActions` in the [reference](/docs/extensions/reference/client).
 
 | Object | Calls | Permissions |
 | --- | --- | --- |
@@ -69,11 +130,23 @@ Each of these calls the machine action of the same name, so `launches.start({ na
 | `browser` | `inspect`, `navigate`, `back`, `forward`, `reload`, `screenshot` | `browser.control` |
 | `devices` | `list`, `inspect`, `screenshot`, `tap`, `launch` | `devices.control` |
 
+A browser or device takes the node it is on:
+
+```ts
+const page = await browser.inspect({
+    node
+});
+
+if (page.ok && page.value.page !== null) {
+    host.notify(page.value.page.title);
+}
+```
+
 An agent may only drive a browser or device it has a line to. An extension has no node for a line to reach, so with the permission it drives any of the project's.
 
 ## Terminals
 
-`terminals.read(node)` returns what a terminal shows, with `terminals.read`. `terminals.open()` opens a shell beside the nodes you name, with `canvas.write`. Only a person types into a terminal.
+`terminals.read(node)` answers what a terminal shows, with `terminals.read`. `terminals.open()` opens a shell beside the nodes you name, with `canvas.write`. Only a person types into a terminal.
 
 ## Context
 

@@ -104,7 +104,11 @@ Opening a window with `?safe-mode` loads no extension and no theme, so a person 
 
 `definePaletteSource({ id, title, search })` adds rows to the command palette. It runs after a pause in the typing, and a slow or failing one costs only its own rows.
 
-`launches`, `routines`, `artifacts`, `browser` and `devices` call the actions of the same name (`launches.start({ name })` is `launch.start`) and answer with their output. The daemon checks each call against `EXTENSION_ACTIONS` and the manifest. From `server/`, `machine.run(projectId, 'launch.start', input)` does the same.
+`launches`, `routines`, `artifacts`, `browser` and `devices` call the actions of the same name (`launches.start({ launch })` is `launch.start`). The daemon checks each call against `EXTENSION_ACTIONS` and the manifest, and `apps/server/src/extensions/machine-actions.ts` turns the extension's input (refs, not ids) into the action's and the output into the smaller one `MachineActions` promises. From `server/`, `machine.run(project, 'launch.start', input)` does the same.
+
+## Failure
+
+A call that can fail answers a `Result`, under one of `EXTENSION_ERROR_CODES` (`packages/contracts/src/extension-results.ts`), which a test holds to the `ExtensionErrorCode` of both `.d.ts` files. The daemon refuses with `ExtensionRefusal` (`apps/server/src/extensions/refusal.ts`); the client host maps any other wire code with `extensionErrorCodeOf`. Only `invalid-input` or `bad-request`, an argument of the wrong shape, reaches an extension as a throw. A refusal is no throw, so the host writes it to the log of `extension dev`: the client with `sendDevLog`, the daemon to the extension's log file for what `server/` asked. `client-api.tsx` and `server-runtime.ts` each `satisfies` their `.d.ts`, so the types and the hosts cannot drift apart.
 
 `terminals.read(node)` returns a terminal's screen and `terminals.open()` opens a shell. Nothing types into one.
 

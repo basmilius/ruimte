@@ -53,7 +53,7 @@ import type server from '../server';
 export default function Main() {
     const greeting = useServer<typeof server>().greeting.use();
 
-    return <p>{greeting}</p>;
+    return <p>{greeting.ok ? greeting.value : greeting.error.message}</p>;
 }
 ```
 
@@ -73,7 +73,7 @@ export default defineServer({
 });
 ```
 
-`useServer().greeting()` returns a promise. `.use()` suspends the component until the answer arrives, so you need no loading state of your own.
+`useServer().greeting()` returns a promise of a `Result`. `.use()` suspends the component until the answer arrives, so you need no loading state of your own. When the method throws, or the server part cannot run, `ok` is false and `error.message` says why.
 
 ## Pack it
 

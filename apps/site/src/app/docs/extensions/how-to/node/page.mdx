@@ -91,7 +91,15 @@ Right-click the canvas. Your node is under Extensions, at the spot you clicked:
 
 The command palette offers "Add Counter" as well. To offer it elsewhere, give `addFrom` the [slots](/docs/extensions/slots) it should show in, such as `{ emptyCanvas: true }`. `addFrom` replaces both defaults, so name `canvasMenu` and `commandPalette` too if you want to keep them.
 
-Your code can add one as well, with `canvas.write`: `canvas.createNode('counter', { data: { count: 10 } })`.
+Your code can add one as well, with `canvas.write`. It answers the new node, or `no-canvas` when no canvas is in front:
+
+```ts
+const counter = canvas.createNode('counter', {
+    data: {
+        count: 10
+    }
+});
+```
 
 ## Let agents read it
 

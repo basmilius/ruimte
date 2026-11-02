@@ -42,7 +42,13 @@ The `threadHeader`, `emptyThread`, `composer`, `messageActions` and `toolActions
 defineSlashCommand({
     name: 'review',
     description: 'Ask for a review of the open diff',
-    run: async () => `Review this diff:\n\n${await git.diff()}`
+    run: async () => {
+        const diff = await git.diff({
+            path: 'src/app.ts'
+        });
+
+        return diff.ok ? `Review this diff:\n\n${diff.value.diff}` : 'Review the last change';
+    }
 });
 ```
 
@@ -66,36 +72,43 @@ defineReference({
 
 ## Running an agent
 
-`agents.run` runs one hidden prompt on one of the person's own CLIs and answers the text whole. `agents.stream` gives the same answer in pieces as the CLI writes them. Both need `agents.run`.
+`agents.run` runs one hidden prompt on one of the person's own CLIs and answers the text whole. `agents.stream` gives the same answer in pieces as the CLI writes them. Both need `agents.run`, and both answer a `Result` ([When a call fails](/docs/extensions/machine#when-a-call-fails)). A stream that fails ends with a piece whose `ok` is false.
 
 ```ts
-const { text } = await agents.run({
+const answer = await agents.run({
     prompt: 'Summarize these notes',
     context: [notes]
 });
 
 for await (const piece of agents.stream({ prompt, signal })) {
-    append(piece.text);
+    if (piece.ok) {
+        append(piece.value.text);
+    }
 }
 ```
 
 `context` takes texts, which go after the prompt. To hand the agent nodes, read them first with `context.read`, which needs the permission `context.read`:
 
 ```ts
-const sources = await context.read({ nodes: selection });
-const { text } = await agents.run({
-    prompt: 'Summarize these notes',
-    context: sources.map((source) => `# ${source.title}\n${source.text}`)
+const sources = await context.read({
+    nodes: selection
 });
+
+if (sources.ok) {
+    const answer = await agents.run({
+        prompt: 'Summarize these notes',
+        context: sources.value.map((source) => `# ${source.title}\n${source.text}`)
+    });
+}
 ```
 
 The agent runs in the project folder, on the person's own CLI and plan.
 
-`agents.start` starts a chat a person sees and can stop, supervised at most. It lands beside `near` on the canvas in front, or as a view of its own when no canvas is open. It needs `agents.start`.
+`agents.start` starts a chat a person sees and can stop, supervised at most. It lands beside `near` on the canvas in front, or as a view of its own when no canvas is open, and answers the chat's node. It needs `agents.start`.
 
 ## Reading and waking chats
 
-With `chats.read`, `chats.list()` and `chats.read(id)` read every chat. With `chats.send`, `chats.send(id, text)` sends a message that wakes the chat. `useChat(id)` follows one chat's status in a component, and `useAgents()` (with `agents.status`) every agent on the canvas.
+With `chats.read`, `chats.list()` and `chats.read(id)` read every chat. With `chats.send`, `chats.send(id, text)` sends a message that wakes the chat. `useChat(id)` follows one chat's status in a component, and `useAgents()` (with `agents.status`) every agent on the canvas. A status is one of `idle`, `running`, `needsYou` and `stopped`, the same word in the client and the server part.
 
 ## Tools for agents
 

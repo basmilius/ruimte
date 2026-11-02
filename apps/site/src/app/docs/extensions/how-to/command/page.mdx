@@ -81,15 +81,26 @@ defineAction({
             return;
         }
 
-        const sources = await context.read({ view });
-        const { text } = await agents.run({
-            prompt: 'Write a standup: what was done, what is next, what is stuck.',
-            context: sources.map((source) => `# ${source.title}\n${source.text}`)
+        const sources = await context.read({
+            view
         });
+
+        if (!sources.ok) {
+            throw new Error(sources.error.message);
+        }
+
+        const answer = await agents.run({
+            prompt: 'Write a standup: what was done, what is next, what is stuck.',
+            context: sources.value.map((source) => `# ${source.title}\n${source.text}`)
+        });
+
+        if (!answer.ok) {
+            throw new Error(answer.error.message);
+        }
 
         canvas.createNote({
             title: 'Standup',
-            text
+            text: answer.value.text
         });
     }
 });

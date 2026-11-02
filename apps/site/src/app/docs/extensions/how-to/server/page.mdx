@@ -113,7 +113,16 @@ export default function Settings() {
     const [key, setKey] = useState('');
 
     const save = async () => {
-        await server.saveKey(key);
+        const saved = await server.saveKey(key);
+
+        if (!saved.ok) {
+            host.notify(saved.error.message, {
+                tone: 'error'
+            });
+
+            return;
+        }
+
         setKey('');
         host.notify('Saved the tracker key');
     };
@@ -147,7 +156,7 @@ export default function Settings() {
 
 ## Call it
 
-`useServer<Api>()` gives the server part's methods, typed. Each returns a promise. `.use()` suspends the component until the answer arrives, so the panel needs no loading state:
+`useServer<Api>()` gives the server part's methods, typed. Each returns a promise of a `Result`. `.use()` suspends the component until the answer arrives, so the panel needs no loading state:
 
 ```tsx
 import { ListRow } from '@ruimte/extension/ui';
@@ -157,7 +166,11 @@ import type { Api } from '../server';
 export default function Tickets() {
     const tickets = useServer<Api>().tickets.use();
 
-    return tickets.map((ticket) => (
+    if (!tickets.ok) {
+        return <p>{tickets.error.message}</p>;
+    }
+
+    return tickets.value.map((ticket) => (
         <ListRow
             key={ticket.key}
             variant="inset"
@@ -170,7 +183,7 @@ export default function Tickets() {
 
 <TicketsPanel />
 
-When `tickets` throws, the panel shows the error in its own rectangle, and the rest of Ruimte goes on. A call goes to the machine the window works on, so on another computer the panel still reads the key from that machine.
+When `tickets` throws, `ok` is false with the code `failed` and the message it threw, such as the missing key. The panel shows that message. A call goes to the machine the window works on, so on another computer the panel still reads the key from that machine.
 
 ## Watch it work
 

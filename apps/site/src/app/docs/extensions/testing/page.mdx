@@ -37,7 +37,7 @@ test('summarize shows for two nodes or more', () => {
 
 ## A surface
 
-`renderSurface` draws a component to a string, with `server` standing in for your server part:
+`renderSurface` draws a component to a string, with `server` standing in for your server part. Its methods answer the way `useServer` does, as a `Result`, and one that throws answers `failed`. A string render waits for nothing, so a fake that `.use()` reads answers without a promise:
 
 ```ts
 import { renderSurface } from '@ruimte/extension/testing';
@@ -46,13 +46,27 @@ import Main from '../client/Main';
 test('the panel greets', () => {
     const html = renderSurface(Main, {
         server: {
-            greeting: async () => 'Good morning'
+            greeting: () => 'Good morning'
         }
     });
 
     expect(html).toContain('Good morning');
 });
+
+test('the panel says why the server part did not answer', () => {
+    const html = renderSurface(Main, {
+        server: {
+            greeting: () => {
+                throw new Error('No key yet');
+            }
+        }
+    });
+
+    expect(html).toContain('No key yet');
+});
 ```
+
+Every other call of the API answers a successful `Result` with an empty value here.
 
 ## Packing
 

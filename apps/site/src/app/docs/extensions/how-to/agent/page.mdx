@@ -65,7 +65,7 @@ A chat's id is the id of its node, so `canvas.reveal` brings the chat into view.
 
 ## A card of agents
 
-`useAgents` gives every chat and terminal on the canvas in front with its `title`, its `status` and whether it `needsYou`. The card draws again on each change:
+`useAgents` gives every chat and terminal on the canvas in front with its `title` and its `status`: `idle`, `running`, `needsYou` or `stopped`. The card draws again on each change:
 
 ```tsx
 import { ListRow, Pill } from '@ruimte/extension/ui';
@@ -85,7 +85,7 @@ export default function AgentsCard() {
             onClick={() => canvas.reveal({ id: agent.id })}
         >
             {agent.title}
-            {agent.needsYou && <Pill tone="needsYou">Needs you</Pill>}
+            {agent.status === 'needsYou' && <Pill tone="needsYou">Needs you</Pill>}
         </ListRow>
     ));
 }

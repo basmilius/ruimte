@@ -53,19 +53,30 @@ defineAction({
     },
     async run({ node }) {
         const screen = await terminals.read(node);
-        const { text } = await agents.run({
+
+        if (!screen.ok) {
+            throw new Error(screen.error.message);
+        }
+
+        const answer = await agents.run({
             prompt: 'Explain why the tests in this terminal fail.',
-            context: [screen]
+            context: [screen.value]
         });
+
+        if (!answer.ok) {
+            throw new Error(answer.error.message);
+        }
 
         canvas.createNote({
             title: 'Why it fails',
-            text,
+            text: answer.value.text,
             near: [node]
         });
     }
 });
 ```
+
+Each call answers a `Result` ([When a call fails](/docs/extensions/machine#when-a-call-fails)). Here a failed one throws, since an action shows what it throws to the person.
 
 A header is tight, so the action shows as its icon alone, with the `title` as its tooltip. Without an `icon` it gets a package symbol. `terminalMenu` puts the same action in the terminal's right-click menu, with its title in words.
 
@@ -88,18 +99,30 @@ defineAction({
             return;
         }
 
-        const sources = await context.read({ view });
-        const { text } = await agents.run({
-            prompt: 'Summarize this canvas in five lines.',
-            context: sources.map((source) => `# ${source.title}\n${source.text}`)
-        });
-        const note = canvas.createNote({
-            title: 'Summary',
-            text
+        const sources = await context.read({
+            view
         });
 
-        if (note !== null) {
-            canvas.reveal(note);
+        if (!sources.ok) {
+            throw new Error(sources.error.message);
+        }
+
+        const answer = await agents.run({
+            prompt: 'Summarize this canvas in five lines.',
+            context: sources.value.map((source) => `# ${source.title}\n${source.text}`)
+        });
+
+        if (!answer.ok) {
+            throw new Error(answer.error.message);
+        }
+
+        const note = canvas.createNote({
+            title: 'Summary',
+            text: answer.value.text
+        });
+
+        if (note.ok) {
+            canvas.reveal(note.value);
         }
     }
 });
