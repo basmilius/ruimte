@@ -8,15 +8,20 @@ function sizeOf(path: string): number {
     }
 }
 
-/* Each call answers what was added to a file since the last, from now on. A file that shrank starts over. */
+/*
+ * Each call answers what was added to a file since the last, from now on. A file that shrank starts over. One decoder
+ * for every call, so a character a write split over two calls comes out whole.
+ */
 export function logTail(path: string): () => string {
     let at = sizeOf(path);
+    let decoder = new TextDecoder();
 
     return () => {
         const size = sizeOf(path);
 
         if (size < at) {
             at = 0;
+            decoder = new TextDecoder();
         }
 
         if (size === at) {
@@ -30,6 +35,6 @@ export function logTail(path: string): () => string {
         closeSync(file);
         at = size;
 
-        return bytes.toString('utf8');
+        return decoder.decode(bytes, { stream: true });
     };
 }

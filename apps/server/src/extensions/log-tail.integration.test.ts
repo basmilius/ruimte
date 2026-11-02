@@ -24,3 +24,16 @@ test('answers only what was added since, also for a file that comes later or sta
     writeFileSync(path, 'new\n');
     expect(read()).toBe('new\n');
 });
+
+test('keeps a character whole that a write split over two reads', () => {
+    const path = join(folder, 'split.log');
+    const read = logTail(path);
+    const bytes = Buffer.from('café\n');
+
+    writeFileSync(path, bytes.subarray(0, 4));
+    const first = read();
+
+    appendFileSync(path, bytes.subarray(4));
+
+    expect(`${first}${read()}`).toBe('café\n');
+});

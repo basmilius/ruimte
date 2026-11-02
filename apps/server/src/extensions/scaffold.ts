@@ -1,4 +1,4 @@
-import { EXTENSION_API_VERSION } from '@ruimte/contracts';
+import { EXTENSION_API_VERSION, ExtensionManifestSchema } from '@ruimte/contracts';
 
 export interface ScaffoldAnswers {
     name: string;
@@ -61,7 +61,7 @@ export default function Main() {
     }
 
     return `export default function Main() {
-    return <p>Hello from ${name}</p>;
+    return <p>{${JSON.stringify(`Hello from ${name}`)}}</p>;
 }
 `;
 }
@@ -104,6 +104,24 @@ function exampleTest(surface: 'panel' | 'node' | 'view' | 'card' | null, withSer
     }
 
     return `${imports.join('\n')}\n\ndescribe(${JSON.stringify(name)}, () => {\n${tests.join('\n\n')}\n});\n`;
+}
+
+const PARTS: readonly string[] = ['client', 'server', 'both'];
+const SURFACES: readonly string[] = ['panel', 'node', 'view', 'card', 'none'];
+
+/* What is wrong with answers given on the command line, before a file is written, or null when they make a project. */
+export function scaffoldProblem(answers: ScaffoldAnswers): string | null {
+    if (!PARTS.includes(answers.parts)) {
+        return `--parts is client, server or both, not ${answers.parts}`;
+    }
+
+    if (!SURFACES.includes(answers.surface)) {
+        return `--surface is panel, node, view, card or none, not ${answers.surface}`;
+    }
+
+    const manifest = ExtensionManifestSchema.safeParse(JSON.parse(scaffoldFiles(answers)['manifest.json'] ?? '{}'));
+
+    return manifest.success ? null : manifest.error.issues.map((issue) => `${issue.path.join('.') || 'manifest'}: ${issue.message}`).join('; ');
 }
 
 /* A project that builds and runs as it is, with an example of what was asked for and a test of it. */
@@ -149,7 +167,7 @@ export function scaffoldFiles(answers: ScaffoldAnswers): Record<string, string> 
 
 export default defineServer({
     async greeting() {
-        return 'Hello from ${answers.name.replaceAll("'", "\\'")}';
+        return ${JSON.stringify(`Hello from ${answers.name}`)};
     }
 });
 `;

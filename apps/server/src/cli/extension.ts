@@ -10,7 +10,7 @@ import { bunRuntime } from '../language/runtime.ts';
 import { buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
 import { logTail } from '../extensions/log-tail.ts';
 import { isLeftOut, sourceSignature } from '../extensions/source-signature.ts';
-import { scaffoldFiles, type ScaffoldAnswers } from '../extensions/scaffold.ts';
+import { scaffoldFiles, scaffoldProblem, type ScaffoldAnswers } from '../extensions/scaffold.ts';
 import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
@@ -118,6 +118,12 @@ async function create(values: {
               git: values.git !== false
           }
         : await askAnswers();
+    const problem = scaffoldProblem(answers);
+
+    if (problem !== null) {
+        throw new Error(problem);
+    }
+
     const folder = resolve(answers.id.split('.').join('-'));
 
     if (existsSync(folder)) {
@@ -129,15 +135,29 @@ async function create(values: {
         await writeFile(join(folder, path), content);
     }
 
-    const runtime = bunRuntime();
-
-    spawnSync(runtime.command, [...runtime.args, 'install'], { cwd: folder, env: { ...process.env, ...runtime.env }, stdio: 'ignore' });
-
     if (answers.git) {
         spawnSync('git', ['init', '-q'], { cwd: folder });
     }
 
+    const failed = installFailure(folder);
+
+    if (failed !== null) {
+        throw new Error(`Created ${folder}, but \`bun install\` failed:\n${failed}\n\nOnce that is fixed: cd ${basename(folder)} && bun install`);
+    }
+
     console.log(`Created ${folder}\n\nNext: cd ${basename(folder)} && bun run dev`);
+}
+
+/* What `bun install` said when it failed in a new project, or null when it did not. */
+export function installFailure(folder: string, run: typeof spawnSync = spawnSync): string | null {
+    const runtime = bunRuntime();
+    const result = run(runtime.command, [...runtime.args, 'install'], { cwd: folder, env: { ...process.env, ...runtime.env }, encoding: 'utf8' });
+
+    if (result.error !== undefined) {
+        return result.error.message;
+    }
+
+    return result.status === 0 ? null : `${String(result.stderr ?? '')}${String(result.stdout ?? '')}`.trim() || `It exited with ${result.status}`;
 }
 
 /*

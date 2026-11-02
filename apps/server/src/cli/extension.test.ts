@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { oneAtATime, watchAndBuild } from './extension.ts';
+import { installFailure, oneAtATime, watchAndBuild } from './extension.ts';
 
 describe('oneAtATime', () => {
     test('never starts a build while one runs, and builds once more after it for the saves that came meanwhile', async () => {
@@ -93,5 +93,15 @@ describe('watchAndBuild', () => {
         } finally {
             rmSync(folder, { recursive: true, force: true });
         }
+    });
+});
+
+describe('installFailure', () => {
+    test('says what bun install printed when it failed, and nothing when it went well', () => {
+        const ran = (status: number, stderr: string) => (() => ({ status, stderr, stdout: '', pid: 1, output: [], signal: null })) as never;
+
+        expect(installFailure('/work/acme-builds', ran(0, ''))).toBeNull();
+        expect(installFailure('/work/acme-builds', ran(1, 'error: no network'))).toBe('error: no network');
+        expect(installFailure('/work/acme-builds', ran(1, ''))).toBe('It exited with 1');
     });
 });
