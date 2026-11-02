@@ -115,6 +115,23 @@ describe('the client API', () => {
         expect(machine.requests('fs.unwatch')).toEqual([{ path: '/work/a' }, { path: '/work/a/src' }]);
     });
 
+    test('tells a watch of a file about a change a watcher of a folder above it could not name, and not about one it named elsewhere', async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'files.read': 'Follows notes' });
+        let heard = 0;
+
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+        api.files.watch('notes/today.md', () => {
+            heard += 1;
+        });
+        machine.emit('fs.changed', { root: '/work/a', paths: ['/work/a/notes'], changedPaths: ['/work/a/src/main.ts'] });
+        machine.emit('fs.changed', { root: '/work/a', paths: ['/work/a/notes'] });
+        machine.emit('fs.changed', { root: '/work/b', paths: ['/work/b'] });
+
+        expect(heard).toBe(1);
+    });
+
     test('answers permission-denied for a call its manifest does not ask for, before anything else', async () => {
         const { api } = loaded();
 

@@ -1115,7 +1115,10 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 attempt('files.watch', () => {
                     const full = inProject(path);
                     const stopListening = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
-                        if (root === full || changedPaths?.some((changed) => changed === full || isUnderFolder(changed, full))) {
+                        // A watcher above it that could not name every change may have changed it too.
+                        const unnamed = changedPaths === undefined && isUnderFolder(full, root);
+
+                        if (root === full || unnamed || changedPaths?.some((changed) => changed === full || isUnderFolder(changed, full))) {
                             listener();
                         }
                     });
