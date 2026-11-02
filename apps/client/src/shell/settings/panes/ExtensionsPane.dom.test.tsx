@@ -52,6 +52,10 @@ describe('installing from a file', () => {
         };
         await mounted.render(<ExtensionsPane />);
 
+        expect(mounted.host.querySelector('input[type="file"]')).toBeNull();
+        [...mounted.host.querySelectorAll('button')].find((button) => button.textContent === 'Install from disk')?.click();
+        await until(() => mounted.host.querySelector('input[type="file"]') !== null);
+
         const input = mounted.host.querySelector<HTMLInputElement>('input[type="file"]');
         const file = new File([Bun.gzipSync(JSON.stringify(pack))], 'local.rex');
 

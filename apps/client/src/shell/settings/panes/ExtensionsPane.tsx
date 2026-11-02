@@ -1,7 +1,7 @@
 import { createElement, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileUp, Store, type LucideIcon } from 'lucide-react';
-import { Button, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
+import { FileUp, HardDrive, Store, type LucideIcon } from 'lucide-react';
+import { Button, EmptyState, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
@@ -19,6 +19,7 @@ import {
     removeExtension,
     setExtensionEnabled,
     storeIconUrl,
+    storeIsOpen,
     type ExtensionStoreEntry,
     type MachineChange,
     type PackPreview,
@@ -28,6 +29,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
 
 const BROWSE = 'browse';
+const DISK = 'disk';
 const DETAIL = 'flex min-w-0 flex-col gap-5';
 const LIST_ROW_TILE = 20;
 const HEADER_TILE = 48;
@@ -121,8 +123,23 @@ function FileDetail({ preview, onShown, onBack }: { preview: PackPreview; onShow
     );
 }
 
-/* The store, and beside it a pack from a file: one an author sent, or one the store has not reviewed yet. */
+/* The store, or until its key ships, a page that says it opens soon. */
 function BrowseDetail({ onShown }: { onShown: (id: string) => void }) {
+    const { t } = useTranslation('settings');
+
+    if (!storeIsOpen()) {
+        return (
+            <EmptyState icon={Store} title={t('extensions.storeSoon')} className="min-h-80">
+                {t('extensions.storeSoonBody')}
+            </EmptyState>
+        );
+    }
+
+    return <StoreDetail onShown={onShown} />;
+}
+
+/* A pack from a file: one an author sent, or one the store has not reviewed yet. */
+function DiskDetail({ onShown }: { onShown: (id: string) => void }) {
     const { t } = useTranslation('settings');
     const input = useRef<HTMLInputElement>(null);
     const [preview, setPreview] = useState<PackPreview | null>(null);
@@ -132,33 +149,39 @@ function BrowseDetail({ onShown }: { onShown: (id: string) => void }) {
     }
 
     return (
-        <div className={DETAIL}>
-            <div>
-                <Button onClick={() => input.current?.click()}>
-                    <Icon icon={FileUp} size={14} />
-                    {t('extensions.fromFile')}
-                </Button>
-                <input
-                    ref={input}
-                    type="file"
-                    accept=".rex"
-                    hidden
-                    aria-label={t('extensions.fromFile')}
-                    onChange={(event) => {
-                        const file = event.target.files?.[0];
+        <>
+            <EmptyState
+                icon={HardDrive}
+                title={t('extensions.fromDisk')}
+                className="min-h-80"
+                action={
+                    <Button onClick={() => input.current?.click()}>
+                        <Icon icon={FileUp} size={14} />
+                        {t('extensions.chooseFile')}
+                    </Button>
+                }
+            >
+                {t('extensions.fromDiskBody')}
+            </EmptyState>
+            <input
+                ref={input}
+                type="file"
+                accept=".rex"
+                hidden
+                aria-label={t('extensions.chooseFile')}
+                onChange={(event) => {
+                    const file = event.target.files?.[0];
 
-                        event.target.value = '';
+                    event.target.value = '';
 
-                        if (file !== undefined) {
-                            void readPack(file).then(setPreview, (e: unknown) =>
-                                useToasts.getState().show({ kind: 'error', title: t('extensions.fromFileUnreadable'), description: String(e) })
-                            );
-                        }
-                    }}
-                />
-            </div>
-            <StoreDetail onShown={onShown} />
-        </div>
+                    if (file !== undefined) {
+                        void readPack(file).then(setPreview, (e: unknown) =>
+                            useToasts.getState().show({ kind: 'error', title: t('extensions.fromFileUnreadable'), description: String(e) })
+                        );
+                    }
+                }}
+            />
+        </>
     );
 }
 
@@ -173,6 +196,10 @@ function StoreDetail({ onShown }: { onShown: (id: string) => void }) {
     }, []);
 
     if (answer === null) {
+        return null;
+    }
+
+    if (answer.kind === 'closed') {
         return null;
     }
 
@@ -418,6 +445,12 @@ export function ExtensionsPane() {
                         </span>
                         {t('extensions.browse')}
                     </MasterItem>
+                    <MasterItem selected={selected === DISK} onSelect={() => setSelected(DISK)}>
+                        <span className="inline-flex shrink-0 items-center justify-center" style={{ width: LIST_ROW_TILE }}>
+                            <Icon icon={HardDrive} size={16} />
+                        </span>
+                        {t('extensions.fromDisk')}
+                    </MasterItem>
                     <InstalledGroup title={t('extensions.groupDevelopment')} entries={developing} selected={selected} onSelect={setSelected} />
                     <InstalledGroup title={t('extensions.groupInstalled')} entries={fromStore} selected={selected} onSelect={setSelected} />
                     {builtIns.length > 0 && <SectionLabel className="px-3 pt-3 pb-1">{t('extensions.builtIn')}</SectionLabel>}
@@ -434,6 +467,8 @@ export function ExtensionsPane() {
                     {extensionsInSafeMode() && <p className="text-sm text-text-muted">{t('extensions.safeMode')}</p>}
                     {selected === BROWSE ? (
                         <BrowseDetail onShown={setSelected} />
+                    ) : selected === DISK ? (
+                        <DiskDetail onShown={setSelected} />
                     ) : builtIns.some((entry) => entry.id === selected) ? (
                         <BuiltInDetail id={selected} />
                     ) : (

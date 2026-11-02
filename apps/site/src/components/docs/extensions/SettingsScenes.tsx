@@ -9,6 +9,7 @@ import {
     ChevronDown,
     CodeXml,
     Folder,
+    HardDrive,
     Info,
     Keyboard,
     LayoutGrid,
@@ -147,6 +148,12 @@ function ExtensionsPane({ selected, children }: { readonly selected: 'standup' |
                             <Icon icon={Store} size={16} />
                         </span>
                         Browse store
+                    </MasterItem>
+                    <MasterItem selected={false} onSelect={() => undefined}>
+                        <span className="inline-flex w-5 shrink-0 justify-center">
+                            <Icon icon={HardDrive} size={16} />
+                        </span>
+                        Install from disk
                     </MasterItem>
                     {selected === 'standup' && (
                         <>

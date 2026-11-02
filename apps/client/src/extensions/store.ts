@@ -11,12 +11,17 @@ const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';
 
 export type { ExtensionStoreEntry };
 
-export type StoreAnswer = { kind: 'entries'; entries: readonly ExtensionStoreEntry[] } | { kind: 'unavailable' };
+export type StoreAnswer = { kind: 'entries'; entries: readonly ExtensionStoreEntry[] } | { kind: 'unavailable' } | { kind: 'closed' };
+
+/* The store opens once its key ships; until then a person installs what someone shared as a `.rex`. */
+export function storeIsOpen(): boolean {
+    return EXTENSION_STORE_PUBLIC_KEY !== '';
+}
 
 /* A signature over the whole index is what ties every hash in it to the store, wherever the bytes came from. */
 export async function readStore(fetcher: typeof fetch = fetch): Promise<StoreAnswer> {
-    if (EXTENSION_STORE_PUBLIC_KEY === '') {
-        return { kind: 'unavailable' };
+    if (!storeIsOpen()) {
+        return { kind: 'closed' };
     }
 
     try {
