@@ -64,8 +64,8 @@ describe('the completion list of the editor', () => {
         const before = 'const prior = 1;\n';
         const suggestion = 'const next = 2;\nconst last = 3;';
         machine.answer('fs.read', () => ({ kind: 'text', text: before, encoding: 'utf-8', size: before.length, mtime: 1, language: 'typescript' }) as never);
-        machine.answer('ondevice.status', () => ({ available: true }));
-        machine.answer('ondevice.generate', () => ({ state: 'done' as const, text: suggestion }));
+        machine.answer('editor.status', () => ({ available: true }));
+        machine.answer('editor.generate', () => ({ state: 'done' as const, text: suggestion }));
         const previous = useSettings.getState().aiGhostText;
         useSettings.setState({ aiGhostText: 'request' });
         try {

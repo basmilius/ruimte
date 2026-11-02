@@ -54,7 +54,6 @@ export async function wireProviders(
     await Promise.all([nanogpt.load(config.home), claudeApi.load(config.home)]);
     const antigravityServer = new AcpServerInstall({ provider: 'antigravity', home: config.home, release: ANTIGRAVITY_ACP_RELEASE });
     const providers = new ProviderRegistry({
-        appleEnabled: () => identity.appleFoundationEnabled,
         antigravityServer,
         home: config.home,
         onList: () => {

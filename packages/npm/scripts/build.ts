@@ -81,7 +81,6 @@ for (const target of targets) {
     // The Android screen server and its license, which the daemon pushes onto a device from `bin/native`.
     await copyNative(source, dir, 'scrcpy-server');
     await copyNative(source, dir, 'scrcpy-server.LICENSE');
-    await copyNative(source, dir, 'ruimte-foundation-models', ['ruimte-foundation-models.NOTICES'], true);
     await copyNative(source, dir, target.os === 'win32' ? 'adecore-database.exe' : 'adecore-database', ['adecore-database.LICENSE'], true);
 
     // An artifact download drops the mode, and npm packs the mode it finds.

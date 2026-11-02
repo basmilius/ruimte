@@ -4,13 +4,13 @@ import type { z } from 'zod';
 import type { RuntimeMode } from '@ruimte/contracts';
 import type { ApprovalDecision, BackendHost, BackendLaunch } from '@adecore/agents/chat';
 import { isNotFound, writeAtomic } from '@adecore/agents';
-import { APPLE_TOOL_NAMES, appleToolInput, askUserCard, type AppleToolCall } from './apple-tools.ts';
+import { API_TOOL_NAMES, apiToolInput, askUserCard, type ApiToolCall } from './api-tools.ts';
 import { executeNanoTool, nanoNeedsApproval, nanoToolCall } from './nanogpt-tools.ts';
 
 /*
  * What the chats on a plain API (NanoGPT, the Claude API) share: the API keeps no conversation, so the
- * thread is a file the backend writes after every step, and the tools are the Apple backend's project
- * tools, held for a person's approval as far as the runtime mode says.
+ * thread is a file the backend writes after every step. Project tools wait for approval as far as
+ * the runtime mode says.
  */
 
 /*
@@ -105,8 +105,8 @@ export class ApiTools {
         const ref = `${launch.generation}-${randomUUID()}`;
         try {
             const call = nanoToolCall(ref, name, argumentsJson);
-            const toolName = APPLE_TOOL_NAMES[call.name];
-            const input = appleToolInput(call);
+            const toolName = API_TOOL_NAMES[call.name];
+            const input = apiToolInput(call);
             host.onEvent({ type: 'tool.started', ref, name: toolName, input, parentRef: null });
             started = true;
             if (call.name === 'ask_user') {
@@ -212,7 +212,7 @@ export class ApiTools {
     }
 
     /* Null when the person declined the question. */
-    private ask(ref: string, call: Extract<AppleToolCall, { name: 'ask_user' }>, signal: AbortSignal): Promise<string | null> {
+    private ask(ref: string, call: Extract<ApiToolCall, { name: 'ask_user' }>, signal: AbortSignal): Promise<string | null> {
         return this.waitFor<string | null>(ref, this.questions, signal, null, () => this.options.host.onEvent(askUserCard(ref, call)));
     }
 }

@@ -10,9 +10,9 @@ const COPILOT_ALLOW = `'${COPILOT_ALLOW_CONTEXT}'`;
 
 describe('terminalCommand', () => {
     test('a chat-only provider cannot launch its helper in a terminal, with or without a prompt or resume id', () => {
-        expect(() => terminalCommand({ kind: 'apple' })).toThrow('Apple Foundation Models is only available as a chat');
-        expect(() => terminalCommand({ kind: 'apple' }, 'hello')).toThrow('Apple Foundation Models is only available as a chat');
-        expect(() => terminalCommand({ kind: 'apple', resume: 'stored' })).toThrow('Apple Foundation Models is only available as a chat');
+        expect(() => terminalCommand({ kind: 'nanogpt' })).toThrow('NanoGPT is only available as a chat');
+        expect(() => terminalCommand({ kind: 'nanogpt' }, 'hello')).toThrow('NanoGPT is only available as a chat');
+        expect(() => terminalCommand({ kind: 'nanogpt', resume: 'stored' })).toThrow('NanoGPT is only available as a chat');
     });
 
     test('starts a CLI in the runtime mode the node asked for', () => {

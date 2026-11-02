@@ -368,12 +368,13 @@ import {
     LanguageWorkspaceProblemsResultSchema
 } from './language.ts';
 import {
-    OnDeviceCancelPayloadSchema,
-    OnDeviceGeneratePayloadSchema,
-    OnDeviceGenerateResultSchema,
-    OnDeviceStatusResultSchema,
-    OnDeviceTextEventSchema
-} from './ondevice.ts';
+    EditorAssistCancelPayloadSchema,
+    EditorAssistGeneratePayloadSchema,
+    EditorAssistGenerateResultSchema,
+    EditorAssistStatusResultSchema,
+    EditorAssistStatusPayloadSchema,
+    EditorAssistTextEventSchema
+} from './editor-assist.ts';
 import {
     LaunchListResultSchema,
     LaunchStartPayloadSchema,
@@ -495,7 +496,7 @@ export * from './routine.ts';
 export * from './routine-schedule.ts';
 export * from './routine-cron.ts';
 export * from './agent-server.ts';
-export * from './apple-foundation.ts';
+export * from './api-tools.ts';
 export * from './archive.ts';
 export * from './auth.ts';
 export * from './browser.ts';
@@ -521,7 +522,8 @@ export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
 export * from './language.ts';
-export * from './ondevice.ts';
+export * from './editor-assist.ts';
+export { cheapestEditorModel, type EditorModelPrice } from './editor-assist-model.ts';
 export * from './launches.ts';
 export * from './secrets.ts';
 export * from './live-stream.ts';
@@ -784,10 +786,10 @@ export const REQUEST_SCHEMAS = {
     'language.sql': { payload: LanguageSqlPayloadSchema, result: LanguageSqlStateSchema },
     // A person's choice of the connection a file, or the project, reads its SQL against; kept in their private project file.
     'language.sql.bind': { payload: LanguageSqlBindPayloadSchema, result: LanguageSqlStateSchema },
-    'ondevice.status': { payload: EmptySchema, result: OnDeviceStatusResultSchema },
-    // The text streams to the asking client as `ondevice.text` while it runs; the result is the whole of it.
-    'ondevice.generate': { payload: OnDeviceGeneratePayloadSchema, result: OnDeviceGenerateResultSchema },
-    'ondevice.cancel': { payload: OnDeviceCancelPayloadSchema, result: EmptySchema },
+    'editor.status': { payload: EditorAssistStatusPayloadSchema, result: EditorAssistStatusResultSchema },
+    // The text streams to the asking client as `editor.text` while it runs; the result is the whole of it.
+    'editor.generate': { payload: EditorAssistGeneratePayloadSchema, result: EditorAssistGenerateResultSchema },
+    'editor.cancel': { payload: EditorAssistCancelPayloadSchema, result: EmptySchema },
     'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
     // A person's save; it approves on this machine every launch it adds or changes.
     'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
@@ -1032,7 +1034,7 @@ export const EVENT_SCHEMAS = {
     // To the one client whose command runs on the server.
     'language.show': LanguageShowEventSchema,
     'language.sql.changed': LanguageSqlChangedEventSchema,
-    'ondevice.text': OnDeviceTextEventSchema,
+    'editor.text': EditorAssistTextEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,
     // To every client that holds the project, except the one whose save it answers.

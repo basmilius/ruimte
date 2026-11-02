@@ -30,7 +30,7 @@ import { registerAgentRegistryHandlers } from '../handlers/agent-registry.ts';
 import { registerAgentServerHandlers } from '../handlers/agent-servers.ts';
 import { registerProviderDetectHandler } from '../handlers/provider-detect.ts';
 import { registerLaunchHandlers } from '../handlers/launches.ts';
-import { registerOnDeviceHandlers } from '../handlers/ondevice.ts';
+import { registerEditorAssistHandlers } from '../handlers/editor-assist.ts';
 import { registerPeerHandlers } from '../handlers/peer.ts';
 import { registerPeerTaskHandlers } from '../handlers/peer-tasks.ts';
 import { registerArtifactHandlers } from '../handlers/artifact.ts';
@@ -334,18 +334,6 @@ export async function registerHandlers(dispatcher: Dispatcher, input: HandlersIn
             }
         },
         usageStatsChanged: (on) => stats.changed(on),
-        appleFoundationChanged: async (on) => {
-            providers.providers.invalidate('apple');
-            if (!on) {
-                await Promise.all(
-                    chats
-                        .list()
-                        .filter((chat) => chat.provider === 'apple')
-                        .map((chat) => chats.stop(chat.chatId, 'Apple Foundation Models was turned off in Settings.'))
-                );
-            }
-            await providers.accounts.refresh();
-        },
         agentIntegrations: {
             summary: () => providers.integrations.summary(),
             files: () => providers.integrations.files(),
@@ -398,7 +386,7 @@ export function registerEditorHandlers(dispatcher: Dispatcher, input: EditorHand
     registerAgentServerHandlers(dispatcher, providers.servers);
     registerAgentRegistryHandlers(dispatcher, providers.registryAgents, providers.versions);
     registerProviderDetectHandler(dispatcher, providers.providers, providers.accounts);
-    registerOnDeviceHandlers(dispatcher, language.onDevice);
+    registerEditorAssistHandlers(dispatcher, language.editorAssist);
     registerProvenanceHandlers(dispatcher, language.provenance, machine.machineHome);
     registerDatabaseHandlers(dispatcher, databases.service, databases.connections, databases.agents, databases.sqlAnalysis);
     const boundaryOf = async (clientId: string): Promise<WriteBoundary> => ({

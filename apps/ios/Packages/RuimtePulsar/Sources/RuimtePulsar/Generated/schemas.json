@@ -6403,9 +6403,6 @@
           "visualReplies": {
             "type": "boolean"
           },
-          "appleFoundationEnabled": {
-            "type": "boolean"
-          },
           "keepAwake": {
             "type": "string",
             "enum": [
@@ -54718,12 +54715,55 @@
       "snapshots"
     ]
   },
-  "request.ondevice.status.payload": {
+  "request.editor.status.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "properties": {}
+    "properties": {
+      "agent": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "antigravity"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
   },
-  "request.ondevice.status.result": {
+  "request.editor.status.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -54732,13 +54772,28 @@
       },
       "reason": {
         "type": "string"
+      },
+      "provider": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "grok",
+          "antigravity"
+        ]
+      },
+      "model": {
+        "type": "string"
+      },
+      "modelName": {
+        "type": "string"
       }
     },
     "required": [
       "available"
     ]
   },
-  "request.ondevice.generate.payload": {
+  "request.editor.generate.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -54760,6 +54815,48 @@
         "minLength": 1,
         "maxLength": 12000
       },
+      "agent": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "claude",
+                  "codex",
+                  "grok",
+                  "antigravity"
+                ]
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "provider",
+              "model"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "stream": {
         "type": "boolean"
       }
@@ -54770,7 +54867,7 @@
       "prompt"
     ]
   },
-  "request.ondevice.generate.result": {
+  "request.editor.generate.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -54790,7 +54887,7 @@
       "text"
     ]
   },
-  "request.ondevice.cancel.payload": {
+  "request.editor.cancel.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
@@ -54804,7 +54901,7 @@
       "id"
     ]
   },
-  "request.ondevice.cancel.result": {
+  "request.editor.cancel.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
@@ -63324,9 +63421,6 @@
       "visualReplies": {
         "type": "boolean"
       },
-      "appleFoundationEnabled": {
-        "type": "boolean"
-      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -63864,9 +63958,6 @@
       "visualReplies": {
         "type": "boolean"
       },
-      "appleFoundationEnabled": {
-        "type": "boolean"
-      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -64184,9 +64275,6 @@
         "type": "boolean"
       },
       "visualReplies": {
-        "type": "boolean"
-      },
-      "appleFoundationEnabled": {
         "type": "boolean"
       },
       "keepAwake": {
@@ -64517,9 +64605,6 @@
       "visualReplies": {
         "type": "boolean"
       },
-      "appleFoundationEnabled": {
-        "type": "boolean"
-      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -64833,9 +64918,6 @@
         "type": "boolean"
       },
       "visualReplies": {
-        "type": "boolean"
-      },
-      "appleFoundationEnabled": {
         "type": "boolean"
       },
       "keepAwake": {
@@ -65428,9 +65510,6 @@
         "type": "boolean"
       },
       "visualReplies": {
-        "type": "boolean"
-      },
-      "appleFoundationEnabled": {
         "type": "boolean"
       },
       "keepAwake": {
@@ -66220,9 +66299,6 @@
         "type": "boolean"
       },
       "visualReplies": {
-        "type": "boolean"
-      },
-      "appleFoundationEnabled": {
         "type": "boolean"
       },
       "keepAwake": {
@@ -80814,9 +80890,6 @@
       "visualReplies": {
         "type": "boolean"
       },
-      "appleFoundationEnabled": {
-        "type": "boolean"
-      },
       "keepAwake": {
         "type": "string",
         "enum": [
@@ -87825,7 +87898,7 @@
       "projectId"
     ]
   },
-  "event.ondevice.text": {
+  "event.editor.text": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {

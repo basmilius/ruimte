@@ -4,16 +4,17 @@ import type { MachineHome } from '../fs/machine-home.ts';
 import type { SharedWatch } from '../fs/shared-watch.ts';
 import { LanguageHost } from '../language/host.ts';
 import { NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout } from '../language/native.ts';
-import { OnDeviceModel } from '../ondevice/model.ts';
+import { EditorAssistModel } from '../editor-assist/model.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { provenanceChat } from '../provenance/chat-facts.ts';
 import { ProvenanceService } from '../provenance/provenance-service.ts';
 import type { AgentsBundle } from './agents.ts';
+import type { ProvidersBundle } from './providers.ts';
 
-/* What the editor asks of the machine: the language servers, the on-device model and who wrote which lines. */
+/* What the editor asks of the machine: the language servers, the editor model and who wrote which lines. */
 export interface LanguageBundle {
     host: LanguageHost;
-    onDevice: OnDeviceModel;
+    editorAssist: EditorAssistModel;
     provenance: ProvenanceService;
 }
 
@@ -25,9 +26,10 @@ interface LanguageInput {
     projects: ProjectStore;
     sqlAnalysis: SqlAnalysis;
     agents: AgentsBundle;
+    providers: ProvidersBundle;
 }
 
-export async function wireLanguage({ home, compiled, machineHome, watches, projects, sqlAnalysis, agents }: LanguageInput): Promise<LanguageBundle> {
+export async function wireLanguage({ home, compiled, machineHome, watches, projects, sqlAnalysis, agents, providers }: LanguageInput): Promise<LanguageBundle> {
     const host = new LanguageHost({
         root: join(home, 'language-servers'),
         watch: { seams: watches },
@@ -40,7 +42,7 @@ export async function wireLanguage({ home, compiled, machineHome, watches, proje
         untrusted: (path) => agents.untrusted.inFolder(path)
     });
     await host.load();
-    const onDevice = new OnDeviceModel();
+    const editorAssist = new EditorAssistModel({ home, registry: providers.providers, accounts: providers.accounts });
     const provenance = new ProvenanceService({
         home,
         locate: (chatId) => projects.index.locate(chatId),
@@ -49,5 +51,5 @@ export async function wireLanguage({ home, compiled, machineHome, watches, proje
         chat: (chatId) => provenanceChat(agents.chats, chatId)
     });
     agents.chats.observe((event) => provenance.consume(event));
-    return { host, onDevice, provenance };
+    return { host, editorAssist, provenance };
 }

@@ -81,8 +81,8 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('editor.ai.inlineAgent'),
     row('editor.ai.agentChanges'),
     row('editor.ai.attribution'),
-    row('editor.ai.onDevice.help'),
-    row('editor.ai.onDevice.ghost'),
+    row('editor.ai.assist.help'),
+    row('editor.ai.assist.ghost'),
     row('editor.smartKeys.pairBrackets'),
     row('editor.smartKeys.pairQuotes'),
     row('editor.smartKeys.surroundSelection'),
@@ -144,7 +144,6 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     row('chats.showViews'),
     row('chats.mapTiles'),
     { id: 'agents.visualReplies', section: 'chats', label: 'settings:agents.visualReplies.label', description: 'settings:agents.visualReplies.description' },
-    row('providers.apple'),
     {
         id: 'providers.acpServer',
         section: 'providers',

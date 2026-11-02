@@ -20,16 +20,16 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
         <>
             {explain.phase !== 'idle' && (
                 <div className="flex max-w-[520px] flex-col gap-1.5 px-3 py-2.5 text-xs/[19px]">
-                    <Tooltip label={t('language.onDevice.note')}>
+                    <Tooltip label={t('language.editorAssist.note')}>
                         <span className="flex items-center gap-1.5 text-text-faint">
-                            <Icon icon={Cpu} size={12} /> {t('language.onDevice.explanation')}
+                            <Icon icon={Cpu} size={12} /> {t('language.editorAssist.explanation')}
                         </span>
                     </Tooltip>
                     <div
                         role={explain.phase === 'error' ? 'alert' : undefined}
                         className={`break-words whitespace-pre-wrap select-text ${explain.phase === 'error' ? 'text-status-error' : 'text-text'}`}
                     >
-                        {explain.error ?? (explain.text || t('language.onDevice.thinking'))}
+                        {explain.error ?? (explain.text || t('language.editorAssist.thinking'))}
                     </div>
                 </div>
             )}
@@ -37,7 +37,7 @@ function HoverActions({ language, view }: { language: EditorLanguage; view: Hove
                 <div className="flex flex-wrap gap-1 px-3 py-2">
                     {explain.offered && (
                         <Button size="xs" variant="secondary" onClick={() => void language.explain.explainCard()}>
-                            {t('language.onDevice.explain')}
+                            {t('language.editorAssist.explain')}
                         </Button>
                     )}
                     {view.problems.map((problem, index) =>

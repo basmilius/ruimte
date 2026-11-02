@@ -88,7 +88,7 @@ Accepted limits: a Claude chat cannot move to an account with another folder aft
 ## 15. Language servers
 
 4. Further native servers (Go, Swift, TOML, Lua, Zig, Markdown) only after their install and execution rules are set. Work from another machine already gets no server that runs project code (`runsProjectCode`). Still open: what such a server may run in a person's own agent worktrees, such as build scripts and proc macros.
-5. Remaining limits, each in its own package or host: a file view keeps its old path after a move; project-wide diagnostics; column-precise navigation; peek highlighting and more than thirty files; review rows hiding unchanged ranges; on-device help for non-function symbols, Explain in the context menu, suggestions while typing.
+5. Remaining limits, each in its own package or host: a file view keeps its old path after a move; project-wide diagnostics; column-precise navigation; peek highlighting and more than thirty files; review rows hiding unchanged ranges; code explanations for non-function symbols, Explain in the context menu, suggestions while typing.
 
 ## 16. Plugins
 

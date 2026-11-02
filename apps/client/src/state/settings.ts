@@ -1,7 +1,16 @@
 import { bundledThemesInfo } from 'shiki/themes';
 import { create } from 'zustand';
 import { z } from 'zod';
-import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
+import {
+    EditorAssistAgentSchema,
+    type EditorAssistAgent,
+    isLiveVoice,
+    isVoiceLanguage,
+    WorktreeMergeStrategySchema,
+    type LiveVoice,
+    type VoiceLanguage,
+    type WorktreeMergeStrategy
+} from '@ruimte/contracts';
 import type { UpdateTrack } from '@ruimte/desktop-bridge';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
@@ -202,9 +211,10 @@ export interface Settings {
     aiAgentChanges: AgentChangesMode;
     /* Whether the gutter marks the lines an agent wrote. */
     aiAttribution: boolean;
-    /* Whether the hover explains code and rename suggests names, both with the model on the machine. */
-    aiOnDeviceHelp: boolean;
-    /* When the editor asks the model on the machine for ghost text. */
+    /* Whether the hover explains code and rename suggests names, both with the chosen editor model. */
+    aiCodeHelp: boolean;
+    aiAssistAgent: EditorAssistAgent | null;
+    /* When the editor asks the chosen editor model for ghost text. */
     aiGhostText: GhostTextMode;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
@@ -332,7 +342,8 @@ const DEFAULT_SETTINGS: Settings = {
     aiInlineAgent: { ...DEFAULT_INLINE_EDIT_AGENT },
     aiAgentChanges: DEFAULT_AGENT_CHANGES_MODE,
     aiAttribution: true,
-    aiOnDeviceHelp: true,
+    aiCodeHelp: true,
+    aiAssistAgent: null,
     aiGhostText: DEFAULT_GHOST_TEXT_MODE,
     codeLigatures: true,
     smartKeys: { ...DEFAULT_SMART_KEYS },
@@ -430,7 +441,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         aiInlineAgent: inlineEditAgentFrom(stored.aiInlineAgent),
         aiAgentChanges: agentChangesModeFrom(stored.aiAgentChanges),
         aiAttribution: stored.aiAttribution !== false,
-        aiOnDeviceHelp: stored.aiOnDeviceHelp !== false,
+        aiCodeHelp: stored.aiCodeHelp !== false,
+        aiAssistAgent: EditorAssistAgentSchema.nullable().catch(null).parse(stored.aiAssistAgent),
         aiGhostText: ghostTextModeFrom(stored.aiGhostText),
         codeLigatures: stored.codeLigatures !== false,
         smartKeys: switchesFrom(stored.smartKeys, DEFAULT_SMART_KEYS),

@@ -16,13 +16,12 @@ import {
     type InlineProblem,
     type LineSpan
 } from '@adecore/editor-react/models';
-import { availableAgents } from '@/agents/creation';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { isShortcut } from '@/language/shortcut-keys';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { inlineEditAccountOn } from '@/state/ai-settings';
+import { editorAgentOn, inlineEditAccountOn } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { inlineEditDeps } from './inline-edit-deps';
@@ -64,13 +63,10 @@ interface InlineEditView {
 
 /* The agent the setting names, or the first one installed when that one is not. */
 export function inlineAgentNow(endpointId: string): { provider: AgentKind; model: string | null; account?: string } {
-    const wanted = useSettings.getState().aiInlineAgent;
-    const offered = availableAgents(providersOf(endpointId).providers, 'chat');
-    if (offered.length === 0 || offered.some((provider) => provider.kind === wanted.provider)) {
-        const account = inlineEditAccountOn(knownAccounts(providerAccountsOf(endpointId)), wanted.provider, wanted.account);
-        return { provider: wanted.provider, model: wanted.model, ...(account === undefined ? {} : { account }) };
-    }
-    return { provider: offered[0]!.kind, model: null };
+    const wanted = editorAgentOn(providersOf(endpointId).providers, useSettings.getState().aiInlineAgent);
+    const account = inlineEditAccountOn(knownAccounts(providerAccountsOf(endpointId)), wanted.provider, wanted.account);
+
+    return { provider: wanted.provider, model: wanted.model, ...(account === undefined ? {} : { account }) };
 }
 
 /*

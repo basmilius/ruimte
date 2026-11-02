@@ -60,7 +60,6 @@
         "notLoggedIn": "Niet ingelogd.",
         "chatAndTerminal": "chat en terminal",
         "terminalOnly": "alleen terminal",
-        "apple": "Gebruik het model op deze Mac voor chats en tools.",
         "missing_one": "Installeer hem en start Ruimte op deze machine opnieuw.",
         "missing_other": "Installeer ze en start Ruimte op deze machine opnieuw.",
         "doneWhen": "Klaar zodra er één provider is ingelogd"

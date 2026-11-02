@@ -40,7 +40,6 @@ interface EndpointHost {
     streamingChanged(allowed: boolean): void;
     // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
     resumeChanged?(on: boolean): void;
-    appleFoundationChanged?(on: boolean): Promise<void>;
     // Off drops the days not sent yet, so nothing counted before goes out later.
     usageStatsChanged?(on: boolean): Promise<void>;
     // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
@@ -83,7 +82,6 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
         visualReplies: identity.visualReplies,
-        appleFoundationEnabled: identity.appleFoundationEnabled,
         ...identity.keepAwakeFields(),
         keepAwakeAvailable: host.keepAwake?.available === true,
         keepAwakeLidAvailable: host.closedLid?.available === true,
@@ -188,7 +186,6 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
             streamingAllowed: settings.streamingAllowed,
             resumeAtReset: settings.resumeAtReset,
             visualReplies: settings.visualReplies,
-            appleFoundationEnabled: settings.appleFoundationEnabled,
             keepAwake: settings.keepAwake,
             keepAwakeOnBattery: settings.keepAwakeOnBattery,
             keepAwakeDisplay: settings.keepAwakeDisplay,
@@ -209,9 +206,6 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
         }
         if (settings.resumeAtReset !== undefined) {
             host.resumeChanged?.(identity.resumeAtReset);
-        }
-        if (settings.appleFoundationEnabled !== undefined) {
-            await host.appleFoundationChanged?.(identity.appleFoundationEnabled);
         }
         if (settings.usageStats !== undefined) {
             await host.usageStatsChanged?.(identity.usageStats);

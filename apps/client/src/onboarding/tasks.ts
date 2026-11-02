@@ -35,7 +35,7 @@ export interface OnboardingFacts {
  * Providers with no CLI to install or log in to. Not read from `capabilities.terminal`: an agent from
  * the ACP registry has no terminal either, and is still a CLI a person installs.
  */
-const NOT_CLIS: ReadonlySet<string> = new Set(['apple', 'nanogpt', 'anthropic-claude-api']);
+const NOT_CLIS: ReadonlySet<string> = new Set(['nanogpt', 'anthropic-claude-api']);
 
 function isCli(provider: ProviderInfo): boolean {
     return !NOT_CLIS.has(provider.kind);

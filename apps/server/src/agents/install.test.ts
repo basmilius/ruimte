@@ -237,6 +237,6 @@ describe('installInFolder', () => {
     });
 
     test('writes nothing for a CLI whose settings the daemon cannot wire', async () => {
-        expect(await installInFolder('apple', dir)).toEqual([]);
+        expect(await installInFolder('nanogpt', dir)).toEqual([]);
     });
 });

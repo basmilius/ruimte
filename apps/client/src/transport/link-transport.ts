@@ -70,7 +70,7 @@ const UNBOUNDED_REQUESTS: ReadonlySet<RequestType> = new Set<RequestType>([
     'language.install',
     'language.rollback',
     'language.workspaceProblems',
-    'ondevice.generate',
+    'editor.generate',
     'provider.installAgent',
     'provider.installServer',
     'provider.update'

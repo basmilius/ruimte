@@ -60,7 +60,6 @@
         "notLoggedIn": "Not logged in.",
         "chatAndTerminal": "chat and terminal",
         "terminalOnly": "terminal only",
-        "apple": "Use the model on this Mac for chats and tools.",
         "missing_one": "Install it, then restart Ruimte on this machine.",
         "missing_other": "Install them, then restart Ruimte on this machine.",
         "doneWhen": "Done once one provider is logged in"

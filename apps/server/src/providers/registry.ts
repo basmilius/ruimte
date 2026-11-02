@@ -1,7 +1,6 @@
 import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import type { CliDetection, ChatProvider } from '@adecore/agents/providers';
 import { ProviderRegistry as AgentProviderRegistry, detectCli } from '@adecore/agents/providers';
-import { createAppleProvider, appleProvider } from './apple-provider.ts';
 import { claudeProvider } from './claude-provider.ts';
 import { codexProvider } from './codex-provider.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
@@ -27,7 +26,6 @@ const BUILT_IN_PROVIDERS: ChatProvider[] = [
     createAntigravityProvider(null),
     copilotProvider,
     grokProvider,
-    appleProvider,
     nanoGptProvider,
     anthropicClaudeApiProvider
 ];
@@ -53,7 +51,6 @@ export function offeredAgentKinds(): AgentKind[] {
 
 interface ProviderRegistryOptions {
     providers?: ChatProvider[];
-    appleEnabled?: () => boolean;
     // Where Antigravity's chat server is installed; without it Antigravity is a terminal only.
     antigravityServer?: AcpServerLaunch;
     // The executables to probe, when they are not the ones the providers name.
@@ -75,13 +72,12 @@ function builtInProviders(options: ProviderRegistryOptions): ChatProvider[] {
         createAntigravityProvider(options.antigravityServer ?? null, store('antigravity')),
         createCopilotProvider(store('copilot'), options.home === undefined ? undefined : copilotUsageDirectory(options.home)),
         createGrokProvider(store('grok')),
-        createAppleProvider(options.appleEnabled ?? (() => false)),
         nanoGptProvider,
         anthropicClaudeApiProvider
     ];
 }
 
-/* What the daemon knows about each agent CLI: the chat CLIs, the ones it only starts in a terminal and the local model. */
+/* What the daemon knows about each agent CLI: the chat CLIs, the ones it only starts in a terminal and the API providers. */
 export class ProviderRegistry extends AgentProviderRegistry {
     private readonly onList: (() => void) | null;
     private readonly probe: (command: string) => Promise<CliDetection>;

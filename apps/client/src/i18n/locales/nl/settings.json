@@ -235,21 +235,28 @@
                 "label": "Toeschrijving in de gutter",
                 "description": "Markeert regels die een agent schreef. Hover voor de chat en turn."
             },
-            "onDevice": {
-                "title": "Op het apparaat",
+            "assist": {
+                "title": "Editormodel",
                 "help": {
                     "label": "Uitleg en naamsuggesties",
-                    "description": "Gebruikt Apple Foundation Models. Code blijft op deze Mac."
+                    "description": "Legt code uit en stelt namen voor met het gekozen model."
                 },
                 "ghost": {
                     "label": "Suggesties tijdens het typen",
-                    "description": "Suggesties van het model op deze Mac verschijnen terwijl je typt. Elke suggestie duurt twee tot drie seconden.",
+                    "description": "Vraag een codesuggestie met de sneltoets. De gekozen provider ontvangt de code rond de cursor.",
                     "options": {
                         "off": "Uit",
                         "request": "Op verzoek"
                     }
                 },
-                "unavailable": "Niet beschikbaar: {{reason}}"
+                "unavailable": "Niet beschikbaar: {{reason}}",
+                "model": {
+                    "label": "Model",
+                    "description": "Automatisch gebruikt het goedkoopste model van de eerste beschikbare provider: Claude, Codex, Grok, dan Antigravity. Code wordt naar de gekozen provider gestuurd."
+                },
+                "automatic": "Automatisch",
+                "choose": "Model kiezen",
+                "resolved": "Gebruikt {{model}}"
             }
         },
         "folding": {
@@ -1737,19 +1744,6 @@
         }
     },
     "providers": {
-        "apple": {
-            "label": "Apple Foundation Models inschakelen",
-            "description": "Gebruik het model op deze Mac voor chats en tools. Vereist Apple silicon, macOS 26.4 of nieuwer en Apple Intelligence.",
-            "toggleDescription": "Uitschakelen stopt actieve Apple-chats en openstaande toolgoedkeuringen op deze machine.",
-            "tools": "Het model draait op deze Mac. Webzoeken, pagina's ophalen en MCP-tools die je goedkeurt, kunnen gegevens naar hun eigen diensten sturen.",
-            "status": "Beschikbaarheid",
-            "disabled": "Uit op deze machine.",
-            "ready": "Beschikbaar.",
-            "unavailable": "Niet beschikbaar.",
-            "saveFailed": "Kon Apple Foundation Models niet wijzigen",
-            "requiresMac": "Vereist een Mac met Apple silicon.",
-            "off": "Uit"
-        },
         "nanogpt": {
             "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen naar de abonnements-API, nooit naar pay as you go.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",

@@ -25,7 +25,8 @@ import { ExtensionStore } from './extensions/store.ts';
 import { registerExtensionHandlers, runExtensionPrompt } from './handlers/extensions.ts';
 import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
-import { serverActionCall, voiceActionCall } from './actions/context.ts';
+import { serverActionCall } from './actions/context.ts';
+import { extensionChatStarter } from './extensions/extension-chat.ts';
 import { runMachineAction, outputOf } from './extensions/machine-actions.ts';
 import { ExtensionRefusal } from './extensions/refusal.ts';
 import { CustomLanguageServerInputSchema, extensionChatOf } from '@ruimte/contracts';
@@ -234,52 +235,19 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         watches: git.watches,
         projects: projects.store,
         sqlAnalysis: databases.sqlAnalysis,
-        agents
+        agents,
+        providers
     });
     agents.context.useExtensionNodes(async (extension, type, data) => {
         const parts = await extensions.nodeContext(extension, type, data);
 
         return Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text ?? '').join('\n') : typeof parts === 'string' ? parts : null;
     });
-    // As Voice starts one: under the person's own CLI, an AI Chat and no wider than supervised, and with no canvas a view of its own.
-    startExtensionChat = async (id, { projectId, viewId, beside, provider, title, prompt }, check) => {
-        const folder = projects.store.index.folderOf(projectId);
-
-        if (folder === null) {
-            throw new ExtensionRefusal('not-found', `No project ${projectId} on this machine`);
-        }
-
-        const kind = provider ?? (await canvasHost.starts.installedAgents())[0];
-
-        if (kind === undefined) {
-            throw new ExtensionRefusal('unavailable', 'No agent is set up on this machine');
-        }
-
-        check();
-
-        const result = await serverActions.execute(
-            'agent.start',
-            {
-                provider: kind,
-                ...(prompt === undefined ? {} : { prompt }),
-                ...(title === undefined ? {} : { title }),
-                ...(viewId === undefined ? {} : { viewId }),
-                ...(beside === undefined ? {} : { beside })
-            },
-            voiceActionCall(
-                canvasHost,
-                { projectId, folder, canvasId: viewId ?? null },
-                {
-                    sessionId: `extension-${id}`,
-                    owner: { clientId: 'extension', sceneId: id },
-                    projectId,
-                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                }
-            )
-        );
-
-        return { nodeId: outputOf(result).nodeId };
-    };
+    startExtensionChat = extensionChatStarter({
+        host: canvasHost,
+        actions: serverActions,
+        folderOf: (projectId) => projects.store.index.folderOf(projectId)
+    });
     runExtensionAction = async (id, projectId, action, input) => {
         const folder = projects.store.index.folderOf(projectId);
 
@@ -531,7 +499,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         databases.agents.close();
         await step('Stopping the database helper', () => databases.service.dispose());
         await step('Stopping language servers', () => language.host.close());
-        await step('Stopping the on-device helper', () => language.onDevice.dispose());
+        await step('Stopping editor model requests', () => language.editorAssist.dispose());
         await step('Writing the usage counts', () => stats.stop());
         await step('Sending error reports', () => stopTelemetry());
         network.peers.closeAll();

@@ -97,6 +97,8 @@ if (values.os === 'mac' && process.platform !== 'darwin') {
 }
 
 const nativeDir = join(outDir, 'native');
+// A removed helper must not survive an incremental build.
+await rm(nativeDir, { recursive: true, force: true });
 await mkdir(nativeDir, { recursive: true });
 const rustTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-apple-darwin`;
 const installedCargo = join(homedir(), '.cargo', 'bin', 'cargo');
@@ -115,22 +117,6 @@ const builds: Array<Promise<number>> = [
 ];
 
 if (values.os === 'mac') {
-    if (values.arch === 'arm64') {
-        const foundationRoot = resolve(root, '../foundation-models');
-        builds.push(
-            run(['bun', join(foundationRoot, 'scripts/build.ts')], root).then(async (exitCode) => {
-                if (exitCode !== 0) {
-                    return exitCode;
-                }
-                const helper = join(nativeDir, 'ruimte-foundation-models');
-                await copyFile(join(foundationRoot, 'dist', 'ruimte-foundation-models'), helper);
-                await copyFile(join(foundationRoot, 'dist', 'ruimte-foundation-models.NOTICES'), `${helper}.NOTICES`);
-                await chmod(helper, 0o755);
-                return 0;
-            })
-        );
-    }
-
     builds.push(
         run(['bun', resolve(root, '../ios-device-bridge/scripts/build.ts'), '--target', rustTarget, '--outfile', join(nativeDir, 'ios-device-bridge')], root)
     );

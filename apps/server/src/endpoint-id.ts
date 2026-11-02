@@ -55,7 +55,6 @@ const FileSchema = z.object({
     resumeAtReset: z.boolean().optional().catch(undefined),
     /* Whether an agent in an AI chat may show a page above its reply. Absent is on. */
     visualReplies: z.boolean().optional().catch(undefined),
-    appleFoundationEnabled: z.boolean().optional().catch(undefined),
     /* The daemon holds the sleep block, so a phone can set it. Absent is off, on the adapter only and
        without the display. */
     keepAwake: KeepAwakeModeSchema.optional().catch(undefined),
@@ -94,7 +93,6 @@ interface IdentityOptions {
     streamingAllowed: boolean;
     resumeAtReset: boolean;
     visualReplies: boolean;
-    appleFoundationEnabled: boolean;
     keepAwake: KeepAwakeSetting;
     broker: BrokerSetting;
     lanDoor: boolean;
@@ -141,7 +139,6 @@ export interface IdentityFlags {
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
     visualReplies?: boolean;
-    appleFoundationEnabled?: boolean;
     keepAwake?: KeepAwakeMode;
     keepAwakeOnBattery?: boolean;
     keepAwakeDisplay?: boolean;
@@ -174,7 +171,6 @@ export class EndpointIdentity {
     private allowStreaming: boolean;
     private resumeLimited: boolean;
     private visuals: boolean;
-    private appleEnabled: boolean;
     private awake: KeepAwakeSetting;
     private brokerSetting: BrokerSetting;
     private readonly brokerSwitch = new Binding<IdentityBroker>('The broker switch of the machine identity');
@@ -201,7 +197,6 @@ export class EndpointIdentity {
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
         this.visuals = options.visualReplies;
-        this.appleEnabled = options.appleFoundationEnabled;
         this.awake = options.keepAwake;
         this.brokerSetting = options.broker;
         this.lanDoorOpen = options.lanDoor;
@@ -249,10 +244,6 @@ export class EndpointIdentity {
     /* Whether `ruimte-context visual show` publishes; pages already in a thread show either way. */
     get visualReplies(): boolean {
         return this.visuals;
-    }
-
-    get appleFoundationEnabled(): boolean {
-        return this.appleEnabled;
     }
 
     get keepAwake(): KeepAwakeSetting {
@@ -352,7 +343,6 @@ export class EndpointIdentity {
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
         this.visuals = flags.visualReplies ?? this.visuals;
-        this.appleEnabled = flags.appleFoundationEnabled ?? this.appleEnabled;
         this.awake = {
             mode: flags.keepAwake ?? this.awake.mode,
             onBattery: flags.keepAwakeOnBattery ?? this.awake.onBattery,
@@ -395,7 +385,6 @@ export class EndpointIdentity {
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
                 visualReplies: this.visuals,
-                appleFoundationEnabled: this.appleEnabled,
                 ...this.keepAwakeFields(),
                 ...this.closedLid.get().describe(),
                 ...this.integrations.get().describe(),
@@ -424,7 +413,6 @@ export class EndpointIdentity {
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
             ...(this.visuals ? {} : { visualReplies: false }),
-            ...(this.appleEnabled ? { appleFoundationEnabled: true } : {}),
             ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
             ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
             ...(this.awake.display ? { keepAwakeDisplay: true } : {}),
@@ -493,7 +481,6 @@ export async function readOrCreateEndpointIdentity(home: string, defaultName: st
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,
         visualReplies: file?.visualReplies ?? true,
-        appleFoundationEnabled: file?.appleFoundationEnabled ?? false,
         keepAwake: {
             mode: file?.keepAwake ?? 'off',
             onBattery: file?.keepAwakeOnBattery ?? false,

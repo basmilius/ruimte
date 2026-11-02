@@ -14,9 +14,9 @@ import {
 } from '@adecore/editor-react';
 import type { Editor } from '@adecore/editor';
 import { fileUriToPath, pathToFileUri, type Diagnostic } from '@adecore/lsp';
-import { onDeviceClientFor } from '@/ondevice/ondevice-client';
-import { parseNames } from '@/ondevice/names-model';
-import { namesPrompt } from '@/ondevice/prompts';
+import { editorAssistClientFor } from '@/editor-assist/client';
+import { parseNames } from '@/editor-assist/names-model';
+import { namesPrompt } from '@/editor-assist/prompts';
 import { openFileLink } from '@/shell/panels/file-links';
 import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
 import { isApplePlatform, openInSystemBrowser } from '@/desktop/bridge';
@@ -197,10 +197,10 @@ function holdUnsavedTexts(service: WireLanguageService, folder: string, files: D
 }
 
 async function suggestNames(transport: Transport, request: RenameSuggestionsRequest, signal: AbortSignal): Promise<readonly string[]> {
-    if (!useSettings.getState().aiOnDeviceHelp || signal.aborted) {
+    if (!useSettings.getState().aiCodeHelp || signal.aborted) {
         return [];
     }
-    const client = onDeviceClientFor(transport);
+    const client = editorAssistClientFor(transport);
     if (!(await client.availability()).available || signal.aborted) {
         return [];
     }

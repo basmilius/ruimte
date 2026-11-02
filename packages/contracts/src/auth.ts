@@ -54,7 +54,6 @@ const MACHINE_SWITCHES = {
     resumeAtReset: z.boolean().optional(),
     // `ruimte-context visual`. Off only when a person turned it off; absent reads as on.
     visualReplies: z.boolean().optional(),
-    appleFoundationEnabled: z.boolean().optional(),
     // The daemon holds the block, so it holds without a window and for a phone. Absent reads as off.
     keepAwake: KeepAwakeModeSchema.optional(),
     // Hold the block on battery as well; off, it holds on the power adapter only.

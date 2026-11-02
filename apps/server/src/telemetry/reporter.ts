@@ -382,7 +382,7 @@ export async function reportFatal(error: unknown): Promise<void> {
 }
 
 interface HelperExit {
-    /* Which helper: `database`, `apple-foundation`, `on-device` or `language-server`. */
+    /* Which helper: `database` or `language-server`. */
     readonly helper: string;
     /* The kind of language server; only for a kind Ruimte ships. */
     readonly kind?: string;

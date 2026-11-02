@@ -397,6 +397,26 @@ describe('the mark in the gutter', () => {
 });
 
 describe('the agent of an inline edit', () => {
+    test('uses Haiku for an unset Claude model, even when the CLI defaults to Sonnet', () => {
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: null } });
+        useProvidersStore.getState().setProviders('e1', [
+            {
+                kind: 'claude',
+                name: 'Claude Code',
+                installed: true,
+                capabilities: { chat: true },
+                defaultModel: 'claude-sonnet-5-5',
+                models: [
+                    { slug: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', legacy: false, isDefault: true, options: [] },
+                    { slug: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', legacy: false, isDefault: false, options: [] }
+                ]
+            } as never
+        ]);
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: 'claude-haiku-5-5' });
+        useSettings.setState({ aiInlineAgent: { provider: 'claude', model: 'claude-sonnet-5-5' } });
+        expect(inlineAgentNow('e1')).toEqual({ provider: 'claude', model: 'claude-sonnet-5-5' });
+    });
+
     function installed(...kinds: string[]): void {
         useProvidersStore.getState().setProviders(
             'e1',

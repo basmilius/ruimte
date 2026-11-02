@@ -35,10 +35,6 @@ module.exports = async (context) => {
             [join(resources, '..', 'Helpers', 'Ruimte Computer Use.app', 'Contents', 'MacOS', 'RuimteComputerUse')],
             `No computer use helper; ${COMPILE_HINT}`
         );
-        // electron-builder uses builder-util's numeric Arch.arm64 (3) in packaging contexts.
-        if (context.arch === 3) {
-            expectFiles([join(native, 'ruimte-foundation-models')], 'No Apple Foundation Models helper; compile the server resources for macOS arm64 first');
-        }
     }
     expectFiles([join(resources, 'client', 'index.html')], 'No built client; run `bun run --cwd apps/client build` first');
 };

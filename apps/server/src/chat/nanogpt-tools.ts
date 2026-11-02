@@ -1,6 +1,6 @@
-import { AppleFoundationEventSchema, type RuntimeMode } from '@ruimte/contracts';
-import { executeAppleTool, type AppleToolCall, type AppleToolContext } from './apple-tools.ts';
-import { executeAppleCommand } from './apple-command-tool.ts';
+import { ApiToolCallSchema, type RuntimeMode } from '@ruimte/contracts';
+import { executeApiTool, type ApiToolCall, type ApiToolContext } from './api-tools.ts';
+import { executeApiCommand } from './api-command-tool.ts';
 
 const string = { type: 'string' };
 function tool(name: string, description: string, properties: Record<string, unknown>, required = Object.keys(properties)) {
@@ -54,7 +54,7 @@ export function nanoNeedsApproval(mode: RuntimeMode, tool: string): boolean {
     return true;
 }
 
-export function nanoToolCall(id: string, name: string, argumentsJson: string): AppleToolCall {
+export function nanoToolCall(id: string, name: string, argumentsJson: string): ApiToolCall {
     if (!NANOGPT_TOOLS.some((entry) => entry.function.name === name)) {
         throw new Error('Unsupported tool requested.');
     }
@@ -62,18 +62,18 @@ export function nanoToolCall(id: string, name: string, argumentsJson: string): A
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
         throw new Error('Invalid tool arguments.');
     }
-    const call = AppleFoundationEventSchema.parse({ ...input, type: 'tool.call', id, name });
+    const call = ApiToolCallSchema.parse({ ...input, type: 'tool.call', id, name });
     if (call.type !== 'tool.call') {
         throw new Error('Invalid tool call.');
     }
     return call;
 }
 
-export function executeNanoTool(cwd: string, call: AppleToolCall, signal: AbortSignal, context: AppleToolContext) {
+export function executeNanoTool(cwd: string, call: ApiToolCall, signal: AbortSignal, context: ApiToolContext) {
     if (call.name !== 'run_command' || process.platform !== 'win32') {
-        return executeAppleTool(cwd, call, signal, context);
+        return executeApiTool(cwd, call, signal, context);
     }
-    return executeAppleCommand(cwd, call.command, signal, context.env, {
+    return executeApiCommand(cwd, call.command, signal, context.env, {
         spawn: (directory, command, env) => {
             const child = Bun.spawn(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', command], {
                 cwd: directory,

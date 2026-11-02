@@ -56,7 +56,7 @@ It builds for this machine, or for another with `--os mac|linux --arch arm64|x64
 A release build always reports crashes and errors, and nothing else (`src/telemetry`). `scripts/compile.ts` stamps `RUIMTE_TELEMETRY=1` only when CI compiles a release, so `bun dev`, the tests and a local compile send nothing. A report goes out for:
 
 - an uncaught exception or rejection, before the process exits (two seconds at most)
-- a helper that ends while the daemon still needs it (the database helper, the Apple Foundation Models helper, a language server Ruimte ships), with its exit code or signal and last stderr lines; not after SIGTERM, SIGINT or SIGHUP, and nothing once shutdown began
+- a helper that ends while the daemon still needs it (the database helper or a language server Ruimte ships), with its exit code or signal and last stderr lines; not after SIGTERM, SIGINT or SIGHUP, and nothing once shutdown began
 - an event loop stuck for five seconds, seen from a worker thread, without a stack. A worker that missed its own ticks was suspended with the process (machine sleep) and does not report. Stall and recovery also write a log line, release build or not.
 
 Under the same stamp and scrubber (`src/telemetry/reporter.ts`) go a session per run without a user, every `console.warn` line (first line only), up to 30 breadcrumbs of fixed words (`DAEMON_MOMENTS`), and four metrics: `daemon.request.duration` by request area, `daemon.loop.lag`, `daemon.memory` (resident MB) and `daemon.clients` by kind. Metrics gather in a quarter-hour window (`startQuarterMeter` in `@ruimte/telemetry`), sent every 15 minutes and on shutdown.
@@ -124,7 +124,6 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
 | `streamingAllowed` | Browser pages and device screens stream to clients. On by default. |
-| `appleFoundationEnabled` | Offers the Apple on-device model as a chat provider. |
 | `keepAwake`, `keepAwakeOnBattery`, `keepAwakeDisplay` | Block sleep `off`, `working` (while an agent works) or `always`; on the adapter only unless battery is allowed; the display only under `always`. |
 | `keepAwakeLidClosed` | Also hold with the lid closed (below). |
 | `broker` | The broker this machine announces itself to, or off. |
@@ -164,7 +163,7 @@ $RUIMTE_HOME/
   pr-watches.json                  the PR-watches a person turned on, per chat
   launch-after-settle.json         per project, the task a person chose to run after a worktree chat settles, and the last turn each chat ran it for
   push-attention.json              the alerts pushed in the last 30 days, which clients mark nodes from
-  apple-mcp.json                   optional, written by a person: the MCP servers the Apple chat provider may use
+  api-mcp.json                     optional, written by a person: MCP servers for API chat providers
   telemetry/sent.json              0600, hashes of the errors a release build reported in the last day
   bin/                             the copy of the binaries `ruimte service install` runs
   projects/<projectId>.local.json  camera, focus, grid and panels, where a client that never saw the project starts
@@ -374,7 +373,7 @@ A path to install or add is a file on the machine, never an upload; one that is 
 
 ## Providers and models
 
-Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `src/providers/registry.ts`, ordered by `src/providers/kinds.ts`: Claude Code, Codex, Antigravity, GitHub Copilot, Grok, the Apple on-device model (when turned on), NanoGPT and the Claude API. `provider.list` answers per CLI whether it is installed, its version, models, resume template, capabilities and install instructions. Detection is cached a minute; `provider.detect` clears it (at most every ten seconds), which a client asks on window focus and when the Providers pane or an agent menu opens.
+Each agent CLI is one `ChatProvider` (`@adecore/agents`). The daemon's list is `src/providers/registry.ts`, ordered by `src/providers/kinds.ts`: Claude Code, Codex, Antigravity, GitHub Copilot, Grok, NanoGPT and the Claude API. `provider.list` answers per CLI whether it is installed, its version, models, resume template, capabilities and install instructions. Detection is cached a minute; `provider.detect` clears it (at most every ten seconds), which a client asks on window focus and when the Providers pane or an agent menu opens.
 
 A kind is an open word on the wire (`AgentKindSchema`, lowercase, at most 32 characters), so an older client draws an unknown kind with a neutral mark. A kind this daemon does not offer starts nothing and is not counted in usage.
 
@@ -480,9 +479,11 @@ The `rust` kind runs the `rust-analyzer` on `PATH` or in `~/.cargo/bin` that ans
 
 One server runs per project per kind, from the first document that needs it until the project closes or the daemon stops. A server that ends by itself after a minute of being ready restarts once; any other end leaves it `crashed` until `language.restart`. `language.log` returns the last 500 lines of install and server, each with `source` (`stderr`, `log`, `message`, `trace`) and `level` (`error`, `warning`, `info`, `log`, `debug`). `language.trace` sets `$/setTrace` (`off`, `messages`, `verbose`) per server, in memory.
 
-## On-device help for the editor
+## Editor model
 
-`src/ondevice` runs one-shot generations on Apple Foundation Models for explanations, rename suggestions and ghost text (wire: `packages/contracts/src/ondevice.ts`). It starts the Apple chat helper with `--oneshot` and keeps it until the daemon stops. Instructions per purpose live in `src/ondevice/instructions.ts`. The helper opens no connection and has no tools. More than four requests at once answer `busy`. A machine that is not an Apple silicon Mac reports itself unavailable.
+`src/editor-assist` runs one-shot generations through an installed Claude, Codex, Grok or Antigravity CLI for explanations, rename suggestions and ghost text (wire: `packages/contracts/src/editor-assist.ts`). Settings > Editor > AI lets a person choose a model and account. Automatic uses the cheapest current model of the first available provider in that order, skipping disabled or signed-out accounts. Known prices come from ADE CORE's bundled price snapshot; without a price, Grok's Build Fast and Gemini's Flash variants take precedence. A chosen provider or model that is unavailable reports why rather than silently switching.
+
+The CLI runs in an empty folder under `$RUIMTE_HOME/editor-assist`, outside the project, with its account's environment and no Ruimte agent token. Claude and Grok have no built-in tools; Codex uses its read-only one-shot mode. The selected provider receives the supplied code. Instructions per purpose live in `src/editor-assist/instructions.ts`. Requests stream and can be cancelled, stop after 60 seconds, and accept at most four concurrent generations.
 
 ## Files
 

@@ -284,15 +284,15 @@ describe('the copy the service runs', () => {
     };
 
     test('takes the native helpers along, and an update drops the ones its package no longer has', () => {
-        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', ['scrcpy-server', 'ruimte-foundation-models']), binDir, 'darwin');
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', ['scrcpy-server', 'retired-helper']), binDir, 'darwin');
         expect(readFileSync(join(binDir, 'native', 'scrcpy-server'), 'utf8')).toBe('scrcpy-server');
         if (process.platform !== 'win32') {
-            expect(statSync(join(binDir, 'native', 'ruimte-foundation-models')).mode & 0o111).not.toBe(0);
+            expect(statSync(join(binDir, 'native', 'retired-helper')).mode & 0o111).not.toBe(0);
         }
 
         copyServiceBinaries(packageBin(join(dir, 'second'), 'two', ['scrcpy-server']), binDir, 'darwin');
         expect(readFileSync(join(binDir, 'ruimte.build'), 'utf8')).toBe('two');
-        expect(existsSync(join(binDir, 'native', 'ruimte-foundation-models'))).toBe(false);
+        expect(existsSync(join(binDir, 'native', 'retired-helper'))).toBe(false);
 
         removeServiceBinaries(binDir, 'darwin');
         expect(existsSync(join(binDir, 'native'))).toBe(false);

@@ -1,7 +1,7 @@
 import { settleLanguage as settle } from './settle.test';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
-import { FakeOnDeviceModel } from '@/ondevice/fake-model';
+import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -20,9 +20,12 @@ const TEXT = 'const hits = need.filter((n) => has(n));\nreturn hits.length / nee
 async function setup(options: { available?: boolean; fail?: boolean } = {}) {
     const transport = new FakeLanguageTransport();
     transport.providers = { 'textDocument/rename': { prepareProvider: true }, 'textDocument/references': {} };
-    const model = new FakeOnDeviceModel(transport, options.available === false ? { available: false, reason: 'Apple Intelligence is turned off.' } : {});
+    const model = new FakeEditorAssistModel(
+        transport,
+        options.available === false ? { available: false, reason: 'The selected editor model is unavailable.' } : {}
+    );
     if (options.fail) {
-        transport.answers.set('ondevice.generate', () => Promise.reject(new Error('model failed')));
+        transport.answers.set('editor.generate', () => Promise.reject(new Error('model failed')));
     }
     transport.answers.set('language.request', (payload: { method: string }) => {
         const results: Record<string, unknown> = {
@@ -51,7 +54,7 @@ function renameSent(transport: FakeLanguageTransport): boolean {
 
 beforeEach(() => {
     useToasts.setState({ toasts: [] });
-    useSettings.setState({ aiOnDeviceHelp: true });
+    useSettings.setState({ aiCodeHelp: true });
 });
 
 describe('rename suggestions', () => {
@@ -75,12 +78,12 @@ describe('rename suggestions', () => {
     });
 
     test('offers none when the setting is off or the machine has no model', async () => {
-        useSettings.setState({ aiOnDeviceHelp: false });
+        useSettings.setState({ aiCodeHelp: false });
         const off = await setup();
         expect(off.model.requests).toEqual([]);
         expect(off.language.popups.getState().rename!.suggestions).toEqual([]);
 
-        useSettings.setState({ aiOnDeviceHelp: true });
+        useSettings.setState({ aiCodeHelp: true });
         const missing = await setup({ available: false });
         expect(missing.model.requests).toEqual([]);
     });
@@ -88,7 +91,7 @@ describe('rename suggestions', () => {
     test('drops the answer of a rename that was closed, and cancels the request', async () => {
         const { model, language, transport, editor } = await setup();
         // Records the cancel but lets the answer still arrive afterwards, to prove it is dropped.
-        transport.answers.set('ondevice.cancel', ({ id }: { id: string }) => {
+        transport.answers.set('editor.cancel', ({ id }: { id: string }) => {
             model.cancels.push(id);
             return {};
         });
@@ -110,7 +113,7 @@ describe('rename suggestions', () => {
         expect(language.popups.getState().rename).toMatchObject({ suggestions: [], phase: 'input', name: 'hits' });
         expect(editor.getText()).toBe(TEXT);
         const failed = await setup({ fail: true });
-        expect(failed.transport.callsOf('ondevice.generate')).toHaveLength(1);
+        expect(failed.transport.callsOf('editor.generate')).toHaveLength(1);
         expect(failed.language.popups.getState().rename).toMatchObject({ suggestions: [], phase: 'input', name: 'hits' });
         expect(failed.editor.getText()).toBe(TEXT);
         expect(renameSent(failed.transport)).toBe(false);

@@ -235,21 +235,28 @@
                 "label": "Attribution in gutter",
                 "description": "Marks lines an agent wrote. Hover for the chat and turn."
             },
-            "onDevice": {
-                "title": "On device",
+            "assist": {
+                "title": "Editor model",
                 "help": {
                     "label": "Explain and name suggestions",
-                    "description": "Uses Apple Foundation Models. Code stays on this Mac."
+                    "description": "Explains code and suggests names using the selected model."
                 },
                 "ghost": {
                     "label": "Suggestions while typing",
-                    "description": "Suggestions from the model on this Mac appear as you type. Each takes two to three seconds.",
+                    "description": "Request a code suggestion with the shortcut. The selected provider receives the code around the cursor.",
                     "options": {
                         "off": "Off",
                         "request": "On request"
                     }
                 },
-                "unavailable": "Not available: {{reason}}"
+                "unavailable": "Not available: {{reason}}",
+                "model": {
+                    "label": "Model",
+                    "description": "Automatic uses the cheapest model of the first available provider: Claude, Codex, Grok, then Antigravity. Code is sent to the selected provider."
+                },
+                "automatic": "Automatic",
+                "choose": "Choose a model",
+                "resolved": "Using {{model}}"
             }
         },
         "folding": {
@@ -1737,19 +1744,6 @@
         }
     },
     "providers": {
-        "apple": {
-            "label": "Enable Apple Foundation Models",
-            "description": "Use the model on this Mac for chats and tools. Requires Apple silicon, macOS 26.4 or later, and Apple Intelligence.",
-            "toggleDescription": "Turning this off stops active Apple chats and pending tool approvals on this machine.",
-            "tools": "The model runs on this Mac. Web searches, page requests and MCP tools you approve can send data to their own services.",
-            "status": "Availability",
-            "disabled": "Off on this machine.",
-            "ready": "Ready.",
-            "unavailable": "Not available.",
-            "saveFailed": "Could not change Apple Foundation Models",
-            "requiresMac": "Requires a Mac with Apple silicon.",
-            "off": "Off"
-        },
         "nanogpt": {
             "description": "Chat with the models your NanoGPT subscription includes. Requests go only to the subscription API, never to pay as you go.",
             "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",
