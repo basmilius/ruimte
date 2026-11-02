@@ -4,7 +4,8 @@ import { ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } 
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
-import { transport } from '@/transport';
+import { currentEndpointId } from '@/state/keys';
+import { machineTransport, TransportError, type Transport } from '@/transport';
 
 const STORE_BASE = 'https://cdn.jsdelivr.net/gh/ruimte-app/extensions@main/';
 
@@ -56,13 +57,17 @@ function base64Of(bytes: Uint8Array): string {
 }
 
 /*
- * The client part goes to the shell of this computer and the rest to the machine in front. A machine only
- * takes it from its owner, so on someone else's the client part still works and this says what is missing.
+ * The machine in front when a person pressed, taken before the first await. The shell's part of a change takes a
+ * while, and a switch meanwhile must not send the rest, or the removal of `data/`, to another machine.
  */
-export async function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
+function machineInFront(): Transport {
+    return machineTransport(currentEndpointId());
+}
+
+async function installOn(link: Transport, bytes: Uint8Array): Promise<{ onMachine: boolean }> {
     await desktop()?.extensions?.install(bytes);
 
-    const onMachine = await extensionRequest(transport, 'extension.install', { pack: base64Of(bytes) }).then(
+    const onMachine = await extensionRequest(link, 'extension.install', { pack: base64Of(bytes) }).then(
         () => true,
         () => false
     );
@@ -72,7 +77,16 @@ export async function installPack(bytes: Uint8Array): Promise<{ onMachine: boole
     return { onMachine };
 }
 
+/*
+ * The client part goes to the shell of this computer and the rest to the machine in front. A machine only
+ * takes it from its owner, so on someone else's the client part still works and this says what is missing.
+ */
+export function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
+    return installOn(machineInFront(), bytes);
+}
+
 export async function installFromStore(entry: ExtensionStoreEntry, fetcher: typeof fetch = fetch): Promise<{ onMachine: boolean }> {
+    const link = machineInFront();
     const response = await fetcher(`${STORE_BASE}${entry.path}`);
     const bytes = new Uint8Array(await response.arrayBuffer());
 
@@ -80,7 +94,7 @@ export async function installFromStore(entry: ExtensionStoreEntry, fetcher: type
         throw new Error('This pack is not the one the store reviewed');
     }
 
-    return installPack(bytes);
+    return installOn(link, bytes);
 }
 
 export interface PackPreview {
@@ -113,14 +127,54 @@ export async function readPack(file: Blob): Promise<PackPreview> {
     };
 }
 
-export async function removeExtension(id: string): Promise<void> {
-    await desktop()?.extensions?.remove(id);
-    await extensionRequest(transport, 'extension.remove', { id }).catch(() => undefined);
-    await syncExtensions();
+/*
+ * What the machine said of its part of a change: null once it made it or had no such part, and why otherwise. Its
+ * own list says whether it has one, since an extension with only a client part is no failure on the machine.
+ */
+async function changeOnMachine(link: Transport, id: string, change: () => Promise<unknown>): Promise<string | null> {
+    try {
+        const { extensions } = await extensionRequest(link, 'extension.list', {});
+
+        if (extensions.some((entry) => entry.manifest.id === id)) {
+            await change();
+        }
+
+        return null;
+    } catch (e) {
+        // A machine from before the extension API has no part to change.
+        if (e instanceof TransportError && e.code === 'unavailable') {
+            return null;
+        }
+
+        return e instanceof Error ? e.message : String(e);
+    }
 }
 
-export async function setExtensionEnabled(id: string, enabled: boolean): Promise<void> {
-    await desktop()?.extensions?.setEnabled(id, enabled);
-    await extensionRequest(transport, 'extension.setEnabled', { id, enabled }).catch(() => undefined);
+export interface MachineChange {
+    // Why the machine kept its part as it was, so a person hears that its server part still runs.
+    machineFailure: string | null;
+}
+
+export async function removeExtension(id: string): Promise<MachineChange> {
+    const link = machineInFront();
+
+    await desktop()?.extensions?.remove(id);
+
+    const machineFailure = await changeOnMachine(link, id, () => extensionRequest(link, 'extension.remove', { id }));
+
     await syncExtensions();
+
+    return { machineFailure };
+}
+
+export async function setExtensionEnabled(id: string, enabled: boolean): Promise<MachineChange> {
+    const link = machineInFront();
+
+    await desktop()?.extensions?.setEnabled(id, enabled);
+
+    const machineFailure = await changeOnMachine(link, id, () => extensionRequest(link, 'extension.setEnabled', { id, enabled }));
+
+    await syncExtensions();
+
+    return { machineFailure };
 }

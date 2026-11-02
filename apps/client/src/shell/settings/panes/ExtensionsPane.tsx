@@ -20,6 +20,7 @@ import {
     setExtensionEnabled,
     storeIconUrl,
     type ExtensionStoreEntry,
+    type MachineChange,
     type PackPreview,
     type StoreAnswer
 } from '@/extensions/store';
@@ -297,6 +298,12 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
     const entry = useInstalledExtensions((state) => state.installed.find((each) => each.manifest.id === id));
     const failure = useInstalledExtensions((state) => state.failures[id]);
     const settings = useContributions((state) => state.extensionSettings.find((each) => each.id === id));
+    const name = entry?.manifest.name ?? id;
+    const machineSaid = ({ machineFailure }: MachineChange): void => {
+        if (machineFailure !== null) {
+            useToasts.getState().show({ kind: 'error', title: t('extensions.machineKept', { name }), description: machineFailure });
+        }
+    };
 
     if (entry === undefined) {
         return null;
@@ -324,7 +331,7 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                             checked={entry.enabled}
                             disabled={entry.dev}
                             label={t('extensions.enabled')}
-                            onCheckedChange={(next) => void setExtensionEnabled(id, next)}
+                            onCheckedChange={(next) => void setExtensionEnabled(id, next).then(machineSaid)}
                         />
                     }
                 />
@@ -335,7 +342,10 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                         control={
                             <Button
                                 onClick={() => {
-                                    void removeExtension(id).then(onRemoved);
+                                    void removeExtension(id).then((change) => {
+                                        machineSaid(change);
+                                        onRemoved();
+                                    });
                                 }}
                             >
                                 {t('extensions.remove')}
