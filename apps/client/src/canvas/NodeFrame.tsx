@@ -30,7 +30,7 @@ import { useRemoteNodeState } from '@/canvas/remote-node-state';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
-import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
+import { GROUP_HEADER_PX, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import type { AgentWork } from '@/state/agent-work';
 import { useNodeStatus, useNodeWork } from '@/state/chats';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
@@ -301,7 +301,7 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
  * transform and undoes it, since moving it out would remount its session or its page.
  */
 function useMaximizedPlace(id: string): CSSProperties | null {
-    const camera = useCanvas((s) => (maximizedNodeOf(s) === id ? s.camera : null));
+    const camera = useCanvasCamera((s) => (maximizedNodeOf(s) === id ? s.camera : null));
     const viewport = useCanvas((s) => (maximizedNodeOf(s) === id ? s.viewport : null));
     if (camera === null || viewport === null) {
         return null;

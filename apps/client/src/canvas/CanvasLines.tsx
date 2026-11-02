@@ -7,7 +7,7 @@ import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { constrainedLineEnd, LINE_GRID, lineArrow, lineBounds, lineDash } from '@/canvas/line-geometry';
 import { snapPoint, toWorld, type Point } from '@/canvas/math';
 import { isSpaceDown } from '@/canvas/space-pan';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 import { DEFAULT_LINE_STYLE } from '@/state/canvas-lines-slice';
 
 type LinePatch = Partial<Omit<ProjectCanvasLine, 'id'>>;
@@ -114,7 +114,7 @@ function CanvasLine({ id }: { id: string }) {
     const store = useCanvasStore();
     const line = useCanvas((s) => s.lines[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
-    const zoom = useCanvas((s) => s.camera.zoom);
+    const zoom = useCanvasCamera((s) => s.camera.zoom);
     const locks = useCanvas((s) => s.locks);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const drag = useRef<Drag | null>(null);
@@ -258,7 +258,7 @@ export function CanvasLineTool({ onDraftChange }: { onDraftChange(line: ProjectC
     const { t } = useTranslation('canvas');
     const store = useCanvasStore();
     const tool = useCanvas((s) => s.lineTool);
-    const camera = useCanvas((s) => s.camera);
+    const camera = useCanvasCamera((s) => s.camera);
     const [draft, setDraft] = useState<ProjectCanvasLine | null>(null);
     const draftRef = useRef<ProjectCanvasLine | null>(null);
     useEffect(
@@ -339,7 +339,7 @@ export function CanvasLineToolbar() {
     const store = useCanvasStore();
     const line = useCanvas((s) => (s.selection.length === 1 ? s.lines[s.selection[0]!] : undefined));
     // Only a bar on screen follows the camera, so a pan with no line selected renders nothing here.
-    const camera = useCanvas((s) => (line === undefined ? null : s.camera));
+    const camera = useCanvasCamera((s) => (line === undefined ? null : s.camera));
     const viewport = useCanvas((s) => s.viewport);
     if (!line || camera === null) {
         return null;

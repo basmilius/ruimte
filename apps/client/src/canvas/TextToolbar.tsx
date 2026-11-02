@@ -5,7 +5,7 @@ import type { DrawingFont } from '@ruimte/contracts';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
 import { FONT_STACK } from '@/canvas/text-font';
-import { useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@adecore/ui';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
@@ -22,7 +22,7 @@ export function TextToolbar() {
     const canvasStore = useCanvasStore();
     const text = useCanvas((s) => (s.selection.length === 1 ? (s.texts[s.selection[0]!] ?? null) : null));
     // Only a bar on screen follows the camera, so a pan with no text selected renders nothing here.
-    const camera = useCanvas((s) => (text === null ? null : s.camera));
+    const camera = useCanvasCamera((s) => (text === null ? null : s.camera));
     const viewport = useCanvas((s) => s.viewport);
 
     const toolbarRef = useRef<HTMLDivElement>(null);

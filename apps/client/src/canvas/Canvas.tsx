@@ -33,7 +33,7 @@ import { stackingOrder } from '@/canvas/stacking';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { farNodeKey } from '@/canvas/culling';
 import { notePointer } from '@/canvas/pointer';
-import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { defaultNodeSize } from '@/state/node-size';
 import { createTextAction } from '@/actions/client-actions';
@@ -177,7 +177,7 @@ export function Canvas() {
     const editable = gapEdit ?? (!altDown || activeGesture !== null || gesturing ? [] : editableGaps(Object.values(frames), selection));
     /* A fixed DOM order with a z-index, since moving an element takes the keyboard from a body a click
        just landed in. A note or a file far from sight is not drawn at all (`farNodeKey`). */
-    const far = useCanvas(farNodeKey);
+    const far = useCanvasCamera(farNodeKey);
     const farIds = new Set(far === '' ? [] : far.split('\n'));
     const drawIds = order.filter((id) => !farIds.has(id)).sort();
     const stacking = stackingOrder(nodes, order);

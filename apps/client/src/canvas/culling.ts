@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Viewport } from '@/canvas/camera-slice';
 import { intersects, isMeasured, visibleRect, type Camera } from '@/canvas/math';
-import { maximizedNodeOf, useCanvas, type CanvasNode, type CanvasState } from '@/state/canvas';
+import { maximizedNodeOf, useCanvasCamera, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
 import { useSettings } from '@/state/settings';
 import { rendersAtZoom } from '@/canvas/render-distance';
@@ -22,7 +22,7 @@ export const visibleNodeIds = memoByIdentity((nodes: Record<string, CanvasNode>,
 });
 
 export function useNodeInViewport(id: string): boolean {
-    return useCanvas((s) => !s.nodes[id] || s.viewport.w === 0 || visibleNodeIds(s.nodes, s.camera, s.viewport).has(id));
+    return useCanvasCamera((s) => !s.nodes[id] || s.viewport.w === 0 || visibleNodeIds(s.nodes, s.camera, s.viewport).has(id));
 }
 
 /*
@@ -34,7 +34,7 @@ export function useNodeInViewport(id: string): boolean {
  */
 export function useRenderZoom(): boolean {
     const distance = useSettings((s) => s.canvasRenderDistance);
-    return useCanvas((s) => rendersAtZoom(distance, s.camera.zoom));
+    return useCanvasCamera((s) => rendersAtZoom(distance, s.camera.zoom));
 }
 
 /* True while visible and for a grace period after; the caller unmounts the live view when it turns false. */

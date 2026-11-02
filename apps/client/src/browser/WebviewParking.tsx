@@ -52,7 +52,7 @@ interface Covering {
     over: Record<string, PageHole[]>;
 }
 
-/* Where a cell stands on screen, read before anything is written, so placing every page lays the window out once. */
+/* Where a cell stands on screen, read before anything is written and kept until the layer forgets it (`forgetBoxes`). */
 interface CellBox {
     rect: DOMRect;
     radius: string;
@@ -120,6 +120,23 @@ function DesktopWebviewParking() {
         /* What the distance asked of each page in the last pass, so a picture asks again before the page goes. */
         const wantsFar = new Map<string, boolean>();
         let wake: ReturnType<typeof setTimeout> | null = null;
+        /* The layer's box and the cells' boxes, kept until one changes size or the grid or the document
+           changes. Read again on every pass, each read forced a layout of the window right after the
+           camera wrote its transform, on every frame of a pan or a zoom. */
+        let rootBox: DOMRect | null = null;
+        const cellBoxes = new Map<HTMLElement, CellBox>();
+        const observed = new Set<HTMLElement>();
+        const forgetBoxes = (): void => {
+            rootBox = null;
+            cellBoxes.clear();
+        };
+        const boxesObserver = new ResizeObserver(() => {
+            forgetBoxes();
+            schedule();
+        });
+        if (root.current !== null) {
+            boxesObserver.observe(root.current);
+        }
         pageSnapshots.judge((key) => wantsFar.get(key) === true);
         /* A page that goes far while it still had the keyboard hands it back to the canvas of its own cell. */
         const releaseFocus = (key: string, viewId: string): void => {
@@ -150,12 +167,11 @@ function DesktopWebviewParking() {
          * than drawn over the cell beside it.
          */
         const place = (): void => {
-            const box = root.current?.getBoundingClientRect();
+            const box = (rootBox ??= root.current?.getBoundingClientRect() ?? null);
             if (!box) {
                 return;
             }
             const open = shownViewIds();
-            const cells = new Map<HTMLElement, CellBox>();
             const distance = useSettings.getState().canvasRenderDistance;
             const now = performance.now();
             let nextWake: number | null = null;
@@ -166,7 +182,12 @@ function DesktopWebviewParking() {
                     return [];
                 }
                 const view = pageViewOf(nodeId, open);
-                return [{ key, host, clip, nodeId, view, cell: view === null ? null : cellBoxOf(cells, cellElement(view.viewId)) }];
+                const element = view === null ? null : cellElement(view.viewId);
+                if (element !== null && !observed.has(element)) {
+                    observed.add(element);
+                    boxesObserver.observe(element);
+                }
+                return [{ key, host, clip, nodeId, view, cell: cellBoxOf(cellBoxes, element) }];
             });
             for (const { key, host, clip, nodeId, view, cell } of pages) {
                 wantsFar.set(key, false);
@@ -346,9 +367,14 @@ function DesktopWebviewParking() {
             });
         }
         place();
+        // A change of the grid or the document may move a cell without resizing it, so the kept boxes go too.
+        const relayout = (): void => {
+            forgetBoxes();
+            schedule();
+        };
         const offCanvas = subscribeCanvases(schedule);
-        const offDocument = useDocument.subscribe(schedule);
-        const offCells = subscribeCells(schedule);
+        const offDocument = useDocument.subscribe(relayout);
+        const offCells = subscribeCells(relayout);
         const offSpace = subscribeSpacePan(schedule);
         const offDistance = useSettings.subscribe((state, previous) => {
             if (state.canvasRenderDistance !== previous.canvasRenderDistance) {
@@ -366,9 +392,10 @@ function DesktopWebviewParking() {
             }
         });
         // The grid moves with the window as well, and a resize moves no state at all.
-        window.addEventListener('resize', schedule);
+        window.addEventListener('resize', relayout);
         return () => {
             frame.dispose();
+            boxesObserver.disconnect();
             offCanvas();
             offDocument();
             offCells();
@@ -382,7 +409,7 @@ function DesktopWebviewParking() {
             for (const off of offGuests) {
                 off();
             }
-            window.removeEventListener('resize', schedule);
+            window.removeEventListener('resize', relayout);
         };
     }, [keys]);
 

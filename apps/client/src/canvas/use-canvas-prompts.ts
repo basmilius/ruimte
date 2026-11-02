@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { nodeChats } from '@ruimte/contracts';
 import { canvasPrompts, samePrompts, type CanvasPrompt } from '@/canvas/prompts';
+import { onlyCameraMoved } from '@/canvas/camera-slice';
 import { useCanvasStore } from '@/state/canvas';
 import { ChatPromptFeed } from '@adecore/agents-react/chat';
 import type { PromptSubject } from '@adecore/agents-react/prompts';
@@ -86,7 +87,14 @@ export function useCanvasPrompts(): StackPrompts {
         };
         reconcile();
         const unsubscribe = [
-            canvasStore.subscribe(reconcile),
+            // A camera that moved changes no prompt, and a canvas moves it every frame of a pan or a zoom.
+            canvasStore.subscribe((state, previous) => {
+                if (onlyCameraMoved(state, previous)) {
+                    return;
+                }
+
+                reconcile();
+            }),
             subscribeChatThreads(update),
             useSessions.subscribe(update),
             useComputer.subscribe(update),

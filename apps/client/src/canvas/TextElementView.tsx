@@ -7,7 +7,7 @@ import { deleteNodesAction } from '@/actions/client-actions';
 import { accentColor } from '@/canvas/accents';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
-import { useCanvas, useCanvasStore } from '@/state/canvas';
+import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 import { copyText, Icon, ContextMenu, Kbd } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
@@ -18,7 +18,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     const selected = useCanvas((s) => s.selection.includes(id));
     const editing = useCanvas((s) => s.editingTextId === id);
     const resizeLocked = useCanvas((s) => s.locks.resize);
-    const zoom = useCanvas((s) => s.camera.zoom);
+    const zoom = useCanvasCamera((s) => s.camera.zoom);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const ref = useRef<HTMLDivElement>(null);
     const hand = text?.font === 'hand';

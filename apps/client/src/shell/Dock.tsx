@@ -31,7 +31,7 @@ import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { shownFolderOf, useProject } from '@/state/project';
-import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
+import { maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
@@ -55,7 +55,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
         const view = activeViewOf(s);
         return view !== null && isCanvasView(view);
     });
-    const { zoom, locks, hasSelection, layouts } = useCanvas(
+    const { zoom, locks, hasSelection, layouts } = useCanvasCamera(
         useShallow((s) => ({
             zoom: s.camera.zoom,
             locks: s.locks,
