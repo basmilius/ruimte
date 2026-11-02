@@ -1,6 +1,6 @@
 'use client';
 
-import { type MouseEvent, useEffect, useState } from 'react';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import clsx from 'clsx';
@@ -32,6 +32,8 @@ interface MobileMenuProps {
 export function MobileMenu({ pathname, section, hiddenFrom }: MobileMenuProps) {
     const [openOn, setOpenOn] = useState<string | null>(null);
     const open = openOn === pathname;
+    const button = useRef<HTMLButtonElement>(null);
+    const panel = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!open) {
@@ -41,20 +43,39 @@ export function MobileMenu({ pathname, section, hiddenFrom }: MobileMenuProps) {
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setOpenOn(null);
+                button.current?.focus();
+            }
+        };
+        // Past the breakpoint the button is gone, so the menu would stay with no way to close it.
+        const wide = window.matchMedia(hiddenFrom === 'md' ? '(min-width: 48rem)' : '(min-width: 64rem)');
+        const onWide = (event: MediaQueryListEvent) => {
+            if (event.matches) {
+                setOpenOn(null);
             }
         };
         const root = document.documentElement;
         const overflow = root.style.overflow;
+        // The page it covers drops out of the keyboard's way, so Tab goes from the button to the menu.
+        const covered = [...document.querySelectorAll<HTMLElement>('main, footer')];
 
         // The page under the menu holds still, so a scroll in the list never moves it.
         root.style.overflow = 'hidden';
+        covered.forEach((element) => {
+            element.inert = true;
+        });
         window.addEventListener('keydown', onKey);
+        wide.addEventListener('change', onWide);
+        panel.current?.querySelector('a')?.focus();
 
         return () => {
             root.style.overflow = overflow;
+            covered.forEach((element) => {
+                element.inert = false;
+            });
             window.removeEventListener('keydown', onKey);
+            wide.removeEventListener('change', onWide);
         };
-    }, [open]);
+    }, [open, hiddenFrom]);
 
     // A link to a part of the page you are on navigates nowhere, so a press on any link closes the menu.
     const closeOnLink = (event: MouseEvent<HTMLElement>) => {
@@ -66,6 +87,7 @@ export function MobileMenu({ pathname, section, hiddenFrom }: MobileMenuProps) {
     return (
         <div className={hiddenFrom === 'md' ? 'md:hidden' : 'lg:hidden'}>
             <IconButton
+                ref={button}
                 icon={open ? X : Menu}
                 label={open ? 'Close menu' : 'Menu'}
                 tooltip={false}
@@ -76,7 +98,12 @@ export function MobileMenu({ pathname, section, hiddenFrom }: MobileMenuProps) {
             {/* Out of the header, whose backdrop filter would make it the box a fixed panel fills. */}
             {open &&
                 createPortal(
-                    <div id="site-menu" className="fixed inset-x-0 top-16 bottom-0 z-30 overflow-y-auto border-t border-border bg-bg" onClick={closeOnLink}>
+                    <div
+                        ref={panel}
+                        id="site-menu"
+                        className="fixed inset-x-0 top-16 bottom-0 z-30 overflow-y-auto border-t border-border bg-bg"
+                        onClick={closeOnLink}
+                    >
                         <div className="mx-auto max-w-[1240px] px-5 py-6 sm:px-8">
                             <nav aria-label="Site" className="flex flex-col gap-px">
                                 <Link href="/" className={clsx(LINK, pathname === '/' ? LINK_CURRENT : LINK_IDLE)}>
