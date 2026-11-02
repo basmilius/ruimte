@@ -84,6 +84,27 @@ describe('the language servers of a person', () => {
         expect(servers.list()).toEqual([]);
     });
 
+    it('keeps every server when saves and removes run at the same time', async () => {
+        const servers = store();
+        await servers.load();
+
+        const kept = await servers.save({ ...zig, name: 'Kept' });
+        await Promise.all([
+            servers.saveFor('poc.machine', { ...zig, name: 'One' }),
+            servers.saveFor('poc.machine', { ...zig, name: 'Two' }),
+            servers.saveFor('poc.machine', { ...zig, name: 'Two' }),
+            servers.save({ ...zig, name: 'Mine' })
+        ]);
+        const [removed] = await Promise.all([servers.removeOwnedBy('poc.machine'), servers.save({ ...zig, name: 'Late' })]);
+
+        const reloaded = store();
+        await reloaded.load();
+
+        expect(removed).toHaveLength(2);
+        expect(reloaded.list().map((server) => server.name)).toEqual(['Kept', 'Mine', 'Late']);
+        expect(reloaded.list()[0]?.id).toBe(kept.id);
+    });
+
     it('holds a server whose command was changed in the file by hand until it is saved again', async () => {
         const first = store();
         const { id } = await first.save(zig);

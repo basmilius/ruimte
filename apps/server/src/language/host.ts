@@ -513,7 +513,9 @@ export class LanguageHost {
     }
 
     async customRemoveOwned(extension: string): Promise<void> {
-        await Promise.all(this.custom.ownedBy(extension).map((id) => this.customRemove(id)));
+        for (const id of await this.custom.removeOwnedBy(extension)) {
+            await this.customChanged(id);
+        }
     }
 
     async customRemove(id: string): Promise<void> {

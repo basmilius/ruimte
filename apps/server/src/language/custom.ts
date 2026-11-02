@@ -87,7 +87,7 @@ export class CustomLanguageServers {
     }
 
     list(): CustomLanguageServer[] {
-        return this.servers.map(({ approval, ...server }) => ({ ...server, ...(approval === approvalOf(server) ? {} : { held: true }) }));
+        return listed(this.servers);
     }
 
     get(id: string): CustomLanguageServer | undefined {
@@ -100,56 +100,41 @@ export class CustomLanguageServers {
     }
 
     /* Saves a server a person gave, which approves starting exactly what it names. */
-    async save(input: CustomLanguageServerInput, extension?: string): Promise<CustomLanguageServer> {
+    async save(input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
         this.assertWritable();
-        const languages = [...new Set(input.languages.map((language) => language.trim().toLowerCase()))];
-        const patterns = [...new Set(input.patterns.map((pattern) => pattern.trim()))];
-        for (const pattern of patterns) {
-            if (!isValidFilePattern(pattern)) {
-                throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `${pattern} is not a file pattern`);
+        this.assertRunnable(input);
+
+        return this.mutate((servers) => {
+            if (input.id !== undefined && !servers.some((server) => server.id === input.id)) {
+                throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `There is no server ${input.id} to change`);
             }
-        }
-        if (this.resolve(input.command.trim()) === null) {
-            throw new CustomServerError(
-                LANGUAGE_ERROR_CODES.invalidServer,
-                `${input.command.trim()} is not an executable on this machine. Give an absolute path, or a command that is on the PATH of the daemon.`
-            );
-        }
-        const id = input.id ?? `${CUSTOM_SERVER_PREFIX}${randomUUID()}`;
-        if (input.id !== undefined && !this.servers.some((server) => server.id === id)) {
-            throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `There is no server ${id} to change`);
-        }
-        const server: CustomLanguageServer = {
-            id,
-            ...(extension === undefined ? {} : { extension }),
-            name: input.name.trim(),
-            command: input.command.trim(),
-            args: [...input.args],
-            env: { ...input.env },
-            languages,
-            patterns,
-            ...(input.initializationOptions === undefined ? {} : { initializationOptions: input.initializationOptions }),
-            ...(input.projects === undefined || input.projects.length === 0 ? {} : { projects: [...new Set(input.projects)] })
-        };
-        const stored: StoredServer = { ...server, approval: approvalOf(server) };
-        const index = this.servers.findIndex((candidate) => candidate.id === id);
-        await this.write(index === -1 ? [...this.servers, stored] : this.servers.map((candidate) => (candidate.id === id ? stored : candidate)));
-        return server;
+
+            const server = serverOf(input, input.id ?? newServerId(), undefined);
+
+            return { next: replaced(servers, server), result: server };
+        });
     }
 
     /* An extension's server, by its name, so loading it again changes the one it already added. */
     async saveFor(extension: string, input: CustomLanguageServerInput): Promise<CustomLanguageServer> {
+        this.assertWritable();
+        this.assertRunnable(input);
+
         const name = input.name.trim();
-        const approved = this.list().find((server) => server.extension === undefined && server.name === name);
 
-        // A person made it theirs, so loading the extension again neither changes it nor adds a second.
-        if (approved !== undefined) {
-            return approved;
-        }
+        return this.mutate((servers) => {
+            // A person made it theirs, so loading the extension again neither changes it nor adds a second.
+            const approved = listed(servers).find((server) => server.extension === undefined && server.name === name);
 
-        const known = this.servers.find((server) => server.extension === extension && server.name === name);
+            if (approved !== undefined) {
+                return { next: null, result: approved };
+            }
 
-        return this.save({ ...input, ...(known === undefined ? {} : { id: known.id }) }, extension);
+            const known = servers.find((server) => server.extension === extension && server.name === name);
+            const server = serverOf(input, known?.id ?? newServerId(), extension);
+
+            return { next: replaced(servers, server), result: server };
+        });
     }
 
     ownedBy(extension: string): string[] {
@@ -159,11 +144,36 @@ export class CustomLanguageServers {
     /* Whether there was such a server. */
     async remove(id: string): Promise<boolean> {
         this.assertWritable();
-        if (!this.servers.some((server) => server.id === id)) {
-            return false;
+
+        return this.mutate((servers) =>
+            servers.some((server) => server.id === id) ? { next: servers.filter((server) => server.id !== id), result: true } : { next: null, result: false }
+        );
+    }
+
+    /* Removes every server of the extension in one write, and gives the ids it removed. */
+    async removeOwnedBy(extension: string): Promise<string[]> {
+        this.assertWritable();
+
+        return this.mutate((servers) => {
+            const owned = servers.filter((server) => server.extension === extension).map((server) => server.id);
+
+            return { next: owned.length === 0 ? null : servers.filter((server) => server.extension !== extension), result: owned };
+        });
+    }
+
+    private assertRunnable(input: CustomLanguageServerInput): void {
+        for (const pattern of input.patterns) {
+            if (!isValidFilePattern(pattern.trim())) {
+                throw new CustomServerError(LANGUAGE_ERROR_CODES.invalidServer, `${pattern} is not a file pattern`);
+            }
         }
-        await this.write(this.servers.filter((server) => server.id !== id));
-        return true;
+
+        if (this.resolve(input.command.trim()) === null) {
+            throw new CustomServerError(
+                LANGUAGE_ERROR_CODES.invalidServer,
+                `${input.command.trim()} is not an executable on this machine. Give an absolute path, or a command that is on the PATH of the daemon.`
+            );
+        }
     }
 
     private assertWritable(): void {
@@ -172,16 +182,57 @@ export class CustomLanguageServers {
         }
     }
 
-    /* One write at a time, and the list in memory only changes once the file has it. */
-    private write(next: StoredServer[]): Promise<void> {
+    /*
+     * One change at a time, computed from the list the previous change left, so two saves or removes
+     * never write over each other. The list in memory only changes once the file has it.
+     */
+    private mutate<T>(change: (servers: StoredServer[]) => { next: StoredServer[] | null; result: T }): Promise<T> {
         const run = this.writing.then(async () => {
-            await mkdir(dirname(this.path), { recursive: true });
-            await writeAtomic(this.path, `${JSON.stringify({ servers: [...next, ...this.unreadable] }, null, 2)}\n`, 0o600, { durable: true });
-            this.servers = next;
+            const { next, result } = change(this.servers);
+
+            if (next !== null) {
+                await mkdir(dirname(this.path), { recursive: true });
+                await writeAtomic(this.path, `${JSON.stringify({ servers: [...next, ...this.unreadable] }, null, 2)}\n`, 0o600, { durable: true });
+                this.servers = next;
+            }
+
+            return result;
         });
         this.writing = run.catch(() => undefined);
+
         return run;
     }
+}
+
+function newServerId(): string {
+    return `${CUSTOM_SERVER_PREFIX}${randomUUID()}`;
+}
+
+function serverOf(input: CustomLanguageServerInput, id: string, extension: string | undefined): CustomLanguageServer {
+    return {
+        id,
+        ...(extension === undefined ? {} : { extension }),
+        name: input.name.trim(),
+        command: input.command.trim(),
+        args: [...input.args],
+        env: { ...input.env },
+        languages: [...new Set(input.languages.map((language) => language.trim().toLowerCase()))],
+        patterns: [...new Set(input.patterns.map((pattern) => pattern.trim()))],
+        ...(input.initializationOptions === undefined ? {} : { initializationOptions: input.initializationOptions }),
+        ...(input.projects === undefined || input.projects.length === 0 ? {} : { projects: [...new Set(input.projects)] })
+    };
+}
+
+function listed(servers: StoredServer[]): CustomLanguageServer[] {
+    return servers.map(({ approval, ...server }) => ({ ...server, ...(approval === approvalOf(server) ? {} : { held: true }) }));
+}
+
+function replaced(servers: StoredServer[], server: CustomLanguageServer): StoredServer[] {
+    const stored: StoredServer = { ...server, approval: approvalOf(server) };
+
+    return servers.some((candidate) => candidate.id === server.id)
+        ? servers.map((candidate) => (candidate.id === server.id ? stored : candidate))
+        : [...servers, stored];
 }
 
 /* What a server of a person's own runs: one process, named by its id on the wire. */
