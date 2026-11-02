@@ -109,6 +109,26 @@ describe('ExtensionStore', () => {
         expect(await idsIn(store)).toEqual(['acme.kept']);
     });
 
+    test('keeps every saved language server at a start with the machine while what is installed cannot be read', async () => {
+        const home = join(root, 'unreadable-start');
+        const store = new ExtensionStore(home);
+        const removed: string[] = [];
+        const hostOf = (owners: string[]): ExtensionHost =>
+            new ExtensionHost({ store, languageServerOwners: () => owners, removeLanguageServers: async (id) => void removed.push(id) });
+
+        await store.install(packOf('acme.broken'));
+        writeFileSync(join(home, 'extensions', 'acme.broken', 'versions', (await store.get('acme.broken'))?.hash ?? '', 'manifest.json'), '{ "id": ');
+        await hostOf(['acme.broken', 'acme.gone']).startAutostarted();
+
+        expect(removed).toEqual(['acme.gone']);
+
+        removed.length = 0;
+        writeFileSync(join(home, 'extensions', 'installed.json'), '["acme.broken", ');
+        await hostOf(['acme.broken', 'acme.gone']).startAutostarted();
+
+        expect(removed).toEqual([]);
+    });
+
     test('unlinks a dev link only for the run that set it last', async () => {
         const store = new ExtensionStore(join(root, 'owned-links'));
         const first = join(root, 'projects', 'owned-first');

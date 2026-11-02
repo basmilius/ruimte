@@ -205,18 +205,25 @@ export class ExtensionHost {
     }
 
     async startAutostarted(): Promise<void> {
-        const listed = await this.options.store.list().catch((e: unknown): DamagedExtension[] => {
+        let listed: (StoredExtension | DamagedExtension)[];
+
+        try {
+            listed = await this.options.store.list();
+        } catch (e) {
+            // An index that cannot be read says nothing of what is installed, so every saved language server stays.
             console.warn(`No extension started with the machine: ${errorText(e)}`);
 
-            return [];
-        });
-        // One whose files cannot be read runs nothing, its language servers neither.
+            return;
+        }
+
+        // One whose files cannot be read runs nothing, and keeps its saved language servers until a person fixes or removes it.
         const extensions = listed.flatMap((entry) => (isDamaged(entry) ? [] : [entry]));
-        const active = new Set(extensions.filter((extension) => extension.enabled).map((extension) => extension.manifest.id));
+        const damaged = listed.flatMap((entry) => (isDamaged(entry) ? [entry.id] : []));
+        const kept = new Set([...damaged, ...extensions.filter((extension) => extension.enabled).map((extension) => extension.manifest.id)]);
 
         // Turned off or removed while its language servers could not be taken off the list, or by a Ruimte that kept them.
         for (const owner of new Set(this.options.languageServerOwners?.() ?? [])) {
-            if (!active.has(owner)) {
+            if (!kept.has(owner)) {
                 await this.dropLanguageServers(owner).catch((e: unknown) => console.warn(errorText(e)));
             }
         }
