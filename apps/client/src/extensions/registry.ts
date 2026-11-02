@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { ExtensionManifest } from '@ruimte/contracts';
+import type { ExtensionManifest, ExtensionSlotName } from '@ruimte/contracts';
 import { create } from 'zustand';
 
 export type PanelGroup = 'project' | 'connected' | 'made' | 'extensions';
@@ -98,42 +98,7 @@ export interface CommandContribution {
 }
 
 /* A place an extension may put something. Ruimte gives each its spot; the extension decides when it shows. */
-export type SlotName =
-    | 'selectionBar'
-    | 'nodeHeader'
-    | 'nodeMenu'
-    | 'canvasMenu'
-    | 'lineMenu'
-    | 'viewToolbar'
-    | 'viewMenu'
-    | 'panelHeader'
-    | 'commandPalette'
-    | 'projectMenu'
-    | 'sidebarFooter'
-    | 'editorStatusBar'
-    | 'sidebarRow'
-    | 'tabMenu'
-    | 'emptyCanvas'
-    | 'startScreen'
-    | 'projectBanner'
-    | 'threadHeader'
-    | 'emptyThread'
-    | 'toolActions'
-    | 'fileRowBadge'
-    | 'fileBreadcrumb'
-    | 'terminalMenu'
-    | 'browserMenu'
-    | 'textMenu'
-    | 'noteToolbar'
-    | 'routineMenu'
-    | 'composer'
-    | 'messageActions'
-    | 'fileMenu'
-    | 'editorToolbar'
-    | 'editorMenu'
-    | 'diffToolbar'
-    | 'terminalToolbar'
-    | 'browserToolbar';
+export type SlotName = ExtensionSlotName;
 
 export type SlotFunction = (context: never) => boolean | { title?: string; icon?: LucideIcon; disabled?: boolean | string; badge?: string; order?: number };
 

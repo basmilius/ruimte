@@ -14,11 +14,15 @@ import * as format from '@adecore/ui/format';
 import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
 import {
-    EXTENSION_ACTIONS,
+    extensionActionCall,
     extensionAgentStatus,
+    extensionCallPermission,
     extensionChatOf,
     extensionErrorCodeOf,
+    extensionProjectPath,
     isArgumentErrorCode,
+    lazyComponentProblem,
+    missingPermissionMessage,
     type ExtensionActionInput,
     type ExtensionActionName,
     type ExtensionActionOutput,
@@ -193,11 +197,10 @@ type PublicSlots = Partial<
 >;
 
 function assertLazy(surface: { component?: unknown; frame?: unknown }, what: string): void {
-    if (
-        surface.frame === undefined &&
-        (typeof surface.component !== 'function' || surface.component.length !== 0 || /^(class|function [A-Z])/.test(String(surface.component)))
-    ) {
-        throw new TypeError(`${what}: component must be a lazy import, such as () => import('./Panel')`);
+    const problem = lazyComponentProblem(surface, what);
+
+    if (problem !== null) {
+        throw new TypeError(problem);
     }
 }
 
@@ -237,13 +240,9 @@ function inProject(path: string): string {
         throw new Refused('no-project', 'This needs a project with a folder');
     }
 
-    const full = path.startsWith('/') ? path : path === '.' ? folder : `${folder}/${path}`;
-    // Either slash, since a Windows machine reads `sub\..\..\x` as two steps up.
-    const parts = full.split(/[\\/]/);
-    const inside = parts.join('/');
-    const root = folder.split(/[\\/]/).join('/');
+    const full = extensionProjectPath(folder, path);
 
-    if (inside !== root && (!inside.startsWith(`${root}/`) || parts.includes('..'))) {
+    if (full === null) {
         throw new Refused('outside-project', `${path} is outside the project folder`);
     }
 
@@ -317,9 +316,11 @@ function hasPermission(extension: LoadedExtension, permission: string): boolean 
 }
 
 /* A hook has no Result to answer, so a missing permission fails the surface that draws it. */
-function hookPermission(extension: LoadedExtension, permission: string): void {
-    if (!hasPermission(extension, permission)) {
-        throw new Error(`${extension.manifest.name} did not ask for the permission ${permission} in its manifest`);
+function hookPermission(extension: LoadedExtension, hook: 'useAgents' | 'useUsageLimits'): void {
+    const permission = extensionCallPermission(hook);
+
+    if (permission !== null && !hasPermission(extension, permission)) {
+        throw new Error(missingPermissionMessage(extension.manifest.name, permission));
     }
 }
 
@@ -389,8 +390,23 @@ export function clientApiFor(extension: LoadedExtension) {
 
         return { ok: false, error };
     };
+    const permit = (permission: string): void => {
+        if (!hasPermission(extension, permission)) {
+            throw new Refused('permission-denied', missingPermissionMessage(extension.manifest.name, permission));
+        }
+    };
+    // A call is named by its path in the API, which `EXTENSION_CLIENT_PERMISSIONS` gives the permission of, asked first.
+    const permitCall = (what: string): void => {
+        const permission = extensionCallPermission(what);
+
+        if (permission !== null) {
+            permit(permission);
+        }
+    };
     const attempt = <Value,>(what: string, run: () => Value): ExtensionResult<Value> => {
         try {
+            permitCall(what);
+
             return { ok: true, value: run() };
         } catch (e) {
             return refusalOf(what, e);
@@ -398,14 +414,11 @@ export function clientApiFor(extension: LoadedExtension) {
     };
     const settle: Settle = async (what, run) => {
         try {
+            permitCall(what);
+
             return { ok: true, value: await run() };
         } catch (e) {
             return refusalOf(what, e);
-        }
-    };
-    const permit = (permission: string): void => {
-        if (!hasPermission(extension, permission)) {
-            throw new Refused('permission-denied', `${extension.manifest.name} did not ask for the permission ${permission} in its manifest`);
         }
     };
     const machineActions = <Name extends ExtensionActionName>(names: readonly Name[]): MachineCalls<Name> =>
@@ -413,10 +426,8 @@ export function clientApiFor(extension: LoadedExtension) {
             names.map((action) => [
                 action.slice(action.indexOf('.') + 1),
                 (input: object = {}) =>
-                    settle(action, async () => {
-                        // The machine checks it too; this one only saves the trip.
-                        permit(EXTENSION_ACTIONS[action]);
-
+                    // The machine checks the permission too; this one only saves the trip.
+                    settle(extensionActionCall(action), async () => {
                         const { output } = await activeTransport.request('extension.action', { id, projectId: currentProjectId(), action, input });
 
                         return output;
@@ -782,7 +793,7 @@ export function clientApiFor(extension: LoadedExtension) {
             );
         },
         useUsageLimits() {
-            hookPermission(useExtension(), 'usage.read');
+            hookPermission(useExtension(), 'useUsageLimits');
 
             const { transport } = useFocusedMachine();
             const [limits, setLimits] = useState<UsageLimitsResult | null>(null);
@@ -937,7 +948,7 @@ export function clientApiFor(extension: LoadedExtension) {
             return stop;
         },
         useAgents() {
-            hookPermission(useExtension(), 'agents.status');
+            hookPermission(useExtension(), 'useAgents');
 
             const nodes = useCanvas((state) => state.nodes);
             const sessions = useSessions((state) => state.byKey);
@@ -987,8 +998,6 @@ export function clientApiFor(extension: LoadedExtension) {
         files: {
             readText: (path: string) =>
                 settle('files.readText', async () => {
-                    permit('files.read');
-
                     const answer = await activeTransport.request('fs.read', { path: inProject(path) });
 
                     if (answer.kind !== 'text') {
@@ -999,8 +1008,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             write: (path: string, text: string) =>
                 settle('files.write', async () => {
-                    permit('files.write');
-
                     const full = inProject(path);
                     const existing = await activeTransport.request('fs.read', { path: full }).catch(() => null);
 
@@ -1012,16 +1019,12 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             list: (folder: string) =>
                 settle('files.list', async () => {
-                    permit('files.read');
-
                     const { entries } = await activeTransport.request('fs.list', { path: inProject(folder) });
 
                     return entries.map((entry) => ({ path: entry.path, name: entry.name, kind: entry.kind }));
                 }),
             watch: (path: string, listener: () => void) =>
                 attempt('files.watch', () => {
-                    permit('files.read');
-
                     const full = inProject(path);
                     const stop = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
                         if (root === full || changedPaths?.some((changed) => changed === full || changed.startsWith(`${full}/`))) {
@@ -1043,8 +1046,6 @@ export function clientApiFor(extension: LoadedExtension) {
         git: {
             status: (options?: { repository?: string }) =>
                 settle('git.status', async () => {
-                    permit('git.read');
-
                     const status = await activeTransport.request('git.status', { cwd: inProject(options?.repository ?? '.') });
 
                     return {
@@ -1067,8 +1068,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             diff: (options: { path: string; repository?: string; staged?: boolean }) =>
                 settle('git.diff', async () => {
-                    permit('git.read');
-
                     const diff = await activeTransport.request('git.diff', {
                         cwd: inProject(options.repository ?? '.'),
                         scope: 'worktree',
@@ -1080,8 +1079,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             log: (options?: { repository?: string; limit?: number }) =>
                 settle('git.log', async () => {
-                    permit('git.read');
-
                     const { commits } = await activeTransport.request('git.log', { cwd: inProject(options?.repository ?? '.'), limit: options?.limit ?? 30 });
 
                     // Git writes an author date in seconds; everything else an extension reads is in milliseconds.
@@ -1103,15 +1100,11 @@ export function clientApiFor(extension: LoadedExtension) {
         terminals: {
             read: (terminal: { id: string }) =>
                 settle('terminals.read', () => {
-                    permit('terminals.read');
-
                     return readNodeText(terminal.id);
                 }),
             // Opens a shell and types nothing: only a person types in a terminal.
             open: (options?: { title?: string; cwd?: string; near?: { id: string }[] }) =>
                 attempt('terminals.open', () => {
-                    permit('canvas.write');
-
                     return createdNode(
                         canvasInFront().addNode('terminal', besideNode(options?.near?.[0]?.id), {
                             ...(options?.title === undefined ? {} : { title: options.title }),
@@ -1123,8 +1116,6 @@ export function clientApiFor(extension: LoadedExtension) {
         database: {
             connections: () =>
                 settle('database.connections', async () => {
-                    permit('database.read');
-
                     return ((await databaseConnections.ready()) ?? []).map((connection: { id: string; name: string }) => ({
                         id: connection.id,
                         name: connection.name
@@ -1132,8 +1123,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             query: (connection: string, sql: string) =>
                 settle('database.query', async () => {
-                    permit('database.read');
-
                     const { columns, rows, hasMore } = await activeTransport.request('extension.databaseQuery', {
                         projectId: currentProjectId(),
                         connection,
@@ -1147,21 +1136,16 @@ export function clientApiFor(extension: LoadedExtension) {
         chats: {
             list: () =>
                 settle('chats.list', async () => {
-                    permit('chats.read');
-
                     const { chats } = await activeTransport.request('chat.list', {});
 
                     return chats.filter((chat) => chat.hidden !== true).map(extensionChatOf);
                 }),
             read: (chatId: string) =>
                 settle('chats.read', () => {
-                    permit('chats.read');
-
                     return readNodeText(chatId);
                 }),
             send: (chatId: string, text: string) =>
                 settle('chats.send', async () => {
-                    permit('chats.send');
                     await activeTransport.request('chat.send', { chatId, text });
                 })
         },
@@ -1171,15 +1155,12 @@ export function clientApiFor(extension: LoadedExtension) {
             },
             createCanvas: (name: string) =>
                 attempt('views.createCanvas', () => {
-                    permit('views.write');
                     currentProjectId();
 
                     return { id: useDocument.getState().addCanvasView(name) };
                 }),
             rename: (view: { id: string }, name: string) =>
                 attempt('views.rename', () => {
-                    permit('views.write');
-
                     if (!useDocument.getState().views.some((each) => each.id === view.id)) {
                         throw new Refused('not-found', `No view ${view.id} in this project`);
                     }
@@ -1190,8 +1171,6 @@ export function clientApiFor(extension: LoadedExtension) {
         context: {
             read: (of: { nodes?: { id: string }[]; view?: { id: string } }) =>
                 settle('context.read', async () => {
-                    permit('context.read');
-
                     const { sources } = await activeTransport.request('extension.contextRead', {
                         projectId: currentProjectId(),
                         ...(of.nodes === undefined ? {} : { nodeIds: of.nodes.map((node) => node.id) }),
@@ -1204,8 +1183,6 @@ export function clientApiFor(extension: LoadedExtension) {
         agents: {
             run: (options: { prompt: string; context?: string[]; provider?: string }) =>
                 settle('agents.run', async () => {
-                    permit('agents.run');
-
                     const { text } = await activeTransport.request('extension.agentRun', {
                         prompt: [options.prompt, ...(options.context ?? [])].join('\n\n'),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
@@ -1222,8 +1199,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 signal?: AbortSignal;
             }): AsyncGenerator<ExtensionResult<{ text: string }>> {
                 const ready = attempt('agents.stream', () => {
-                    permit('agents.run');
-
                     return currentProjectId();
                 });
 
@@ -1282,8 +1257,6 @@ export function clientApiFor(extension: LoadedExtension) {
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
             start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) =>
                 settle('agents.start', async () => {
-                    permit('agents.start');
-
                     const { views, activeViewId } = useDocument.getState();
                     const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
                     const beside = options.near?.[0]?.id;
@@ -1303,8 +1276,6 @@ export function clientApiFor(extension: LoadedExtension) {
         canvas: {
             createNote: (note: { title?: string; text: string; near?: { id: string }[]; color?: NodeAccent }) =>
                 attempt('canvas.createNote', () => {
-                    permit('canvas.write');
-
                     const canvas = canvasInFront();
                     const created = createdNode(canvas.addNode('note', besideNode(note.near?.[0]?.id), note.title === undefined ? {} : { title: note.title }));
 
@@ -1318,14 +1289,10 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             createFile: (path: string, options?: { near?: { id: string }[] }) =>
                 attempt('canvas.createFile', () => {
-                    permit('canvas.write');
-
                     return createdNode(canvasInFront().addNode('file', besideNode(options?.near?.[0]?.id), { path }));
                 }),
             createBrowser: (url: string, options?: { near?: { id: string }[] }) =>
                 attempt('canvas.createBrowser', () => {
-                    permit('canvas.write');
-
                     return createdNode(canvasInFront().addNode('browser', besideNode(options?.near?.[0]?.id), { url }));
                 }),
             createNode: <Data,>(type: string, options?: { data?: Data; title?: string; near?: { id: string }[] }) => {
@@ -1337,8 +1304,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 }
 
                 return attempt('canvas.createNode', () => {
-                    permit('canvas.write');
-
                     return createdNode(
                         canvasInFront().addExtensionNode(
                             id,
@@ -1354,8 +1319,6 @@ export function clientApiFor(extension: LoadedExtension) {
             },
             update: (node: { id: string }, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }) =>
                 attempt('canvas.update', () => {
-                    permit('canvas.write');
-
                     const store = nodeStore(node);
                     const current = store.nodes[node.id];
 
@@ -1371,13 +1334,10 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             writeNote: (node: { id: string }, text: string) =>
                 attempt('canvas.writeNote', () => {
-                    permit('canvas.write');
                     nodeStore(node).updateNode(node.id, { body: text });
                 }),
             arrange: (nodes: { id: string }[], layout: 'row' | 'column' | 'grid') =>
                 attempt('canvas.arrange', () => {
-                    permit('canvas.write');
-
                     const store = canvasInFront();
                     const placed = nodes.flatMap((node) => {
                         const current = store.nodes[node.id];
@@ -1406,8 +1366,6 @@ export function clientApiFor(extension: LoadedExtension) {
             // A person confirms, as anywhere a node goes away.
             remove: (nodes: { id: string }[]) =>
                 settle('canvas.remove', async () => {
-                    permit('canvas.write');
-
                     const store = canvasInFront();
                     const words = { count: nodes.length, extension: extension.manifest.name };
                     const asked = await askHost({
@@ -1425,8 +1383,6 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             group: (nodes: { id: string }[]) =>
                 attempt('canvas.group', () => {
-                    permit('canvas.write');
-
                     const store = canvasInFront();
 
                     store.select(nodes.map((node) => node.id));
@@ -1441,13 +1397,10 @@ export function clientApiFor(extension: LoadedExtension) {
                 }),
             link: (from: { id: string }, to: { id: string }) =>
                 attempt('canvas.link', () => {
-                    permit('canvas.write');
                     nodeStore(from).addEdge(from.id, to.id);
                 }),
             unlink: (from: { id: string }, to: { id: string }) =>
                 attempt('canvas.unlink', () => {
-                    permit('canvas.write');
-
                     const store = nodeStore(from);
                     const edge = store.edges.find((each) => (each.from === from.id && each.to === to.id) || (each.from === to.id && each.to === from.id));
 

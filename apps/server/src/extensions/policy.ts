@@ -3,6 +3,7 @@
  * author's code to the same answers. Pure, so both carry it, and it imports nothing that needs zod.
  */
 import type { AgentInfo, ChatInfo, ExtensionManifest } from '@ruimte/contracts';
+import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
 import { extensionActionPermission } from '@ruimte/contracts/extension-permissions';
 import { extensionAgentStatus, extensionChatOf, type ExtensionErrorCode } from '@ruimte/contracts/extension-results';
 
@@ -68,7 +69,7 @@ export function missingPermission(id: string, permission: string, permissions: R
         return null;
     }
 
-    return { code: 'permission-denied', message: `${id} did not ask for the permission ${permission} in its manifest` };
+    return { code: 'permission-denied', message: missingPermissionMessage(id, permission) };
 }
 
 /* An action of the machine, within `EXTENSION_ACTIONS` and the manifest. */

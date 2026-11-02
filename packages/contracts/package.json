@@ -6,6 +6,7 @@
     "exports": {
         ".": "./src/index.ts",
         "./extension-actions": "./src/extension-actions.ts",
+        "./extension-client": "./src/extension-client.ts",
         "./extension-permissions": "./src/extension-permissions.ts",
         "./extension-results": "./src/extension-results.ts"
     },

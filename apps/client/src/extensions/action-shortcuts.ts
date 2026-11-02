@@ -1,3 +1,4 @@
+import { shortcutProblem } from '@ruimte/contracts';
 import { runAction } from '@/extensions/action-runs';
 import { useContributions, type SlotEntry } from '@/extensions/registry';
 import { baseContext, nodeInfoOf } from '@/extensions/slots';
@@ -7,13 +8,10 @@ const MODIFIERS = new Set(['mod', 'shift', 'alt']);
 
 /* Refuses what the rule of every shortcut refuses: a key on its own. */
 export function assertShortcut(shortcut: string): void {
-    if (
-        !shortcut
-            .toLowerCase()
-            .split('+')
-            .some((part) => part === 'mod' || part === 'alt')
-    ) {
-        throw new Error(`${shortcut} has no modifier: a shortcut needs mod or alt`);
+    const problem = shortcutProblem(shortcut);
+
+    if (problem !== null) {
+        throw new Error(problem);
     }
 }
 
