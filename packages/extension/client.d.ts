@@ -625,13 +625,16 @@ export const terminals: {
     open(options?: { title?: string; cwd?: string; near?: NodeRef[] }): Result<NodeRef>;
 };
 
-/** A cell as the database gave it: a large number, a decimal or a date as the text the server writes for it. Bytes come as hex and a long text cut off, each with its whole `length`. */
+/**
+ * A cell as the database gave it: a large number, a decimal or a date as the text the server writes for it. Bytes come
+ * as hex, with their whole `length` only when the hex is cut off, and a long text cut off as `preview` with its whole `length`.
+ */
 export type DatabaseValue =
     | string
     | number
     | boolean
     | null
-    | { kind: 'binary'; hex: string; length: number }
+    | { kind: 'binary'; hex: string; length?: number }
     | { kind: 'longText'; preview: string; length: number };
 
 /** Needs `database.read`. One SELECT or WITH statement on a read-only session, as for an agent. */

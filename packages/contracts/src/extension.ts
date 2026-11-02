@@ -204,7 +204,8 @@ export type ExtensionDatabaseValue =
     | number
     | boolean
     | null
-    | { kind: 'binary'; hex: string; length: number }
+    // `length` only for bytes whose hex is cut off.
+    | { kind: 'binary'; hex: string; length?: number }
     | { kind: 'longText'; preview: string; length: number };
 export const ExtensionDatabaseQueryResultSchema = z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.unknown())), hasMore: z.boolean() });
 

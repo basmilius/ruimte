@@ -116,7 +116,14 @@ if (connection !== undefined) {
 }
 ```
 
-A cell is a string, number, boolean or null. A large number, a decimal or a date comes as the text the database writes for it.
+A cell is a string, number, boolean or null. A large number, a decimal or a date comes as the text the database writes for it. Two kinds of cell come as an object:
+
+| Cell | Shape |
+| --- | --- |
+| Bytes | `{ kind: 'binary', hex, length? }`: the bytes as hex, cut off when there are many. `length` counts all of them, and is there only when `hex` is cut off. |
+| A long text | `{ kind: 'longText', preview, length }`: the start of the text, with the `length` of the whole. |
+
+A query answers at most 500 rows. `hasMore` says whether there were more.
 
 ## What the machine runs
 
