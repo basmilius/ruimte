@@ -64,7 +64,7 @@ async function wrangler(args: string[]): Promise<void> {
 
 /* The release the worker reports its errors under: the commit it deploys, `pulsar@<12 hex>`. */
 function releaseOfCheckout(): string | null {
-    // CI starts a deploy for the commit it passed on, which the workflow names; GITHUB_SHA is main as it was when it started.
+    // A deploy starts from CI's finished run, where GITHUB_SHA is whatever main is by then; the workflow names the commit.
     const commit = process.env.DEPLOY_SHA ?? Bun.spawnSync(['git', 'rev-parse', 'HEAD'], { cwd: WORKER_ROOT }).stdout.toString().trim();
     return /^[0-9a-f]{40}$/.test(commit) ? `pulsar@${commit.slice(0, 12)}` : null;
 }
