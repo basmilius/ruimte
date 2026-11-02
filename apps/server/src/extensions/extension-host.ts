@@ -736,7 +736,11 @@ export class ExtensionHost {
 
     /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */
     async startAgent(id: string, start: ExtensionChatStart): Promise<{ nodeId: string }> {
-        await this.requirePermission(id, 'agents.start');
+        return this.startChatWith(id, await this.grantedTo(id), start);
+    }
+
+    private async startChatWith(id: string, permissions: ReadonlySet<string>, start: ExtensionChatStart): Promise<{ nodeId: string }> {
+        refuse(missingPermission(id, 'agents.start', permissions));
 
         if (this.options.startChat === undefined) {
             throw new ExtensionRefusal('unavailable', 'This machine does not start chats for an extension');
@@ -747,7 +751,11 @@ export class ExtensionHost {
 
     /* An action of the machine, within the list and the manifest. Both checked here, so the client's own check is only a courtesy. */
     async runAction(id: string, projectId: string, action: string, input: unknown): Promise<unknown> {
-        refuse(actionRefusal(id, action, await this.permissionsOf(id)));
+        return this.runActionWith(id, await this.grantedTo(id), projectId, action, input);
+    }
+
+    private async runActionWith(id: string, permissions: ReadonlySet<string>, projectId: string, action: string, input: unknown): Promise<unknown> {
+        refuse(actionRefusal(id, action, permissions));
 
         if (this.options.runAction === undefined) {
             throw new ExtensionRefusal('unavailable', 'This machine does not run actions for an extension');
@@ -757,13 +765,23 @@ export class ExtensionHost {
         return this.options.runAction(id, projectId, action as ExtensionActionName, input);
     }
 
-    /* What the manifest asks for as it is stored now, so an update that drops a permission takes it away at once. */
-    private async permissionsOf(id: string): Promise<ReadonlySet<string>> {
-        return permissionsOf((await this.options.store.get(id))?.manifest);
-    }
+    /*
+     * What the manifest asks for as it is stored now, so an update that drops a permission takes it away at once, and
+     * nothing for one that is turned off. With `running`, also nothing once that process is no longer the one that runs:
+     * an ask that came in before a turn off is not answered after it.
+     */
+    private async grantedTo(id: string, running?: Running): Promise<ReadonlySet<string>> {
+        const extension = await this.options.store.get(id);
 
-    private async requirePermission(id: string, permission: string): Promise<void> {
-        refuse(missingPermission(id, permission, await this.permissionsOf(id)));
+        if (running !== undefined && this.running.get(id) !== running) {
+            throw stopped();
+        }
+
+        if (extension?.enabled === false) {
+            throw new ExtensionRefusal('unavailable', `${id} is turned off`);
+        }
+
+        return permissionsOf(extension?.manifest);
     }
 
     /* What a client with no shell of its own loads. Not its server part, which only runs here. */
@@ -795,7 +813,9 @@ export class ExtensionHost {
     }
 
     private async answerAsk(id: string, running: Running, method: string, args: unknown[]): Promise<unknown> {
-        refuse(askRefusal(id, method, args, await this.permissionsOf(id)));
+        const permissions = await this.grantedTo(id, running);
+
+        refuse(askRefusal(id, method, args, permissions));
 
         if (method === 'storage.get') {
             return { value: await this.storageGet(id, String(args[0])) };
@@ -812,7 +832,7 @@ export class ExtensionHost {
         if (method === 'action') {
             const [projectId, action, input] = args as [string, string, unknown];
 
-            return this.runAction(id, projectId, action, input);
+            return this.runActionWith(id, permissions, projectId, action, input);
         }
 
         if (method === 'languages.add') {
@@ -833,7 +853,7 @@ export class ExtensionHost {
         }
 
         if (method === 'agents.start') {
-            return this.startAgent(id, args[0] as ExtensionChatStart);
+            return this.startChatWith(id, permissions, args[0] as ExtensionChatStart);
         }
 
         const run = this.options.asks?.()[method];

@@ -45,6 +45,8 @@ interface Hosted {
     // How many starts read the server entry, which is where setting a process up begins.
     setups: () => number;
     log: () => string;
+    // Holds every store read from now on, each answering what the store held when it was asked, until the returned release.
+    holdReads: () => () => void;
 }
 
 function hostWith(
@@ -60,9 +62,16 @@ function hostWith(
         folder
     };
     let setups = 0;
+    let held: Promise<void> | null = null;
     const store = {
         list: async () => [extension],
-        get: async (id: string) => (id === extension.manifest.id ? extension : null),
+        get: async (id: string) => {
+            const answer = id === extension.manifest.id ? { ...extension } : null;
+
+            await held;
+
+            return answer;
+        },
         setEnabled: async (_id: string, enabled: boolean) => {
             extension.enabled = enabled;
         },
@@ -89,7 +98,22 @@ function hostWith(
     hosts.push(host);
 
     // The host appends without waiting, so the file may not be there yet.
-    return { host, children, setups: () => setups, log: () => (existsSync(store.logFile()) ? readFileSync(store.logFile(), 'utf8') : '') };
+    return {
+        host,
+        children,
+        setups: () => setups,
+        log: () => (existsSync(store.logFile()) ? readFileSync(store.logFile(), 'utf8') : ''),
+        holdReads: () => {
+            const { promise, resolve } = Promise.withResolvers<void>();
+
+            held = promise;
+
+            return () => {
+                held = null;
+                resolve();
+            };
+        }
+    };
 }
 
 async function until(condition: () => boolean): Promise<void> {
@@ -199,6 +223,46 @@ describe('ExtensionHost', () => {
 
         await expect(host.runAction('acme.builds', 'project', 'launch.start', { launch: 'web' })).rejects.toMatchObject({ code: 'permission-denied' });
         await expect(host.runAction('acme.builds', 'project', 'session.write', {})).rejects.toMatchObject({ code: 'not-found' });
+    });
+
+    test('one that is turned off neither runs an action nor starts a chat', async () => {
+        const ran: string[] = [];
+        const { host } = hostWith(
+            { permissions: { 'launches.run': 'Starts launches', 'agents.start': 'Starts chats' } },
+            {
+                runAction: async (_id, _project, action) => void ran.push(action),
+                startChat: async () => {
+                    ran.push('chat');
+
+                    return { nodeId: 'node-1' };
+                }
+            }
+        );
+
+        await host.setEnabled('acme.builds', false);
+
+        await expect(host.runAction('acme.builds', 'project', 'launch.start', { launch: 'web' })).rejects.toMatchObject({ code: 'unavailable' });
+        await expect(host.startAgent('acme.builds', { projectId: 'project' })).rejects.toMatchObject({ code: 'unavailable' });
+        expect(ran).toEqual([]);
+    });
+
+    test('an ask that came in before a turn off is not answered after it', async () => {
+        const sent: unknown[] = [];
+        const hosted = hostWith(
+            { permissions: { 'chats.send': 'Pokes a chat' } },
+            { asks: () => ({ 'chats.send': async (...args: never[]) => void sent.push(args) }) }
+        );
+        const child = await runningChild(hosted);
+        const release = hosted.holdReads();
+
+        child.say({ type: 'ask', id: 9, method: 'chats.send', args: ['chat-1', 'Hello'] });
+        await new Promise((resolve) => setImmediate(resolve));
+        await hosted.host.setEnabled('acme.builds', false);
+        release();
+        await until(() => sent.length > 0 || hosted.log().includes('chats.send answered'));
+
+        expect(sent).toEqual([]);
+        expect(hosted.log()).toContain('chats.send answered unavailable');
     });
 
     test('a method that throws fails, and one it lacks is not found', async () => {
