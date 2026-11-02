@@ -54,10 +54,16 @@ export interface ProjectRef {
 }
 
 /** `icon` names a Lucide icon. Without one, a surface shows the extension's `assets/icon.svg`. */
-export function definePanel<Params = void>(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface<{ params: Params | undefined }>): PanelHandle<Params>;
+export function definePanel<Params = void>(
+    panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface<{ params: Params | undefined }>
+): PanelHandle<Params>;
 export function defineSidebarCard(card: { id: string; title: string; component: LazyComponent }): void;
-/** `params` is kept with the view in the project, so it is JSON. */
-export function defineView<Params = Json>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>): { open(params?: Params): void };
+/** `params` is kept with the view in the project, so it is JSON. A view opened without them, as `New <title>` opens it, gets undefined. */
+export function defineView<Params = Json>(
+    view: { id: string; title: string; icon?: string } & Surface<{ params: Params | undefined }>
+): {
+    open(params?: Params): void;
+};
 export function defineNode<Data = Json>(
     node: {
         id: string;
@@ -75,7 +81,12 @@ export function defineNode<Data = Json>(
 /** Over the whole canvas, under Ruimte's own controls such as the minimap in the bottom right. It lets clicks through; set `pointer-events: auto` on what takes them. */
 export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;
 /** Opens every file with these extensions in your component, with Ruimte's own view one click away. */
-export function defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo & { text: string | null } }> }): void;
+export function defineFileViewer(viewer: {
+    id: string;
+    title: string;
+    extensions: string[];
+    component: LazyComponent<{ file: FileInfo & { text: string | null } }>;
+}): void;
 /** Draws a fenced block of this language in a chat and in markdown, on this client. Elsewhere it stays code. */
 export function defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }): void;
 /** Your own UI over the app: Ruimte draws the header with `title` and a close button, and animates it; you draw the body. `open` answers what `close` was given, or null when a person dismissed it. */
@@ -96,11 +107,20 @@ export interface ToolCall {
 /** Draws these tools' calls in a chat, by their exact name, instead of the thread's own view. */
 export function defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: ToolCall }> }): void;
 /** Rows in the command palette for what a person types. It waits for a pause in the typing; a slow or failing one costs only its own rows. */
-export function definePaletteSource(source: { id: string; title: string; search(query: string): Promise<{ id: string; title: string; detail?: string; run(): void }[]> }): void;
+export function definePaletteSource(source: {
+    id: string;
+    title: string;
+    search(query: string): Promise<{ id: string; title: string; detail?: string; run(): void }[]>;
+}): void;
 /** After `/` in a chat. It expands into the prompt, and the person still sends it. */
 export function defineSlashCommand(command: { name: string; description: string; run(args: string): string | Promise<string> }): void;
 /** Things from outside the project for `#` in a chat. Picking one puts what `read` answers in the prompt. */
-export function defineReference(reference: { id: string; title: string; list(): Promise<{ id: string; name: string }[]>; read(item: { id: string; name: string }): Promise<string> }): void;
+export function defineReference(reference: {
+    id: string;
+    title: string;
+    list(): Promise<{ id: string; name: string }[]>;
+    read(item: { id: string; name: string }): Promise<string>;
+}): void;
 /** Opens a changed file with these extensions in your component, with Ruimte's own diff one click away. */
 export function defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo; diff: string }> }): void;
 /** An icon from your pack, by its path, for files with these extensions. */
@@ -113,7 +133,12 @@ export function defineVoiceAction<Input extends object = { [key: string]: Json |
     run(input: Input): string | Promise<string>;
 }): void;
 /** New from a template, under Extensions in the canvas menu. */
-export function defineTemplate(template: { id: string; title: string; icon?: string; create(context: BaseContext & { at: { x: number; y: number } }): void | Promise<void> }): void;
+export function defineTemplate(template: {
+    id: string;
+    title: string;
+    icon?: string;
+    create(context: BaseContext & { at: { x: number; y: number } }): void | Promise<void>;
+}): void;
 export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;
 export interface SettingField {
     key: string;
@@ -132,7 +157,9 @@ export interface SettingGroup {
 }
 
 /** Your own component, or `fields` (one card) or `groups` (a card per group) that Ruimte draws. Read a field with `useSetting`; keys are unique across groups. */
-export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }): void;
+export function defineExtensionSettings(
+    settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] } | { groups: SettingGroup[] }
+): void;
 export function useSetting<Value extends boolean | string>(key: string): Value;
 export function useMachine(): { id: string };
 export function useTheme(): { side: 'light' | 'dark' };
@@ -268,10 +295,20 @@ export function defineAction<Context extends object = {}>(action: {
 export type MenuItem = ActionHandle | 'separator' | { title: string; run(): void; checked?: boolean } | { title: string; items: MenuItem[] };
 
 /** A menu of your own: a submenu in a menu, a dropdown in a bar. */
-export function defineMenu<Place extends SlotName>(menu: { id: string; title: string; icon?: string; slots: Slots<Place>; items: MenuItem[] | ((context: ContextOf<Place>) => MenuItem[]) }): void;
+export function defineMenu<Place extends SlotName>(menu: {
+    id: string;
+    title: string;
+    icon?: string;
+    slots: Slots<Place>;
+    items: MenuItem[] | ((context: ContextOf<Place>) => MenuItem[]);
+}): void;
 
 /** Your own React in a slot. */
-export function defineWidget<Place extends SlotName>(widget: { id: string; slots: Slots<Place>; component: LazyComponent<{ context: ContextOf<Place> }> }): void;
+export function defineWidget<Place extends SlotName>(widget: {
+    id: string;
+    slots: Slots<Place>;
+    component: LazyComponent<{ context: ContextOf<Place> }>;
+}): void;
 
 /**
  * Each method calls `server/` on the machine in front and answers a Result: `failed` with the message of what it threw,
@@ -298,7 +335,11 @@ export function useSelection(): NodeInfo[];
 export function useNode(id: string): NodeInfo;
 export function useNodes(filter?: (node: NodeInfo) => boolean): NodeInfo[];
 /** Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`. */
-export function useLocale(): { language: string; t(key: string, values?: Record<string, string | number>): string; format: typeof import('@adecore/ui/format') };
+export function useLocale(): {
+    language: string;
+    t(key: string, values?: Record<string, string | number>): string;
+    format: typeof import('@adecore/ui/format');
+};
 
 export interface ClientEvents {
     'node.added': { node: NodeInfo };
