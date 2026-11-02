@@ -7,6 +7,8 @@ import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { folderWatches } from '@/state/fs-watch';
+import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { TransportError } from '@/transport';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
@@ -85,6 +87,31 @@ describe('the client API', () => {
         expect(await api.files.list('src')).toMatchObject({ ok: true });
         expect(machine.requests('fs.read')).toEqual([{ path: '/work/a/link.md', within: '/work/a' }]);
         expect(machine.requests('fs.list')).toEqual([{ path: '/work/a/src', within: '/work/a' }]);
+    });
+
+    test("shares a folder's watch with the files panel, and lets go of its own when the extension goes", async () => {
+        const machine = new FakeMachine();
+        const { api } = loaded({ 'files.read': 'Follows notes' });
+
+        disconnect = connectFakeMachine(machine);
+        useProject.setState({ current: PROJECT });
+
+        const panel = folderWatches.watch(currentEndpointId(), '/work/a');
+        const watched = api.files.watch('.', () => undefined);
+
+        expect(watched.ok).toBe(true);
+
+        if (watched.ok) {
+            watched.value();
+        }
+
+        expect(machine.requests('fs.unwatch')).toEqual([]);
+
+        panel.release();
+        api.files.watch('src', () => undefined);
+        forgetExtension('acme.probe');
+
+        expect(machine.requests('fs.unwatch')).toEqual([{ path: '/work/a' }, { path: '/work/a/src' }]);
     });
 
     test('answers permission-denied for a call its manifest does not ask for, before anything else', async () => {

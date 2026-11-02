@@ -55,6 +55,7 @@ import { openFileLink } from '@/shell/panels/file-links';
 import { currentEndpointId } from '@/state/keys';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { folderWatches, isUnderFolder } from '@/state/fs-watch';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
@@ -1048,18 +1049,21 @@ export function clientApiFor(extension: LoadedExtension) {
             watch: (path: string, listener: () => void) =>
                 attempt('files.watch', () => {
                     const full = inProject(path);
-                    const stop = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
-                        if (root === full || changedPaths?.some((changed) => changed === full || changed.startsWith(`${full}/`))) {
+                    const stopListening = activeTransport.on('fs.changed', ({ root, changedPaths }) => {
+                        if (root === full || changedPaths?.some((changed) => changed === full || isUnderFolder(changed, full))) {
                             listener();
                         }
                     });
-
-                    void activeTransport.request('fs.watch', { path: full }).catch(() => undefined);
-
-                    return () => {
-                        stop();
-                        void activeTransport.request('fs.unwatch', { path: full }).catch(() => undefined);
+                    // Counted with every other reader of the folder, so letting go of it leaves the files panel's watch alone.
+                    const held = folderWatches.watch(currentEndpointId(), full, listener);
+                    const stop = (): void => {
+                        stopListening();
+                        held.release();
                     };
+
+                    extension.disposers.push(stop);
+
+                    return stop;
                 }),
             open(path: string) {
                 void openFileLink(useProject.getState().current?.folder ?? null, { path, directory: false }, currentEndpointId());
