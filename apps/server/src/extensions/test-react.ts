@@ -37,17 +37,26 @@ export function fromProject<Module>(name: string): Module {
 }
 
 /*
- * The formatters of `@adecore/ui`, which `@ruimte/extension` depends on: from beside that package, since an isolated
- * install keeps it out of the project's own `node_modules`, or from the project.
+ * A module of `@adecore/ui`, which `@ruimte/extension` depends on: from beside that package, since an isolated install
+ * keeps it out of the project's own `node_modules`, or from the project.
  */
-export function formatModule<Module>(): Module {
+function besideExtension<Module>(name: string): Module {
     const extension = join(process.cwd(), 'node_modules', '@ruimte', 'extension', 'package.json');
 
     try {
-        return createRequire(realpathSync(extension))('@adecore/ui/format') as Module;
+        return createRequire(realpathSync(extension))(name) as Module;
     } catch {
-        return fromProject<Module>('@adecore/ui/format');
+        return fromProject<Module>(name);
     }
+}
+
+export function formatModule<Module>(): Module {
+    return besideExtension<Module>('@adecore/ui/format');
+}
+
+/* `@ruimte/extension/ui`, which Ruimte answers with the components of `@adecore/ui`. */
+export function uiModule(): Record<string, unknown> {
+    return besideExtension<Record<string, unknown>>('@adecore/ui');
 }
 
 export function react(): ReactModule {

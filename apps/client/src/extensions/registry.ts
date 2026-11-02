@@ -80,6 +80,9 @@ export interface ExtensionNodeContribution {
     title: string;
     icon: LucideIcon;
     component: ComponentType<ExtensionSurfaceProps>;
+    // What a new node starts with, however it is added.
+    size: { width: number; height: number };
+    initialData: unknown;
     // What a node made now stores, so it is not taken for one an older version made.
     dataVersion?: number;
 }

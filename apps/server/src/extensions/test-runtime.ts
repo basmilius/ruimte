@@ -8,6 +8,7 @@ import { afterEach } from 'bun:test';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { unmountAll } from './test-dom.ts';
+import { uiModule } from './test-react.ts';
 import { client, createTestHost } from './test-hosts.ts';
 import { createTestServer, currentServer, refusal } from './test-server.ts';
 
@@ -57,5 +58,7 @@ plugin({
         build.module('@ruimte/extension/client', () => ({ exports: client, loader: 'object' }));
         build.module('@ruimte/extension/server', () => ({ exports: server, loader: 'object' }));
         build.module('@ruimte/extension/testing', () => ({ exports: testing, loader: 'object' }));
+        // What a pack hands an extension in Ruimte, loaded only when a test imports it.
+        build.module('@ruimte/extension/ui', () => ({ exports: uiModule(), loader: 'object' }));
     }
 });

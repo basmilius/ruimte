@@ -6,6 +6,7 @@
 import { describe, expect, test } from 'bun:test';
 import { EXTENSION_CLIENT_PERMISSIONS } from '@ruimte/contracts/extension-client';
 import type * as Client from '../../../packages/extension/client';
+import type * as Ui from '../../../packages/extension/ui';
 
 type Result<Value> = Client.Result<Value>;
 
@@ -24,11 +25,37 @@ export interface ContractScreen {
     until(check: () => unknown): Promise<void>;
 }
 
+/* A node beside `SEED.node` on `SEED.view`: one an agent reads `text` of, or one of the extension's own as it was stored. */
+export type SeedNode =
+    | { id: string; kind: 'terminal' | 'chat'; title: string; text: string }
+    | { id: string; kind: 'extension'; type: string; data: Client.Json; dataVersion?: number };
+
+/* What a scenario needs beside `SEED`: what the machine answers is the machine's own rule over it. */
+export interface WorldSeed {
+    nodes?: SeedNode[];
+    /* Views beside `SEED.view`, which stays in front. */
+    views?: { id: string; kind: string; name: string }[];
+    /* The methods of `server/`, as `useServer` reaches them. */
+    server?: Record<string, (...args: never[]) => unknown>;
+    /* The pieces `agents.stream` answers. */
+    stream?: string[];
+}
+
 export interface ClientWorld {
     api: typeof Client;
+    /* `@ruimte/extension/ui` as the world hands it to an extension. */
+    ui: typeof Ui;
     /* React of the world's own, so a component of a scenario draws with the copy that draws it. */
     createElement(type: unknown, props?: object | null, ...children: unknown[]): unknown;
     render(component: () => unknown): Promise<ContractScreen>;
+    /* Draws the node of this type of the extension's own, as the canvas does for the node with this id. */
+    renderNode(type: string, nodeId: string): Promise<ContractScreen>;
+    /* The connection to the machine dropping and coming back. */
+    reconnect(): Promise<void>;
+    /* Another window of the same computer writing a key of this extension's storage or a setting. */
+    fromOtherWindow(write: { storage: string; value: Client.Json } | { setting: string; value: boolean | string }): Promise<void>;
+    /* Where each chat `agents.start` started went, in order. */
+    started(): ('canvas' | 'view')[];
     /* The title an action shows with at a place, or null where it does not show. */
     slot(action: string, place: Client.SlotName, extra: object): string | null;
     /* Presses an action at a place as a person would: a throw is `failed`, which a person is shown. */
@@ -41,7 +68,7 @@ export interface ClientWorld {
     failures(): { text: string; detail: string }[];
 }
 
-export type OpenClientWorld = (permissions: Record<string, string>) => Promise<ClientWorld>;
+export type OpenClientWorld = (permissions: Record<string, string>, seed?: WorldSeed) => Promise<ClientWorld>;
 
 const ALL = { 'canvas.write': 'Writes' };
 const REF = { id: 'note-1' };
@@ -236,6 +263,160 @@ export function clientContract(open: OpenClientWorld): void {
             world.select([]);
 
             expect(heard).toEqual([['note-1']]);
+        });
+
+        test('makes a node of its own with the size and data its definition starts with', async () => {
+            const world = await open(ALL);
+            const { api, createElement: h } = world;
+            const Counter = () => h('p', null, `count ${api.useNodeData<{ count: number }>()[0].count}`);
+
+            api.defineNode({
+                id: 'counter',
+                title: 'Counter',
+                size: { width: 200, height: 100 },
+                initialData: { count: 1 },
+                // Drawn with the world's own React, which this file does not type.
+                component: async () => ({ default: Counter as () => null })
+            });
+
+            const made = api.canvas.createNode('counter');
+
+            if (!made.ok) {
+                throw new Error(made.error.message);
+            }
+
+            const node = await world.renderNode('counter', made.value.id);
+            const Size = () => {
+                const { bounds } = api.useNode(made.value.id);
+
+                return h('p', null, `${bounds.width} by ${bounds.height}`);
+            };
+            const size = await world.render(Size);
+
+            await node.until(() => node.text() === 'count 1');
+
+            expect(size.text()).toBe('200 by 100');
+        });
+
+        test('reads nothing of another kind: a chat with terminals.read, a terminal with chats.read', async () => {
+            const { api } = await open(
+                { 'terminals.read': 'Reads', 'chats.read': 'Reads' },
+                {
+                    nodes: [
+                        { id: 'shell-1', kind: 'terminal', title: 'Shell', text: 'The screen' },
+                        { id: 'chat-1', kind: 'chat', title: 'Chat', text: 'The thread' }
+                    ]
+                }
+            );
+
+            expect(await api.terminals.read({ id: 'shell-1' })).toStrictEqual({ ok: true, value: 'The screen' });
+            expect(await api.chats.read('chat-1')).toStrictEqual({ ok: true, value: 'The thread' });
+            expect(await api.terminals.read({ id: 'chat-1' })).toStrictEqual({
+                ok: false,
+                error: { code: 'not-found', message: 'No terminal chat-1 in this project' }
+            });
+            expect(await api.chats.read('shell-1')).toMatchObject({ ok: false });
+        });
+
+        test('starts an agent as a node on the canvas in front, and as a view of its own with no canvas there', async () => {
+            const world = await open({ 'agents.start': 'Starts' }, { views: [{ id: 'page', kind: 'browser', name: 'Page' }] });
+            const onCanvas = await world.api.agents.start({ prompt: 'Hi' });
+
+            world.api.views.open({ id: 'page' });
+
+            const alone = await world.api.agents.start({ prompt: 'Hi' });
+
+            expect([onCanvas.ok, alone.ok]).toEqual([true, true]);
+            expect(world.started()).toEqual(['canvas', 'view']);
+        });
+
+        test('moves what an older version of a node stored up before it draws', async () => {
+            const world = await open({}, { nodes: [{ id: 'counter-1', kind: 'extension', type: 'counter', data: 5 }] });
+            const { api, createElement: h } = world;
+            const Counter = () => h('p', null, `count ${api.useNodeData<{ count: number }>()[0].count}`);
+
+            api.defineNode({
+                id: 'counter',
+                title: 'Counter',
+                dataVersion: 2,
+                migrate: (stored, from) => ({ count: typeof stored === 'number' && from === 1 ? stored : 0 }),
+                // Drawn with the world's own React, which this file does not type.
+                component: async () => ({ default: Counter as () => null })
+            });
+
+            const node = await world.renderNode('counter', 'counter-1');
+
+            await node.until(() => node.text() === 'count 5');
+        });
+
+        test('draws the components of @ruimte/extension/ui', async () => {
+            const world = await open({});
+            const screen = await world.render(() => world.createElement(world.ui.Button, { variant: 'secondary' }, 'Save'));
+
+            expect(screen.text()).toBe('Save');
+        });
+
+        test('asks server/ again for what .use() kept after reload, and after the connection to the machine comes back', async () => {
+            let calls = 0;
+            const world = await open(
+                {},
+                {
+                    server: {
+                        count: () => {
+                            calls += 1;
+
+                            return calls;
+                        }
+                    }
+                }
+            );
+            const { api, createElement: h } = world;
+            const Count = () => {
+                const server = api.useServer<{ count(): Promise<number> }>();
+                const count = server.count.use();
+
+                return h('button', { type: 'button', onClick: () => server.count.reload() }, `call ${count.ok ? count.value : count.error.code}`);
+            };
+            const screen = await world.render(Count);
+
+            await screen.until(() => screen.text() === 'call 1');
+            await screen.click('call 1');
+            await screen.until(() => screen.text() === 'call 2');
+            await world.reconnect();
+            await screen.until(() => screen.text() === 'call 3');
+        });
+
+        test("shows what another window wrote to this computer's storage and to a setting", async () => {
+            const world = await open({});
+            const { api, createElement: h } = world;
+            const Values = () => {
+                const [count] = api.useStorage('count', 0);
+                // Undefined until a person or another window sets it, with no default of a schema.
+                const mode: string | undefined = api.useSetting<string>('mode');
+
+                return h('p', null, `count ${count} mode ${mode ?? 'none'}`);
+            };
+            const screen = await world.render(Values);
+
+            await world.fromOtherWindow({ storage: 'count', value: 3 });
+            await world.fromOtherWindow({ setting: 'mode', value: 'dark' });
+            await screen.until(() => screen.text() === 'count 3 mode dark');
+        });
+
+        test('yields nothing for a stream whose signal was aborted before it started', async () => {
+            const { api } = await open({ 'agents.run': 'Answers' }, { stream: ['First', 'Second'] });
+            const read = async (signal?: AbortSignal): Promise<string[]> => {
+                const pieces: string[] = [];
+
+                for await (const piece of api.agents.stream({ prompt: 'Hi', ...(signal === undefined ? {} : { signal }) })) {
+                    pieces.push(piece.ok ? piece.value.text : piece.error.code);
+                }
+
+                return pieces;
+            };
+
+            expect(await read(AbortSignal.abort())).toEqual([]);
+            expect(await read()).toEqual(['First', 'Second']);
         });
     });
 }

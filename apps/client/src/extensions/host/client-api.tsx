@@ -365,6 +365,7 @@ function wordsOf(extension: LoadedExtension, language: string): Promise<Record<s
 }
 
 const ARRANGE_GAP = 40;
+const NEW_NODE_SIZE = { width: 420, height: 300 };
 
 function hasPermission(extension: LoadedExtension, permission: string): boolean {
     return Object.hasOwn(extension.manifest.permissions ?? {}, permission);
@@ -647,12 +648,16 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 'component' in node && migrate !== undefined && dataVersion !== undefined
                     ? { component: migratedNode(node.component, dataVersion, migrate as (stored: unknown, from: number) => unknown) }
                     : node;
+            const size = node.size ?? NEW_NODE_SIZE;
+            const initialData = node.initialData ?? {};
 
             add('extensionNodes', {
                 id: `${id}/${node.id}`,
                 title: node.title,
                 icon: iconOf(node.icon, extension),
                 component: surfaceOf(extension, surface) as ComponentType<ExtensionSurfaceProps>,
+                size,
+                initialData,
                 ...(dataVersion === undefined ? {} : { dataVersion })
             });
             // Adding is an action like any other, so an extension chooses where it shows; by default where a person adds nodes.
@@ -666,15 +671,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 run: (context) => {
                     focusedCanvas()
                         .getState()
-                        .addExtensionNode(
-                            id,
-                            node.id,
-                            node.title,
-                            node.size ?? { width: 420, height: 300 },
-                            node.initialData ?? {},
-                            node.dataVersion,
-                            (context as { at?: { x: number; y: number } }).at
-                        );
+                        .addExtensionNode(id, node.id, node.title, size, initialData, node.dataVersion, (context as { at?: { x: number; y: number } }).at);
                 }
             });
         },
@@ -1416,8 +1413,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                             id,
                             type,
                             options?.title ?? contribution.title,
-                            { width: 420, height: 300 },
-                            options?.data ?? {},
+                            contribution.size,
+                            options?.data ?? contribution.initialData,
                             contribution.dataVersion,
                             options?.near === undefined ? undefined : besideNode(options.near[0]?.id)
                         )

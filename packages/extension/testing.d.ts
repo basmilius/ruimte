@@ -46,8 +46,11 @@ export interface TestNode {
     agent?: Partial<AgentInfo>;
     path?: string;
     url?: string;
-    /** A node of this extension, by the id it gave `defineNode`, with what `useNodeData` reads. */
-    extension?: { type: string; data?: Json };
+    /**
+     * A node of this extension, by the id it gave `defineNode`, with what `useNodeData` reads. `dataVersion` is the version
+     * that stored `data`: below the definition's own, `render` moves it up through `migrate` first, as Ruimte does.
+     */
+    extension?: { type: string; data?: Json; dataVersion?: number };
 }
 
 /**
@@ -187,6 +190,10 @@ export interface TestHost {
     select(ids: string[]): void;
     /** Changes a setting, as a person would. */
     setSetting(key: string, value: boolean | string): void;
+    /** Writes a stored value as another window or `server/` would, and draws again what reads it. */
+    setStorage(scope: 'computer' | 'project' | 'machine', key: string, value: Json): void;
+    /** The connection to the machine dropping and coming back: every answer `.use()` kept is dropped, so what read one asks again. */
+    reconnect(): void;
     /**
      * Draws a panel, view, node, widget or card, or a component of your own, into the page, and waits for its lazy import and
      * whatever it suspends on. `node` is the node `useNodeData` reads, `params` what a panel or view gets, `context` a widget's.

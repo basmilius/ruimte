@@ -49,6 +49,7 @@ export interface HostNode {
     url?: string;
     extension?: { id: string; type: string };
     data?: unknown;
+    dataVersion?: number;
 }
 
 /* Something an extension put in a slot, as the client host keeps it. */
@@ -186,7 +187,8 @@ export class TestHost {
                 ...(node.agent === undefined ? {} : { agent: node.agent }),
                 ...(node.path === undefined ? {} : { path: node.path }),
                 ...(node.url === undefined ? {} : { url: node.url }),
-                ...(node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire(node.extension.data ?? {}) })
+                ...(node.extension === undefined ? {} : { extension: { id: this.id, type: node.extension.type }, data: wire(node.extension.data ?? {}) }),
+                ...(node.extension?.dataVersion === undefined ? {} : { dataVersion: node.extension.dataVersion })
             });
 
             for (const to of node.linkedTo ?? []) {
@@ -409,6 +411,40 @@ export class TestHost {
         this.createdIds.push(id);
         this.changed();
         this.deliver('node.added', { node: this.info(id) });
+
+        return { id };
+    }
+
+    /*
+     * What the client host does before a node draws: data an older `dataVersion` stored moves up through the definition's
+     * `migrate`, and is saved with the version it is now. A node from before any version counts as 1.
+     */
+    migrateNode(definition: object, nodeId: string): void {
+        const { dataVersion, migrate } = definition as { dataVersion?: unknown; migrate?: unknown };
+        const node = this.nodes.get(nodeId);
+
+        if (node === undefined || typeof dataVersion !== 'number' || typeof migrate !== 'function') {
+            return;
+        }
+
+        const from = node.dataVersion ?? 1;
+
+        if (from < dataVersion) {
+            this.changeNode(nodeId, { data: wire((migrate as (stored: unknown, from: number) => unknown)(node.data, from)), dataVersion });
+        }
+    }
+
+    addView(kind: string, name: string): { id: string } {
+        let count = this.views.length + 1;
+
+        while (this.views.some((view) => view.id === `view-${count}`)) {
+            count += 1;
+        }
+
+        const id = `view-${count}`;
+
+        this.views.push({ id, kind, name });
+        this.changed();
 
         return { id };
     }

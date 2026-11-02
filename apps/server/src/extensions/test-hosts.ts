@@ -8,7 +8,7 @@ import type * as PublicClient from '../../../../packages/extension/client';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { clientApi, type ClientApi } from './test-client.ts';
 import { render } from './test-dom.ts';
-import { TestHost } from './test-host.ts';
+import { TestHost, wire } from './test-host.ts';
 import { loadFresh } from './test-loader.ts';
 
 let current: { host: TestHost; api: ClientApi } | null = null;
@@ -79,9 +79,21 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
             host.settings[key] = value;
             host.changed();
         },
+        setStorage(scope, key, value) {
+            host.storage[scope][key] = wire(value);
+            host.changed();
+        },
+        reconnect() {
+            host.serverCache.clear();
+            host.changed();
+        },
         // A component of the test's own draws against the host it is drawn on.
         render: (drawable, options) => {
             current = { host, api };
+
+            if (options?.node !== undefined) {
+                host.migrateNode(drawable, options.node);
+            }
 
             return render(drawable as object, options);
         },

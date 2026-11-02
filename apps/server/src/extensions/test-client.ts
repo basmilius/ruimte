@@ -140,14 +140,14 @@ function machineCalls<Name extends ExtensionActionName>(
     );
 }
 
-/* What an agent reads of a node: its `text`, which a test seeds. */
-function nodeText(host: TestHost, id: string): string {
+/* What an agent reads of a node of this kind: its `text`, which a test seeds. Each kind takes its own permission, so another kind reads nothing. */
+function nodeText(host: TestHost, id: string, kind: 'terminal' | 'chat'): string {
     host.projectId();
 
     const node = host.nodes.get(id);
 
-    if (node === undefined) {
-        throw new Refused('not-found', `No node ${id} in this project`);
+    if (node?.kind !== kind) {
+        throw new Refused('not-found', `No ${kind} ${id} in this project`);
     }
 
     return node.text;
@@ -257,6 +257,7 @@ export function clientApi(host: TestHost) {
             icon?: string;
             size?: { width: number; height: number };
             initialData?: unknown;
+            dataVersion?: number;
             addFrom?: Slots;
             component?: unknown;
             frame?: unknown;
@@ -274,7 +275,8 @@ export function clientApi(host: TestHost) {
                     host.addNode('extension', (context as { at?: { x: number; y: number } }).at ?? { x: 0, y: 0 }, node.size ?? NEW_NODE, {
                         title: node.title,
                         extension: { id: host.id, type: node.id },
-                        data: wire(node.initialData ?? {})
+                        data: wire(node.initialData ?? {}),
+                        ...(node.dataVersion === undefined ? {} : { dataVersion: node.dataVersion })
                     });
                 }
             });
@@ -589,7 +591,7 @@ export function clientApi(host: TestHost) {
         ]) as unknown as typeof PublicClient.devices,
         terminals: {
             read: (terminal: NodeRef) =>
-                host.settle('terminals.read', [terminal], () => host.scripted('terminals.read', [terminal], () => nodeText(host, terminal.id))),
+                host.settle('terminals.read', [terminal], () => host.scripted('terminals.read', [terminal], () => nodeText(host, terminal.id, 'terminal'))),
             open: (options: { title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
                 host.attempt('terminals.open', [options], () =>
                     host.addNode('terminal', host.beside(options.near), NEW_NODE, {
@@ -609,7 +611,7 @@ export function clientApi(host: TestHost) {
         },
         chats: {
             list: () => host.settle('chats.list', [], () => host.scripted<PublicClient.ChatSummary[]>('chats.list', [])),
-            read: (chatId: string) => host.settle('chats.read', [chatId], () => host.scripted('chats.read', [chatId], () => nodeText(host, chatId))),
+            read: (chatId: string) => host.settle('chats.read', [chatId], () => host.scripted('chats.read', [chatId], () => nodeText(host, chatId, 'chat'))),
             send: (chatId: string, text: string) =>
                 host.settle('chats.send', [chatId, text], async () => {
                     await host.scripted<void>('chats.send', [chatId, text]);
@@ -664,7 +666,24 @@ export function clientApi(host: TestHost) {
                     return host.scripted<{ text: string }>('agents.run', [options]);
                 }),
             async *stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncGenerator<Result<{ text: string }>> {
-                const { signal: _signal, ...asked } = options;
+                const { signal, ...asked } = options;
+
+                const refused = (): boolean => {
+                    try {
+                        host.permitCall('agents.stream');
+                        host.projectId();
+
+                        return false;
+                    } catch {
+                        return true;
+                    }
+                };
+
+                // Aborted before it began, so no run starts, as in Ruimte; a refusal still answers first, below.
+                if (signal?.aborted === true && !refused()) {
+                    return;
+                }
+
                 const pieces = await host.settle('agents.stream', [asked], () => {
                     host.projectId();
 
@@ -681,17 +700,23 @@ export function clientApi(host: TestHost) {
                     yield { ok: true, value: { text } };
                 }
             },
-            // A chat a person can see, beside the node it is about, unless the test answers otherwise.
+            // A chat a person can see, unless the test answers otherwise: beside the node it is about on the canvas in front, or a view of its own with none there.
             start: (options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }) =>
                 host.settle('agents.start', [options], () => {
                     host.projectId();
 
-                    return host.scripted<NodeRef>('agents.start', [options], () =>
-                        host.addNode('chat', host.beside(options.near), NEW_NODE, {
-                            title: options.title ?? 'Chat',
+                    return host.scripted<NodeRef>('agents.start', [options], () => {
+                        const title = options.title ?? 'Chat';
+
+                        if (host.views.find((view) => view.id === host.activeViewId)?.kind !== 'canvas') {
+                            return host.addView('chat', title);
+                        }
+
+                        return host.addNode('chat', host.beside(options.near), NEW_NODE, {
+                            title,
                             agent: { provider: options.provider ?? 'claude', status: 'running' }
-                        })
-                    );
+                        });
+                    });
                 })
         },
         canvas: {
@@ -715,11 +740,14 @@ export function clientApi(host: TestHost) {
                     throw new TypeError(`${host.name} has no node ${type}`);
                 }
 
+                const defined = node.definition as { title: string; size?: { width: number; height: number }; initialData?: unknown; dataVersion?: number };
+
                 return host.attempt('canvas.createNode', [type, options], () =>
-                    host.addNode('extension', options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), NEW_NODE, {
-                        title: options.title ?? (node.definition as { title: string }).title,
+                    host.addNode('extension', options.near === undefined ? { x: 0, y: 0 } : host.beside(options.near), defined.size ?? NEW_NODE, {
+                        title: options.title ?? defined.title,
                         extension: { id: host.id, type },
-                        data: wire(options.data ?? {})
+                        data: wire(options.data ?? defined.initialData ?? {}),
+                        ...(defined.dataVersion === undefined ? {} : { dataVersion: defined.dataVersion })
                     })
                 );
             },
