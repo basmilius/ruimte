@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { EXTENSION_API_VERSION } from '@ruimte/contracts';
 import { ExtensionHost } from './extension-host.ts';
@@ -177,6 +178,67 @@ describe('ExtensionStore', () => {
         expect(await new ExtensionStore(home).unlink(id, 'run-b')).toBe(false);
         expect((await after.get(id))?.devFolder).toBe(first);
     });
+
+    // Each write of the file a link makes fails in turn, until a link makes no write of it that fails and lands.
+    test.each(['dev-link-owners.json', 'dev-links.json'])(
+        'a link whose write of %s fails changes nothing, tells no client, and stays the run of before',
+        async (file) => {
+            const first = join(root, 'projects', `failed-first-${file}`);
+            const second = join(root, 'projects', `failed-second-${file}`);
+            const id = 'acme.failed';
+
+            for (const folder of [first, second]) {
+                mkdirSync(folder, { recursive: true });
+                writeFileSync(join(folder, 'manifest.json'), manifestOf(id));
+            }
+
+            for (let failing = 1; ; failing++) {
+                const home = join(root, `failed-${file}-${failing}`);
+                let writes: number | null = null;
+                const store = new ExtensionStore(home, async (path, text) => {
+                    if (writes !== null && basename(path).startsWith(`${file}.`) && ++writes === failing) {
+                        throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
+                    }
+
+                    await writeFile(path, text);
+                });
+                const host = new ExtensionHost({ store });
+                const heard: unknown[] = [];
+
+                await host.linked(first, 'run-a');
+                host.subscribe('client-a', (event) => void heard.push(event));
+                writes = 0;
+
+                const failure = await host.linked(second, 'run-b').then(
+                    () => null,
+                    (e: unknown) => e
+                );
+
+                writes = null;
+
+                if (failure === null) {
+                    expect(failing).toBeGreaterThan(1);
+                    expect((await store.get(id))?.devFolder).toBe(second);
+                    expect(await store.unlink(id, 'run-b')).toBe(true);
+
+                    break;
+                }
+
+                expect(failure).toMatchObject({ code: 'ENOSPC' });
+                expect((await new ExtensionStore(home).get(id))?.devFolder).toBe(first);
+                expect(heard).toEqual([]);
+
+                await host.unlink(id, 'run-b');
+
+                expect((await store.get(id))?.devFolder).toBe(first);
+
+                await host.unlink(id, 'run-a');
+
+                expect(await store.get(id)).toBeNull();
+                expect(heard).toEqual([{ event: 'extension.changed', payload: {} }]);
+            }
+        }
+    );
 
     test('a removal after an install takes it away, also while the install still unpacks', async () => {
         const store = new ExtensionStore(join(root, 'install-remove'));

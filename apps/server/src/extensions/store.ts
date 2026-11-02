@@ -43,9 +43,10 @@ const IDS_FILE = 'installed.json';
 const LINKS_FILE = 'dev-links.json';
 // Beside the links, so a Ruimte that only knows `dev-links.json` still reads that one as it is.
 const LINKS_OFF_FILE = 'dev-links-off.json';
-// The `extension dev` run that set each dev link, by its token, kept on disk so a restart of the machine keeps it too.
+// The `extension dev` run that set each dev link, by its token per folder, kept on disk so a restart of the machine keeps it too.
 const LINK_OWNERS_FILE = 'dev-link-owners.json';
 const IdsSchema = z.array(z.string());
+const OwnersSchema = z.record(z.string(), z.record(z.string(), z.string()));
 
 /*
  * Only a file that is not there is the fallback. One that cannot be read or is damaged refuses, so a change never
@@ -81,14 +82,10 @@ async function readJson<T>(path: string, schema: z.ZodType<T>, fallback: T): Pro
     return parsed.data;
 }
 
-async function writeJson(path: string, value: unknown): Promise<void> {
-    await mkdir(dirname(path), { recursive: true });
+/* How the store writes its JSON files, handed in so a test can fail one as a full disk would. */
+export type ExtensionStoreWrite = (file: string, text: string) => Promise<void>;
 
-    const temporary = `${path}.${randomUUID()}.tmp`;
-
-    await writeFile(temporary, JSON.stringify(value, null, 2));
-    await rename(temporary, path);
-}
+const NODE_WRITE: ExtensionStoreWrite = (file, text) => writeFile(file, text);
 
 /*
  * What a machine has installed, under `$RUIMTE_HOME/extensions`: every version of an extension in a
@@ -98,10 +95,27 @@ async function writeJson(path: string, value: unknown): Promise<void> {
 export class ExtensionStore {
     private readonly root: string;
     private readonly revisions = new Map<string, number>();
+    private readonly write: ExtensionStoreWrite;
     private changes: Promise<unknown> = Promise.resolve();
 
-    constructor(home: string) {
+    constructor(home: string, write: ExtensionStoreWrite = NODE_WRITE) {
         this.root = join(home, 'extensions');
+        this.write = write;
+    }
+
+    private async writeJson(path: string, value: unknown): Promise<void> {
+        await mkdir(dirname(path), { recursive: true });
+
+        const temporary = `${path}.${randomUUID()}.tmp`;
+
+        try {
+            await this.write(temporary, JSON.stringify(value, null, 2));
+            await rename(temporary, path);
+        } catch (e) {
+            await rm(temporary, { force: true });
+
+            throw e;
+        }
     }
 
     /*
@@ -148,17 +162,25 @@ export class ExtensionStore {
     private async writeLinksOff(id: string, off: boolean): Promise<void> {
         const ids = (await this.linksOff()).filter((entry) => entry !== id);
 
-        await writeJson(join(this.root, LINKS_OFF_FILE), off ? [...ids, id] : ids);
+        await this.writeJson(join(this.root, LINKS_OFF_FILE), off ? [...ids, id] : ids);
     }
 
-    private linkOwners(): Promise<Record<string, string>> {
-        return readJson(join(this.root, LINK_OWNERS_FILE), LinksSchema, {});
+    private linkOwners(): Promise<Record<string, Record<string, string>>> {
+        return readJson(join(this.root, LINK_OWNERS_FILE), OwnersSchema, {});
     }
 
-    private async writeLinkOwner(id: string, owner: string | undefined): Promise<void> {
-        const { [id]: _previous, ...owners } = await this.linkOwners();
+    /* The run that owns the link of `id` as it is now: the owner its folder has, so one of another folder owns nothing. */
+    private async linkOwner(id: string): Promise<string | undefined> {
+        const [links, owners] = await Promise.all([this.links(), this.linkOwners()]);
+        const folder = links[id];
 
-        await writeJson(join(this.root, LINK_OWNERS_FILE), owner === undefined ? owners : { ...owners, [id]: owner });
+        return folder === undefined ? undefined : owners[id]?.[folder];
+    }
+
+    private async dropLinkOwners(id: string): Promise<void> {
+        const { [id]: _gone, ...owners } = await this.linkOwners();
+
+        await this.writeJson(join(this.root, LINK_OWNERS_FILE), owners);
     }
 
     /*
@@ -243,8 +265,8 @@ export class ExtensionStore {
             const previous = await this.current(manifest.id);
             const enabled = previous?.enabled ?? true;
 
-            await writeJson(join(this.root, IDS_FILE), [...new Set([...(await this.installedIds()), manifest.id])]);
-            await writeJson(this.currentFile(manifest.id), { hash, enabled });
+            await this.writeJson(join(this.root, IDS_FILE), [...new Set([...(await this.installedIds()), manifest.id])]);
+            await this.writeJson(this.currentFile(manifest.id), { hash, enabled });
 
             return { manifest, hash, enabled, folder };
         });
@@ -256,13 +278,13 @@ export class ExtensionStore {
             const ids = await this.installedIds();
             const { [id]: _gone, ...links } = await this.links();
 
-            await writeJson(join(this.root, LINKS_FILE), links);
+            await this.writeJson(join(this.root, LINKS_FILE), links);
             await this.writeLinksOff(id, false);
-            await writeJson(
+            await this.writeJson(
                 join(this.root, IDS_FILE),
                 ids.filter((entry) => entry !== id)
             );
-            await this.writeLinkOwner(id, undefined);
+            await this.dropLinkOwners(id);
             await rm(join(this.root, id), { recursive: true, force: true });
         });
     }
@@ -282,7 +304,7 @@ export class ExtensionStore {
             }
 
             if (current !== null) {
-                await writeJson(this.currentFile(id), { ...current, enabled });
+                await this.writeJson(this.currentFile(id), { ...current, enabled });
             }
         });
     }
@@ -300,15 +322,18 @@ export class ExtensionStore {
         }
 
         return this.change(async () => {
-            // The old owner goes before the folder changes and the new one comes after, so a write that fails between
-            // them leaves a link no run owns rather than one the previous run could still take away.
-            await this.writeLinkOwner(manifest.id, undefined);
-            await writeJson(join(this.root, LINKS_FILE), { ...(await this.links()), [manifest.id]: folder });
-            this.revisions.set(manifest.id, (this.revisions.get(manifest.id) ?? 0) + 1);
+            const { id } = manifest;
+            const links = await this.links();
+            const { [id]: previous = {}, ...owners } = await this.linkOwners();
+            const linkedNow = links[id];
+            const kept = linkedNow === undefined || linkedNow === folder || previous[linkedNow] === undefined ? {} : { [linkedNow]: previous[linkedNow] };
+            const next = owner === undefined ? kept : { ...kept, [folder]: owner };
 
-            if (owner !== undefined) {
-                await this.writeLinkOwner(manifest.id, owner);
-            }
+            // Who owns the new folder lands beside who owns the one linked now, and the link after it: a write that fails
+            // leaves the link and its owner as they were, and the link is the one write that changes what runs.
+            await this.writeJson(join(this.root, LINK_OWNERS_FILE), Object.keys(next).length === 0 ? owners : { ...owners, [id]: next });
+            await this.writeJson(join(this.root, LINKS_FILE), { ...links, [id]: folder });
+            this.revisions.set(id, (this.revisions.get(id) ?? 0) + 1);
 
             return manifest;
         });
@@ -321,15 +346,15 @@ export class ExtensionStore {
      */
     unlink(id: string, owner?: string): Promise<boolean> {
         return this.change(async () => {
-            if (owner !== undefined && (await this.linkOwners())[id] !== owner) {
+            if (owner !== undefined && (await this.linkOwner(id)) !== owner) {
                 return false;
             }
 
             const { [id]: _gone, ...rest } = await this.links();
 
-            await writeJson(join(this.root, LINKS_FILE), rest);
+            await this.writeJson(join(this.root, LINKS_FILE), rest);
             await this.writeLinksOff(id, false);
-            await this.writeLinkOwner(id, undefined);
+            await this.dropLinkOwners(id);
 
             return true;
         });
