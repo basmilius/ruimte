@@ -5,6 +5,7 @@ import { nodeInfoOf, type NodeInfo } from '@/extensions/slots';
 import { defaultCanvases, focusedCanvas, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { splitKey } from '@/state/keys';
+import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';
 import { useSessions, sessionStatus } from '@/state/sessions';
 
@@ -23,10 +24,25 @@ type Listener = (event: never) => void;
 
 const listeners = new Map<string, Set<Listener>>();
 
+// Each listener on its own: one that throws would otherwise end the store's notification, and every one after it hears nothing.
 function emit<Name extends keyof ClientEvents>(name: Name, event: ClientEvents[Name]): void {
     for (const listener of listeners.get(name) ?? []) {
-        (listener as (event: ClientEvents[Name]) => void)(event);
+        try {
+            (listener as (event: ClientEvents[Name]) => void)(event);
+        } catch (e) {
+            console.error(`A listener of ${name} failed`, e);
+        }
     }
+}
+
+/*
+ * Whether a chat or session of this key is about the workspace in this window: on its own machine, or a node of its
+ * project that runs on another. Every machine of the pool fills the same stores, and another one's are no event here.
+ */
+function inThisWorkspace(key: string): boolean {
+    const { endpointId, id } = splitKey(key);
+
+    return endpointOfNodeId(id) === endpointId;
 }
 
 let started = false;
@@ -98,6 +114,10 @@ function start(): void {
         }
 
         for (const [key, row] of Object.entries(state.statusByKey)) {
+            if (!inThisWorkspace(key)) {
+                continue;
+            }
+
             const before = previous.statusByKey[key]?.info;
             const { id } = splitKey(key);
 
@@ -115,7 +135,7 @@ function start(): void {
         for (const [key, row] of Object.entries(state.byKey)) {
             const status = sessionStatus(row);
 
-            if (status !== sessionStatus(previous.byKey[key])) {
+            if (status !== sessionStatus(previous.byKey[key]) && inThisWorkspace(key)) {
                 emit('agent.status', { nodeId: splitKey(key).id, status: extensionAgentStatus(status) });
             }
         }

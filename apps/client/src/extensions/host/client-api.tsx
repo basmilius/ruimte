@@ -1098,7 +1098,15 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         },
         // Stopped with the extension too, or one turned off or built again keeps listening.
         onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void {
-            const stop = onClientEvent(name, listener);
+            const stop = onClientEvent(name, (event) => {
+                try {
+                    listener(event);
+                } catch (e) {
+                    reportFailure(`onEvent ${name}`)(e instanceof Error ? e.message : String(e));
+
+                    throw e;
+                }
+            });
 
             hold(stop);
 
