@@ -82,21 +82,32 @@ export const SECTIONS: readonly NavigationSection[] = [
                 title: 'Start',
                 pages: [
                     { title: 'Overview', href: '/docs/extensions' },
-                    { title: 'Your first extension', href: '/docs/extensions/getting-started' },
+                    { title: 'Getting started', href: '/docs/extensions/getting-started' },
                     { title: 'The manifest', href: '/docs/extensions/manifest' }
                 ]
             },
             {
-                title: 'Guides',
+                title: 'Build',
                 pages: [
                     { title: 'Surfaces', href: '/docs/extensions/surfaces' },
                     { title: 'Slots and actions', href: '/docs/extensions/slots' },
-                    { title: 'Chats and agents', href: '/docs/extensions/chats-and-agents' },
-                    { title: 'The project and the machine', href: '/docs/extensions/machine' },
-                    { title: 'The server part', href: '/docs/extensions/server' },
+                    { title: 'Styling', href: '/docs/extensions/styling' },
                     { title: 'Themes', href: '/docs/extensions/themes' },
-                    { title: 'Testing and packing', href: '/docs/extensions/testing' }
+                    { title: 'Settings and storage', href: '/docs/extensions/settings' },
+                    { title: 'Events', href: '/docs/extensions/events' }
                 ]
+            },
+            {
+                title: 'Work with Ruimte',
+                pages: [
+                    { title: 'The project and the machine', href: '/docs/extensions/machine' },
+                    { title: 'Chats and agents', href: '/docs/extensions/chats-and-agents' },
+                    { title: 'The server part', href: '/docs/extensions/server' }
+                ]
+            },
+            {
+                title: 'Ship',
+                pages: [{ title: 'Testing and packing', href: '/docs/extensions/testing' }]
             },
             {
                 title: 'Reference',
