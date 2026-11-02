@@ -1,6 +1,7 @@
 import { afterEach } from 'bun:test';
 import { createElement, type ComponentType } from 'react';
 import type { ExtensionManifest } from '@ruimte/contracts';
+import { contextSelection } from '@ruimte/contracts/extension-context';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
@@ -63,6 +64,12 @@ clientContract(async (permissions) => {
 
         return {};
     });
+    // The machine's own rule, over the one node of the seed.
+    machine.answer('extension.contextRead', (of) => ({
+        sources: [SEED.node]
+            .filter((node) => contextSelection(of)(node.id, SEED.view.id))
+            .map((node) => ({ id: node.id, kind: node.kind, title: node.title, text: '' }))
+    }));
     disconnect = connectFakeMachine(machine);
     registerExtension(extension);
     useProject.setState({ current: { ...useProject.getState().current, ...PROJECT } });

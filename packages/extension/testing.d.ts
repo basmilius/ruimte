@@ -82,7 +82,7 @@ export interface TestHostAnswers {
     'git.log'?(options: { repository?: string; limit?: number }): Answer<GitCommit[]>;
     'database.connections'?(): Answer<{ id: string; name: string }[]>;
     'database.query'?(connection: string, sql: string): Answer<{ columns: string[]; rows: DatabaseValue[][]; hasMore: boolean }>;
-    /** What `context.read` answers; by default the `text` of each node it names, or of every node on the view. */
+    /** What `context.read` answers; by default the `text` of each node it names and of every node on the view it names. */
     'context.read'?(of: { nodes?: NodeRef[]; view?: ViewRef }): Answer<ContextSource[]>;
     /** `launches`, `routines`, `artifacts`, `browser` and `devices`, by the action each call is: `launches.start` is `launch.start`. */
     'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };

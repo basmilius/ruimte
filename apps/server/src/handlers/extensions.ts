@@ -1,5 +1,6 @@
 import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { ChatProvider } from '@adecore/agents/providers';
+import { contextSelection } from '@ruimte/contracts/extension-context';
 import type { Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import type { ExtensionHost } from '../extensions/extension-host.ts';
@@ -19,16 +20,10 @@ export interface ExtensionHandlerDeps {
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
 }
 
-function nodesIn(views: readonly ProjectView[], nodeIds: readonly string[] | undefined, viewId: string | undefined): ProjectNode[] {
-    const canvases = views.filter(isCanvasView);
+function nodesIn(views: readonly ProjectView[], of: { nodeIds?: readonly string[] | undefined; viewId?: string | undefined }): ProjectNode[] {
+    const selects = contextSelection(of);
 
-    if (viewId !== undefined) {
-        return canvases.find((view) => view.id === viewId)?.nodes ?? [];
-    }
-
-    const wanted = new Set(nodeIds ?? []);
-
-    return canvases.flatMap((view) => view.nodes.filter((node) => wanted.has(node.id)));
+    return views.filter(isCanvasView).flatMap((view) => view.nodes.filter((node) => selects(node.id, view.id)));
 }
 
 /* The last `limit` characters of a stream, read to its end so the process never waits on a full pipe. */
@@ -101,7 +96,7 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
             throw new ExtensionRefusal('not-found', `No project ${payload.projectId} on this machine`);
         }
 
-        const nodes = nodesIn(views, payload.nodeIds, payload.viewId);
+        const nodes = nodesIn(views, payload);
         const sources = nodes.flatMap((node) => sourceOf(node, undefined, folder) ?? []);
 
         return {

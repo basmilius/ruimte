@@ -211,6 +211,21 @@ export function clientContract(open: OpenClientWorld): void {
             expect(world.links()).toContainEqual({ from: 'note-1', to: note.value.id });
         });
 
+        test('reads the nodes it names and those on the view it names, each once, and nothing when it names neither', async () => {
+            const { api } = await open({ 'context.read': 'Reads' });
+            const ids = async (of: Parameters<typeof api.context.read>[0]) => {
+                const read = await api.context.read(of);
+
+                return read.ok ? read.value.map((source) => source.id) : read;
+            };
+
+            expect(await ids({})).toEqual([]);
+            expect(await ids({ nodes: [REF] })).toEqual(['note-1']);
+            expect(await ids({ view: { id: 'view-1' } })).toEqual(['note-1']);
+            expect(await ids({ nodes: [REF], view: { id: 'view-1' } })).toEqual(['note-1']);
+            expect(await ids({ view: { id: 'view-2' } })).toEqual([]);
+        });
+
         test('hands a client event to what listens, until it stops', async () => {
             const world = await open({});
             const heard: string[][] = [];

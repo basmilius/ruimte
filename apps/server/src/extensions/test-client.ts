@@ -4,6 +4,7 @@
  * member the API gains and the fake lacks breaks the check rather than an author's test.
  */
 import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
+import { contextSelection } from '@ruimte/contracts/extension-context';
 import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/contracts/extension-actions';
 import type * as PublicClient from '../../../../packages/extension/client';
 import { formatModule, nodeContextOf, react } from './test-react.ts';
@@ -637,15 +638,11 @@ export function clientApi(host: TestHost) {
                     host.projectId();
 
                     return host.scripted<PublicClient.ContextSource[]>('context.read', [of], () => {
-                        const ids =
-                            of.nodes?.map((node) => node.id) ??
-                            [...host.nodes.values()].filter((node) => node.viewId === (of.view?.id ?? host.activeViewId)).map((node) => node.id);
+                        const selects = contextSelection({ nodeIds: of.nodes?.map((node) => node.id), viewId: of.view?.id });
 
-                        return ids.flatMap((id) => {
-                            const node = host.nodes.get(id);
-
-                            return node === undefined ? [] : [{ id, kind: node.kind, title: node.title, text: node.text }];
-                        });
+                        return [...host.nodes.values()]
+                            .filter((node) => selects(node.id, node.viewId))
+                            .map((node) => ({ id: node.id, kind: node.kind, title: node.title, text: node.text }));
                     });
                 })
         },

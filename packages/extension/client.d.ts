@@ -613,6 +613,7 @@ export interface ContextSource {
 
 /** Needs the permission `context.read`. */
 export const context: {
+    /** Each node in `nodes` and every node on `view`, each once. Naming neither reads nothing. */
     read(of: { nodes?: NodeRef[]; view?: ViewRef }): Promise<Result<ContextSource[]>>;
 };
 

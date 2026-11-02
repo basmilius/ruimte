@@ -341,6 +341,12 @@ function extensionProjectPath(folder, path) {
   return joined;
 }
 
+// packages/contracts/src/extension-context.ts
+function contextSelection(of) {
+  const named = new Set(of.nodeIds ?? []);
+  return (nodeId, viewId) => viewId === of.viewId || named.has(nodeId);
+}
+
 // node_modules/.bun/zod@4.6.7/node_modules/zod/v4/core/util.js
 function getEnumValues(entries) {
   const numericValues = Object.values(entries).filter((v) => typeof v === "number");
@@ -7696,11 +7702,8 @@ function clientApi(host) {
       read: (of) => host.settle("context.read", [of], () => {
         host.projectId();
         return host.scripted("context.read", [of], () => {
-          const ids = of.nodes?.map((node) => node.id) ?? [...host.nodes.values()].filter((node) => node.viewId === (of.view?.id ?? host.activeViewId)).map((node) => node.id);
-          return ids.flatMap((id) => {
-            const node = host.nodes.get(id);
-            return node === undefined ? [] : [{ id, kind: node.kind, title: node.title, text: node.text }];
-          });
+          const selects = contextSelection({ nodeIds: of.nodes?.map((node) => node.id), viewId: of.view?.id });
+          return [...host.nodes.values()].filter((node) => selects(node.id, node.viewId)).map((node) => ({ id: node.id, kind: node.kind, title: node.title, text: node.text }));
         });
       })
     },
