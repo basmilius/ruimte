@@ -3,6 +3,7 @@ import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
 import { machineExtensions } from '@/extensions/station-files';
 import { IS_STATION } from '@/station';
+import { useEndpoints } from '@/state/endpoints';
 import { transport } from '@/transport';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
 import { refreshExtensionTheme } from '@/extensions/themes';
@@ -52,7 +53,9 @@ function failed(id: string, e: unknown): void {
 
 /* Loads what is on and new, and takes down what went or moved to another version. One extension failing leaves the others alone. */
 export async function syncExtensions(): Promise<void> {
-    const installed = IS_STATION ? await machineExtensions(transport).catch(() => null) : ((await desktop()?.extensions?.list()) ?? null);
+    const installed = IS_STATION
+        ? await machineExtensions(transport, useEndpoints.getState().activeId).catch(() => null)
+        : ((await desktop()?.extensions?.list()) ?? null);
 
     if (installed === null) {
         return;
