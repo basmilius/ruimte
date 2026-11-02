@@ -1,0 +1,586 @@
+[
+    {
+        "module": "client",
+        "entries": [
+            {
+                "name": "LazyComponent",
+                "kind": "type",
+                "doc": "A component is always handed over as a lazy import: `() => import('./Panel')`.",
+                "code": "export type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;"
+            },
+            {
+                "name": "Surface",
+                "kind": "type",
+                "doc": null,
+                "code": "export type Surface<Props = {}> = { component: LazyComponent<Props> } | { frame: string };"
+            },
+            {
+                "name": "PanelHandle",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface PanelHandle<Params = void> {\n    open(params: Params): void;\n    close(): void;\n    setBadge(text: string | null): void;\n    setTitle(title: string): void;\n}"
+            },
+            {
+                "name": "NodeRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface NodeRef {\n    id: string;\n}"
+            },
+            {
+                "name": "ViewRef",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ViewRef {\n    id: string;\n}"
+            },
+            {
+                "name": "definePanel",
+                "kind": "function",
+                "doc": "`icon` names a Lucide icon. Without one, a surface shows the extension's `assets/icon.svg`.",
+                "code": "export function definePanel<Params = void>(panel: { id: string; title: string; icon?: string; minWidth?: number } & Surface<{ params: Params | undefined }>): PanelHandle<Params>;"
+            },
+            {
+                "name": "defineSidebarCard",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineSidebarCard(card: { id: string; title: string; component: LazyComponent }): void;"
+            },
+            {
+                "name": "defineView",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineView<Params = unknown>(view: { id: string; title: string; icon?: string } & Surface<{ params: Params }>): { open(params?: Params): void };"
+            },
+            {
+                "name": "defineNode",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineNode<Data = unknown>(\n    node: {\n        id: string;\n        title: string;\n        icon?: string;\n        size?: { width: number; height: number };\n        initialData?: Data;\n        dataVersion?: number;\n        migrate?: (stored: unknown, fromVersion: number) => Data;\n        /** Where \"Add\" shows. By default the Extensions submenu of the canvas menu, at the spot clicked, and the command palette. */\n        addFrom?: Partial<Slots>;\n    } & Surface\n): void;"
+            },
+            {
+                "name": "defineCanvasOverlay",
+                "kind": "function",
+                "doc": "Over the whole canvas, under Ruimte's own controls such as the minimap in the bottom right. It lets clicks through; set `pointer-events: auto` on what takes them.",
+                "code": "export function defineCanvasOverlay(overlay: { id: string; component: LazyComponent }): void;"
+            },
+            {
+                "name": "defineFileViewer",
+                "kind": "function",
+                "doc": "Opens every file with these extensions in your component, with Ruimte's own view one click away.",
+                "code": "export function defineFileViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo & { text: string | null } }> }): void;"
+            },
+            {
+                "name": "defineMarkdownBlock",
+                "kind": "function",
+                "doc": "Draws a fenced block of this language in a chat and in markdown, on this client. Elsewhere it stays code.",
+                "code": "export function defineMarkdownBlock(block: { language: string; component: LazyComponent<{ source: string }> }): void;"
+            },
+            {
+                "name": "defineOverlay",
+                "kind": "function",
+                "doc": "Your own UI over the app: Ruimte draws the header with `title` and a close button, and animates it; you draw the body. `open` answers what `close` was given, or null when a person dismissed it.",
+                "code": "export function defineOverlay<Params = void, Result = void>(overlay: {\n    id: string;\n    title: string;\n    size?: 'sm';\n    component: LazyComponent<{ params: Params; close(result?: Result): void }>;\n}): { open(params: Params): Promise<Result | null>; close(): void };"
+            },
+            {
+                "name": "defineToolResult",
+                "kind": "function",
+                "doc": "Draws these tools' calls in a chat, by their exact name, instead of the thread's own view.",
+                "code": "export function defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: { name: string; input: unknown; output: string | null; state: string } }> }): void;"
+            },
+            {
+                "name": "definePaletteSource",
+                "kind": "function",
+                "doc": "Rows in the command palette for what a person types. It waits for a pause in the typing; a slow or failing one costs only its own rows.",
+                "code": "export function definePaletteSource(source: { id: string; title: string; search(query: string): Promise<{ id: string; title: string; detail?: string; run(): void }[]> }): void;"
+            },
+            {
+                "name": "defineSlashCommand",
+                "kind": "function",
+                "doc": "After `/` in a chat. It expands into the prompt, and the person still sends it.",
+                "code": "export function defineSlashCommand(command: { name: string; description: string; run(args: string): string | Promise<string> }): void;"
+            },
+            {
+                "name": "defineReference",
+                "kind": "function",
+                "doc": "Things from outside the project for `#` in a chat. Picking one puts what `read` answers in the prompt.",
+                "code": "export function defineReference(reference: { id: string; title: string; list(): Promise<{ id: string; name: string }[]>; read(item: { id: string; name: string }): Promise<string> }): void;"
+            },
+            {
+                "name": "defineDiffViewer",
+                "kind": "function",
+                "doc": "Opens a changed file with these extensions in your component, with Ruimte's own diff one click away.",
+                "code": "export function defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo; diff: string }> }): void;"
+            },
+            {
+                "name": "defineFileIcon",
+                "kind": "function",
+                "doc": "An icon from your pack, by its path, for files with these extensions.",
+                "code": "export function defineFileIcon(icon: { extensions: string[]; path: string }): void;"
+            },
+            {
+                "name": "defineVoiceAction",
+                "kind": "function",
+                "doc": "What a person can ask for by voice, through extension.voiceList and extension.voiceRun. It answers in words.",
+                "code": "export function defineVoiceAction(action: { id: string; description: string; parameters?: object; run(input: any): string | Promise<string> }): void;"
+            },
+            {
+                "name": "defineTemplate",
+                "kind": "function",
+                "doc": "New from a template, under Extensions in the canvas menu.",
+                "code": "export function defineTemplate(template: { id: string; title: string; icon?: string; create(context: BaseContext & { at: { x: number; y: number } }): void | Promise<void> }): void;"
+            },
+            {
+                "name": "defineCommand",
+                "kind": "function",
+                "doc": null,
+                "code": "export function defineCommand(command: { id: string; title: string; run: () => void | Promise<void> }): void;"
+            },
+            {
+                "name": "SettingField",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface SettingField {\n    key: string;\n    type: 'boolean' | 'text' | 'select';\n    label: string;\n    description?: string;\n    default: boolean | string;\n    options?: { value: string; label: string }[];\n}"
+            },
+            {
+                "name": "defineExtensionSettings",
+                "kind": "function",
+                "doc": "Your own component, or `fields` that Ruimte draws. Read a field with `useSetting`.",
+                "code": "export function defineExtensionSettings(settings: { component: LazyComponent; keywords?: string[] } | { fields: SettingField[] }): void;"
+            },
+            {
+                "name": "useSetting",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useSetting<Value>(key: string): Value;"
+            },
+            {
+                "name": "useMachine",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useMachine(): { id: string };"
+            },
+            {
+                "name": "useTheme",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useTheme(): { side: 'light' | 'dark' };"
+            },
+            {
+                "name": "useChat",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useChat(id: string): { id: string; status: string; provider: string } | null;"
+            },
+            {
+                "name": "AgentInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface AgentInfo {\n    provider: string;\n    account: string | null;\n    status: 'idle' | 'running' | 'needsYou' | 'stopped';\n    cwd: string | null;\n    branch: string | null;\n    worktree: string | null;\n}"
+            },
+            {
+                "name": "NodeInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface NodeInfo {\n    id: string;\n    kind: string;\n    title: string;\n    color: string | null;\n    bounds: { x: number; y: number; width: number; height: number };\n    groupId: string | null;\n    viewId: string;\n    machine: string | null;\n    linkedTo: string[];\n    agent?: AgentInfo;\n    path?: string;\n    url?: string;\n    extension?: { id: string; type: string };\n}"
+            },
+            {
+                "name": "FileInfo",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface FileInfo {\n    path: string;\n    name: string;\n    extension: string;\n}"
+            },
+            {
+                "name": "BaseContext",
+                "kind": "interface",
+                "doc": "What every slot, action and widget is told.",
+                "code": "export interface BaseContext {\n    project: { id: string; name: string; folder: string | null };\n    view: { id: string; kind: string; name: string } | null;\n    machine: { id: string };\n    theme: 'light' | 'dark';\n}"
+            },
+            {
+                "name": "SlotAnswer",
+                "kind": "type",
+                "doc": "`false` hides it, `true` shows it, an object also changes what it shows there.",
+                "code": "export type SlotAnswer = boolean | { title?: string; icon?: string; disabled?: boolean | string; badge?: string; order?: number };"
+            },
+            {
+                "name": "Slot",
+                "kind": "type",
+                "doc": null,
+                "code": "export type Slot<Context> = true | ((context: BaseContext & Context) => SlotAnswer);"
+            },
+            {
+                "name": "SlotContexts",
+                "kind": "interface",
+                "doc": "What each place tells.",
+                "code": "export interface SlotContexts {\n    selectionBar: { nodes: NodeInfo[] };\n    nodeHeader: { node: NodeInfo };\n    /** `nodes` is the selection if the node is in it. */\n    nodeMenu: { node: NodeInfo; nodes: NodeInfo[] };\n    canvasMenu: { at: { x: number; y: number } };\n    viewToolbar: {};\n    viewMenu: { target: { id: string; kind: string } };\n    panelHeader: { panel: string };\n    commandPalette: { nodes: NodeInfo[] };\n    sidebarRow: { node: NodeInfo };\n    tabMenu: { target: { id: string } };\n    emptyCanvas: {};\n    startScreen: {};\n    projectBanner: {};\n    threadHeader: { chat: { id: string }; node: NodeInfo };\n    emptyThread: { chat: { id: string } };\n    toolActions: { chat: { id: string }; tool: { name: string; input: unknown; output: string | null; state: string } };\n    fileRowBadge: { file: FileInfo };\n    fileBreadcrumb: { file: FileInfo };\n    terminalMenu: { node: NodeInfo };\n    browserMenu: {};\n    textMenu: { text: { id: string } };\n    noteToolbar: { node: NodeInfo };\n    routineMenu: { routine: { id: string } };\n    composer: { chat: { id: string }; node: NodeInfo };\n    projectMenu: {};\n    sidebarFooter: {};\n    editorStatusBar: { file: FileInfo };\n    messageActions: { chat: { id: string }; message: { id: string; kind: 'user' | 'assistant'; text: string } };\n    lineMenu: { from: NodeInfo; to: NodeInfo };\n    fileMenu: { file: FileInfo; files: FileInfo[] };\n    editorToolbar: { file: FileInfo };\n    editorMenu: { file: FileInfo; files: FileInfo[] };\n    diffToolbar: { repository: string };\n    terminalToolbar: { node: NodeInfo };\n    browserToolbar: { node: NodeInfo; url: string };\n}"
+            },
+            {
+                "name": "SlotName",
+                "kind": "type",
+                "doc": null,
+                "code": "export type SlotName = keyof SlotContexts;"
+            },
+            {
+                "name": "Slots",
+                "kind": "type",
+                "doc": null,
+                "code": "export type Slots<Place extends SlotName = SlotName> = { [Key in Place]: Slot<SlotContexts[Key]> };"
+            },
+            {
+                "name": "ContextOf",
+                "kind": "type",
+                "doc": null,
+                "code": "export type ContextOf<Place extends SlotName> = { [Key in Place]: BaseContext & SlotContexts[Key] }[Place];"
+            },
+            {
+                "name": "ActionHandle",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ActionHandle {\n    run(context?: Partial<BaseContext> & Record<string, unknown>): Promise<void>;\n    useRunning(): boolean;\n}"
+            },
+            {
+                "name": "defineAction",
+                "kind": "function",
+                "doc": "While `run` is pending, its nodes show a spinner that also stops it through `signal`, and a throw reaches the person. Without `slots` it only shows where a menu puts it, and gets that menu's context. Type it with `defineAction<Context>`.",
+                "code": "export function defineAction<Place extends SlotName>(action: {\n    id: string;\n    title: string;\n    icon?: string;\n    /** Like mod+shift+k. Needs mod or alt. It gets the context of the command palette. */\n    shortcut?: string;\n    slots: Slots<Place>;\n    run(context: ContextOf<Place> & { slot: Place; signal: AbortSignal }): void | Promise<void>;\n}): ActionHandle;\nexport function defineAction<Context = {}>(action: {\n    id: string;\n    title: string;\n    icon?: string;\n    shortcut?: string;\n    run(context: BaseContext & Context & { slot: string; signal: AbortSignal }): void | Promise<void>;\n}): ActionHandle;"
+            },
+            {
+                "name": "MenuItem",
+                "kind": "type",
+                "doc": null,
+                "code": "export type MenuItem = ActionHandle | 'separator' | { title: string; run(): void; checked?: boolean } | { title: string; items: MenuItem[] };"
+            },
+            {
+                "name": "defineMenu",
+                "kind": "function",
+                "doc": "A menu of your own: a submenu in a menu, a dropdown in a bar.",
+                "code": "export function defineMenu<Place extends SlotName>(menu: { id: string; title: string; icon?: string; slots: Slots<Place>; items: MenuItem[] | ((context: ContextOf<Place>) => MenuItem[]) }): void;"
+            },
+            {
+                "name": "defineWidget",
+                "kind": "function",
+                "doc": "Your own React in a slot.",
+                "code": "export function defineWidget<Place extends SlotName>(widget: { id: string; slots: Slots<Place>; component: LazyComponent<{ context: ContextOf<Place> }> }): void;"
+            },
+            {
+                "name": "ServerClient",
+                "kind": "type",
+                "doc": "Each method calls `server/` on the machine in front; `.use()` suspends until it answers.",
+                "code": "export type ServerClient<Server> = {\n    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Result>\n        ? ((...args: Args) => Promise<Result>) & { use(...args: Args): Result }\n        : never;\n};"
+            },
+            {
+                "name": "useServer",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useServer<Server>(): ServerClient<Server>;"
+            },
+            {
+                "name": "useServerEvent",
+                "kind": "function",
+                "doc": "Hears what `emit` says in `server/`.",
+                "code": "export function useServerEvent(name: string, listener: (payload: unknown) => void): void;"
+            },
+            {
+                "name": "useNodeData",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useNodeData<Data>(): [Data, (next: Data) => void];"
+            },
+            {
+                "name": "useStorage",
+                "kind": "function",
+                "doc": "`computer` stays on this computer. `project` and `machine` live on the machine, where `server/` reads `machine` keys too.",
+                "code": "export function useStorage<Value>(key: string, initial: Value, scope?: 'computer' | 'project' | 'machine'): [Value, (next: Value) => void];"
+            },
+            {
+                "name": "useProject",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useProject(): { id: string; name: string };"
+            },
+            {
+                "name": "useActiveView",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useActiveView(): ViewRef;"
+            },
+            {
+                "name": "useViews",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useViews(): { id: string; kind: string; name: string }[];"
+            },
+            {
+                "name": "useSelection",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useSelection(): NodeInfo[];"
+            },
+            {
+                "name": "useNode",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useNode(id: string): NodeInfo;"
+            },
+            {
+                "name": "useNodes",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useNodes(filter?: (node: NodeInfo) => boolean): NodeInfo[];"
+            },
+            {
+                "name": "useLocale",
+                "kind": "function",
+                "doc": "Words from `locales/<language>.json`, English as the fallback, and every number and date through `format`.",
+                "code": "export function useLocale(): { language: string; t(key: string, values?: Record<string, unknown>): string; format: typeof import('@adecore/ui/format') };"
+            },
+            {
+                "name": "ClientEvents",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ClientEvents {\n    'node.added': { node: NodeInfo };\n    'node.removed': { id: string };\n    'node.changed': { node: NodeInfo };\n    'selection.changed': { nodes: NodeInfo[] };\n    'view.changed': { viewId: string | null };\n    'project.opened': { projectId: string };\n    'agent.status': { nodeId: string; status: string | undefined };\n    'chat.turnFinished': { chatId: string };\n}"
+            },
+            {
+                "name": "useEvent",
+                "kind": "function",
+                "doc": null,
+                "code": "export function useEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): void;"
+            },
+            {
+                "name": "onEvent",
+                "kind": "function",
+                "doc": null,
+                "code": "export function onEvent<Name extends keyof ClientEvents>(name: Name, listener: (event: ClientEvents[Name]) => void): () => void;"
+            },
+            {
+                "name": "useAgents",
+                "kind": "function",
+                "doc": "Needs the permission `agents.status`.",
+                "code": "export function useAgents(): { id: string; title: string; status: string | undefined; needsYou: boolean }[];"
+            },
+            {
+                "name": "useUsageLimits",
+                "kind": "function",
+                "doc": "Needs the permission `usage.read`. `used` runs from 0 to 1.",
+                "code": "export function useUsageLimits(): { provider: string; plan: string | null; windows: { label: string; used: number; resetsAt: number | null }[] }[];"
+            },
+            {
+                "name": "host",
+                "kind": "const",
+                "doc": null,
+                "code": "export const host: {\n    /** Marks work that is no action as busy: a spinner on `nodes` until it is done, which also stops it through the signal. */\n    busy<Result>(work: { title: string; nodes?: NodeRef[] }, run: (signal: AbortSignal) => Result | Promise<Result>): Promise<Result>;\n    notify(text: string, options?: { tone?: 'neutral' | 'error'; action?: { title: string; run(): void } }): void;\n    pickFolder(initial?: string): Promise<string | null>;\n    openSettings(): void;\n    confirm(options: { title: string; body: string; danger?: boolean }): Promise<boolean>;\n    prompt(options: { title: string; placeholder?: string; initial?: string }): Promise<string | null>;\n    pick<Item>(options: { title: string; items: readonly Item[]; label(item: Item): string }): Promise<Item | null>;\n    openUrl(url: string): void;\n    copy(text: string): void;\n};"
+            },
+            {
+                "name": "files",
+                "kind": "const",
+                "doc": "The project folder only. Needs `files.read` or `files.write`, except `open`.",
+                "code": "export const files: {\n    readText(path: string): Promise<string>;\n    write(path: string, text: string): Promise<void>;\n    list(folder: string): Promise<{ path: string; name: string; kind: string }[]>;\n    /** Calls back when the file or anything under the folder changes. Answers how to stop. */\n    watch(path: string, listener: () => void): () => void;\n    open(path: string): void;\n};"
+            },
+            {
+                "name": "git",
+                "kind": "const",
+                "doc": "Needs `git.read`.",
+                "code": "export const git: {\n    status(repository?: string): Promise<unknown>;\n    diff(options?: { repository?: string; path?: string }): Promise<unknown>;\n    log(options?: { repository?: string; limit?: number }): Promise<unknown>;\n};"
+            },
+            {
+                "name": "chats",
+                "kind": "const",
+                "doc": "`list` and `read` need `chats.read`, `send` needs `chats.send`.",
+                "code": "export const chats: {\n    list(): Promise<unknown[]>;\n    read(chatId: string): Promise<string>;\n    send(chatId: string, text: string): Promise<void>;\n};"
+            },
+            {
+                "name": "MachineAction",
+                "kind": "type",
+                "doc": null,
+                "code": "type MachineAction = (input?: object) => Promise<any>;"
+            },
+            {
+                "name": "launches",
+                "kind": "const",
+                "doc": "`list` and `read` need `launches.read`, the rest `launches.run`.",
+                "code": "export const launches: Record<'list' | 'read' | 'start' | 'restart' | 'stop', MachineAction>;"
+            },
+            {
+                "name": "routines",
+                "kind": "const",
+                "doc": "`list` needs `routines.read`, the rest `routines.run`.",
+                "code": "export const routines: Record<'list' | 'run' | 'pause' | 'resume', MachineAction>;"
+            },
+            {
+                "name": "artifacts",
+                "kind": "const",
+                "doc": "`list` and `read` need `artifacts.read`, `publish` `artifacts.write`.",
+                "code": "export const artifacts: Record<'list' | 'read' | 'publish', MachineAction>;"
+            },
+            {
+                "name": "browser",
+                "kind": "const",
+                "doc": "Needs `browser.control`.",
+                "code": "export const browser: Record<'inspect' | 'navigate' | 'back' | 'forward' | 'reload' | 'screenshot', MachineAction>;"
+            },
+            {
+                "name": "devices",
+                "kind": "const",
+                "doc": "Needs `devices.control`.",
+                "code": "export const devices: Record<'list' | 'inspect' | 'screenshot' | 'tap' | 'launch', MachineAction>;"
+            },
+            {
+                "name": "terminals",
+                "kind": "const",
+                "doc": null,
+                "code": "export const terminals: {\n    /** Needs `terminals.read`. */\n    read(terminal: NodeRef): Promise<string>;\n    /** Needs `canvas.write`. Opens a shell and types nothing: only a person types in a terminal. */\n    open(options?: { title?: string; cwd?: string; near?: NodeRef[] }): NodeRef | null;\n};"
+            },
+            {
+                "name": "database",
+                "kind": "const",
+                "doc": "Needs `database.read`. One SELECT or WITH statement on a read-only session, as for an agent.",
+                "code": "export const database: {\n    connections(): Promise<{ id: string; name: string }[]>;\n    query(connection: string, sql: string): Promise<{ columns: string[]; rows: unknown[][]; hasMore: boolean }>;\n};"
+            },
+            {
+                "name": "views",
+                "kind": "const",
+                "doc": "Needs `views.write`, except `open`.",
+                "code": "export const views: {\n    open(view: ViewRef): void;\n    createCanvas(name: string): ViewRef;\n    rename(view: ViewRef, name: string): void;\n};"
+            },
+            {
+                "name": "ContextSource",
+                "kind": "interface",
+                "doc": null,
+                "code": "export interface ContextSource {\n    id: string;\n    kind: string;\n    title: string;\n    text: string;\n}"
+            },
+            {
+                "name": "context",
+                "kind": "const",
+                "doc": "Needs the permission `context.read`.",
+                "code": "export const context: {\n    read(of: { nodes?: NodeRef[]; view?: ViewRef }): Promise<ContextSource[]>;\n};"
+            },
+            {
+                "name": "agents",
+                "kind": "const",
+                "doc": null,
+                "code": "export const agents: {\n    /** Needs `agents.run`. One hidden prompt on a CLI of the person, with the answer whole. */\n    run(options: { prompt: string; context?: string[]; provider?: string }): Promise<{ text: string }>;\n    /** Needs `agents.run`. The same, in pieces as the CLI writes them. */\n    stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncIterable<{ text: string }>;\n    /** Needs `agents.start`. A chat a person sees and can stop, supervised at most: on the canvas in front, or a view of its own in the sidebar with none there. */\n    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Promise<NodeRef>;\n};"
+            },
+            {
+                "name": "canvas",
+                "kind": "const",
+                "doc": "Needs `canvas.write`, except `reveal` and `select`.",
+                "code": "export const canvas: {\n    createNote(note: { title?: string; text: string; near?: NodeRef[]; color?: string }): NodeRef | null;\n    arrange(nodes: NodeRef[], layout: 'row' | 'column' | 'grid'): void;\n    /** A person confirms first. Answers whether they did. */\n    remove(nodes: NodeRef[]): Promise<boolean>;\n    createFile(path: string, options?: { near?: NodeRef[] }): NodeRef | null;\n    createBrowser(url: string, options?: { near?: NodeRef[] }): NodeRef | null;\n    /** A node of this extension's own, by the id it gave `defineNode`. */\n    createNode(type: string, options?: { data?: unknown; title?: string }): NodeRef | null;\n    update(node: NodeRef, patch: { title?: string; x?: number; y?: number; width?: number; height?: number }): void;\n    writeNote(node: NodeRef, text: string): void;\n    group(nodes: NodeRef[]): NodeRef | null;\n    link(from: NodeRef, to: NodeRef): void;\n    unlink(from: NodeRef, to: NodeRef): void;\n    select(nodes: NodeRef[]): void;\n    reveal(target: NodeRef): void;\n};"
+            }
+        ]
+    },
+    {
+        "module": "server",
+        "entries": [
+            {
+                "name": "defineServer",
+                "kind": "function",
+                "doc": "What the client can call. The default export of `server/index.ts`.",
+                "code": "export function defineServer<Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api;"
+            },
+            {
+                "name": "onEvent",
+                "kind": "function",
+                "doc": "A machine event, such as `chat.status`. Set `\"autostart\": true` to follow them with no client open.",
+                "code": "export function onEvent(name: string, listener: (payload: unknown) => void): () => void;"
+            },
+            {
+                "name": "emit",
+                "kind": "function",
+                "doc": "Says something to every client of this machine.",
+                "code": "export function emit(name: string, payload: unknown): void;"
+            },
+            {
+                "name": "defineNodeContext",
+                "kind": "function",
+                "doc": "What an agent reads of a node along a line, also with no client open.",
+                "code": "export function defineNodeContext<Data>(nodeType: string, read: (node: { data: Data }) => Promise<{ text: string }[]> | { text: string }[]): void;"
+            },
+            {
+                "name": "defineAgentTool",
+                "kind": "function",
+                "doc": "Needs `agents.tools`. Any agent on this machine can then find it with `ruimte-context tool list` and call it with `tool run`. Having it starts `server/` with the machine, since an agent can only find what is running. It answers in text.",
+                "code": "export function defineAgentTool(tool: { id: string; description: string; parameters?: object; run(input: any, context: { caller: string }): string | Promise<string> }): void;"
+            },
+            {
+                "name": "schedule",
+                "kind": "function",
+                "doc": "Needs the permission `clock`. Runs on this process's own clock: `every` is like 30s, 5m or 1h, of at least 10 seconds.",
+                "code": "export function schedule(task: { id: string; every: string; run(): void | Promise<void> }): void;"
+            },
+            {
+                "name": "agents",
+                "kind": "const",
+                "doc": null,
+                "code": "export const agents: {\n    /** Needs `agents.run`. */\n    run(options: { prompt: string; context?: string[]; provider?: string }): Promise<{ text: string }>;\n    /** Needs `agents.start`. A chat a person sees, supervised at most: on the canvas of `viewId`, or a view of its own in the sidebar without one. */\n    start(options: { projectId: string; prompt?: string; provider?: string; title?: string; viewId?: string; beside?: string }): Promise<{ nodeId: string }>;\n};"
+            },
+            {
+                "name": "chats",
+                "kind": "const",
+                "doc": null,
+                "code": "export const chats: {\n    /** Needs `chats.read`. */\n    list(): Promise<unknown[]>;\n    /** Needs `chats.send`. Wakes the chat. At most 20 messages per chat per hour. */\n    send(chatId: string, text: string): Promise<void>;\n};"
+            },
+            {
+                "name": "storage",
+                "kind": "const",
+                "doc": null,
+                "code": "export const storage: {\n    get<Value>(key: string): Promise<Value | undefined>;\n    set(key: string, value: unknown): Promise<void>;\n    delete(key: string): Promise<void>;\n};"
+            },
+            {
+                "name": "secrets",
+                "kind": "const",
+                "doc": "Kept readable only by the person who runs the machine.",
+                "code": "export const secrets: {\n    get(key: string): Promise<string | undefined>;\n    set(key: string, value: string): Promise<void>;\n};"
+            },
+            {
+                "name": "machine",
+                "kind": "const",
+                "doc": null,
+                "code": "export const machine: {\n    platform: string;\n    dataFolder: string;\n    /** An action of the machine in a project, such as launch.start, within what your manifest asks for. */\n    run(projectId: string, action: string, input?: object): Promise<any>;\n};"
+            },
+            {
+                "name": "defineLanguageServer",
+                "kind": "function",
+                "doc": "Needs `languages.servers`. Adds a server, listed in Settings like one a person added, and started without asking: installing the extension was the approval. Calling it again with the same name changes it, and removing the extension removes it unless a person edited it. Rejects when the command is not on this machine.",
+                "code": "export function defineLanguageServer(server: { name: string; command: string; args?: string[]; env?: Record<string, string>; languages: string[]; patterns: string[] }): Promise<void>;"
+            },
+            {
+                "name": "log",
+                "kind": "const",
+                "doc": null,
+                "code": "export const log: {\n    info(message: string): void;\n    error(message: string, error?: unknown): void;\n};"
+            }
+        ]
+    },
+    {
+        "module": "ui",
+        "entries": [
+            {
+                "name": "@adecore/ui",
+                "kind": "export",
+                "doc": "The components of Ruimte. Optional: any other React library works too.",
+                "code": "export * from '@adecore/ui';"
+            }
+        ]
+    },
+    {
+        "module": "testing",
+        "entries": [
+            {
+                "name": "definitions",
+                "kind": "function",
+                "doc": "What `client/index.ts` defined so far, in order. Available under `ruimte extension test`.",
+                "code": "export function definitions(): { kind: string; definition: unknown }[];"
+            },
+            {
+                "name": "slotAnswer",
+                "kind": "function",
+                "doc": "What a slot of an action, menu or widget answers for this context.",
+                "code": "export function slotAnswer(definition: { slots?: object }, slot: string, context: object): unknown;"
+            },
+            {
+                "name": "renderSurface",
+                "kind": "function",
+                "doc": "Draws a component to a string, with `server` standing in for `server/`.",
+                "code": "export function renderSurface<Props extends object>(\n    component: ComponentType<Props>,\n    options?: { server?: Record<string, (...args: never[]) => unknown>; data?: unknown; props?: Props }\n): string;"
+            }
+        ]
+    }
+]

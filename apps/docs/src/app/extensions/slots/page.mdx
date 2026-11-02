@@ -1,0 +1,104 @@
+import { SlotTable } from '@/components/SlotTable';
+
+export const metadata = { title: 'Slots and actions' };
+
+# Slots and actions
+
+<p className="lead">A slot is a place in Ruimte where an extension can add something: a node's header, the canvas menu, the editor's status bar. You decide which places, and what shows in each.</p>
+
+Three things go in slots:
+
+- `defineAction` is a button in a bar, or an item in a menu.
+- `defineMenu` is a menu of your own: a submenu in a menu, a dropdown in a bar.
+- `defineWidget` is your own React.
+
+## Actions
+
+```ts
+defineAction({
+    id: 'summarize',
+    title: 'Summarize',
+    icon: 'sparkles',
+    shortcut: 'mod+alt+s',
+    slots: {
+        selectionBar: ({ nodes }) => nodes.length > 1,
+        nodeMenu: true
+    },
+    async run({ nodes, signal }) {
+        // ...
+    }
+});
+```
+
+Each slot gets a function that receives what is true at that place and answers:
+
+- `false` to hide the action there,
+- `true` to show it as it is,
+- an object to change what it shows there: `title`, `icon`, `badge`, `order`, or `disabled` with an optional reason.
+
+```ts
+slots: {
+    nodeHeader: ({ node }) => node.kind === 'terminal' && { badge: 'new' }
+}
+```
+
+While `run` is pending, the nodes it is about show a spinner, which also stops the action through `signal`, and its button is disabled for those nodes. When `run` throws, the person sees the error. For work that is no action, `host.busy` shows the same spinner.
+
+An action without `slots` shows only where a menu of yours puts it, and gets that menu's context. Type that context yourself with `defineAction<{ node: NodeInfo }>`.
+
+A `shortcut` needs `mod` or `alt`. Pressed, it runs with the context of the command palette.
+
+## Menus
+
+```ts
+defineMenu({
+    id: 'standup',
+    title: 'Standup',
+    icon: 'calendar',
+    slots: { nodeMenu: true, canvasMenu: true },
+    items: (context) => [summarize, 'separator', { title: 'Settings', run: () => host.openSettings() }]
+});
+```
+
+An item is an action, `'separator'`, an item with `title` and `run` (and `checked` for a toggle), or a submenu with `title` and `items`. In a menu of Ruimte's own, an extension always comes below Ruimte's items.
+
+## Widgets
+
+```ts
+defineWidget({
+    id: 'count',
+    slots: { editorStatusBar: true },
+    component: () => import('./WordCount')
+});
+```
+
+The component gets `context`, the same object a slot function gets. A widget works in every slot, also in a menu.
+
+## Every slot
+
+Every slot also gets the base context: the `project`, the `view` in front, the `machine` and the `theme`.
+
+<SlotTable />
+
+## The command palette
+
+`commandPalette` puts an action in the palette. `definePaletteSource` adds rows for what a person types, from your own search:
+
+```ts
+definePaletteSource({
+    id: 'issues',
+    title: 'Issues',
+    search: async (query) =>
+        (await findIssues(query)).map((issue) => ({ id: issue.id, title: issue.title, detail: issue.state, run: () => host.openUrl(issue.url) }))
+});
+```
+
+It runs after a pause in the typing. A source that is slow or fails costs only its own rows. `defineCommand` adds a plain command with no slots.
+
+## Templates
+
+`defineTemplate` adds an entry under Extensions in the canvas menu that builds something at the spot a person clicked.
+
+## Finding the slots
+
+While `ruimte extension dev` runs, "Show extension slots" in the command palette outlines every slot on the screen with its name. Its tooltip lists what the slot tells.

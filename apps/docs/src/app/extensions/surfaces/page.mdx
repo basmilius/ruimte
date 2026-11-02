@@ -1,0 +1,135 @@
+export const metadata = { title: 'Surfaces' };
+
+# Surfaces
+
+<p className="lead">A surface is a rectangle an extension draws itself: a panel, a view, a node, a card, an overlay or a viewer.</p>
+
+Every surface takes its component as a lazy import, `() => import('./Panel')`, so its code loads only when a person opens it. Each one sits inside an error boundary of its own: a surface that throws shows the error in its own rectangle, and the rest of Ruimte goes on.
+
+Instead of `component`, a surface can name a `frame`: an HTML file in your pack that runs in a sandboxed frame with an origin of its own and no storage. It reaches the network only on the hosts the manifest names as `net:` permissions, such as `"net:api.example.com"`, over HTTPS. Use it for code you would rather keep apart from the app's page. The frame works in the desktop app only.
+
+```ts
+definePanel({ id: 'frame', title: 'Report', icon: 'frame', frame: 'views/report.html' });
+```
+
+The frame calls your server part by posting a message to its parent, and gets the answer the same way:
+
+```ts
+parent.postMessage({ ruimte: 1, method: 'summary', args: [] }, '*');
+
+window.addEventListener('message', (event) => {
+    if (event.data?.ruimte === 1) {
+        console.log(event.data.error ?? event.data.result);
+    }
+});
+```
+
+## Panels
+
+A panel docks beside the canvas, like Ruimte's own files and git panels.
+
+```ts
+const panel = definePanel<{ chatId: string }>({
+    id: 'review',
+    title: 'Review',
+    icon: 'list-checks',
+    component: () => import('./ReviewPanel')
+});
+
+panel.open({ chatId: 'chat-1' });
+panel.setBadge('3');
+```
+
+The component gets `params`, the value the panel was last opened with.
+
+## Views
+
+A view fills the window and shows up in the sidebar beside canvases, chats and files. `open(params)` opens it.
+
+```ts
+const dashboard = defineView({ id: 'dashboard', title: 'Dashboard', icon: 'gauge', component: () => import('./Dashboard') });
+```
+
+## Nodes
+
+A node is a card on the canvas. Its data lives in the project file, so it survives a reload and travels with the project.
+
+```ts
+defineNode<{ count: number }>({
+    id: 'counter',
+    title: 'Counter',
+    icon: 'hash',
+    size: { width: 320, height: 200 },
+    initialData: { count: 0 },
+    component: () => import('./Counter')
+});
+```
+
+```tsx
+export default function Counter() {
+    const [data, setData] = useNodeData<{ count: number }>();
+
+    return <button onClick={() => setData({ count: data.count + 1 })}>{data.count}</button>;
+}
+```
+
+A person adds it from the Extensions submenu of the canvas menu, or from the command palette. `addFrom` places that "Add" elsewhere. When the shape of the data changes, raise `dataVersion` and give `migrate`, which gets the stored data and its version.
+
+An agent reads a node of yours along a line once the server part says what it holds: see `defineNodeContext` in [The server part](/extensions/server).
+
+## Sidebar cards
+
+```ts
+defineSidebarCard({ id: 'today', title: 'Today', component: () => import('./Today') });
+```
+
+## Overlays
+
+An overlay opens your UI over the app. Ruimte draws the header with its title and a close button, and the animation; you draw the body. `open` answers what `close` was given, or `null` when the person dismissed it.
+
+```ts
+const rename = defineOverlay<{ name: string }, string>({
+    id: 'rename',
+    title: 'Rename',
+    size: 'sm',
+    component: () => import('./Rename')
+});
+
+const name = await rename.open({ name: 'Draft' });
+```
+
+For a plain question, `host.confirm`, `host.prompt` and `host.pick` ask through Ruimte's own dialogs.
+
+`defineCanvasOverlay` draws over the whole canvas, under Ruimte's own controls. It lets clicks through; set `pointer-events: auto` on what should take them.
+
+## File and diff viewers
+
+```ts
+defineFileViewer({ id: 'csv', title: 'Table', extensions: ['csv'], component: () => import('./CsvTable') });
+defineDiffViewer({ id: 'csv', title: 'Table diff', extensions: ['csv'], component: () => import('./CsvDiff') });
+defineFileIcon({ extensions: ['csv'], path: 'assets/csv.svg' });
+```
+
+A viewer opens every file with those extensions, with Ruimte's own view one click away. The file viewer gets `file` with its `text`; the diff viewer gets `file` and the `diff`.
+
+## Settings
+
+Settings, Extensions shows a page for every extension. Give it fields and Ruimte draws them, or draw your own:
+
+```ts
+defineExtensionSettings({
+    fields: [
+        { key: 'tone', type: 'select', label: 'Tone', default: 'short', options: [{ value: 'short', label: 'Short' }, { value: 'long', label: 'Long' }] }
+    ]
+});
+
+const tone = useSetting<string>('tone');
+```
+
+## Words and numbers
+
+`useLocale()` gives `t` for words from `locales/<language>.json`, with English as the fallback, and `format` for every number and date, in the language and region the person chose.
+
+## Storage
+
+`useStorage(key, initial, scope)` keeps a value. `computer` stays on this computer; `project` and `machine` live on the machine, where the server part reads `machine` keys too.

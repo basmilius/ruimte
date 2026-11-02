@@ -51,9 +51,9 @@ export function defineOverlay<Params = void, Result = void>(overlay: {
 }): { open(params: Params): Promise<Result | null>; close(): void };
 /** Draws these tools' calls in a chat, by their exact name, instead of the thread's own view. */
 export function defineToolResult(result: { id: string; tools: string[]; component: LazyComponent<{ call: { name: string; input: unknown; output: string | null; state: string } }> }): void;
-/** After `/` in a chat. It expands into the prompt, and the person still sends it. */
 /** Rows in the command palette for what a person types. It waits for a pause in the typing; a slow or failing one costs only its own rows. */
 export function definePaletteSource(source: { id: string; title: string; search(query: string): Promise<{ id: string; title: string; detail?: string; run(): void }[]> }): void;
+/** After `/` in a chat. It expands into the prompt, and the person still sends it. */
 export function defineSlashCommand(command: { name: string; description: string; run(args: string): string | Promise<string> }): void;
 /** Things from outside the project for `#` in a chat. Picking one puts what `read` answers in the prompt. */
 export function defineReference(reference: { id: string; title: string; list(): Promise<{ id: string; name: string }[]>; read(item: { id: string; name: string }): Promise<string> }): void;

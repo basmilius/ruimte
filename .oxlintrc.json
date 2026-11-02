@@ -34,9 +34,12 @@
     },
     {
       // Next.js reads these exports from a layout or page, beside the component.
-      "files": ["apps/site/src/app/**"],
+      "files": ["apps/site/src/app/**", "apps/docs/src/app/**", "apps/docs/src/mdx-components.tsx"],
       "rules": {
-        "react/only-export-components": ["warn", { "allowConstantExport": true, "allowExportNames": ["metadata", "viewport", "dynamic"] }]
+        "react/only-export-components": [
+          "warn",
+          { "allowConstantExport": true, "allowExportNames": ["metadata", "viewport", "dynamic", "dynamicParams", "generateStaticParams", "generateMetadata", "useMDXComponents"] }
+        ]
       }
     }
   ]
