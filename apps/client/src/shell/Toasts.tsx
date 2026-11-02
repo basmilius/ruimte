@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useToasts, type Toast } from '@/state/toasts';
+import { useWindow } from '@/state/window';
 import { CopyButton, Toasts as ToastStack } from '@adecore/ui';
 
 /* Keep copy feedback on this button rather than opening another toast. */
@@ -27,6 +28,9 @@ function footerOf(toast: Toast) {
  * say about a view is not here but in the banner over the views, where a person looks for a decision.
  */
 export function Toasts() {
-    // The stack sits outside the workspace, so it steps left of the rail (48 pixels) by looking for it.
-    return <ToastStack store={toastStore} footer={footerOf} className="[body:has(.ade-workspace[data-rail])_&]:right-16" />;
+    const inWorkspace = useWindow((s) => s.content.kind === 'workspace');
+
+    // The stack sits outside the workspace, so it steps left of the rail (48 pixels) that every workspace has; important over the stack's own `right-4`.
+    // Never through `body:has(...)`: that restyles the whole page on every DOM change and made each interaction three times as slow.
+    return <ToastStack store={toastStore} footer={footerOf} className={inWorkspace ? 'right-16!' : undefined} />;
 }
