@@ -342,7 +342,7 @@ const DEFAULT_SETTINGS: Settings = {
     aiInlineAgent: { ...DEFAULT_INLINE_EDIT_AGENT },
     aiAgentChanges: DEFAULT_AGENT_CHANGES_MODE,
     aiAttribution: true,
-    aiCodeHelp: true,
+    aiCodeHelp: false,
     aiAssistAgent: null,
     aiGhostText: DEFAULT_GHOST_TEXT_MODE,
     codeLigatures: true,
@@ -414,6 +414,11 @@ function settingsOf(state: Settings): Settings {
     return Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, state[key as keyof Settings]])) as unknown as Settings;
 }
 
+/* An older installation may have saved nothing, so an absent choice always becomes an explicit opt-out. */
+function needsCodeHelpMigration(stored: Partial<Settings>): boolean {
+    return typeof stored.aiCodeHelp !== 'boolean';
+}
+
 /* What a stored blob means, key by key. Everything a client wrote before a setting existed, or wrote
    as something else, reads as what a fresh client gets. */
 export function settingsFrom(stored: Partial<Settings>): Settings {
@@ -441,7 +446,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         aiInlineAgent: inlineEditAgentFrom(stored.aiInlineAgent),
         aiAgentChanges: agentChangesModeFrom(stored.aiAgentChanges),
         aiAttribution: stored.aiAttribution !== false,
-        aiCodeHelp: stored.aiCodeHelp !== false,
+        aiCodeHelp: stored.aiCodeHelp === true,
         aiAssistAgent: EditorAssistAgentSchema.nullable().catch(null).parse(stored.aiAssistAgent),
         aiGhostText: ghostTextModeFrom(stored.aiGhostText),
         codeLigatures: stored.codeLigatures !== false,
@@ -500,7 +505,15 @@ const storedSettings = storedJson<Partial<Settings>, Settings>(
 
 function read(): Settings {
     try {
-        return settingsFrom(storedSettings.read() ?? {});
+        const stored = storedSettings.read() ?? {};
+        const settings = settingsFrom(stored);
+
+        // Written back once, so from then on the blob holds its own answer and no later rule decides it again.
+        if (needsCodeHelpMigration(stored)) {
+            storedSettings.write(settingsOf(settings));
+        }
+
+        return settings;
     } catch {
         return DEFAULT_SETTINGS;
     }

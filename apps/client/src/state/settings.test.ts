@@ -2,7 +2,17 @@ import { describe, expect, test } from 'bun:test';
 import { bundledThemesInfo } from 'shiki/themes';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { DEFAULT_CODE_FOLDING } from './code-folding';
-import { codeLineHeight, codeThemesOf, iceServersFrom, settingsFrom, terminalFontOf, useSettings, type KeepAwakeMode, type Settings } from './settings';
+import {
+    codeLineHeight,
+    codeThemesOf,
+    iceServersFrom,
+    SETTINGS_STORAGE_KEY,
+    settingsFrom,
+    terminalFontOf,
+    useSettings,
+    type KeepAwakeMode,
+    type Settings
+} from './settings';
 
 test('project glow defaults to on while preserving an explicit opt-out', () => {
     expect(settingsFrom({}).projectGlow).toBe(true);
@@ -118,6 +128,102 @@ describe('the tiles of a chat map', () => {
         expect(settingsFrom({ accent: 'blue' }).chatMapTiles).toBe(true);
         expect(settingsFrom({ chatMapTiles: true }).chatMapTiles).toBe(true);
         expect(settingsFrom({ chatMapTiles: false }).chatMapTiles).toBe(false);
+    });
+});
+
+describe('help from the editor model', () => {
+    const legacy = (value: unknown): Partial<Settings> => ({ aiOnDeviceHelp: value }) as Partial<Settings>;
+
+    test('is off without an explicit choice, since an older client may never have saved settings', () => {
+        expect(settingsFrom({}).aiCodeHelp).toBe(false);
+    });
+
+    test('is off for a client that stored settings before it, whatever its on-device switch said', () => {
+        expect(settingsFrom(legacy(false)).aiCodeHelp).toBe(false);
+        expect(settingsFrom(legacy(true)).aiCodeHelp).toBe(false);
+        expect(settingsFrom({ accent: 'blue' }).aiCodeHelp).toBe(false);
+        expect(settingsFrom({ aiCodeHelp: 'yes' as unknown as boolean, accent: 'blue' }).aiCodeHelp).toBe(false);
+    });
+
+    test('keeps a switch written since, over the one left beside it', () => {
+        expect(settingsFrom({ ...legacy(false), aiCodeHelp: true }).aiCodeHelp).toBe(true);
+        expect(settingsFrom({ ...legacy(true), aiCodeHelp: false }).aiCodeHelp).toBe(false);
+        expect(settingsFrom({ aiCodeHelp: true }).aiCodeHelp).toBe(true);
+    });
+
+    test.each([
+        ['missing', null],
+        ['empty', '{}'],
+        ['invalid', '{']
+    ])('keeps editor help off with %s settings until an explicit choice survives a reload', (_kind, blob) => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>();
+
+        if (blob !== null) {
+            items.set(SETTINGS_STORAGE_KEY, blob);
+        }
+
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+
+        try {
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(false);
+
+            useSettings.getState().update({ aiCodeHelp: true });
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(true);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+
+    test('is decided once for an older blob, written back, and a person turning it on keeps it on', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const items = new Map<string, string>([[SETTINGS_STORAGE_KEY, JSON.stringify({ aiOnDeviceHelp: true, accent: 'blue' })]]);
+        const stored = (): Record<string, unknown> => JSON.parse(items.get(SETTINGS_STORAGE_KEY)!);
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => items.set(key, value)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(false);
+            expect(stored()).toMatchObject({ aiCodeHelp: false, accent: 'blue' });
+            expect(stored().aiOnDeviceHelp).toBeUndefined();
+
+            useSettings.getState().update({ aiCodeHelp: true });
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(true);
+            expect(stored().aiCodeHelp).toBe(true);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
+    });
+
+    test('leaves the blob of a client with an answer alone as it reads it', () => {
+        const previousStorage = globalThis.localStorage;
+        const previous = useSettings.getState();
+        const writes: string[] = [];
+        const blob = JSON.stringify({ aiCodeHelp: false, accent: 'blue' });
+        globalThis.localStorage = {
+            getItem: () => blob,
+            setItem: (key: string) => writes.push(key)
+        } as unknown as Storage;
+        try {
+            useSettings.getState().reload();
+            expect(useSettings.getState().aiCodeHelp).toBe(false);
+            expect(writes).toEqual([]);
+        } finally {
+            globalThis.localStorage = previousStorage;
+            useSettings.setState(previous);
+        }
     });
 });
 
