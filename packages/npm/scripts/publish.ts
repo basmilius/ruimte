@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { EXTENSION_DIR } from '../src/manifest';
-import { latestFromView, planPublish, publishedFromView, type PackageToPublish } from '../src/publish-plan';
+import { landedAfterAll, latestFromView, planPublish, publishedFromView, type PackageToPublish, type RegistryLookup } from '../src/publish-plan';
 import { LAUNCHER_NAME } from '../src/targets';
 
 /* Publishes the platform binaries and the extension API's types before the launcher, skipping versions already on npm.
@@ -53,10 +53,12 @@ function npm(args: string[], cwd?: string) {
     return { code: result.exitCode ?? 1, stdout: result.stdout.toString(), stderr: result.stderr.toString() };
 }
 
-const steps = await planPublish(packages, version!, {
-    published: async (name, wanted) => publishedFromView(wanted, npm(['view', `${name}@${wanted}`, 'version'])),
-    latest: async (name) => latestFromView(npm(['view', name, 'dist-tags.latest']))
-});
+// `--prefer-online` skips npm's cache; the registry's own lag after a publish remains.
+const registry: RegistryLookup = {
+    published: async (name, wanted) => publishedFromView(wanted, npm(['view', `${name}@${wanted}`, 'version', '--prefer-online'])),
+    latest: async (name) => latestFromView(npm(['view', name, 'dist-tags.latest', '--prefer-online']))
+};
+const steps = await planPublish(packages, version!, registry);
 
 for (const step of steps) {
     if (step.action === 'skip') {
@@ -66,6 +68,10 @@ for (const step of steps) {
     const args = ['publish', '--access', 'public', '--tag', step.tag, ...(values['dry-run'] ? ['--dry-run'] : [])];
     console.log(`npm ${args.join(' ')} (${step.name}@${version})`);
     const result = Bun.spawnSync(['npm', ...args], { cwd: step.dir, stdio: ['ignore', 'inherit', 'inherit'], timeout: 10 * 60_000 });
+    if (result.exitCode !== 0 && !values['dry-run'] && (await landedAfterAll(registry, step.name, version!, () => Bun.sleep(20_000)))) {
+        console.log(`${step.name}@${version} is on npm after all; going on.`);
+        continue;
+    }
     if (result.exitCode !== 0) {
         // Stopping here keeps `ruimte` from going out while a binary it names is missing.
         console.error(`Publishing ${step.name} failed; nothing after it was published.`);

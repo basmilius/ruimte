@@ -49,6 +49,24 @@ export async function planPublish(packages: PackageToPublish[], version: string,
     return steps;
 }
 
+/*
+ * A failed `npm publish` may have landed after all: npm retries an upload that took too long and
+ * trips over its own first attempt (a 409 from the transparency log), and a rerun the registry's lag
+ * kept from skipping a version gets E403. The registry shows a new version only after a while, so it
+ * is asked a few times before the failure counts.
+ */
+export async function landedAfterAll(registry: RegistryLookup, name: string, version: string, wait: () => Promise<void>, attempts = 6): Promise<boolean> {
+    for (let i = 0; i < attempts; i++) {
+        await wait();
+
+        if (await registry.published(name, version).catch(() => false)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export interface CommandOutcome {
     code: number;
     stdout: string;
