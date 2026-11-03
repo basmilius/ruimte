@@ -346,7 +346,7 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                 color={manifest.color}
                 name={manifest.name}
                 meta={[manifest.publisher, manifest.version]}
-                badge={entry.dev ? t('extensions.development') : undefined}
+                badge={entry.dev ? t('extensions.development') : entry.fromStore === true ? undefined : t('extensions.fromDiskBadge')}
                 description={manifest.description}
             />
             {failure !== undefined && <p className="text-sm text-status-error">{failure}</p>}

@@ -69,8 +69,8 @@ function machineInFront(): Transport {
     return machineTransport(currentEndpointId());
 }
 
-async function installOn(link: Transport, bytes: Uint8Array): Promise<{ onMachine: boolean }> {
-    await desktop()?.extensions?.install(bytes);
+async function installOn(link: Transport, bytes: Uint8Array, fromStore: boolean): Promise<{ onMachine: boolean }> {
+    await desktop()?.extensions?.install(bytes, { fromStore });
 
     const onMachine = await extensionRequest(link, 'extension.install', { pack: base64Of(bytes) }).then(
         () => true,
@@ -87,7 +87,7 @@ async function installOn(link: Transport, bytes: Uint8Array): Promise<{ onMachin
  * takes it from its owner, so on someone else's the client part still works and this says what is missing.
  */
 export function installPack(bytes: Uint8Array): Promise<{ onMachine: boolean }> {
-    return installOn(machineInFront(), bytes);
+    return installOn(machineInFront(), bytes, false);
 }
 
 export async function installFromStore(entry: ExtensionStoreEntry, fetcher: typeof fetch = fetch): Promise<{ onMachine: boolean }> {
@@ -99,7 +99,7 @@ export async function installFromStore(entry: ExtensionStoreEntry, fetcher: type
         throw new Error('This pack is not the one the store reviewed');
     }
 
-    return installOn(link, bytes);
+    return installOn(link, bytes, true);
 }
 
 export interface PackPreview {

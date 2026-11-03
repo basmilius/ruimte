@@ -66,7 +66,7 @@ const quickLookBridge = {
 const bridge = {
     extensions: {
         list: () => ipcRenderer.invoke('extensions:list'),
-        install: (pack: Uint8Array) => ipcRenderer.invoke('extensions:install', pack),
+        install: (pack: Uint8Array, options?: { fromStore?: boolean }) => ipcRenderer.invoke('extensions:install', pack, options),
         remove: (id: string) => ipcRenderer.invoke('extensions:remove', id),
         setEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('extensions:set-enabled', id, enabled),
         link: (folder: string, revision: number, enabled?: boolean) => ipcRenderer.invoke('extensions:link', folder, revision, enabled),

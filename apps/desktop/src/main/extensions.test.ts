@@ -117,6 +117,17 @@ describe('the client extensions of the shell', () => {
         expect(await Promise.all(seen)).toEqual([[false], [false]]);
     });
 
+    test('remember which pack came from the store, until one from a file replaces it', async () => {
+        const store = extensions();
+
+        expect((await store.install(pack({}), true)).fromStore).toBe(true);
+        expect((await store.list())[0]?.fromStore).toBe(true);
+
+        await store.install(pack({ 'client/index.js': 'export {};' }));
+
+        expect((await store.list())[0]?.fromStore).toBeUndefined();
+    });
+
     test('keep both of two changes to the index made at once', async () => {
         const store = extensions();
         const other = gzipSync(

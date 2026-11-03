@@ -8,13 +8,15 @@ export interface InstalledClientExtension {
     hasClient: boolean;
     hasIcon?: boolean;
     dev: boolean;
+    /* Installed from the store; any other pack came from a file. Absent from a shell of before. */
+    fromStore?: boolean;
 }
 
 /* The client side of what a person installed on this computer. The shell keeps the files, since a window may have no machine of its own. */
 export interface ExtensionsBridge {
     list(): Promise<InstalledClientExtension[]>;
     /* The bytes of a `.rex`. Refuses a pack that does not hold together, and leaves what is installed alone. */
-    install(pack: Uint8Array): Promise<InstalledClientExtension>;
+    install(pack: Uint8Array, options?: { fromStore?: boolean }): Promise<InstalledClientExtension>;
     remove(id: string): Promise<void>;
     setEnabled(id: string, enabled: boolean): Promise<void>;
     /*

@@ -15,7 +15,7 @@ import { EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
 
-const IndexSchema = z.array(z.object({ id: z.string(), hash: z.string(), enabled: z.boolean() }));
+const IndexSchema = z.array(z.object({ id: z.string(), hash: z.string(), enabled: z.boolean(), fromStore: z.boolean().optional() }));
 type IndexEntry = z.infer<typeof IndexSchema>[number];
 
 const LOAD_MARK = /~\d+$/;
@@ -139,7 +139,8 @@ export class ClientExtensions {
             enabled: entry.enabled,
             hasClient: existsSync(join(this.root, entry.id, entry.hash, 'client', 'index.js')),
             hasIcon: existsSync(join(this.root, entry.id, entry.hash, EXTENSION_ICON_PATH)),
-            dev: false
+            dev: false,
+            ...(entry.fromStore === true ? { fromStore: true } : {})
         };
     }
 
@@ -163,7 +164,7 @@ export class ClientExtensions {
         return [...installed.flat(), ...linked];
     }
 
-    async install(pack: Uint8Array): Promise<InstalledClientExtension> {
+    async install(pack: Uint8Array, fromStore = false): Promise<InstalledClientExtension> {
         const bytes = Buffer.from(pack);
         const parsed = ExtensionPackSchema.parse(JSON.parse(gunzipSync(bytes).toString('utf8')));
         const paths = Object.keys(parsed.files);
@@ -201,7 +202,12 @@ export class ClientExtensions {
                 }
             }
 
-            const added = { id: manifest.id, hash, enabled: entries.find((each) => each.id === manifest.id)?.enabled ?? true };
+            const added = {
+                id: manifest.id,
+                hash,
+                enabled: entries.find((each) => each.id === manifest.id)?.enabled ?? true,
+                ...(fromStore ? { fromStore: true } : {})
+            };
 
             await this.writeIndex([...entries.filter((each) => each.id !== manifest.id), added]);
             touched();

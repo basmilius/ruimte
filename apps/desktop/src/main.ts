@@ -604,7 +604,7 @@ ipc.handle('browser:capture', async (_event, id: number) => {
 });
 
 ipc.handle('extensions:list', () => clientExtensions.list());
-ipc.handle('extensions:install', (_event, pack: Uint8Array) => clientExtensions.install(pack));
+ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => clientExtensions.install(pack, options?.fromStore === true));
 ipc.handle('extensions:remove', (_event, id: string) => clientExtensions.remove(id));
 ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => clientExtensions.setEnabled(id, enabled));
 ipc.handle('extensions:link', (_event, folder: string, revision: number, enabled?: unknown) =>

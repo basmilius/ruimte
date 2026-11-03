@@ -1903,6 +1903,7 @@
         "groupDevelopment": "In development",
         "groupInstalled": "Installed",
         "builtIn": "Built-in",
-        "development": "Development"
+        "development": "Development",
+        "fromDiskBadge": "From disk"
     }
 }

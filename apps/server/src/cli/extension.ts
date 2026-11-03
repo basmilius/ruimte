@@ -253,12 +253,15 @@ async function dev(options: LocalDaemonOptions): Promise<void> {
             timer = setTimeout(run, WATCH_DEBOUNCE_MS);
         }
     });
-    process.on('SIGINT', () => {
-        // With this run's own token, so a later `extension dev` of the same extension keeps its link.
-        void askDaemon(options, '/extensions/unlink', { id: manifest.id, owner })
-            .catch(() => undefined)
-            .finally(() => process.exit(0));
-    });
+    // Also when its terminal closes or something ends it, or the link outlives the run and hides what is installed.
+    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+        process.on(signal, () => {
+            // With this run's own token, so a later `extension dev` of the same extension keeps its link.
+            void askDaemon(options, '/extensions/unlink', { id: manifest.id, owner })
+                .catch(() => undefined)
+                .finally(() => process.exit(0));
+        });
+    }
     // What `server/` wrote and what the client said, together.
     const readLog = logTail(join(options.home, 'extensions', manifest.id, 'server.log'));
 
