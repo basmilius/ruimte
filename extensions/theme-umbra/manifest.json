@@ -1,0 +1,9 @@
+{
+    "id": "ruimte.umbra",
+    "name": "Umbra",
+    "version": "1.0.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "description": "A theme darker than Dark, with grounds just short of black.",
+    "color": "#3471fe"
+}

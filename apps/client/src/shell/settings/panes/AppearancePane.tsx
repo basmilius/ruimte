@@ -9,6 +9,7 @@ import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useSettings } from '@/state/settings';
 import { AccentRow, PaletteRow } from '@/shell/settings/panes/ColorRows';
 import { useInstalledExtensions } from '@/extensions/loader';
+import { useContributions } from '@/extensions/registry';
 import { chooseExtensionTheme, listExtensionThemes, type ThemeChoice } from '@/extensions/themes';
 import { useExtensionTheme } from '@/state/extension-theme';
 import { useTheme, type Theme } from '@/state/theme';
@@ -36,6 +37,7 @@ function AccentMark({ className }: { className: string }) {
 /* The themes that enabled extensions bring, loaded again when what is installed changes. */
 function useExtensionThemes(): readonly ThemeChoice[] {
     const installed = useInstalledExtensions((state) => state.installed);
+    const builtInThemes = useContributions((state) => state.builtInThemes);
     const [themes, setThemes] = useState<readonly ThemeChoice[]>([]);
 
     useEffect(() => {
@@ -50,7 +52,7 @@ function useExtensionThemes(): readonly ThemeChoice[] {
         return () => {
             current = false;
         };
-    }, [installed]);
+    }, [installed, builtInThemes]);
 
     return themes;
 }

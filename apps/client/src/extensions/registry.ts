@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { ExtensionManifest, ExtensionSlotName } from '@ruimte/contracts';
+import type { ExtensionManifest, ExtensionSlotName, ExtensionTheme } from '@ruimte/contracts';
 import { create } from 'zustand';
 
 export type PanelGroup = 'project' | 'connected' | 'made' | 'extensions';
@@ -206,6 +206,15 @@ export interface SettingGroup {
     fields: readonly SettingField[];
 }
 
+/* A theme a built-in brings, offered beside those of installed extensions and chosen the same way. */
+export interface BuiltInThemeContribution {
+    // `<extension id>/<name>`, the key a chosen theme is stored under.
+    id: string;
+    extensionId: string;
+    theme: ExtensionTheme;
+    thumbnailUrl: string;
+}
+
 export interface ExtensionSchemaContribution {
     id: string;
     // Every field of every group, for a lookup by key.
@@ -222,6 +231,7 @@ export interface BuiltInContribution {
 
 export interface Contributions {
     builtIns: readonly BuiltInContribution[];
+    builtInThemes: readonly BuiltInThemeContribution[];
     panels: readonly PanelContribution[];
     settingsSections: readonly SettingsSectionContribution[];
     canvasLayers: readonly CanvasLayerContribution[];
@@ -249,6 +259,7 @@ type ContributionOf<Kind extends ContributionKind> = Contributions[Kind][number]
 
 export const useContributions = create<Contributions>(() => ({
     builtIns: [],
+    builtInThemes: [],
     panels: [],
     settingsSections: [],
     canvasLayers: [],

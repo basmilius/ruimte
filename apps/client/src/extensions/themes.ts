@@ -2,6 +2,7 @@ import { ExtensionThemeSchema, extensionThemeCssProblem, type ExtensionTheme } f
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
 import { storedJson } from '@/state/stored-json';
+import { useContributions } from '@/extensions/registry';
 import { useExtensionTheme } from '@/state/extension-theme';
 import { IS_STATION } from '@/station';
 import { previewColors } from '@/state/settings';
@@ -112,14 +113,34 @@ async function loadTheme(extension: InstalledClientExtension, path: string): Pro
     };
 }
 
-/* Every theme of what is on. One that does not load is left out, and the others stay. */
+function builtInThemes(): ThemeChoice[] {
+    return useContributions.getState().builtInThemes.map((contribution) => ({
+        key: contribution.id,
+        extensionId: contribution.extensionId,
+        path: contribution.id.slice(contribution.extensionId.length + 1),
+        name: contribution.theme.name,
+        theme: contribution.theme,
+        cssUrl: null,
+        thumbnailUrl: contribution.thumbnailUrl
+    }));
+}
+
+function isBuiltIn(extensionId: string): boolean {
+    return useContributions.getState().builtIns.some((builtIn) => builtIn.id === extensionId);
+}
+
+function extensionIdOf(key: string): string {
+    return key.slice(0, key.indexOf('/'));
+}
+
+/* Every theme of what is on, the built-ins' first. One that does not load is left out, and the others stay. */
 export async function listExtensionThemes(installed: readonly InstalledClientExtension[]): Promise<ThemeChoice[]> {
     const paths = installed
         .filter((extension) => extension.enabled)
         .flatMap((extension) => (extension.manifest.themes ?? []).map((path) => ({ extension, path })));
     const loaded = await Promise.allSettled(paths.map(({ extension, path }) => loadTheme(extension, path)));
 
-    return loaded.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+    return [...builtInThemes(), ...loaded.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))];
 }
 
 export function chooseExtensionTheme(choice: ThemeChoice | null): void {
@@ -152,8 +173,9 @@ export async function refreshExtensionTheme(installed: readonly InstalledClientE
     const choice = (await listExtensionThemes(installed)).find((each) => each.key === stored.key);
 
     if (choice === undefined) {
-        const extensionId = stored.key.slice(0, stored.key.indexOf('/'));
-        const removed = !IS_STATION && !installed.some((extension) => extension.manifest.id === extensionId);
+        const extensionId = extensionIdOf(stored.key);
+        // A built-in is never removed, only turned off.
+        const removed = !IS_STATION && !isBuiltIn(extensionId) && !installed.some((extension) => extension.manifest.id === extensionId);
 
         if (removed) {
             chooseExtensionTheme(null);
@@ -169,3 +191,29 @@ export async function refreshExtensionTheme(installed: readonly InstalledClientE
     storedTheme.write(next);
     paint(next);
 }
+
+/*
+ * A built-in turned off takes its theme out of the page and keeps it chosen; turned on again, it paints
+ * it anew. The list of installed extensions has no say in it, so it may not have come in yet.
+ */
+useContributions.subscribe((state, previous) => {
+    const stored = storedTheme.read();
+
+    if (state.builtInThemes === previous.builtInThemes || stored === null || !isBuiltIn(extensionIdOf(stored.key))) {
+        return;
+    }
+
+    const choice = builtInThemes().find((each) => each.key === stored.key);
+
+    if (choice === undefined) {
+        paint(null);
+
+        return;
+    }
+
+    // Written again, so tokens a new Ruimte changed show from its first start.
+    const next: StoredTheme = { key: choice.key, tokens: tokensCss(choice.theme), cssUrl: null };
+
+    storedTheme.write(next);
+    paint(next);
+});

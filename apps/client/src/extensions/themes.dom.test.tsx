@@ -2,7 +2,16 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
 import { useSettings } from '@/state/settings';
 import { mount } from '../../testing/dom';
-import { activeExtensionTheme, applyStoredExtensionTheme, chooseExtensionTheme, refreshExtensionTheme, type ThemeChoice } from '@/extensions/themes';
+import { defineTheme } from '@/extensions/internal';
+import { contribute, type BuiltInThemeContribution } from '@/extensions/registry';
+import {
+    activeExtensionTheme,
+    applyStoredExtensionTheme,
+    chooseExtensionTheme,
+    listExtensionThemes,
+    refreshExtensionTheme,
+    type ThemeChoice
+} from '@/extensions/themes';
 
 const CHOICE: ThemeChoice = {
     key: 'acme.midnight/themes/midnight.json',
@@ -93,5 +102,62 @@ describe('an extension theme', () => {
 
         expect(themeText()).toBeNull();
         expect(activeExtensionTheme()).toBeNull();
+    });
+});
+
+describe("a built-in's theme", () => {
+    const DUSK: BuiltInThemeContribution = {
+        id: 'acme.dusk/dusk',
+        extensionId: 'acme.dusk',
+        theme: { name: 'Dusk', side: 'dark', thumbnail: 'dusk.svg', tokens: { '--surface': '#010101' } },
+        thumbnailUrl: 'data:,'
+    };
+    let takeBuiltInOut = (): void => {};
+    let takeThemeOut = (): void => {};
+
+    async function dusk(): Promise<ThemeChoice> {
+        const choice = (await listExtensionThemes([])).find((each) => each.key === DUSK.id);
+
+        if (choice === undefined) {
+            throw new Error('Dusk is not offered');
+        }
+
+        return choice;
+    }
+
+    beforeEach(() => {
+        localStorage.clear();
+        takeBuiltInOut = contribute('builtIns', {
+            id: 'acme.dusk',
+            manifest: { id: 'acme.dusk', name: 'Dusk', version: '1.0.0', api: 1 },
+            setEnabled: () => {}
+        });
+        takeThemeOut = defineTheme(DUSK);
+    });
+
+    afterEach(() => {
+        chooseExtensionTheme(null);
+        takeThemeOut();
+        takeBuiltInOut();
+    });
+
+    test('is offered with no extension installed, and stays chosen through a refresh', async () => {
+        chooseExtensionTheme(await dusk());
+        await refreshExtensionTheme([]);
+
+        expect(themeText()).toContain('--surface: #010101');
+        expect(activeExtensionTheme()).toBe(DUSK.id);
+    });
+
+    test('leaves the page while its built-in is off, and comes back with it', async () => {
+        chooseExtensionTheme(await dusk());
+        takeThemeOut();
+
+        expect(themeText()).toBeNull();
+        expect(activeExtensionTheme()).toBe(DUSK.id);
+
+        takeThemeOut = defineTheme(DUSK);
+
+        expect(themeText()).toContain('--surface: #010101');
     });
 });

@@ -6,6 +6,7 @@ import { extensionsInSafeMode } from '@/extensions/safe-mode';
 import { storedJson } from '@/state/stored-json';
 import {
     contribute,
+    type BuiltInThemeContribution,
     type CanvasLayerContribution,
     type CanvasLayerProps,
     type PanelContribution,
@@ -35,6 +36,10 @@ export function defineCanvasLayer(layer: Omit<CanvasLayerContribution, 'componen
 
 export function defineViewAccessory(accessory: Omit<ViewAccessoryContribution, 'component'> & { component: LazyComponent<ViewAccessoryProps> }): () => void {
     return contribute('viewAccessories', { ...accessory, component: lazy(accessory.component) });
+}
+
+export function defineTheme(theme: BuiltInThemeContribution): () => void {
+    return contribute('builtInThemes', theme);
 }
 
 /*

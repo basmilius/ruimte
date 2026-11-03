@@ -433,6 +433,10 @@
         "react-dom": "^19.3.1",
       },
     },
+    "extensions/theme-umbra": {
+      "name": "@ruimte/extension-theme-umbra",
+      "version": "0.0.0",
+    },
     "packages/actions": {
       "name": "@ruimte/actions",
       "version": "0.0.0",
@@ -1319,6 +1323,8 @@
     "@ruimte/extension-poc-themes": ["@ruimte/extension-poc-themes@workspace:extensions/poc-themes"],
 
     "@ruimte/extension-poc-workspace": ["@ruimte/extension-poc-workspace@workspace:extensions/poc-workspace"],
+
+    "@ruimte/extension-theme-umbra": ["@ruimte/extension-theme-umbra@workspace:extensions/theme-umbra"],
 
     "@ruimte/maps-worker": ["@ruimte/maps-worker@workspace:apps/maps-worker"],
 
