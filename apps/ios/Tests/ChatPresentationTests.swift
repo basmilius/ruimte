@@ -388,6 +388,18 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(ChatToolPresentation.groupLabel([edit("a", "error"), edit("b", "error")]).text, "Edit 2 calls")
     }
 
+    func testARunSaysHowManyOfItsCallsFailedApartFromItsLine() {
+        let read = { (path: String, state: String) in
+            self.tool(path, "Read", ["file_path": .string(path)], state: state).chatTool
+        }
+        XCTAssertNil(ChatToolPresentation.groupFailures([read("a", "done"), read("b", "done")]))
+        XCTAssertEqual(
+            ChatToolPresentation.groupFailures([read("a", "error"), read("b", "done"), read("c", "error")]), "2 failed")
+        XCTAssertEqual(
+            ChatToolPresentation.groupLabel([read("a", "error"), read("b", "done"), read("c", "error")]).text,
+            "Read 3 files")
+    }
+
     func testACallThatWaitsOnAnApprovalIsKnownByItsToolUse() {
         let presentation = ChatPresentation()
         let approval = item("p", "approval").setting("toolUseId", .string("call"))

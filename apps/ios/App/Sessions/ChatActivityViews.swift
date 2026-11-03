@@ -228,7 +228,9 @@ private struct ChatToolLine: View {
     var body: some View {
         let run = RuimteCommandLook.run(of: item)
         HStack(spacing: 8) {
+            // Only the mark and the word at the end say it failed, so the line stays readable in its own tone.
             ChatToolMarkView(mark: failed ? .lucide("circle-alert") : ChatToolPresentation.mark(item))
+                .foregroundStyle(failed ? MobileStyle.statusError : MobileStyle.muted)
             // The label is the body face and the detail mono, so only a shared baseline puts them on one line.
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 ChatLiveLabel(
@@ -274,7 +276,7 @@ private struct ChatToolLine: View {
             }
             .fixedSize().layoutPriority(3)
         }
-        .font(.footnote).foregroundStyle(failed ? MobileStyle.statusError : MobileStyle.muted)
+        .font(.footnote).foregroundStyle(MobileStyle.muted)
         .frame(minHeight: 28).contentShape(Rectangle())
     }
 }

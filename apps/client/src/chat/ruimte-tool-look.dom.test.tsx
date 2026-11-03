@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem, ProjectCanvasView } from '@ruimte/contracts';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { layOutChat, mount, openToolCall, type Mounted } from '../../testing/dom';
+import { clickOn, layOutChat, mount, openToolCall, until, type Mounted } from '../../testing/dom';
 import { claudeProvider } from '../../testing/fake-provider';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
@@ -109,15 +109,25 @@ afterEach(async () => {
 describe('a tool of the machine in a chat', () => {
     test('reads as the part of Ruimte it works on, with its fields, in place of the MCP name', () => {
         const line = lineOf('call-new')!;
-        expect(line).toBe('Ruimte Canvasnode new kind=note title="Open punten" view=Feature: Viewsmain');
+        expect(line).toBe('Ruimte Canvasnode new kind=note title="Open punten" view=#Feature: Viewsmain');
         expect(page.host.querySelector('[data-find-item="call-new"] .font-semibold')?.textContent).toBe('Ruimte');
         expect(line).not.toContain('mcp__ruimte__node_new');
     });
 
-    test('names a node by its title in any CLI shape, the id still behind it', () => {
-        expect(lineOf('call-go')).toStartWith('Ruimte Browsergo id=Downloads');
+    test('draws a node it names as the reference chip of a message, in any CLI shape, the id still behind it', () => {
+        expect(lineOf('call-go')).toStartWith('Ruimte Browsergo id=Feature: Views#Downloads');
+        const chips = [...page.host.querySelectorAll('[data-find-item="call-go"] [data-chip="reference"]')];
+        expect(chips.map((chip) => [chip.getAttribute('data-chip-value'), chip.getAttribute('data-chip-name'), chip.getAttribute('role')])).toEqual([
+            ['browser-3f2a9k1d', 'Downloads', 'button']
+        ]);
         const hidden = [...page.host.querySelectorAll('[data-find-item="call-go"] .sr-only')].map((element) => element.textContent);
-        expect(hidden).toEqual(['browser-3f2a9k1d']);
+        expect(hidden).toEqual(['#', 'browser-3f2a9k1d']);
+    });
+
+    test('opens a view it names from its chip, as a message does', async () => {
+        const chip = page.host.querySelector('[data-find-item="call-new"] [data-chip="reference"][data-chip-value="main"]');
+        await clickOn(chip);
+        await until(() => page.host.querySelector('[data-split-cell][data-view-id="main"]') !== null);
     });
 
     test('a notify reads as the message it sent, to whom and how it went', () => {

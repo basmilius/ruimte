@@ -150,7 +150,7 @@ describe('a tool of the MCP server', () => {
         expect(toolLine(mcp('1', 'mcp__ruimte__launch_read', { launch: 'api' }))).toEqual(['Launches', 'read launch=api']);
         expect(toolLine(mcp('1', 'mcp__ruimte__alert', { text: 'Groen' }))).toEqual(['Notification', 'text=Groen']);
         expect(toolLine(mcp('1', 'mcp__ruimte__guide', { topic: 'canvas' }))).toEqual(['Help', 'topic=canvas']);
-        expect(toolLine(mcp('1', 'mcp__ruimte__tool_run', { argument1: 'lint' }))).toEqual(['Using an extension tool', 'argument1=lint']);
+        expect(toolLine(mcp('1', 'mcp__ruimte__tool_run', { id: 'lint' }))).toEqual(['Using an extension tool', 'id=lint']);
     });
 
     test('reads the same from every CLI, and a toolkit this client does not know as the CLI named it', () => {

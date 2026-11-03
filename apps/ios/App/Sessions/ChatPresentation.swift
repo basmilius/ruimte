@@ -858,6 +858,12 @@ enum ChatToolPresentation {
         }
     }
 
+    /// How many calls of a run failed, said apart from the run's line in the error tone; nil when none did.
+    static func groupFailures(_ tools: [ChatToolItem]) -> String? {
+        let failed = tools.filter { $0.state == .error }.count
+        return failed == 0 ? nil : String(localized: "\(failed) failed")
+    }
+
     /// The line of a run of calls, as `summarizeGroup` in `chat/logic/timeline.ts` writes it: a run of
     /// `ruimte-context` calls as using Ruimte, and edits by the files they touched rather than the calls.
     static func groupLabel(_ tools: [ChatToolItem]) -> ChatToolSentence {

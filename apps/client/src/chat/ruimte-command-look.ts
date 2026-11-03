@@ -1,5 +1,4 @@
 import i18next from 'i18next';
-import { createElement } from 'react';
 import type {
     CommandLook,
     CommandLookCall,
@@ -12,10 +11,6 @@ import type {
 } from '@adecore/agents-react';
 import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
-import { Icon } from '@adecore/ui';
-import { NODE_KIND_ICONS } from '@/canvas/node-icons';
-import { ViewGlyph } from '@/project/ViewGlyph';
-import { viewGlyphOf } from '@/shell/cell-view';
 import { useSidebarSource, type SidebarSource } from '@/shell/sidebar-source';
 import { memoByIdentity } from '@/state/identity-memo';
 import { currentEndpointId } from '@/state/keys';
@@ -135,7 +130,8 @@ function describeTool(tool: string): ToolLookMatch | null {
     };
 }
 
-interface ProjectName extends CommandName {
+interface ProjectName {
+    readonly name: string;
     readonly view: boolean;
 }
 
@@ -143,9 +139,9 @@ interface ProjectName extends CommandName {
 const projectNames = memoByIdentity((source: SidebarSource): ReadonlyMap<string, ProjectName> => {
     const names = new Map<string, ProjectName>();
     for (const view of source.views) {
-        names.set(view.id, { name: view.name ?? '', icon: createElement(ViewGlyph, { ...viewGlyphOf(view), size: 12 }), view: true });
+        names.set(view.id, { name: view.name ?? '', view: true });
         for (const node of source.nodesOf(view)) {
-            names.set(node.id, { name: node.title, icon: createElement(Icon, { icon: NODE_KIND_ICONS[node.kind], size: 12 }), view: false });
+            names.set(node.id, { name: node.title, view: false });
         }
     }
     return names;
@@ -153,7 +149,8 @@ const projectNames = memoByIdentity((source: SidebarSource): ReadonlyMap<string,
 
 /*
  * The titles of the ids in a call, from the project in this window, and only for a chat of that project:
- * a chat of another project or machine keeps its ids, since the ids it names are not here.
+ * a chat of another project or machine keeps its ids, since the ids it names are not here. A line draws
+ * each as the `#` chip a message draws for it.
  */
 export function useContextNames(endpointId: string, chatId: string): (word: string, option: string | null) => CommandName | null {
     const names = projectNames(useSidebarSource());
@@ -163,7 +160,7 @@ export function useContextNames(endpointId: string, chatId: string): (word: stri
         if (named === undefined || named.name === '' || !(NODE_ID.test(word) || (named.view && option !== null && VIEW_OPTIONS.has(option)))) {
             return null;
         }
-        return { name: named.name, icon: named.icon };
+        return { name: named.name, reference: word };
     };
 }
 

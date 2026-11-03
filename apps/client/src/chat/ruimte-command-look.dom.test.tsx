@@ -123,13 +123,15 @@ describe('a ruimte-context call in a chat', () => {
         expect(page.host.querySelector('[data-find-item="call-click"] .font-semibold')?.textContent).toBe('Ruimte');
     });
 
-    test('names a node and a view of the project by their titles, the ids still behind them', () => {
+    test('draws a node and a view of the project as the reference chips of a message, the ids still behind them', () => {
         const line = lineOf('call-go')!;
-        expect(line).toStartWith('Ruimte Browsergo Downloads');
-        expect(line).toContain('--view Feature: Views');
+        expect(line).toStartWith('Ruimte Browsergo Feature: Views#Downloads');
+        expect(line).toContain('--view #Feature: Views');
         expect(line).not.toContain('Bash');
+        const chips = [...page.host.querySelectorAll('[data-find-item="call-go"] [data-chip="reference"]')];
+        expect(chips.map((chip) => chip.getAttribute('data-chip-value'))).toEqual(['browser-3f2a9k1d', 'main']);
         const hidden = [...page.host.querySelectorAll('[data-find-item="call-go"] .sr-only')].map((element) => element.textContent);
-        expect(hidden).toEqual(['browser-3f2a9k1d', 'main']);
+        expect(hidden).toEqual(['#', 'browser-3f2a9k1d', '#', 'main']);
     });
 
     test('a notify reads as the message it sent, to whom and how it went', () => {
