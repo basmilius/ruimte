@@ -73808,6 +73808,13 @@
             "type": "integer",
             "minimum": 1024,
             "maximum": 128000
+          },
+          "contextWindow": {
+            "type": "string",
+            "enum": [
+              "200k",
+              "1m"
+            ]
           }
         },
         "required": [
@@ -73851,6 +73858,13 @@
             "type": "integer",
             "minimum": 1024,
             "maximum": 128000
+          },
+          "contextWindow": {
+            "type": "string",
+            "enum": [
+              "200k",
+              "1m"
+            ]
           }
         }
       }
@@ -73888,6 +73902,13 @@
             "type": "integer",
             "minimum": 1024,
             "maximum": 128000
+          },
+          "contextWindow": {
+            "type": "string",
+            "enum": [
+              "200k",
+              "1m"
+            ]
           }
         },
         "required": [

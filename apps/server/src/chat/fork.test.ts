@@ -190,7 +190,7 @@ describe('forking a Claude chat', () => {
         daemon.chats.persistAllSync();
         expect((await new ChatStore(home).read(nodeId))!.preambles).toEqual([]);
         // The fork resumed its own session, never the original's.
-        expect(daemon.claude.started.at(-1)!.argv).toContain(daemon.chats.get(nodeId)!.info.agentSessionId!);
+        expect(daemon.claude.started.at(-1)!.argv).toContain(`--resume=${daemon.chats.get(nodeId)!.info.agentSessionId!}`);
     });
 
     test('a fork deleted unused takes its record and transcript copy along, loaded or not, and one written in keeps its record', async () => {

@@ -2,7 +2,7 @@ import { NanoGptBackend } from '../chat/nanogpt-backend.ts';
 import { createApiChatProvider } from './api-chat-provider.ts';
 import { NanoGptService } from './nanogpt-service.ts';
 
-/* One per daemon, like the Claude API provider (`anthropic-claude-api-provider.ts`). */
+/* One per daemon, so the places without a registry at hand (`providerFor`) see the same name and models as the registry. */
 export const nanoGptService = new NanoGptService();
 export const nanoGptProvider = createApiChatProvider({
     kind: 'nanogpt',

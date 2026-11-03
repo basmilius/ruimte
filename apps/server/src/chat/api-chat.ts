@@ -13,7 +13,7 @@ import { API_TOOL_NAMES, apiToolInput, askUserCard, type ApiToolCall } from './a
 import { NANOGPT_TOOLS, executeNanoTool, nanoNeedsApproval, nanoToolCall } from './nanogpt-tools.ts';
 
 /*
- * What the chats on a plain API (NanoGPT, the Claude API) share: the API keeps no conversation, so the
+ * What the chats on a plain API (NanoGPT) share: the API keeps no conversation, so the
  * thread is a file the backend writes after every step. Project tools wait for approval as far as
  * the runtime mode says; the tools of Ruimte's MCP server sit beside them.
  */

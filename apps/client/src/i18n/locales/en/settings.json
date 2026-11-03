@@ -1836,12 +1836,12 @@
             "removeButton": "Remove"
         },
         "claudeApi": {
-            "description": "Chat with Claude through the API, with a key of your own. Anthropic bills every call per token, so check your spending there.",
+            "description": "Chat with Claude in Claude Code, on a key of your own. Anthropic bills every call per token, so check your spending there.",
             "footer": "The key stays on this machine and is never shown again. Tools follow the chat's permission mode.",
             "key": "API key",
             "keyDescription": "A key from console.anthropic.com.",
             "saved": "Saved",
-            "status": "API key",
+            "status": "Connection",
             "save": "Save",
             "refresh": "Refresh models",
             "disconnect": "Disconnect",
@@ -1852,23 +1852,24 @@
             "disconnected": "No key saved on this machine.",
             "unavailable": "This machine does not offer the Claude API yet. Update Ruimte on it.",
             "failed": "Could not change the Claude API on this machine.",
-            "continue": {
-                "label": "Continue automatically",
-                "description": "A chat that uses up a run's steps starts the next run itself, and every call is billed. When off, it waits for you."
+            "window": {
+                "label": "Context window",
+                "description": "Used for new chats. You can switch per chat.",
+                "options": {
+                    "200k": "200K",
+                    "1m": "1M"
+                }
             },
-            "rounds": {
-                "label": "Steps per run",
-                "description": "Steps before a run stops, 5 to 200."
-            },
-            "runs": {
-                "label": "Runs in a row",
-                "description": "Runs a chat starts by itself, 1 to 20. Each run is billed."
+            "cli": {
+                "missing": "Claude API chats run in Claude Code. Install it on this machine first.",
+                "install": "Install"
             },
             "tokens": {
                 "label": "Output tokens per reply",
                 "description": "The most a reply may use, 1,024 to 128,000, within the model's limit. Thinking counts too."
             },
-            "noKey": "No API key saved"
+            "noKey": "No API key saved",
+            "noCli": "Claude Code is not installed"
         }
     },
     "extensions": {

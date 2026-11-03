@@ -426,7 +426,7 @@ describe('a task wakes the chat that gave it', () => {
                 .flatMap((item) => (item.kind === 'note' && item.turnId === turnId && item.level === 'error' ? [item.text] : []));
             expect(notes.join('\n')).toContain(how === 'missing' ? 'No conversation found with session ID' : 'Claude Code exited with code 1');
             // Tried once: the CLI started and answered, so there is nothing to retry.
-            expect(second.claude.started.filter((cli) => cli.argv.includes(sessionId))).toHaveLength(1);
+            expect(second.claude.started.filter((cli) => cli.argv.includes(`--resume=${sessionId}`))).toHaveLength(1);
             expect(second.outbox.list()).toEqual([]);
         }
     );

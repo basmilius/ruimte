@@ -1836,12 +1836,12 @@
             "removeButton": "Verwijderen"
         },
         "claudeApi": {
-            "description": "Chat met Claude via de API, met een eigen sleutel. Anthropic rekent elke call per token af, dus houd je uitgaven daar in de gaten.",
+            "description": "Chat met Claude in Claude Code, met een eigen sleutel. Anthropic rekent elke call per token af, dus houd je uitgaven daar in de gaten.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Tools volgen de toestemmingsmodus van de chat.",
             "key": "API-sleutel",
             "keyDescription": "Een sleutel van console.anthropic.com.",
             "saved": "Opgeslagen",
-            "status": "API-sleutel",
+            "status": "Verbinding",
             "save": "Opslaan",
             "refresh": "Modellen vernieuwen",
             "disconnect": "Ontkoppelen",
@@ -1852,23 +1852,24 @@
             "disconnected": "Geen sleutel opgeslagen op deze machine.",
             "unavailable": "Deze machine biedt de Claude API nog niet aan. Werk Ruimte daar bij.",
             "failed": "De Claude API kon niet worden gewijzigd op deze machine.",
-            "continue": {
-                "label": "Automatisch doorgaan",
-                "description": "Een chat die de stappen van een run opmaakt, start zelf de volgende, en elke call kost geld. Als dit uit staat, wacht hij op jou."
+            "window": {
+                "label": "Contextvenster",
+                "description": "Geldt voor nieuwe chats. Per chat kun je wisselen.",
+                "options": {
+                    "200k": "200K",
+                    "1m": "1M"
+                }
             },
-            "rounds": {
-                "label": "Stappen per run",
-                "description": "Stappen voordat een run stopt, 5 tot 200."
-            },
-            "runs": {
-                "label": "Runs achter elkaar",
-                "description": "Runs die een chat zelf start, 1 tot 20. Elke run kost geld."
+            "cli": {
+                "missing": "Chats op de Claude API draaien in Claude Code. Installeer dat eerst op deze machine.",
+                "install": "Installeren"
             },
             "tokens": {
                 "label": "Outputtokens per antwoord",
                 "description": "Het meeste dat een antwoord mag gebruiken, 1.024 tot 128.000, binnen de grens van het model. Denken telt mee."
             },
-            "noKey": "Geen API-sleutel ingesteld"
+            "noKey": "Geen API-sleutel ingesteld",
+            "noCli": "Claude Code is niet geïnstalleerd"
         }
     },
     "extensions": {

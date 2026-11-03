@@ -6,15 +6,24 @@ import { NanoGptSettingsSchema } from './nanogpt.ts';
  * a NanoGPT chat has, and `maxOutputTokens`, the `max_tokens` of every request, which the API requires and the model caps.
  */
 export const ClaudeApiSettingsSchema = NanoGptSettingsSchema.extend({
-    maxOutputTokens: z.number().int().min(1024).max(128_000)
+    maxOutputTokens: z.number().int().min(1024).max(128_000),
+    // The context window a new chat starts on, for a model that offers both; absent is `200k`.
+    contextWindow: z.enum(['200k', '1m']).optional()
 });
 export type ClaudeApiSettings = z.infer<typeof ClaudeApiSettingsSchema>;
 
 /*
  * Unlike a subscription, every call here is paid for, so a chat does not go on by itself unless a person turned that on.
  * Thinking counts toward `max_tokens` and a request is billed for what it used, so the default leaves room for a long reply.
+ * A long context costs more per token past 200k, so a new chat starts on 200k.
  */
-export const DEFAULT_CLAUDE_API_SETTINGS: ClaudeApiSettings = { autoContinue: false, roundsPerRun: 40, runs: 3, maxOutputTokens: 32_000 };
+export const DEFAULT_CLAUDE_API_SETTINGS: ClaudeApiSettings = {
+    autoContinue: false,
+    roundsPerRun: 40,
+    runs: 3,
+    maxOutputTokens: 32_000,
+    contextWindow: '200k'
+};
 
 /* Whether this machine holds a key for the API of Claude, and how many models it offers. Never the key. */
 export const ClaudeApiStatusSchema = z.object({

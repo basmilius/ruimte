@@ -65,7 +65,9 @@ export async function wireProviders(
     const modelCatalogs = new ModelCatalogFeed({
         home: config.home,
         allowFetch: config.modelFetch,
-        catalogs: Object.fromEntries((['claude', 'codex', 'antigravity', 'copilot', 'grok'] as const).map((kind) => [kind, providers.catalogFor(kind)]))
+        catalogs: Object.fromEntries((['claude', 'codex', 'antigravity', 'copilot', 'grok'] as const).map((kind) => [kind, providers.catalogFor(kind)])),
+        // The Claude API takes its options from Claude Code's catalog, which may now know a model it did not.
+        changed: () => claudeApi.rebuildCatalog()
     });
     // What a person allowed in the CLIs' global settings; the accounts below ask it before they write anywhere.
     const integrations = new AgentIntegrations({
@@ -140,7 +142,11 @@ export async function wireProviders(
     });
     // Before the feed listens, so the list it sends reads the new key instead of the cached detection.
     nanogpt.onChange(() => providers.invalidate('nanogpt'));
-    claudeApi.onChange(() => providers.invalidate('anthropic-claude-api'));
+    // Its account is checked against the detection too, which said "not found" while no key was saved.
+    claudeApi.onChange(() => {
+        providers.invalidate('anthropic-claude-api');
+        void accounts.refresh();
+    });
     return {
         nanogpt,
         claudeApi,

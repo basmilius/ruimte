@@ -257,14 +257,20 @@ struct ChatProviderMark: View {
     var size: CGFloat = 14
 
     var body: some View {
-        switch provider {
-        case "claude", "codex":
-            Image(provider == "codex" ? "CodexMark" : "ClaudeMark")
+        if let mark = Self.assets[provider] {
+            Image(mark.asset)
                 .renderingMode(.template).resizable().scaledToFit()
                 .frame(width: size, height: size)
-                .accessibilityLabel(provider.capitalized)
-        default:
+                .accessibilityLabel(mark.name)
+        } else {
             Image(lucide: "bot", size: size)
         }
     }
+
+    // The Claude API's mark keeps its even-odd holes in its SVG, so the label shows through.
+    private static let assets: [String: (asset: String, name: String)] = [
+        "claude": ("ClaudeMark", "Claude"),
+        "codex": ("CodexMark", "Codex"),
+        "anthropic-claude-api": ("ClaudeApiMark", "Claude API"),
+    ]
 }

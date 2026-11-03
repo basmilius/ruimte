@@ -107,7 +107,7 @@ function sharedChatSteps(chats: ChatManager) {
         load: (chatId: string) => loadedInfo(chats, chatId),
         relocate: (chatId: string, cwd: string, during: () => Promise<void>) => chats.relocate(chatId, cwd, during),
         deliverNote: (chatId: string, delivery: { noteId: string; note: string; preamble: string }) => chats.deliverNote(chatId, delivery),
-        claudeProjectsDirOf: (info: Pick<ChatInfo, 'account'>) => chats.claudeProjectsDirOf(info)
+        claudeProjectsDirOf: (info: Pick<ChatInfo, 'account' | 'provider'>) => chats.claudeProjectsDirOf(info)
     };
 }
 

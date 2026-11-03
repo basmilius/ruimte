@@ -114,7 +114,7 @@ describe('a chat under an account', () => {
         expect(daemon.chatEnvs.at(-1)!.ANTHROPIC_API_KEY).toBeUndefined();
         daemon.chats.persistAllSync();
         expect((await new ChatStore(home).read('chat-lead'))!.info.account).toBe('claude_personal');
-        expect(daemon.chats.claudeProjectsDirOf({ account: 'claude_personal' })).toBe(join(personal, 'projects'));
+        expect(daemon.chats.claudeProjectsDirOf({ account: 'claude_personal', provider: 'claude' })).toBe(join(personal, 'projects'));
     });
 
     test('reports what a turn says about the plan on its account, which keeps that account read', async () => {

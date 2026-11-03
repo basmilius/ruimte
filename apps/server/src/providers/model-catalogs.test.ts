@@ -65,6 +65,23 @@ describe('ModelCatalogFeed', () => {
         expect(slugsOf(restarted)).toEqual(['model-a', 'model-b']);
     });
 
+    test('says when a catalog took a newer copy, and only then', async () => {
+        const claude = new ModelCatalog(SHIPPED);
+        let told = 0;
+        const feed = new ModelCatalogFeed({
+            home,
+            allowFetch: true,
+            catalogs: { claude },
+            now: () => clock,
+            fetchCatalogs: () => answer(),
+            changed: () => (told += 1)
+        });
+        await feed.refresh();
+        clock += 16 * 60_000;
+        await feed.refresh();
+        expect(told).toBe(1);
+    });
+
     test('asks again only once the answer is fifteen minutes old', async () => {
         const feed = feedOf({ claude: new ModelCatalog(SHIPPED) });
         await feed.refresh();

@@ -22,7 +22,7 @@ export const MCP_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const CHAT_TOKEN_VARIABLE = 'RUIMTE_CONTEXT_TOKEN';
 export const TERMINAL_TOKEN_VARIABLE = 'RUIMTE_HOOK_TOKEN';
 
-// Where a backend that runs inside the daemon (Apple, the API providers, an ACP agent's session request) finds the server.
+// Where a backend that runs inside the daemon (Apple, the API providers, an ACP agent's session request, a Claude chat's launch) finds the server.
 export const MCP_URL_VARIABLE = 'RUIMTE_MCP_URL';
 
 export interface McpEndpoint {
@@ -40,10 +40,10 @@ function bearerHeader(endpoint: McpEndpoint): Record<string, string> {
 }
 
 /*
- * Claude Code expands `${VAR}` in a config's headers, also under `--strict-mcp-config` (measured on 2.1.316).
- * The `=` form matters, since the flag is variadic and would swallow the argument after it.
+ * A terminal's line. Claude Code expands `${VAR}` in a config's headers, also under `--strict-mcp-config` (measured
+ * on 2.1.316). The `=` form matters, since the flag is variadic and would swallow the argument after it.
  */
-export function claudeMcpArgs(endpoint: McpEndpoint): string[] {
+function claudeMcpArgs(endpoint: McpEndpoint): string[] {
     const config = { mcpServers: { [MCP_SERVER]: { type: 'http', url: endpoint.url, headers: bearerHeader(endpoint) } } };
 
     return [`--mcp-config=${JSON.stringify(config)}`];
@@ -90,19 +90,21 @@ export function mcpArgs(kind: AgentKind, endpoint: McpEndpoint): string[] {
 }
 
 /*
- * A chat's launch with the server in it, for an ACP agent, which loads it from its session request with every
- * tool allowed. ACP expands no variable, so the header carries the chat's token itself, over the agent's stdio
- * and never on its line. A chat the daemon gave no token starts without it.
+ * A chat's launch with the server in it, every tool allowed. An ACP agent loads it from its session request and
+ * expands no variable, so its header carries the chat's token itself, over the agent's stdio and never on its line.
+ * Claude Code gets its servers on its line and expands `${VAR}` there, so it gets the `variable` header instead.
+ * A chat the daemon gave no token starts without it.
  */
-export function withRuimteMcp(launch: BackendLaunch): BackendLaunch {
+export function withRuimteMcp(launch: BackendLaunch, token: 'inline' | 'variable' = 'inline'): BackendLaunch {
     const url = launch.env[MCP_URL_VARIABLE];
-    const token = launch.env[CHAT_TOKEN_VARIABLE];
+    const value = launch.env[CHAT_TOKEN_VARIABLE];
 
-    if (url === undefined || token === undefined) {
+    if (url === undefined || value === undefined) {
         return launch;
     }
 
-    const server = { name: MCP_SERVER, url, headers: { Authorization: `Bearer ${token}` }, allowTools: true };
+    const headers = token === 'inline' ? { Authorization: `Bearer ${value}` } : bearerHeader({ url, tokenVariable: CHAT_TOKEN_VARIABLE });
+    const server = { name: MCP_SERVER, url, headers, allowTools: true };
 
     return { ...launch, mcpServers: [...(launch.mcpServers ?? []), server] };
 }

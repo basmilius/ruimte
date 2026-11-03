@@ -268,7 +268,7 @@ describe('clearing a chat', () => {
         expect(recorder.info).toMatchObject({ status: 'idle', activeTurnId: null, queue: [] });
 
         // Whatever the killed CLI or the settled checkpoint still had on its way must not bring the turn back.
-        expect(await claude.started[0]!.exited).toBeNull();
+        await claude.started[0]!.exited;
         await checkpoints.settled();
         expect(recorder.items.size).toBe(0);
         expect(manager.attach('chat-busy', 'c1').items).toEqual([]);

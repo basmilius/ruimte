@@ -39,7 +39,7 @@ import { projectAccountChooser } from '../projects/project-accounts.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { openedAgentCount } from '../agents/hidden-agents.ts';
-import type { AccountLaunches, ProviderAccountsService } from '@adecore/agents/providers';
+import type { AccountLaunches, ChatProvider, ProviderAccountsService } from '@adecore/agents/providers';
 import type { LimitsUpdate } from '@adecore/agents/usage';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
@@ -56,7 +56,23 @@ import { BundleStore } from '../git/bundles.ts';
 import { StartClaims } from '../actions/start-claims.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 
-const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
+const detect = async () => ({ installed: true, version: '0.0.0' });
+const sharedProviders = new ProviderRegistry({ detect });
+
+/* The built-in providers with the ones a test brings in place of those of the same kind, in a registry of this daemon alone. */
+function registryWith(replacements: readonly ChatProvider[]): ProviderRegistry {
+    if (replacements.length === 0) {
+        return sharedProviders;
+    }
+
+    const registry = new ProviderRegistry({ detect });
+
+    for (const provider of replacements) {
+        registry.add(provider);
+    }
+
+    return registry;
+}
 
 /* One run of the daemon over a home, wired the way `daemon.ts` wires it, with fakes where a process would be. */
 export interface TestDaemon {
@@ -140,6 +156,8 @@ interface TestDaemonOptions {
         git: PeerTasksDeps['git'];
         notify: PeerTasksDeps['notify'];
     };
+    /* Providers in place of the built-ins of their kind, such as the Claude API on a service of the test's own. */
+    providers?: readonly ChatProvider[];
 }
 
 export async function bootTestDaemon({
@@ -159,8 +177,10 @@ export async function bootTestDaemon({
     visualRender = {},
     gh = () => Promise.resolve({ code: 1, stdout: '', stderr: 'no gh in this test' }),
     remote,
-    peer
+    peer,
+    providers: replacements = []
 }: TestDaemonOptions): Promise<TestDaemon> {
+    const providers = registryWith(replacements);
     await store.hiddenAgents.load();
     const projectAccount = projectAccountChooser({
         projectOf: (id) => store.index.locate(id)?.projectId ?? null,

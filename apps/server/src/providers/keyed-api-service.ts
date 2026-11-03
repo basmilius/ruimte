@@ -44,8 +44,8 @@ const SETTINGS_FILE = 'settings.json';
 /*
  * A provider with no CLI, reached with an API key a person typed into Settings. The key, the models and the settings live
  * in a folder of `$RUIMTE_HOME`, the key in a 0600 file in a 0700 folder like the secrets of launches. No client reads the
- * folder (`MachineHome` keeps it closed) and no tool reaches it; the only reader is the chat backend, which puts the key in
- * the header of its own requests and nowhere else.
+ * folder (`MachineHome` keeps it closed) and no tool reaches it; the only reader is the chat backend. NanoGPT's puts the key in
+ * the header of its own requests, the Claude API's hands it to Claude Code as `ANTHROPIC_API_KEY`, and nowhere else.
  */
 export abstract class KeyedApiService<Settings extends RunSettings, Model> {
     readonly catalog = new ModelCatalog({ defaultModel: '', profiles: {}, models: [] });
@@ -183,6 +183,11 @@ export abstract class KeyedApiService<Settings extends RunSettings, Model> {
 
             return this.status();
         });
+    }
+
+    /* Builds the catalog again from the models it has, for when what it is built from beside them changed. */
+    rebuildCatalog(): void {
+        this.setModels(this.models);
     }
 
     /* Never fails a turn: a call that was made counts whether or not its line could be written. */

@@ -380,18 +380,20 @@ private struct ProviderMark: View {
 
     var body: some View {
         Group {
-            switch provider {
-            case "claude", "codex":
-                Image(provider == "codex" ? "CodexMark" : "ClaudeMark")
+            if let mark = Self.assets[provider] {
+                Image(mark)
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-            default:
+            } else {
                 LucideIcon(.bot, size: size)
             }
         }
         .frame(width: size, height: size)
         .foregroundStyle(theme.mark)
-        .accessibilityLabel(provider.capitalized)
+        .accessibilityLabel(provider == "anthropic-claude-api" ? "Claude API" : provider.capitalized)
     }
+
+    // The Claude API's mark keeps its even-odd holes in its SVG, so the label shows through.
+    private static let assets = ["claude": "ClaudeMark", "codex": "CodexMark", "anthropic-claude-api": "ClaudeApiMark"]
 }

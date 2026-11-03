@@ -41,7 +41,8 @@ test('create spawns nothing; the first send starts the CLI with the selection an
     expect(manager.attach('chat-1', 'c1')).toEqual({ info, items: [], seq: 0 });
 
     await manager.send('chat-1', 'hello there');
-    expect(manager.get('chat-1')?.running).toBe(true);
+    // The CLI starts behind the send, once the SDK it runs through has loaded.
+    expect(manager.get('chat-1')?.info.activeTurnId).not.toBeNull();
     // A send while a turn runs queues instead of failing, so the test unqueues it to reach idle.
     expect(await manager.send('chat-1', 'again')).toMatchObject({ queued: true });
     manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
@@ -250,8 +251,7 @@ test('configure restarts the CLI with new flags on the next send and keeps the s
     expect(recorder.info?.agentSessionId).toBe(sessionId ?? null);
     expect(claude.started).toHaveLength(2);
     expect(await claude.started[0]!.exited).toBe(0);
-    const argv = claude.started[1]!.argv;
-    expect(argv[argv.indexOf('--resume') + 1]).toBe(sessionId!);
+    expect(claude.started[1]!.argv).toContain(`--resume=${sessionId!}`);
     // The fake reports the `--model` it was started with, so this proves the restart carried the new flags.
     expect(recorder.info?.model).toBe('claude-opus-5-5[1m]');
     expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', 'echo: argv?']);
@@ -270,8 +270,7 @@ test('a restart ends the CLI between turns and the next send resumes the convers
     await manager.send('chat-r', 'again');
     await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
     expect(claude.started).toHaveLength(2);
-    const argv = claude.started[1]!.argv;
-    expect(argv[argv.indexOf('--resume') + 1]).toBe(sessionId!);
+    expect(claude.started[1]!.argv).toContain(`--resume=${sessionId!}`);
     expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', 'echo: again']);
 });
 
@@ -288,8 +287,7 @@ test('the meter reads the window the pick asked for, not the maximum the CLI rep
     await manager.send('chat-w', 'hello');
     await recorder.untilIdle();
     // The CLI reports 1M whatever it was started on, and the turn it ends must not put that on the meter.
-    const argv = claude.started[0]!.argv;
-    expect(argv[argv.indexOf('--model') + 1]).toBe('claude-opus-5-5');
+    expect(claude.started[0]!.argv).toContain('--model=claude-opus-5-5');
     expect(recorder.info?.usage.contextWindow).toBe(200_000);
 
     expect(manager.configure({ chatId: 'chat-w', selection: { model: 'opus', options: { contextWindow: '1m' } } })).toMatchObject({

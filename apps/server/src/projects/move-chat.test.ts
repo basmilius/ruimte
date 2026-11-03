@@ -9,6 +9,8 @@ import { SnoozeStore } from '../push/snoozes.ts';
 import { moveOwnFiles } from './own-files.ts';
 import type { ChatMovePayload } from '@ruimte/contracts';
 import { MachineHome } from '../fs/machine-home.ts';
+import { claudeApiConfigDir, createAnthropicClaudeApiProvider } from '../providers/anthropic-claude-api-provider.ts';
+import { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { chatMoveDeps, type ChatMoveWiring } from '../wiring/chat-move.ts';
 import { moveChat, type MoveChatDeps } from './move-chat.ts';
@@ -28,6 +30,7 @@ describe('moving a chat from Chats into a project', () => {
     let ownFolder: string;
     let sessionId: string;
     let journal: MoveJournal;
+    let claudeApi: AnthropicClaudeApiService;
 
     const wiring = (): ChatMoveWiring => ({
         ...daemon,
@@ -73,7 +76,10 @@ describe('moving a chat from Chats into a project', () => {
         const home = join(root, 'home');
         store = new ProjectStore(home, projectLinks(), new FakeWatch());
         journal = new MoveJournal(home);
-        daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
+        claudeApi = new AnthropicClaudeApiService(async () => Response.json({ data: [{ id: 'claude-sonnet-example', line: 'sonnet' }] }));
+        await claudeApi.load(home);
+        await claudeApi.configure('sk-ant-test-only');
+        daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), providers: [createAnthropicClaudeApiProvider(claudeApi)] });
         const made = await newScratchChat(store, {});
         chatId = made.viewId;
         chatsId = made.summary.projectId;
@@ -193,7 +199,7 @@ describe('moving a chat from Chats into a project', () => {
         await say(chatId, 'where am I');
         const started = daemon.claude.started.slice(before);
         expect(started).toHaveLength(1);
-        expect(started[0]!.argv).toContain(sessionId);
+        expect(started[0]!.argv).toContain(`--resume=${sessionId}`);
         const reply = daemon.chats
             .get(chatId)!
             .thread.list()
@@ -392,6 +398,28 @@ describe('moving a chat from Chats into a project', () => {
         expect(
             await readFile(join(daemon.chats.claudeProjectsDir, claudeProjectSlug(await realpath(join(root, 'vinyl'))), `${forkSession}.jsonl`), 'utf8')
         ).toBe('inherited conversation\n');
+    });
+
+    test("a Claude API chat takes its conversation along in the Claude API's own config folder", async () => {
+        const apiId = (await newScratchChat(store, { provider: 'anthropic-claude-api' })).viewId;
+        const apiFolder = join(store.scratchFolder, apiId);
+        await daemon.chats.create({ chatId: apiId, provider: 'anthropic-claude-api', cwd: apiFolder });
+        await say(apiId, 'hello');
+        await store.mutate(chatsId, (content) => ({
+            content: { ...content, views: content.views.map((view) => (view.id === apiId && view.kind === 'chat' ? { ...view, empty: undefined } : view)) },
+            result: undefined
+        }));
+        const apiSession = daemon.chats.get(apiId)!.info.agentSessionId!;
+        const projects = join(claudeApiConfigDir(claudeApi), 'projects');
+        await mkdir(join(projects, claudeProjectSlug(apiFolder)), { recursive: true });
+        await writeFile(join(projects, claudeProjectSlug(apiFolder), `${apiSession}.jsonl`), '{"type":"user"}\n');
+
+        await moveChat({ chatId: apiId, to: make('vinyl'), ownFiles: 'leave' }, deps());
+
+        // The move names the folder by its real path, as the project registry does.
+        expect(existsSync(join(projects, claudeProjectSlug(await realpath(join(root, 'vinyl'))), `${apiSession}.jsonl`))).toBe(true);
+        expect(existsSync(join(projects, claudeProjectSlug(apiFolder), `${apiSession}.jsonl`))).toBe(false);
+        expect(existsSync(join(daemon.chats.claudeProjectsDir, claudeProjectSlug(join(root, 'vinyl'))))).toBe(false);
     });
 
     test('a Codex chat has no conversation file to move', async () => {

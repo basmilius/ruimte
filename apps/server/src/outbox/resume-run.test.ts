@@ -155,7 +155,7 @@ describe('resume-run', () => {
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'done', attempt: 2 });
         expect(session.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
         const argv = daemon.claude.started[0]!.argv;
-        expect(argv[argv.indexOf('--resume') + 1]).toBe(agentSessionId);
+        expect(argv).toContain(`--resume=${agentSessionId}`);
         const items = session.thread.list();
         // No message of a person was made up. The prompt only went to the CLI, and the thread says why the turn went on.
         expect(items.filter((item) => item.kind === 'user').map((item) => (item.kind === 'user' ? item.text : ''))).toEqual(['slow']);
@@ -195,7 +195,7 @@ describe('resume-run', () => {
         expect(turnOf(daemon, turnId, 'chat-view')).toMatchObject({ state: 'done', attempt: 2 });
         expect(daemon.chats.get('chat-view')?.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
         const argv = daemon.claude.started[0]!.argv;
-        expect(argv[argv.indexOf('--resume') + 1]).toBe(agentSessionId);
+        expect(argv).toContain(`--resume=${agentSessionId}`);
         expect(daemon.outbox.list()).toEqual([]);
     });
 

@@ -31,7 +31,7 @@ export interface MoveRepairDeps {
         /* The record's info, loaded from disk when nobody has it; throws `chat-not-found` for a chat with no record. */
         load(chatId: string): Promise<ChatInfo>;
         relocate(chatId: string, cwd: string, during: () => Promise<void>): Promise<ChatInfo>;
-        claudeProjectsDirOf(info: Pick<ChatInfo, 'account'>): string;
+        claudeProjectsDirOf(info: Pick<ChatInfo, 'account' | 'provider'>): string;
     };
     moveTranscript?: typeof moveClaudeTranscript;
 }

@@ -48,9 +48,8 @@ import { InlineEditNotes } from './inline-edit.ts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
-import { claudeProvider } from '../providers/claude-provider.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
-import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, claudeMcpArgs, codexMcpArgs, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, codexMcpArgs, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
 
@@ -135,19 +134,16 @@ function chatEnvOf(env: Record<string, string | undefined>): Record<string, stri
 }
 
 /*
- * The CLIs a chat runs with Ruimte's MCP server on their line, each reading the chat's token from its environment.
- * A command a caller passes (a test's fake CLI) gets the server too.
+ * Codex with Ruimte's MCP server on its line, reading the chat's token from its environment. A command a caller
+ * passes (a test's fake CLI) gets the server too. Claude Code gets it in its launch (`claude-provider.ts`).
  */
-function mcpCommands(options: ChatManagerOptions): Pick<ChatCoreOptions, 'command' | 'codexCommand'> {
+function mcpCommands(options: ChatManagerOptions): Pick<ChatCoreOptions, 'codexCommand'> {
     if (options.contextUrl === undefined) {
         return {};
     }
     const endpoint: McpEndpoint = { url: mcpUrlOf(options.contextUrl), tokenVariable: CHAT_TOKEN_VARIABLE };
 
-    return {
-        command: [...(options.command ?? claudeProvider.command), ...claudeMcpArgs(endpoint)],
-        codexCommand: [...(options.codexCommand ?? codexProvider.command), ...codexMcpArgs(endpoint)]
-    };
+    return { codexCommand: [...(options.codexCommand ?? codexProvider.command), ...codexMcpArgs(endpoint)] };
 }
 
 export const BRIEF_TITLE = 'Instructions from Ruimte';
@@ -860,8 +856,9 @@ export class ChatManager extends ChatCore {
     /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */
     private async dropForkCopy(chat: { info: ChatInfo; items: readonly ChatItem[] }): Promise<void> {
         const { info } = chat;
+        // Empty for a provider that does not run Claude Code.
         const projectsDir = this.claudeProjectsDirOf(info);
-        if (info.provider !== 'claude' || info.agentSessionId === null || projectsDir === '' || !unspokenFork(chat.items, info)) {
+        if (info.agentSessionId === null || projectsDir === '' || !unspokenFork(chat.items, info)) {
             return;
         }
         if (/[/\\]|\.\./.test(info.agentSessionId)) {

@@ -41,7 +41,7 @@ One WebSocket, or the same frames over a WebRTC DataChannel, as JSON validated b
 - A new request or event is `<area>.<name>`, the area singular and the name lowerCamelCase, never kebab-case or a third level. A subscription is `<area>.watch` with `<area>.unwatch`.
 - The client chooses a session id (the node id), so a node reattaches after a reload.
 - `session.attach` answers with the serialized screen from `@xterm/headless`, then streams raw output; a client never replays history. A byte is in the screen or in the stream, never both. A client gets a screen only through `Session.snapshotFor`, which holds back its output from the call until the screen is taken, with no await between.
-- Agent status comes only from the CLIs' hooks (`POST /hooks/<kind>`), never from parsing output. A chat speaks the CLI's own protocol (stream-json, Codex's app-server or ACP), no SDK.
+- Agent status comes only from the CLIs' hooks (`POST /hooks/<kind>`), never from parsing output. A chat speaks the CLI's own protocol (Codex's app-server or ACP), or drives Claude Code through the Claude Agent SDK, which runs the person's own CLI.
 - Chat events carry a `seq` per chat and are logged, so `chat.attach` with `since` resumes.
 - A chat's thread goes only to attached clients; what it is doing goes to every client (`chat.status`, on change). A client asks `chat.list` on every fresh socket. `project.changed` goes only to clients that hold the project; the rest hear `project.summary`.
 - Bytes for an `<img>` or `<video>` come only from `useMachineUrl` (`transport/machine-url.ts`).
@@ -85,7 +85,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas. Each area
 - What the daemon enforces against an agent (depth, lineage, tasks) lives under `$RUIMTE_HOME`, never in `project.json`, which an agent with a shell can rewrite. An observer only notes; only the outbox acts. Nothing removes a worktree on its own.
 - Nothing reads a vendor credential (keychain, `~/.codex/auth.json`, usage endpoints); plan windows come from the CLIs. The exceptions are keys a person typed into Ruimte:
     - a key for a provider with no CLI, also sent to that provider's own usage endpoint (NanoGPT's `/usage`);
-    - an Anthropic API key, set only on the local secret, kept 0600 under `$RUIMTE_HOME/anthropic-claude-api` and sent only to `api.anthropic.com` (`apps/server/src/providers/anthropic-claude-api-service.ts`);
+    - an Anthropic API key, set only on the local secret, kept 0600 under `$RUIMTE_HOME/anthropic-claude-api`, sent by the daemon only to `api.anthropic.com` to list its models, and handed only to the Claude Code CLI as `ANTHROPIC_API_KEY`, in a config folder of its own under that folder, with its telemetry, error reporting, bug reports and auto-update off (`apps/server/src/providers/anthropic-claude-api-service.ts`, `anthropic-claude-api-provider.ts`);
     - the OpenAI key for Voice, handed over on the local secret and sent only to OpenAI in the `Authorization` header.
 - By Bas's choice the daemon reads one vendor credential: the token `grok login` left in an account's `auth.json` (xAI sign-in only, never an API key). It never renews or writes it and sends it only to the billing endpoint the CLI asks (`apps/server/src/usage/grok-plan.ts`).
 - A stuck process gets a warning, never a signal a person did not press.

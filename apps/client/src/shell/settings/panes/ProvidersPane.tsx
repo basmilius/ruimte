@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { ProvidersPane as Pane } from '@adecore/agents-react/providers';
+import { useProvidersStore } from '@adecore/agents-react/state';
 import { AcpServerSection, AcpServerStepBody } from '@/shell/settings/providers/AcpServerSection';
 import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
 import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection';
@@ -26,6 +27,8 @@ export function ProvidersPane() {
     const antigravity = useAcpServer(endpointId, 'antigravity');
     const registryAnswers = useMachineAnswers(endpointId, 'provider.registry');
     const versions = useCliVersions(endpointId);
+    const providers = useProvidersStore((s) => s.byScope[endpointId]?.providers);
+    const claudeInstalled = providers?.find((provider) => provider.kind === 'claude')?.installed !== false;
     useDetectProviders();
     const detailOf = (provider: ProviderInfo) => {
         if (provider.kind === 'anthropic-claude-api') {
@@ -51,8 +54,9 @@ export function ProvidersPane() {
     // Off is a choice only a Mac offers; elsewhere the detail says why the model is not there.
     const setupStatusOf = (provider: ProviderInfo) => {
         // The machine reports a provider behind a key installed once a saved key brought it models.
+        // It also needs Claude Code, which it runs in.
         if (provider.kind === 'anthropic-claude-api' && !provider.installed) {
-            return { text: t('providers.claudeApi.noKey'), tone: 'warning' as const };
+            return { text: t(claudeInstalled ? 'providers.claudeApi.noKey' : 'providers.claudeApi.noCli'), tone: 'warning' as const };
         }
         if (provider.kind === 'nanogpt' && !provider.installed) {
             return { text: t('providers.nanogpt.noKey'), tone: 'warning' as const };

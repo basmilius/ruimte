@@ -1,8 +1,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool, type Transport } from '@modelcontextprotocol/client';
 import { isNotFound } from '@adecore/agents';
+import type { ChatMcpServer } from '@adecore/agents/chat';
 import { z } from 'zod';
 import { CHAT_TOKEN_VARIABLE, MCP_MAX_IMAGE_BYTES, MCP_REQUEST_TIMEOUT_S, MCP_SERVER, MCP_URL_VARIABLE } from '../providers/ruimte-mcp.ts';
 import { ApiStdioTransport } from './api-mcp-stdio.ts';
@@ -36,36 +38,86 @@ const ApiMcpConfigSchema = z.object({
 });
 export type ApiMcpServer = z.infer<typeof ApiMcpConfigSchema>['mcpServers'][string];
 
+const CONFIG_FILE = 'api-mcp.json';
+const MAX_CONFIG_BYTES = 128 * 1024;
+
+function openFailure(error: unknown): Error | null {
+    return isNotFound(error) ? null : new Error('The Api MCP configuration could not be opened.');
+}
+
+function checkConfigFile(info: { isFile(): boolean; size: number }): void {
+    if (!info.isFile() || info.size > MAX_CONFIG_BYTES) {
+        throw new Error('Api MCP configuration must be a regular JSON file of at most 128 KiB.');
+    }
+}
+
+function parseApiMcpConfig(bytes: Buffer, bytesRead: number): Record<string, ApiMcpServer> {
+    if (bytesRead > MAX_CONFIG_BYTES) {
+        throw new Error('Api MCP configuration exceeds 128 KiB.');
+    }
+
+    const parsed = ApiMcpConfigSchema.safeParse(JSON.parse(bytes.subarray(0, bytesRead).toString('utf8')));
+
+    if (!parsed.success) {
+        throw new Error('Invalid api-mcp.json. Use mcpServers with named stdio or HTTP server configurations.');
+    }
+
+    return Object.fromEntries(Object.entries(parsed.data.mcpServers).filter(([, server]) => server.enabled !== false));
+}
+
 export async function readApiMcpConfig(home: string, signal?: AbortSignal): Promise<Record<string, ApiMcpServer>> {
     signal?.throwIfAborted();
     let handle;
     try {
-        handle = await open(join(home, 'api-mcp.json'), 'r');
+        handle = await open(join(home, CONFIG_FILE), 'r');
     } catch (error) {
-        if (isNotFound(error)) {
+        const failure = openFailure(error);
+        if (failure === null) {
             return {};
         }
-        throw new Error('The Api MCP configuration could not be opened.');
+        throw failure;
     }
     try {
-        const info = await handle.stat();
-        if (!info.isFile() || info.size > 128 * 1024) {
-            throw new Error('Api MCP configuration must be a regular JSON file of at most 128 KiB.');
-        }
-        const bytes = Buffer.alloc(128 * 1024 + 1);
+        checkConfigFile(await handle.stat());
+        const bytes = Buffer.alloc(MAX_CONFIG_BYTES + 1);
         const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
         signal?.throwIfAborted();
-        if (bytesRead > 128 * 1024) {
-            throw new Error('Api MCP configuration exceeds 128 KiB.');
-        }
-        const parsed = ApiMcpConfigSchema.safeParse(JSON.parse(bytes.subarray(0, bytesRead).toString('utf8')));
-        if (!parsed.success) {
-            throw new Error('Invalid api-mcp.json. Use mcpServers with named stdio or HTTP server configurations.');
-        }
-        return Object.fromEntries(Object.entries(parsed.data.mcpServers).filter(([, server]) => server.enabled !== false));
+        return parseApiMcpConfig(bytes, bytesRead);
     } finally {
         await handle.close();
     }
+}
+
+/* The same file, read where a backend is made, which cannot wait; it is small enough to read at once. */
+export function readApiMcpConfigSync(home: string): Record<string, ApiMcpServer> {
+    let fd;
+    try {
+        fd = openSync(join(home, CONFIG_FILE), 'r');
+    } catch (error) {
+        const failure = openFailure(error);
+        if (failure === null) {
+            return {};
+        }
+        throw failure;
+    }
+    try {
+        checkConfigFile(fstatSync(fd));
+        const bytes = Buffer.alloc(MAX_CONFIG_BYTES + 1);
+        return parseApiMcpConfig(bytes, readSync(fd, bytes, 0, bytes.length, 0));
+    } finally {
+        closeSync(fd);
+    }
+}
+
+/*
+ * The servers of `api-mcp.json` a CLI loads itself. It takes only HTTP servers, and expands a `${VAR}` in their headers
+ * from its own environment. A stdio server is left out, and so is one with `allowedTools`, whose limit the CLI would not
+ * keep. Ruimte's own server wins over one of the same name.
+ */
+export function cliMcpServers(servers: Record<string, ApiMcpServer>): ChatMcpServer[] {
+    return Object.entries(servers).flatMap(([name, server]) =>
+        name === MCP_SERVER || !('url' in server) || server.allowedTools !== undefined ? [] : [{ name, url: server.url, headers: server.headers }]
+    );
 }
 
 export function expandMcpEnvironment(values: Record<string, string>, env: Record<string, string>): Record<string, string> {

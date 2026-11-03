@@ -62,7 +62,7 @@ export interface MoveChatDeps {
         claim(chatId: string): (() => void) | null;
         relocate(chatId: string, cwd: string, during: () => Promise<void>): Promise<ChatInfo>;
         deliverNote(chatId: string, delivery: { noteId: string; note: string; preamble: string }): Promise<boolean>;
-        claudeProjectsDirOf(info: Pick<ChatInfo, 'account'>): string;
+        claudeProjectsDirOf(info: Pick<ChatInfo, 'account' | 'provider'>): string;
     };
     lineage: Pick<AgentLineageStore, 'projectOf' | 'rehome'>;
     /* A snooze on the chat goes with it, since the Chats write would drop it. */
@@ -97,8 +97,9 @@ export async function fileTranscript(
     folder: string,
     move: typeof moveClaudeTranscript = moveClaudeTranscript
 ): Promise<Awaited<ReturnType<typeof moveClaudeTranscript>> | null> {
+    // Empty for a provider that does not run Claude Code; one with a config folder of its own has its transcripts there.
     const projectsDir = chats.claudeProjectsDirOf(info);
-    if (info.provider !== 'claude' || info.agentSessionId === null || projectsDir === '') {
+    if (info.agentSessionId === null || projectsDir === '') {
         return null;
     }
     return move({ projectsDir, sessionId: info.agentSessionId, fromCwd: info.cwd, toCwd: folder });

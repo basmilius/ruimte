@@ -77,10 +77,12 @@ describe('the configuration a chat CLI loads from its folder', () => {
         await say('chat-peer');
         expect(daemon.chatCommands.at(-1)).toContain('--setting-sources=user');
         expect(daemon.chatCommands.at(-1)).toContain('--strict-mcp-config');
-        // The strict flag keeps the servers on the line, so Ruimte's own stays.
-        expect(daemon.chatCommands.at(-1)).toContain(
-            '--mcp-config={"mcpServers":{"ruimte":{"type":"http","url":"http://127.0.0.1:4210/mcp","headers":{"Authorization":"Bearer ${RUIMTE_CONTEXT_TOKEN}"}}}}'
+        // The strict flag keeps the servers on the line, so Ruimte's own stays, with the token's variable and never the token.
+        const command = daemon.chatCommands.at(-1)!;
+        expect(command[command.indexOf('--mcp-config') + 1]).toBe(
+            '{"mcpServers":{"ruimte":{"type":"http","url":"http://127.0.0.1:4210/mcp","headers":{"Authorization":"Bearer ${RUIMTE_CONTEXT_TOKEN}"}}}}'
         );
+        expect(command).toContain('--allowedTools=mcp__ruimte__*');
         expect(daemon.chatEnvs.at(-1)).toMatchObject({ RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: expect.any(String) });
     });
 

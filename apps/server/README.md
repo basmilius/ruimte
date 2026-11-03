@@ -221,7 +221,8 @@ $RUIMTE_HOME/
   screenshots/                     pngs `browser_shot` and `device_shot` wrote, swept after a day
   device-captures/                 a person's screenshots and recordings of a device, read over `bytes.read`, swept after a week
     placed/                        the screenshots a person placed on a canvas (`device.importCapture`), never swept
-  anthropic-claude-api/            0600 key, model list, settings and conversations of the Claude API provider
+  anthropic-claude-api/            0600 key, model list, settings and older usage log of the Claude API provider
+    claude-config/                 the config folder (`CLAUDE_CONFIG_DIR`) of Claude Code on that key, with its sessions
   nanogpt/                         0600 key, model list, settings, conversations and usage log of NanoGPT
   agent-servers/antigravity/       Google's ACP server for Antigravity chats, put here by a person's Install
   agent-registry/                  the agents of the ACP registry (see "Providers and models")
@@ -389,13 +390,13 @@ Ruimte no longer offers Gemini: a node with `provider: 'gemini'` keeps it and op
 
 A release ships model catalogs as `<kind>-models.json` in `@adecore/agents/providers`. The address book serves the live ones on `GET /v2/models/catalog` (`apps/pulsar-worker/README.md`). The daemon asks at start and on `provider.list` once the last answer is fifteen minutes old, keeps it in `models/catalogs-v2.json`, and never takes a catalog older than the bundled one. `--no-model-fetch` turns this off.
 
-The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. Ruimte's MCP tools run without a prompt in every mode, since the daemon checks each call itself: Claude Code gets `--allowedTools=mcp__ruimte`, Copilot `--allow-tool=ruimte`, and Codex `default_tools_approval_mode="approve"` on the server (`src/providers/ruimte-mcp.ts`).
+The runtime mode (`supervised`, `auto-accept-edits`, `auto`, `full-access`) is one vocabulary that each provider maps to its own flags. Ruimte's MCP tools run without a prompt in every mode, since the daemon checks each call itself: a Claude Code terminal gets `--allowedTools=mcp__ruimte`, a Claude chat the server in its launch with `allowTools` (`mcp__ruimte__*`), Copilot `--allow-tool=ruimte`, and Codex `default_tools_approval_mode="approve"` on the server (`src/providers/ruimte-mcp.ts`).
 
 ### Claude API
 
-A chat provider with no CLI. Save an Anthropic API key in Settings, Providers, Claude API. `anthropic.configure` validates it against the model list before saving it or its settings; `anthropic.status` reports whether a key exists without returning it. Only the machine's owner configures it. Requests go only to `https://api.anthropic.com`, redirects refused. Everything lives under `$RUIMTE_HOME/anthropic-claude-api`.
+Claude Code on an Anthropic API key, beside a person's own sign-in (`src/providers/anthropic-claude-api-provider.ts`). Save the key in Settings, Providers, Claude API. `anthropic.configure` validates it against the model list before saving it or its settings; `anthropic.status` reports whether a key exists without returning it. Only the machine's owner configures it. The daemon's own requests (the model list) go only to `https://api.anthropic.com`, redirects refused. Everything lives under `$RUIMTE_HOME/anthropic-claude-api`.
 
-Tools follow the runtime modes as with NanoGPT; there are no attachments, MCP, subagents, forks or compaction. Settings: tool rounds per run (40), maximum runs (3 when continuing is on; it is off by default since it spends credits) and output tokens per request (32000, capped by the model, thinking included). A request fails only after two minutes without data.
+A chat runs the person's installed `claude` through the same Agent SDK backend as a Claude Code chat, so the provider is there only once a key brought models and the CLI is installed; without the CLI, Settings leads to its install. The CLI gets the key as `ANTHROPIC_API_KEY`, `CLAUDE_CONFIG_DIR=anthropic-claude-api/claude-config`, and `DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING`, `DISABLE_BUG_COMMAND` and `DISABLE_AUTOUPDATER`, so telemetry, error reporting, bug reports and auto-update are off. It loses any sign-in token from the environment, and loads no settings file and only the servers of its launch: Ruimte's own, with the token's variable in its header, and the HTTP servers of `api-mcp.json`. A stdio server, or one with `allowedTools`, stays out, since the CLI would not keep that limit. It has the capabilities of a Claude Code chat (attachments, compaction, cost from the result frame) except terminals and hooks. The output tokens per reply (32000, capped by the model, thinking included) go as `CLAUDE_CODE_MAX_OUTPUT_TOKENS`; the run settings the service keeps apply to NanoGPT only. The usage page reads Claude Code's transcripts in `claude-config` under the Claude API, beside `usage/`, where turns before this backend left their tokens. A chat whose resume id has no transcript there (one from before this backend) starts a session of its own.
 
 ### NanoGPT
 

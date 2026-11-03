@@ -23,6 +23,8 @@ interface ModelCatalogFeedOptions {
     allowFetch: boolean;
     fetchCatalogs?: () => Promise<ModelCatalogsV2Result>;
     now?: () => number;
+    // Told once a catalog took a newer copy, from disk or the address book, for what is built from them.
+    changed?: () => void;
 }
 
 function fromAddressBook(): Promise<ModelCatalogsV2Result> {
@@ -127,6 +129,9 @@ export class ModelCatalogFeed {
             if (data.success && catalog.replace(data.data)) {
                 changed = true;
             }
+        }
+        if (changed) {
+            this.options.changed?.();
         }
         return changed;
     }
