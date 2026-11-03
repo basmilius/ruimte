@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
     edgeRole,
+    isExtensionView,
     isOpenableView,
     isUnknownNode,
     isUnknownView,
@@ -107,6 +108,20 @@ describe('kinds this version does not know', () => {
         expect(withRenamedView(document.views, 'timeline-1', 'Other')).toBeNull();
         expect(withViewIcon(document.views, 'timeline-1', { kind: 'lucide', value: 'rocket' })).toBeNull();
         expect(withDuplicatedView(document.views, 'timeline-1', (prefix) => `${prefix}-copy`)).toBeNull();
+    });
+
+    test("an extension's view opens and renames in the entry it is written back as, and is copied by nothing", () => {
+        const stored = { kind: 'extension', id: 'board-1', name: 'Plans', extension: 'ruimte.plans', type: 'plans', params: { tab: 'flow' } };
+        const document = parsedFrom({ ...NEWER_FILE, views: [NEWER_FILE.views[0], stored] });
+        const view = document.views[1]!;
+        expect(isExtensionView(view)).toBe(true);
+        expect(isOpenableView(view)).toBe(true);
+        const renamed = withRenamedView(document.views, 'board-1', 'Roadmap')!;
+        expect(renamed[1]).toMatchObject({ kind: 'unknown', name: 'Roadmap' });
+        expect(storedViewsOf(renamed)[1]).toEqual({ ...stored, name: 'Roadmap' });
+        expect(withRenamedView(renamed, 'board-1', 'Roadmap')).toBeNull();
+        expect(withDuplicatedView(document.views, 'board-1', (prefix) => `${prefix}-copy`)).toBeNull();
+        expect(isExtensionView(parsed().views[1]!)).toBe(false);
     });
 
     test('an unknown view without a name is called after its kind, and still written without one', () => {

@@ -705,7 +705,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 id: `${id}/${view.id}`,
                 title: view.title,
                 icon: iconOf(view.icon, extension),
-                component: surfaceOf(extension, view) as ComponentType<{ params: unknown }>
+                component: surfaceOf(extension, view) as ComponentType<{ params: unknown }>,
+                open: () => open()
             });
             add('commands', { id: `extension:${id}/view/${view.id}`, title: `New ${view.title}`, run: open });
 

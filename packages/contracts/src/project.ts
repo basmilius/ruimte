@@ -756,6 +756,7 @@ export const PROJECT_VIEW_KINDS = KNOWN_VIEW_SCHEMAS.map((schema) => schema.shap
 const KNOWN_VIEW_KINDS: ReadonlySet<string> = new Set(PROJECT_VIEW_KINDS);
 
 // A view of a kind a newer Ruimte made: listed, never opened, written back as read. The name falls back to the kind.
+// An extension's view is one too, and the one that opens (`isExtensionView`).
 export const ProjectUnknownViewSchema = z.object({
     kind: z.literal(UNKNOWN_KIND),
     id: z.string().min(1),
@@ -1029,8 +1030,16 @@ export function isUnlistedView(view: ProjectView): boolean {
     return isEmptyChatView(view) || isHiddenView(view);
 }
 
+/*
+ * A view an extension draws. It is kept as an unknown kind, so a Ruimte without the extension writes it back as it
+ * was read, but it opens: without its extension it says which one it needs.
+ */
+export function isExtensionView(view: ProjectView): boolean {
+    return view.kind === UNKNOWN_KIND && view.raw.kind === 'extension' && typeof view.raw.extension === 'string' && typeof view.raw.type === 'string';
+}
+
 export function isOpenableView(view: ProjectView): boolean {
-    return !isDividerView(view) && view.kind !== UNKNOWN_KIND && !isHiddenView(view);
+    return !isDividerView(view) && (view.kind !== UNKNOWN_KIND || isExtensionView(view)) && !isHiddenView(view);
 }
 
 function storedViewOf(view: ProjectView): unknown {

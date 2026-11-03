@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { usePanelGap } from '@/shell/panel-layout';
-import { designNodeChats, isDesignView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
+import { designNodeChats, isDesignView, isExtensionView, isSessionView, isUnlistedView, sessionKindOfView, viewChats, type AgentKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@adecore/agents-react/chat';
@@ -220,7 +220,8 @@ export function Sidebar() {
                               designChats.map((chat) => asRow({ id: chat.id, kind: 'chat', title: chat.name, provider: chat.node.provider }, view.id))
                           )
                         : own,
-                hidden: isUnlistedView(view)
+                hidden: isUnlistedView(view),
+                ...(isExtensionView(view) ? { extension: true } : {})
             };
         })
     };
@@ -649,7 +650,7 @@ export function Sidebar() {
                                                                   <SeparatorRow {...shared} />
                                                               ) : row.view.kind === 'subheader' ? (
                                                                   <SubheaderRow {...shared} />
-                                                              ) : row.view.kind === 'unknown' ? (
+                                                              ) : row.view.kind === 'unknown' && row.view.extension !== true ? (
                                                                   <UnknownViewRow {...shared} />
                                                               ) : (
                                                                   <ViewRow

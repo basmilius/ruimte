@@ -92,6 +92,8 @@ export interface ExtensionViewContribution {
     title: string;
     icon?: LucideIcon;
     component: ComponentType<{ params: unknown }>;
+    /* Adds a view of it to the project and opens it, as its `New` command does. */
+    open(): void;
 }
 
 export interface CommandContribution {

@@ -6,6 +6,7 @@ import {
     isChatHostView,
     isDiagramView,
     isDrawingView,
+    isExtensionView,
     isOpenableView,
     isProjectIconName,
     isSessionView,
@@ -211,7 +212,7 @@ export function viewActions(document: StoreApi<DocumentState>, reach: ViewReach)
         'view.rename': ({ viewId, name }) => {
             const state = document.getState();
             const view = existingView(state, viewId);
-            if (isUnknownView(view)) {
+            if (isUnknownView(view) && !isExtensionView(view)) {
                 throw new ActionRefusal('unsupported-view', `The view “${view.name}” has a kind this version of Ruimte cannot rename.`);
             }
             const previousName = view.name ?? '';

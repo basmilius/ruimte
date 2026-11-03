@@ -53,6 +53,8 @@ export interface SidebarView {
     self: SidebarNode | null;
     /* A chat nobody wrote in yet, which has no row until its first message, even while it is on screen. */
     hidden?: boolean;
+    /* An extension's view, which opens though its kind is `unknown`. */
+    extension?: boolean;
 }
 
 export interface SidebarViewRow {
