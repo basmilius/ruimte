@@ -12,6 +12,7 @@ import { defaultDocumentStore } from '@/state/document';
 import { folderWatches } from '@/state/fs-watch';
 import { useFiles } from '@/state/files';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
+import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 
 // Once for the process, before any chat store is read, as `main.tsx` does it.
 configureChat();
@@ -19,13 +20,20 @@ startFileReadPreparation(defaultProjectStore, defaultDocumentStore, folderWatche
 
 /*
  * Lets what a fake machine answered and what React drew from it land. Bounded by turns of the event
- * loop rather than by a clock, so a slow machine waits longer and a missing answer still fails.
+ * loop rather than by a clock, so a slow machine waits longer and a missing answer still fails. A test
+ * that ran out of time stops here, before it acts beside the next one (`test-scope.ts`).
  */
 export async function until(condition: () => boolean): Promise<void> {
-    for (let turn = 0; turn < 200 && !condition(); turn++) {
-        await act(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 0));
-        });
+    const test = currentTest();
+    for (let turn = 0; turn < 200 && !condition() && currentTest() === test; turn++) {
+        await waitTurn(
+            act(async () => {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            })
+        );
+    }
+    if (currentTest() !== test) {
+        throw new Error('The test ended while it waited');
     }
     expect(condition()).toBe(true);
 }
@@ -39,11 +47,15 @@ export interface Mounted {
     unmount(): Promise<void>;
 }
 
-/* A root of its own in the page. */
+/* A root of its own in the page, unmounted after the test if the test did not. */
 export function mount(): Mounted {
     const host = document.createElement('div');
     document.body.append(host);
     const root: Root = createRoot(host);
+    const unmount = closedAfterTest(async () => {
+        await act(async () => root.unmount());
+        host.remove();
+    });
     return {
         host,
         render: async (element) => {
@@ -67,10 +79,7 @@ export function mount(): Mounted {
                 );
             });
         },
-        unmount: async () => {
-            await act(async () => root.unmount());
-            host.remove();
-        }
+        unmount
     };
 }
 

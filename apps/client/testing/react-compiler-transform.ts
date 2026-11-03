@@ -1,5 +1,5 @@
-import { realpathSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, realpathSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { BunPlugin } from 'bun';
 import { withViteGlobs } from './vite-glob-transform';
 import type { Compiled } from '../react-compiler-babel';
@@ -54,12 +54,14 @@ function compiledOnce(path: string): Promise<string> {
  */
 export async function compileReactSourcesAhead(): Promise<void> {
     const client = join(import.meta.dir, '..');
-    const roots = [join(client, 'src'), ...REACT_COMPILED_PACKAGES.map((name) => realpathSync(join(client, 'node_modules', name, 'src')))];
+    const extensions = join(client, '..', '..', 'extensions');
+    const builtIns = [...ownModules(extensions, '**/package.json')].map(dirname);
+    const roots = [join(client, 'src'), extensions, ...packageSources([client, ...builtIns])];
     const pool = new CompilerPool();
     const pending: Promise<string>[] = [];
     try {
         for (const root of roots) {
-            for await (const file of new Bun.Glob('**/*.{ts,tsx}').scan({ cwd: root, absolute: true })) {
+            for (const file of ownModules(root, '**/*.{ts,tsx}')) {
                 if (compiledByReactCompiler(file) && !compiled.has(file)) {
                     const code = compileOn(pool, file);
                     compiled.set(file, code);
@@ -70,6 +72,48 @@ export async function compileReactSourcesAhead(): Promise<void> {
         await Promise.all(pending);
     } finally {
         pool.close();
+    }
+}
+
+/*
+ * The source of every copy of the compiled packages that the client and the built-ins reach. An install
+ * keeps a copy per set of peers, and `@adecore/agents-react` reaches another `@adecore/ui` than the client.
+ */
+function packageSources(starts: readonly string[]): string[] {
+    const found = new Set<string>();
+    const pending = [...starts];
+    while (pending.length > 0) {
+        const from = pending.pop()!;
+        for (const name of REACT_COMPILED_PACKAGES) {
+            const folder = installedFrom(from, name);
+            if (folder !== null && !found.has(folder)) {
+                found.add(folder);
+                pending.push(folder);
+            }
+        }
+    }
+    return [...found].map((folder) => join(folder, 'src')).filter((source) => existsSync(source));
+}
+
+/* The folder of `name` that Node's lookup finds from `folder`, the nearest `node_modules` up that holds it. */
+function installedFrom(folder: string, name: string): string | null {
+    for (let current = folder; ; current = dirname(current)) {
+        const candidate = join(current, 'node_modules', name);
+        if (existsSync(candidate)) {
+            return realpathSync(candidate);
+        }
+        if (dirname(current) === current) {
+            return null;
+        }
+    }
+}
+
+/* The modules under `root` that are its own: what a built-in installed is found through `packageSources`. */
+function* ownModules(root: string, pattern: string): Generator<string> {
+    for (const file of new Bun.Glob(pattern).scanSync({ cwd: root })) {
+        if (!file.split(/[\\/]/).includes('node_modules')) {
+            yield join(root, file);
+        }
     }
 }
 

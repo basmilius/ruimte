@@ -5,6 +5,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { useProjectList } from '@/state/project-list';
 import { dropMachine, enterWorkspace, showStart } from '@/transport/connections';
 import { connectFakeMachine, type FakeMachine } from './fake-machine';
+import { closedAfterTest } from './test-scope';
 
 const FAKE_PROJECT: ProjectSummary = {
     projectId: 'project-atlas',
@@ -58,20 +59,20 @@ export async function openFakeWorkspace(
     const disconnect = connectFakeMachine(machine, endpointId);
     // Files share a page, and closing an earlier fixture stores its view there, which would win over `local`.
     dropClientLocal(localStorage, endpointId, FAKE_PROJECT.projectId);
-    await enterWorkspace(endpointId, { projectId: FAKE_PROJECT.projectId });
-    return {
-        close(): void {
-            showStart();
-            dropMachine(endpointId);
-            disconnect();
-            useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
-            if (endpointId === ENDPOINT.id) {
-                useEndpoints.getState().remove(ENDPOINT.id);
-            } else {
-                // The row of this machine stays for the next test, so what it listed goes instead.
-                useProjectList.getState().setProjects(endpointId, []);
-                forgetCachedList(endpointId);
-            }
+    // Closed after the test if the test did not, so a test that failed before it got the fixture leaves no window open.
+    const close = closedAfterTest(() => {
+        showStart();
+        dropMachine(endpointId);
+        disconnect();
+        useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
+        if (endpointId === ENDPOINT.id) {
+            useEndpoints.getState().remove(ENDPOINT.id);
+        } else {
+            // The row of this machine stays for the next test, so what it listed goes instead.
+            useProjectList.getState().setProjects(endpointId, []);
+            forgetCachedList(endpointId);
         }
-    };
+    });
+    await enterWorkspace(endpointId, { projectId: FAKE_PROJECT.projectId });
+    return { close };
 }

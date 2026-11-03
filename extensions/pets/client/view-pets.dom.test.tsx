@@ -48,11 +48,11 @@ async function openViews(views: ProjectView[]): Promise<{ workspace: FakeWorkspa
 }
 
 describe('a terminal in a view of its own', () => {
-    let opened: { workspace: FakeWorkspace; page: Mounted };
+    let opened: { workspace: FakeWorkspace; page: Mounted } | undefined;
 
     afterEach(async () => {
-        await opened.page.unmount();
-        opened.workspace.close();
+        await opened?.page.unmount();
+        opened?.workspace.close();
     });
 
     test('has its pet in the bar over its text while an agent runs in it, until a person turns pets in views off', async () => {
@@ -96,10 +96,10 @@ describe('a pet on a canvas', () => {
         edges: [{ id: 'e1', from: WRITER.id, to: SHOP.id, role: 'target' }],
         layouts: []
     };
-    let canvas: CanvasPage;
+    let canvas: CanvasPage | undefined;
 
     afterEach(async () => {
-        await canvas.close();
+        await canvas?.close();
     });
 
     function standsOn(): string | null {
@@ -131,13 +131,13 @@ describe('a pet on a canvas', () => {
 
 describe('a chat in a view of its own', () => {
     const CHAT: ProjectView = { kind: 'chat', id: 'writer-view', name: 'Writer', node: { provider: 'claude' } };
-    let opened: { workspace: FakeWorkspace; page: Mounted };
+    let opened: { workspace: FakeWorkspace; page: Mounted } | undefined;
     const measure = HTMLElement.prototype.getBoundingClientRect;
 
     afterEach(async () => {
         HTMLElement.prototype.getBoundingClientRect = measure;
-        await opened.page.unmount();
-        opened.workspace.close();
+        await opened?.page.unmount();
+        opened?.workspace.close();
     });
 
     test('has its pet on the composer, and a press on it hands the keyboard to the composer', async () => {
