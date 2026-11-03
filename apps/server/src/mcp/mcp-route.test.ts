@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { NODE_SIZE, type ProjectContent } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ContextRefusal } from '../context/context-store.ts';
@@ -243,7 +243,7 @@ describe('files', () => {
         await symlink(outside, join(project, 'link.txt'));
         const files = new AgentFiles(project, [await realpath(project)]);
 
-        expect(await opened(files, 'notes.txt')).toEndWith('/repo/notes.txt');
+        expect(await opened(files, 'notes.txt')).toEndWith(`${sep}${join('repo', 'notes.txt')}`);
         await expect(files.open(outside)).rejects.toMatchObject({ code: 'path-outside' });
         await expect(files.open('link.txt')).rejects.toMatchObject({ code: 'path-outside' });
         await expect(files.open('missing.txt')).rejects.toMatchObject({ code: 'bad-path' });
@@ -267,7 +267,7 @@ describe('files', () => {
         await writeFile(path, 'x');
         const files = await AgentFiles.of(join(root, 'repo'), [], []);
 
-        expect(await opened(files, path)).toEndWith('/shot.txt');
+        expect(await opened(files, path)).toEndWith(`${sep}shot.txt`);
     });
 
     test('an open file reads what was judged, whatever its name points at later', async () => {

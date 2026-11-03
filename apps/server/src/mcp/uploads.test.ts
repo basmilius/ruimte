@@ -120,7 +120,8 @@ describe('stageArtifact', () => {
     test('a file outside the allowed folders is refused before anything is sent', async () => {
         const uploads = memoryUploads();
 
-        await expect(stageArtifact(uploads, files, 'chat-1', ['/etc/hosts'], 'r1')).rejects.toMatchObject({ code: 'path-outside' });
+        // This test file: absolute on every platform, and outside the temp folders the files allow.
+        await expect(stageArtifact(uploads, files, 'chat-1', [import.meta.path], 'r1')).rejects.toMatchObject({ code: 'path-outside' });
         expect(uploads.held.size).toBe(0);
     });
 });

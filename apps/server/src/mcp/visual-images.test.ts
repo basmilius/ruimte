@@ -369,6 +369,7 @@ describe('prepareVisualPage', () => {
         await expect(prepareVisualPage('show', `<img src="${missing}">`)).rejects.toMatchObject({ code: 'visual-images-missing' });
         const preview = await prepareVisualPage('preview', `<img src="${missing}">`);
         expect(preview.html).toBe(`<img src="${missing}">`);
-        expect(preview.lines).toEqual([expect.stringMatching(new RegExp(`^missing\t${missing}\tnot embedded: `))]);
+        expect(preview.lines).toHaveLength(1);
+        expect(preview.lines[0]).toStartWith(`missing\t${missing}\tnot embedded: `);
     });
 });
