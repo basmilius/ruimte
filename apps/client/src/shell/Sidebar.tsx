@@ -51,6 +51,7 @@ import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { draggedViewId, dragging as draggedView, draggingWholeCell, PROJECT_DRAG_TYPE, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
+import { useChatDrawers } from '@/extensions/drawn-chats';
 import { SidebarCards } from '@/extensions/SidebarCards';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { useSettings } from '@/state/settings';
@@ -119,6 +120,7 @@ export function Sidebar() {
     const gap = usePanelGap();
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
+    const draws = useChatDrawers();
     const combined = useSettings((s) => s.sidebarScope === 'all-open');
     const everywhere = useSettings((s) => s.needsYouAllProjects);
     const currentProject = useProject((s) => s.current);
@@ -220,7 +222,7 @@ export function Sidebar() {
                               designChats.map((chat) => asRow({ id: chat.id, kind: 'chat', title: chat.name, provider: chat.node.provider }, view.id))
                           )
                         : own,
-                hidden: isUnlistedView(view),
+                hidden: isUnlistedView(view, draws),
                 ...(isExtensionView(view) ? { extension: true } : {})
             };
         })

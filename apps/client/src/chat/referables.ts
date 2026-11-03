@@ -1,4 +1,5 @@
 import { useExtensionReferables } from '@/extensions/chat-references';
+import { useChatDrawers } from '@/extensions/drawn-chats';
 import {
     isCanvasView,
     isDividerView,
@@ -71,8 +72,8 @@ const VIEW_KINDS: ReadonlySet<string> = new Set<ReferableKind>([
     'database'
 ]);
 
-function viewReferable(view: ProjectView): Referable | null {
-    if (isDividerView(view) || isUnlistedView(view) || view.kind === UNKNOWN_KIND || !VIEW_KINDS.has(view.kind)) {
+function viewReferable(view: ProjectView, draws?: (extensionId: string) => boolean): Referable | null {
+    if (isDividerView(view) || isUnlistedView(view, draws) || view.kind === UNKNOWN_KIND || !VIEW_KINDS.has(view.kind)) {
         return null;
     }
     return { id: view.id, name: view.name, kind: view.kind as ReferableKind, group: 'views' };
@@ -83,7 +84,13 @@ function viewReferable(view: ProjectView): Referable | null {
  * then the views in sidebar order, never the chat itself. Two of one name and kind are told apart by
  * the canvas the node stands on.
  */
-export function projectReferables(views: readonly ProjectView[], nodesOf: NodesOfView<ProjectNode>, textsOf: TextsOfView, chatId: string): Referable[] {
+export function projectReferables(
+    views: readonly ProjectView[],
+    nodesOf: NodesOfView<ProjectNode>,
+    textsOf: TextsOfView,
+    chatId: string,
+    draws?: (extensionId: string) => boolean
+): Referable[] {
     // A later chat of a design node is no node of its own, so the canvas is the one its design stands on.
     const canvas = views.find(
         (view) => isCanvasView(view) && !isUnlistedView(view) && nodesOf(view).some((node) => nodeChats(node).some((chat) => chat.id === chatId))
@@ -114,7 +121,7 @@ export function projectReferables(views: readonly ProjectView[], nodesOf: NodesO
         });
     };
     const offered = views.flatMap((view) => {
-        const own = viewReferable(view);
+        const own = viewReferable(view, draws);
 
         return own === null ? nodesUnder(view) : [own, ...nodesUnder(view)];
     });
@@ -219,7 +226,8 @@ export function openReference(endpointId: string, id: string): void {
 
 /* The open project's views and nodes for a chat's `#`; a machine from before `viewReferences` is offered its chats only. */
 export function useReferables(endpointId: string, chatId: string): Referables {
-    const items = useViewNodes((views, nodesOf) => projectReferables(views, nodesOf, textsOfView, chatId), sameReferables);
+    const draws = useChatDrawers();
+    const items = useViewNodes((views, nodesOf) => projectReferables(views, nodesOf, textsOfView, chatId, draws), sameReferables);
     const chatsOnly = useServers((s) => s.byEndpoint[endpointId]?.viewReferences !== true);
     const own = useProject((s) => s.current);
     const reached = useReachedProjects(endpointId);

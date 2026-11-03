@@ -8,16 +8,10 @@ import { useEndpoints } from '@/state/endpoints';
 import { machineTransport } from '@/transport';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
 import { refreshExtensionTheme } from '@/extensions/themes';
-import { create } from 'zustand';
+import { useInstalledExtensions } from '@/extensions/installed';
 import type { LoadedExtension } from '@/extensions/host/client-api';
 
-export interface ExtensionsState {
-    installed: readonly InstalledClientExtension[];
-    // What failed to load, by id, shown on its row in Settings.
-    failures: Readonly<Record<string, string>>;
-}
-
-export const useInstalledExtensions = create<ExtensionsState>(() => ({ installed: [], failures: {} }));
+export { useInstalledExtensions, type ExtensionsState } from '@/extensions/installed';
 
 type Runtime = typeof import('@/extensions/host/runtime');
 
@@ -88,7 +82,7 @@ async function withdrawOtherMachine(endpointId: string): Promise<void> {
     const stale = [...loaded];
 
     runningFor = null;
-    useInstalledExtensions.setState({ installed: [], failures: {} });
+    useInstalledExtensions.setState({ installed: [], failures: {}, listed: false });
     await refreshExtensionTheme([]);
 
     if (stale.length === 0) {
@@ -125,7 +119,7 @@ export async function syncExtensions(): Promise<void> {
         runningFor = endpointId;
     }
 
-    useInstalledExtensions.setState({ installed });
+    useInstalledExtensions.setState({ installed, listed: true });
 
     for (const [id, failure] of Object.entries(answer.failures)) {
         failed(id, failure);

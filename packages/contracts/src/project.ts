@@ -1028,8 +1028,14 @@ export function isHiddenCanvasView(view: ProjectView): view is ProjectCanvasView
     return view.kind === 'canvas' && view.hidden === true;
 }
 
-export function isUnlistedView(view: ProjectView): boolean {
-    return isEmptyChatView(view) || isHiddenView(view) || isDrawnChatView(view);
+/*
+ * `draws` says whether the extension that drew a chat runs where it is listed. Without one, as on a machine that
+ * cannot know a window's extensions, a drawn chat stays unlisted.
+ */
+export function isUnlistedView(view: ProjectView, draws?: (extensionId: string) => boolean): boolean {
+    const drawn = view.kind === 'chat' && view.drawnBy !== undefined && (draws?.(view.drawnBy) ?? true);
+
+    return drawn || isEmptyChatView(view) || isHiddenView(view);
 }
 
 /* A chat an extension draws itself: listed nowhere, but no inline edit, so it keeps everything an ordinary chat has. */
