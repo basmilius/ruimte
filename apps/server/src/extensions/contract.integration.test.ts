@@ -9,7 +9,7 @@ import { serverActions } from '../actions/server-actions.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { hideChatView } from '../projects/inline-chat.ts';
+import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { extensionChatStarter } from './extension-chat.ts';
 import { ExtensionHost } from './extension-host.ts';
 import { runMachineAction } from './machine-actions.ts';
@@ -66,7 +66,7 @@ serverContract(async (permissions) => {
             actions: serverActions,
             folderOf: (id) => projects.index.folderOf(id),
             projectOfFolder: (folder) => projects.index.projectOfFolder(folder),
-            hideChatView: (id, viewId) => hideChatView(projects, id, viewId)
+            markDrawn: (id, viewId, extensionId) => markDrawnChat(projects, id, viewId, extensionId)
         }),
         runAction: (_id, _projectId, action, input) =>
             runMachineAction(

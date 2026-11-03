@@ -10,8 +10,8 @@ export interface ExtensionChatDeps {
     actions: Pick<ActionRegistry<ServerActionContext>, 'execute'>;
     folderOf(projectId: string): string | null;
     projectOfFolder(folder: string): string | null;
-    /* Turns the chat view into a hidden one, as an inline edit's chat is. */
-    hideChatView(projectId: string, viewId: string): Promise<void>;
+    /* Takes the chat view out of the sidebar as one this extension draws, which leaves it an ordinary chat otherwise. */
+    markDrawn(projectId: string, viewId: string, extensionId: string): Promise<void>;
 }
 
 /*
@@ -25,7 +25,7 @@ export function extensionChatStarter({
     actions,
     folderOf,
     projectOfFolder,
-    hideChatView
+    markDrawn
 }: ExtensionChatDeps): NonNullable<ExtensionHostOptions['startChat']> {
     return async (id, start, check) => {
         const elsewhere = start.folder === undefined ? null : projectOfFolder(start.folder);
@@ -81,7 +81,7 @@ export function extensionChatStarter({
         const { nodeId } = outputOf(result);
 
         if (start.hidden === true) {
-            await hideChatView(projectId, nodeId);
+            await markDrawn(projectId, nodeId, id);
         }
 
         return { nodeId };

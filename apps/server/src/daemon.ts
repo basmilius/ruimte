@@ -26,7 +26,7 @@ import { registerExtensionChatRead } from './handlers/extension-chat-read.ts';
 import type { ExtensionAsks, ExtensionHostOptions } from './extensions/extension-host.ts';
 import { serverActionCall } from './actions/context.ts';
 import { extensionChatStarter } from './extensions/extension-chat.ts';
-import { hideChatView } from './projects/inline-chat.ts';
+import { markDrawnChat } from './projects/drawn-chat.ts';
 import { runMachineAction, outputOf } from './extensions/machine-actions.ts';
 import { ExtensionRefusal } from './extensions/refusal.ts';
 import { CustomLanguageServerInputSchema, extensionChatOf } from '@ruimte/contracts';
@@ -254,7 +254,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         actions: serverActions,
         folderOf: (projectId) => projects.store.index.folderOf(projectId),
         projectOfFolder: (folder) => projects.store.index.projectOfFolder(folder),
-        hideChatView: (projectId, viewId) => hideChatView(projects.store, projectId, viewId)
+        markDrawn: (projectId, viewId, extensionId) => markDrawnChat(projects.store, projectId, viewId, extensionId)
     });
     runExtensionAction = async (id, projectId, action, input) => {
         const folder = projects.store.index.folderOf(projectId);

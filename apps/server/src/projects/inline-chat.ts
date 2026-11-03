@@ -119,18 +119,6 @@ export async function showInlineChat(store: ProjectStore, payload: ProjectInline
     }));
 }
 
-/* The other way: a chat view that something draws itself, such as an extension with `Chat`, leaves the sidebar and stays in the project. */
-export async function hideChatView(store: ProjectStore, projectId: string, viewId: string): Promise<void> {
-    await store.mutate(projectId, (content) =>
-        content.views.some((view) => view.id === viewId && view.kind === 'chat' && view.hidden !== true)
-            ? {
-                  content: { ...content, views: content.views.map((view) => (view.id === viewId && view.kind === 'chat' ? { ...view, hidden: true } : view)) },
-                  result: undefined
-              }
-            : { content: null, result: undefined }
-    );
-}
-
 /*
  * Takes an inline chat away: its CLI and record first, then its view, the order a view delete follows.
  * A chat that is listed is a person's conversation by now, so only a hidden view is ever removed.

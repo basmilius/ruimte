@@ -104,7 +104,8 @@ export const EXTENSION_CLIENT_PERMISSIONS: Readonly<Record<string, string>> = {
     'canvas.unlink': 'canvas.write',
     useAgents: 'agents.status',
     useUsageLimits: 'usage.read',
-    Chat: 'chats.read',
+    // It opens the chat when it is not running, so it starts an agent as `agents.start` does.
+    Chat: 'agents.start',
     ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
 

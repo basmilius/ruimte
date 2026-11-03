@@ -128,8 +128,8 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                 title?: string;
                 hidden?: boolean;
             }) {
-                if (project === undefined && folder === undefined) {
-                    throw new TypeError('agents.start needs a project or a folder');
+                if ((project === undefined) === (folder === undefined)) {
+                    throw new TypeError('agents.start needs a project or a folder, not both');
                 }
 
                 const beside = near?.[0]?.id;

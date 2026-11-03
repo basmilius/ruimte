@@ -17,7 +17,7 @@ function BoardBody({ params }: { params: unknown }) {
     return <p>{`Board with ${JSON.stringify(params ?? null)}`}</p>;
 }
 
-// A chat this machine started in another project's folder, which the view draws.
+// A chat of this project that the view draws itself.
 const CHAT_VIEW = ProjectViewSchema.parse({ kind: 'extension', id: 'chat-view', name: 'Write it down', extension: 'acme.views', type: 'chat' });
 
 let machine = new FakeMachine();
@@ -25,13 +25,13 @@ let workspace: FakeWorkspace | null = null;
 let page: Mounted | null = null;
 
 beforeAll(() => {
-    const manifest: ExtensionManifest = { id: 'acme.views', name: 'Views', version: '0.1.0', api: 1, permissions: { 'chats.read': 'Draws a chat' } };
+    const manifest: ExtensionManifest = { id: 'acme.views', name: 'Views', version: '0.1.0', api: 1, permissions: { 'agents.start': 'Draws a chat' } };
     const extension = { manifest, base: '/', disposers: [], settings: null };
     const api = clientApiFor(extension);
 
     registerExtension(extension);
     api.defineView({ id: 'board', title: 'Board view', component: async () => ({ default: BoardBody }) });
-    api.defineView({ id: 'chat', title: 'Chat view', component: async () => ({ default: () => <api.Chat id="plans-chat" folder="/work/plans" /> }) });
+    api.defineView({ id: 'chat', title: 'Chat view', component: async () => ({ default: () => <api.Chat id="plans-chat" /> }) });
 });
 afterAll(() => forgetExtension('acme.views'));
 afterEach(async () => {
@@ -92,11 +92,11 @@ describe('views of an extension', () => {
         await until(() => sidebarRow('Board view') !== null && (document.body.textContent?.includes('Board with null') ?? false));
     });
 
-    test("draw a chat of another project's folder, which opens there", async () => {
+    test('draw a chat of the project in front, which opens in its folder', async () => {
         await openWith([CHAT_VIEW]);
         await clickOn(sidebarRow('Write it down'));
         await until(() => machine.requests('chat.create').length > 0);
 
-        expect(machine.requests('chat.create')[0]).toMatchObject({ chatId: 'plans-chat', cwd: '/work/plans' });
+        expect(machine.requests('chat.create')[0]).toMatchObject({ chatId: 'plans-chat', cwd: '/work/atlas' });
     });
 });

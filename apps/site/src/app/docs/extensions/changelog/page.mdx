@@ -8,7 +8,7 @@ API version `1` is a preview. It goes to a small group of invited developers fir
 
 ## 1, preview, chats and charts (November 2026)
 
-- `Chat` in `@ruimte/extension/client` draws a chat of the machine, its thread and its composer, inside your own surface. It needs `chats.read`.
+- `Chat` in `@ruimte/extension/client` draws a chat of the machine, its thread and its composer, inside your own surface. It needs `agents.start`, and draws a chat of the project in front.
 - `agents.start` takes a `folder`, on the client and in `server/`, and starts the chat in the project the machine knows there, as a view of that project. In `server/` it takes `folder` instead of `project`.
 - `@ruimte/extension/charts` and `@ruimte/extension/agents-ui` hand you the charts and the pieces of a chat Ruimte draws with. A pack takes them from Ruimte instead of bundling them, so they follow the ADE CORE version of the Ruimte that loads the extension, with no promise between releases.
 - `agents.start` takes `hidden`, for a chat you draw yourself with `Chat`: it stays in the project and out of the sidebar.

@@ -636,7 +636,9 @@ export const ProjectChatViewSchema = ViewBaseSchema.extend({
     // A Chats project chat nobody wrote in yet: unlisted, reused by the next new chat, cleared by the first message.
     empty: z.boolean().optional(),
     // A chat an inline edit runs in: no list or tab shows it, only its card in the editor.
-    hidden: z.boolean().optional()
+    hidden: z.boolean().optional(),
+    // The extension that draws this chat in a surface of its own, so the sidebar leaves it out; otherwise an ordinary chat.
+    drawnBy: z.string().min(1).optional()
 });
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 
@@ -1027,7 +1029,12 @@ export function isHiddenCanvasView(view: ProjectView): view is ProjectCanvasView
 }
 
 export function isUnlistedView(view: ProjectView): boolean {
-    return isEmptyChatView(view) || isHiddenView(view);
+    return isEmptyChatView(view) || isHiddenView(view) || isDrawnChatView(view);
+}
+
+/* A chat an extension draws itself: listed nowhere, but no inline edit, so it keeps everything an ordinary chat has. */
+export function isDrawnChatView(view: ProjectView): view is ProjectChatView {
+    return view.kind === 'chat' && view.drawnBy !== undefined;
 }
 
 /*

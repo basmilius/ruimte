@@ -487,7 +487,7 @@ export function clientApi(host: TestHost) {
             };
         },
         // A chat as a test reads it: its thread as text under its title, or that the machine has no chat of that id.
-        Chat({ id }: { id: string; folder?: string }) {
+        Chat({ id }: { id: string }) {
             host.hookPermission('Chat');
             useHost(host);
 

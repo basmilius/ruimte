@@ -5,10 +5,10 @@ import { lazyNamed } from '@adecore/ui';
 const ChatBody = lazyNamed(() => import('@/nodes/ChatBody'), 'ChatBody');
 
 /*
- * A chat of the machine in front as Ruimte draws it, thread and composer, inside a surface of an extension. It has the
+ * A chat of the project in front as Ruimte draws it, thread and composer, inside a surface of an extension. It has the
  * keyboard while the focus is in it, as a chat view has while its body has it.
  */
-export function ExtensionChat({ id, folder }: { id: string; folder?: string }) {
+export function ExtensionChat({ id }: { id: string }) {
     const [focused, setFocused] = useState(false);
 
     return (
@@ -21,7 +21,7 @@ export function ExtensionChat({ id, folder }: { id: string; folder?: string }) {
                 }
             }}
         >
-            <ChatBody id={id} focused={focused} {...(folder === undefined ? {} : { cwd: folder })} />
+            <ChatBody id={id} focused={focused} />
         </div>
     );
 }

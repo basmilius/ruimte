@@ -1107,7 +1107,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         useTheme() {
             return { side: useUiTheme((state) => state.resolved) };
         },
-        Chat(props: { id: string; folder?: string }) {
+        Chat(props: { id: string }) {
             hookPermission(useExtension(), 'Chat');
 
             return <ExtensionChat {...props} />;

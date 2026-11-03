@@ -10,7 +10,7 @@ import type { CanvasHost } from '../tools/host.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { hideChatView } from '../projects/inline-chat.ts';
+import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { extensionChatStarter } from './extension-chat.ts';
 import { ExtensionHost } from './extension-host.ts';
 import { ExtensionStore } from './store.ts';
@@ -69,7 +69,7 @@ async function extensionOn(host: CanvasHost): Promise<ExtensionHost> {
         actions: serverActions,
         folderOf: (id) => store.index.folderOf(id),
         projectOfFolder: (folder) => store.index.projectOfFolder(folder),
-        hideChatView: (id, viewId) => hideChatView(store, id, viewId)
+        markDrawn: (id, viewId, extensionId) => markDrawnChat(store, id, viewId, extensionId)
     });
     const extensionHost = new ExtensionHost({ store: extensions, startChat: starter });
 
@@ -114,13 +114,15 @@ describe('an extension starts a chat', () => {
         await expect(extensions.startAgent(ID, { projectId, folder: join(root, 'nowhere') })).rejects.toMatchObject({ code: 'not-found' });
     });
 
-    test('that the extension draws itself as a hidden chat view, on no canvas, also when one is in front', async () => {
+    test('that the extension draws itself, out of the sidebar and on no canvas, as an ordinary chat and never an inline edit', async () => {
         const extensions = await extensionOn(daemon.host);
         const { nodeId } = await extensions.startAgent(ID, { projectId, viewId: 'main', hidden: true, prompt: 'Hello' });
         const view = (await store.read(projectId)).views.find((candidate) => candidate.id === nodeId);
 
         expect(await nodesOnCanvas()).toEqual([]);
-        expect(view).toMatchObject({ kind: 'chat', hidden: true });
+        expect(view).toMatchObject({ kind: 'chat', drawnBy: ID });
+        expect(view).not.toHaveProperty('hidden');
+        expect(store.index.isHiddenChat(nodeId)).toBe(false);
     });
 
     test('makes nothing once it is turned off while the start waits in the action', async () => {

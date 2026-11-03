@@ -187,7 +187,7 @@ export const ExtensionAgentStartPayloadSchema = z.object({
     prompt: z.string().optional(),
     // The folder of another project on the machine to start the chat in, instead of `projectId`.
     folder: z.string().min(1).optional(),
-    // A chat the extension draws itself: a hidden chat view, kept in the project but listed nowhere.
+    // A chat the extension draws itself: kept in the project as a chat view the sidebar leaves out (`drawnBy`).
     hidden: z.boolean().optional()
 });
 export const ExtensionAgentStartResultSchema = z.object({ nodeId: z.string() });
