@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rename, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
@@ -29,6 +29,15 @@ afterEach(async () => {
 });
 
 describe('fs.create', () => {
+    test.each(['file', 'directory'] as const)('refuses a parent redirected outside the project after planning a %s', async (kind) => {
+        const plan = await planCreate({ path: join(project, 'src', 'deep', 'escaped'), kind, text: 'proof' }, boundary());
+        await rename(join(project, 'src'), join(project, 'old-src'));
+        await symlink(outside, join(project, 'src'), 'junction');
+
+        await expect(plan.run()).rejects.toMatchObject({ code: 'outside-project' });
+        expect(await stat(join(outside, 'deep')).catch(() => null)).toBeNull();
+    });
+
     test('creates an empty file and answers its size and mtime', async () => {
         const path = join(project, 'src', 'b.ts');
 

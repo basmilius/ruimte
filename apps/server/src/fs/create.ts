@@ -1,9 +1,10 @@
-import { constants } from 'node:fs';
-import { lstat, mkdir, open, stat } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { closeSync, constants, fchmodSync, fstatSync, ftruncateSync, writeFileSync } from 'node:fs';
+import { lstat, stat } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES, type FsCreatePayload, type FsCreateResult } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import { assertOpenGround, realRoots, rootOf, type WriteBoundary } from './write.ts';
+import { withCreateParent } from './create-parent.ts';
 import { realOrNull } from './real-path.ts';
 
 type CreateErrorCode = 'bad-path' | 'exists' | 'not-a-directory' | 'too-large' | 'not-writable';
@@ -56,7 +57,7 @@ function failure(e: unknown, path: string): unknown {
     if (code === 'ENOTDIR') {
         return new CreateError('not-a-directory', `A part of ${path} is a file, not a folder`);
     }
-    if (code === 'EACCES' || code === 'EPERM' || code === 'EROFS') {
+    if (code === 'EACCES' || code === 'EPERM' || code === 'EROFS' || code === 'ESTALE' || code === 'ENOTSUP') {
         return new CreateError('not-writable', `${path} cannot be created`);
     }
     if (code === 'ENAMETOOLONG' || code === 'EINVAL') {
@@ -97,7 +98,11 @@ export async function planCreate(
     }
     const { base, missing } = await deepestExisting(target);
     const real = join(base, ...missing);
-    assertOpenGround(rootOf(await realRoots(boundary), real, target), real, target, 'created');
+    const roots = await realRoots(boundary);
+    const root = rootOf(roots, real, target);
+    assertOpenGround(root, real, target, 'created');
+    const rootInfo = await stat(root);
+    const parents = relative(root, dirname(real)).split(sep).filter(Boolean);
     const bytes = kind === 'file' ? new TextEncoder().encode(payload.text ?? '') : null;
     if (bytes !== null && bytes.length > FS_READ_MAX_TEXT_BYTES) {
         throw new CreateError('too-large', 'That text is too large to create from here');
@@ -105,33 +110,55 @@ export async function planCreate(
     return {
         run: async () => {
             try {
-                await mkdir(dirname(real), { recursive: true });
-                if (bytes === null) {
-                    await mkdir(real);
-                    return { size: 0, mtime: Math.round((await lstat(real)).mtimeMs) };
+                const entry = await lstat(real).catch(() => null);
+
+                if (entry?.isSymbolicLink()) {
+                    throw new CreateError('exists', `${target} changed before it was created`);
                 }
-                const handle = await open(real, constants.O_WRONLY | (replacing ? 0 : constants.O_CREAT | constants.O_EXCL) | noFollow, payload.mode ?? 0o644);
-                try {
-                    // Truncated only once the handle is the file the plan saw: without `O_NOFOLLOW`, a link put in its place since would be followed.
-                    if (replacing) {
-                        const opened = await handle.stat();
-                        if (opened.ino !== taken.ino || opened.dev !== taken.dev) {
-                            throw new CreateError('exists', `${target} changed before it was replaced`);
+
+                const current = await deepestExisting(real);
+                const destination = join(current.base, ...current.missing);
+                rootOf(roots, destination, target);
+                assertOpenGround(rootOf(await realRoots(boundary), destination, target), destination, target, 'created');
+
+                return withCreateParent(root, rootInfo, parents, (directory) => {
+                    if (bytes === null) {
+                        const created = directory.mkdir(basename(real));
+
+                        return { size: 0, mtime: Math.round(created.mtimeMs) };
+                    }
+
+                    const descriptor = directory.open(
+                        basename(real),
+                        constants.O_WRONLY | (constants.O_NONBLOCK ?? 0) | (replacing ? 0 : constants.O_CREAT | constants.O_EXCL) | noFollow,
+                        payload.mode ?? 0o644
+                    );
+
+                    try {
+                        if (replacing) {
+                            const opened = fstatSync(descriptor);
+
+                            if (opened.ino !== taken.ino || opened.dev !== taken.dev) {
+                                throw new CreateError('exists', `${target} changed before it was replaced`);
+                            }
                         }
+
+                        if (payload.mode !== undefined) {
+                            fchmodSync(descriptor, payload.mode);
+                        }
+
+                        if (replacing) {
+                            ftruncateSync(descriptor, 0);
+                        }
+
+                        writeFileSync(descriptor, bytes);
+                        const created = fstatSync(descriptor);
+
+                        return { size: created.size, mtime: Math.round(created.mtimeMs) };
+                    } finally {
+                        closeSync(descriptor);
                     }
-                    // Before the text goes in, so a secret never sits in a file others may read.
-                    if (payload.mode !== undefined) {
-                        await handle.chmod(payload.mode);
-                    }
-                    if (replacing) {
-                        await handle.truncate(0);
-                    }
-                    await handle.writeFile(bytes);
-                    const created = await handle.stat();
-                    return { size: created.size, mtime: Math.round(created.mtimeMs) };
-                } finally {
-                    await handle.close();
-                }
+                });
             } catch (e) {
                 if (replacing && (e as NodeJS.ErrnoException).code === 'ENOENT') {
                     throw new CreateError('exists', `${target} changed before it was replaced`);

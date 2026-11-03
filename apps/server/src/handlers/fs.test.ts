@@ -296,6 +296,36 @@ describe('files that go past the language servers', () => {
         expect(await readFile(path, 'utf8')).toBe('old');
     });
 
+    test('refuses overlapping upload pieces without counting a hole as received bytes', async () => {
+        const path = join(root, 'overlap.txt');
+        await writeFile(path, 'old');
+        const { mtimeMs } = await stat(path);
+        const started = await request('fs.writeStart', { path, size: 6, expectedMtime: Math.round(mtimeMs) });
+        const { uploadId } = (started as { result: { uploadId: string } }).result;
+        const piece = (offset: number, text: string) => request('fs.writePiece', { uploadId, offset, data: Buffer.from(text).toString('base64') });
+
+        expect(await piece(0, 'abcd')).toMatchObject({ ok: true });
+        expect(await piece(2, 'XY')).toMatchObject({ ok: false, error: { code: 'upload-invalid' } });
+        expect(await request('fs.writeCommit', { uploadId })).toMatchObject({ ok: false, error: { code: 'upload-incomplete' } });
+        expect(await readFile(path, 'utf8')).toBe('old');
+    });
+
+    test('accepts out of order upload pieces and identical retries, but refuses changed retries', async () => {
+        const path = join(root, 'retry.txt');
+        await writeFile(path, 'old');
+        const { mtimeMs } = await stat(path);
+        const started = await request('fs.writeStart', { path, size: 6, expectedMtime: Math.round(mtimeMs) });
+        const { uploadId } = (started as { result: { uploadId: string } }).result;
+        const piece = (offset: number, text: string) => request('fs.writePiece', { uploadId, offset, data: Buffer.from(text).toString('base64') });
+
+        expect(await piece(4, 'ef')).toMatchObject({ ok: true });
+        expect(await piece(0, 'abcd')).toMatchObject({ ok: true });
+        expect(await piece(0, 'abcd')).toMatchObject({ ok: true });
+        expect(await piece(0, 'XY')).toMatchObject({ ok: false, error: { code: 'upload-invalid' } });
+        expect(await request('fs.writeCommit', { uploadId })).toMatchObject({ ok: true });
+        expect(await readFile(path, 'utf8')).toBe('abcdef');
+    });
+
     test('does not tell the servers about a write that is refused', async () => {
         const { calls } = withLanguage();
 
