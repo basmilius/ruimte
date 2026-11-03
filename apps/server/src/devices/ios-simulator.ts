@@ -307,6 +307,12 @@ export class IosSimulatorBackend implements DeviceBackend {
         return this.find(deviceId);
     }
 
+    /* simctl lists a simulator as booted while it still shows the boot screen; `bootstatus` returns once its boot finished. */
+    async ready(deviceId: string): Promise<DeviceInfo> {
+        await this.command(['bootstatus', deviceId]);
+        return this.find(deviceId);
+    }
+
     async shutdown(deviceId: string): Promise<DeviceInfo> {
         const current = await this.find(deviceId);
         if (current.state === 'shutdown') {

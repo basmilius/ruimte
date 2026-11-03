@@ -56,6 +56,15 @@ const LOCATION_INPUT = z
         return { latitude: latitude!, longitude: longitude! };
     });
 
+/* The size coordinates count in, which is that of the last shot, so a running device has none before one. */
+function screenLine(state: ActionOutput<'device.inspect'>): string {
+    if (state.screen !== null) {
+        return `${state.screen.width}x${state.screen.height}`;
+    }
+
+    return state.present ? 'unknown until device_shot' : 'unknown';
+}
+
 function powerLine(state: ActionOutput<'device.inspect'>): string {
     const { power } = state;
 
@@ -168,6 +177,13 @@ const deviceStart = defineActionTool('device', {
     async run(input, call) {
         const started = await runAction(call, 'device.start', { nodeId: input.device });
 
+        if (!started.ready) {
+            return [
+                `started\t${input.device}\t${field(started.device)}\tstarting`,
+                'next\tdevice_start\tit is still starting; call it again to wait until it can be operated'
+            ];
+        }
+
         return [`started\t${input.device}\t${field(started.device)}\t${started.state}`, 'next\tdevice_state\twhat the device can do now'];
     }
 });
@@ -189,7 +205,7 @@ const deviceState = defineActionTool('device', {
             `device\t${state.deviceId ?? input.device}\t${field(device.name)}\t${device.platform}\t${device.kind}\t${field(device.runtime)}`,
             `state\t${state.state ?? 'missing'}`,
             powerLine(state),
-            `screen\t${state.screen === null ? 'unknown' : `${state.screen.width}x${state.screen.height}`}`,
+            `screen\t${screenLine(state)}`,
             `buttons\t${state.buttons.join(' ')}`,
             `can\tshot\t${yesNo(state.can.shot)}`,
             `can\tinput\t${yesNo(state.can.input)}`,

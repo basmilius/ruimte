@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { ROLES_SHAPE } from './agent-tools.ts';
-import { nextLine } from './task-tools.ts';
+import { nextLine, taskToolkit } from './task-tools.ts';
 import { MAX_TASK_PROMPT_LENGTH, taskBrief, taskFirstPrompt } from './tasks.ts';
 import { canvasFixture, projectId, held, started, tasks, TOKENS, invoke, nodeOnDisk } from './canvas-test-fixture.ts';
 
@@ -61,6 +61,15 @@ describe('task list', () => {
         // A child that is told about done calls it even when its last answer already reports back.
         expect(taskBrief(true)).not.toContain('done');
         expect(taskBrief(false)).toContain('call task_done with the result');
+    });
+
+    test('a chat child hears that its last message reports back also where its task names a tool, which task_done says too', () => {
+        const done = taskToolkit.tools.find((tool) => tool.name === 'task_done');
+
+        // A task often says to report with task_done; told that no tool call is needed, a child wrote its name under the answer.
+        expect(taskBrief(true)).not.toContain('no tool call is needed');
+        expect(taskBrief(true)).toContain('also where the task names a tool for it');
+        expect(done?.description).toContain("a chat child's last message does the same");
     });
 
     test('team task gives every role a task of its own', async () => {

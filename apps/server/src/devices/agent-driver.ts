@@ -20,6 +20,9 @@ import type { DeviceManager } from './manager.ts';
 /* How long an agent's session on a device outlives its last call, so a run of taps shares one and a finished agent leaves none behind. */
 export const AGENT_HOLD_IDLE_MS = 60_000;
 
+/* How long `device_start` waits for a device to finish starting, well within the MCP request's own limit. */
+export const DEVICE_READY_WAIT_MS = 120_000;
+
 /* How long a finger rests on the glass for a tap: long enough for a button to see it, short of a long press. */
 const TAP_MS = 60;
 
@@ -117,6 +120,7 @@ type Manager = Pick<
     | 'list'
     | 'find'
     | 'boot'
+    | 'ready'
     | 'hold'
     | 'release'
     | 'input'
@@ -207,9 +211,31 @@ export class DeviceDriver {
         this.claims.release(caller);
     }
 
-    /* Starts a simulator or an emulator the way a person's start from its node does; a phone has no start. */
-    boot(device: DeviceInfo): Promise<DeviceInfo> {
-        return this.manager.boot(device.backendId, device.platform, device.deviceId);
+    /*
+     * Starts a simulator or an emulator the way a person's start from its node does, then waits until it
+     * can be operated, also when it already says booted: a simulator does long before its boot screen
+     * went. `ready` is false when that took longer than `DEVICE_READY_WAIT_MS`. A phone has no start.
+     */
+    async start(device: DeviceInfo): Promise<{ device: DeviceInfo; ready: boolean }> {
+        const started = device.state === 'booted' ? device : await this.manager.boot(device.backendId, device.platform, device.deviceId);
+        let cancel: () => void = () => undefined;
+        const late = new Promise<'late'>((resolve) => {
+            cancel = this.timers.set(() => resolve('late'), DEVICE_READY_WAIT_MS);
+        });
+
+        try {
+            const ready = await Promise.race([this.manager.ready(started.backendId, started.platform, started.deviceId), late]);
+
+            if (ready === 'late') {
+                return { device: started, ready: false };
+            }
+
+            const now = ready ?? started;
+
+            return { device: now, ready: now.state === 'booted' };
+        } finally {
+            cancel();
+        }
     }
 
     /* Where beside the project an agent may hand a device a file from: its chat's own folders and the system's temporary ones. */

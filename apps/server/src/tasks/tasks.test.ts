@@ -908,10 +908,8 @@ describe('a child that waits on input', () => {
         expect(wakeTurns(first)).toEqual([]);
         expect(turnsOf(first, 'chat-lead')).toHaveLength(1);
         expect(first.tasks.get(child.taskId)?.status).toBe('open');
-        // The lead's CLI hears it in front of its next turn, which is where an agent reads what happened meanwhile.
-        expect(first.chats.get('chat-lead')?.preambles.join('\n')).toContain(
-            `Ruimte: Lexer (node ${child.childId}), an agent you gave a task, waits for a person to approve Bash`
-        );
+        // The lead's CLI hears it in front of its next turn while the approval still waits; ADE CORE's waiting-child test holds the words.
+        expect(first.chats.get('chat-lead')?.holdsPreamble).toBe(true);
         running.splice(running.indexOf(first), 1);
         await first.stop();
 

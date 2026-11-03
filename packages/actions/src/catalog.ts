@@ -2996,7 +2996,7 @@ export const ACTION_DEFINITIONS = {
         domain: 'machine',
         actors: AGENT,
         input: z.object({ nodeId: deviceNode }),
-        output: deviceDone.extend({ state: DeviceStateSchema })
+        output: deviceDone.extend({ state: DeviceStateSchema, ready: z.boolean() })
     },
     'context.list': {
         title: 'List linked context',

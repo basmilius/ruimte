@@ -14,15 +14,16 @@ export const MAX_TASK_PROMPT_LENGTH = MAX_PROMPT_LENGTH - BRIEF_ROOM;
 
 /*
  * The line a child reads under its prompt. A chat child's last answer is its result, and naming done
- * there made every child call it anyway. A terminal child has no answer the daemon can take, so it
- * calls `task_done`.
+ * there made every child call it anyway; a task that names it still holds, which the line says, since a
+ * child told no tool was needed wrote the tool's name under its answer. A terminal child has no answer
+ * the daemon can take, so it calls `task_done`.
  */
 export function taskBrief(chat: boolean): string {
     return `\n\n(${chat ? CHAT_TASK_BRIEF : TERMINAL_TASK_BRIEF})`;
 }
 
 const CHAT_TASK_BRIEF =
-    'This is a task from the agent that opened you. End this turn with the result as your last message; that is reported back to it, so no tool call is needed.';
+    'This is a task from the agent that opened you. End this turn with the result as your last message; that reports it back, also where the task names a tool for it.';
 const TERMINAL_TASK_BRIEF =
     'This is a task from the agent that opened you. When it is finished, call task_done with the result; if you exit without it, the task fails.';
 

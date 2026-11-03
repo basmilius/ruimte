@@ -20,6 +20,19 @@ interface InsideRule {
  * of its repository. An agent must not reach outside the project the person opened it in. Compared
  * on real paths, so neither a symlink inside the folder nor `/tmp` against `/private/tmp` decides it.
  */
+/*
+ * How a refusal names a path that lies outside: a link also by where it leads, since the link itself may
+ * sit inside. Only a link at the end, so a system one above it (`/var` on macOS) adds no noise.
+ */
+export async function outsidePath(resolved: string, real: string): Promise<string> {
+    const link = await lstat(resolved).then(
+        (info) => info.isSymbolicLink(),
+        () => false
+    );
+
+    return link ? `${resolved} leads to ${real}, which is` : `${resolved} is`;
+}
+
 async function checkInsideProject(
     folder: string,
     rule: InsideRule,
@@ -42,7 +55,7 @@ async function checkInsideProject(
         // The paths as git has them, not the real ones the comparison ran on: those are what a caller can type back.
         throw new ToolRefusal(
             rule.outsideCode,
-            `${resolved} is outside ${folder}${also.length > 0 ? ', the other folders below' : ''} and the worktrees of its repository`,
+            `${await outsidePath(resolved, real)} outside ${folder}${also.length > 0 ? ', the other folders below' : ''} and the worktrees of its repository`,
             [
                 `folder\t${folder}`,
                 ...paths.filter((candidate) => candidate !== folder).map((candidate) => `worktree\t${candidate}`),

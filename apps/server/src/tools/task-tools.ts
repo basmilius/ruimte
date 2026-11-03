@@ -61,7 +61,7 @@ const taskNew = defineActionTool('task', {
 const taskDone = defineActionTool('task', {
     name: 'task_done',
     action: 'task.complete',
-    description: "Reports your task's result and wakes the chat that gave it.",
+    description: "Reports your task's result and wakes the chat that gave it; a chat child's last message does the same.",
     counter: 'done',
     input: z.object({ result: z.string({ error: 'result needs what came of the task, as text' }).optional() }),
     async run(input, call) {

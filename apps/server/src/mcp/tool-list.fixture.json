@@ -3037,7 +3037,7 @@
         },
         {
             "name": "task_done",
-            "description": "Reports your task's result and wakes the chat that gave it.",
+            "description": "Reports your task's result and wakes the chat that gave it; a chat child's last message does the same.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -3192,7 +3192,7 @@
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "argument1": {
+                    "id": {
                         "type": "string",
                         "description": "The tool, from tool_list"
                     },

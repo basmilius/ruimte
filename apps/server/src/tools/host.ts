@@ -394,7 +394,7 @@ export type DeviceDriveHost = Pick<
     | 'list'
     | 'find'
     | 'claim'
-    | 'boot'
+    | 'start'
     | 'pathFolders'
     | 'screen'
     | 'abilities'

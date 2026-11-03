@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { DeviceInfo, ProjectContent, ProjectEdge, ProjectNode } from '@ruimte/contracts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
-import { DeviceDriver } from '../devices/agent-driver.ts';
+import { DEVICE_READY_WAIT_MS, DeviceDriver } from '../devices/agent-driver.ts';
 import { DeviceControl } from '../devices/control.ts';
 import { ReadingBackend, RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
@@ -136,7 +136,7 @@ describe('device tools', () => {
             'device\tsim-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',
             'state\tbooted',
             'power\tnone',
-            'screen\tunknown',
+            'screen\tunknown until device_shot',
             'buttons\thome swipeHome appSwitcher lock siri',
             'can\tshot\tyes',
             'can\tinput\tyes',
@@ -287,6 +287,39 @@ describe('device tools', () => {
         ]);
         expect(backend.boots).toEqual(['sim-1']);
         expect((await run('device_start', { device: 'phone-1' }))[0]).toBe('started\tphone-1\tiPhone 18 Pro\tbooted');
+        expect(backend.boots).toEqual(['sim-1']);
+    });
+
+    test('answers a start once the device can be operated, also one that already says booted, and says when it is still starting', async () => {
+        const timers = new ManualTimers();
+        const waits: string[] = [];
+        let finish: () => void = () => undefined;
+        const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+        host = { ...host, devices: driverWith([backend], { timers }) } as CanvasHost;
+        backend.info = { ...SIMULATOR, state: 'shutdown' };
+        Object.assign(backend, {
+            ready: (deviceId: string) => {
+                waits.push(deviceId);
+
+                return new Promise<DeviceInfo>((resolve) => {
+                    finish = () => resolve(backend.info);
+                });
+            }
+        });
+
+        const first = run('device_start', { device: 'sim-1' });
+        await settle();
+        finish();
+        expect(await first).toEqual(['started\tsim-1\tiPhone 18 Pro\tbooted', 'next\tdevice_state\twhat the device can do now']);
+
+        const second = run('device_start', { device: 'sim-1' });
+        await settle();
+        timers.advance(DEVICE_READY_WAIT_MS);
+        expect(await second).toEqual([
+            'started\tsim-1\tiPhone 18 Pro\tstarting',
+            'next\tdevice_start\tit is still starting; call it again to wait until it can be operated'
+        ]);
+        expect(waits).toEqual(['sim-1', 'sim-1']);
         expect(backend.boots).toEqual(['sim-1']);
     });
 

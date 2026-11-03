@@ -199,9 +199,9 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         }
 
         claim(context, actor.id, device);
-        const started = device.state === 'booted' ? device : await driverOf(context.host).boot(device);
+        const started = await driverOf(context.host).start(device);
 
-        return { output: { nodeId: id, device: started.name, state: started.state } };
+        return { output: { nodeId: id, device: started.device.name, state: started.device.state, ready: started.ready } };
     },
     'device.inspect': async ({ nodeId, find }, { actor, context }) => {
         const { reference, device } = await targetOf(context, actor.id, nodeId);

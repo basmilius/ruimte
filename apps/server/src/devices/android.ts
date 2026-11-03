@@ -150,6 +150,8 @@ const PACKAGE_NAME = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/;
 const FIRST_EMULATOR_PORT = 5554;
 const LAST_EMULATOR_PORT = 5682;
 const EMULATOR_SERIAL = /^emulator-(\d+)$/;
+/* Seconds an emulator's boot is asked after, as long as `DEVICE_READY_WAIT_MS` lets an agent's start wait. */
+const READY_ATTEMPTS = 120;
 
 /* Where a device that cannot dump to its own output leaves its tree, for as long as it takes to read it. */
 const TREE_DUMP = '/data/local/tmp/ruimte-window.xml';
@@ -358,6 +360,16 @@ export class AndroidBackend implements DeviceBackend {
             return current;
         }
         return this.start(deviceId, []);
+    }
+
+    /* An emulator is listed as booted only once `sys.boot_completed` is set, so this asks until it is, for as long as an agent's start waits. */
+    async ready(deviceId: string): Promise<DeviceInfo> {
+        let current = await this.find(deviceId);
+        for (let attempt = 0; attempt < READY_ATTEMPTS && current.state === 'transitioning'; attempt += 1) {
+            await this.sleep(1_000);
+            current = await this.find(deviceId);
+        }
+        return current;
     }
 
     /* Starts a stopped emulator, with `extra` after the usual arguments. */

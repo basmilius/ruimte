@@ -73,6 +73,8 @@ export interface DeviceBackend {
     readonly kinds?: readonly DeviceKind[];
     list(): Promise<DeviceInfo[]>;
     boot?(deviceId: string): Promise<DeviceInfo>;
+    /* Waits until a started device has finished starting and can be operated; absent on a backend that cannot tell. */
+    ready?(deviceId: string): Promise<DeviceInfo>;
     shutdown?(deviceId: string): Promise<DeviceInfo>;
     detail?(deviceId: string): Promise<DeviceSettings>;
     /* `session` is the device's open source, for an action that goes through it; null while nobody has the device open. */
@@ -219,6 +221,13 @@ export class DeviceManager {
             throw new DeviceError('device-action-unavailable', 'This device cannot be started by Ruimte');
         }
         return backend.boot(deviceId);
+    }
+
+    /* The device once it can be operated; null from a backend that cannot tell when that is. */
+    async ready(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceInfo | null> {
+        const backend = this.backend(backendId, platform);
+
+        return backend.ready ? backend.ready(deviceId) : null;
     }
 
     async shutdown(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceInfo> {

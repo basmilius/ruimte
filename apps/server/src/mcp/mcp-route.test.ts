@@ -249,6 +249,19 @@ describe('files', () => {
         await expect(files.open('missing.txt')).rejects.toMatchObject({ code: 'bad-path' });
     });
 
+    test('a link that leads out is refused naming where it leads', async () => {
+        const project = join(root, 'repo');
+        const outside = join(root, 'elsewhere.png');
+        await Bun.write(join(project, 'notes.txt'), 'inside');
+        await writeFile(outside, 'outside');
+        await symlink(outside, join(project, 'link.png'));
+        const files = new AgentFiles(project, [await realpath(project)]);
+
+        await expect(files.open('link.png')).rejects.toMatchObject({
+            message: `${join(project, 'link.png')} leads to ${await realpath(outside)}, which is outside the folders a tool reads from: the project folder, its worktrees, your chat folder and the temp folder`
+        });
+    });
+
     test('the temp folder is always allowed', async () => {
         const path = join(root, 'shot.txt');
         await writeFile(path, 'x');
