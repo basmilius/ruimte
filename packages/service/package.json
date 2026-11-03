@@ -14,6 +14,6 @@
         "typescript": "^7.0.2"
     },
     "dependencies": {
-        "@adecore/service": "0.51.0"
+        "@adecore/service": "0.52.0"
     }
 }

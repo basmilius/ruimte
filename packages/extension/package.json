@@ -12,7 +12,7 @@
         "./testing": { "types": "./testing.d.ts" }
     },
     "dependencies": {
-        "@adecore/ui": "0.51.0"
+        "@adecore/ui": "0.52.0"
     },
     "peerDependencies": {
         "@types/react": "^19.0.0"
