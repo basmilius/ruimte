@@ -2,7 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { Search, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SeriesLegend } from '@adecore/charts';
-import { IconButton, Input, Switch } from '@adecore/ui';
+import { IconButton, Input, ScrollArea, Switch } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import type { BenchmarkLab } from '@ruimte/pulsar';
 import type { ChartModel, ModelMark } from './chart';
@@ -110,7 +110,7 @@ export function ModelsLegend({
                 />
                 <ModelsReasoningFilter efforts={efforts} hidden={hiddenEfforts} onToggle={onEffort} />
             </div>
-            <div className="min-h-0 grow overflow-y-auto px-3 pb-3">
+            <ScrollArea className="grow" viewportClassName="px-3 pb-3">
                 <SeriesLegend
                     label={t('legend.label')}
                     search={false}
@@ -148,7 +148,7 @@ export function ModelsLegend({
                         return lab === undefined ? null : <LabLogo lab={lab} size={14} />;
                     }}
                 />
-            </div>
+            </ScrollArea>
             <label className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-text-muted">
                 {t('legend.legacy')}
                 <Switch checked={showLegacy} onCheckedChange={onShowLegacy} label={t('legend.legacy')} />

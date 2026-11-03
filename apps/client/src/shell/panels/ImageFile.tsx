@@ -8,7 +8,7 @@ import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/
 import { machineResourceOf, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
 import { RevealButton } from '@/shell/panels/RevealButton';
 import { useMachineUrl } from '@/transport/machine-url';
-import { ButtonGroup, EmptyState } from '@adecore/ui';
+import { ButtonGroup, EmptyState, ScrollArea } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 
 type Zoom = 'fit' | 'full';
@@ -37,24 +37,26 @@ export function ImageFile({ source, name, read }: { source: FileSource; name: st
             ) : (
                 <FileToolbar />
             )}
-            <FileContextMenu className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
-                {!drawable ? (
-                    <EmptyState className="select-text" icon={ImageOff} action={path === null ? undefined : <RevealButton path={path} />}>
-                        {t('file.image.notShown', { name, format: imageFormatName(read.mime) })}
-                    </EmptyState>
-                ) : failed || bytes.failure !== null ? (
-                    <EmptyState icon={ImageOff}>{t('file.image.failed', { name, reason: bytes.failure ?? t('file.image.maybeChanged') })}</EmptyState>
-                ) : (
-                    bytes.url !== null && (
-                        <img
-                            src={bytes.url}
-                            alt={name}
-                            className={zoom === 'fit' ? 'h-auto max-w-full' : 'max-w-none'}
-                            onLoad={(event) => setSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
-                            onError={() => setFailed(true)}
-                        />
-                    )
-                )}
+            <FileContextMenu className="flex min-h-0 grow flex-col bg-surface-sunken">
+                <ScrollArea axis="both" className="grow" viewportClassName="grid place-items-center p-4">
+                    {!drawable ? (
+                        <EmptyState className="select-text" icon={ImageOff} action={path === null ? undefined : <RevealButton path={path} />}>
+                            {t('file.image.notShown', { name, format: imageFormatName(read.mime) })}
+                        </EmptyState>
+                    ) : failed || bytes.failure !== null ? (
+                        <EmptyState icon={ImageOff}>{t('file.image.failed', { name, reason: bytes.failure ?? t('file.image.maybeChanged') })}</EmptyState>
+                    ) : (
+                        bytes.url !== null && (
+                            <img
+                                src={bytes.url}
+                                alt={name}
+                                className={zoom === 'fit' ? 'h-auto max-w-full' : 'max-w-none'}
+                                onLoad={(event) => setSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+                                onError={() => setFailed(true)}
+                            />
+                        )
+                    )}
+                </ScrollArea>
             </FileContextMenu>
             <div className={FILE_FOOTER}>
                 {/* An SVG without a width of its own reports nothing, and 0 x 0 is worse than no line at all. */}

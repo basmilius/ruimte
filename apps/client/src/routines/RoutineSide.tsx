@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CircleCheck } from 'lucide-react';
 import type { RoutineEntry } from '@ruimte/contracts';
-import { Button, FormError, Icon, SectionLabel } from '@adecore/ui';
+import { Button, FormError, Icon, ScrollArea, SectionLabel } from '@adecore/ui';
 import { OutputProjectGlyph } from '@/output/look';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
 import { showRoutine } from '@/routines/stage';
@@ -33,7 +33,7 @@ export function RoutineSide({
         return null;
     }
     return (
-        <aside className="flex w-[248px] shrink-0 flex-col overflow-y-auto border-l border-border" aria-label={t('side.label')}>
+        <ScrollArea render={<aside />} className="w-[248px] shrink-0 border-l border-border" viewportClassName="flex flex-col" aria-label={t('side.label')}>
             {held.length > 0 && (
                 <section className="flex flex-col gap-2 border-b border-border p-3" aria-label={t('side.approvals')}>
                     <SideHeading label={t('side.approvals')} count={held.length} />
@@ -66,7 +66,7 @@ export function RoutineSide({
                     ))}
                 </section>
             )}
-        </aside>
+        </ScrollArea>
     );
 }
 

@@ -9,7 +9,7 @@ import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/
 import { readSourceBytes, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
 import { canDrawWebgl, ModelViewer, type LoadedModel } from '@/shell/panels/model-viewer';
 import { RevealButton } from '@/shell/panels/RevealButton';
-import { ButtonGroup, EmptyState, IconButton, messageOf } from '@adecore/ui';
+import { ButtonGroup, EmptyState, IconButton, messageOf, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
 
 type Phase = { kind: 'loading' } | { kind: 'ready'; model: LoadedModel } | { kind: 'failed'; reason: string } | { kind: 'no-webgl' };
@@ -140,7 +140,11 @@ export function ModelFile({ source, name, read }: { source: FileSource; name: st
             )}
             <FileContextMenu className="relative min-h-0 grow overflow-hidden bg-surface-sunken">
                 <div ref={hostRef} className={clsx('absolute inset-0', !ready && 'invisible')} />
-                {!ready && <div className="absolute inset-0 grid place-items-center overflow-auto p-4">{overlay()}</div>}
+                {!ready && (
+                    <ScrollArea className="absolute inset-0" viewportClassName="grid place-items-center p-4">
+                        {overlay()}
+                    </ScrollArea>
+                )}
             </FileContextMenu>
             <div className={FILE_FOOTER}>
                 {phase.kind === 'ready' && (

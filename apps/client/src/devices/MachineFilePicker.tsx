@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CornerLeftUp, File, Folder } from 'lucide-react';
 import type { FsEntry, FsListResult } from '@ruimte/contracts';
 import { transportFor } from '@/transport';
-import { Button, Checkbox, CloseButton, FormError, Icon, IconButton, MiddleTruncate, messageOf } from '@adecore/ui';
+import { Button, Checkbox, CloseButton, FormError, Icon, IconButton, MiddleTruncate, messageOf, ScrollArea } from '@adecore/ui';
 
 /*
  * Files of the machine a device runs on, one folder at a time, so a person on another machine picks a
@@ -72,7 +72,7 @@ export function MachineFilePicker({
                 <CloseButton label={t('device.tools.files.cancel')} onClick={onCancel} />
             </div>
             {failure !== null && <FormError>{failure}</FormError>}
-            <ul className="max-h-48 overflow-auto rounded-md border border-border" aria-label={t('device.tools.files.list')}>
+            <ScrollArea render={<ul />} className="max-h-48 overflow-hidden rounded-md border border-border" aria-label={t('device.tools.files.list')}>
                 {entries.map((entry) => {
                     const file = pickable(entry.path);
                     return (
@@ -96,7 +96,7 @@ export function MachineFilePicker({
                     );
                 })}
                 {listing !== null && entries.length === 0 && <li className="px-2 py-1 text-xs text-text-muted">{t('device.tools.files.empty')}</li>}
-            </ul>
+            </ScrollArea>
             {multiple && (
                 <Button size="sm" variant="primary" className="self-end" disabled={chosen.length === 0} onClick={() => onPick([...chosen])}>
                     {confirmLabel}

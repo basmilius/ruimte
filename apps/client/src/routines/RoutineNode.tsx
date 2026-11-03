@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { CalendarClock, CircleAlert, CirclePause, Clock, Folder, Hand, Play, Rocket, WifiOff } from 'lucide-react';
 import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
-import { ButtonGroup, Icon, IconButton, Pill, Separator, Switch, Tooltip, useNow } from '@adecore/ui';
+import { ButtonGroup, Icon, IconButton, Pill, ScrollArea, Separator, Switch, Tooltip, useNow } from '@adecore/ui';
 import { formatCountdown, formatDateTime } from '@adecore/ui/format';
 import { runtimeModeLabel } from '@adecore/agents-react/chat';
 import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
@@ -71,7 +71,7 @@ function RoutineOnCanvas({ endpointId, entry, timeZone }: { endpointId: string; 
     };
     return (
         // The node scrolls as a whole, so no part of it is squeezed to fit its height.
-        <div className={clsx('flex h-full min-h-0 w-full flex-col gap-3 overflow-y-auto p-3 *:shrink-0', paused && 'opacity-70')}>
+        <ScrollArea className={clsx('h-full w-full', paused && 'opacity-70')} viewportClassName="flex flex-col gap-3 p-3 *:shrink-0">
             <NodeHeaderControls>
                 <Switch
                     checked={!paused && entry.local.declined !== entry.digest}
@@ -123,7 +123,7 @@ function RoutineOnCanvas({ endpointId, entry, timeZone }: { endpointId: string; 
                 {strip.length > 0 && <StripCounts runs={strip} />}
                 {run !== undefined && <p className="text-xs text-text-muted">{runSentence(run, timeZone)}</p>}
             </section>
-        </div>
+        </ScrollArea>
     );
 }
 

@@ -17,6 +17,7 @@ import {
     IconButton,
     Input,
     PanelEmpty,
+    ScrollArea,
     SectionLabel,
     Segmented,
     Select,
@@ -197,10 +198,10 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
         <>
             <div className="flex min-h-0 grow">
                 <div className="flex w-56 shrink-0 flex-col border-r border-border">
-                    <div className="min-h-0 grow overflow-y-auto p-2">
+                    <ScrollArea className="grow" viewportClassName="p-2">
                         {drafts.length === 0 && <p className="px-2 py-1.5 text-xs text-text-faint">{t('edit.empty')}</p>}
                         <DraftList drafts={drafts} selectedId={selectedId} onSelect={setSelectedId} />
-                    </div>
+                    </ScrollArea>
                     <div className="flex flex-col gap-1 border-t border-border p-2">
                         <Button variant="ghost" size="sm" className="justify-start" onClick={add}>
                             <Icon icon={Plus} size={14} /> {t('edit.new')}
@@ -210,7 +211,7 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
                         </Button>
                     </div>
                 </div>
-                <div className="min-h-0 grow overflow-y-auto px-5 py-4">
+                <ScrollArea className="grow" viewportClassName="px-5 py-4">
                     {selected === null ? (
                         <PanelEmpty icon={Rocket}>{t('edit.empty')}</PanelEmpty>
                     ) : (
@@ -223,7 +224,7 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
                             onChange={(change) => update(selected.entry.id, change)}
                         />
                     )}
-                </div>
+                </ScrollArea>
             </div>
             <div className="flex items-center gap-2 border-t border-border px-5 py-3">
                 {selected !== null && (
@@ -588,7 +589,7 @@ function ImportForm({ projectId, document, into }: { projectId: string; document
         ) : offered.length === 0 ? (
             <PanelEmpty icon={Search}>{t('import.nothing')}</PanelEmpty>
         ) : (
-            <div className="min-h-0 grow overflow-y-auto py-2">
+            <ScrollArea className="grow" viewportClassName="py-2">
                 {offered.map((suggestion) => (
                     <SuggestionRow
                         key={suggestion.launch.id}
@@ -605,7 +606,7 @@ function ImportForm({ projectId, document, into }: { projectId: string; document
                         }}
                     />
                 ))}
-            </div>
+            </ScrollArea>
         );
 
     return (

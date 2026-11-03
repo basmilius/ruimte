@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
-import { Button, FormError, Icon, Input, Menu, Dialog } from '@adecore/ui';
+import { Button, FormError, Icon, Input, Menu, Dialog, ScrollArea } from '@adecore/ui';
 
 export interface Choice {
     value: string;
@@ -59,7 +59,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                         />
                     </span>
                 )}
-                <div className="mt-3 max-h-72 overflow-y-auto">
+                <ScrollArea className="mt-3 max-h-72">
                     {loading && <p className="px-1 py-6 text-center text-sm text-text-faint">{t('git.branchMenu.loading')}</p>}
                     {error && (
                         <div className="flex flex-col items-start gap-2 py-3">
@@ -82,7 +82,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                             {choice.hint !== undefined && <Menu.Hint className="truncate">{choice.hint}</Menu.Hint>}
                         </button>
                     ))}
-                </div>
+                </ScrollArea>
             </Dialog.Popup>
         </Dialog.Root>
     );

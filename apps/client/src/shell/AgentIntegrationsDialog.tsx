@@ -5,7 +5,7 @@ import { CliMark } from '@adecore/agents-react/providers';
 import { useLocalTilde } from '@/format/home-path';
 import { INTEGRATION_NAMES, pendingReview, providersToKeep, setAgentIntegration, useAgentIntegrations, useIntegrationChoice } from '@/state/agent-integrations';
 import { useUi } from '@/state/ui';
-import { Button, Dialog, FormError, Skeleton } from '@adecore/ui';
+import { Button, Dialog, FormError, ScrollArea, Skeleton } from '@adecore/ui';
 
 const OUTCOME_KEYS = {
     written: 'written',
@@ -116,7 +116,7 @@ export function AgentIntegrationsDialog() {
             <Dialog.Popup className="flex w-[560px] flex-col p-5">
                 <Dialog.Title>{t('settings:agents.integrations.dialog.title')}</Dialog.Title>
                 <Dialog.Description className="mt-1">{t('settings:agents.integrations.dialog.description')}</Dialog.Description>
-                <div className="mt-4 -mx-1 flex min-h-0 flex-col gap-3 overflow-y-auto px-1">
+                <ScrollArea className="mt-4 -mx-1" viewportClassName="flex flex-col gap-3 px-1">
                     {(summary?.providers ?? []).map((entry) => {
                         const own = reports[entry.provider];
                         // After a choice the card shows its state; only a file that went wrong is named.
@@ -160,7 +160,7 @@ export function AgentIntegrationsDialog() {
                             </section>
                         );
                     })}
-                </div>
+                </ScrollArea>
                 {error !== null && <FormError className="mt-3">{error.message}</FormError>}
                 <Dialog.Footer>
                     <Button disabled={busy !== null} onClick={close}>

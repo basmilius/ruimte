@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Icon, Pill, Tooltip } from '@adecore/ui';
+import { Icon, Pill, ScrollArea, Tooltip } from '@adecore/ui';
 import { CircleHelp, Unplug } from 'lucide-react';
 import type { SessionPort, SessionPortsResult } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
@@ -101,7 +101,7 @@ export function SessionPorts({ id }: { id: string }) {
     }
     const { result, opening, localRoute, open } = controls;
     return (
-        <div className="-m-1 flex min-w-0 max-w-1/2 items-center gap-1 overflow-x-auto p-1">
+        <ScrollArea axis="x" className="-m-1 max-w-1/2" viewportClassName="flex items-center gap-1 p-1">
             {result.status === 'ready' ? (
                 result.ports.map((port) => (
                     <Tooltip
@@ -127,6 +127,6 @@ export function SessionPorts({ id }: { id: string }) {
                     </Pill>
                 </Tooltip>
             )}
-        </div>
+        </ScrollArea>
     );
 }

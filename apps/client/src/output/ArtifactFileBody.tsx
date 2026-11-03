@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CircleAlert } from 'lucide-react';
 import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
 import { injectVisualBootstrap, type ArtifactFile } from '@ruimte/contracts';
-import { EmptyState } from '@adecore/ui';
+import { EmptyState, ScrollArea } from '@adecore/ui';
 import { readArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { artifactBinaryRead, artifactSource, fileViewOf, languageOfName } from '@/output/file-view';
 import { CodeText } from '@/shell/panels/CodeFile';
@@ -109,10 +109,10 @@ function ArtifactText({ endpointId, reference, file, markdown }: ArtifactFilePro
         );
     }
     return (
-        <div className="min-h-0 grow overflow-y-auto px-6 py-6 select-text">
+        <ScrollArea className="grow" viewportClassName="px-6 py-6 select-text">
             <div className="mx-auto max-w-[768px]">
                 <FileMarkdown text={text.text} />
             </div>
-        </div>
+        </ScrollArea>
     );
 }

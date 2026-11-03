@@ -14,7 +14,7 @@ import { readResource } from '@/transport/byte-transfer';
 import { useTransport } from '@/transport/context';
 import { readPiece } from '@/transport/piece';
 import { TransportError } from '@/transport/transport';
-import { Button, EmptyState, Icon, Menu, messageOf } from '@adecore/ui';
+import { Button, EmptyState, Icon, Menu, messageOf, ScrollArea } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 
 export interface ArchiveVersion {
@@ -137,10 +137,12 @@ export function ArchiveEntryPreview({
     const state = (icon: LucideIcon | undefined, text: string, action?: ReactNode, busy = false): ReactNode => (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
-            <FileTextMenu className="grid min-h-0 grow place-items-center overflow-auto">
-                <EmptyState className="select-text" icon={icon} busy={busy} action={action}>
-                    {text}
-                </EmptyState>
+            <FileTextMenu className="flex min-h-0 grow flex-col">
+                <ScrollArea className="grow" viewportClassName="grid place-items-center">
+                    <EmptyState className="select-text" icon={icon} busy={busy} action={action}>
+                        {text}
+                    </EmptyState>
+                </ScrollArea>
             </FileTextMenu>
         </div>
     );

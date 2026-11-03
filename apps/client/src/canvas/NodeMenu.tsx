@@ -76,7 +76,7 @@ import { useToasts } from '@/state/toasts';
 import { useWorkspace } from '@/transport/connections';
 import { NodeMachineScope } from '@/transport/node-machine';
 import { useTransport } from '@/transport/context';
-import { DisabledReason, Icon, Kbd, ContextMenu } from '@adecore/ui';
+import { DisabledReason, Icon, Kbd, ContextMenu, ScrollArea } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { formatNodeSize, makeDefaultSize } from '@/canvas/default-size';
 import { CanvasCreateItems } from '@/canvas/CanvasMenu';
@@ -485,7 +485,7 @@ function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(
             </ContextMenu.SubmenuTrigger>
             {/* The same list as Flag; only the colors scroll, so None stays in sight in a short window. */}
             <ContextMenu.Popup className="flex min-w-44 flex-col overflow-hidden">
-                <div className="min-h-0 overflow-y-auto overscroll-contain">
+                <ScrollArea viewportClassName="overscroll-contain">
                     {NODE_ACCENTS.map((accent) => (
                         <ContextMenu.Item key={accent.id} onClick={() => onPick(accent.id)}>
                             <ContextMenu.Check kind="radio" checked={picked === accent.id} />
@@ -493,7 +493,7 @@ function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(
                             <span className="grow">{accentLabel(accent.id)}</span>
                         </ContextMenu.Item>
                     ))}
-                </div>
+                </ScrollArea>
                 <ContextMenu.Separator />
                 <ContextMenu.Item onClick={() => onPick(null)}>
                     <ContextMenu.Check kind="radio" checked={!picked} /> {t('menu.noAccent')}

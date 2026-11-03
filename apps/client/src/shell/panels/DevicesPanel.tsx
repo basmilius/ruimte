@@ -30,7 +30,7 @@ import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ContextMenu } from '@adecore/ui';
+import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ContextMenu, ScrollArea } from '@adecore/ui';
 import { SignInMark } from '@/ui/SignInMark';
 
 function referenceOf({ platform, kind, name, runtime }: DeviceInfo): DeviceReference {
@@ -456,7 +456,7 @@ export function DevicesPanel() {
     return (
         <div className="flex min-h-0 grow flex-col">
             {listHeader}
-            <div className="min-h-0 grow overflow-y-auto p-3">
+            <ScrollArea className="grow" viewportClassName="p-3">
                 <DeviceList
                     devices={row.devices}
                     collapsed={collapsedGroups}
@@ -472,7 +472,7 @@ export function DevicesPanel() {
                         ))}
                     </p>
                 )}
-            </div>
+            </ScrollArea>
         </div>
     );
 }

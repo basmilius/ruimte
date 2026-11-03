@@ -25,7 +25,7 @@ import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@adecore/plan';
 import { Markdown } from '@adecore/agents-react/chat/ui';
 import { formatMoment } from '@adecore/ui/format';
-import { copyText, EmptyState, Icon, IconButton, Menu, TextArea, TextMenu, Tooltip, ContextMenu } from '@adecore/ui';
+import { copyText, EmptyState, Icon, IconButton, Menu, ScrollArea, TextArea, TextMenu, Tooltip, ContextMenu } from '@adecore/ui';
 import {
     collapsedOf,
     copyPlanMarkdown,
@@ -187,12 +187,12 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                     <span style={{ flexGrow: progress.open + progress.active }} />
                 </div>
             </PlanTextMenu>
-            <div ref={scroller} className="min-h-0 grow overflow-y-auto py-1">
+            <ScrollArea viewportRef={scroller} className="grow" viewportClassName="py-1">
                 {rows.length === 0 && <EmptyState>{filter === 'issues' ? t('empty.issues') : filter === 'open' ? t('empty.open') : t('empty.all')}</EmptyState>}
                 {rows.map((row) => (
                     <PlanRowView key={row.item.id} row={row} context={context} />
                 ))}
-            </div>
+            </ScrollArea>
         </div>
     );
 }

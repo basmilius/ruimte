@@ -635,11 +635,13 @@
     .code-theme-preview > [data-theme] {
         background: var(--surface);
     }
+    /* The `ScrollArea` around it scrolls a long line; the block takes the line's width, so its padding stays at the end. */
     .code-theme-preview pre {
         margin: 0;
         background: transparent !important;
         padding: 12px 16px;
-        overflow-x: auto;
+        width: max-content;
+        min-width: 100%;
         font-family: var(--font-mono);
         font-size: var(--code-font-size);
         line-height: var(--code-line-height);

@@ -40,6 +40,7 @@ import {
     Menu,
     Pill,
     Popover,
+    ScrollArea,
     SectionLabel,
     Tooltip,
     lazyNamed,
@@ -493,7 +494,13 @@ export function VersionBody({ endpointId, artifact, version }: { endpointId: str
 function FilePicker({ files, index, onPick }: { files: readonly ArtifactFile[]; index: number; onPick: (index: number) => void }) {
     const { t } = useTranslation('output');
     return (
-        <div role="group" aria-label={t('view.files')} className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2">
+        <ScrollArea
+            axis="x"
+            role="group"
+            aria-label={t('view.files')}
+            className="h-9 shrink-0 border-b border-border"
+            viewportClassName="flex items-center gap-1 px-2"
+        >
             {files.map((file, i) => (
                 <Button
                     key={i}
@@ -506,7 +513,7 @@ function FilePicker({ files, index, onPick }: { files: readonly ArtifactFile[]; 
                     {file.name}
                 </Button>
             ))}
-        </div>
+        </ScrollArea>
     );
 }
 
@@ -546,7 +553,7 @@ function CompareBody({ endpointId, artifact, version, base }: { endpointId: stri
             {patch.hunks.length === 0 ? (
                 <Centered icon={GitCompare}>{t('view.noChange')}</Centered>
             ) : (
-                <div className="file-diff flex min-h-0 grow flex-col overflow-auto">
+                <ScrollArea axis="both" className="grow" viewportClassName="file-diff flex flex-col">
                     <LazyBoundary>
                         <UnifiedDiff
                             change={{ path: file.name, kind: 'update', diff: patch.text }}
@@ -555,7 +562,7 @@ function CompareBody({ endpointId, artifact, version, base }: { endpointId: stri
                             fill
                         />
                     </LazyBoundary>
-                </div>
+                </ScrollArea>
             )}
         </div>
     );
@@ -563,13 +570,13 @@ function CompareBody({ endpointId, artifact, version, base }: { endpointId: stri
 
 function ImagesBody({ endpointId, artifact, version }: { endpointId: string; artifact: Artifact; version: ArtifactVersion }) {
     return (
-        <div className="flex min-h-0 grow flex-col items-center gap-4 overflow-auto bg-surface-sunken p-4">
+        <ScrollArea axis="both" className="grow bg-surface-sunken" viewportClassName="flex flex-col items-center gap-4 p-4">
             {version.files.map((file, index) =>
                 file.mime.startsWith('image/') ? (
                     <ArtifactImage key={index} endpointId={endpointId} reference={refOf(artifact, version, index)} name={file.name} />
                 ) : null
             )}
-        </div>
+        </ScrollArea>
     );
 }
 
@@ -581,10 +588,10 @@ function ArtifactImage({ endpointId, reference, name }: { endpointId: string; re
 function FilesBody({ endpointId, artifact, version }: { endpointId: string; artifact: Artifact; version: ArtifactVersion }) {
     const { t } = useTranslation('output');
     return (
-        <div className="flex min-h-0 grow flex-col overflow-y-auto px-6 py-6">
+        <ScrollArea className="grow" viewportClassName="flex flex-col px-6 py-6">
             <p className="mb-4 text-sm text-text-muted">{t('view.noPreview')}</p>
             <FileRows endpointId={endpointId} artifact={artifact} version={version} />
-        </div>
+        </ScrollArea>
     );
 }
 

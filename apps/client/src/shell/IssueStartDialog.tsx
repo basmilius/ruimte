@@ -5,7 +5,7 @@ import type { GitIssue } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
 import { rememberChatSelection, offerDraft } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
-import { Button, Dialog, ErrorBoundary, Field, FormError, Icon, Input, Pill, TextArea, messageOf } from '@adecore/ui';
+import { Button, Dialog, ErrorBoundary, Field, FormError, Icon, Input, Pill, ScrollArea, TextArea, messageOf } from '@adecore/ui';
 import { focusChat } from '@/plan/plan-actions';
 import { nodesOfView, useViewNodes } from '@/project/view-nodes';
 import { findIssueNode, issueBranch, issuePrompt } from '@/shell/issue-start';
@@ -148,7 +148,7 @@ function IssueStartForm({ onDone }: { onDone(): void }) {
 
     return (
         <>
-            <div className="-mx-1 min-h-0 overflow-y-auto px-1">
+            <ScrollArea className="-mx-1" viewportClassName="px-1">
                 <Dialog.Text className="mt-1">{t('issueStart.description')}</Dialog.Text>
                 <Field label={t('issueStart.refLabel')} error={readFailure} className="mt-3">
                     <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ function IssueStartForm({ onDone }: { onDone(): void }) {
                     </>
                 )}
                 {failure && <FormError className="mt-2">{failure}</FormError>}
-            </div>
+            </ScrollArea>
             <Dialog.Footer>
                 <Button onClick={onDone}>{t('common:action.cancel')}</Button>
                 <Button variant="primary" disabled={!ready} onClick={() => void submit()}>

@@ -26,7 +26,7 @@ import { useWorkspace } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
 import type { Transport } from '@/transport/transport';
 import { formatBytes } from '@adecore/ui/format';
-import { Button, Checkbox, Dialog, ErrorBoundary, FieldHint, FormError, Input, Meter, Segmented, Select, Skeleton, messageOf } from '@adecore/ui';
+import { Button, Checkbox, Dialog, ErrorBoundary, FieldHint, FormError, Input, Meter, ScrollArea, Segmented, Select, Skeleton, messageOf } from '@adecore/ui';
 
 const PROTOCOLS: readonly RemoteProtocol[] = ['ssh', 'https'];
 
@@ -446,7 +446,7 @@ function FileList({
     }
     return (
         <>
-            <ul className="mt-3 max-h-64 overflow-auto rounded-md border border-border" aria-label={t('addToMachine.files.label')}>
+            <ScrollArea render={<ul />} className="mt-3 max-h-64 overflow-hidden rounded-md border border-border" aria-label={t('addToMachine.files.label')}>
                 {candidates.map((file) => (
                     <li key={file.path}>
                         <label className="flex items-center gap-2 px-2 py-1 text-sm">
@@ -463,7 +463,7 @@ function FileList({
                         </label>
                     </li>
                 ))}
-            </ul>
+            </ScrollArea>
             {truncated && <FieldHint className="mt-1">{t('addToMachine.files.truncated')}</FieldHint>}
         </>
     );
@@ -479,7 +479,7 @@ function Summary({ machine, clone, outcomes }: { machine: string; clone: string;
             <Dialog.Text>{t('addToMachine.done', { machine, path: clone })}</Dialog.Text>
             <span className="text-sm text-text">{t('addToMachine.copied', { count: copied })}</span>
             {missed.length > 0 && (
-                <ul className="max-h-48 overflow-auto rounded-md border border-border" aria-label={t('addToMachine.notCopied')}>
+                <ScrollArea render={<ul />} className="max-h-48 overflow-hidden rounded-md border border-border" aria-label={t('addToMachine.notCopied')}>
                     {missed.map((outcome) => (
                         <li key={outcome.path} className="flex items-center justify-between gap-3 px-2 py-1 text-sm">
                             <span className="min-w-0 truncate font-mono">{outcome.path}</span>
@@ -492,7 +492,7 @@ function Summary({ machine, clone, outcomes }: { machine: string; clone: string;
                             </span>
                         </li>
                     ))}
-                </ul>
+                </ScrollArea>
             )}
         </div>
     );

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { POSTFIX_TEMPLATE_LANGUAGES, TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES, type TemplateScope } from '@ruimte/contracts';
-import { Button, Checkbox, Dialog, Field, FormError, Icon, Input, Menu, Segmented, TextArea, messageOf } from '@adecore/ui';
+import { Button, Checkbox, Dialog, Field, FormError, Icon, Input, Menu, ScrollArea, Segmented, TextArea, messageOf } from '@adecore/ui';
 import type { TemplateLanguage, TemplatePlace } from '@adecore/editor-react';
 import { useUi } from '@/state/ui';
 import { inputOf, problemOf, type TemplateDraft } from './template-draft';
@@ -30,10 +30,10 @@ export function TemplateDialog({ draft, tracker, onClose }: { draft: TemplateDra
     return (
         <Dialog.Root open={draft !== null} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Popup className="flex max-h-[90vh] w-[640px] flex-col">
-                <div className="min-h-0 overflow-y-auto px-5 pt-4">
+                <ScrollArea viewportClassName="px-5 pt-4">
                     <Dialog.Title>{title}</Dialog.Title>
                     <Dialog.Description className="mt-1 mb-3 break-words">{t('editor.templates.dialog.description')}</Dialog.Description>
-                </div>
+                </ScrollArea>
                 {draft !== null && <Form key={draft.id ?? 'new'} start={draft} tracker={tracker} onClose={onClose} />}
             </Dialog.Popup>
         </Dialog.Root>
@@ -100,7 +100,7 @@ function Form({ start, tracker, onClose }: { start: TemplateDraft; tracker: Temp
 
     return (
         <>
-            <div className="flex min-h-0 grow flex-col gap-3 overflow-y-auto px-5 pb-4">
+            <ScrollArea className="grow" viewportClassName="flex flex-col gap-3 px-5 pb-4">
                 <Field orientation="horizontal" label={postfix ? t('editor.templates.dialog.keyPostfix') : t('editor.templates.dialog.key')}>
                     <Input
                         mono
@@ -201,7 +201,7 @@ function Form({ start, tracker, onClose }: { start: TemplateDraft; tracker: Temp
                         />
                     </Field>
                 )}
-            </div>
+            </ScrollArea>
             <div className="flex items-center gap-2 border-t border-border px-5 py-3">
                 <span className="min-w-0 grow">{(problem ?? failure) !== null && <FormError className="break-words">{problem ?? failure}</FormError>}</span>
                 <Dialog.Close render={<Button variant="secondary" />}>{t('editor.templates.dialog.cancel')}</Dialog.Close>

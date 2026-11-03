@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import { useOverlayScrollbars } from '@adecore/ui';
 import type { ConflictFile } from '@/conflicts/conflict-model';
 import { applyBlock, blockAt, conflictEditing, revealBlock, setSpans, spansField, spansOf, type ConflictDraft } from '@/conflicts/editor';
 
@@ -30,6 +31,8 @@ interface Props {
 export function ConflictEditor({ file, held, onChange, onReady }: Props) {
     const host = useRef<HTMLDivElement>(null);
     const latest = useRef({ onChange, onReady, held });
+    const [scroller, setScroller] = useState<HTMLElement | null>(null);
+    const scrollbars = useOverlayScrollbars(scroller, { axis: 'both' });
 
     useLayoutEffect(() => {
         latest.current = { onChange, onReady, held };
@@ -68,11 +71,20 @@ export function ConflictEditor({ file, held, onChange, onReady }: Props) {
             apply: (block, lines) => applyBlock(view, block, lines),
             reveal: (block) => revealBlock(view, block)
         });
+        // CodeMirror's scroller stays native; it gets the overlay bars here, over the host it fills.
+        setScroller(view.scrollDOM);
         return () => {
             latest.current.onReady(null);
+            setScroller(null);
             view.destroy();
         };
     }, [file]);
 
-    return <div ref={host} className="conflict-editor min-h-0 grow overflow-hidden" />;
+    // The host is its own stacking layer, so CodeMirror's gutter never rises over the bars beside it.
+    return (
+        <div className="relative flex min-h-0 grow flex-col">
+            <div ref={host} className="conflict-editor isolate min-h-0 grow overflow-hidden" />
+            {scrollbars}
+        </div>
+    );
 }

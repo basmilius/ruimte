@@ -4,7 +4,7 @@ import { flagOf } from '@ruimte/contracts';
 import { flagAction } from '@/actions/client-actions';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { useDocument } from '@/state/document';
-import { Icon, Menu } from '@adecore/ui';
+import { Icon, Menu, ScrollArea } from '@adecore/ui';
 
 function ColorItem({ ids, entry, picked }: { ids: readonly string[]; entry: (typeof NODE_ACCENTS)[number]; picked: boolean }) {
     return (
@@ -30,11 +30,11 @@ export function FlagSubmenu({ id }: { id: string }) {
                 <Icon icon={Flag} size={14} /> {t('flag.menu')}
             </Menu.SubmenuTrigger>
             <Menu.Popup className="flex min-w-44 flex-col overflow-hidden">
-                <div className="min-h-0 overflow-y-auto overscroll-contain">
+                <ScrollArea viewportClassName="overscroll-contain">
                     {NODE_ACCENTS.map((entry) => (
                         <ColorItem key={entry.id} ids={ids} entry={entry} picked={flag === entry.id} />
                     ))}
-                </div>
+                </ScrollArea>
                 <Menu.Separator />
                 <Menu.Item disabled={flag === null} onClick={() => flagAction(ids, null)}>
                     <Icon icon={FlagOff} size={14} /> {t('flag.remove')}

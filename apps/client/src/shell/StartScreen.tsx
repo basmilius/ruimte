@@ -33,7 +33,7 @@ import { useUpdates } from '@/state/updates';
 import { useWindow, type BootFailure } from '@/state/window';
 import { useEndpointConnection, useMachineHold, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
-import { Button, ErrorBoundary, Icon, Kbd, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
+import { Button, ErrorBoundary, Icon, Kbd, ScrollArea, SectionLabel, Tile, ContextMenu } from '@adecore/ui';
 
 const ROW = 'flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-hover disabled:opacity-50';
 
@@ -349,11 +349,11 @@ export function StartScreen() {
         <div className="flex h-full w-full flex-col bg-bg">
             <div className="app-drag h-12 shrink-0" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }} />
             <div className="relative min-h-0 grow">
-                <div className="h-full overflow-auto">
+                <ScrollArea className="h-full">
                     <ErrorBoundary label={t('start.failed')}>
                         <StartContent />
                     </ErrorBoundary>
-                </div>
+                </ScrollArea>
                 <Footer />
             </div>
         </div>

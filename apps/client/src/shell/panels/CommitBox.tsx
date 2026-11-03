@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ArrowUp, FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult } from '@ruimte/contracts';
-import { Button, Checkbox, Icon, IconButton, Menu, SplitButton, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut, messageOf } from '@adecore/ui';
+import { Button, Checkbox, Icon, IconButton, Menu, ScrollArea, SplitButton, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut, messageOf } from '@adecore/ui';
 import { cancelGitRunAction, perform } from '@/actions/client-actions';
 import { amendTarget, commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
 import { CommitSuggestion } from './commit-suggestion';
@@ -232,7 +232,9 @@ export function CommitBox({ messageKey, checkouts, named, capabilities, busy, on
             {offered !== null && offered.key === messageKey && offered.source === source && (
                 <div className="flex flex-col gap-2 rounded-lg border border-border bg-clip-padding p-2">
                     <p className="text-xs text-text-muted">{t('git.commit.suggestionReady')}</p>
-                    <p className="max-h-32 overflow-auto text-sm whitespace-pre-wrap text-text">{offered.message}</p>
+                    <ScrollArea render={<p />} className="max-h-32" viewportClassName="text-sm whitespace-pre-wrap text-text">
+                        {offered.message}
+                    </ScrollArea>
                     <div className="flex gap-2">
                         <Button
                             size="sm"

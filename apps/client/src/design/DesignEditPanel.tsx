@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Field, Input } from '@adecore/ui';
+import { Button, Field, Input, ScrollArea } from '@adecore/ui';
 import type { DesignElement } from '@/design/design-protocol';
 
 /* The properties the panel offers, with the key the page reports its computed value under. */
@@ -38,7 +38,7 @@ export function DesignEditPanel({ element, pending, onStyle, onSave, onDiscard, 
     const { t } = useTranslation('shell');
 
     return (
-        <div className="menu-popup absolute top-2 right-2 bottom-2 z-10 flex w-64 flex-col gap-3 overflow-y-auto p-3">
+        <ScrollArea className="menu-popup absolute top-2 right-2 bottom-2 z-10 w-64 overflow-hidden p-0" viewportClassName="flex flex-col gap-3 p-3">
             {element === null ? (
                 <p className="text-xs text-text-muted">{t('design.edit.hint')}</p>
             ) : (
@@ -67,7 +67,7 @@ export function DesignEditPanel({ element, pending, onStyle, onSave, onDiscard, 
                     {t('design.edit.save')}
                 </Button>
             </div>
-        </div>
+        </ScrollArea>
     );
 }
 

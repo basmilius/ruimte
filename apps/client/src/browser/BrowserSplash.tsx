@@ -6,7 +6,7 @@ import type { DevServer } from '@ruimte/contracts';
 import { DEV_SERVER_PROBE_PORTS, devServerTiles, type DevServerTile } from '@/browser/dev-servers';
 import { openPage } from '@/browser/open-page';
 import { useOptionalConnection } from '@/transport/context';
-import { Icon, SectionLabel, Tile } from '@adecore/ui';
+import { Icon, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
 
 /* How often the machine is asked again, so a server started after this node was opened shows up. */
 const REFRESH_MS = 5_000;
@@ -68,7 +68,7 @@ export function BrowserSplash({ id, className }: { id: string; className?: strin
     );
 
     return (
-        <div className={clsx('min-h-0 overflow-auto bg-surface-sunken px-4 py-6', className)}>
+        <ScrollArea className={clsx('bg-surface-sunken', className)} viewportClassName="px-4 py-6">
             <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
                 <header className="flex flex-col gap-1 px-1">
                     <span className="text-sm font-medium text-text">{t('splash.title')}</span>
@@ -77,6 +77,6 @@ export function BrowserSplash({ id, className }: { id: string; className?: strin
                 {live.length > 0 && section(t('splash.running'), live)}
                 {section(t('splash.common'), rest)}
             </div>
-        </div>
+        </ScrollArea>
     );
 }

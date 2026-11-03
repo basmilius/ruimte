@@ -14,6 +14,7 @@ import {
     IconButton,
     Menu,
     Pill,
+    ScrollArea,
     SectionLabel,
     Switch,
     Tooltip,
@@ -99,7 +100,7 @@ function PullRequestView({ cwd, onDone }: { cwd: string; onDone(): void }) {
                 </div>
                 {pr !== null && <PullRequestMeta pr={pr} split={split} />}
             </header>
-            <div className="flex min-h-0 grow flex-col overflow-y-auto">
+            <ScrollArea className="grow" viewportClassName="flex flex-col">
                 {reading === null && (
                     <EmptyState busy className="grow">
                         {t('git.pr.loading')}
@@ -122,7 +123,7 @@ function PullRequestView({ cwd, onDone }: { cwd: string; onDone(): void }) {
                         <PullRequestThreads pr={pr} showBots={showBots} showResolved={showResolved} onBots={setShowBots} onResolved={setShowResolved} />
                     </>
                 )}
-            </div>
+            </ScrollArea>
             <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3">
                 {pr !== null && pr.state === 'OPEN' && <PullRequestWatch cwd={cwd} pr={pr} />}
                 <span className="grow" />

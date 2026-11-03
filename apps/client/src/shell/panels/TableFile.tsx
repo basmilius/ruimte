@@ -6,7 +6,7 @@ import { CodeFile } from '@/shell/panels/CodeFile';
 import { DELIMITERS, delimiterOf, type Delimiter } from '@/shell/panels/delimited';
 import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useSourceToggle } from '@/shell/panels/use-source-toggle';
-import { EmptyState, ErrorBoundary, lazyNamed, LazyBoundary, Menu } from '@adecore/ui';
+import { EmptyState, ErrorBoundary, lazyNamed, LazyBoundary, Menu, ScrollArea } from '@adecore/ui';
 
 // The grid comes with the database views, which most workspaces never open, so it waits for the first table.
 const TableGrid = lazyNamed(() => import('@/shell/panels/TableGrid'), 'TableGrid');
@@ -49,8 +49,10 @@ export function TableFile({ path, name, read }: { path: string; name: string; re
                 {toggle}
             </FileToolbar>
             {blank ? (
-                <FileTextMenu className="grid min-h-0 grow place-items-center overflow-auto">
-                    <EmptyState icon={Sheet}>{t('file.table.empty', { name })}</EmptyState>
+                <FileTextMenu className="flex min-h-0 grow flex-col">
+                    <ScrollArea className="grow" viewportClassName="grid place-items-center">
+                        <EmptyState icon={Sheet}>{t('file.table.empty', { name })}</EmptyState>
+                    </ScrollArea>
                 </FileTextMenu>
             ) : (
                 <ErrorBoundary label={t('file.table.crashed')} resetKeys={[path, read.mtime]} className="flex min-h-0 grow flex-col">

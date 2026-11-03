@@ -20,7 +20,7 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { ButtonGroup, EmptyState, ErrorBoundary, LazyBoundary, Menu, Separator, lazyNamed, messageOf, useNow } from '@adecore/ui';
+import { ButtonGroup, EmptyState, ErrorBoundary, LazyBoundary, Menu, ScrollArea, Separator, lazyNamed, messageOf, useNow } from '@adecore/ui';
 import { formatAge } from '@adecore/ui/format';
 
 const UnifiedDiff = lazyNamed(() => import('@adecore/agents-react/chat/ui'), 'UnifiedDiff');
@@ -186,7 +186,7 @@ function DiffBody({
         );
     }
     return (
-        <div ref={surface} className="file-diff flex min-h-0 grow flex-col overflow-auto">
+        <ScrollArea axis="both" viewportRef={surface} className="grow" viewportClassName="file-diff flex flex-col">
             <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     change={{ path: relative, kind: 'update', diff: state.diff.diff }}
@@ -198,7 +198,7 @@ function DiffBody({
                     onSource={onSource}
                 />
             </LazyBoundary>
-        </div>
+        </ScrollArea>
     );
 }
 
@@ -378,7 +378,7 @@ function CommitFileDiff({
         );
     }
     return (
-        <div ref={surface} className="file-diff flex min-h-0 min-w-0 grow flex-col overflow-auto">
+        <ScrollArea axis="both" viewportRef={surface} className="grow" viewportClassName="file-diff flex flex-col">
             <LazyBoundary fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     key={file.path}
@@ -389,6 +389,6 @@ function CommitFileDiff({
                     onSource={onSource}
                 />
             </LazyBoundary>
-        </div>
+        </ScrollArea>
     );
 }

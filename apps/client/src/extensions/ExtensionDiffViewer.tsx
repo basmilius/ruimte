@@ -1,6 +1,6 @@
 import { createElement, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@adecore/ui';
+import { Button, ScrollArea } from '@adecore/ui';
 import { perform } from '@/actions/client-actions';
 import { fileInfoOf } from '@/extensions/file-info';
 import { useContributions } from '@/extensions/registry';
@@ -60,7 +60,9 @@ export function ExtensionDiffViewer({ path, view, children }: { path: string; vi
                     {own ? viewer.title : t('file.viewer.original')}
                 </Button>
             </div>
-            <div className="flex min-h-0 min-w-0 grow flex-col overflow-auto">{own ? children : createElement(viewer.component, { file: info, diff })}</div>
+            <ScrollArea axis="both" className="grow" viewportClassName="flex flex-col">
+                {own ? children : createElement(viewer.component, { file: info, diff })}
+            </ScrollArea>
         </div>
     );
 }

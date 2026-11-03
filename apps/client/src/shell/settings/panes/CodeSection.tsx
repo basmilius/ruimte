@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { highlightCode } from '@/shell/panels/highlight';
 import { SettingsRow } from '@adecore/ui/settings';
-import { Select } from '@adecore/ui';
+import { ScrollArea, Select } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { codeThemesOf, useSettings } from '@/state/settings';
 
@@ -45,20 +45,22 @@ export function CodeThemePreview({ theme, mode, label, code = PREVIEW_CODE }: Co
         <div className="code-theme-preview overflow-hidden rounded-lg border border-border bg-clip-padding" role="img" aria-label={label}>
             {/* The side's own tokens, so the light theme is judged on the light background while the app is dark. */}
             <div data-theme={mode}>
-                {html === null ? (
-                    // The plain lines hold the same height until the highlighted ones arrive, so the pane does not jump.
-                    <pre>
-                        <code>
-                            {code.split('\n').map((line, index) => (
-                                <span key={index} className="line">
-                                    {line}
-                                </span>
-                            ))}
-                        </code>
-                    </pre>
-                ) : (
-                    <div dangerouslySetInnerHTML={{ __html: html }} />
-                )}
+                <ScrollArea axis="x">
+                    {html === null ? (
+                        // The plain lines hold the same height until the highlighted ones arrive, so the pane does not jump.
+                        <pre>
+                            <code>
+                                {code.split('\n').map((line, index) => (
+                                    <span key={index} className="line">
+                                        {line}
+                                    </span>
+                                ))}
+                            </code>
+                        </pre>
+                    ) : (
+                        <div dangerouslySetInnerHTML={{ __html: html }} />
+                    )}
+                </ScrollArea>
             </div>
         </div>
     );

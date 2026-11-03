@@ -1,3 +1,4 @@
+import { ScrollArea } from '@adecore/ui';
 import { SlotRow } from '@/extensions/SlotSurfaces';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { NewViewTiles } from '@/shell/NewViewMenu';
@@ -11,7 +12,7 @@ export function ProjectStartScreen() {
     }
     const folder = shownFolderOf(project);
     return (
-        <div className="absolute inset-0 flex overflow-auto bg-surface p-6">
+        <ScrollArea className="absolute inset-0 bg-surface" viewportClassName="flex p-6">
             <section className="m-auto flex w-full max-w-2xl flex-col gap-8" aria-labelledby="project-start-title">
                 <div className="flex flex-col items-center gap-3 text-center">
                     <span style={{ color: project.color }}>
@@ -34,6 +35,6 @@ export function ProjectStartScreen() {
                 <NewViewTiles size="md" />
                 <SlotRow place="startScreen" context={{}} words wrap={(row) => <div className="flex flex-wrap justify-center gap-2">{row}</div>} />
             </section>
-        </div>
+        </ScrollArea>
     );
 }

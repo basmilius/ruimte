@@ -24,6 +24,7 @@ import { deviceClientFor } from '@/transport/connections';
 import { useMachineAnswers } from '@/transport/features';
 import { formatClockDuration } from '@adecore/ui/format';
 import {
+    ScrollArea,
     Segmented,
     Switch,
     Button,
@@ -130,7 +131,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
                 {pending && <Icon icon={LoaderCircle} size={14} className="animate-spin text-text-muted" />}
                 <CloseButton label={t('device.tools.close')} className="ml-auto" onClick={onClose} />
             </PanelHeader>
-            <div className="min-h-0 grow overflow-y-auto">
+            <ScrollArea className="grow">
                 {error && <FormError className="border-b border-border px-3 py-2 break-words">{error}</FormError>}
                 {settings === null && !error && (
                     <div className="flex items-center gap-2 px-3 py-3 text-xs text-text-muted">
@@ -262,7 +263,7 @@ export function DeviceToolsPanel({ device, onClose }: { device: DeviceInfo; onCl
                         <PushAction appIdPlaceholder={appIdPlaceholder} disabled={disabled} act={act} />
                     </ToolSection>
                 )}
-            </div>
+            </ScrollArea>
         </aside>
     );
 }

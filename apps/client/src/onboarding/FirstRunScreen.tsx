@@ -8,7 +8,7 @@ import { WELCOME_SKY } from '@/onboarding/welcome-sky';
 import { useSettings } from '@/state/settings';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse } from '@/ui/Eclipse';
-import { Button, ChoiceCards, FormError, Spinner, type Choice, messageOf } from '@adecore/ui';
+import { Button, ChoiceCards, FormError, ScrollArea, Spinner, type Choice, messageOf } from '@adecore/ui';
 
 type FirstChoice = 'local' | 'none';
 
@@ -48,7 +48,7 @@ export function FirstRunScreen() {
     return (
         <div className="relative flex h-full w-full flex-col bg-bg">
             <div className="app-drag absolute inset-x-0 top-0 z-10 h-12" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }} />
-            <div className="relative flex min-h-0 grow flex-col items-center overflow-auto pt-12">
+            <ScrollArea className="grow" viewportClassName="relative flex flex-col items-center pt-12">
                 <Eclipse center={216} {...WELCOME_SKY} className="h-full" />
                 <div className="relative mt-30 flex w-full max-w-md flex-col items-center gap-4 px-8 pb-12 text-center">
                     <BrandSymbol size={96} className="rounded-[22px] shadow-float" />
@@ -77,7 +77,7 @@ export function FirstRunScreen() {
                     </Button>
                     {failure !== null && <FormError>{failure}</FormError>}
                 </div>
-            </div>
+            </ScrollArea>
         </div>
     );
 }

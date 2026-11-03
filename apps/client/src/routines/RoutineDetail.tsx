@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Ban, CircleCheck, Hand, SquareArrowOutUpRight } from 'lucide-react';
 import type { RoutineEntry, RoutineRun } from '@ruimte/contracts';
-import { Button, EmptyState, ErrorBoundary, FormError, Icon, IconButton, KeyValueList, Pill, SectionLabel, Segmented } from '@adecore/ui';
+import { Button, EmptyState, ErrorBoundary, FormError, Icon, IconButton, KeyValueList, Pill, ScrollArea, SectionLabel, Segmented } from '@adecore/ui';
 import { formatDateTime } from '@adecore/ui/format';
 import { runtimeModeLabel } from '@adecore/agents-react/chat';
 import { ArtifactView } from '@/output/ArtifactView';
@@ -27,10 +27,10 @@ export function RoutineDetail({ endpointId, entry, runId, timeZone }: { endpoint
     const run = entry.runs.find((candidate) => candidate.runId === runId) ?? entry.runs.find((candidate) => candidate.state !== 'skipped') ?? null;
     return (
         <div className="flex min-h-0 grow">
-            <div className="flex w-[440px] shrink-0 flex-col overflow-y-auto border-r border-border">
+            <ScrollArea className="w-[440px] shrink-0 border-r border-border" viewportClassName="flex flex-col">
                 <Definition endpointId={endpointId} entry={entry} />
                 <RunTimeline entry={entry} picked={run?.runId ?? null} timeZone={timeZone} />
-            </div>
+            </ScrollArea>
             <div className="flex min-w-0 grow flex-col">
                 <ErrorBoundary label={t('detail.runFailed')} resetKeys={[run?.runId ?? null]} className="grow">
                     {run === null ? (

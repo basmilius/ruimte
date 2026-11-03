@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageCustomCheckResult } from '@ruimte/contracts';
-import { Button, Checkbox, Dialog, Field, FormError, Input, Segmented, TextArea, messageOf } from '@adecore/ui';
+import { Button, Checkbox, Dialog, Field, FormError, Input, ScrollArea, Segmented, TextArea, messageOf } from '@adecore/ui';
 import { useProjectList } from '@/state/project-list';
 import { inputOf, problemOf, type CustomDraft, type DraftProblem } from './custom-draft';
 import type { CustomServersTracker } from './custom-servers';
@@ -30,12 +30,12 @@ export function CustomServerDialog({
     return (
         <Dialog.Root open={draft !== null} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Popup className="flex max-h-[90vh] w-[640px] flex-col">
-                <div className="min-h-0 overflow-y-auto px-5 pt-4">
+                <ScrollArea viewportClassName="px-5 pt-4">
                     <Dialog.Title>
                         {draft?.id === undefined ? t('editor.servers.own.dialog.titleAdd') : t('editor.servers.own.dialog.titleEdit', { name: draft.name })}
                     </Dialog.Title>
                     <Dialog.Description className="mt-1 mb-3 break-words">{t('editor.servers.own.dialog.description')}</Dialog.Description>
-                </div>
+                </ScrollArea>
                 {draft !== null && <Form key={draft.id ?? 'new'} start={draft} endpointId={endpointId} tracker={tracker} onClose={onClose} />}
             </Dialog.Popup>
         </Dialog.Root>
@@ -81,7 +81,7 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
 
     return (
         <>
-            <div className="flex min-h-0 grow flex-col gap-3 overflow-y-auto px-5 pb-4">
+            <ScrollArea className="grow" viewportClassName="flex flex-col gap-3 px-5 pb-4">
                 <Field orientation="horizontal" label={t('editor.servers.own.dialog.name')} error={errorOf('name')}>
                     <Input value={draft.name} autoFocus={draft.name === ''} onChange={(e) => set({ name: e.target.value })} />
                 </Field>
@@ -153,7 +153,7 @@ function Form({ start, endpointId, tracker, onClose }: { start: CustomDraft; end
                             ))}
                     </div>
                 </Field>
-            </div>
+            </ScrollArea>
             <div className="flex items-center gap-2 border-t border-border px-5 py-3">
                 <span className="min-w-0 grow">{failure !== null && <FormError className="break-words">{failure}</FormError>}</span>
                 <Dialog.Close render={<Button variant="secondary" />}>{t('editor.servers.own.dialog.cancel')}</Dialog.Close>

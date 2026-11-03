@@ -22,7 +22,7 @@ import {
 import { SubagentTimeline, WorkflowAgentLine } from '@adecore/agents-react/chat/ui';
 import { useChatRow } from '@adecore/agents-react/state';
 import { useChatScope } from '@adecore/agents-react';
-import { ErrorBoundary, Icon, IconButton, Tooltip, messageOf, useTickingText } from '@adecore/ui';
+import { ErrorBoundary, Icon, IconButton, ScrollArea, Tooltip, messageOf, useTickingText } from '@adecore/ui';
 import { formatElapsedShort } from '@adecore/ui/format';
 import { accentColor, accentHeaderStyle, accentShades } from '@/canvas/accents';
 import { CHROME_H, FRAME, frameStyle, HEADER, HEADER_MIDDLE } from '@/canvas/derived-card-look';
@@ -448,7 +448,7 @@ function OpenPhase({
                     <PhaseTime phase={phase} />
                 </span>
             </header>
-            <div className="min-h-0 grow overflow-auto">
+            <ScrollArea className="grow">
                 <div ref={listRef} className="px-3 py-2">
                     {refused && <p className="pb-1 text-xs text-text-muted">{t('workflowBeside.unsupported')}</p>}
                     {phase.agents.map((view) => (
@@ -461,7 +461,7 @@ function OpenPhase({
                         />
                     ))}
                 </div>
-            </div>
+            </ScrollArea>
         </div>
     );
 }

@@ -16,7 +16,7 @@ import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/Fil
 import { machineResourceOf, revealablePath, sourceKey, useEndpointIdOf, wireResourceOf, type FileSource } from '@/shell/panels/file-source';
 import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
 import { RevealButton } from '@/shell/panels/RevealButton';
-import { ButtonGroup, EmptyState, messageOf } from '@adecore/ui';
+import { ButtonGroup, EmptyState, messageOf, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
 
 // From this page's own origin, so the worker stays inside `worker-src 'self'`.
@@ -98,7 +98,7 @@ export function PdfFile({ source: origin, name, read }: { source: FileSource; na
     const [sizes, setSizes] = useState<ReadonlyMap<number, PdfPageSize>>(new Map());
     const [available, setAvailable] = useState(0);
     const [scroll, setScroll] = useState({ top: 0, height: 0, scrollHeight: 0 });
-    const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+    const [scroller, setScroller] = useState<HTMLElement | null>(null);
 
     const doc = opened !== null && opened.source === source ? opened.doc : null;
     const count = doc?.numPages ?? 0;
@@ -224,9 +224,15 @@ export function PdfFile({ source: origin, name, read }: { source: FileSource; na
                 </ButtonGroup>
             </FileToolbar>
             <FileTextMenu className="flex min-h-0 grow flex-col">
-                <div ref={setScroller} tabIndex={-1} className="flex min-h-0 grow flex-col overflow-auto bg-surface-sunken outline-none select-text">
+                <ScrollArea
+                    axis="both"
+                    viewportRef={setScroller}
+                    tabIndex={-1}
+                    className="grow bg-surface-sunken"
+                    viewportClassName="flex flex-col outline-none select-text"
+                >
                     {body()}
-                </div>
+                </ScrollArea>
             </FileTextMenu>
             <div className={FILE_FOOTER}>
                 {count > 0 && <span>{t('file.pdf.page', { page: formatNumber(Math.max(page, 1)), total: formatNumber(count) })}</span>}
@@ -242,7 +248,7 @@ interface PdfPageProps {
     index: number;
     box: PdfPageSize;
     scale: number;
-    root: HTMLDivElement | null;
+    root: HTMLElement | null;
     onSize(index: number, size: PdfPageSize): void;
 }
 

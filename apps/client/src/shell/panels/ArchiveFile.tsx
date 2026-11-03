@@ -18,7 +18,20 @@ import { readResource } from '@/transport/byte-transfer';
 import { useTransport } from '@/transport/context';
 import { readPiece } from '@/transport/piece';
 import type { Transport } from '@/transport/transport';
-import { Button, ContextMenu, EmptyState, ErrorBoundary, FileTree, Icon, IconButton, Menu, PromptDialog, useFileTree, messageOf } from '@adecore/ui';
+import {
+    Button,
+    ContextMenu,
+    EmptyState,
+    ErrorBoundary,
+    FileTree,
+    Icon,
+    IconButton,
+    Menu,
+    PromptDialog,
+    ScrollArea,
+    useFileTree,
+    messageOf
+} from '@adecore/ui';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
 
 const { rowPathOf } = FileTree;
@@ -241,7 +254,13 @@ export function ArchiveFile({ path, name, read }: { path: string; name: string; 
         setAttempt((count) => count + 1);
     };
 
-    const centered = (content: ReactNode): ReactNode => <FileTextMenu className="grid min-h-0 grow place-items-center overflow-auto">{content}</FileTextMenu>;
+    const centered = (content: ReactNode): ReactNode => (
+        <FileTextMenu className="flex min-h-0 grow flex-col">
+            <ScrollArea className="grow" viewportClassName="grid place-items-center">
+                {content}
+            </ScrollArea>
+        </FileTextMenu>
+    );
 
     const body = (): ReactNode => {
         if (listing.status === 'loading') {

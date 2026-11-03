@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Input } from '@adecore/ui';
+import { Button, Input, ScrollArea } from '@adecore/ui';
 import type { PromptViewProps } from '@adecore/agents-react/prompts';
 import { ApprovalActions, PromptPrimary, PromptCard } from '@adecore/agents-react/prompts';
 import type { ProjectProposal, SecretRequest } from '@ruimte/contracts';
@@ -31,7 +31,13 @@ export function RuimtePromptView({ prompt, props }: { prompt: RuimtePrompt; prop
             >
                 {data.request?.title && <p className="text-sm text-text">{data.request.title}</p>}
                 {data.request?.text && (
-                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-text select-text">{data.request.text}</pre>
+                    <ScrollArea
+                        render={<pre />}
+                        className="max-h-64"
+                        viewportClassName="whitespace-pre-wrap break-words font-mono text-xs text-text select-text"
+                    >
+                        {data.request.text}
+                    </ScrollArea>
                 )}
                 <p className="text-sm text-text-muted">{t('waiting.body')}</p>
             </PromptCard>

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ImageUp, PawPrint, Trash2 } from 'lucide-react';
-import { Button, FormError, Icon, IconButton, PromptDialog } from '@adecore/ui';
+import { Button, FormError, Icon, IconButton, PromptDialog, ScrollArea } from '@adecore/ui';
 import {
     browserSheetReader,
     forgetUnusedImages,
@@ -59,7 +59,11 @@ function limitsOf(): Record<string, number> {
 /* The rows live inside the popup, so the preview images go once it closes and its rows unmount. */
 function StripRows({ children }: { children: ReactNode }) {
     useEffect(() => forgetUnusedImages, []);
-    return <ul className="mt-4 flex max-h-[35dvh] flex-col gap-2 overflow-y-auto">{children}</ul>;
+    return (
+        <ScrollArea render={<ul />} className="mt-4 max-h-[35dvh]" viewportClassName="flex flex-col gap-2">
+            {children}
+        </ScrollArea>
+    );
 }
 
 /* One state: its preview, what it plays, and a button for its file that says which state it is for. */

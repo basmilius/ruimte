@@ -31,6 +31,7 @@ import {
     lazyNamed,
     Menu,
     PanelEmpty,
+    ScrollArea,
     SectionLabel,
     useNow
 } from '@adecore/ui';
@@ -166,7 +167,7 @@ export function OutputPanel() {
                     />
                 </div>
             )}
-            <div className="min-h-0 grow overflow-y-auto px-2 pb-2">
+            <ScrollArea className="grow" viewportClassName="px-2 pb-2">
                 {list.artifacts.length === 0 ? (
                     <PanelEmpty icon={Package} fill="full">
                         <span className="flex flex-col gap-1">
@@ -201,7 +202,7 @@ export function OutputPanel() {
                             <LinkedMachineOutput link={link} filters={filters} query={query} now={now} />
                         </ErrorBoundary>
                     ))}
-            </div>
+            </ScrollArea>
             <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-3 text-xs text-text-muted">
                 <Icon icon={HardDrive} size={14} className="shrink-0 text-text-faint" />
                 <span className="grow truncate tabular-nums">{t('panel.shown', { count: shown.length, size: formatBytes(shownBytes) })}</span>

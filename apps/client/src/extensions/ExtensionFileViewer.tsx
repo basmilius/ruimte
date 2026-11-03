@@ -1,6 +1,6 @@
 import { createElement, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@adecore/ui';
+import { Button, ScrollArea } from '@adecore/ui';
 import { fileInfoOf } from '@/extensions/file-info';
 import { useContributions } from '@/extensions/registry';
 
@@ -22,9 +22,9 @@ export function ExtensionFileViewer({ path, name, text, children }: { path: stri
                     {own ? viewer.title : t('file.viewer.original')}
                 </Button>
             </div>
-            <div className="flex min-h-0 min-w-0 grow flex-col overflow-auto">
+            <ScrollArea axis="both" className="grow" viewportClassName="flex flex-col">
                 {own ? children : createElement(viewer.component, { file: { ...info, name, text } })}
-            </div>
+            </ScrollArea>
         </div>
     );
 }

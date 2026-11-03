@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseButton, Dialog, PromptDialog, Select } from '@adecore/ui';
+import { CloseButton, Dialog, PromptDialog, ScrollArea, Select } from '@adecore/ui';
 import { removeOverlay, useHostDialog, useOverlays, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 
 function ChoiceBody({ choices, value, onChange }: { choices: readonly string[]; value: string; onChange: (value: string) => void }) {
@@ -41,9 +41,9 @@ function HostOverlay({ overlay, nested }: { overlay: OpenOverlay; nested: boolea
                     <Dialog.Title className="min-w-0 grow truncate">{overlay.title}</Dialog.Title>
                     <CloseButton label={t('action.close')} onClick={() => overlay.close()} />
                 </header>
-                <div className="min-h-0 grow overflow-y-auto">
+                <ScrollArea className="grow">
                     <overlay.component params={overlay.params} close={overlay.close} />
-                </div>
+                </ScrollArea>
             </Dialog.Popup>
         </Dialog.Root>
     );

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ErrorBoundary, TextArea } from '@adecore/ui';
+import { Button, ErrorBoundary, ScrollArea, TextArea } from '@adecore/ui';
 import { observeSpeech, registerDictationTarget, useDictation } from './controller';
 import { registerTerminalDictationTarget, terminalTargetKey } from './terminal-targets';
 import { useEndpointId } from '@/state/keys';
@@ -40,9 +40,14 @@ function TerminalControl({
     return (
         <div className="relative shrink-0 bg-term-bg" onPointerDown={(event) => event.stopPropagation()}>
             {text && (
-                <p className="max-h-32 overflow-auto whitespace-pre-wrap break-words p-2 text-sm text-text" aria-label={t('dictation.preview')}>
+                <ScrollArea
+                    render={<p />}
+                    className="max-h-32"
+                    viewportClassName="whitespace-pre-wrap break-words p-2 text-sm text-text"
+                    aria-label={t('dictation.preview')}
+                >
                     {text}
-                </p>
+                </ScrollArea>
             )}
             {error && (
                 <span role="alert" className="sr-only">

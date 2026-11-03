@@ -44,7 +44,7 @@ import { viewGlyphOf } from '@/shell/cell-view';
 import { childTask, useTasks } from '@/state/tasks';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Brand } from '@/ui/Brand';
-import { Icon, Menu, SectionLabel } from '@adecore/ui';
+import { Icon, Menu, ScrollArea, SectionLabel } from '@adecore/ui';
 import { hasLogoMenu } from '@/desktop/bridge';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
@@ -452,9 +452,10 @@ export function Sidebar() {
                     <SidebarToggle />
                 </div>
 
-                <div
-                    ref={listRef}
-                    className="mt-2 min-h-0 grow overflow-auto px-2"
+                <ScrollArea
+                    viewportRef={listRef}
+                    className="mt-2 grow"
+                    viewportClassName="px-2"
                     onFocusCapture={(event) => {
                         listHadFocus.current = true;
                         const row = (event.target as HTMLElement).closest<HTMLElement>('[data-sidebar-row]');
@@ -690,7 +691,7 @@ export function Sidebar() {
                         })
                     )}
                     {!empty && separators.trailing.map(separatorRow)}
-                </div>
+                </ScrollArea>
                 <SidebarCards />
 
                 <div className="flex shrink-0 items-center justify-end gap-1 border-t border-border px-2 py-1.5">

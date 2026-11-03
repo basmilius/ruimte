@@ -4,7 +4,7 @@ import { CircleCheck, CircleX, Info, ScanSearch, Search, TriangleAlert } from 'l
 import { resolveStoredPath, type LanguageServerStatus } from '@ruimte/contracts';
 import type { EditorPosition } from '@adecore/editor';
 import { pathToFileUri } from '@adecore/lsp';
-import { ButtonGroup, Icon, IconButton, PanelEmpty } from '@adecore/ui';
+import { ButtonGroup, Icon, IconButton, PanelEmpty, ScrollArea } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { countsOf, createHolder, type ProblemFile } from '@adecore/editor-react';
@@ -167,7 +167,7 @@ export function ProblemsPanel() {
                             onChange={(event) => setFilter(event.target.value)}
                         />
                     </div>
-                    <div className="min-h-0 grow overflow-y-auto pb-2">
+                    <ScrollArea className="grow" viewportClassName="pb-2">
                         {shown.length === 0 && <div className="px-3 py-4 text-center text-xs text-text-muted">{t('problems.nothingMatches')}</div>}
                         {shown.map((file) => {
                             const name = basenameOf(file.path);
@@ -207,7 +207,7 @@ export function ProblemsPanel() {
                                 </div>
                             );
                         })}
-                    </div>
+                    </ScrollArea>
                 </div>
             )}
         </>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import type { ArtifactCleanupProposal } from '@ruimte/contracts';
-import { Checkbox, PromptDialog } from '@adecore/ui';
+import { Checkbox, PromptDialog, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatDayClock } from '@adecore/ui/format';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
@@ -86,7 +86,7 @@ export function CleanupReviewDialog({
                     <span className="grow font-medium text-text">{t('storage.cleanup.all', { count: proposal.versions.length, checked: picked.length })}</span>
                     <span className="text-text-muted tabular-nums">{formatBytes(bytes)}</span>
                 </div>
-                <ul className="flex max-h-72 flex-col overflow-y-auto">
+                <ScrollArea render={<ul />} className="max-h-72" viewportClassName="flex flex-col">
                     {proposal.versions.map((version) => (
                         <li key={version.versionId}>
                             <div className="flex h-8 items-center gap-2.5 px-2 text-sm">
@@ -101,7 +101,7 @@ export function CleanupReviewDialog({
                             </div>
                         </li>
                     ))}
-                </ul>
+                </ScrollArea>
             </div>
         </PromptDialog>
     );

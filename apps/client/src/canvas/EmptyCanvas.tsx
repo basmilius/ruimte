@@ -16,7 +16,7 @@ import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useProviders } from '@adecore/agents-react/state';
 import { useUi } from '@/state/ui';
-import { Icon, Kbd, SectionLabel, Tile } from '@adecore/ui';
+import { Icon, Kbd, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
 import type { Shortcut } from '@adecore/ui';
 import { AgentIcon } from '@adecore/agents-react/providers';
 
@@ -96,7 +96,7 @@ export function EmptyCanvas() {
     return (
         // The bottom padding keeps the grid clear of the dock, which floats over the same cell.
         <div className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden px-4 pt-4 pb-20">
-            <div className="pointer-events-auto flex max-h-full w-full max-w-3xl flex-col gap-5 overflow-auto">
+            <ScrollArea className="pointer-events-auto max-h-full w-full max-w-3xl" viewportClassName="flex flex-col gap-5">
                 <ProviderRows onPick={(provider) => void createNodeAction('chat', { provider: provider.kind })} />
                 {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
                     <section key={key} className="flex flex-col gap-2">
@@ -129,7 +129,7 @@ export function EmptyCanvas() {
                 <p className="text-center text-xs text-text-muted">
                     <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
                 </p>
-            </div>
+            </ScrollArea>
         </div>
     );
 }
