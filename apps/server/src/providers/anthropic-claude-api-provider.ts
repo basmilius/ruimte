@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { claudeProjectSlug, type BackendLaunch } from '@adecore/agents/chat';
+import { claudeProjectSlug, type BackendChange, type BackendLaunch } from '@adecore/agents/chat';
 import { createClaudeProvider, type ChatProvider, type ClaudeCodeRuntime, type CliDetection } from '@adecore/agents/providers';
 import { claudeTranscriptRoot, type UsageRootPath } from '@adecore/agents/usage';
 import { cliMcpServers, readApiMcpConfigSync } from '../chat/api-mcp.ts';
@@ -101,9 +101,17 @@ export function createAnthropicClaudeApiProvider(service: AnthropicClaudeApiServ
             const configDir = claudeApiConfigDir(service);
             const claude = createClaudeProvider({ apiKey: { key: () => service.apiKey, configDir } });
             const mcpServers = [...(launch.mcpServers ?? []), ...cliMcpServers(readApiMcpConfigSync(dirname(service.directory)))];
-            const env = { ...launch.env, CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(service.maxOutputTokensFor(launch.selection.model)) };
+            const limit = service.maxOutputTokensFor(launch.selection.model);
+            const env = { ...launch.env, CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(limit) };
+            const backend = claude.createBackend(withRuimteMcp({ ...withoutForeignResume(launch, configDir), env, mcpServers }, 'variable'), host);
+            const inPlace = backend.reconfigure?.bind(backend);
+            // The CLI reads its output limit only as it starts, so a new limit, or a model with another one, needs a new process.
+            const outdated = (change: BackendChange): boolean => service.maxOutputTokensFor(change.selection.model) !== limit;
 
-            return claude.createBackend(withRuimteMcp({ ...withoutForeignResume(launch, configDir), env, mcpServers }, 'variable'), host);
+            return Object.assign(backend, {
+                outdated,
+                reconfigure: async (change: BackendChange): Promise<boolean> => !outdated(change) && inPlace !== undefined && (await inPlace(change))
+            });
         }
     };
 }

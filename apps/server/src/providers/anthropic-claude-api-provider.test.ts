@@ -1,8 +1,9 @@
 import { expect, test } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { BackendLaunch } from '@adecore/agents/chat';
+import { ChatSession, type BackendLaunch } from '@adecore/agents/chat';
 import { ModelCatalog } from '@adecore/agents/providers';
+import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
 import { claudeApiUsageRoots, createAnthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
@@ -222,4 +223,71 @@ test("a Claude API model offers Claude Code's reasoning levels, and the one pick
 
     expect(command).toContain('--effort=low');
     expect(command).toContain('--model=claude-sonnet-5-5');
+});
+
+test('a running chat takes a changed output limit, or a model with another one, on a new process at its next turn', async () => {
+    const home = await newHome();
+    const service = new AnthropicClaudeApiService(async () =>
+        Response.json({
+            data: [
+                { id: 'claude-sonnet-example', display_name: 'Sonnet', line: 'sonnet', max_tokens: 64_000 },
+                { id: 'claude-haiku-example', display_name: 'Haiku', line: 'haiku', max_tokens: 8_000 }
+            ]
+        })
+    );
+    await service.load(home);
+    await service.configure('sk-ant-test-only');
+    const cli = inProcess(fakeClaude);
+    const limits: (string | undefined)[] = [];
+    const sonnet = { model: 'claude-sonnet-example', options: {} };
+    const session = new ChatSession({
+        info: {
+            chatId: 'api-chat',
+            provider: 'anthropic-claude-api',
+            cwd: home,
+            agentSessionId: null,
+            model: null,
+            selection: sonnet,
+            runtimeMode: 'supervised',
+            status: 'idle',
+            running: false,
+            activeTurnId: null,
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: 200_000, costUsd: 0, turns: 0 },
+            createdAt: 1
+        },
+        provider: createAnthropicClaudeApiProvider(service, { detect: installed }),
+        command: ['claude'],
+        env: () => ({}),
+        emit: () => undefined,
+        persist: () => undefined,
+        persistSoon: () => undefined,
+        spawn: (options) => {
+            limits.push(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS);
+
+            return cli.spawn(options);
+        }
+    });
+
+    const turn = async (text: string): Promise<void> => {
+        session.send(text);
+
+        for (let i = 0; i < 1000 && (session.info.activeTurnId !== null || session.info.running === false); i++) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+    };
+
+    try {
+        await turn('first');
+        await turn('same limit');
+        await service.setSettings({ maxOutputTokens: 16_000 });
+        await turn('lower limit');
+        session.configure({ selection: { model: 'claude-haiku-example', options: {} } });
+        await turn('smaller model');
+
+        expect(limits).toEqual(['32000', '16000', '8000']);
+        expect(session.info.activeTurnId).toBeNull();
+    } finally {
+        await session.dispose();
+    }
 });
