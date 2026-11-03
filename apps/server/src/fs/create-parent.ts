@@ -127,8 +127,9 @@ function withWindowsParent<T>(base: string, expected: Stats, parts: string[], ru
     const handles: Pointer[] = [];
 
     const hold = (path: string): void => {
-        // No FILE_SHARE_DELETE: every ancestor stays in place until the operation ends.
-        const handle = symbols.CreateFileW(Buffer.from(`${path}\0`, 'utf16le'), 0x80, 0x3, null, 3, 0x02200000, null);
+        // No FILE_SHARE_DELETE: every ancestor stays in place until the operation ends. FILE_LIST_DIRECTORY (0x1) beside
+        // FILE_READ_ATTRIBUTES (0x80), since a handle that only reads attributes takes no part in the sharing check.
+        const handle = symbols.CreateFileW(Buffer.from(`${path}\0`, 'utf16le'), 0x81, 0x3, null, 3, 0x02200000, null);
 
         if (typeof handle !== 'number' || handle <= 0 || !Number.isSafeInteger(handle)) {
             const error = symbols.GetLastError();
