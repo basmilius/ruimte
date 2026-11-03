@@ -15,7 +15,7 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport';
-import { clientContract, NAME, SEED, type ContractScreen, type SeedNode } from '../../../../../extensions/poc-contract/contract/client';
+import { clientContract, NAME, SEED, type ContractScreen, type SeedNode } from '../../../../../extensions/poc/contract/contract/client';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { emptyCanvas } from '../../../testing/project-fixtures';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';

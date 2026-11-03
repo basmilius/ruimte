@@ -5,8 +5,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { EXTENSION_CLIENT_PERMISSIONS } from '@ruimte/contracts/extension-client';
-import type * as Client from '../../../packages/extension/client';
-import type * as Ui from '../../../packages/extension/ui';
+import type * as Client from '../../../../packages/extension/client';
+import type * as Ui from '../../../../packages/extension/ui';
 
 type Result<Value> = Client.Result<Value>;
 

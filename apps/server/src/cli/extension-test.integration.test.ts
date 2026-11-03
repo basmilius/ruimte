@@ -31,7 +31,7 @@ function scaffolded(name: string): string {
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 describe('ruimte extension test', () => {
-    test.each(['limits', 'poc-server', 'poc-agents', 'poc-workspace', 'poc-contract'])(
+    test.each(['limits', 'poc/server', 'poc/agents', 'poc/workspace', 'poc/contract'])(
         'runs the tests of extensions/%s against the test host',
         async (name) => {
             const { code, output } = await extensionTest(join(import.meta.dir, '../../../../extensions', name));

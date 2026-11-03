@@ -7,7 +7,7 @@ import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { mount, until } from '../../testing/dom';
 
-const FOLDER = join(import.meta.dir, '../../../../extensions/poc-surfaces');
+const FOLDER = join(import.meta.dir, '../../../../extensions/poc/surfaces');
 const OUTPUT = join(FOLDER, 'dist');
 // By a path the types do not follow: the client's project never reaches into the daemon's, only this test does.
 const PACK = '../../../server/src/extensions/pack.ts';

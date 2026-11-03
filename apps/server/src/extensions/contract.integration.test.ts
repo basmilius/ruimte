@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
 import { ExtensionMessageEventSchema, type ProjectContent } from '@ruimte/contracts';
-import { serverContract, ID } from '../../../../extensions/poc-contract/contract/server.ts';
+import { serverContract, ID } from '../../../../extensions/poc/contract/contract/server.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
@@ -16,7 +16,7 @@ import { packExtension } from './pack.ts';
 import { extensionFailureOf } from './refusal.ts';
 import { ExtensionStore } from './store.ts';
 
-const PROBE = join(import.meta.dir, '..', '..', '..', '..', 'extensions', 'poc-contract');
+const PROBE = join(import.meta.dir, '..', '..', '..', '..', 'extensions', 'poc', 'contract');
 const root = mkdtempSync(join(process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT ?? tmpdir(), 'ruimte-extension-contract-'));
 const hosts: ExtensionHost[] = [];
 let worlds = 0;

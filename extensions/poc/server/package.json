@@ -4,9 +4,9 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "dev": "RUIMTE_HOME=$HOME/.ruimte-dev bun ../../apps/server/src/main.ts extension dev --port 4211",
-        "test": "bun ../../apps/server/src/main.ts extension test",
-        "pack": "bun ../../apps/server/src/main.ts extension pack"
+        "dev": "RUIMTE_HOME=$HOME/.ruimte-dev bun ../../../apps/server/src/main.ts extension dev --port 4211",
+        "test": "bun ../../../apps/server/src/main.ts extension test",
+        "pack": "bun ../../../apps/server/src/main.ts extension pack"
     },
     "dependencies": {
         "@ruimte/extension": "workspace:*",

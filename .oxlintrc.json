@@ -14,7 +14,7 @@
     {
       // The client's files the React Compiler builds (`apps/client/react-compiler.ts`), held to the Rules of React it relies on.
       // Its `todo` (syntax it cannot compile yet) and `rule-suppression` (a dependency list left short on purpose) are no faults.
-      "files": ["apps/client/src/**", "extensions/*/client/**"],
+      "files": ["apps/client/src/**", "extensions/*/client/**", "extensions/poc/*/client/**"],
       "rules": {
         "react/hooks": "error",
         "react/refs": "error",

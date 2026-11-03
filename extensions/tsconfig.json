@@ -12,6 +12,8 @@
     },
     "include": [
         "*/client",
-        "*/server"
+        "*/server",
+        "poc/*/client",
+        "poc/*/server"
     ]
 }

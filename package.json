@@ -7,7 +7,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "extensions/*"
+    "extensions/*",
+    "extensions/poc/*"
   ],
   "scripts": {
     "adecore:link": "bun scripts/adecore.ts link",
@@ -35,8 +36,8 @@
     "test:devices": "bun scripts/test-integration.ts --suite devices",
     "test:browser": "bun run --cwd apps/client build && bun scripts/test-integration.ts --browser",
     "test:terminal": "bun --config=integration.bunfig.toml test --conditions=source apps/server/src/sessions/terminal-stream.integration.test.ts",
-    "format": "oxfmt --write \"apps/*/src/**/*.{ts,tsx}\" \"extensions/*/client/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\"",
-    "format:check": "oxfmt --check \"apps/*/src/**/*.{ts,tsx}\" \"extensions/*/client/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\"",
+    "format": "oxfmt --write \"apps/*/src/**/*.{ts,tsx}\" \"extensions/*/client/**/*.{ts,tsx}\" \"extensions/poc/*/client/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\"",
+    "format:check": "oxfmt --check \"apps/*/src/**/*.{ts,tsx}\" \"extensions/*/client/**/*.{ts,tsx}\" \"extensions/poc/*/client/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
     "dev:desktop:built": "RUIMTE_DEV_WAIT_FOR_DAEMON=1 bun run dev:desktop",
     "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"

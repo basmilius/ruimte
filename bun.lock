@@ -302,7 +302,7 @@
         "typescript": "^7.0.2",
       },
     },
-    "extensions/poc-agents": {
+    "extensions/poc/agents": {
       "name": "@ruimte/extension-poc-agents",
       "version": "0.0.0",
       "dependencies": {
@@ -315,7 +315,7 @@
         "react-dom": "^19.3.1",
       },
     },
-    "extensions/poc-broken": {
+    "extensions/poc/broken": {
       "name": "@ruimte/extension-poc-broken",
       "version": "0.0.0",
       "dependencies": {
@@ -326,7 +326,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-broken-load": {
+    "extensions/poc/broken-load": {
       "name": "@ruimte/extension-poc-broken-load",
       "version": "0.0.0",
       "dependencies": {
@@ -337,7 +337,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-chat": {
+    "extensions/poc/chat": {
       "name": "@ruimte/extension-poc-chat",
       "version": "0.0.0",
       "dependencies": {
@@ -348,7 +348,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-contract": {
+    "extensions/poc/contract": {
       "name": "@ruimte/extension-poc-contract",
       "version": "0.0.0",
       "dependencies": {
@@ -363,7 +363,7 @@
         "react-dom": "^19.3.1",
       },
     },
-    "extensions/poc-frame": {
+    "extensions/poc/frame": {
       "name": "@ruimte/extension-poc-frame",
       "version": "0.0.0",
       "dependencies": {
@@ -374,7 +374,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-machine": {
+    "extensions/poc/machine": {
       "name": "@ruimte/extension-poc-machine",
       "version": "0.0.0",
       "dependencies": {
@@ -386,7 +386,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-server": {
+    "extensions/poc/server": {
       "name": "@ruimte/extension-poc-server",
       "version": "0.0.0",
       "dependencies": {
@@ -398,7 +398,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-surfaces": {
+    "extensions/poc/surfaces": {
       "name": "@ruimte/extension-poc-surfaces",
       "version": "0.0.0",
       "dependencies": {
@@ -409,7 +409,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-themes": {
+    "extensions/poc/themes": {
       "name": "@ruimte/extension-poc-themes",
       "version": "0.0.0",
       "dependencies": {
@@ -420,7 +420,7 @@
         "@types/react": "^19.3.0",
       },
     },
-    "extensions/poc-workspace": {
+    "extensions/poc/workspace": {
       "name": "@ruimte/extension-poc-workspace",
       "version": "0.0.0",
       "dependencies": {
@@ -1300,27 +1300,27 @@
 
     "@ruimte/extension-pets": ["@ruimte/extension-pets@workspace:extensions/pets"],
 
-    "@ruimte/extension-poc-agents": ["@ruimte/extension-poc-agents@workspace:extensions/poc-agents"],
+    "@ruimte/extension-poc-agents": ["@ruimte/extension-poc-agents@workspace:extensions/poc/agents"],
 
-    "@ruimte/extension-poc-broken": ["@ruimte/extension-poc-broken@workspace:extensions/poc-broken"],
+    "@ruimte/extension-poc-broken": ["@ruimte/extension-poc-broken@workspace:extensions/poc/broken"],
 
-    "@ruimte/extension-poc-broken-load": ["@ruimte/extension-poc-broken-load@workspace:extensions/poc-broken-load"],
+    "@ruimte/extension-poc-broken-load": ["@ruimte/extension-poc-broken-load@workspace:extensions/poc/broken-load"],
 
-    "@ruimte/extension-poc-chat": ["@ruimte/extension-poc-chat@workspace:extensions/poc-chat"],
+    "@ruimte/extension-poc-chat": ["@ruimte/extension-poc-chat@workspace:extensions/poc/chat"],
 
-    "@ruimte/extension-poc-contract": ["@ruimte/extension-poc-contract@workspace:extensions/poc-contract"],
+    "@ruimte/extension-poc-contract": ["@ruimte/extension-poc-contract@workspace:extensions/poc/contract"],
 
-    "@ruimte/extension-poc-frame": ["@ruimte/extension-poc-frame@workspace:extensions/poc-frame"],
+    "@ruimte/extension-poc-frame": ["@ruimte/extension-poc-frame@workspace:extensions/poc/frame"],
 
-    "@ruimte/extension-poc-machine": ["@ruimte/extension-poc-machine@workspace:extensions/poc-machine"],
+    "@ruimte/extension-poc-machine": ["@ruimte/extension-poc-machine@workspace:extensions/poc/machine"],
 
-    "@ruimte/extension-poc-server": ["@ruimte/extension-poc-server@workspace:extensions/poc-server"],
+    "@ruimte/extension-poc-server": ["@ruimte/extension-poc-server@workspace:extensions/poc/server"],
 
-    "@ruimte/extension-poc-surfaces": ["@ruimte/extension-poc-surfaces@workspace:extensions/poc-surfaces"],
+    "@ruimte/extension-poc-surfaces": ["@ruimte/extension-poc-surfaces@workspace:extensions/poc/surfaces"],
 
-    "@ruimte/extension-poc-themes": ["@ruimte/extension-poc-themes@workspace:extensions/poc-themes"],
+    "@ruimte/extension-poc-themes": ["@ruimte/extension-poc-themes@workspace:extensions/poc/themes"],
 
-    "@ruimte/extension-poc-workspace": ["@ruimte/extension-poc-workspace@workspace:extensions/poc-workspace"],
+    "@ruimte/extension-poc-workspace": ["@ruimte/extension-poc-workspace@workspace:extensions/poc/workspace"],
 
     "@ruimte/extension-theme-umbra": ["@ruimte/extension-theme-umbra@workspace:extensions/theme-umbra"],
 

@@ -14,7 +14,7 @@ export async function loadPoc(name: string): Promise<LoadedExtension> {
 
     await mock.module('@ruimte/extension/client', () => client);
     await mock.module('@ruimte/extension/ui', () => ui);
-    await import(`../../../extensions/poc-${name}/client/index.ts`);
+    await import(`../../../extensions/poc/${name}/client/index.ts`);
 
     return extension;
 }

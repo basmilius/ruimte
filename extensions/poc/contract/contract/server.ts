@@ -6,7 +6,7 @@
  * does with its own chat start and action registry.
  */
 import { describe, expect, test } from 'bun:test';
-import type * as Server from '../../../packages/extension/server';
+import type * as Server from '../../../../packages/extension/server';
 
 export const ID = 'poc.contract';
 
@@ -71,7 +71,7 @@ export function serverContract(open: OpenServerWorld): void {
             const hidden = await open({});
 
             expect(await offered.tool('echo', { text: 'Hi' }, 'chat-9')).toBe('Hi, for chat-9');
-            await expect(hidden.tool('echo', { text: 'Hi' }, 'chat-9')).rejects.toThrow(`No tool ${ID}/echo. ruimte-context tool list says what there is`);
+            await expect(hidden.tool('echo', { text: 'Hi' }, 'chat-9')).rejects.toThrow(`No tool ${ID}/echo. tool_list says what there is`);
         });
 
         test('sends a chat at most 20 messages an hour, each with value undefined', async () => {

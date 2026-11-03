@@ -21,7 +21,7 @@ function hostIn(name: string): { host: ExtensionHost; home: string } {
 }
 
 async function packOf(name: string): Promise<string> {
-    const { path } = await packExtension(join(EXTENSIONS, `poc-${name}`));
+    const { path } = await packExtension(join(EXTENSIONS, 'poc', name));
 
     return readFileSync(path).toString('base64');
 }
@@ -37,7 +37,7 @@ afterAll(() => {
     rmSync(root, { recursive: true, force: true });
 
     for (const name of POCS) {
-        rmSync(join(EXTENSIONS, `poc-${name}`, 'dist'), { recursive: true, force: true });
+        rmSync(join(EXTENSIONS, 'poc', name, 'dist'), { recursive: true, force: true });
     }
 });
 

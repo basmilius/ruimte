@@ -1,12 +1,10 @@
 {
-    "name": "@ruimte/extension-poc-workspace",
+    "name": "@ruimte/extension-poc-contract",
     "private": true,
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "dev": "RUIMTE_HOME=$HOME/.ruimte-dev bun ../../apps/server/src/main.ts extension dev --port 4211",
-        "test": "bun ../../apps/server/src/main.ts extension test",
-        "pack": "bun ../../apps/server/src/main.ts extension pack"
+        "test": "bun ../../../apps/server/src/main.ts extension test"
     },
     "dependencies": {
         "@ruimte/extension": "workspace:*",
@@ -14,6 +12,8 @@
     },
     "devDependencies": {
         "@happy-dom/global-registrator": "^21.0.4",
+        "@ruimte/contracts": "workspace:*",
+        "@types/bun": "^1.4.4",
         "@types/react": "^19.3.0",
         "react-dom": "^19.3.1"
     }

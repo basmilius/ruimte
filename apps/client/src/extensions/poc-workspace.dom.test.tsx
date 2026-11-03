@@ -35,7 +35,7 @@ beforeAll(async () => {
             return realFetch(input);
         }
 
-        return new Response(Bun.file(`${import.meta.dir}/../../../../extensions/poc-workspace/locales/${name}.json`));
+        return new Response(Bun.file(`${import.meta.dir}/../../../../extensions/poc/workspace/locales/${name}.json`));
     }) as typeof fetch;
     extension = await loadPoc('workspace');
 });
@@ -62,7 +62,7 @@ describe('poc-workspace', () => {
         await runAction(action('open-panel'), baseContext(), 'commandPalette');
         // Loaded ahead, so the lazy panel resolves from the module cache: reading and compiling the file is
         // disk work, which no count of event-loop turns bounds on a busy machine.
-        await import('../../../../extensions/poc-workspace/client/WorkspacePanel');
+        await import('../../../../extensions/poc/workspace/client/WorkspacePanel');
         mounted = mount();
 
         const Panel = entry()?.component as ComponentType;

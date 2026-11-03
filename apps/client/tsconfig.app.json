@@ -10,6 +10,6 @@
     "jsx": "react-jsx",
     "paths": { "@/*": ["./src/*"], "@extensions/*": ["../../extensions/*"] }
   },
-  "include": ["src", "../../extensions/*/client"],
+  "include": ["src", "../../extensions/*/client", "../../extensions/poc/*/client"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/worker", "../../extensions/**/*.test.ts", "../../extensions/**/*.test.tsx"]
 }
