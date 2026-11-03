@@ -1128,6 +1128,10 @@ struct ChatEntryView: View {
                             .lineLimit(1).font(.footnote).foregroundStyle(MobileStyle.muted).frame(minHeight: 28)
                     }.buttonStyle(.plain).disabled(task.isEmpty)
                 }
+            case .selectionSwitch:
+                if let from = entry.switchedFrom, let to = entry.items.first?.item.turnItem?.selection {
+                    ChatSelectionSwitchRule(from: from, to: to, models: presentation.chatModels())
+                }
             case .changedFiles:
                 if let turn = entry.items.first {
                     ChatChangedFilesRow(

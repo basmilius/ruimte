@@ -16438,6 +16438,31 @@
                     "agent"
                   ]
                 },
+                "selection": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": [
+                          "string",
+                          "boolean"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "options"
+                  ]
+                },
                 "label": {
                   "type": "string"
                 },
@@ -18872,6 +18897,31 @@
                     "agent"
                   ]
                 },
+                "selection": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": [
+                          "string",
+                          "boolean"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "options"
+                  ]
+                },
                 "label": {
                   "type": "string"
                 },
@@ -20540,6 +20590,31 @@
                     "agent"
                   ]
                 },
+                "selection": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": [
+                          "string",
+                          "boolean"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "options"
+                  ]
+                },
                 "label": {
                   "type": "string"
                 },
@@ -22200,6 +22275,31 @@
                           "enum": [
                             "user",
                             "agent"
+                          ]
+                        },
+                        "selection": {
+                          "type": "object",
+                          "properties": {
+                            "model": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "options": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": [
+                                  "string",
+                                  "boolean"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "model",
+                            "options"
                           ]
                         },
                         "label": {
@@ -25596,6 +25696,31 @@
                               "agent"
                             ]
                           },
+                          "selection": {
+                            "type": "object",
+                            "properties": {
+                              "model": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "options": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "type": [
+                                    "string",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "model",
+                              "options"
+                            ]
+                          },
                           "label": {
                             "type": "string"
                           },
@@ -27782,6 +27907,31 @@
                   "enum": [
                     "user",
                     "agent"
+                  ]
+                },
+                "selection": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": [
+                          "string",
+                          "boolean"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "options"
                   ]
                 },
                 "label": {
@@ -33010,6 +33160,31 @@
                   "enum": [
                     "user",
                     "agent"
+                  ]
+                },
+                "selection": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": [
+                          "string",
+                          "boolean"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "options"
                   ]
                 },
                 "label": {
@@ -76101,6 +76276,31 @@
                           "agent"
                         ]
                       },
+                      "selection": {
+                        "type": "object",
+                        "properties": {
+                          "model": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "options": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": [
+                                "string",
+                                "boolean"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "model",
+                          "options"
+                        ]
+                      },
                       "label": {
                         "type": "string"
                       },
@@ -79493,6 +79693,31 @@
                           "enum": [
                             "user",
                             "agent"
+                          ]
+                        },
+                        "selection": {
+                          "type": "object",
+                          "properties": {
+                            "model": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "options": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": [
+                                  "string",
+                                  "boolean"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "model",
+                            "options"
                           ]
                         },
                         "label": {

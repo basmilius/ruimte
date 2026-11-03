@@ -11308,6 +11308,16 @@
         }
       }
     },
+    "The model or reasoning effort changed before this turn" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Model of reasoning effort gewijzigd vóór deze turn"
+          }
+        }
+      }
+    },
     "Everything above reaches the agent only as a summary" : {
       "localizations" : {
         "nl" : {

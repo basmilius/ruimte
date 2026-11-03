@@ -45,6 +45,58 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(record.replyTrees?.answered, [:])
     }
 
+    @MainActor func testASelectionSwitchStandsAboveTheTurnThatRanOnIt() {
+        func pick(_ model: String, _ effort: String?) -> ChatTurnItemSelection {
+            ChatTurnItemSelection(model: model, options: effort.map { ["effort": .string($0)] } ?? [:])
+        }
+        func turn(_ id: String, _ selection: ChatTurnItemSelection?) -> [ChatItem] {
+            [
+                .turn(
+                    ChatTurnItem(
+                        id: id, createdAt: 0, turnId: id, state: .done, selection: selection, endedAt: 1, costUsd: 0)),
+                .user(ChatUserItem(id: "u-\(id)", createdAt: 0, turnId: id, text: "hi")),
+            ]
+        }
+        let presentation = ChatPresentation()
+        presentation.replace(
+            turn("t1", pick("opus", "low")) + turn("t2", nil) + turn("t3", pick("opus", "low"))
+                + turn("t4", pick("sonnet", "low")),
+            info: nil)
+        let switches = presentation.entries.filter { $0.kind == .selectionSwitch }
+        XCTAssertEqual(switches.map(\.id), ["switch-t4"])
+        XCTAssertEqual(switches.first?.switchedFrom, pick("opus", "low"))
+        let index = presentation.entries.firstIndex { $0.kind == .selectionSwitch }!
+        XCTAssertEqual(presentation.entries[index + 1].items.first?.id, "u-t4")
+    }
+
+    func testASelectionSwitchNamesOnlyWhatChanged() {
+        func choice(_ id: String, _ label: String) -> JSONValue {
+            .object(["id": .string(id), "label": .string(label)])
+        }
+        func model(_ slug: String, _ name: String, _ options: [JSONValue]) -> JSONValue {
+            .object(["slug": .string(slug), "name": .string(name), "options": .array(options)])
+        }
+        let effort: JSONValue = .object([
+            "id": .string("effort"), "type": .string("select"), "defaultChoice": .string("medium"),
+            "choices": .array([choice("low", "Low"), choice("medium", "Medium"), choice("xhigh", "Extra High")]),
+        ])
+        let models = [
+            model("opus", "Claude Opus 5.5", [effort]), model("sonnet", "Claude Sonnet 5.5", [effort]),
+            model("haiku", "Claude Haiku 5.5", []),
+        ]
+        func pick(_ model: String, _ level: String? = nil) -> ChatTurnItemSelection {
+            ChatTurnItemSelection(model: model, options: level.map { ["effort": .string($0)] } ?? [:])
+        }
+        func text(_ from: ChatTurnItemSelection, _ to: ChatTurnItemSelection) -> String? {
+            ChatSelectionSwitch.text(from: from, to: to, models: models).map { "\($0.from) → \($0.to)" }
+        }
+        XCTAssertEqual(text(pick("opus", "low"), pick("opus", "xhigh")), "Low → Extra High")
+        XCTAssertEqual(text(pick("opus", "low"), pick("sonnet", "low")), "Opus 5.5 → Sonnet 5.5")
+        XCTAssertEqual(text(pick("opus", "xhigh"), pick("sonnet", "medium")), "Opus 5.5 Extra High → Sonnet 5.5 Medium")
+        XCTAssertEqual(text(pick("haiku"), pick("opus", "low")), "Haiku 5.5 → Opus 5.5 Low")
+        XCTAssertNil(text(pick("opus"), pick("opus", "medium")))
+    }
+
     @MainActor func testInfoAloneStartsAndEndsWorking() {
         let presentation = ChatPresentation()
         presentation.setConnected(true)
