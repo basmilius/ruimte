@@ -10,6 +10,8 @@ export interface ExtensionChatDeps {
     actions: Pick<ActionRegistry<ServerActionContext>, 'execute'>;
     folderOf(projectId: string): string | null;
     projectOfFolder(folder: string): string | null;
+    /* Turns the chat view into a hidden one, as an inline edit's chat is. */
+    hideChatView(projectId: string, viewId: string): Promise<void>;
 }
 
 /*
@@ -18,7 +20,13 @@ export interface ExtensionChatDeps {
  * waits makes nothing. With a `folder` it starts in the project the machine knows there, as a view of that project,
  * since an extension is trusted code that a person chose to run.
  */
-export function extensionChatStarter({ host, actions, folderOf, projectOfFolder }: ExtensionChatDeps): NonNullable<ExtensionHostOptions['startChat']> {
+export function extensionChatStarter({
+    host,
+    actions,
+    folderOf,
+    projectOfFolder,
+    hideChatView
+}: ExtensionChatDeps): NonNullable<ExtensionHostOptions['startChat']> {
     return async (id, start, check) => {
         const elsewhere = start.folder === undefined ? null : projectOfFolder(start.folder);
 
@@ -27,8 +35,8 @@ export function extensionChatStarter({ host, actions, folderOf, projectOfFolder 
         }
 
         const projectId = elsewhere ?? start.projectId;
-        // A canvas and a node beside it belong to the project the request came from.
-        const { viewId, beside } = elsewhere === null ? start : { viewId: undefined, beside: undefined };
+        // A canvas and a node beside it belong to the project the request came from, and a chat the extension draws stands on none.
+        const { viewId, beside } = elsewhere === null && start.hidden !== true ? start : { viewId: undefined, beside: undefined };
         const { provider, title, prompt } = start;
         const folder = folderOf(projectId);
 
@@ -70,6 +78,12 @@ export function extensionChatStarter({ host, actions, folderOf, projectOfFolder 
             call
         );
 
-        return { nodeId: outputOf(result).nodeId };
+        const { nodeId } = outputOf(result);
+
+        if (start.hidden === true) {
+            await hideChatView(projectId, nodeId);
+        }
+
+        return { nodeId };
     };
 }

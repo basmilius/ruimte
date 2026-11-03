@@ -116,7 +116,8 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                 near,
                 prompt,
                 provider,
-                title
+                title,
+                hidden
             }: {
                 project?: Ref;
                 folder?: string;
@@ -125,14 +126,15 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                 prompt?: string;
                 provider?: string;
                 title?: string;
+                hidden?: boolean;
             }) {
                 if (project === undefined && folder === undefined) {
                     throw new TypeError('agents.start needs a project or a folder');
                 }
 
                 const beside = near?.[0]?.id;
-                // A chat in another project's folder has no canvas of this one to stand on.
-                const placed = folder === undefined;
+                // A chat in another project's folder has no canvas of this one to stand on, and one the extension draws stands on none.
+                const placed = folder === undefined && hidden !== true;
                 const started = await typed<{ nodeId: string }>('agents.start', [
                     {
                         projectId: project?.id ?? '',
@@ -141,7 +143,8 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                         ...(beside === undefined || !placed ? {} : { beside }),
                         ...(prompt === undefined ? {} : { prompt }),
                         ...(provider === undefined ? {} : { provider }),
-                        ...(title === undefined ? {} : { title })
+                        ...(title === undefined ? {} : { title }),
+                        ...(hidden === true ? { hidden: true } : {})
                     }
                 ]);
 

@@ -511,8 +511,9 @@ export class TestHost {
     }
 
     /* A chat the machine started in a view of its own, with no canvas in front to put it on. */
-    addChatView(title: string, provider: string): { id: string } {
-        const view = this.addView('chat', title);
+    /* A hidden one is a chat of the project that no list of views shows, as the machine keeps one an extension draws. */
+    addChatView(title: string, provider: string, hidden = false): { id: string } {
+        const view = hidden ? { id: `chat-${this.chats.size + 1}` } : this.addView('chat', title);
 
         this.chats.set(view.id, { id: view.id, title, text: '', provider, status: 'running' });
 

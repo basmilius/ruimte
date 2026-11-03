@@ -125,6 +125,8 @@ export interface ExtensionChatStart {
     projectId: string;
     // Where the chat works instead: the project the machine knows in this folder, which then wins over `projectId`.
     folder?: string | undefined;
+    // A chat the extension draws itself with `Chat`: never on a canvas, and a view the sidebar does not list.
+    hidden?: boolean | undefined;
     viewId?: string | undefined;
     beside?: string | undefined;
     provider?: string | undefined;

@@ -7335,6 +7335,9 @@
       "folder": {
         "type": "string",
         "minLength": 1
+      },
+      "hidden": {
+        "type": "boolean"
       }
     },
     "required": [

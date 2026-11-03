@@ -1528,11 +1528,12 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }
             },
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
-            start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[]; folder?: string }) =>
+            start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[]; folder?: string; hidden?: boolean }) =>
                 settle('agents.start', async () => {
                     const { views, activeViewId } = useDocument.getState();
-                    // A chat in another project's folder is a view of that project, never on this canvas.
-                    const onCanvas = options.folder === undefined && views.find((view) => view.id === activeViewId)?.kind === 'canvas';
+                    // A chat in another project's folder is a view of that project, and one the extension draws stands on no canvas.
+                    const onCanvas =
+                        options.folder === undefined && options.hidden !== true && views.find((view) => view.id === activeViewId)?.kind === 'canvas';
                     const beside = options.near?.[0]?.id;
                     const { nodeId } = await extensionRequest(callScope().link, 'extension.agentStart', {
                         id,
@@ -1542,7 +1543,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
                         ...(options.title === undefined ? {} : { title: options.title }),
                         ...(options.prompt === undefined ? {} : { prompt: options.prompt }),
-                        ...(options.folder === undefined ? {} : { folder: options.folder })
+                        ...(options.folder === undefined ? {} : { folder: options.folder }),
+                        ...(options.hidden === true ? { hidden: true } : {})
                     });
 
                     return { id: nodeId };

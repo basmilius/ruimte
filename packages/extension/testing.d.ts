@@ -80,7 +80,7 @@ export interface TestHostAnswers {
      */
     'agents.stream'?(options: { prompt: string; context?: string[]; provider?: string; signal: AbortSignal }): Answer<string[]> | AsyncIterable<string>;
     /** A chat node on the canvas in front by default. */
-    'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string }): Answer<NodeRef>;
+    'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string; hidden?: boolean }): Answer<NodeRef>;
     'chats.list'?(): Answer<ChatSummary[]>;
     'chats.send'?(chatId: string, text: string): Answer<void>;
     'files.readText'?(path: string): Answer<string>;
@@ -267,6 +267,7 @@ export interface TestServerAnswers {
         prompt?: string;
         provider?: string;
         title?: string;
+        hidden?: boolean;
     }): Answer<NodeRef>;
     'chats.list'?(): Answer<ChatSummary[]>;
     'chats.read'?(chatId: string): Answer<string>;

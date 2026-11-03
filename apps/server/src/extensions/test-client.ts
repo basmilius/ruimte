@@ -815,7 +815,7 @@ export function clientApi(host: TestHost) {
             },
             // A chat a person can see, unless the test answers otherwise: beside the node it is about on the canvas in front, or a view of its own with none there.
             // With a `folder`, as the machine does: a view of the project there, which in a test is only the open one.
-            start: (options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string }) =>
+            start: (options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string; hidden?: boolean }) =>
                 host.settle('agents.start', [options], () => {
                     host.projectId();
 
@@ -823,13 +823,18 @@ export function clientApi(host: TestHost) {
                         const title = options.title ?? 'Chat';
 
                         const provider = options.provider ?? 'claude';
+                        const hidden = options.hidden === true;
 
                         if (options.folder !== undefined) {
                             if (options.folder !== host.project?.folder) {
                                 throw new Refused('not-found', `No project in ${options.folder} on this machine`);
                             }
 
-                            return host.addChatView(title, provider);
+                            return host.addChatView(title, provider, hidden);
+                        }
+
+                        if (hidden) {
+                            return host.addChatView(title, provider, true);
                         }
 
                         if (host.views.find((view) => view.id === host.activeViewId)?.kind !== 'canvas') {

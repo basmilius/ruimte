@@ -145,13 +145,14 @@ function createServerApi(options) {
         near,
         prompt,
         provider,
-        title
+        title,
+        hidden
       }) {
         if (project === undefined && folder === undefined) {
           throw new TypeError("agents.start needs a project or a folder");
         }
         const beside = near?.[0]?.id;
-        const placed = folder === undefined;
+        const placed = folder === undefined && hidden !== true;
         const started = await typed("agents.start", [
           {
             projectId: project?.id ?? "",
@@ -160,7 +161,8 @@ function createServerApi(options) {
             ...beside === undefined || !placed ? {} : { beside },
             ...prompt === undefined ? {} : { prompt },
             ...provider === undefined ? {} : { provider },
-            ...title === undefined ? {} : { title }
+            ...title === undefined ? {} : { title },
+            ...hidden === true ? { hidden: true } : {}
           }
         ]);
         return mapResult(started, ({ nodeId }) => ({ id: nodeId }));

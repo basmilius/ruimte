@@ -112,6 +112,8 @@ Give it a `folder` to start the chat in another project on the machine, such as 
 
 `Chat` draws a chat of the machine inside your panel, view or node: its thread and its composer, as Ruimte draws them. Give it the id `agents.start` answered, and the same `folder` for a chat of another project, so it works there when it opens again. It needs `chats.read`.
 
+Start it with `hidden: true` to keep it out of the sidebar. It stays in the project and keeps running, but only your surface shows it, so keep its id to show it again.
+
 ```tsx
 import { agents, Chat } from '@ruimte/extension/client';
 import { useState } from 'react';
@@ -121,6 +123,7 @@ export default function Inbox() {
     const start = async () => {
         const started = await agents.start({
             folder: '/work/plans',
+            hidden: true,
             prompt: 'Write down a new idea with me.'
         });
 

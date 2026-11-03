@@ -689,9 +689,9 @@ export const agents: {
     stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncIterable<Result<{ text: string }>>;
     /**
      * Needs `agents.start`. A chat a person sees and can stop, supervised at most: on the canvas in front, or a view of its own in the sidebar with none there.
-     * With `folder` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`. Draw it with {@link Chat}.
+     * With `folder` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`. With `hidden` it stays out of the sidebar, a chat you draw yourself with {@link Chat}.
      */
-    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string }): Promise<Result<NodeRef>>;
+    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string; hidden?: boolean }): Promise<Result<NodeRef>>;
 };
 
 /** An accent of Ruimte, which follows the theme. */

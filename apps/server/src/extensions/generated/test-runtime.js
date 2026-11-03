@@ -6337,13 +6337,14 @@ function createServerApi(options) {
         near,
         prompt,
         provider,
-        title
+        title,
+        hidden
       }) {
         if (project === undefined && folder === undefined) {
           throw new TypeError("agents.start needs a project or a folder");
         }
         const beside = near?.[0]?.id;
-        const placed = folder === undefined;
+        const placed = folder === undefined && hidden !== true;
         const started = await typed("agents.start", [
           {
             projectId: project?.id ?? "",
@@ -6352,7 +6353,8 @@ function createServerApi(options) {
             ...beside === undefined || !placed ? {} : { beside },
             ...prompt === undefined ? {} : { prompt },
             ...provider === undefined ? {} : { provider },
-            ...title === undefined ? {} : { title }
+            ...title === undefined ? {} : { title },
+            ...hidden === true ? { hidden: true } : {}
           }
         ]);
         return mapResult(started, ({ nodeId }) => ({ id: nodeId }));
@@ -6606,6 +6608,7 @@ function startOptions(start) {
   return {
     ...start.projectId === "" ? {} : { project: { id: start.projectId } },
     ...start.folder === undefined ? {} : { folder: start.folder },
+    ...start.hidden === true ? { hidden: true } : {},
     ...start.viewId === undefined ? {} : { view: { id: start.viewId } },
     ...start.beside === undefined ? {} : { near: [{ id: start.beside }] },
     ...start.prompt === undefined ? {} : { prompt: start.prompt },
@@ -7147,8 +7150,8 @@ class TestHost {
     }
     return group;
   }
-  addChatView(title, provider) {
-    const view = this.addView("chat", title);
+  addChatView(title, provider, hidden = false) {
+    const view = hidden ? { id: `chat-${this.chats.size + 1}` } : this.addView("chat", title);
     this.chats.set(view.id, { id: view.id, title, text: "", provider, status: "running" });
     return view;
   }
@@ -8052,11 +8055,15 @@ function clientApi(host) {
         return host.scripted("agents.start", [options], () => {
           const title = options.title ?? "Chat";
           const provider = options.provider ?? "claude";
+          const hidden = options.hidden === true;
           if (options.folder !== undefined) {
             if (options.folder !== host.project?.folder) {
               throw new Refused("not-found", `No project in ${options.folder} on this machine`);
             }
-            return host.addChatView(title, provider);
+            return host.addChatView(title, provider, hidden);
+          }
+          if (hidden) {
+            return host.addChatView(title, provider, true);
           }
           if (host.views.find((view) => view.id === host.activeViewId)?.kind !== "canvas") {
             return host.addChatView(title, provider);

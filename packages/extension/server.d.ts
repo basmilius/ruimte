@@ -95,7 +95,7 @@ export const agents: {
     run(options: { prompt: string; context?: string[]; provider?: string }): Promise<Result<{ text: string }>>;
     /**
      * Needs `agents.start`. A chat a person sees, supervised at most: on the canvas `view`, beside `near`, or a view of its own in the sidebar without one.
-     * With `folder` instead of `project` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`.
+     * With `folder` instead of `project` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`. With `hidden` it stays out of the sidebar, for a chat the client draws with `Chat`.
      */
     start(
         options: ({ project: ProjectRef; folder?: undefined } | { folder: string; project?: undefined }) & {
@@ -104,6 +104,7 @@ export const agents: {
             prompt?: string;
             provider?: string;
             title?: string;
+            hidden?: boolean;
         }
     ): Promise<Result<NodeRef>>;
 };
