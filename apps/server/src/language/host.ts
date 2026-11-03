@@ -1417,6 +1417,11 @@ export class LanguageHost {
 
     /* Hands an edit to one client, which makes it in its editors and answers with `language.edit.answer`. */
     private sendEdit(projectId: string, clientId: string, edit: WorkspaceEdit, label?: string): Promise<ApplyWorkspaceEditResult> {
+        // A client that left before the server asked would never answer; `dropClient` only settles edits already sent.
+        if (!this.sinks.clientIds().includes(clientId)) {
+            return Promise.resolve({ applied: false, failureReason: 'The client went away' });
+        }
+
         const editId = `edit-${++this.editCounter}`;
         return new Promise<ApplyWorkspaceEditResult>((resolve) => {
             const cancel = this.clock.set(() => pending.settle({ applied: false, failureReason: 'The client did not answer' }), EDIT_ANSWER_MS);

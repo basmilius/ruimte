@@ -1102,6 +1102,21 @@ describe('commands', () => {
         leave();
         expect((await running).result).toMatchObject({ applied: false });
     });
+
+    it('answers at once for a client that went away before the server asked', async () => {
+        const { host, server } = await commandRig();
+        const leave = host.subscribe('client-3', () => undefined);
+        const asking = Promise.withResolvers<void>();
+        server.handle('workspace/executeCommand', async () => {
+            await asking.promise;
+            return server.request('workspace/applyEdit', { edit });
+        });
+        const running = host.command('client-3', { projectId: 'p1', path: 'src/a.ts', command: 'fix.all' });
+        await settle();
+        leave();
+        asking.resolve();
+        expect((await running).result).toMatchObject({ applied: false, failureReason: 'The client went away' });
+    });
 });
 
 describe('events', () => {
