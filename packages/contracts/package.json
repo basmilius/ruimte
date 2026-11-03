@@ -18,10 +18,10 @@
         "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check && bun ../../apps/ios/Scripts/generate-visual.ts --check && bun ../../apps/ios/Scripts/generate-mermaid.ts --check && bun ../../apps/server/scripts/generate-native-ui.ts --check"
     },
     "dependencies": {
-        "@adecore/agent-contracts": "0.53.1",
-        "@adecore/diagram": "0.53.1",
-        "@adecore/drawing": "0.53.1",
-        "@adecore/plan": "0.53.1",
+        "@adecore/agent-contracts": "0.53.3",
+        "@adecore/diagram": "0.53.3",
+        "@adecore/drawing": "0.53.3",
+        "@adecore/plan": "0.53.3",
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.6.7"
     },

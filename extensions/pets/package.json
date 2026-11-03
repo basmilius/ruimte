@@ -7,8 +7,8 @@
         ".": "./client/index.ts"
     },
     "dependencies": {
-        "@adecore/agents-react": "0.53.1",
-        "@adecore/ui": "0.53.1",
+        "@adecore/agents-react": "0.53.3",
+        "@adecore/ui": "0.53.3",
         "@ruimte/contracts": "workspace:*",
         "clsx": "^2.1.1",
         "i18next": "^26.5.12",
