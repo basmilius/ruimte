@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
@@ -225,6 +225,55 @@ describe('DatabaseConnectionStore', () => {
 });
 
 describe('DatabaseConnectionStore, a save cut off between its two files', () => {
+    test('refuses recovery destinations outside the two connection files before writing anything', async () => {
+        const outside = join(root, 'proof.txt');
+        const pending = join(folder, '.ruimte', 'private', 'pending-databases.json');
+        await writeFile(
+            pending,
+            JSON.stringify({
+                version: 1,
+                files: [
+                    { path: privatePath(), before: null, after: 'also untouched' },
+                    { path: outside, before: null, after: 'escaped' }
+                ]
+            })
+        );
+
+        await expect(store.read('p1', 'c1')).rejects.toMatchObject({ code: 'connections-invalid' });
+        expect(await fileExists(outside)).toBe(false);
+        expect(await fileExists(privatePath())).toBe(false);
+        expect(await fileExists(pending)).toBe(true);
+    });
+
+    test('refuses a recovery file redirected through a symlink', async () => {
+        const outside = join(root, 'proof.txt');
+        await writeFile(outside, 'original');
+        await symlink(outside, sharedPath());
+        await writeFile(
+            join(folder, '.ruimte', 'private', 'pending-databases.json'),
+            JSON.stringify({ version: 1, files: [{ path: sharedPath(), before: 'original', after: 'escaped' }] })
+        );
+
+        await expect(store.read('p1', 'c1')).rejects.toMatchObject({ code: 'connections-invalid' });
+        expect(await readFile(outside, 'utf8')).toBe('original');
+    });
+
+    test('refuses recovery through a symlinked storage folder', async () => {
+        const storage = join(root, 'storage');
+        await writeFile(
+            join(folder, '.ruimte', 'private', 'pending-databases.json'),
+            JSON.stringify({
+                version: 1,
+                files: [{ path: sharedPath(), before: null, after: 'escaped' }]
+            })
+        );
+        await rename(join(folder, '.ruimte'), storage);
+        await symlink(storage, join(folder, '.ruimte'), 'junction');
+
+        await expect(store.read('p1', 'c1')).rejects.toMatchObject({ code: 'connections-invalid' });
+        expect(await fileExists(join(storage, 'databases.json'))).toBe(false);
+    });
+
     function failingPrivateWrite(): ProjectWriteIO {
         let failed = false;
         return {

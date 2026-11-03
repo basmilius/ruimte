@@ -1,5 +1,5 @@
-import { mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { lstat, mkdir } from 'node:fs/promises';
+import { dirname, join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import { PROJECT_WRITE_IO, textAt, writeChangedFiles, type ProjectWriteIO } from './project-write.ts';
 
@@ -20,6 +20,40 @@ export class PairedWriteRaced extends Error {}
 
 /* An interrupted write that cannot finish without overwriting an edit made since. */
 export class PairedWriteStuck extends Error {}
+
+export interface PairedWriteTargets {
+    readonly root: string;
+    readonly paths: readonly string[];
+}
+
+async function checkTargets(intentPath: string, targets: PairedWriteTargets): Promise<void> {
+    for (const path of [intentPath, ...targets.paths]) {
+        const below = relative(targets.root, path);
+
+        if (below.startsWith(`..${sep}`) || below === '..' || below === '') {
+            throw new PairedWriteStuck(`The recovery destination ${path} is outside its storage folder`);
+        }
+
+        let current = targets.root;
+
+        for (const part of below.split(sep)) {
+            current = join(current, part);
+            const entry = await lstat(current).catch((error: NodeJS.ErrnoException) => {
+                if (error.code === 'ENOENT') {
+                    return null;
+                }
+
+                throw error;
+            });
+
+            if (entry?.isSymbolicLink()) {
+                throw new PairedWriteStuck(
+                    `The recovery destination ${path} passes through a symbolic link. Delete ${intentPath} to keep the files as they are now.`
+                );
+            }
+        }
+    }
+}
 
 async function apply(intentPath: string, files: readonly PairedFile[], io: ProjectWriteIO): Promise<void> {
     await writeChangedFiles(files, io);
@@ -51,12 +85,19 @@ export async function writePaired(intentPath: string, files: readonly PairedFile
 }
 
 /* Finishes an interrupted `writePaired`, unless a file was edited since; then it says which intent to delete. */
-export async function recoverPaired(intentPath: string, io: ProjectWriteIO = PROJECT_WRITE_IO): Promise<'none' | 'recovered'> {
+export async function recoverPaired(intentPath: string, targets: PairedWriteTargets, io: ProjectWriteIO = PROJECT_WRITE_IO): Promise<'none' | 'recovered'> {
+    await checkTargets(intentPath, targets);
     const text = await textAt(intentPath);
     if (text === null) {
         return 'none';
     }
     const { files } = IntentSchema.parse(JSON.parse(text));
+    const paths = new Set(files.map((file) => file.path));
+
+    if (paths.size !== files.length || files.some((file) => !targets.paths.includes(file.path))) {
+        throw new PairedWriteStuck(`The interrupted save contains an unexpected destination. Delete ${intentPath} to keep the files as they are now.`);
+    }
+
     const edited = await moved(files, (current, file) => current === file.before || current === file.after);
     if (edited !== null) {
         throw new PairedWriteStuck(`${edited.path} changed since an interrupted save started. Delete ${intentPath} to keep the files as they are now.`);

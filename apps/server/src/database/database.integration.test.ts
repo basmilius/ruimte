@@ -81,6 +81,78 @@ describe.skipIf(databaseHelperPath() === null)('the database helper on SQLite', 
         await rm(root, { recursive: true, force: true });
     });
 
+    test('SQL cannot bypass the file grant or write inside the machine state', async () => {
+        const source = join(root, 'sql-files.sqlite');
+        const { session: seed } = await ok<{ session: string }>(
+            call(service, 'seed', 'open', { connection: { engine: 'sqlite', path: source, create: true } }, true)
+        );
+        await ok(call(service, 'seed', 'execute', { session: seed, sql: 'CREATE TABLE proof (id INTEGER); INSERT INTO proof VALUES (1);' }));
+        await ok(call(service, 'seed', 'close', { session: seed }));
+
+        for (const local of [false, true]) {
+            for (const readOnly of [false, true]) {
+                const owner = `file-policy-${local}-${readOnly}`;
+                const { session } = await ok<{ session: string }>(
+                    call(service, owner, 'open', { connection: { engine: 'sqlite', path: source, readOnly } }, local)
+                );
+                const target = join(home, `${owner}.sqlite`);
+                const response = await call(
+                    service,
+                    owner,
+                    'export',
+                    {
+                        session,
+                        path: target,
+                        source: { kind: 'query', sql: 'SELECT * FROM proof' },
+                        format: 'sql'
+                    },
+                    local
+                );
+
+                expect(response).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+
+                const result = await ok<{ results: { kind: string }[] }>(
+                    call(
+                        service,
+                        owner,
+                        'execute',
+                        {
+                            session,
+                            sql: `PRAGMA query_only=0; VACUUM INTO '${target.replaceAll("'", "''")}';`
+                        },
+                        local
+                    )
+                );
+
+                expect(result.results.some((item) => item.kind === 'error')).toBe(true);
+                expect(await Bun.file(target).exists()).toBe(false);
+
+                const allowed = join(root, `${owner}.csv`);
+                const exported = await call(
+                    service,
+                    owner,
+                    'export',
+                    {
+                        session,
+                        path: allowed,
+                        source: { kind: 'query', sql: 'SELECT * FROM proof' },
+                        format: 'csv'
+                    },
+                    local
+                );
+
+                if (local) {
+                    expect(exported).toMatchObject({ ok: true });
+                    expect(await readFile(allowed, 'utf8')).toContain('1');
+                } else {
+                    expect(exported).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+                }
+
+                await service.release(owner);
+            }
+        }
+    });
+
     test('opens a new file, reads its tables and rows and applies a change', async () => {
         const { session, server } = await ok<{ session: string; server: { flavor: string } }>(
             call(service, 'client-1', 'open', { connection: { engine: 'sqlite', path, create: true } }, true)

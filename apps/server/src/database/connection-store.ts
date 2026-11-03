@@ -283,7 +283,7 @@ export class DatabaseConnectionStore {
     /* Finishes a save that was cut off between its two files. */
     private async recover(folder: string): Promise<void> {
         try {
-            await recoverPaired(pendingPathIn(folder), this.io);
+            await recoverPaired(pendingPathIn(folder), { root: folder, paths: [sharedPathIn(folder), privatePathIn(folder)] }, this.io);
         } catch (e) {
             if (e instanceof PairedWriteStuck) {
                 throw new DatabaseConnectionError('connections-invalid', e.message);
