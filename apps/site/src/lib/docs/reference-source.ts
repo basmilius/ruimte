@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseDeclarations, type ReferenceModule } from './reference.ts';
 
-export const REFERENCE_MODULES = ['client', 'server', 'ui', 'testing'] as const;
+export const REFERENCE_MODULES = ['client', 'server', 'ui', 'charts', 'agents-ui', 'testing'] as const;
 
 const TYPES_FOLDER = join(import.meta.dir, '../../../../../packages/extension');
 

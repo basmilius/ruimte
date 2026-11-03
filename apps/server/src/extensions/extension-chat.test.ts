@@ -63,7 +63,12 @@ afterEach(async () => {
 
 async function extensionOn(host: CanvasHost): Promise<ExtensionHost> {
     const extensions = new ExtensionStore(join(root, 'home'));
-    const starter = extensionChatStarter({ host, actions: serverActions, folderOf: (id) => store.index.folderOf(id) });
+    const starter = extensionChatStarter({
+        host,
+        actions: serverActions,
+        folderOf: (id) => store.index.folderOf(id),
+        projectOfFolder: (folder) => store.index.projectOfFolder(folder)
+    });
     const extensionHost = new ExtensionHost({ store: extensions, startChat: starter });
 
     await extensions.install(packOf({ 'agents.start': 'Starts a chat' }));
@@ -86,6 +91,25 @@ describe('an extension starts a chat', () => {
         expect(daemon.enqueued.find((work) => work.kind === 'start-agent')).toMatchObject({
             payload: { node: 'chat', provider: 'claude', ceiling: 'supervised' }
         });
+    });
+
+    test("in another project's folder, as a view of that project, and in none it does not know", async () => {
+        const plansFolder = join(root, 'plans');
+
+        await mkdir(plansFolder, { recursive: true });
+
+        const plans = await store.openProject({ folder: plansFolder });
+
+        await store.save(plans.summary.projectId, plans.document.rev, { ...CONTENT, name: 'Plans' });
+        store.release(plans.summary.projectId);
+
+        const extensions = await extensionOn(daemon.host);
+        const { nodeId } = await extensions.startAgent(ID, { projectId, viewId: 'main', beside: 'main', folder: `${plansFolder}/`, prompt: 'Write it down' });
+        const plansViews = (await store.read(plans.summary.projectId)).views;
+
+        expect(await nodesOnCanvas()).toEqual([]);
+        expect(plansViews.find((view) => view.id === nodeId)).toMatchObject({ kind: 'chat' });
+        await expect(extensions.startAgent(ID, { projectId, folder: join(root, 'nowhere') })).rejects.toMatchObject({ code: 'not-found' });
     });
 
     test('makes nothing once it is turned off while the start waits in the action', async () => {

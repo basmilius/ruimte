@@ -6,6 +6,13 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, chats and charts (November 2026)
+
+- `Chat` in `@ruimte/extension/client` draws a chat of the machine, its thread and its composer, inside your own surface. It needs `chats.read`.
+- `agents.start` takes a `folder`, on the client and in `server/`, and starts the chat in the project the machine knows there, as a view of that project. In `server/` it takes `folder` instead of `project`.
+- `@ruimte/extension/charts` and `@ruimte/extension/agents-ui` hand you the charts and the pieces of a chat Ruimte draws with. A pack takes them from Ruimte instead of bundling them, so they follow the ADE CORE version of the Ruimte that loads the extension, with no promise between releases.
+- An extension needs no change.
+
 ## 1, preview, first changes (November 2026)
 
 - `getServer` calls the server part outside a component, such as in a command's `run`. An extension needs no change.

@@ -111,25 +111,34 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             run: (runOptions: { prompt: string; context?: string[]; provider?: string }) => typed<{ text: string }>('agents.run', [runOptions]),
             async start({
                 project,
+                folder,
                 view,
                 near,
                 prompt,
                 provider,
                 title
             }: {
-                project: Ref;
+                project?: Ref;
+                folder?: string;
                 view?: Ref;
                 near?: Ref[];
                 prompt?: string;
                 provider?: string;
                 title?: string;
             }) {
+                if (project === undefined && folder === undefined) {
+                    throw new TypeError('agents.start needs a project or a folder');
+                }
+
                 const beside = near?.[0]?.id;
+                // A chat in another project's folder has no canvas of this one to stand on.
+                const placed = folder === undefined;
                 const started = await typed<{ nodeId: string }>('agents.start', [
                     {
-                        projectId: project.id,
-                        ...(view === undefined ? {} : { viewId: view.id }),
-                        ...(beside === undefined ? {} : { beside }),
+                        projectId: project?.id ?? '',
+                        ...(folder === undefined ? {} : { folder }),
+                        ...(view === undefined || !placed ? {} : { viewId: view.id }),
+                        ...(beside === undefined || !placed ? {} : { beside }),
                         ...(prompt === undefined ? {} : { prompt }),
                         ...(provider === undefined ? {} : { provider }),
                         ...(title === undefined ? {} : { title })

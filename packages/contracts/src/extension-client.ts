@@ -104,6 +104,7 @@ export const EXTENSION_CLIENT_PERMISSIONS: Readonly<Record<string, string>> = {
     'canvas.unlink': 'canvas.write',
     useAgents: 'agents.status',
     useUsageLimits: 'usage.read',
+    Chat: 'chats.read',
     ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
 

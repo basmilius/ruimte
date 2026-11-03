@@ -9,12 +9,21 @@
         "./client": { "types": "./client.d.ts" },
         "./server": { "types": "./server.d.ts" },
         "./ui": { "types": "./ui.d.ts" },
+        "./charts": { "types": "./charts.d.ts" },
+        "./agents-ui": { "types": "./agents-ui.d.ts" },
         "./testing": { "types": "./testing.d.ts" }
     },
     "dependencies": {
+        "@adecore/charts": "0.52.0",
         "@adecore/ui": "0.52.0"
     },
     "peerDependencies": {
+        "@adecore/agents-react": "0.52.0",
         "@types/react": "^19.0.0"
+    },
+    "peerDependenciesMeta": {
+        "@adecore/agents-react": {
+            "optional": true
+        }
     }
 }

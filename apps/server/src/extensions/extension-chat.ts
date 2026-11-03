@@ -9,15 +9,27 @@ export interface ExtensionChatDeps {
     host: CanvasHost;
     actions: Pick<ActionRegistry<ServerActionContext>, 'execute'>;
     folderOf(projectId: string): string | null;
+    projectOfFolder(folder: string): string | null;
 }
 
 /*
  * As Voice starts one: under the person's own CLI, an AI Chat and no wider than supervised, and with no canvas a view
  * of its own. `check` goes along into the action, which calls it after each of its own awaits, so a turn off while it
- * waits makes nothing.
+ * waits makes nothing. With a `folder` it starts in the project the machine knows there, as a view of that project,
+ * since an extension is trusted code that a person chose to run.
  */
-export function extensionChatStarter({ host, actions, folderOf }: ExtensionChatDeps): NonNullable<ExtensionHostOptions['startChat']> {
-    return async (id, { projectId, viewId, beside, provider, title, prompt }, check) => {
+export function extensionChatStarter({ host, actions, folderOf, projectOfFolder }: ExtensionChatDeps): NonNullable<ExtensionHostOptions['startChat']> {
+    return async (id, start, check) => {
+        const elsewhere = start.folder === undefined ? null : projectOfFolder(start.folder);
+
+        if (start.folder !== undefined && elsewhere === null) {
+            throw new ExtensionRefusal('not-found', `No project in ${start.folder} on this machine`);
+        }
+
+        const projectId = elsewhere ?? start.projectId;
+        // A canvas and a node beside it belong to the project the request came from.
+        const { viewId, beside } = elsewhere === null ? start : { viewId: undefined, beside: undefined };
+        const { provider, title, prompt } = start;
         const folder = folderOf(projectId);
 
         if (folder === null) {

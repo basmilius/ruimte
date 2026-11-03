@@ -26,7 +26,9 @@ const CLIENT_HOSTED: Readonly<Record<string, string>> = {
     'react/jsx-dev-runtime': 'jsxRuntime',
     'react-dom': 'reactDom',
     '@ruimte/extension/client': 'client',
-    '@ruimte/extension/ui': 'ui'
+    '@ruimte/extension/ui': 'ui',
+    '@ruimte/extension/charts': 'charts',
+    '@ruimte/extension/agents-ui': 'agentsUi'
 };
 const SERVER_HOSTED: Readonly<Record<string, string>> = { '@ruimte/extension/server': 'server' };
 const MAX_ICON_BYTES = 64 * 1024;

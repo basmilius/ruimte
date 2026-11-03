@@ -93,8 +93,19 @@ export function schedule(task: { id: string; every: string; run(): void | Promis
 export const agents: {
     /** Needs `agents.run`. One hidden prompt on a CLI of the person, with the answer whole. */
     run(options: { prompt: string; context?: string[]; provider?: string }): Promise<Result<{ text: string }>>;
-    /** Needs `agents.start`. A chat a person sees, supervised at most: on the canvas `view`, beside `near`, or a view of its own in the sidebar without one. */
-    start(options: { project: ProjectRef; view?: ViewRef; near?: NodeRef[]; prompt?: string; provider?: string; title?: string }): Promise<Result<NodeRef>>;
+    /**
+     * Needs `agents.start`. A chat a person sees, supervised at most: on the canvas `view`, beside `near`, or a view of its own in the sidebar without one.
+     * With `folder` instead of `project` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`.
+     */
+    start(
+        options: ({ project: ProjectRef; folder?: undefined } | { folder: string; project?: undefined }) & {
+            view?: ViewRef;
+            near?: NodeRef[];
+            prompt?: string;
+            provider?: string;
+            title?: string;
+        }
+    ): Promise<Result<NodeRef>>;
 };
 
 /** `list` and `read` need `chats.read`, `send` needs `chats.send`. */

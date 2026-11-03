@@ -491,11 +491,16 @@
       "name": "@ruimte/extension",
       "version": "1.0.0",
       "dependencies": {
+        "@adecore/charts": "0.52.0",
         "@adecore/ui": "0.52.0",
       },
       "peerDependencies": {
+        "@adecore/agents-react": "0.52.0",
         "@types/react": "^19.0.0",
       },
+      "optionalPeers": [
+        "@adecore/agents-react",
+      ],
     },
     "packages/npm": {
       "name": "@ruimte/npm",

@@ -98,9 +98,10 @@ export function removeTestFolders(): void {
 export const machineStorageOf = new WeakMap<object, { values: Record<string, Json>; subscribe(listener: () => void): () => void }>();
 
 /* The wire's `agents.start` back in the words of the API, as an answer reads it. */
-function startOptions(start: { projectId: string; viewId?: string; beside?: string; prompt?: string; provider?: string; title?: string }) {
+function startOptions(start: { projectId: string; folder?: string; viewId?: string; beside?: string; prompt?: string; provider?: string; title?: string }) {
     return {
-        project: { id: start.projectId },
+        ...(start.projectId === '' ? {} : { project: { id: start.projectId } }),
+        ...(start.folder === undefined ? {} : { folder: start.folder }),
         ...(start.viewId === undefined ? {} : { view: { id: start.viewId } }),
         ...(start.beside === undefined ? {} : { near: [{ id: start.beside }] }),
         ...(start.prompt === undefined ? {} : { prompt: start.prompt }),

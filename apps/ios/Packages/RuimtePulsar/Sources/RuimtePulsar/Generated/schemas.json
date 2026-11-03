@@ -7331,6 +7331,10 @@
       },
       "prompt": {
         "type": "string"
+      },
+      "folder": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [

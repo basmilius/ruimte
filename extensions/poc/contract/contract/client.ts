@@ -155,7 +155,7 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'devices.tap': (api) => api.devices.tap({ node: REF, x: 1, y: 1 }),
     'devices.launch': (api) => api.devices.launch({ node: REF, app: 'app.ruimte' })
 };
-const HOOKS = new Set(['useAgents', 'useUsageLimits']);
+const HOOKS = new Set(['useAgents', 'useUsageLimits', 'Chat']);
 
 export function clientContract(open: OpenClientWorld): void {
     describe('the client contract', () => {

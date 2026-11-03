@@ -60,7 +60,12 @@ serverContract(async (permissions) => {
     const host = new ExtensionHost({
         store,
         asks: () => ({ 'chats.send': async () => undefined }),
-        startChat: extensionChatStarter({ host: daemon.host, actions: serverActions, folderOf: (id) => projects.index.folderOf(id) }),
+        startChat: extensionChatStarter({
+            host: daemon.host,
+            actions: serverActions,
+            folderOf: (id) => projects.index.folderOf(id),
+            projectOfFolder: (folder) => projects.index.projectOfFolder(folder)
+        }),
         runAction: (_id, _projectId, action, input) =>
             runMachineAction(
                 action,

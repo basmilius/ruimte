@@ -486,6 +486,17 @@ export function clientApi(host: TestHost) {
                 cwd: agent?.cwd ?? host.project?.folder ?? ''
             };
         },
+        // A chat as a test reads it: its thread as text under its title, or that the machine has no chat of that id.
+        Chat({ id }: { id: string; folder?: string }) {
+            host.hookPermission('Chat');
+            useHost(host);
+
+            const chat = host.chats.get(id);
+
+            return react().createElement('section', { 'aria-label': chat?.title ?? id }, chat === undefined ? `No chat ${id}` : chat.text) as ReturnType<
+                typeof PublicClient.Chat
+            >;
+        },
         // Only a node of the canvas the surface is on, the one in front unless it draws a node: any other reads as unknown.
         useNode: (id: string) => {
             const module = react();
@@ -803,7 +814,8 @@ export function clientApi(host: TestHost) {
                 }
             },
             // A chat a person can see, unless the test answers otherwise: beside the node it is about on the canvas in front, or a view of its own with none there.
-            start: (options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }) =>
+            // With a `folder`, as the machine does: a view of the project there, which in a test is only the open one.
+            start: (options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string }) =>
                 host.settle('agents.start', [options], () => {
                     host.projectId();
 
@@ -811,6 +823,14 @@ export function clientApi(host: TestHost) {
                         const title = options.title ?? 'Chat';
 
                         const provider = options.provider ?? 'claude';
+
+                        if (options.folder !== undefined) {
+                            if (options.folder !== host.project?.folder) {
+                                throw new Refused('not-found', `No project in ${options.folder} on this machine`);
+                            }
+
+                            return host.addChatView(title, provider);
+                        }
 
                         if (host.views.find((view) => view.id === host.activeViewId)?.kind !== 'canvas') {
                             return host.addChatView(title, provider);

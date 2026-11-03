@@ -52,6 +52,7 @@ import {
 } from '@/extensions/registry';
 import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
 import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
+import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { openFileLink } from '@/shell/panels/file-links';
 import { currentEndpointId } from '@/state/keys';
@@ -407,7 +408,7 @@ function hasPermission(extension: LoadedExtension, permission: string): boolean 
 }
 
 /* A hook has no Result to answer, so a missing permission fails the surface that draws it. */
-function hookPermission(extension: LoadedExtension, hook: 'useAgents' | 'useUsageLimits'): void {
+function hookPermission(extension: LoadedExtension, hook: 'useAgents' | 'useUsageLimits' | 'Chat'): void {
     const permission = extensionCallPermission(hook);
 
     if (permission !== null && !hasPermission(extension, permission)) {
@@ -1106,6 +1107,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
         useTheme() {
             return { side: useUiTheme((state) => state.resolved) };
         },
+        Chat(props: { id: string; folder?: string }) {
+            hookPermission(useExtension(), 'Chat');
+
+            return <ExtensionChat {...props} />;
+        },
         useChat(chatId: string) {
             const endpointId = useEndpointId();
             const info = useChats((state) => state.statusByKey[endpointKey(endpointId, chatId)]?.info);
@@ -1522,10 +1528,11 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 }
             },
             // A chat a person can see, follow and stop: on the canvas in front, or a view of its own with none there.
-            start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[] }) =>
+            start: (options: { prompt?: string; provider?: string; title?: string; near?: { id: string }[]; folder?: string }) =>
                 settle('agents.start', async () => {
                     const { views, activeViewId } = useDocument.getState();
-                    const onCanvas = views.find((view) => view.id === activeViewId)?.kind === 'canvas';
+                    // A chat in another project's folder is a view of that project, never on this canvas.
+                    const onCanvas = options.folder === undefined && views.find((view) => view.id === activeViewId)?.kind === 'canvas';
                     const beside = options.near?.[0]?.id;
                     const { nodeId } = await extensionRequest(callScope().link, 'extension.agentStart', {
                         id,
@@ -1534,7 +1541,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                         ...(onCanvas && beside !== undefined ? { beside } : {}),
                         ...(options.provider === undefined ? {} : { provider: options.provider }),
                         ...(options.title === undefined ? {} : { title: options.title }),
-                        ...(options.prompt === undefined ? {} : { prompt: options.prompt })
+                        ...(options.prompt === undefined ? {} : { prompt: options.prompt }),
+                        ...(options.folder === undefined ? {} : { folder: options.folder })
                     });
 
                     return { id: nodeId };

@@ -328,7 +328,7 @@ export class TestHost {
         }
     }
 
-    hookPermission(hook: 'useAgents' | 'useUsageLimits'): void {
+    hookPermission(hook: 'useAgents' | 'useUsageLimits' | 'Chat'): void {
         const permission = extensionCallPermission(hook);
 
         if (permission !== null && !this.permissions.has(permission)) {

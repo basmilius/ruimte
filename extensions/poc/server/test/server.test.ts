@@ -81,7 +81,7 @@ describe('poc-server under createTestServer', () => {
         const server = await createTestServer<PocServer>({
             answers: {
                 'agents.run': ({ prompt }) => ({ text: `You said ${prompt}` }),
-                'agents.start': ({ project }) => ({ id: `chat-in-${project.id}` }),
+                'agents.start': ({ project }) => ({ id: `chat-in-${project?.id}` }),
                 'chats.list': () => {
                     throw refusal('refused', 'Not now');
                 }

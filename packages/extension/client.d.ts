@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactElement } from 'react';
 
 /**
  * Why a call came back without its answer. `permission-denied`: the manifest does not ask for the permission. `no-project`: no
@@ -168,6 +168,11 @@ export function useMachine(): { id: string };
 export function useTheme(): { side: 'light' | 'dark' };
 /** The chat of this id on the machine in front, or null when it has none. */
 export function useChat(id: string): ChatSummary | null;
+/**
+ * Needs `chats.read`. A chat of the machine in front as Ruimte draws it, its thread and its composer, by the id `agents.start`
+ * answered. Give `folder` for a chat started there, so it works in that folder when it opens again.
+ */
+export function Chat(props: { id: string; folder?: string }): ReactElement;
 
 /** Where an agent is, the same word everywhere it shows. */
 export type AgentStatus = 'idle' | 'running' | 'needsYou' | 'stopped';
@@ -329,7 +334,9 @@ export function useServer<Server>(): ServerClient<Server>;
 
 /** Each method of `server/` as {@link ServerClient} calls it, without `.use()` and `.reload()`, which only a component has. */
 export type ServerCalls<Server> = {
-    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value> ? (...args: Args) => Promise<Result<Returned<Value>>> : never;
+    [Method in keyof Server]: Server[Method] extends (...args: infer Args) => Promise<infer Value>
+        ? (...args: Args) => Promise<Result<Returned<Value>>>
+        : never;
 };
 
 /** `server/` outside a component, such as in the `run` of a command or an action. Each call goes to the machine in front when it is made. */
@@ -680,8 +687,11 @@ export const agents: {
     run(options: { prompt: string; context?: string[]; provider?: string }): Promise<Result<{ text: string }>>;
     /** Needs `agents.run`. The same, in pieces as the CLI writes them. A failure is the last piece. */
     stream(options: { prompt: string; context?: string[]; provider?: string; signal?: AbortSignal }): AsyncIterable<Result<{ text: string }>>;
-    /** Needs `agents.start`. A chat a person sees and can stop, supervised at most: on the canvas in front, or a view of its own in the sidebar with none there. */
-    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Promise<Result<NodeRef>>;
+    /**
+     * Needs `agents.start`. A chat a person sees and can stop, supervised at most: on the canvas in front, or a view of its own in the sidebar with none there.
+     * With `folder` it works in the project this machine knows in that folder, as a view of that project, or answers `not-found`. Draw it with {@link Chat}.
+     */
+    start(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string }): Promise<Result<NodeRef>>;
 };
 
 /** An accent of Ruimte, which follows the theme. */

@@ -37,6 +37,18 @@ describe('building an extension', () => {
         expect(readFileSync(join(outdir, 'server', 'index.js'), 'utf8')).toContain('globalThis.__ruimteExtension.for("acme.builds", import.meta.url).server');
     });
 
+    test('takes charts and the pieces of a chat from Ruimte instead of bundling ADE CORE', async () => {
+        const folder = project('hosted', {
+            'client/index.ts': `import { Chart } from '@ruimte/extension/charts';\nimport { Markdown } from '@ruimte/extension/agents-ui';\nexport const parts = [Chart, Markdown];`
+        });
+        const { outdir } = await buildExtension(folder);
+        const index = readFileSync(join(outdir, 'client', 'index.js'), 'utf8');
+
+        expect(index).toContain('globalThis.__ruimteExtension.for("acme.builds", import.meta.url).charts');
+        expect(index).toContain('globalThis.__ruimteExtension.for("acme.builds", import.meta.url).agentsUi');
+        expect(index).not.toContain('d3-scale');
+    });
+
     test('gathers every stylesheet the client imports, also a lazy one, into index.css beside index.js', async () => {
         const folder = project('styles', {
             'client/index.ts': `import './base.css';\nexport const load = () => import('./Panel');`,

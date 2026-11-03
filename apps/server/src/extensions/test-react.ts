@@ -59,6 +59,15 @@ export function uiModule(): Record<string, unknown> {
     return besideExtension<Record<string, unknown>>('@adecore/ui');
 }
 
+/* `@ruimte/extension/charts` and `/agents-ui`, which Ruimte answers with those of ADE CORE. */
+export function chartsModule(): Record<string, unknown> {
+    return besideExtension<Record<string, unknown>>('@adecore/charts');
+}
+
+export function agentsUiModule(): Record<string, unknown> {
+    return besideExtension<Record<string, unknown>>('@adecore/agents-react/chat/ui');
+}
+
 export function react(): ReactModule {
     return fromProject<ReactModule>('react');
 }

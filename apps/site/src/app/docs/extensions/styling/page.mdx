@@ -23,6 +23,8 @@ export default function Header() {
 
 The module hands on everything `@adecore/ui` exports, and your editor completes each name and shows the props of each component. The [reference](/docs/extensions/reference/ui) has the module, not every component in it. Any other React library works too, but does not follow the theme.
 
+Two more modules come from Ruimte the same way. `@ruimte/extension/charts` has the charts of `@adecore/charts`, and `@ruimte/extension/agents-ui` the pieces of a chat from `@adecore/agents-react`: markdown, messages, tool rows and diffs. A pack leaves all three out, so an extension stays small, and they follow the ADE CORE version of the Ruimte that loads it. A name there can change between releases, and [Changes to the API](/docs/extensions/changelog) says when. For the types of `agents-ui`, add `@adecore/agents-react` at that version to your project's dev dependencies.
+
 ## Color tokens
 
 Ruimte's colors are CSS variables on the page. Use them instead of fixed colors:

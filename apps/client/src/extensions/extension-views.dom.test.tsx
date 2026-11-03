@@ -17,15 +17,21 @@ function BoardBody({ params }: { params: unknown }) {
     return <p>{`Board with ${JSON.stringify(params ?? null)}`}</p>;
 }
 
+// A chat this machine started in another project's folder, which the view draws.
+const CHAT_VIEW = ProjectViewSchema.parse({ kind: 'extension', id: 'chat-view', name: 'Write it down', extension: 'acme.views', type: 'chat' });
+
+let machine = new FakeMachine();
 let workspace: FakeWorkspace | null = null;
 let page: Mounted | null = null;
 
 beforeAll(() => {
-    const manifest: ExtensionManifest = { id: 'acme.views', name: 'Views', version: '0.1.0', api: 1, permissions: {} };
+    const manifest: ExtensionManifest = { id: 'acme.views', name: 'Views', version: '0.1.0', api: 1, permissions: { 'chats.read': 'Draws a chat' } };
     const extension = { manifest, base: '/', disposers: [], settings: null };
+    const api = clientApiFor(extension);
 
     registerExtension(extension);
-    clientApiFor(extension).defineView({ id: 'board', title: 'Board view', component: async () => ({ default: BoardBody }) });
+    api.defineView({ id: 'board', title: 'Board view', component: async () => ({ default: BoardBody }) });
+    api.defineView({ id: 'chat', title: 'Chat view', component: async () => ({ default: () => <api.Chat id="plans-chat" folder="/work/plans" /> }) });
 });
 afterAll(() => forgetExtension('acme.views'));
 afterEach(async () => {
@@ -36,7 +42,8 @@ afterEach(async () => {
 });
 
 async function openWith(views: ProjectView[]): Promise<void> {
-    workspace = await openFakeWorkspace(new FakeMachine(), { views: [MAIN, ...views] }, { activeViewId: 'main', views: {} });
+    machine = new FakeMachine();
+    workspace = await openFakeWorkspace(machine, { views: [MAIN, ...views] }, { activeViewId: 'main', views: {} });
     page = mount();
     await page.renderApp();
     await until(() => sidebarRow('Main') !== null);
@@ -83,5 +90,13 @@ describe('views of an extension', () => {
         await until(() => menuRow('Board view') !== null);
         await clickOn(menuRow('Board view'));
         await until(() => sidebarRow('Board view') !== null && (document.body.textContent?.includes('Board with null') ?? false));
+    });
+
+    test("draw a chat of another project's folder, which opens there", async () => {
+        await openWith([CHAT_VIEW]);
+        await clickOn(sidebarRow('Write it down'));
+        await until(() => machine.requests('chat.create').length > 0);
+
+        expect(machine.requests('chat.create')[0]).toMatchObject({ chatId: 'plans-chat', cwd: '/work/plans' });
     });
 });

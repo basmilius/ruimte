@@ -30,6 +30,12 @@ function formatModule() {
 function uiModule() {
   return besideExtension("@adecore/ui");
 }
+function chartsModule() {
+  return besideExtension("@adecore/charts");
+}
+function agentsUiModule() {
+  return besideExtension("@adecore/agents-react/chat/ui");
+}
 function react() {
   return fromProject("react");
 }
@@ -318,6 +324,7 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "canvas.unlink": "canvas.write",
   useAgents: "agents.status",
   useUsageLimits: "usage.read",
+  Chat: "chats.read",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
 function extensionCallPermission(call) {
@@ -6325,18 +6332,24 @@ function createServerApi(options) {
       run: (runOptions) => typed("agents.run", [runOptions]),
       async start({
         project,
+        folder,
         view,
         near,
         prompt,
         provider,
         title
       }) {
+        if (project === undefined && folder === undefined) {
+          throw new TypeError("agents.start needs a project or a folder");
+        }
         const beside = near?.[0]?.id;
+        const placed = folder === undefined;
         const started = await typed("agents.start", [
           {
-            projectId: project.id,
-            ...view === undefined ? {} : { viewId: view.id },
-            ...beside === undefined ? {} : { beside },
+            projectId: project?.id ?? "",
+            ...folder === undefined ? {} : { folder },
+            ...view === undefined || !placed ? {} : { viewId: view.id },
+            ...beside === undefined || !placed ? {} : { beside },
             ...prompt === undefined ? {} : { prompt },
             ...provider === undefined ? {} : { provider },
             ...title === undefined ? {} : { title }
@@ -6591,7 +6604,8 @@ function removeTestFolders() {
 var machineStorageOf = new WeakMap;
 function startOptions(start) {
   return {
-    project: { id: start.projectId },
+    ...start.projectId === "" ? {} : { project: { id: start.projectId } },
+    ...start.folder === undefined ? {} : { folder: start.folder },
     ...start.viewId === undefined ? {} : { view: { id: start.viewId } },
     ...start.beside === undefined ? {} : { near: [{ id: start.beside }] },
     ...start.prompt === undefined ? {} : { prompt: start.prompt },
@@ -7786,6 +7800,12 @@ function clientApi(host) {
         cwd: agent?.cwd ?? host.project?.folder ?? ""
       };
     },
+    Chat({ id }) {
+      host.hookPermission("Chat");
+      useHost(host);
+      const chat = host.chats.get(id);
+      return react().createElement("section", { "aria-label": chat?.title ?? id }, chat === undefined ? `No chat ${id}` : chat.text);
+    },
     useNode: (id) => {
       const module = react();
       const nodeId = module.useContext(nodeContextOf(module));
@@ -8032,6 +8052,12 @@ function clientApi(host) {
         return host.scripted("agents.start", [options], () => {
           const title = options.title ?? "Chat";
           const provider = options.provider ?? "claude";
+          if (options.folder !== undefined) {
+            if (options.folder !== host.project?.folder) {
+              throw new Refused("not-found", `No project in ${options.folder} on this machine`);
+            }
+            return host.addChatView(title, provider);
+          }
           if (host.views.find((view) => view.id === host.activeViewId)?.kind !== "canvas") {
             return host.addChatView(title, provider);
           }
@@ -8347,5 +8373,7 @@ plugin({
     build.module("@ruimte/extension/server", () => ({ exports: server, loader: "object" }));
     build.module("@ruimte/extension/testing", () => ({ exports: testing, loader: "object" }));
     build.module("@ruimte/extension/ui", () => ({ exports: uiModule(), loader: "object" }));
+    build.module("@ruimte/extension/charts", () => ({ exports: chartsModule(), loader: "object" }));
+    build.module("@ruimte/extension/agents-ui", () => ({ exports: agentsUiModule(), loader: "object" }));
   }
 });

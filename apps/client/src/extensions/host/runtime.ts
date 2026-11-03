@@ -1,6 +1,8 @@
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import * as reactDom from 'react-dom';
+import * as agentsUi from '@adecore/agents-react/chat/ui';
+import * as charts from '@adecore/charts';
 import * as ui from '@adecore/ui';
 import { consoleFor } from '@/extensions/dev-log';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
@@ -53,7 +55,7 @@ function loadOf(id: string, address: unknown): Load {
     for(id: string, address?: string) {
         const load = loadOf(id, address);
 
-        return { react: React, jsxRuntime, reactDom, ui, client: apiOf(id, load), console: consoleFor(id, load.extension.dev === true) };
+        return { react: React, jsxRuntime, reactDom, ui, charts, agentsUi, client: apiOf(id, load), console: consoleFor(id, load.extension.dev === true) };
     }
 };
 

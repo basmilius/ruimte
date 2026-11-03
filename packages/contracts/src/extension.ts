@@ -184,7 +184,9 @@ export const ExtensionAgentStartPayloadSchema = z.object({
     beside: z.string().min(1).optional(),
     provider: z.string().optional(),
     title: z.string().max(200).optional(),
-    prompt: z.string().optional()
+    prompt: z.string().optional(),
+    // The folder of another project on the machine to start the chat in, instead of `projectId`.
+    folder: z.string().min(1).optional()
 });
 export const ExtensionAgentStartResultSchema = z.object({ nodeId: z.string() });
 

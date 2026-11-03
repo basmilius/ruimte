@@ -129,6 +129,8 @@ export const SECTIONS: readonly NavigationSection[] = [
                     { title: '@ruimte/extension/client', href: '/docs/extensions/reference/client' },
                     { title: '@ruimte/extension/server', href: '/docs/extensions/reference/server' },
                     { title: '@ruimte/extension/ui', href: '/docs/extensions/reference/ui' },
+                    { title: '@ruimte/extension/charts', href: '/docs/extensions/reference/charts' },
+                    { title: '@ruimte/extension/agents-ui', href: '/docs/extensions/reference/agents-ui' },
                     { title: '@ruimte/extension/testing', href: '/docs/extensions/reference/testing' },
                     { title: 'Changes to the API', href: '/docs/extensions/changelog' }
                 ]

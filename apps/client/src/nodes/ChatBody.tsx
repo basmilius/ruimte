@@ -43,13 +43,16 @@ export function ChatBody({
     focused,
     onCanvas = false,
     workflowsBeside = false,
-    accessories
+    accessories,
+    cwd
 }: {
     id: string;
     focused: boolean;
     onCanvas?: boolean;
     workflowsBeside?: boolean;
     accessories?: { title: string | undefined };
+    /* Where the chat works when it opens again, for one an extension draws that belongs to another project than this one. */
+    cwd?: string;
 }) {
     useMountCount('chat');
     const { t } = useTranslation('canvas');
@@ -81,7 +84,7 @@ export function ChatBody({
             .open(id, {
                 provider,
                 account: host?.account,
-                cwd: host?.cwd ?? useProject.getState().current?.folder ?? undefined,
+                cwd: cwd ?? host?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: host?.resume,
                 selection: (catalog === undefined ? selectionFor(preferences, provider) : startingSelection(preferences, catalog)) ?? undefined,
                 runtimeMode: peekOpeningMode(endpointId, id) ?? preferences.runtimeMode
@@ -101,7 +104,7 @@ export function ChatBody({
             cancelled = true;
             void chats.detach(id);
         };
-    }, [endpointId, id, generation]);
+    }, [endpointId, id, generation, cwd]);
 
     // The chat is gone on the machine until it opened again on the other CLI, so a send or another switch meanwhile waits for that.
     const retarget = (provider: AgentKind, selection: ModelSelection): Promise<void> => {

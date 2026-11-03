@@ -80,7 +80,7 @@ export interface TestHostAnswers {
      */
     'agents.stream'?(options: { prompt: string; context?: string[]; provider?: string; signal: AbortSignal }): Answer<string[]> | AsyncIterable<string>;
     /** A chat node on the canvas in front by default. */
-    'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[] }): Answer<NodeRef>;
+    'agents.start'?(options: { prompt?: string; provider?: string; title?: string; near?: NodeRef[]; folder?: string }): Answer<NodeRef>;
     'chats.list'?(): Answer<ChatSummary[]>;
     'chats.send'?(chatId: string, text: string): Answer<void>;
     'files.readText'?(path: string): Answer<string>;
@@ -259,7 +259,15 @@ export function createTestHost(options?: TestHostOptions): Promise<TestHost>;
 export interface TestServerAnswers {
     'agents.run'?(options: { prompt: string; context?: string[]; provider?: string }): Answer<{ text: string }>;
     /** `near` holds only the first node, as the machine only uses that one. */
-    'agents.start'?(options: { project: ProjectRef; view?: ViewRef; near?: NodeRef[]; prompt?: string; provider?: string; title?: string }): Answer<NodeRef>;
+    'agents.start'?(options: {
+        project?: ProjectRef;
+        folder?: string;
+        view?: ViewRef;
+        near?: NodeRef[];
+        prompt?: string;
+        provider?: string;
+        title?: string;
+    }): Answer<NodeRef>;
     'chats.list'?(): Answer<ChatSummary[]>;
     'chats.read'?(chatId: string): Answer<string>;
     'chats.send'?(chatId: string, text: string): Answer<void>;

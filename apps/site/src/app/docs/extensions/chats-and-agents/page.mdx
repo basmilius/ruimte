@@ -106,6 +106,35 @@ The agent runs in the project folder, on the person's own CLI and plan.
 
 `agents.start` starts a chat a person sees and can stop, supervised at most. It lands beside `near` on the canvas in front, or as a view of its own when no canvas is open, and answers the chat's node. It needs `agents.start`.
 
+Give it a `folder` to start the chat in another project on the machine, such as the repository your extension reads. The chat becomes a view of that project and works in its folder. A folder the machine knows no project in answers `not-found`.
+
+## A chat in your own surface
+
+`Chat` draws a chat of the machine inside your panel, view or node: its thread and its composer, as Ruimte draws them. Give it the id `agents.start` answered, and the same `folder` for a chat of another project, so it works there when it opens again. It needs `chats.read`.
+
+```tsx
+import { agents, Chat } from '@ruimte/extension/client';
+import { useState } from 'react';
+
+export default function Inbox() {
+    const [chat, setChat] = useState<string | null>(null);
+    const start = async () => {
+        const started = await agents.start({
+            folder: '/work/plans',
+            prompt: 'Write down a new idea with me.'
+        });
+
+        if (started.ok) {
+            setChat(started.value.id);
+        }
+    };
+
+    return chat === null ? <button onClick={start}>New idea</button> : <Chat id={chat} folder="/work/plans" />;
+}
+```
+
+For the pieces of a chat without an agent behind them, such as the answer of `agents.stream` drawn as markdown, use `@ruimte/extension/agents-ui`.
+
 ## Reading and waking chats
 
 With `chats.read`, `chats.list()` and `chats.read(id)` read every chat. With `chats.send`, `chats.send(id, text)` sends a message that wakes the chat. `useChat(id)` follows one chat's status in a component, and `useAgents()` (with `agents.status`) every agent on the canvas. A status is one of `idle`, `running`, `needsYou` and `stopped`, the same word in the client and the server part.

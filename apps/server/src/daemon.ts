@@ -251,7 +251,8 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
     startExtensionChat = extensionChatStarter({
         host: canvasHost,
         actions: serverActions,
-        folderOf: (projectId) => projects.store.index.folderOf(projectId)
+        folderOf: (projectId) => projects.store.index.folderOf(projectId),
+        projectOfFolder: (folder) => projects.store.index.projectOfFolder(folder)
     });
     runExtensionAction = async (id, projectId, action, input) => {
         const folder = projects.store.index.folderOf(projectId);

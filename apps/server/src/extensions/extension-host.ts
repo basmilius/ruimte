@@ -123,6 +123,8 @@ export type ExtensionAsks = Readonly<Record<string, (...args: never[]) => Promis
 
 export interface ExtensionChatStart {
     projectId: string;
+    // Where the chat works instead: the project the machine knows in this folder, which then wins over `projectId`.
+    folder?: string | undefined;
     viewId?: string | undefined;
     beside?: string | undefined;
     provider?: string | undefined;

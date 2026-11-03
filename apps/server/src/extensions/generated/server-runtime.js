@@ -78,6 +78,7 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "canvas.unlink": "canvas.write",
   useAgents: "agents.status",
   useUsageLimits: "usage.read",
+  Chat: "chats.read",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
 
@@ -139,18 +140,24 @@ function createServerApi(options) {
       run: (runOptions) => typed("agents.run", [runOptions]),
       async start({
         project,
+        folder,
         view,
         near,
         prompt,
         provider,
         title
       }) {
+        if (project === undefined && folder === undefined) {
+          throw new TypeError("agents.start needs a project or a folder");
+        }
         const beside = near?.[0]?.id;
+        const placed = folder === undefined;
         const started = await typed("agents.start", [
           {
-            projectId: project.id,
-            ...view === undefined ? {} : { viewId: view.id },
-            ...beside === undefined ? {} : { beside },
+            projectId: project?.id ?? "",
+            ...folder === undefined ? {} : { folder },
+            ...view === undefined || !placed ? {} : { viewId: view.id },
+            ...beside === undefined || !placed ? {} : { beside },
             ...prompt === undefined ? {} : { prompt },
             ...provider === undefined ? {} : { provider },
             ...title === undefined ? {} : { title }
