@@ -3044,7 +3044,8 @@ export const ACTION_DEFINITIONS = {
         }),
         output: z.object({
             text: z.string(),
-            usage: chatReadUsage.optional().describe('Only on a chat read whole or by its tail, not on a subagent of it')
+            usage: chatReadUsage.optional().describe('Only on a chat read whole or by its tail, not on a subagent of it'),
+            image: z.string().optional().describe('The path of the PNG a read in form image wrote')
         })
     },
     'agent.start': {

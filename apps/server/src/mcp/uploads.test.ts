@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentFiles } from './files.ts';
@@ -67,6 +67,54 @@ describe('stageArtifact', () => {
         await stageArtifact(uploads, files, 'chat-1', ['report.md'], 'r1');
 
         expect(Buffer.from(uploads.held.get('r1')![0]!).toString()).toBe('# Report');
+    });
+
+    test('a link swapped in after the file was judged is never followed', async () => {
+        const outside = await mkdtemp(join(tmpdir(), 'ruimte-mcp-outside-'));
+        const report = join(root, 'report.md');
+        await writeFile(join(outside, 'secret.txt'), 'outside the project');
+        await writeFile(report, '# Report');
+        const uploads = memoryUploads();
+        const state = uploads.uploadState;
+        uploads.uploadState = async (...args) => {
+            await rm(report);
+            await symlink(join(outside, 'secret.txt'), report);
+
+            return state(...args);
+        };
+
+        try {
+            await stageArtifact(uploads, files, 'chat-1', ['report.md'], 'r1');
+
+            expect(Buffer.from(uploads.held.get('r1')![0]!).toString()).toBe('# Report');
+        } finally {
+            await rm(outside, { recursive: true, force: true });
+        }
+    });
+
+    test('a file that shrinks while it is sent is refused as changed', async () => {
+        const report = join(root, 'report.md');
+        await writeFile(report, '0123456789');
+        const uploads = memoryUploads();
+        const state = uploads.uploadState;
+        const append = uploads.uploadAppend;
+        let appends = 0;
+        uploads.uploadState = async (...args) => {
+            await truncate(report, 3);
+
+            return state(...args);
+        };
+        uploads.uploadAppend = async (...args) => {
+            appends += 1;
+
+            if (appends > 10) {
+                throw new Error('the upload made no progress');
+            }
+
+            return append(...args);
+        };
+
+        await expect(stageArtifact(uploads, files, 'chat-1', ['report.md'], 'r1')).rejects.toMatchObject({ code: 'file-changed' });
     });
 
     test('a file outside the allowed folders is refused before anything is sent', async () => {

@@ -61,6 +61,17 @@ describe('computer tools', () => {
         expect(setup.helper.acted.at(-1)).toMatchObject({ command: 'state', screenshot: false, maxDepth: 5 });
     });
 
+    test('a state hands its picture back as image content, as a browser or device shot does', async () => {
+        const setup = await computerSetup();
+        await approved(setup);
+        const call = toolCall('chat-1', hostFor(setup));
+
+        expect((await toolAnswer('computer_state', { app: 'TextEdit' }, call)).images).toEqual([SAMPLE_STATE.screenshot.path]);
+        expect((await toolAnswer('computer_act', { action: 'click', app: 'TextEdit', element: 4, state: 'on' }, call)).images).toEqual([
+            SAMPLE_STATE.screenshot.path
+        ]);
+    });
+
     test('an action prints what it did and, with state, the state after it', async () => {
         const setup = await computerSetup();
         await approved(setup);

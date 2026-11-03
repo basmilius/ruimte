@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { NODE_SIZE, type ProjectContent } from '@ruimte/contracts';
+import { z } from 'zod';
 import { ContextRefusal } from '../context/context-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import type { CanvasHost } from '../tools/host.ts';
+import { defineTool, defineToolkit } from '../tools/tool.ts';
 import { callTool, handleMcpRequest, visibleTools } from './mcp-route.ts';
-import type { ToolContext } from './catalog.ts';
-import { AgentFiles } from './files.ts';
+import { buildCatalog, type ToolContext } from './catalog.ts';
+import { AgentFiles, readOpened } from './files.ts';
 
 const PLACE = { projectId: 'p1', folder: '/nowhere/repo', canvasId: 'main' };
 
@@ -159,14 +161,23 @@ describe('calls', () => {
         expect(alerts).toEqual(['line one\\nstill line one']);
     });
 
-    test('a patch runs only the actions whose fields it got, and holds the first to the revision', async () => {
+    test('a patch lands as one write, held to the revision as a whole', async () => {
         const result = await call('chat-1', 'node_update', { node_id: 'note-1', title: 'Renamed', color: 'blue', revision: 4 });
         const note = content.views[0]!.kind === 'canvas' ? content.views[0]!.nodes.find((node) => node.id === 'note-1') : undefined;
 
         expect(result.isError).toBeUndefined();
         expect(note?.title).toBe('Renamed');
-        expect(revisions[0]).toBe(4);
-        expect(revisions.slice(1).every((expected) => expected === undefined)).toBe(true);
+        expect(note?.accent).toBe('blue');
+        expect(revisions).toEqual([4]);
+        expect(rev).toBe(5);
+    });
+
+    test('a patch with one part refused changes nothing', async () => {
+        const result = await call('chat-1', 'view_edit', { view_id: 'main', name: 'Changed', icon: 'no-such-lucide-icon', revision: 4 });
+
+        expect(result.isError).toBe(true);
+        expect(content.views[0]!.name).toBe('Canvas');
+        expect(rev).toBe(4);
     });
 
     test('a patch with nothing to change is refused with the fields it takes', async () => {
@@ -217,16 +228,25 @@ describe('files', () => {
         await rm(root, { recursive: true, force: true });
     });
 
-    test('a file inside an allowed folder resolves and one outside is refused', async () => {
+    async function opened(files: AgentFiles, path: string): Promise<string> {
+        const file = await files.open(path);
+        await file.handle.close();
+
+        return file.path;
+    }
+
+    test('a file inside an allowed folder opens and one outside is refused', async () => {
         const project = join(root, 'repo');
         const outside = join(root, 'elsewhere.txt');
         await Bun.write(join(project, 'notes.txt'), 'inside');
         await writeFile(outside, 'outside');
+        await symlink(outside, join(project, 'link.txt'));
         const files = new AgentFiles(project, [await realpath(project)]);
 
-        expect(await files.file('notes.txt')).toEndWith('/repo/notes.txt');
-        await expect(files.file(outside)).rejects.toMatchObject({ code: 'path-outside' });
-        await expect(files.file('missing.txt')).rejects.toMatchObject({ code: 'bad-path' });
+        expect(await opened(files, 'notes.txt')).toEndWith('/repo/notes.txt');
+        await expect(files.open(outside)).rejects.toMatchObject({ code: 'path-outside' });
+        await expect(files.open('link.txt')).rejects.toMatchObject({ code: 'path-outside' });
+        await expect(files.open('missing.txt')).rejects.toMatchObject({ code: 'bad-path' });
     });
 
     test('the temp folder is always allowed', async () => {
@@ -234,7 +254,84 @@ describe('files', () => {
         await writeFile(path, 'x');
         const files = await AgentFiles.of(join(root, 'repo'), [], []);
 
-        expect(await files.file(path)).toEndWith('/shot.txt');
+        expect(await opened(files, path)).toEndWith('/shot.txt');
+    });
+
+    test('an open file reads what was judged, whatever its name points at later', async () => {
+        const project = join(root, 'repo');
+        const outside = join(root, 'elsewhere.txt');
+        const notes = join(project, 'notes.txt');
+        await Bun.write(notes, 'inside');
+        await writeFile(outside, 'outside');
+        const files = new AgentFiles(project, [await realpath(project)]);
+        const file = await files.open('notes.txt');
+        await rm(notes);
+        await symlink(outside, notes);
+        const bytes = Buffer.alloc(64);
+
+        try {
+            expect(bytes.subarray(0, await readOpened(file.handle, bytes)).toString()).toBe('inside');
+        } finally {
+            await file.handle.close();
+        }
+    });
+});
+
+describe('images', () => {
+    let root: string;
+    let project: string;
+    let inside: string;
+    let outside: string;
+
+    beforeEach(async () => {
+        root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-mcp-images-')));
+        project = join(root, 'repo');
+        inside = join(project, 'shot.png');
+        outside = join(root, 'private.png');
+        await Bun.write(inside, 'inside png');
+        await writeFile(outside, 'private png');
+    });
+
+    afterEach(async () => {
+        await rm(root, { recursive: true, force: true });
+    });
+
+    /* A tool that names `named` in its answer and hands back `handed` as a picture it wrote. */
+    async function shot(named: string, handed: string | null) {
+        const tool = defineTool('test', {
+            name: 'test_shot',
+            description: 'Takes a picture.',
+            input: z.object({}),
+            run: async (_input, toolCall) => {
+                if (handed !== null) {
+                    toolCall.image(handed);
+                }
+
+                return [`shot\t${named}`, `note\t${named} is not embedded: this process may not read it`];
+            }
+        });
+        const files = new AgentFiles(project, [project]);
+
+        return callTool(
+            buildCatalog([defineToolkit('test', [tool], [{ name: 'shots', lines: [] }])]),
+            'test_shot',
+            {},
+            { ...context('chat-1'), files: async () => files }
+        );
+    }
+
+    function imagesOf(result: Awaited<ReturnType<typeof shot>>): string[] {
+        return result.content.flatMap((part) => (part.type === 'image' ? [Buffer.from(part.data, 'base64').toString()] : []));
+    }
+
+    test('a path in the answer text is never read as a picture', async () => {
+        expect(imagesOf(await shot(outside, null))).toEqual([]);
+        expect(imagesOf(await shot(inside, null))).toEqual([]);
+    });
+
+    test('a picture a tool hands back is read only inside the caller folders', async () => {
+        expect(imagesOf(await shot(inside, inside))).toEqual(['inside png']);
+        expect(imagesOf(await shot(outside, outside))).toEqual([]);
     });
 });
 

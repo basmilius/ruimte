@@ -36,7 +36,8 @@ import { answerRoute, type Route } from '../http-routes.ts';
 import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
-import { takesNoteOnLine } from '../providers/launch.ts';
+import { noteOnLine } from '../providers/launch.ts';
+import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
 import { BUILD, VERSION } from '../version.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
@@ -293,8 +294,8 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     // Asked on every event that can carry an answer, so the memory of what this
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
-                    // A CLI the node launched got the tools note on its line; one typed by hand in the shell did not.
-                    const tools = !(takesNoteOnLine(kind) && sessions.get(sessionId)?.launch?.kind === kind);
+                    // A CLI the node launched fresh got the tools note on its line; a resume or one typed by hand in the shell did not.
+                    const tools = !noteOnLine(kind, sessions.get(sessionId)?.launch);
                     return hookContext(event, context.list(sessionId), {
                         changed,
                         messages: agents.messagesFor(sessionId),
@@ -315,7 +316,8 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     targetForToken: agents.targetForToken,
                     host: canvasHost,
                     uploads: input.artifacts.artifacts,
-                    callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)]
+                    callerFolders: (caller) => [join(config.home, 'attachments', caller), agents.visuals.workspacePath(caller)],
+                    shotFolders: shotFolders(config.home)
                 });
             }
         }

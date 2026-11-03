@@ -54,7 +54,6 @@ const visualPreview = defineActionTool('visual', {
     description: 'Renders an HTML page to a png without showing it.',
     annotations: { readOnly: true },
     audience: 'chat',
-    images: true,
     input: z.object({
         width: z
             .number({ error: 'width takes a whole number of CSS pixels' })
@@ -69,6 +68,7 @@ const visualPreview = defineActionTool('visual', {
     async run(input, call) {
         const page = await pageOf('preview', input.html, call);
         const shown = await runAction(call, 'visual.preview', { html: page.html, width: input.width ?? null, appearance: input.appearance ?? null });
+        call.image(shown.path);
 
         return [
             `shot\t${field(shown.path)}\tthe png on this machine, which you open with your own tools`,

@@ -53,6 +53,7 @@ async function image(context: ServerActionContext, caller: string, title: string
     try {
         const preview = await visuals.preview(chatId, { html, width, appearance: 'light' });
         return {
+            image: preview.path,
             text: [
                 `PNG of ${JSON.stringify(title)}, ${preview.width}x${preview.shotHeight}:`,
                 preview.path,

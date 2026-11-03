@@ -4,8 +4,9 @@ import { DRAWING_EDIT_LIMITS, DrawingElementPatchSchema, NewDrawingElementSchema
 import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
 import { defineActionTool, runAction } from './action-tool.ts';
+import { oneWrite } from './batch.ts';
 import { fieldLines, typeOf } from './schema-lines.ts';
-import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT, type ToolCall } from './tool.ts';
+import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT } from './tool.ts';
 import { field, titleField } from './host.ts';
 import { VIEW_KINDS } from './views.ts';
 
@@ -84,7 +85,7 @@ const viewNew = defineActionTool('view', {
     }
 });
 
-/* A rename, a mark and a move are writes of one call; the revision holds the first, and each later one follows from it. */
+/* A rename, a mark and a move land as one write, held to the revision, or as nothing when one of them is refused. */
 const viewEdit = defineTool('view', {
     name: 'view_edit',
     description: 'Renames a view, sets its icon or moves it; give only what changes.',
@@ -111,30 +112,26 @@ const viewEdit = defineTool('view', {
             ]);
         }
 
-        const lines: string[] = [];
-        let write: ToolCall = call;
-        const next = (): void => {
-            write = { ...call, expectedRevision: undefined };
-        };
+        return oneWrite(call, async (write) => {
+            const lines: string[] = [];
 
-        if (input.name !== undefined) {
-            const renamed = await runAction(write, 'view.rename', { viewId: id, name: input.name });
-            lines.push(`${id}\t${renamed.kind}\t${field(renamed.name)}`);
-            next();
-        }
+            if (input.name !== undefined) {
+                const renamed = await runAction(write, 'view.rename', { viewId: id, name: input.name });
+                lines.push(`${id}\t${renamed.kind}\t${field(renamed.name)}`);
+            }
 
-        if (input.icon !== undefined) {
-            const marked = await runAction(write, 'view.setIcon', { viewId: id, icon: input.icon === NO_ICON ? null : input.icon });
-            lines.push(marked.icon === null ? `${id}\t${marked.kind}\t${NO_ICON}` : `${id}\t${marked.kind}\tlucide\t${field(marked.icon.value)}`);
-            next();
-        }
+            if (input.icon !== undefined) {
+                const marked = await runAction(write, 'view.setIcon', { viewId: id, icon: input.icon === NO_ICON ? null : input.icon });
+                lines.push(marked.icon === null ? `${id}\t${marked.kind}\t${NO_ICON}` : `${id}\t${marked.kind}\tlucide\t${field(marked.icon.value)}`);
+            }
 
-        if (moves) {
-            const moved = await runAction(write, 'view.move', { viewId: id, afterViewId: input.after ?? null });
-            lines.push(`${id}\t${moved.kind}\t${moved.index}`);
-        }
+            if (moves) {
+                const moved = await runAction(write, 'view.move', { viewId: id, afterViewId: input.after ?? null });
+                lines.push(`${id}\t${moved.kind}\t${moved.index}`);
+            }
 
-        return lines;
+            return lines;
+        });
     }
 });
 

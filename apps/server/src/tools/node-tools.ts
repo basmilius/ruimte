@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
 import { COLOR_LINES } from '../actions/node-actions.ts';
 import { canvasIdFor, defineActionTool, pointedCanvas, runAction } from './action-tool.ts';
-import { ONE_WRITE, idsInput, jsonBatch } from './batch.ts';
+import { ONE_WRITE, idsInput, jsonBatch, oneWrite } from './batch.ts';
 import { JSON_NODE_KINDS, NODE_NEW_KINDS, kindLine } from './node-kinds.ts';
 import { idList } from './nodes.ts';
 import { ARRANGE_LAYOUTS, type ArrangeLayout } from './placement.ts';
-import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT, VIEW_INPUT, type ToolCall } from './tool.ts';
+import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT, VIEW_INPUT } from './tool.ts';
 import { field, placeOf, requiredField, titleField } from './host.ts';
 
 const OFF_CANVAS = 'This session is not on a canvas; name one with view';
@@ -241,7 +241,7 @@ const nodeEdit = defineActionTool('node', {
     }
 });
 
-/* A rename and a color are two writes of one call; the revision holds the first, and the second follows from it. */
+/* A rename and a color land as one write, held to the revision, or as nothing when one of them is refused. */
 const nodeUpdate = defineTool('node', {
     name: 'node_update',
     description: 'Renames a node or changes its color; give only what changes.',
@@ -259,23 +259,23 @@ const nodeUpdate = defineTool('node', {
 
         const color = input.color === undefined ? undefined : colorOf(input.color, true);
         const id = input.node_id;
-        const lines: string[] = [];
-        let write: ToolCall = call;
+        return oneWrite(call, async (write) => {
+            const lines: string[] = [];
 
-        if (input.title !== undefined) {
-            const viewId = await canvasIdFor(write, placeOf(write), input.view, OFF_CANVAS);
-            const renamed = await runAction(write, 'node.rename', { viewId, nodeId: id, name: input.title });
-            lines.push([id, renamed.kind, field(renamed.name)].join('\t'));
-            write = { ...call, expectedRevision: undefined };
-        }
+            if (input.title !== undefined) {
+                const viewId = await canvasIdFor(write, placeOf(write), input.view, OFF_CANVAS);
+                const renamed = await runAction(write, 'node.rename', { viewId, nodeId: id, name: input.title });
+                lines.push([id, renamed.kind, field(renamed.name)].join('\t'));
+            }
 
-        if (color !== undefined) {
-            const viewId = input.view ?? pointedCanvas(write, [id]) ?? (await canvasIdFor(write, placeOf(write), undefined, OFF_CANVAS));
-            const colored = await runAction(write, 'node.setColor', { viewId, nodeId: id, color });
-            lines.push(['colored', id, colored.kind, colored.color ?? '-'].join('\t'));
-        }
+            if (color !== undefined) {
+                const viewId = input.view ?? pointedCanvas(write, [id]) ?? (await canvasIdFor(write, placeOf(write), undefined, OFF_CANVAS));
+                const colored = await runAction(write, 'node.setColor', { viewId, nodeId: id, color });
+                lines.push(['colored', id, colored.kind, colored.color ?? '-'].join('\t'));
+            }
 
-        return lines;
+            return lines;
+        });
     }
 });
 

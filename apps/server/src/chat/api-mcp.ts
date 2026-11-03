@@ -1,9 +1,10 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool, type Transport } from '@modelcontextprotocol/client';
 import { isNotFound } from '@adecore/agents';
 import { z } from 'zod';
-import { CHAT_TOKEN_VARIABLE, MCP_SERVER, MCP_URL_VARIABLE } from '../providers/ruimte-mcp.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_MAX_IMAGE_BYTES, MCP_REQUEST_TIMEOUT_S, MCP_SERVER, MCP_URL_VARIABLE } from '../providers/ruimte-mcp.ts';
 import { ApiStdioTransport } from './api-mcp-stdio.ts';
 
 const common = { enabled: z.boolean().optional(), allowedTools: z.array(z.string().min(1).max(200)).max(100).optional() };
@@ -116,9 +117,43 @@ export interface ApiMcpConnection {
     call(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<CallToolResult>;
     close(): Promise<void>;
 }
-export type ConnectApiMcp = (server: ApiMcpServer, cwd: string, env: Record<string, string>, signal: AbortSignal) => Promise<ApiMcpConnection>;
 
-export async function connectApiMcp(server: ApiMcpServer, cwd: string, env: Record<string, string>, signal: AbortSignal): Promise<ApiMcpConnection> {
+/* How long a tool call may take and how large an HTTP answer may be. */
+export interface ApiMcpLimits {
+    callTimeoutMs: number;
+    responseBytes: number;
+}
+
+/* A server a person configured. */
+export const EXTERNAL_MCP_LIMITS: ApiMcpLimits = { callTimeoutMs: 30_000, responseBytes: 1024 * 1024 };
+
+/*
+ * Ruimte's own server: the time its route gives a call, and its largest picture in base64 with room for
+ * the text and the JSON around it.
+ */
+export const RUIMTE_MCP_LIMITS: ApiMcpLimits = {
+    callTimeoutMs: MCP_REQUEST_TIMEOUT_S * 1000,
+    responseBytes: Math.ceil(MCP_MAX_IMAGE_BYTES / 3) * 4 + 1024 * 1024
+};
+
+export type ConnectApiMcp = (
+    server: ApiMcpServer,
+    cwd: string,
+    env: Record<string, string>,
+    signal: AbortSignal,
+    limits?: ApiMcpLimits
+) => Promise<ApiMcpConnection>;
+
+/* The signal of the tool call a request of the transport is for, so a call that is cancelled ends its request too. */
+const callSignal = new AsyncLocalStorage<AbortSignal>();
+
+export async function connectApiMcp(
+    server: ApiMcpServer,
+    cwd: string,
+    env: Record<string, string>,
+    signal: AbortSignal,
+    limits: ApiMcpLimits = EXTERNAL_MCP_LIMITS
+): Promise<ApiMcpConnection> {
     const client = new Client(
         { name: 'ruimte-api-foundation', version: '1.0.0' },
         { versionNegotiation: { mode: 'command' in server ? 'legacy' : 'auto' }, listMaxPages: 5 }
@@ -147,7 +182,9 @@ export async function connectApiMcp(server: ApiMcpServer, cwd: string, env: Reco
                 if (target.origin !== url.origin) {
                     throw new Error('The MCP server attempted to contact an unconfigured origin.');
                 }
-                const response = await fetch(input, { ...init, redirect: 'error' });
+                const cancelled = callSignal.getStore();
+                const signals = [init?.signal, cancelled].filter((candidate): candidate is AbortSignal => candidate !== undefined && candidate !== null);
+                const response = await fetch(input, { ...init, redirect: 'error', ...(signals.length === 0 ? {} : { signal: AbortSignal.any(signals) }) });
                 if (!response.body) {
                     return response;
                 }
@@ -156,8 +193,8 @@ export async function connectApiMcp(server: ApiMcpServer, cwd: string, env: Reco
                     new TransformStream<Uint8Array, Uint8Array>({
                         transform(chunk, controller) {
                             bytes += chunk.byteLength;
-                            if (bytes > 1024 * 1024) {
-                                controller.error(new Error('MCP response exceeded 1 MiB.'));
+                            if (bytes > limits.responseBytes) {
+                                controller.error(new Error(`MCP response exceeded ${Math.floor(limits.responseBytes / 1024 / 1024)} MiB.`));
                             } else {
                                 controller.enqueue(chunk);
                             }
@@ -187,7 +224,8 @@ export async function connectApiMcp(server: ApiMcpServer, cwd: string, env: Reco
     let closing: Promise<void> | undefined;
     return {
         list: async (currentSignal) => (await client.listTools(undefined, { signal: currentSignal, timeout: 20_000 })).tools,
-        call: (name, args, currentSignal) => client.callTool({ name, arguments: args }, { signal: currentSignal, timeout: 30_000 }),
+        call: (name, args, currentSignal) =>
+            callSignal.run(currentSignal, () => client.callTool({ name, arguments: args }, { signal: currentSignal, timeout: limits.callTimeoutMs })),
         close: () =>
             (closing ??= (async () => {
                 // Terminating a remote session must not hold up stopping the local chat.

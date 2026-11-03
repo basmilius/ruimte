@@ -96,6 +96,8 @@ interface ContextReaders {
 export interface ContextReading {
     text: string;
     usage?: ChatReadUsage;
+    /* The png a read in form image wrote. */
+    image?: string;
 }
 
 /* The first line of a subagent's report that says something, which is all a line about it has room for. */

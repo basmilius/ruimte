@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
-import { freshCommand, probeCodexNoDaemon, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
+import { freshCommand, probeCodexNoDaemon, resumeCommand, noteOnLine, resumeOrFreshCommand, terminalCommand } from './launch.ts';
 import { COPILOT_ALLOW_MCP, type McpEndpoint } from './ruimte-mcp.ts';
 
 // How the launch line quotes the flag that lets Ruimte's MCP tools through.
@@ -132,9 +132,15 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'codex', runtimeMode: 'auto' })).toBe('codex --ask-for-approval on-request --sandbox workspace-write');
     });
 
-    test('says which kinds carry the note, so their start hook leaves it out', () => {
-        expect(takesNoteOnLine('codex')).toBe(true);
-        expect(takesNoteOnLine('claude')).toBe(false);
+    test('says which launches carried the note, so their start hook leaves it out', () => {
+        expect(noteOnLine('codex', { kind: 'codex' })).toBe(true);
+        expect(noteOnLine('claude', { kind: 'claude' })).toBe(false);
+        expect(noteOnLine('codex', null)).toBe(false);
+    });
+
+    test('a resumed Codex carries no note on its line, so its start hook tells it the tools', () => {
+        expect(noteOnLine('codex', { kind: 'codex', resume: 'thread-1' })).toBe(false);
+        expect(resumeCommand({ kind: 'codex', resume: 'thread-1' }, 'thread-1')).not.toContain('developer_instructions');
     });
 
     test('a resume never carries a first prompt: the session it picks up has its own history', () => {

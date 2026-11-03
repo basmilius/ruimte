@@ -206,10 +206,10 @@ const deviceShot = defineActionTool('device', {
     action: 'device.screenshot',
     description: "Takes a png of a device's screen.",
     annotations: { readOnly: true },
-    images: true,
     input: z.object({ device: deviceInput('device_shot') }),
     async run(input, call) {
         const shot = await runAction(call, 'device.screenshot', { nodeId: input.device });
+        call.image(shot.path);
 
         return [`shot\t${field(shot.path)}\t${shot.width}x${shot.height}\tRead it with your own tools`];
     }

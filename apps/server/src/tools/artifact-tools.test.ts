@@ -6,7 +6,7 @@ import { ArtifactStore } from '../artifacts/artifact-store.ts';
 import { Artifacts } from '../artifacts/artifacts.ts';
 import { MemoryArtifactFs } from '../artifacts/memory-artifact-fs.ts';
 import { AgentFiles } from '../mcp/files.ts';
-import type { ToolCall } from './tool.ts';
+import type { ToolCaller } from './tool.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import type { CanvasHost } from './host.ts';
 
@@ -46,7 +46,7 @@ afterEach(async () => {
 });
 
 /* A call whose files come from the test's folder and whose uploads go to the artifacts of this machine. */
-function callOf(caller: string): ToolCall {
+function callOf(caller: string): ToolCaller {
     return { ...toolCall(caller, host), uploads: artifacts, files: async () => new AgentFiles(folder, [folder]) };
 }
 

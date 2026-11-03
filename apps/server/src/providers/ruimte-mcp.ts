@@ -9,6 +9,15 @@ import type { BackendLaunch } from '@adecore/agents/chat';
 export const MCP_SERVER = 'ruimte';
 export const MCP_PATH = '/mcp';
 
+/*
+ * How long a tool call may take before the server drops it, in seconds. Bun ends a request after 10 s of
+ * silence, and a computer tool may hold 110 s for a card or a pause and then wait 110 s for its window.
+ */
+export const MCP_REQUEST_TIMEOUT_S = 240;
+
+/* The largest picture a tool hands back as image content; a larger one is still named by its path. */
+export const MCP_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 // Where the token sits: a chat gets its own per load, a terminal its hook token.
 export const CHAT_TOKEN_VARIABLE = 'RUIMTE_CONTEXT_TOKEN';
 export const TERMINAL_TOKEN_VARIABLE = 'RUIMTE_HOOK_TOKEN';

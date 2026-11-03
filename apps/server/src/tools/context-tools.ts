@@ -60,7 +60,6 @@ const contextRead = defineTool('context', {
     description: 'Prints one linked source, whole or its last lines.',
     annotations: { readOnly: true },
     counter: 'read',
-    images: (input) => input.form === 'image',
     input: z.object({
         id: z
             .string({ error: 'context_read needs id, a source from context_list' })
@@ -91,6 +90,10 @@ const contextRead = defineTool('context', {
         );
 
         if (result.status === 'completed') {
+            if (result.output.image !== undefined) {
+                call.image(result.output.image);
+            }
+
             return [result.output.text];
         }
 

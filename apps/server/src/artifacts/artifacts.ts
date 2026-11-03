@@ -29,7 +29,7 @@ import { WatchedSinks } from '@adecore/agents/host';
 import { isInside } from '../tools/project-paths.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import { sniffMime } from '../fs/sniff.ts';
-import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
+import { shotFolders } from '../shots.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';
@@ -113,11 +113,6 @@ export interface UploadState {
 interface OpenUpload {
     caller: string;
     stagingId: string;
-}
-
-/* The names a picture made for a person is in, under the machine's own folder. */
-function shotFolders(home: string): string[] {
-    return [join(home, 'screenshots'), join(home, 'computer-use', 'screenshots'), join(home, DEVICE_CAPTURES_FOLDER)];
 }
 
 /* A label from a title: no folders, no control characters. */

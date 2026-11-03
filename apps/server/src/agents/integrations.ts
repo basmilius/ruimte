@@ -342,7 +342,8 @@ export class AgentIntegrations {
 
     /*
      * Takes out the `ruimte-context` rules an earlier release wrote into this folder, exactly those and nothing of a
-     * person's. A folder without them reports nothing; one a person edited, or that will not read, says so.
+     * person's: only a file the ledger says Ruimte wrote, since a person may have added the same rules. A folder
+     * without them reports nothing; one a person edited, or that will not read, says so.
      */
     private async removeFormerRules(kind: AgentKind, folder: string): Promise<AgentIntegrationReport[]> {
         const path = formerRulesPathIn(kind, folder);
@@ -352,14 +353,32 @@ export class AgentIntegrations {
         }
 
         const state = this.stateOf(kind);
-        const entry: LedgerEntry = state.written.find((written) => written.path === path) ?? { createdFile: false, createdHooksKey: false };
+        const entry = await this.ledgerEntry(kind, path);
+
+        if (entry === null) {
+            return [];
+        }
+
         const report = kind === 'antigravity' ? await revokeAntigravityRules(path, entry) : await revokeCodexRules(path);
 
         if (report.outcome !== 'kept-edited' && report.outcome !== 'refused' && report.outcome !== 'failed') {
-            this.providers[kind] = { ...state, written: state.written.filter((written) => written.path !== path) };
+            this.providers[kind] = { ...state, written: state.written.filter((written) => written !== entry) };
         }
 
         return report.outcome === 'missing' || report.outcome === 'none' ? [] : [report];
+    }
+
+    /* What the ledger says Ruimte wrote at this path, matched on real paths; null for a file it never wrote. */
+    private async ledgerEntry(kind: AgentKind, path: string): Promise<Written | null> {
+        const key = await realOrSelf(path);
+
+        for (const written of this.stateOf(kind).written) {
+            if (written.path === path || (await realOrSelf(written.path)) === key) {
+                return written;
+            }
+        }
+
+        return null;
     }
 
     /* The first time a file is written decides whether it was ours to begin with; later runs only confirm. */
@@ -391,7 +410,14 @@ export class AgentIntegrations {
         }
         const reports: AgentIntegrationReport[] = [];
         for (const [key, target] of targets) {
-            const entry: LedgerEntry = ledger.get(key) ?? { createdFile: false, createdHooksKey: false };
+            const written = ledger.get(key);
+
+            // A person may have added the former rules themselves; only the ones Ruimte wrote are its to take out.
+            if (target.kind === 'rules' && written === undefined) {
+                continue;
+            }
+
+            const entry: LedgerEntry = written ?? { createdFile: false, createdHooksKey: false };
             reports.push(await this.revokeTarget(kind, target, entry));
         }
         this.providers[kind] = { ...this.stateOf(kind), written: [] };

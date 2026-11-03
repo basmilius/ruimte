@@ -8,7 +8,7 @@ import { isNotFound, writeAtomic } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
 import { isRecord } from '../is-record.ts';
 import { MCP_SERVER } from '../providers/ruimte-mcp.ts';
-import { connectApiMcp, mcpResultText, ruimteMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
+import { connectApiMcp, mcpResultText, RUIMTE_MCP_LIMITS, ruimteMcpServer, type ApiMcpConnection, type ConnectApiMcp } from './api-mcp.ts';
 import { API_TOOL_NAMES, apiToolInput, askUserCard, type ApiToolCall } from './api-tools.ts';
 import { NANOGPT_TOOLS, executeNanoTool, nanoNeedsApproval, nanoToolCall } from './nanogpt-tools.ts';
 
@@ -239,7 +239,7 @@ export class ApiTools {
             }
             const signal = AbortSignal.timeout(RUIMTE_CONNECT_TIMEOUT_MS);
             try {
-                const connection = await (this.options.connectMcp ?? connectApiMcp)(server, launch.cwd, launch.env, signal);
+                const connection = await (this.options.connectMcp ?? connectApiMcp)(server, launch.cwd, launch.env, signal, RUIMTE_MCP_LIMITS);
 
                 return { connection, tools: await connection.list(signal) };
             } catch (error) {

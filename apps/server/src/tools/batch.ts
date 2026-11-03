@@ -1,6 +1,7 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { MAX_PER_CALL } from '@ruimte/actions';
 import { z } from 'zod';
+import { placeOf, type AgentCall, type ProjectHost } from './host.ts';
 
 /* What every tool that changes several at once says of it, so an agent reaches for the one call and not a loop. */
 export const ONE_WRITE = 'one write of the project, one update on every screen, and the call changes all of them or, refused, none';
@@ -42,4 +43,57 @@ export function jsonBatch<Item extends z.ZodType>(json: string, item: Item, exam
     }
 
     return result.data;
+}
+
+/*
+ * Runs the actions of one tool call as one write of the project file: under one lock, held to the
+ * revision the call named, each action applied to what the one before it left. A refusal of any of
+ * them writes nothing. A write after `run` returned, such as an undo, goes to the store as its own.
+ */
+export async function oneWrite<T>(call: AgentCall, run: (write: AgentCall) => Promise<T>): Promise<T> {
+    const { projects } = call.host;
+    const { projectId } = placeOf(call);
+    let open = true;
+
+    return projects.mutate(
+        projectId,
+        async (content) => {
+            let current = content;
+            let changed = false;
+            const staged: ProjectHost = {
+                locate: (id) => projects.locate(id),
+                read: async (id) => (open && id === projectId ? current : projects.read(id)),
+                revision: (id) => projects.revision(id),
+                showView: (id, viewId, by) => projects.showView(id, viewId, by),
+                machineOfNode: (nodeId) => projects.machineOfNode(nodeId),
+                mutate: async (id, apply, expectedRev) => {
+                    if (!open || id !== projectId) {
+                        return projects.mutate(id, apply, expectedRev);
+                    }
+
+                    const mutation = await apply(current);
+
+                    if (mutation.overlayFields !== undefined || mutation.bindMachines !== undefined || mutation.landed !== undefined) {
+                        throw new Error('A write of several actions carries only content');
+                    }
+
+                    if (mutation.content !== null) {
+                        current = mutation.content;
+                        changed = true;
+                    }
+
+                    return mutation.result;
+                }
+            };
+
+            try {
+                const result = await run({ ...call, host: { ...call.host, projects: staged }, expectedRevision: undefined });
+
+                return { content: changed ? current : null, result };
+            } finally {
+                open = false;
+            }
+        },
+        call.expectedRevision
+    );
 }

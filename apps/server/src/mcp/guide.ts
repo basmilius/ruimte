@@ -12,6 +12,7 @@ export function guideTool(toolkits: readonly Toolkit[]): Tool {
         name: 'guide',
         description: 'Prints the format of an input whose field names a topic.',
         annotations: { readOnly: true },
+        counter: 'help',
         input: z.object({ topic: z.enum(names as [string, ...string[]], { error: needs }) }),
         run: async ({ topic }) => {
             const lines = topics.get(topic);

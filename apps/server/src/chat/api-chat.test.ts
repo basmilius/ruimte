@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
 import { ApiTools } from './api-chat.ts';
-import type { ApiMcpServer, ConnectApiMcp } from './api-mcp.ts';
+import { MCP_REQUEST_TIMEOUT_S } from '../providers/ruimte-mcp.ts';
+import { RUIMTE_MCP_LIMITS, type ApiMcpLimits, type ApiMcpServer, type ConnectApiMcp } from './api-mcp.ts';
 import { NANOGPT_TOOLS } from './nanogpt-tools.ts';
 
 const ENV = { RUIMTE_MCP_URL: 'http://127.0.0.1:4210/mcp', RUIMTE_CONTEXT_TOKEN: 'tok' };
@@ -64,6 +65,19 @@ describe('ApiTools', () => {
         expect((await tools.run('mcp__ruimte__node_delete', '{}', new AbortController().signal)).failed).toBe(true);
         await tools.close();
         expect(closed).toBe(true);
+    });
+
+    test("Ruimte's tools get the time and answer size the daemon's route allows", async () => {
+        const given: Array<ApiMcpLimits | undefined> = [];
+        const { tools } = harness(ENV, async (_server, _cwd, _env, _signal, limits) => {
+            given.push(limits);
+            return { list: async () => [], call: async () => ({ content: [] }), close: async () => {} };
+        });
+
+        await tools.definitions();
+        await tools.close();
+        expect(given).toEqual([RUIMTE_MCP_LIMITS]);
+        expect(RUIMTE_MCP_LIMITS.callTimeoutMs).toBe(MCP_REQUEST_TIMEOUT_S * 1000);
     });
 
     test('a chat the daemon gave no token, or one that cannot reach the server, keeps the project tools alone', async () => {

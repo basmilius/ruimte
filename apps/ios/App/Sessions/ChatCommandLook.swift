@@ -321,42 +321,78 @@ struct ChatMcpCall: Equatable {
 
     // An ACP agent titles a call of an MCP tool with the server and the tool, each agent with a separator of its own.
     private static let titleSeparators = ["__", "_", "-"]
+    // The name an ACP call of kind `other` gets, which is all a call of an MCP tool is where its agent marks none.
+    private static let acpToolRow = "Tool"
 
-    /// The call `item` is on `server`: `mcp__<server>__<tool>` (Claude Code and the API), `<server>/<tool>` (Codex),
-    /// or an ACP call titled with the server and the tool (Grok's `use_tool`, Antigravity, Copilot).
-    static func of(_ item: ChatToolItem, server: String) -> ChatMcpCall? {
-        guard let found = call(on: server, name: item.name, input: item.input.objectValue ?? [:]) else { return nil }
-        return ChatMcpCall(server: server, tool: found.tool, input: found.input, output: unwrapped(item.output))
+    private typealias Found = (server: String, tool: String, input: [String: JSONValue])
+
+    /// The call of a tool on one of `servers` that `item` is, as `mcpCallOf` in ADE CORE reads it: `mcp__<server>__<tool>`
+    /// (Claude Code, the API and an ACP agent that marks its server), `<server>/<tool>` (Codex), or an ACP call titled
+    /// with the server and the tool (Grok's `use_tool`, Copilot, and calls of agents from before they were marked). A
+    /// name that says which server is read before any title, over every server, the longest name first.
+    static func of(_ item: ChatToolItem, servers: [String]) -> ChatMcpCall? {
+        let input = item.input.objectValue ?? [:]
+        let longestFirst = servers.sorted { $0.count > $1.count }
+        let found: Found?
+        if let named = namedCall(item.name, input: input, servers: longestFirst) {
+            found = named
+        } else {
+            found = titledCall(item.name, input: input, servers: longestFirst)
+        }
+        guard let found else { return nil }
+        return ChatMcpCall(server: found.server, tool: found.tool, input: found.input, output: unwrapped(item.output))
     }
 
-    private static func call(on server: String, name: String, input: [String: JSONValue]) -> (
-        tool: String, input: [String: JSONValue]
-    )? {
-        if let tool = toolName(name, after: "mcp__\(server)__") ?? toolName(name, after: "\(server)/") {
-            return (tool, input)
+    /// The call as its name says it, whatever its input holds. `.some(nil)` where the name names a server that is not
+    /// in `servers`, which no title overrules; nil where the name says nothing of a server.
+    private static func namedCall(_ name: String, input: [String: JSONValue], servers: [String]) -> Found?? {
+        if name.hasPrefix("mcp__") {
+            let named = toolOn(String(name.dropFirst(5)), servers: servers, separators: ["__"])
+            return .some(named.map { ($0.server, $0.tool, input) })
         }
-        if name == "Bash" { return nil }
+        if name.contains("/") {
+            return .some(toolOn(name, servers: servers, separators: ["/"]).map { ($0.server, $0.tool, input) })
+        }
+        guard name == acpToolRow, let used = input["tool_name"]?.stringValue else { return nil }
         // Grok runs every MCP tool through its `use_tool`, which names the tool in its input.
-        if let used = input["tool_name"]?.stringValue.flatMap({ toolName($0, after: "\(server)__") }) {
-            return (used, input["tool_input"]?.objectValue ?? [:])
-        }
-        guard let title = input["description"]?.stringValue,
-            let tool = titleSeparators.lazy.compactMap({ toolName(title, after: "\(server)\($0)") }).first
+        let named = toolOn(used, servers: servers, separators: ["__"])
+        return .some(named.map { ($0.server, $0.tool, input["tool_input"]?.objectValue ?? [:]) })
+    }
+
+    /// The call as an ACP agent that marks no server titles it: a call of kind `other`, or a `Read` Copilot makes of a
+    /// tool that only reads. A `Read` of a file is no MCP call.
+    private static func titledCall(_ name: String, input: [String: JSONValue], servers: [String]) -> Found? {
+        let titledRow = name == acpToolRow || (name == "Read" && input["file_path"] == nil)
+        guard titledRow, let title = input["description"]?.stringValue,
+            let titled = toolOn(title, servers: servers, separators: titleSeparators)
         else { return nil }
         // Antigravity hands the arguments over as `arguments`, Copilot beside the title.
-        return (tool, input["arguments"]?.objectValue ?? input.filter { $0.key != "description" })
+        return (titled.server, titled.tool, input["arguments"]?.objectValue ?? input.filter { $0.key != "description" })
     }
 
-    private static func toolName(_ text: String, after prefix: String) -> String? {
-        guard text.hasPrefix(prefix) else { return nil }
-        let tool = String(text.dropFirst(prefix.count))
-        return tool.wholeMatch(of: /[A-Za-z0-9][A-Za-z0-9_-]*/) != nil ? tool : nil
+    /// The server and the tool `text` names as `<server><separator><tool>`, on the first of `servers` it starts with.
+    private static func toolOn(
+        _ text: String, servers: [String], separators: [String]
+    ) -> (server: String, tool: String)? {
+        for server in servers {
+            for separator in separators {
+                let prefix = "\(server)\(separator)"
+                guard text.hasPrefix(prefix) else { continue }
+                let tool = String(text.dropFirst(prefix.count))
+                if tool.wholeMatch(of: /[A-Za-z0-9][A-Za-z0-9_-]*/) != nil {
+                    return (server, tool)
+                }
+            }
+        }
+        return nil
     }
 
-    /// A tool's answer out of the envelope Grok puts around an MCP answer, `{"type":"MCP",...,"output":{"OkayOutput":"..."}}`.
+    /// A tool's answer out of the envelope Grok puts around an MCP answer,
+    /// `{"type":"MCP",...,"output":{"OkayOutput":"..."}}`, whatever the order of its keys.
     private static func unwrapped(_ output: String?) -> String? {
-        guard let output, output.firstMatch(of: /^\{\s*"type"\s*:\s*"MCP"/) != nil,
+        guard let output, output.drop(while: \.isWhitespace).hasPrefix("{"),
             let parsed = try? JSONDecoder().decode(JSONValue.self, from: Data(output.utf8)),
+            parsed["type"]?.stringValue == "MCP",
             let inner = parsed["output"]?.objectValue, inner.count == 1, let text = inner.values.first?.stringValue
         else { return output }
         return text
@@ -460,7 +496,7 @@ enum RuimteCommandLook {
         if tool.name == "Bash" {
             return tool.input["command"]?.stringValue.flatMap(match)
         }
-        return ChatMcpCall.of(tool, server: server).flatMap(toolRun)
+        return ChatMcpCall.of(tool, servers: [server]).flatMap(toolRun)
     }
 
     /// A tool of the machine's MCP server, as `describeTool` on the desktop reads it: the part of Ruimte and its

@@ -1,11 +1,11 @@
 import { toolInputSchema, type ToolInputSchema } from '@adecore/agents/context';
-import { runTool, type Audience, type Tool as KitTool, type Toolkit, type ToolCall, type ToolOutcome } from '../tools/tool.ts';
+import { runTool, type Audience, type Tool as KitTool, type Toolkit, type ToolCaller, type ToolOutcome } from '../tools/tool.ts';
 import { TOOLKITS } from '../tools/toolkits.ts';
 import { guideTool } from './guide.ts';
 
 export type { Audience, ToolOutcome } from '../tools/tool.ts';
 
-export type ToolContext = ToolCall;
+export type ToolContext = ToolCaller;
 
 export type InputSchema = ToolInputSchema;
 

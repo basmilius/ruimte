@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CONTEXT_VERBS } from '@ruimte/contracts';
 import { USAGE_VERB_COUNTERS } from '@ruimte/pulsar';
+import { guideTool } from '../mcp/guide.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import { runTool } from '../tools/tool.ts';
+import { toolCall } from '../tools/tool-test-helpers.ts';
 import { TOOLKITS } from '../tools/toolkits.ts';
 import { UsageCounter } from './usage-counter.ts';
 import {
@@ -49,12 +53,20 @@ describe('counting at the sites', () => {
         expect(counts()).toEqual({});
     });
 
-    // A counter the client does not know reads as plain "Ruimte" in a chat; `help` stays for old chats that called the CLI.
+    // A counter the client does not know reads as plain "Ruimte" in a chat.
     test('every tool counts in a usage group, under a name the client knows', () => {
-        const counters = new Set(TOOLKITS.flatMap((toolkit) => toolkit.tools.map((tool) => tool.counter)));
+        const counters = new Set([guideTool(TOOLKITS), ...TOOLKITS.flatMap((toolkit) => toolkit.tools)].map((tool) => tool.counter));
 
         expect([...counters].filter((counter) => !Object.hasOwn(USAGE_VERB_COUNTERS, counter))).toEqual([]);
-        expect([...counters, 'help'].sort()).toEqual([...CONTEXT_VERBS].sort());
+        expect([...counters].sort()).toEqual([...CONTEXT_VERBS].sort());
+    });
+
+    test('a guide call counts as help, the verb it replaced', async () => {
+        const guide = guideTool(TOOLKITS);
+        const [topic] = TOOLKITS.flatMap((toolkit) => toolkit.guides);
+
+        await runTool(guide, { topic: topic!.name }, toolCall('chat-1', {} as CanvasHost));
+        expect(counts()).toEqual({ 'verbs.help': 1 });
     });
 
     test('a tool call counts under its counter, and delegating and feature tools on the day as well', () => {

@@ -16,34 +16,35 @@ import type { AgentCall } from './host.ts';
 /* Who sees a tool: every caller, only an AI chat, only while computer use is on, only in a project with a database connection. */
 export type Audience = 'everyone' | 'chat' | 'computer' | 'database';
 
-/* What a tool runs with: the caller and the daemon, and the files and uploads a tool that takes a path reads. */
-export interface ToolCall extends AgentCall {
+/* Who calls a tool: the caller and the daemon, and the files and uploads a tool that takes a path reads. */
+export interface ToolCaller extends AgentCall {
     /* The folders a file this caller names may come from, worked out on first use. */
     files(): Promise<AgentFiles>;
     uploads?: ArtifactUploads;
 }
 
+/* What a tool runs with, which `runTool` gives it. */
+export interface ToolCall extends ToolCaller {
+    /* Hands back a png this call wrote, which goes back as image content; a path in the answer's text never does. */
+    image(path: string): void;
+}
+
 export interface ToolOutcome {
     lines: string[];
-    /* Pictures the tool wrote, as paths on this machine, which go back as image content too. */
+    /* The pngs the tool handed back through `image`, read only inside the caller's folders. */
     images: string[];
 }
 
 export interface ToolSpec<Input extends z.ZodObject> extends CoreToolSpec<Input, ToolCall, string[]> {
     /* Everyone when left out. */
     audience?: Audience;
-    /* Whether the tool writes pngs and prints their paths, which go back as image content; a function says it per call. */
-    images?: boolean | ((input: z.output<Input>) => boolean);
     /* The usage counter a call adds to, for a tool that replaced a tool of its own; the toolkit's name when left out. */
     counter?: string;
 }
 
 export interface Tool<Input extends z.ZodObject = z.ZodObject> extends CoreTool<ToolCall, string[], Input> {
     readonly audience: Audience;
-    /* Whether any call may hand back pngs; `imagesOf` says it for one call. */
-    readonly images: boolean;
     readonly counter: string;
-    imagesOf(input: z.output<Input>): boolean;
 }
 
 /* A format a field takes as text, which `guide` prints on demand so no schema has to carry it. */
@@ -86,24 +87,15 @@ export function textInput(tool: string, name: string, max: number, what: string)
 }
 
 export function defineTool<Input extends z.ZodObject>(toolkit: string, spec: ToolSpec<Input>): Tool<Input> {
-    const images = spec.images ?? false;
-
     return {
         ...defineCoreTool(toolkit, spec),
         audience: spec.audience ?? 'everyone',
-        images: images !== false,
-        counter: spec.counter ?? toolkit,
-        imagesOf: (input) => (typeof images === 'function' ? images(input) : images)
+        counter: spec.counter ?? toolkit
     };
 }
 
 export function defineToolkit(name: string, tools: readonly Tool[], guides: readonly GuideTopic[] = []): Toolkit {
     return { ...defineCoreToolkit(name, tools), tools, guides };
-}
-
-/* The paths a tool printed for a png it wrote: every tab-separated field that is an absolute path to one. */
-export function imagePaths(lines: readonly string[]): string[] {
-    return lines.flatMap((line) => line.split(/[\t\n]/)).filter((part) => part.startsWith('/') && part.endsWith('.png'));
 }
 
 /*
@@ -112,18 +104,22 @@ export function imagePaths(lines: readonly string[]): string[] {
  * checked again at every call, the second is the revision of the project file the write was decided
  * on. Throws a `ToolRefusal` or a `ProjectError` for a refusal.
  */
-export async function runTool(tool: Tool, raw: unknown, call: ToolCall): Promise<ToolOutcome> {
+export async function runTool(tool: Tool, raw: unknown, call: ToolCaller): Promise<ToolOutcome> {
     const input = parseToolInput(tool, raw) as Record<string, unknown>;
     const { reached: _reached, expectedRevision: _revision, ...own } = call;
     const project = typeof input.project === 'string' ? input.project : undefined;
     const revision = input[REVISION_FIELD];
+    const images: string[] = [];
     const ran: ToolCall = {
         ...own,
         ...(project === undefined ? {} : { reached: await reachedPlace(call.host, call.caller, project) }),
-        ...(typeof revision === 'number' ? { expectedRevision: revision } : {})
+        ...(typeof revision === 'number' ? { expectedRevision: revision } : {}),
+        image: (path) => {
+            images.push(path);
+        }
     };
     const lines = await tool.run(input, ran);
     countToolCall(tool.counter);
 
-    return { lines, images: tool.imagesOf(input) ? imagePaths(lines) : [] };
+    return { lines, images };
 }

@@ -259,6 +259,35 @@ final class ChatCommandLookTests: XCTestCase {
         XCTAssertEqual(ChatToolPresentation.mark(tool("mcp__ruimte__node_list", [:])), .ruimte)
     }
 
+    func testANameThatSaysTheServerWinsOverAnyTitleTheLongestServerFirst() {
+        let titled = tool("mcp__ruimte__node_list", ["description": .string("github__issue_list")])
+        XCTAssertEqual(ChatMcpCall.of(titled, servers: ["github", "ruimte"])?.server, "ruimte")
+        let foreign = tool("mcp__other__node_list", ["description": .string("ruimte__node_list")])
+        XCTAssertNil(ChatMcpCall.of(foreign, servers: ["ruimte"]))
+        XCTAssertNil(ChatMcpCall.of(tool("other/node_list", ["description": .string("ruimte__node_list")]), servers: ["ruimte"]))
+        let longer = ChatMcpCall.of(tool("mcp__ruimte__dev__node_list", [:]), servers: ["ruimte", "ruimte__dev"])
+        XCTAssertEqual(longer.map { [$0.server, $0.tool] }, ["ruimte__dev", "node_list"])
+        XCTAssertNil(ChatMcpCall.of(tool("Edit", ["description": .string("ruimte__node_list")]), servers: ["ruimte"]))
+        XCTAssertNil(
+            ChatMcpCall.of(
+                tool("Read", ["description": .string("ruimte__node_list"), "file_path": .string("/a")]), servers: ["ruimte"]))
+    }
+
+    func testGrokAnswersComeOutOfTheirEnvelopeWhateverTheOrderOfItsKeys() {
+        let item = ChatWire.item([
+            "id": .string("call"), "kind": .string("tool"), "name": .string("mcp__ruimte__node_list"),
+            "input": .object([:]), "state": .string("done"),
+            "output": .string(#"  {"output":{"OkayOutput":"node\tn1"},"server_name":"ruimte","type":"MCP"}"#),
+        ]).chatTool
+        XCTAssertEqual(ChatMcpCall.of(item, servers: ["ruimte"])?.output, "node\tn1")
+        let other = ChatWire.item([
+            "id": .string("call"), "kind": .string("tool"), "name": .string("mcp__ruimte__node_list"),
+            "input": .object([:]), "state": .string("done"),
+            "output": .string(#"{"type":"Other","output":{"OkayOutput":"x"}}"#),
+        ]).chatTool
+        XCTAssertEqual(ChatMcpCall.of(other, servers: ["ruimte"])?.output, #"{"type":"Other","output":{"OkayOutput":"x"}}"#)
+    }
+
     func testAToolCallDrawsItsFieldsWithIdsAsTheirTitles() {
         let call = tool(
             "mcp__ruimte__node_new",

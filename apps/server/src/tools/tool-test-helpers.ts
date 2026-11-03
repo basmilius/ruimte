@@ -1,16 +1,18 @@
 import { refusalBody, ToolRefusal } from '@adecore/agents/context';
 import { ProjectError } from '../projects/project-error.ts';
-import { runTool, type ToolCall } from './tool.ts';
+import { runTool, type ToolCaller } from './tool.ts';
 import { TOOLKITS } from './toolkits.ts';
 import type { CanvasHost, LaunchReading } from './host.ts';
 
 export interface ToolAnswer {
     refused: boolean;
     lines: string[];
+    /* The pngs the tool handed back as image content. */
+    images: string[];
 }
 
 /* A call for a tool that reads no file the agent names; one that does gets `files` of its own. */
-export function toolCall(caller: string, host: CanvasHost): ToolCall {
+export function toolCall(caller: string, host: CanvasHost): ToolCaller {
     return { caller, host, files: () => Promise.reject(new Error('This test hands the tool no files')) };
 }
 
@@ -18,7 +20,7 @@ export function toolCall(caller: string, host: CanvasHost): ToolCall {
  * What the tool `name` answers `caller` for this JSON input, through the same `runTool` the MCP route
  * runs: its lines, or a refusal as its `refused` rows, as the daemon words it before the route does.
  */
-export async function toolAnswer(name: string, input: Readonly<Record<string, unknown>>, call: ToolCall): Promise<ToolAnswer> {
+export async function toolAnswer(name: string, input: Readonly<Record<string, unknown>>, call: ToolCaller): Promise<ToolAnswer> {
     const tool = TOOLKITS.flatMap((toolkit) => toolkit.tools).find((candidate) => candidate.name === name);
 
     if (tool === undefined) {
@@ -26,12 +28,12 @@ export async function toolAnswer(name: string, input: Readonly<Record<string, un
     }
 
     try {
-        const { lines } = await runTool(tool, input, call);
+        const { lines, images } = await runTool(tool, input, call);
 
-        return { refused: false, lines: lines.length === 0 ? [] : lines.join('\n').split('\n') };
+        return { refused: false, lines: lines.length === 0 ? [] : lines.join('\n').split('\n'), images };
     } catch (error) {
         if (error instanceof ToolRefusal || error instanceof ProjectError) {
-            return { refused: true, lines: refusalBody(error.code, error.message, error instanceof ToolRefusal ? error.lines : []).split('\n') };
+            return { refused: true, lines: refusalBody(error.code, error.message, error instanceof ToolRefusal ? error.lines : []).split('\n'), images: [] };
         }
 
         throw error;

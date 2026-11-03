@@ -99,7 +99,6 @@ const browserShot = defineActionTool('browser', {
     action: 'browser.screenshot',
     description: "Takes a png of a browser node's page.",
     annotations: { readOnly: true },
-    images: true,
     input: z.object({ id: ID_INPUT, view: VIEW_INPUT }),
     async run(input, call) {
         const shot = await runAction(call, 'browser.screenshot', { nodeId: input.id, viewId: input.view ?? null });
@@ -109,6 +108,7 @@ const browserShot = defineActionTool('browser', {
         }
 
         const [, ...stand] = pageLines(shot);
+        call.image(shot.path);
 
         return ['open\tyes\tThe page answered', `shot\t${field(shot.path)}\tRead it with your own tools`, ...stand];
     }

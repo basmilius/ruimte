@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
 import { AGENT_IMAGE_BYTES, AGENT_MODEL_BYTES, AGENT_MODEL_TYPES, agentAttachmentBytes, agentAttachmentType } from '../chat/attachment-type.ts';
 import type { AgentFiles } from '../mcp/files.ts';
-import { readAtMost } from '../mcp/visual-images.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineToolkit } from './tool.ts';
 import { field } from './host.ts';
@@ -20,9 +19,8 @@ export interface AgentAttachment {
 
 /* An image or a model file of the caller's own as `chat.attach` takes it, refused when it is neither or too large. */
 export async function attachmentOf(files: AgentFiles, path: string, name: string | undefined): Promise<AgentAttachment> {
-    const real = await files.file(path);
     const buffer = Buffer.alloc(AGENT_MODEL_BYTES + 1);
-    const length = await readAtMost(real, buffer);
+    const length = await files.read(path, buffer);
 
     if (length > AGENT_MODEL_BYTES) {
         throw new ToolRefusal(

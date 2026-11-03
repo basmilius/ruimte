@@ -142,9 +142,13 @@ const NOTE_FLAGS: Partial<Record<AgentKind, (note: string) => string[]>> = {
     codex: (note) => ['-c', quote(`developer_instructions=${JSON.stringify(note)}`)]
 };
 
-/* Whether a launch line of this kind carries the tools note, so a hook must not say it a second time. */
-export function takesNoteOnLine(kind: AgentKind): boolean {
-    return NOTE_FLAGS[kind] !== undefined;
+/*
+ * Whether the line a CLI of this kind was launched with carried the tools note, so its hook must not say it a
+ * second time. A resume carries none, and keeps what its session started with, which for a session from before
+ * the tools may still name `ruimte-context`: its hook says the note, so the agent learns the tools.
+ */
+export function noteOnLine(kind: AgentKind, launch: AgentLaunch | null | undefined): boolean {
+    return NOTE_FLAGS[kind] !== undefined && launch?.kind === kind && !launch.resume;
 }
 
 /*

@@ -3,7 +3,7 @@ import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineTool, defineToolkit } from './tool.ts';
+import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 import { field, requiredField, yesNo } from './host.ts';
 
 type ComputerState = ActionOutput<'computer.state'>;
@@ -93,7 +93,11 @@ function round(value: number): string {
     return String(Math.round(value * 100) / 100);
 }
 
-function windowLines(state: ComputerState): string[] {
+function windowLines(state: ComputerState, call: ToolCall): string[] {
+    if (state.screenshot !== null) {
+        call.image(state.screenshot.path);
+    }
+
     return [
         `window\t${field(state.window.title)}\t${round(state.window.x)},${round(state.window.y)}\t${round(state.window.width)}x${round(state.window.height)}`,
         ...(state.window.sheet === null ? [] : [`sheet\t${field(state.window.sheet)}`]),
@@ -119,16 +123,16 @@ function changeCounts({ added, gone, changed }: { added: number; gone: number; c
  * A window, its picture and its tree: one row each, the tree a row per element with its indent kept.
  * After an action that is only what changed, since the rest is what the agent read before.
  */
-function stateLines(state: ComputerState): string[] {
+function stateLines(state: ComputerState, call: ToolCall): string[] {
     const tree = state.tree.map((line) => `tree\t${field(line)}`);
 
     if (state.diff !== null && state.diff !== undefined) {
-        return [...windowLines(state), ...remarkLines(state), `changes\t${changeCounts(state.diff)}`, ...tree];
+        return [...windowLines(state, call), ...remarkLines(state), `changes\t${changeCounts(state.diff)}`, ...tree];
     }
 
     return [
         `app\t${field(state.app.name)}\t${state.app.bundleId ?? '-'}\t${state.app.pid}`,
-        ...windowLines(state),
+        ...windowLines(state, call),
         `elements\t${state.elements}`,
         ...(state.matches === null || state.matches === undefined ? [] : [`matches\t${state.matches}`]),
         ...(state.within === null || state.within === undefined ? [] : [`within\t${state.within}`]),
@@ -139,7 +143,7 @@ function stateLines(state: ComputerState): string[] {
 }
 
 /* What an action did, and the state after it when it was asked for. */
-function outcomeLines(word: string, outcome: ComputerOutcome): string[] {
+function outcomeLines(word: string, outcome: ComputerOutcome, call: ToolCall): string[] {
     const { target } = outcome;
 
     return [
@@ -152,7 +156,7 @@ function outcomeLines(word: string, outcome: ComputerOutcome): string[] {
         ...(outcome.note === null ? [] : [`note\t${field(outcome.note)}`]),
         ...(outcome.settled === null ? [] : [`settled\t${yesNo(outcome.settled)}`]),
         ...(outcome.stateError === null ? [] : [`state\tnone\t${field(outcome.stateError)}`]),
-        ...(outcome.state === null ? [] : stateLines(outcome.state))
+        ...(outcome.state === null ? [] : stateLines(outcome.state, call))
     ];
 }
 
@@ -192,7 +196,7 @@ const computerState = defineActionTool('computer', {
     async run(input, call) {
         const state = await runAction(call, 'computer.state', { app: input.app, find: input.find ?? null, within: input.within ?? null, ...cutOf(input) });
 
-        return stateLines(state);
+        return stateLines(state, call);
     }
 });
 
@@ -256,7 +260,7 @@ const computerWait = defineActionTool('computer', {
         });
         const lines = [
             ...(outcome.stateError === null ? [] : [`state\tnone\t${field(outcome.stateError)}`]),
-            ...(outcome.state === null ? [] : stateLines(outcome.state))
+            ...(outcome.state === null ? [] : stateLines(outcome.state, call))
         ];
 
         if (!outcome.met) {
@@ -320,7 +324,7 @@ const computerAct = defineTool('computer', {
             case 'click': {
                 const outcome = await runAction(call, 'computer.click', { app, ...point, count: input.count ?? null, button: input.button ?? null, ...after });
 
-                return outcomeLines('click', outcome);
+                return outcomeLines('click', outcome, call);
             }
 
             case 'type': {
@@ -328,7 +332,7 @@ const computerAct = defineTool('computer', {
                     throw new ToolRefusal('bad-arguments', 'computer_act type needs text, the text to type');
                 }
 
-                return outcomeLines('type', await runAction(call, 'computer.type', { app, text: input.text, ...after }));
+                return outcomeLines('type', await runAction(call, 'computer.type', { app, text: input.text, ...after }), call);
             }
 
             case 'key': {
@@ -336,7 +340,7 @@ const computerAct = defineTool('computer', {
                     throw new ToolRefusal('bad-arguments', 'computer_act key needs combo, at least one key combo such as cmd+n');
                 }
 
-                return outcomeLines('key', await runAction(call, 'computer.key', { app, combos: input.combo, ...after }));
+                return outcomeLines('key', await runAction(call, 'computer.key', { app, combos: input.combo, ...after }), call);
             }
 
             case 'set-value': {
@@ -346,7 +350,7 @@ const computerAct = defineTool('computer', {
 
                 const outcome = await runAction(call, 'computer.setValue', { app, element: input.element, value: input.value, ...after });
 
-                return outcomeLines('set-value', outcome);
+                return outcomeLines('set-value', outcome, call);
             }
 
             case 'scroll': {
@@ -356,7 +360,7 @@ const computerAct = defineTool('computer', {
 
                 const outcome = await runAction(call, 'computer.scroll', { app, ...point, direction: input.direction, pages: input.pages ?? null, ...after });
 
-                return outcomeLines('scroll', outcome);
+                return outcomeLines('scroll', outcome, call);
             }
 
             case 'drag': {
@@ -371,7 +375,7 @@ const computerAct = defineTool('computer', {
                     ...after
                 });
 
-                return outcomeLines('drag', outcome);
+                return outcomeLines('drag', outcome, call);
             }
         }
     }
@@ -402,7 +406,7 @@ const computerMenu = defineActionTool('computer', {
             ];
         }
 
-        return outcomeLines('menu', outcome);
+        return outcomeLines('menu', outcome, call);
     }
 });
 
@@ -413,7 +417,7 @@ const computerOpen = defineActionTool('computer', {
     audience: 'computer',
     input: z.object({ app: appInput('computer_open'), ...ACTION_INPUT }),
     async run(input, call) {
-        return outcomeLines('open', await runAction(call, 'computer.open', { app: input.app, ...thenState(input) }));
+        return outcomeLines('open', await runAction(call, 'computer.open', { app: input.app, ...thenState(input) }), call);
     }
 });
 
