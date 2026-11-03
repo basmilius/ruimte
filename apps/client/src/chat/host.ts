@@ -11,7 +11,7 @@ import { perform, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions';
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
 import { searchFiles } from '@/chat/file-search';
-import { RUIMTE_COMMAND_LOOKS } from '@/chat/ruimte-command-look';
+import { RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS } from '@/chat/ruimte-command-look';
 import { openLogin } from '@/chat/login';
 import { openForkDialog } from '@/chat/open-fork';
 import { useMachinePlatform } from '@/chat/machine-platform';
@@ -280,5 +280,6 @@ export const CHAT_HOST: Partial<ChatHost> = {
     // A chat of the Chats project is a conversation of its own, so it opens the way one does.
     useWelcome: () => useProject((s) => isScratchProject(s.current)),
     commandLooks: RUIMTE_COMMAND_LOOKS,
+    toolLooks: RUIMTE_TOOL_LOOKS,
     saidBy: { name: 'Ruimte', mark: createElement(RuimteMark, { size: 14 }) }
 };

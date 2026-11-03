@@ -1,10 +1,10 @@
 import type { ChatItem } from '@ruimte/contracts';
 import { compileFind, matchesIn, MATCH_LIMIT, type FindQuery } from '@adecore/editor-react/models';
 import type { CommandName } from '@adecore/agents-react';
-import { handbackReportOf, matchCommandLook, toolSummary, stripAnsi } from '@adecore/agents-react/chat';
+import { handbackReportOf, lookRunOf, sentMessageOf, toolSummary, stripAnsi } from '@adecore/agents-react/chat';
 import type { TimelineRow } from '@adecore/agents-react/chat';
 import type { ChatFindField } from '@adecore/agents-react/chat/ui';
-import { RUIMTE_COMMAND_LOOKS } from '@/chat/ruimte-command-look';
+import { RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS } from '@/chat/ruimte-command-look';
 
 /*
  * Find in a chat, over the thread's data and not its DOM: the timeline only draws the rows on screen,
@@ -31,17 +31,15 @@ function isChild(item: ChatItem): boolean {
     return (item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent') && Boolean(item.parentToolUseId);
 }
 
-/* The title a word of a `ruimte-context` call is drawn as, or null for one drawn as it was typed. */
+/* The title a word of a call of Ruimte's own is drawn as, or null for one drawn as it was typed. */
 type CallNames = (word: string, option: string | null) => CommandName | null;
 
 /*
- * The line of a `ruimte-context` call as its row draws it: the detail, a named word as its title with
- * the id behind it, the way the frame holds both. Null for any other call.
+ * The line of a `ruimte-context` call or a tool of the MCP server as its row draws it: the detail, a named
+ * word as its title with the id behind it, the way the frame holds both. Null for any other call.
  */
 function contextCallLine(item: Extract<ChatItem, { kind: 'tool' }>, nameOf: CallNames | undefined): string | null {
-    const input = item.input as { command?: unknown } | null;
-    const command = item.name === 'Bash' && typeof input?.command === 'string' ? input.command : null;
-    const run = command === null ? null : matchCommandLook(command, RUIMTE_COMMAND_LOOKS);
+    const run = lookRunOf(item, RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS);
     if (run === null) {
         return null;
     }
@@ -71,6 +69,11 @@ function findableFields(item: ChatItem, nameOf?: CallNames, hideTools = false): 
             const report = handbackReportOf(item);
             if (report !== null) {
                 return [{ field: 'text', text: report }];
+            }
+            // A message the agent sent is drawn as said, whether or not the thread hides its tool lines.
+            const sent = sentMessageOf(item, RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS);
+            if (sent !== null) {
+                return [{ field: 'text', text: sent.text }];
             }
             // A thread that hides its tool lines draws none of this, so a hit here would lead nowhere.
             if (hideTools) {

@@ -1,6 +1,15 @@
 import i18next from 'i18next';
 import { createElement } from 'react';
-import type { CommandLook, CommandLookCall, CommandLookMatch, CommandLookSent, CommandName } from '@adecore/agents-react';
+import type {
+    CommandLook,
+    CommandLookCall,
+    CommandLookMatch,
+    CommandLookSent,
+    CommandName,
+    ToolLook,
+    ToolLookCall,
+    ToolLookMatch
+} from '@adecore/agents-react';
 import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
 import { Icon } from '@adecore/ui';
@@ -62,8 +71,22 @@ const NO_VERB: VerbLook = { name: 'Context', from: 0 };
 const FOLDED = ['--prompt', '--text', '--result', '--roles', '--answers'];
 const LANGUAGES = { '--sql': 'sql' };
 
-// The shape of a node id; a view id such as `main` is only taken for one after `--view`.
+// The shape of a node id; a view id such as `main` is only taken for one as the value of a view option or field.
 const NODE_ID = /^[a-z]+-[a-z0-9]+$/;
+const VIEW_OPTIONS = new Set(['--view', 'view', 'view_id']);
+
+// The tools of the MCP server whose part of Ruimte is not their first word, by the verb they were.
+const TOOL_VERBS: Readonly<Record<string, ContextVerb>> = {
+    context_list: 'list',
+    context_read: 'read',
+    task_done: 'done',
+    agent_answer: 'answer',
+    agent_team: 'team',
+    agent_fork: 'fork',
+    guide: 'help'
+};
+
+const TOOLKIT_VERBS: Readonly<Record<string, ContextVerb>> = { launch: 'launches' };
 
 function lookOf(verb: string | undefined): VerbLook | null {
     if (verb === undefined) {
@@ -84,6 +107,31 @@ function describeContextCall(args: readonly string[]): CommandLookMatch {
         group: { key: look.name, sentence: (count) => i18next.t('chat:commandLook.used', { name: look.name, count }) },
         fold: FOLDED,
         languages: LANGUAGES
+    };
+}
+
+/* The verb a tool of the MCP server was: its own, or its first word's. */
+function verbOfTool(tool: string): string {
+    const toolkit = tool.split('_')[0]!;
+    if (Object.hasOwn(TOOL_VERBS, tool)) {
+        return TOOL_VERBS[tool]!;
+    }
+    return Object.hasOwn(TOOLKIT_VERBS, toolkit) ? TOOLKIT_VERBS[toolkit]! : toolkit;
+}
+
+/*
+ * What one tool of Ruimte's MCP server reads as: the name of its part of Ruimte, and its words from where the
+ * call's verb would have started the detail. A toolkit this client does not know leaves it the CLI's own line.
+ */
+function describeTool(tool: string): ToolLookMatch | null {
+    const look = lookOf(verbOfTool(tool));
+    if (look === null) {
+        return null;
+    }
+    return {
+        label: look.name,
+        lead: tool.split('_').slice(look.from).join(' '),
+        group: { key: look.name, sentence: (count) => i18next.t('chat:commandLook.used', { name: look.name, count }) }
     };
 }
 
@@ -112,7 +160,7 @@ export function useContextNames(endpointId: string, chatId: string): (word: stri
     const here = endpointId === currentEndpointId() && names.has(chatId);
     return (word: string, option: string | null): CommandName | null => {
         const named = here ? names.get(word) : undefined;
-        if (named === undefined || named.name === '' || !(NODE_ID.test(word) || (named.view && option === '--view'))) {
+        if (named === undefined || named.name === '' || !(NODE_ID.test(word) || (named.view && option !== null && VIEW_OPTIONS.has(option)))) {
             return null;
         }
         return { name: named.name, icon: named.icon };
@@ -151,15 +199,17 @@ function notifyWords(args: readonly string[]): { id: string; text: string; proje
 }
 
 const REFUSALS = new Set(['self-notify', 'not-an-agent', 'unknown-node', 'node-on-other-machine']);
+// `refused\t<code>` from the command, `refused <code>: <sentence>` from the MCP server.
+const REFUSAL_LINE = /^refused[\t ]([a-z-]+)/;
 
 /* How the call went, from its state and what it answered; null for a finished call whose answer says neither. */
-function notifyOutcome({ state, output }: CommandLookCall): Pick<CommandLookSent, 'state' | 'reason' | 'title'> | null {
+function notifyOutcome({ state, output }: Pick<CommandLookCall, 'state' | 'output'>): Pick<CommandLookSent, 'state' | 'reason' | 'title'> | null {
     const lines = (output ?? '').split('\n');
-    // A CLI may put its own line above what a failed command wrote, so a refusal is looked for in all of them.
-    const refused = lines.find((line) => line.startsWith('refused\t'));
+    // A CLI may put its own line above what a failed call answered, so a refusal is looked for in all of them.
+    const refused = lines.map((line) => REFUSAL_LINE.exec(line)).find((match) => match !== null);
 
     if (refused !== undefined || state === 'error') {
-        const code = refused?.split('\t')[1];
+        const code = refused?.[1];
 
         return { state: 'failed', ...(code !== undefined && REFUSALS.has(code) ? { reason: i18next.t(`chat:commandLook.refused.${code}`) } : {}) };
     }
@@ -189,16 +239,34 @@ export function sentByNotify(call: CommandLookCall): CommandLookSent | null {
         return null;
     }
 
-    const text = words.text === '-' ? call.heredoc : unescapeText(words.text);
+    return sentMessage({ ...words, text: words.text === '-' ? call.heredoc : unescapeText(words.text) }, call);
+}
+
+/* The message to `id`, once there is text and the call says how it went. */
+function sentMessage(
+    words: { id: string; text: string | null; project: string | null },
+    call: Pick<CommandLookCall, 'state' | 'output'>
+): CommandLookSent | null {
     const outcome = notifyOutcome(call);
 
-    if (text === null || text === '' || outcome === null) {
+    if (words.text === null || words.text === '' || outcome === null) {
         return null;
     }
 
     const elsewhere = words.project === null ? {} : { title: i18next.t('chat:commandLook.inAnotherProject'), hint: words.project };
 
-    return { to: words.id, text, ...elsewhere, ...outcome };
+    return { to: words.id, text: words.text, ...elsewhere, ...outcome };
+}
+
+/* A call of the `notify` tool as the message it sent; the server takes its text as it is. */
+export function sentByNotifyTool(call: ToolLookCall): CommandLookSent | null {
+    const { id, text, project } = call.input;
+
+    if (call.tool !== 'notify' || typeof id !== 'string' || typeof text !== 'string' || (project !== undefined && typeof project !== 'string')) {
+        return null;
+    }
+
+    return sentMessage({ id, text, project: project ?? null }, call);
 }
 
 /* `ruimte-context` as a tool of Ruimte's own in a chat, with the mark, the name of the part it works on and titles for ids. */
@@ -212,4 +280,16 @@ const RUIMTE_COMMAND_LOOK: CommandLook = {
     sent: sentByNotify
 };
 
+/* The tools of the machine's MCP server, drawn the way their `ruimte-context` calls were. */
+const RUIMTE_TOOL_LOOK: ToolLook = {
+    server: 'ruimte',
+    brand: 'Ruimte',
+    Mark: RuimteMark,
+    describe: describeTool,
+    sentence: (count) => i18next.t('chat:commandLook.usedAny', { count }),
+    useNames: useContextNames,
+    sent: sentByNotifyTool
+};
+
 export const RUIMTE_COMMAND_LOOKS: readonly CommandLook[] = [RUIMTE_COMMAND_LOOK];
+export const RUIMTE_TOOL_LOOKS: readonly ToolLook[] = [RUIMTE_TOOL_LOOK];

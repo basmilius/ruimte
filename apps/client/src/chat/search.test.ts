@@ -52,6 +52,14 @@ describe('searchChat', () => {
         expect(searchChat([call], query('3f2a9k1d')).hits).toHaveLength(1);
     });
 
+    test('a call of the MCP server is found by the titles its line draws, and a message it sent by its text', () => {
+        const go = tool('m1', { id: 'browser-3f2a9k1d', url: 'https://example.com' }, '', { name: 'mcp__ruimte__browser_go' });
+        const notify = tool('m2', { id: 'chat-b', text: 'The build is green' }, 'notified\tchat-b\tnow\td', { name: 'mcp__ruimte__notify' });
+        const nameOf = (word: string) => (word === 'browser-3f2a9k1d' ? { name: 'Downloads' } : null);
+        expect(searchChat([go], query('Downloads'), nameOf).hits).toEqual([{ itemId: 'm1', field: 'summary', occurrence: 0 }]);
+        expect(searchChat([notify], query('green'), nameOf, true).hits).toEqual([{ itemId: 'm2', field: 'text', occurrence: 0 }]);
+    });
+
     test('a note drawn as a bubble is found in the words the bubble shows', () => {
         const notes: ChatItem[] = [
             {

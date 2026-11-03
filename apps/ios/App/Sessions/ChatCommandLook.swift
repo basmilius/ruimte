@@ -296,6 +296,8 @@ struct RuimteCommandRun: Equatable {
     var heredocText: String?
     /// Whether the shell fills in a part of a word, so its text here is not what the program gets.
     var expands = false
+    /// The call of the machine's MCP server this run is; nil for a `ruimte-context` call.
+    var mcp: ChatMcpCall?
 
     struct Word: Equatable {
         /// Offsets in Unicode scalars into the detail.
@@ -304,6 +306,60 @@ struct RuimteCommandRun: Equatable {
         let text: String
         /// The option right before it, whose value it may be.
         let option: String?
+    }
+}
+
+/// A call of a tool on an MCP server, the same whichever CLI made it, as `mcpCallOf` in `@adecore/agents-react`
+/// reads it.
+struct ChatMcpCall: Equatable {
+    let server: String
+    /// The tool's name on its server, without the server.
+    let tool: String
+    let input: [String: JSONValue]
+    /// What the tool answered, out of any envelope the CLI wraps it in.
+    let output: String?
+
+    // An ACP agent titles a call of an MCP tool with the server and the tool, each agent with a separator of its own.
+    private static let titleSeparators = ["__", "_", "-"]
+
+    /// The call `item` is on `server`: `mcp__<server>__<tool>` (Claude Code and the API), `<server>/<tool>` (Codex),
+    /// or an ACP call titled with the server and the tool (Grok's `use_tool`, Antigravity, Copilot).
+    static func of(_ item: ChatToolItem, server: String) -> ChatMcpCall? {
+        guard let found = call(on: server, name: item.name, input: item.input.objectValue ?? [:]) else { return nil }
+        return ChatMcpCall(server: server, tool: found.tool, input: found.input, output: unwrapped(item.output))
+    }
+
+    private static func call(on server: String, name: String, input: [String: JSONValue]) -> (
+        tool: String, input: [String: JSONValue]
+    )? {
+        if let tool = toolName(name, after: "mcp__\(server)__") ?? toolName(name, after: "\(server)/") {
+            return (tool, input)
+        }
+        if name == "Bash" { return nil }
+        // Grok runs every MCP tool through its `use_tool`, which names the tool in its input.
+        if let used = input["tool_name"]?.stringValue.flatMap({ toolName($0, after: "\(server)__") }) {
+            return (used, input["tool_input"]?.objectValue ?? [:])
+        }
+        guard let title = input["description"]?.stringValue,
+            let tool = titleSeparators.lazy.compactMap({ toolName(title, after: "\(server)\($0)") }).first
+        else { return nil }
+        // Antigravity hands the arguments over as `arguments`, Copilot beside the title.
+        return (tool, input["arguments"]?.objectValue ?? input.filter { $0.key != "description" })
+    }
+
+    private static func toolName(_ text: String, after prefix: String) -> String? {
+        guard text.hasPrefix(prefix) else { return nil }
+        let tool = String(text.dropFirst(prefix.count))
+        return tool.wholeMatch(of: /[A-Za-z0-9][A-Za-z0-9_-]*/) != nil ? tool : nil
+    }
+
+    /// A tool's answer out of the envelope Grok puts around an MCP answer, `{"type":"MCP",...,"output":{"OkayOutput":"..."}}`.
+    private static func unwrapped(_ output: String?) -> String? {
+        guard let output, output.firstMatch(of: /^\{\s*"type"\s*:\s*"MCP"/) != nil,
+            let parsed = try? JSONDecoder().decode(JSONValue.self, from: Data(output.utf8)),
+            let inner = parsed["output"]?.objectValue, inner.count == 1, let text = inner.values.first?.stringValue
+        else { return output }
+        return text
     }
 }
 
@@ -366,18 +422,32 @@ enum RuimteCommandLook {
         "task": VerbLook(name: "Task", from: 1),
         "plan": VerbLook(name: "Plan", from: 1),
         "visual": VerbLook(name: "Visual", from: 1),
+        "artifact": VerbLook(name: "Output", from: 1),
         "chat": VerbLook(name: "Chat", from: 1),
         "ui": VerbLook(name: "Help", from: 0),
         "worktree": VerbLook(name: "Worktree", from: 1),
         "operation": VerbLook(name: "Task", from: 1),
+        "tool": VerbLook(name: "Using an extension tool", from: 2),
         "launches": VerbLook(name: "Launches", from: 1),
+        "routine": VerbLook(name: "Routines", from: 1),
         "secret": VerbLook(name: "Launches", from: 1),
         "project": VerbLook(name: "Project", from: 1),
         "database": VerbLook(name: "Database", from: 1),
         "language": VerbLook(name: "Language", from: 1),
+        "template": VerbLook(name: "Templates", from: 1),
         "provider": VerbLook(name: "Providers", from: 1),
         "computer": VerbLook(name: "Computer Use", from: 1),
     ]
+
+    /// The machine's MCP server, whose tools read as the `ruimte-context` calls they were.
+    static let server = "ruimte"
+    // The tools whose part of Ruimte is not their first word, by the verb they were.
+    private static let toolVerbs: [String: String] = [
+        "context_list": "list", "context_read": "read", "task_done": "done", "agent_answer": "answer",
+        "agent_team": "team", "agent_fork": "fork", "guide": "help",
+    ]
+    private static let toolkitVerbs: [String: String] = ["launch": "launches"]
+    private static let viewOptions: Set<String> = ["--view", "view", "view_id"]
 
     private static let noVerb = VerbLook(name: "Context", from: 0)
     // Long values an agent writes into a call, cut so the options after them stay in the line.
@@ -387,8 +457,65 @@ enum RuimteCommandLook {
     private static let lengthLimit = 20_000
 
     static func run(of tool: ChatToolItem) -> RuimteCommandRun? {
-        guard tool.name == "Bash", let command = tool.input["command"]?.stringValue else { return nil }
-        return match(command)
+        if tool.name == "Bash" {
+            return tool.input["command"]?.stringValue.flatMap(match)
+        }
+        return ChatMcpCall.of(tool, server: server).flatMap(toolRun)
+    }
+
+    /// A tool of the machine's MCP server, as `describeTool` on the desktop reads it: the part of Ruimte and its
+    /// words from where the call's verb would have started the detail, then its fields as `field=value`. The fields
+    /// come in the order of their names, since the input reaches the phone without the order the agent wrote.
+    static func toolRun(_ call: ChatMcpCall) -> RuimteCommandRun? {
+        let parts = call.tool.split(separator: "_").map(String.init)
+        guard let toolkit = parts.first else { return nil }
+        let verb = toolVerbs[call.tool] ?? toolkitVerbs[toolkit] ?? toolkit
+        guard let look = verbs[verb] else { return nil }
+        let (detail, words) = fieldsDetail(lead: parts.dropFirst(look.from).joined(separator: " "), call.input)
+        return RuimteCommandRun(
+            label: look.name, groupKey: look.name, detail: detail, words: words, others: [], more: 0, heredoc: false,
+            mcp: call)
+    }
+
+    private static func fieldsDetail(lead: String, _ input: [String: JSONValue]) -> (String, [RuimteCommandRun.Word]) {
+        var detail = Array(lead.unicodeScalars)
+        var words: [RuimteCommandRun.Word] = []
+        for field in input.keys.sorted() {
+            guard let value = input[field], value != .null else { continue }
+            if !detail.isEmpty { detail.append(" ") }
+            detail += Array("\(field)=".unicodeScalars)
+            let values = value.arrayValue ?? [value]
+            let texts = values.compactMap(scalarText)
+            guard texts.count == values.count else {
+                detail += Array((value.arrayValue == nil ? "{…}" : "[…]").unicodeScalars)
+                continue
+            }
+            for (index, text) in texts.enumerated() {
+                let quoted = text.isEmpty || text.contains { $0.isWhitespace || $0 == "\"" || $0 == "," }
+                if index > 0 { detail.append(",") }
+                if quoted { detail.append("\"") }
+                let start = detail.count
+                detail += foldedValue(text)
+                words.append(RuimteCommandRun.Word(range: start..<detail.count, text: text, option: field))
+                if quoted { detail.append("\"") }
+            }
+        }
+        return (String(String.UnicodeScalarView(detail)), words)
+    }
+
+    private static func scalarText(_ value: JSONValue) -> String? {
+        switch value {
+        case .string(let text): text
+        case .number(let number):
+            number.rounded() == number && abs(number) < 1e15 ? String(Int(number)) : String(number)
+        case .bool(let flag): flag ? "true" : "false"
+        default: nil
+        }
+    }
+
+    private static func foldedValue(_ text: String) -> [Unicode.Scalar] {
+        let line = Array(text.split(whereSeparator: \.isWhitespace).joined(separator: " ").unicodeScalars)
+        return line.count > foldLength ? Array(line[..<foldLength]) + ["…"] : line
     }
 
     /// The first `ruimte-context` call of a shell line; only where the shell runs it, so `grep ruimte-context` is none.
@@ -445,14 +572,35 @@ enum RuimteCommandLook {
     /// The message a `notify` call sent, as `sentByNotify` on the desktop reads it, for a line that holds only that
     /// call and nothing the shell fills in; nil leaves it a tool line.
     static func sent(of tool: ChatToolItem) -> ChatAgentSent? {
-        guard let run = run(of: tool), run.args.first == "notify", run.others.isEmpty, run.more == 0, !run.expands,
+        guard let run = run(of: tool) else { return nil }
+        if let call = run.mcp {
+            return sent(ofTool: call, state: tool.state)
+        }
+        guard run.args.first == "notify", run.others.isEmpty, run.more == 0, !run.expands,
             let words = notifyWords(run.args),
-            let text = words.text == "-" ? run.heredocText : unescape(words.text), !text.isEmpty,
-            let outcome = notifyOutcome(tool)
+            let text = words.text == "-" ? run.heredocText : unescape(words.text)
         else { return nil }
-        let elsewhere = words.project != nil ? String(localized: "In another project") : nil
+        return sentMessage(to: words.id, text: text, project: words.project, output: tool.output, state: tool.state)
+    }
+
+    /// A call of the `notify` tool as the message it sent; the server takes its text as it is.
+    private static func sent(ofTool call: ChatMcpCall, state: ChatToolState) -> ChatAgentSent? {
+        let project = call.input["project"]
+        guard call.tool == "notify", let id = call.input["id"]?.stringValue, let text = call.input["text"]?.stringValue,
+            project == nil || project?.stringValue != nil
+        else { return nil }
+        return sentMessage(to: id, text: text, project: project?.stringValue, output: call.output, state: state)
+    }
+
+    private static func sentMessage(
+        to id: String, text: String, project: String?, output: String?, state: ChatToolState
+    )
+        -> ChatAgentSent?
+    {
+        guard !text.isEmpty, let outcome = notifyOutcome(output: output, state: state) else { return nil }
+        let elsewhere = project != nil ? String(localized: "In another project") : nil
         return ChatAgentSent(
-            to: words.id, title: outcome.title ?? elsewhere, hint: words.project, text: text, state: outcome.state,
+            to: id, title: outcome.title ?? elsewhere, hint: project, text: text, state: outcome.state,
             reason: outcome.reason)
     }
 
@@ -481,17 +629,21 @@ enum RuimteCommandLook {
         return (ids[0], text, flags["--project"])
     }
 
-    private static func notifyOutcome(_ tool: ChatToolItem) -> (state: ChatAgentSent.State, title: String?, reason: String?)? {
-        let lines = (tool.output ?? "").components(separatedBy: "\n")
-        // A CLI may put its own line above what a failed command wrote, so a refusal is looked for in all of them.
-        let refused = lines.first { $0.hasPrefix("refused\t") }
-        if refused != nil || tool.state == .error {
-            let code = refused?.components(separatedBy: "\t").dropFirst().first
-            return (.failed, nil, code.flatMap(refusal))
+    private static func notifyOutcome(output: String?, state: ChatToolState) -> (
+        state: ChatAgentSent.State, title: String?, reason: String?
+    )? {
+        let lines = (output ?? "").components(separatedBy: "\n")
+        // A CLI may put its own line above what a failed call answered, so a refusal is looked for in all of them.
+        // `refused\t<code>` comes from the command, `refused <code>: <sentence>` from the MCP server.
+        let refused = lines.lazy.compactMap { $0.firstMatch(of: /^refused[\t ]([a-z-]+)/) }.first
+        if refused != nil || state == .error {
+            return (.failed, nil, refused.flatMap { refusal(String($0.1)) })
         }
-        if tool.state == .running { return (.sending, nil, nil) }
+        if state == .running { return (.sending, nil, nil) }
         let fields = lines[0].components(separatedBy: "\t")
-        guard fields.count >= 3, fields[0] == "notified", fields[2] == "now" || fields[2] == "waiting" else { return nil }
+        guard fields.count >= 3, fields[0] == "notified", fields[2] == "now" || fields[2] == "waiting" else {
+            return nil
+        }
         let title = fields.count > 4 && !fields[4].isEmpty ? fields[4] : nil
         return (fields[2] == "now" ? .delivered : .waiting, title, nil)
     }
@@ -596,10 +748,12 @@ enum RuimteCommandLook {
         return names
     }
 
-    /// The name a word of the detail reads as; a view id such as `main` is only taken for one after `--view`.
+    /// The name a word of the detail reads as; a view id such as `main` is only taken for one as the value of a view
+    /// option or field.
     static func name(of word: RuimteCommandRun.Word, in names: [String: ChatCommandName]) -> ChatCommandName? {
         guard let named = names[word.text], !named.name.isEmpty,
-            word.text.wholeMatch(of: /[a-z]+-[a-z0-9]+/) != nil || (named.view && word.option == "--view")
+            word.text.wholeMatch(of: /[a-z]+-[a-z0-9]+/) != nil
+                || (named.view && word.option.map(viewOptions.contains) == true)
         else { return nil }
         return named
     }
