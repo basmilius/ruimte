@@ -150,7 +150,7 @@ export function kindOf(mime: string): ArtifactKind {
     return 'build';
 }
 
-/* Whether a file reads as text, which is what an agent's `artifact read` prints. */
+/* Whether a file reads as text, which is what an agent's `artifact_read` prints. */
 export function isTextMime(mime: string): boolean {
     return mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml' || mime === 'application/yaml' || mime === 'image/svg+xml';
 }

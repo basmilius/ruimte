@@ -1,5 +1,5 @@
 import type { ChatInfo, SessionInfo } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import type { WorktreeAgent, WorktreeAgents } from './worktree-merge.ts';
 
 interface WorktreeAgentSources {

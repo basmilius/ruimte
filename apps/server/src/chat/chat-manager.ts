@@ -218,7 +218,7 @@ function noteDigest(note: string): string {
 /*
  * The chat row of a task in the thread of the chat that gave it, written from the task alone so writing
  * it twice changes nothing. A new row joins the turn that is running, which is the turn that ran the
- * verb; a cancelled task gets a note saying why its row failed.
+ * tool; a cancelled task gets a note saying why its row failed.
  */
 function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
     const id = `task-${task.id}`;
@@ -263,7 +263,7 @@ function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
 
 /*
  * Ruimte's chats: the generic core with what the daemon adds to it. A chat runs in a project, hears
- * about the verbs and its links, draws a row per task it gave, keeps its plans beside its record and
+ * about the tools and its links, draws a row per task it gave, keeps its plans beside its record and
  * forks into the canvas, and a turn cut off by a restart or a limit is taken up through the outbox.
  */
 export class ChatManager extends ChatCore {

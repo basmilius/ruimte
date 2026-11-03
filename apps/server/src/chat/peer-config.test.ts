@@ -6,7 +6,7 @@ import { ManualClock } from '@adecore/agents/testing';
 import { PeerLinks } from '../peering/links.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, runVerb, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
 
 let root: string;
 let folder: string;
@@ -93,7 +93,7 @@ describe('the configuration a chat CLI loads from its folder', () => {
             agent: true,
             peer: { machineId: 'machine-a' }
         });
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--prompt', 'look around']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', prompt: 'look around' });
         const childId = line!.split('\t')[0]!;
         expect(daemon.host.untrusted?.node(childId)).toBe(true);
         await daemon.until(() => daemon.chatCommands.length > 0);
@@ -126,10 +126,12 @@ describe('what an untrusted caller or folder may start', () => {
 
     test('a caller that came from a peer opens no Codex chat and no terminal agent', async () => {
         await peerLead();
-        expect((await runVerb(daemon, 'chat-lead', 'agent', ['codex', '--prompt', 'x']))[0]).toStartWith('refused\tuntrusted-folder\t');
-        expect((await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--prompt', 'x']))[0]).toStartWith('refused\tuntrusted-folder\t');
+        expect((await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', prompt: 'x' }))[0]).toStartWith('refused\tuntrusted-folder\t');
+        expect((await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, prompt: 'x' }))[0]).toStartWith(
+            'refused\tuntrusted-folder\t'
+        );
         const roles = JSON.stringify([{ title: 'Counter', prompt: 'count', provider: 'codex' }]);
-        expect((await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Counters', '--roles', roles]))[0]).toStartWith('refused\tuntrusted-folder\t');
+        expect((await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Counters', roles }))[0]).toStartWith('refused\tuntrusted-folder\t');
         expect(daemon.outbox.list()).toEqual([]);
     });
 
@@ -138,9 +140,9 @@ describe('what an untrusted caller or folder may start', () => {
         await mkdir(worktree, { recursive: true });
         await links.bind('machine-a', 'Studio', projectId);
         await links.recordTask('machine-a', 'chat-given', { projectId, cwd: worktree, worktree: true });
-        const refused = await runVerb(daemon, 'chat-lead', 'agent', ['codex', '--cwd', worktree, '--prompt', 'x', '--dry-run']);
+        const refused = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', cwd: worktree, prompt: 'x', dry_run: true });
         expect(refused[0]).toStartWith('refused\tuntrusted-folder\t');
-        const own = await runVerb(daemon, 'chat-lead', 'agent', ['codex', '--prompt', 'x', '--dry-run']);
+        const own = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', prompt: 'x', dry_run: true });
         expect(own[0]).toStartWith('dry-run\t');
     });
 });

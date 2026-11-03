@@ -169,7 +169,7 @@ export function sqlSettingsOf(input: SqlSettingsInput): ProjectSqlSettings {
     return { sql: settings, php: settings, unbound };
 }
 
-/* What the verbs tell an agent about the SQL of a file. */
+/* What the tools tell an agent about the SQL of a file. */
 export interface SqlFileContext {
     choice: SqlChoice;
     /* The snapshot the file is read against, when one was taken. */

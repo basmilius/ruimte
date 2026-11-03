@@ -64,35 +64,12 @@ import type { TemplateStore } from '../templates/template-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { UntrustedFolders } from '../peering/untrusted.ts';
 import type { Artifacts } from '../artifacts/artifacts.ts';
-import {
-    field,
-    REVISION_FLAG,
-    VerbRefusal,
-    createVerbRegistry,
-    lengthOf,
-    orNote,
-    type Action as RegistryAction,
-    type Noun as RegistryNoun,
-    type Verb as RegistryVerb,
-    type VerbEntry as RegistryVerbEntry,
-    type VerbSpec as RegistryVerbSpec
-} from '@adecore/agents/context';
+import { ToolRefusal, field, lengthOf, orNote } from '@adecore/agents/context';
 
-// The verbs reach the one sanitizer and the registry through the toolkit they already import.
-export { field } from '@adecore/agents/context';
-export {
-    DRY_RUN_FLAG,
-    DRY_RUN_PREVIEW,
-    REVISION_FLAG,
-    VerbRefusal,
-    lengthOf,
-    orNote,
-    requiredField,
-    type ContextVerb,
-    type VerbHelp
-} from '@adecore/agents/context';
+// The tools and actions reach the one sanitizer through the module they already import.
+export { DRY_RUN_PREVIEW, field, lengthOf, orNote, requiredField } from '@adecore/agents/context';
 
-/* A worktree a verb asks for: a new branch named after a title, or the branch it was given. */
+/* A worktree a tool asks for: a new branch named after a title, or the branch it was given. */
 export type WorktreeWant = ({ fresh: string } | { branch: string }) & { base?: string };
 
 /* What an agent may read of the CLIs a person installs and updates in Settings, Providers. */
@@ -101,21 +78,21 @@ export interface ProviderInstallHost {
     versions(refresh: boolean): Promise<CliVersion[]>;
 }
 
-/* The plan windows the CLIs of this machine reported, as last read; a verb only reports them and never asks again. */
+/* The plan windows the CLIs of this machine reported, as last read; a tool only reports them and never asks again. */
 interface PlanLimitsHost {
     snapshot(): UsageLimitsSnapshot;
     now(): number;
 }
 
 /*
- * What a verb reaches the daemon through: the daemon's own services, each typed by what a verb may
+ * What a tool reaches the daemon through: the daemon's own services, each typed by what a tool may
  * call of it, so a new capability is a method of its service and a name here. An interface so a
  * test can hand in a store of its own.
  */
 export interface CanvasHost {
     projects: ProjectHost;
     hiddenAgents?: HiddenAgentStore;
-    /* What a retried `agent --request-id` answers with; absent, a request id is ignored. */
+    /* What a retried `agent_start` with the same `request_id` answers with; absent, a request id is ignored. */
     startClaims?: StartClaims;
     lineage: LineageHost;
     starts: AgentStartHost;
@@ -128,7 +105,7 @@ export interface CanvasHost {
     diagrams: Pick<DiagramStore, 'write'> & Partial<Pick<DiagramStore, 'read'>>;
     /* Reads and edits the drawing of a view, whether or not anyone has its project open; absent on a host that keeps none. */
     drawings?: Pick<DrawingStore, 'read' | 'edit'>;
-    /* The tasks a chat gives the nodes it opens with `--task`, kept by the daemon outside the project. */
+    /* The tasks a chat gives the nodes it opens with `task`, kept by the daemon outside the project. */
     tasks: TaskHost;
     /* The plans of the caller's own chat, kept beside its record. */
     plans: Pick<PlanStore, 'read' | 'create' | 'apply' | 'delete'>;
@@ -188,7 +165,7 @@ export interface CanvasHost {
     routines?: RoutineAgentHost;
     /* The editor templates an agent lists and adds to; absent on a host that keeps none. */
     templates?: Pick<TemplateStore, 'listForAgent' | 'addByAgent' | 'checkAgentAdd'>;
-    /* The other open projects an agent may reach with `--project`; absent on a host that reaches none. */
+    /* The other open projects an agent may reach with `project`; absent on a host that reaches none. */
     reach?: ReachHost;
 }
 
@@ -225,8 +202,8 @@ interface TerminalAgentHost {
 }
 
 /*
- * The projects of this machine; every write of a verb goes through `mutate`, which refuses a document that
- * moved past `expectedRev`. A verb changes the content only; what a move of a view between projects reads
+ * The projects of this machine; every write of a tool goes through `mutate`, which refuses a document that
+ * moved past `expectedRev`. A tool changes the content only; what a move of a view between projects reads
  * besides is the store's own.
  */
 export type ProjectHost = Pick<ProjectStore, 'locate' | 'read' | 'revision' | 'showView' | 'machineOfNode'> & {
@@ -236,13 +213,13 @@ export type ProjectHost = Pick<ProjectStore, 'locate' | 'read' | 'revision' | 's
 /* Who made a node and how deep it sits, kept under `$RUIMTE_HOME` and across a restart, never in the project an agent can rewrite. */
 type LineageHost = Pick<AgentLineageStore, 'depthOf' | 'madeBy' | 'put'>;
 
-/* The machine's switches a verb is held to; `agentsDeleteAnyView` lets an agent remove a view it did not make,
+/* The machine's switches a tool is held to; `agentsDeleteAnyView` lets an agent remove a view it did not make,
    and `nodeSize` is the size a person on the machine gave new nodes of a kind. */
 export type MachineHost = Pick<EndpointIdentity, 'agentsDeleteAnyView' | 'nodeSize'>;
 
 /* What starting an agent node takes. */
 export interface AgentStartHost {
-    /* The agent CLIs this machine has; a verb that starts one refuses the rest by name. */
+    /* The agent CLIs this machine has; a tool that starts one refuses the rest by name. */
     installedAgents(): Promise<AgentKind[]>;
     /* Holds the first prompt of a node against its id until the session or the chat for it is made; a chat hears `brief` beside it. */
     holdPrompt(projectId: string, nodeId: string, prompt: string, brief?: string): Promise<void>;
@@ -401,7 +378,7 @@ interface AgentForkHost {
 }
 
 /*
- * What a verb reaches a page through. One door for both kinds of page: one this machine runs itself
+ * What a tool reaches a page through. One door for both kinds of page: one this machine runs itself
  * and one a client holds in a <webview>. Null is the answer when nobody has the page open at all.
  */
 export interface BrowserDriveHost {
@@ -457,87 +434,35 @@ export interface NodeAccount {
 export interface AgentStart {
     projectId: string;
     nodeId: string;
-    /* The node that ran the verb; a chat hands its permission mode on to a chat it opens. */
+    /* The node that called the tool; a chat hands its permission mode on to a chat it opens. */
     openedBy: string;
     node: 'chat' | 'terminal';
     provider: AgentKind;
     /* Where a client mounting the node would start it: its own directory, else the project folder. */
     cwd: string | null;
-    /* The mode `--mode` asked for, and for a terminal the mode it was written down with; absent leaves a chat to the daemon. */
+    /* The mode the field `mode` asked for, and for a terminal the mode it was written down with; absent leaves a chat to the daemon. */
     runtimeMode?: RuntimeMode;
     selection?: ModelSelection;
     /* The account it starts under: its opener's, when that runs the same CLI. */
     account?: string;
 }
 
-export interface VerbCall {
+/* What a call of an agent carries, whether it came in as a tool call or as an action an agent caused. */
+export interface AgentCall {
     /* The session or chat id the bearer token speaks for. */
     caller: string;
     host: CanvasHost;
-    /* The other project `--project` named, as the route checked it; absent, the verb works in the caller's own. */
+    /* The other project the field `project` named, as `runTool` checked it; absent, the call works in the caller's own. */
     reached?: IndexedPlace;
     /* The rev of the project file the caller read before it decided on this write. */
     expectedRevision?: number;
 }
-
-export type Verb = RegistryVerb<VerbCall>;
-
-export type Action = RegistryAction<VerbCall>;
-
-export type Noun = RegistryNoun<VerbCall>;
-
-export type VerbEntry = RegistryVerbEntry<VerbCall>;
-
-export type ArgumentSpec = RegistryVerbSpec<z.ZodType, z.ZodObject, VerbCall>;
-
-const registry = createVerbRegistry<VerbCall>({ cli: 'ruimte-context' });
-
-/* The spec each verb and action was defined from, which the registry keeps to itself and the MCP tools read their fields off. */
-const SPECS = new WeakMap<Verb | Action, ArgumentSpec>();
-
-export const { defineNoun, defineHelp, dryRunVerbNames, dryRunLine } = registry;
-
-export function defineVerb<Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: RegistryVerbSpec<Positionals, Flags, VerbCall>): Verb {
-    const verb = registry.defineVerb(spec);
-    SPECS.set(verb, spec as unknown as ArgumentSpec);
-
-    return verb;
-}
-
-export function defineAction<Positionals extends z.ZodType, Flags extends z.ZodObject>(
-    noun: string,
-    spec: RegistryVerbSpec<Positionals, Flags, VerbCall>
-): Action {
-    const action = registry.defineAction(noun, spec);
-    SPECS.set(action, spec as unknown as ArgumentSpec);
-
-    return action;
-}
-
-/* The spec a verb or an action was defined from; undefined for one made outside `defineVerb` and `defineAction`. */
-export function specOf(entry: Verb | Action): ArgumentSpec | undefined {
-    return SPECS.get(entry);
-}
-
-/* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
-export const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; node, link, browser, device, view, task, agent, team, done, notify, alert, answer, worktree, launches, routine, database and language are the project itself, project list names the other open projects that --project reaches on view list, node list, link list, read, notify, agent, team and task new, while a person lets agents reach them, artifact is the Output of the project, plan, visual and chat are the chat of the caller, secret is a card in that chat for a launch, template the editor templates of the person on this machine and of the project, computer the apps of this machine\ta node you add is readable through read only once a line joins it to you, and a terminal or a chat only once that line runs from it into you; a chat view has no lines and reads and operates every node of the canvas it names with --view';
-
-/* What a snooze means to an agent, said wherever a list prints the column. */
-export const SNOOZE_LINE =
-    'snoozed\tThe moment, an ISO time in UTC, until which the person put that node aside, or - for none: until then they get no alert when it waits on them, so a question or an approval from it may sit unanswered that long; it ends early once the person answered what it waited on. Only a person snoozes a node or wakes it, no verb does';
 
 /* The snooze on a node as the actions hand it on: an ISO time, or null for none. */
 export function snoozedAt(host: Pick<CanvasHost, 'snoozes'>, nodeId: string): string | null {
     const until = host.snoozes?.until(nodeId) ?? null;
     return until === null ? null : new Date(until).toISOString();
 }
-
-/* What `help` says of the last row of every list of the project file. */
-export const REVISION_ROW = `revision\tThe last row is revision and the revision of the project file; --${REVISION_FLAG} on a write that follows refuses it once the project moved on`;
-
-/* What `help` says of `--revision` on every verb that writes the project file. */
-export const REVISION_LINE = `flag\t--${REVISION_FLAG} N\toptional\tThe revision of the project a list printed, which this call was decided on; refused with rev-conflict and nothing written once the project moved on`;
 
 /* What a dry run calls the node it is not making, so the edge it names still has two ends; a team
    puts the role's title in it, since its rows are otherwise the same for two roles of one CLI. */
@@ -548,26 +473,23 @@ export function newNode(name = 'new node'): string {
 export const NEW_NODE = newNode();
 
 /*
- * The project the verb works in: the one `--project` reached, else the caller's own, from the index
+ * The project the call works in: the one `project` reached, else the caller's own, from the index
  * of every known project, since an open one would miss an agent whose person switched away.
  */
-export function placeOf(call: VerbCall): IndexedPlace {
+export function placeOf(call: AgentCall): IndexedPlace {
     if (call.reached !== undefined) {
         return call.reached;
     }
     const place = call.host.projects.locate(call.caller);
     if (!place) {
-        throw new VerbRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
+        throw new ToolRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
     }
     return place;
 }
 
 export { MAX_TITLE_LENGTH } from '@ruimte/actions';
 
-/* Said wherever a verb takes a name, since neither half of it can be read off the canvas. */
-export const TITLE_LINE = `titles\tA name is at most ${MAX_TITLE_LENGTH} characters and is never unique: two nodes may carry the same one, and an id is what names a node`;
-
-/* One title schema for every verb that takes one, so the same limit is refused in the same sentence. */
+/* One title schema for every tool that takes one, so the same limit is refused in the same sentence. */
 export function titleField(name: string, needs: string): z.ZodString {
     return z
         .string({ error: needs })
@@ -576,37 +498,6 @@ export function titleField(name: string, needs: string): z.ZodString {
         .max(MAX_TITLE_LENGTH, {
             error: (issue) => `${name} is ${lengthOf(issue.input)} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
         });
-}
-
-/* A required text flag of `command`, trimmed and capped at `max` characters. */
-export function textFlag(command: string, flag: string, max: number, what: string): z.ZodString {
-    const needs = `${command} needs --${flag}, ${what}`;
-    return z.string({ error: needs }).trim().min(1, needs).max(max, `--${flag} is at most ${max} characters`);
-}
-
-/* A verb's one argument: `needs` when it is missing or empty, `tooMany` when more follow it. */
-export function oneArgument(needs: string, tooMany: string) {
-    return z.tuple([z.string().min(1, needs)], { error: (issue) => (issue.code === 'too_big' ? tooMany : needs) });
-}
-
-export const VIEW_FLAG = z.string().min(1, '--view needs the id of a canvas').optional();
-
-export const TAIL_FLAG = z.coerce
-    .number({ error: '--tail needs a positive whole number' })
-    .int('--tail needs a positive whole number')
-    .positive('--tail needs a positive whole number')
-    .optional();
-
-/* A flag that carries JSON, refused with `message` when it does not parse. */
-export function jsonFlag(message: string) {
-    return z.string().transform((text, context) => {
-        try {
-            return JSON.parse(text) as unknown;
-        } catch {
-            context.addIssue({ code: 'custom', message });
-            return z.NEVER;
-        }
-    });
 }
 
 export function yesNo(value: boolean): string {
@@ -622,36 +513,36 @@ export function canvasLines(content: ProjectContent): string[] {
     );
 }
 
-/* What `node new`, `agent` and `team` say when the caller is on no canvas: where the node goes is not all that changes. */
+/* What `node_new`, `agent_start` and `agent_team` say when the caller is on no canvas: where the node goes is not all that changes. */
 export const OPENING_OFF_CANVAS =
-    'A node opens on a canvas; name which one with --view (ruimte-context view list lists them). A line only joins two nodes of one canvas, so the edge column shows -';
+    'A node opens on a canvas; name which one with view (view_list lists them). A line only joins two nodes of one canvas, so the edge column shows -';
 
 /* The canvas an id names, refused with the canvases there are when it names none. */
 export function canvasNamed(content: ProjectContent, viewId: string): ProjectCanvasView {
     const named = content.views.find((candidate) => candidate.id === viewId);
     // The canvas of another machine's nodes is that machine's to draw, so it answers as one that does not exist.
     if (!named || !isCanvasView(named) || isHiddenCanvasView(named)) {
-        throw new VerbRefusal('not-a-canvas', `${viewId} is not a canvas of this project`, canvasLines(content));
+        throw new ToolRefusal('not-a-canvas', `${viewId} is not a canvas of this project`, canvasLines(content));
     }
     return named;
 }
 
 /*
- * The canvas a verb works on: the one `--view` names, else the one the caller is a node on. Ids
+ * The canvas a tool works on: the one `view` names, else the one the caller is a node on. Ids
  * only, never names, so an agent cannot aim at a canvas by naming something else after it.
  */
 export function canvasFor(
     content: ProjectContent,
     place: IndexedPlace,
     view: string | undefined,
-    offCanvas = 'This session is not on a canvas; name one with --view'
+    offCanvas = 'This session is not on a canvas; name one with view'
 ): ProjectCanvasView {
     if (view !== undefined) {
         return canvasNamed(content, view);
     }
     const own = place.canvasId === null ? undefined : content.views.find((candidate) => candidate.id === place.canvasId);
     if (!own || !isCanvasView(own)) {
-        throw new VerbRefusal('view-required', offCanvas, canvasLines(content));
+        throw new ToolRefusal('view-required', offCanvas, canvasLines(content));
     }
     return own;
 }

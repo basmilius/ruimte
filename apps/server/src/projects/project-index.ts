@@ -231,7 +231,7 @@ export class ProjectIndex {
 
     /*
      * The view or node under `id` in a project other than that of `fromId`. It only words the note in
-     * front of a message: this opens no door, since the `--project` of every command there checks the
+     * front of a message: this opens no door, since the `project` of every command there checks the
      * reach again, and what a chat may reach without it still asks `referenceBeside`.
      */
     referenceElsewhere(fromId: string, id: string): Reference | null {

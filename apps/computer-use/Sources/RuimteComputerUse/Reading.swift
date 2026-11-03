@@ -6,7 +6,7 @@ extension Agent {
     /// One element whole, where a state cuts its text: the viewfinder goes around the element.
     func read(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
         guard let index = request.element else {
-            throw AgentError("read needs --element N")
+            throw AgentError("read needs element N")
         }
         try checkStopped()
         let element = try snapshot(for: app).element(index)

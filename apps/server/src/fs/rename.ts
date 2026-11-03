@@ -3,7 +3,7 @@ import { lstat, mkdir, rmdir, stat } from 'node:fs/promises';
 import type { Stats } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { retryingRename } from './busy-retry.ts';
 import { deepestEntry } from './create.ts';
 import { renameNoReplace } from './no-replace-rename.ts';

@@ -9,8 +9,8 @@ pathIgnorePatterns = [
     "extensions/*/test/**",
     # Reads every source file, and says the same on every platform.
     "apps/client/src/project/view-nodes.test.ts",
-    "apps/server/src/canvas/project-verb.test.ts",
-    "apps/server/src/canvas/worktree-verb.test.ts",
+    "apps/server/src/tools/project-verb.test.ts",
+    "apps/server/src/tools/worktree-verb.test.ts",
     "apps/server/src/chat/fork-worktree.test.ts",
     "apps/server/src/chat/ui-sources.test.ts",
     "apps/server/src/git/actions.test.ts",
@@ -32,8 +32,8 @@ pathIgnorePatterns = [
     "apps/server/src/projects/scratch-project.test.ts",
     "apps/server/src/provenance/provenance-service.test.ts",
     # These boot a whole test daemon per test, with the same result on a slow runner.
-    "apps/server/src/canvas/fork-verb.test.ts",
-    "apps/server/src/canvas/operation-verb.test.ts",
+    "apps/server/src/tools/fork-verb.test.ts",
+    "apps/server/src/tools/operation-verb.test.ts",
     "apps/server/src/chat/account.test.ts",
     "apps/server/src/chat/agent-images.test.ts",
     "apps/server/src/chat/fork.test.ts",

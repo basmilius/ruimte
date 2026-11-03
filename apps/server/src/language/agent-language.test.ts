@@ -107,7 +107,7 @@ function rig(options: RigOptions = {}): Rig {
     return { agent, asked, context };
 }
 
-describe('the language verb of an agent', () => {
+describe('the language tool of an agent', () => {
     test('diagnostics come back where they sit, with the server, the source and the code', async () => {
         const answer = await rig().agent.diagnostics(PLACE, 'chat-1', '/work/db/a.sql');
         expect(answer).toEqual({

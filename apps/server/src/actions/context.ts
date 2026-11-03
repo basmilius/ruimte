@@ -1,6 +1,7 @@
 import type { ActionCall } from '@ruimte/actions';
-import { callerKind } from '../canvas/tasks.ts';
-import { VerbRefusal, type CanvasHost, type ProjectHost, type VerbCall } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { callerKind } from '../tools/tasks.ts';
+import { type CanvasHost, type ProjectHost, type AgentCall } from '../tools/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { VoiceFollowHost } from '../voice/voice-follower.ts';
 
@@ -9,7 +10,7 @@ export interface ServerActionContext {
     /* Where the caller stands, looked up by its id before the action runs: project, folder and canvas. */
     place: IndexedPlace;
     /*
-     * Where the caller itself stands, set only when `place` is another project `--project` reached:
+     * Where the caller itself stands, set only when `place` is another project `project` reached:
      * whatever judges the caller (its kind, whether it is a chat) reads this one, never `place`.
      */
     origin?: IndexedPlace;
@@ -69,7 +70,7 @@ export type ServerActionCall = ActionCall<ServerActionContext>;
 export function hostService<Key extends keyof CanvasHost>(context: ServerActionContext, key: Key, code: string, message: string): NonNullable<CanvasHost[Key]> {
     const service = context.host[key];
     if (!service) {
-        throw new VerbRefusal(code, message);
+        throw new ToolRefusal(code, message);
     }
 
     return service;
@@ -86,7 +87,7 @@ export function youAre(kind: string | null): string {
 }
 
 /* Refuses a caller that is no AI chat, with `refusal` given what it is instead. */
-export async function requireChatCaller(context: ServerActionContext, caller: string, refusal: (you: string) => VerbRefusal): Promise<void> {
+export async function requireChatCaller(context: ServerActionContext, caller: string, refusal: (you: string) => ToolRefusal): Promise<void> {
     const kind = await callerNodeKind(context, caller);
     if (kind !== 'chat') {
         throw refusal(youAre(kind));
@@ -123,14 +124,14 @@ function contextOf(host: CanvasHost, place: IndexedPlace | null): ServerActionCo
     return {
         host,
         get place(): IndexedPlace {
-            throw new VerbRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
+            throw new ToolRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
         }
     };
 }
 
 /*
  * Whoever calls the daemon's actions is a session or a chat of a project, so the actor is an agent under that id.
- * `origin` is the caller's own place when `place` is another project `--project` reached.
+ * `origin` is the caller's own place when `place` is another project `project` reached.
  */
 export function serverActionCall(
     host: CanvasHost,
@@ -187,11 +188,11 @@ export function voiceActionCall(host: CanvasHost, place: IndexedPlace | null, vo
     };
 }
 
-export function noVoiceProject(): VerbRefusal {
-    return new VerbRefusal('no-project', 'Voice works in no project now; list the projects of this machine and switch to one first');
+export function noVoiceProject(): ToolRefusal {
+    return new ToolRefusal('no-project', 'Voice works in no project now; list the projects of this machine and switch to one first');
 }
 
 /* The caller in the shape the canvas helpers take, which ask who it is and who made what. */
-export function verbCallOf(call: ServerActionCall): VerbCall {
+export function agentCallOf(call: ServerActionCall): AgentCall {
     return { caller: call.actor.id, host: call.context.host };
 }

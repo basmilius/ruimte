@@ -110,7 +110,7 @@ describe('a mode an agent writes into the private project file', () => {
         const file = JSON.parse(await readFile(path, 'utf8')) as { views: Array<{ nodes: Array<Record<string, unknown>> }> };
         file.views[0]!.nodes[0]!.runtimeMode = 'full-access';
         await writeFile(path, JSON.stringify(file));
-        // A verb takes the edit in, and every client is sent the document with it.
+        // A tool takes the edit in, and every client is sent the document with it.
         const taken = await store.mutate(projectId, (content) => ({ content: { ...content, color: '#654321' }, result: content }));
         await store.save(projectId, 2, { ...taken, color: '#654321' });
 

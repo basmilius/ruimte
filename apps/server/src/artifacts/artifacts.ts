@@ -26,7 +26,7 @@ import {
 } from '@ruimte/contracts';
 import { KeyedSerializer } from '@adecore/agents';
 import { WatchedSinks } from '@adecore/agents/host';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import { sniffMime } from '../fs/sniff.ts';
 import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
@@ -40,7 +40,7 @@ import { realOrNull } from '../fs/real-path.ts';
 // One agent with this many publishes half sent holds them all; the next waits until one is done.
 export const MAX_OPEN_UPLOADS = 8;
 
-// What `artifact read` prints of a text file; past it the agent reads the rest from its own copy.
+// What `artifact_read` prints of a text file; past it the agent reads the rest from its own copy.
 export const MAX_READ_BYTES = 256 * 1024;
 
 interface ArtifactReading {

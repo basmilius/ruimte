@@ -1,17 +1,23 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult } from '@modelcontextprotocol/server';
 import { bearerCaller } from '../agents/bearer.ts';
-import { callerKind } from '../canvas/tasks.ts';
-import { VerbRefusal, type CanvasHost } from '../canvas/verb.ts';
+import { callerKind } from '../tools/tasks.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { errorText } from '../error-text.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { VERSION } from '../version.ts';
-import { catalog, catalogNames, withToolNames, type Tool, type ToolContext } from './catalog.ts';
-import { withFieldNames } from './fields.ts';
+import { catalog, type Tool, type ToolContext } from './catalog.ts';
 import { AgentFiles } from './files.ts';
 import { MCP_INSTRUCTIONS } from './instructions.ts';
 import type { ArtifactUploads } from './uploads.ts';
 
 export { MCP_PATH } from '../providers/ruimte-mcp.ts';
+
+/*
+ * How long a tool call may take before the server drops it, in seconds. Bun ends a request after 10 s of
+ * silence, and a computer tool may hold 110 s for a card or a pause and then wait 110 s for its window.
+ */
+export const MCP_REQUEST_TIMEOUT_S = 240;
 
 /* The largest picture a tool hands back as image content; a larger one is still named by its path. */
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -40,13 +46,9 @@ export async function visibleTools(caller: string, host: CanvasHost): Promise<To
     return catalog().filter((tool) => shown[tool.audience]);
 }
 
-/* A refusal as a model reads it: the code and sentence first, then only what the call would accept, without pointers to CLI help. */
+/* A refusal as a model reads it: the code and sentence first, then only what the call would accept. */
 export function refusalResult(code: string, message: string, lines: readonly string[]): CallToolResult {
-    const names = catalogNames();
-    const said = (text: string): string => withFieldNames(withToolNames(text, names));
-    const kept = lines.filter((line) => !line.startsWith('usage\t') && !(line.startsWith('detail\t') && /\bhelp\b/.test(line))).map(said);
-
-    return { isError: true, content: [{ type: 'text', text: [`refused ${code}: ${said(message)}`, ...kept].join('\n') }] };
+    return { isError: true, content: [{ type: 'text', text: [`refused ${code}: ${message}`, ...lines].join('\n') }] };
 }
 
 async function imageContent(path: string): Promise<CallToolResult['content'][number] | null> {
@@ -75,7 +77,7 @@ export async function callTool(tools: readonly Tool[], name: string, input: Read
             content: [{ type: 'text', text: outcome.lines.join('\n') }, ...images.filter((image): image is NonNullable<typeof image> => image !== null)]
         };
     } catch (e) {
-        if (e instanceof VerbRefusal) {
+        if (e instanceof ToolRefusal) {
             return refusalResult(e.code, e.message, e.lines);
         }
 
@@ -96,7 +98,7 @@ function toolContext(caller: string, deps: McpDeps): ToolContext {
         const place = deps.host.projects.locate(caller);
 
         if (place === null) {
-            throw new VerbRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
+            throw new ToolRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
         }
 
         return AgentFiles.of(place.folder, await deps.host.checkouts.paths(place.folder), deps.callerFolders?.(caller) ?? []);

@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '@adecore/agents/testing';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, releasedProject, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
 
 function content(): ProjectContent {
     return {
@@ -43,7 +43,11 @@ afterEach(async () => {
 });
 
 function operation(caller: string, id: string): Promise<string[]> {
-    return runVerb(daemon, caller, 'operation', ['get', id]);
+    return invokeTool(daemon, caller, 'operation_get', { id });
+}
+
+function cancel(caller: string, id: string): Promise<string[]> {
+    return invokeTool(daemon, caller, 'operation_cancel', { id });
 }
 
 function firstTurnDone(chatId: string): boolean {
@@ -56,7 +60,7 @@ function firstTurnDone(chatId: string): boolean {
 }
 
 test('a start with a task is queued until the outbox runs it, running while the task is open, and completed once it is done', async () => {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--task', 'Lexer', '--prompt', 'fix the lexer']);
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, task: 'Lexer', prompt: 'fix the lexer' });
     const [child, , , , , taskId] = line!.split('\t');
     const id = `agent.start:${child}`;
 
@@ -69,7 +73,7 @@ test('a start with a task is queued until the outbox runs it, running while the 
     await daemon.worker.settled();
     expect(await operation('chat-lead', id)).toEqual([`operation\t${id}\tagent.start\trunning`, `agent\t${child}\trunning\t${taskId}\tits task is open`]);
 
-    await runVerb(daemon, child!, 'done', ['--result', 'fixed']);
+    await invokeTool(daemon, child!, 'task_done', { result: 'fixed' });
     // The wake it owes the lead runs before anything is torn down.
     await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'wake-parent'));
     await daemon.worker.settled();
@@ -77,7 +81,7 @@ test('a start with a task is queued until the outbox runs it, running while the 
 });
 
 test('a start without a task is completed once the agent ran its first turn', async () => {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--prompt', 'say hello']);
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', prompt: 'say hello' });
     const child = line!.split('\t')[0]!;
 
     daemon.worker.start();
@@ -91,7 +95,7 @@ test('a start without a task is completed once the agent ran its first turn', as
 });
 
 test('a cancelled start reads cancelled once its turn stopped, and not completed', async () => {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--prompt', 'slow']);
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', prompt: 'slow' });
     const child = line!.split('\t')[0]!;
     const id = `agent.start:${child}`;
 
@@ -99,7 +103,7 @@ test('a cancelled start reads cancelled once its turn stopped, and not completed
     await daemon.worker.settled();
     await daemon.until(() => daemon.chats.get(child)?.info.status === 'running');
 
-    const [cancelled] = await runVerb(daemon, 'chat-lead', 'operation', ['cancel', id]);
+    const [cancelled] = await cancel('chat-lead', id);
     expect(cancelled).toStartWith(`operation\t${id}\tcancelled\t${child}: its turn is told to stop`);
     await daemon.until(() => daemon.chats.get(child)?.info.status === 'idle');
 
@@ -114,7 +118,7 @@ test('a team is one operation over its roles, and only the one who started it ma
         { title: 'One', prompt: 'a', provider: 'claude', terminal: true },
         { title: 'Two', prompt: 'b', provider: 'claude', terminal: true }
     ];
-    const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--roles', JSON.stringify(roles)]);
+    const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', roles: JSON.stringify(roles) });
     const ids = lines.slice(1).map((row) => row.split('\t')[0]!);
     const id = `team.start:${ids.join(',')}`;
 
@@ -128,13 +132,13 @@ test('a team is one operation over its roles, and only the one who started it ma
 });
 
 test('a node that is no agent the caller started names no operation, even one the caller made', async () => {
-    const [note] = (await runVerb(daemon, 'chat-lead', 'node', ['new', 'note', '--text', 'hi']))[0]!.split('\t');
-    const [terminal] = (await runVerb(daemon, 'chat-lead', 'node', ['new', 'terminal']))[0]!.split('\t');
-    const [agent] = (await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--prompt', 'a']))[0]!.split('\t');
+    const [note] = (await invokeTool(daemon, 'chat-lead', 'node_new', { kind: 'note', text: 'hi' }))[0]!.split('\t');
+    const [terminal] = (await invokeTool(daemon, 'chat-lead', 'node_new', { kind: 'terminal' }))[0]!.split('\t');
+    const [agent] = (await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, prompt: 'a' }))[0]!.split('\t');
 
     for (const id of [`agent.start:${note}`, `agent.start:${terminal}`, `team.start:${agent},${note}`, 'agent.start:term-other']) {
         expect((await operation('chat-lead', id))[0]).toStartWith(`refused\tunknown-operation\t`);
-        expect((await runVerb(daemon, 'chat-lead', 'operation', ['cancel', id]))[0]).toStartWith(`refused\tunknown-operation\t`);
+        expect((await cancel('chat-lead', id))[0]).toStartWith(`refused\tunknown-operation\t`);
     }
     expect((await operation('term-other', `agent.start:${agent}`))[0]).toStartWith('refused\tnot-yours\t');
     expect((await operation('chat-lead', `agent.start:${agent}`))[0]).toBe(`operation\tagent.start:${agent}\tagent.start\tqueued`);

@@ -3,7 +3,7 @@ import type { ServerWebSocket } from 'bun';
 import type { ChatItem, ProjectContent, ProjectSummary } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
 import { serverActions } from '../actions/server-actions.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { connectionOpener, socketChannel, type ConnectionServices, type SocketChannel, type OpenConnection } from '../connection.ts';
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
 import { registerVoiceHandlers } from '../handlers/voice.ts';

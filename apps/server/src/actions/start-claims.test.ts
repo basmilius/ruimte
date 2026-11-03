@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ActionRefusal } from '@ruimte/actions';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { codeOf } from '../fs/test-boundary.ts';
 import { StartClaims, startInputHash, type StartClaim } from './start-claims.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
@@ -84,7 +84,7 @@ describe('StartClaims', () => {
     });
 
     test.each([
-        ['a verb refusal', () => new VerbRefusal('no-room', 'The canvas is full')],
+        ['a tool refusal', () => new ToolRefusal('no-room', 'The canvas is full')],
         ['an action refusal', () => new ActionRefusal('no-room', 'The canvas is full')]
     ])('%s frees the id, since nothing was made', async (_name, refusal) => {
         const store = await loaded();

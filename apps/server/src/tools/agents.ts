@@ -1,6 +1,7 @@
 import { type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
+import { ToolRefusal } from '@adecore/agents/context';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { BUILT_IN_KINDS } from '../providers/kinds.ts';
 import { offeredAgentKinds, providerFor } from '../providers/registry.ts';
@@ -8,7 +9,7 @@ import { MAX_LINKS } from './links.ts';
 import { narrowerMode } from '@adecore/agents/providers';
 import type { placeInGroup, Rect } from './placement.ts';
 import { readPromptFile } from './project-paths.ts';
-import { VerbRefusal, field, orNote, type CanvasHost, type VerbCall } from './verb.ts';
+import { field, orNote, type CanvasHost, type AgentCall } from './host.ts';
 
 export const AGENT_KINDS = BUILT_IN_KINDS;
 
@@ -17,9 +18,6 @@ export function agentKindField(what: string) {
     const message = () => `${what} needs a CLI: ${offeredAgentKinds().join(', ')}`;
     return z.string({ error: message }).refine((kind) => offeredAgentKinds().includes(kind), { error: message });
 }
-
-export const REGISTRY_KINDS_LINE =
-    'kinds\tregistry\tAn agent a person installed from the ACP registry is named by its kind, and is a chat only; provider_info lists them';
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
 export function chatKinds(): AgentKind[] {
@@ -67,14 +65,14 @@ export function agentNode(spec: AgentNodeSpec): ProjectNode {
  * its project or that order says. One the child's project turned off is dropped rather than refused,
  * since nobody chose it. Never one the agent picks, since an account is someone's costs.
  */
-export function inheritedAccount(call: VerbCall, kind: AgentKind, projectId: string): string | undefined {
+export function inheritedAccount(call: AgentCall, kind: AgentKind, projectId: string): string | undefined {
     const opener = call.host.starts.accountOf?.(call.caller) ?? null;
     const account = opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
     return account !== undefined && call.host.starts.accountsOff?.(projectId, kind).includes(account) ? undefined : account;
 }
 
 /* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */
-export function terminalMode(call: VerbCall, requested: RuntimeMode | undefined, ceiling: RuntimeMode): RuntimeMode {
+export function terminalMode(call: AgentCall, requested: RuntimeMode | undefined, ceiling: RuntimeMode): RuntimeMode {
     return requested ?? narrowerMode(call.host.starts.terminalModePreference() ?? DEFAULT_RUNTIME_MODE, ceiling);
 }
 
@@ -104,7 +102,7 @@ export function grownGroup(group: ProjectNode, placement: ReturnType<typeof plac
 export function readsOf(ids: readonly string[] | null): string[] {
     const reads = [...new Set(ids ?? [])];
     if (reads.length > MAX_LINKS) {
-        throw new VerbRefusal('too-many-links', `--reads names ${reads.length} nodes and at most ${MAX_LINKS} may be linked at once`);
+        throw new ToolRefusal('too-many-links', `reads names ${reads.length} nodes and at most ${MAX_LINKS} may be linked at once`);
     }
     return reads;
 }
@@ -114,7 +112,7 @@ export function requireInstalled(installed: readonly AgentKind[], kind: AgentKin
     if (installed.includes(kind)) {
         return;
     }
-    throw new VerbRefusal(
+    throw new ToolRefusal(
         'cli-not-installed',
         `${role === undefined ? '' : `${role}: `}${nameOf(kind)} is not installed on this machine`,
         installed.length === 0 ? ['note\tNo agent CLI is installed on this machine'] : installed.map((candidate) => `cli\t${candidate}\t${nameOf(candidate)}`)
@@ -124,7 +122,7 @@ export function requireInstalled(installed: readonly AgentKind[], kind: AgentKin
 /* The first prompt, from whichever field carried it, checked against the one length a line into a shell survives. */
 export async function startPrompt(prompt: string | null, promptFile: string | null, host: CanvasHost, folder: string): Promise<string | null> {
     if (prompt !== null && promptFile !== null) {
-        throw new VerbRefusal('prompt-twice', '--prompt and --prompt-file both say what to start on; give one of them');
+        throw new ToolRefusal('prompt-twice', 'prompt and promptFile both say what to start on; give one of them');
     }
     let text = prompt;
     if (promptFile !== null) {
@@ -135,10 +133,10 @@ export async function startPrompt(prompt: string | null, promptFile: string | nu
     }
     text = text.trim();
     if (text === '') {
-        throw new VerbRefusal('empty-prompt', 'The prompt is empty; leave the flag out to open an agent that waits for its person');
+        throw new ToolRefusal('empty-prompt', 'The prompt is empty; leave prompt out to open an agent that waits for its person');
     }
     if (text.length > MAX_PROMPT_LENGTH) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'prompt-too-long',
             `The prompt is ${text.length} characters and at most ${MAX_PROMPT_LENGTH} fit on the line a CLI is started with; put the rest in a file and tell the agent to read it`
         );

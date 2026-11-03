@@ -37,7 +37,7 @@ function isStoredSecret(value: unknown): value is StoredSecret {
 /*
  * The secrets a person typed into a card, one file per project under `$RUIMTE_HOME/secrets`, keyed on
  * launch and variable. Files are 0600 in a 0700 folder and replaced whole, so a crash leaves the old
- * file or the new one. Nothing here is a client's to read: `MachineHome` refuses the folder, no verb
+ * file or the new one. Nothing here is a client's to read: `MachineHome` refuses the folder, no tool
  * reads it, and the only reader is the start of a launch, which puts a value into that process's
  * environment and nowhere else.
  */

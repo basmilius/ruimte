@@ -16,13 +16,14 @@ import {
     type NodeTitleSource,
     type ProjectView
 } from '@ruimte/contracts';
-import { checkUrl, newId } from '../canvas/nodes.ts';
-import { checkPath } from '../canvas/project-paths.ts';
-import { VerbRefusal, orNote } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { checkUrl, newId } from '../tools/nodes.ts';
+import { checkPath } from '../tools/project-paths.ts';
+import { orNote } from '../tools/host.ts';
 import {
     ID_PREFIX,
     MAX_PROJECT_VIEWS,
-    VIEW_KIND_FLAGS,
+    VIEW_KIND_FIELDS,
     deleteReason,
     iconChoice,
     madeView,
@@ -32,7 +33,7 @@ import {
     type TableParts,
     viewLines,
     viewNamed
-} from '../canvas/views.ts';
+} from '../tools/views.ts';
 import type { ServerActionContext } from './context.ts';
 import { databasesOf } from './database-actions.ts';
 
@@ -67,50 +68,50 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         };
     },
     'view.create': async ({ kind, name, url, command, path, provider, after, connection, schema, table, mode, where }, { actor, context }) => {
-        // Only `agent` starts anything, so a view an agent makes opens empty.
+        // Only `agent_start` starts anything, so a view an agent makes opens empty.
         if (command !== null || provider !== null) {
-            throw new VerbRefusal('starts-nothing', 'view new opens a chat or a terminal empty; agent_start is what starts a CLI');
+            throw new ToolRefusal('starts-nothing', 'view_new opens a chat or a terminal empty; agent_start is what starts a CLI');
         }
         if (name === null) {
-            throw new VerbRefusal('bad-arguments', 'view new needs a name');
+            throw new ToolRefusal('bad-arguments', 'view_new needs a name');
         }
         // The registry keeps a device view to a person, and no person reaches the daemon's executor.
         if (kind === 'device') {
-            throw new VerbRefusal('bad-arguments', 'view new makes no device view; a person opens one from the devices panel');
+            throw new ToolRefusal('bad-arguments', 'view_new makes no device view; a person opens one from the devices panel');
         }
         if (kind === 'design') {
-            throw new VerbRefusal('bad-arguments', 'view new makes no design; a person makes one from New view');
+            throw new ToolRefusal('bad-arguments', 'view_new makes no design; a person makes one from New view');
         }
         const given = { path, url };
         for (const flag of ['path', 'url'] as const) {
-            if (given[flag] !== null && VIEW_KIND_FLAGS[kind] !== flag) {
-                throw new VerbRefusal('flag-not-for-kind', `--${flag} does not go with a ${kind} view`, [
-                    `kind\t${kind}\t${VIEW_KIND_FLAGS[kind] === undefined ? 'takes neither --path nor --url' : `--${VIEW_KIND_FLAGS[kind]} (required)`}`,
-                    `flag\t--path\t${viewKindsFor('path')}`,
-                    `flag\t--url\t${viewKindsFor('url')}`
+            if (given[flag] !== null && VIEW_KIND_FIELDS[kind] !== flag) {
+                throw new ToolRefusal('flag-not-for-kind', `${flag} does not go with a ${kind} view`, [
+                    `kind\t${kind}\t${VIEW_KIND_FIELDS[kind] === undefined ? 'takes neither path nor url' : `${VIEW_KIND_FIELDS[kind]} (required)`}`,
+                    `field\tpath\t${viewKindsFor('path')}`,
+                    `field\turl\t${viewKindsFor('url')}`
                 ]);
             }
         }
-        const required = VIEW_KIND_FLAGS[kind];
+        const required = VIEW_KIND_FIELDS[kind];
         if (required && given[required] === null) {
-            throw new VerbRefusal('missing-flag', `A ${kind} view needs --${required}`, [`kind\t${kind}\t--${required} (required)`]);
+            throw new ToolRefusal('missing-flag', `A ${kind} view needs ${required}`, [`kind\t${kind}\t${required} (required)`]);
         }
         const tableFlags = { connection, schema, table, mode, where };
         if (kind !== 'database') {
             const stray = Object.entries(tableFlags).find(([, value]) => value != null);
             if (stray !== undefined) {
-                throw new VerbRefusal('flag-not-for-kind', `--${stray[0]} does not go with a ${kind} view`, [
-                    'kind\tdatabase\t--connection and --table (required), --schema, --mode and --where'
+                throw new ToolRefusal('flag-not-for-kind', `${stray[0]} does not go with a ${kind} view`, [
+                    'kind\tdatabase\tconnection and table (required), schema, mode and where'
                 ]);
             }
         } else {
             for (const flag of ['connection', 'table'] as const) {
                 if (tableFlags[flag] == null) {
-                    throw new VerbRefusal('missing-flag', `A database view needs --${flag}`, ['kind\tdatabase\t--connection and --table (required)']);
+                    throw new ToolRefusal('missing-flag', `A database view needs ${flag}`, ['kind\tdatabase\tconnection and table (required)']);
                 }
             }
             if (where != null && mode === 'structure') {
-                throw new VerbRefusal('bad-arguments', '--where filters rows, so it goes with --mode data and not with --mode structure');
+                throw new ToolRefusal('bad-arguments', 'where filters rows, so it goes with mode data and not with mode structure');
             }
         }
 
@@ -130,10 +131,10 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
 
         return context.host.projects.mutate(context.place.projectId, (content) => {
             if (content.views.length + 1 > MAX_PROJECT_VIEWS) {
-                throw new VerbRefusal('too-many-views', `This project has ${content.views.length} views and a project holds at most ${MAX_PROJECT_VIEWS}`);
+                throw new ToolRefusal('too-many-views', `This project has ${content.views.length} views and a project holds at most ${MAX_PROJECT_VIEWS}`);
             }
             if (after != null) {
-                viewNamed(content, after, '--after');
+                viewNamed(content, after, 'after');
             }
             const id = newId(ID_PREFIX[kind] ?? 'view', content);
             const view = madeView(kind, id, name, actor.id, {
@@ -183,7 +184,7 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         return context.host.projects.mutate(context.place.projectId, (content) => {
             const view = viewNamed(content, viewId, 'view icon');
             if (isDividerView(view)) {
-                throw new VerbRefusal('not-markable', `${viewId} is a ${view.kind}, a row that divides the sidebar and has no room for a mark`);
+                throw new ToolRefusal('not-markable', `${viewId} is a ${view.kind}, a row that divides the sidebar and has no room for a mark`);
             }
             const views = withViewIcon(content.views, viewId, icon);
             return {
@@ -197,9 +198,9 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
             const view = viewNamed(content, viewId, 'view move');
             let toIndex = 0;
             if (afterViewId !== null) {
-                const after = viewNamed(content, afterViewId, '--after');
+                const after = viewNamed(content, afterViewId, 'after');
                 if (after.id === viewId) {
-                    throw new VerbRefusal('two-places', 'view move cannot put a view under itself');
+                    throw new ToolRefusal('two-places', 'view move cannot put a view under itself');
                 }
                 // The index is read off the list without the view, since that is where it is put back.
                 toIndex = content.views.filter((candidate) => candidate.id !== viewId).findIndex((candidate) => candidate.id === after.id) + 1;
@@ -243,10 +244,10 @@ export const viewActions: ActionHandlers<ServerActionContext> = {
         const openable = (): string[] => orNote(viewLines(content.views.filter(isOpenableView)), 'This project has no view that opens');
         const view = content.views.find((candidate) => candidate.id === viewId);
         if (!view) {
-            throw new VerbRefusal('unknown-view', `${viewId} is not a view of this project`, [...openable(), 'note\tview open takes a view id, never a name']);
+            throw new ToolRefusal('unknown-view', `${viewId} is not a view of this project`, [...openable(), 'note\tview open takes a view id, never a name']);
         }
         if (!isOpenableView(view)) {
-            throw new VerbRefusal('never-opens', `${viewId} is a ${view.kind} and has nothing to show`, openable());
+            throw new ToolRefusal('never-opens', `${viewId} is a ${view.kind} and has nothing to show`, openable());
         }
         const delivered = context.host.projects.showView(context.place.projectId, viewId, actor.id);
         return { output: { viewId, view: view.name ?? viewId, kind: kindOf(view), changed: delivered, delivered } };

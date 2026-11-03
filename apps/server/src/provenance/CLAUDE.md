@@ -2,7 +2,7 @@
 
 `apps/server/README.md` has the format and the requests.
 
-- It lives under `$RUIMTE_HOME/provenance`, written only by the daemon. A client reads it and sets a review state; no verb reaches it.
+- It lives under `$RUIMTE_HOME/provenance`, written only by the daemon. A client reads it and sets a review state; no tool reaches it.
 - It is an observer (`ChatCore.observe`) and only notes: nothing waits on it, nothing acts on it, a failure is logged and forgotten, and no handler starts work beyond its own file.
 - A write is found again on disk, never trusted from the tool call, which only says which hunks are the agent's (`WriteSignature`). Diff against the turn's checkpoint tree first, the file's record second.
 - A run from the checkpoint alone is `via: 'checkpoint'`, a guess. When HEAD moved in a turn, a touched file gets such a run only if it differs from the new HEAD, and an unreadable move claims nothing. A run noted over a checkpoint that already differed from the turn's starting HEAD is not dropped against HEAD at note time.

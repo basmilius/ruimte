@@ -40,5 +40,5 @@
     "chats": ["standalone"],
     "references": ["research", "sketch"]
   },
-  "note": "The person referenced views and nodes of this project in this message. Read each with the tool call beside it before you answer.\n- \"Release notes\" (chat): `context_read standalone` · message it with `notify standalone`\n- \"Research\" (note on \"Planning\"): `context_read research` · write with `node_edit research`\n- \"Sketch\" (drawing): `context_read sketch` · see its elements with `context_read sketch --elements` · write with `view_drawing sketch --revision R`\nWhen you refer back to one of them, write `#` and its name exactly as listed (#Name), and the person can open it from your answer."
+  "note": "The person referenced views and nodes of this project in this message. Read each with the tool call beside it before you answer.\n- \"Release notes\" (chat): `context_read standalone` · message it with `notify standalone`\n- \"Research\" (note on \"Planning\"): `context_read research` · write with `node_edit research`\n- \"Sketch\" (drawing): `context_read sketch` · see its elements with `context_read sketch form elements` · write with `view_drawing sketch revision R`\nWhen you refer back to one of them, write `#` and its name exactly as listed (#Name), and the person can open it from your answer."
 }

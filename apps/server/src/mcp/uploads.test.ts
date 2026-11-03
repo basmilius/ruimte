@@ -3,7 +3,7 @@ import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentFiles } from './files.ts';
-import { attachmentFlags, stageArtifact, type ArtifactUploads } from './uploads.ts';
+import { stageArtifact, type ArtifactUploads } from './uploads.ts';
 
 let root: string;
 let files: AgentFiles;
@@ -41,21 +41,21 @@ afterEach(async () => {
 });
 
 describe('stageArtifact', () => {
-    test('stages every file under the request id and names them for the verb', async () => {
+    test('stages every file under the request id and names them for the publish', async () => {
         await writeFile(join(root, 'report.md'), '# Report');
         await writeFile(join(root, 'empty.txt'), '');
         const uploads = memoryUploads();
 
-        const flags = await stageArtifact(uploads, files, 'chat-1', ['report.md', 'empty.txt'], 'r1');
+        const staged = await stageArtifact(uploads, files, 'chat-1', ['report.md', 'empty.txt'], 'r1');
 
-        expect(flags).toEqual([
-            '--request-id=r1',
-            '--upload=r1',
-            `--files=${JSON.stringify([
+        expect(staged).toEqual({
+            requestId: 'r1',
+            upload: 'r1',
+            files: [
                 { name: 'report.md', size: 8 },
                 { name: 'empty.txt', size: 0 }
-            ])}`
-        ]);
+            ]
+        });
         expect(uploads.held.get('r1')?.map((bytes) => Buffer.from(bytes).toString())).toEqual(['# Report', '']);
     });
 
@@ -74,20 +74,5 @@ describe('stageArtifact', () => {
 
         await expect(stageArtifact(uploads, files, 'chat-1', ['/etc/hosts'], 'r1')).rejects.toMatchObject({ code: 'path-outside' });
         expect(uploads.held.size).toBe(0);
-    });
-});
-
-describe('attachmentFlags', () => {
-    test('a file that is no image or model is refused', async () => {
-        await writeFile(join(root, 'notes.txt'), 'plain text');
-
-        await expect(attachmentFlags(files, 'notes.txt', undefined)).rejects.toMatchObject({ code: 'attach-not-image' });
-    });
-
-    test('an image goes as its name and its bytes', async () => {
-        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, ...new Array(17).fill(0)]);
-        await writeFile(join(root, 'shot.png'), png);
-
-        expect(await attachmentFlags(files, 'shot.png', undefined)).toEqual(['--name=shot.png', `--data=${png.toString('base64')}`]);
     });
 });

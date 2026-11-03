@@ -3,7 +3,7 @@ import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
 import { runningInBackground } from '@adecore/agents/chat';
 import type { AgentEvent } from '@adecore/agents/host';
 import { z } from 'zod';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
@@ -95,7 +95,7 @@ function lastTurn(items: readonly ChatItem[]): ChatTurnItem | null {
     return items.findLast((item): item is ChatTurnItem => item.kind === 'turn') ?? null;
 }
 
-/* What a turn of the chat leaves the agent to read about the run, said in the words its launches verb takes. */
+/* What a turn of the chat leaves the agent to read about the run, said in the words its launches tool takes. */
 function endedPreamble(name: string, launchId: string, status: LaunchStatus): string {
     return `${endedText(name, status)} It ran in your worktree after your last turn; launch_read ${launchId} shows its output.`;
 }

@@ -1,7 +1,7 @@
 import { lstat, readdir, stat } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
+import { ToolRefusal } from '@adecore/agents/context';
 import { climbsOut } from '../fs/path-segment.ts';
-import { VerbRefusal } from './verb.ts';
 import { realOrNull } from '../fs/real-path.ts';
 
 export function isInside(root: string, path: string): boolean {
@@ -16,7 +16,7 @@ interface InsideRule {
 }
 
 /*
- * The folders a verb may hand to a node or read a file from: the project folder and the worktrees
+ * The folders a tool may hand to a node or read a file from: the project folder and the worktrees
  * of its repository. An agent must not reach outside the project the person opened it in. Compared
  * on real paths, so neither a symlink inside the folder nor `/tmp` against `/private/tmp` decides it.
  */
@@ -30,7 +30,7 @@ async function checkInsideProject(
     const resolved = resolve(folder, path);
     const real = await realOrNull(resolved);
     if (real === null) {
-        throw new VerbRefusal(rule.badCode, `${resolved} is not there; ${rule.flag} is resolved against the project folder unless it is absolute`);
+        throw new ToolRefusal(rule.badCode, `${resolved} is not there; ${rule.flag} is resolved against the project folder unless it is absolute`);
     }
     const realFolder = await realOrNull(folder);
     if (realFolder !== null && isInside(realFolder, real)) {
@@ -40,7 +40,7 @@ async function checkInsideProject(
     const roots = await Promise.all([...paths, ...also].map(realOrNull));
     if (!roots.some((root) => root !== null && isInside(root, real))) {
         // The paths as git has them, not the real ones the comparison ran on: those are what a caller can type back.
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             rule.outsideCode,
             `${resolved} is outside ${folder}${also.length > 0 ? ', the other folders below' : ''} and the worktrees of its repository`,
             [
@@ -53,17 +53,17 @@ async function checkInsideProject(
     return { resolved, real };
 }
 
-const CWD_RULE: InsideRule = { flag: '--cwd', badCode: 'bad-cwd', outsideCode: 'cwd-outside-project' };
-const PROMPT_FILE_RULE: InsideRule = { flag: '--prompt-file', badCode: 'bad-prompt-file', outsideCode: 'prompt-file-outside-project' };
-const RESULT_FILE_RULE: InsideRule = { flag: '--result-file', badCode: 'bad-result-file', outsideCode: 'result-file-outside-project' };
+const CWD_RULE: InsideRule = { flag: 'cwd', badCode: 'bad-cwd', outsideCode: 'cwd-outside-project' };
+const PROMPT_FILE_RULE: InsideRule = { flag: 'promptFile', badCode: 'bad-prompt-file', outsideCode: 'prompt-file-outside-project' };
+const RESULT_FILE_RULE: InsideRule = { flag: 'resultFile', badCode: 'bad-result-file', outsideCode: 'result-file-outside-project' };
 const FILE_RULE: InsideRule = { flag: 'the path', badCode: 'bad-path', outsideCode: 'path-outside-project' };
-const DEVICE_PATH_RULE: InsideRule = { flag: '--path', badCode: 'device-path-refused', outsideCode: 'device-path-refused' };
+const DEVICE_PATH_RULE: InsideRule = { flag: 'path', badCode: 'device-path-refused', outsideCode: 'device-path-refused' };
 
 /* Where a shell or an agent may start: a directory inside the project folder or a worktree of it. */
 export async function checkCwd(folder: string, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> {
     const { resolved, real } = await checkInsideProject(folder, CWD_RULE, cwd, worktreePaths);
     if (!(await stat(real)).isDirectory()) {
-        throw new VerbRefusal('bad-cwd', `${resolved} is not a folder; --cwd is resolved against the project folder unless it is absolute`);
+        throw new ToolRefusal('bad-cwd', `${resolved} is not a folder; cwd is resolved against the project folder unless it is absolute`);
     }
     return resolved;
 }
@@ -77,7 +77,7 @@ interface StartCwdDeps {
 }
 
 /*
- * The cwd check again, at every start of a node an agent made. The verb checked a path that may be
+ * The cwd check again, at every start of a node an agent made. The tool checked a path that may be
  * a symlink, which anyone who can write in the folder can point elsewhere before a start, so only
  * the check right before the shell or the CLI spawns counts.
  */
@@ -88,7 +88,7 @@ export function startCwdGuard(deps: StartCwdDeps) {
         }
         const folder = deps.folderOf(nodeId);
         if (folder === null) {
-            throw new VerbRefusal(CWD_RULE.outsideCode, `${nodeId} is in no project this machine knows, so ${cwd} cannot be held against its folder`);
+            throw new ToolRefusal(CWD_RULE.outsideCode, `${nodeId} is in no project this machine knows, so ${cwd} cannot be held against its folder`);
         }
         await checkCwd(folder, cwd, deps.worktreePaths);
     };
@@ -102,7 +102,7 @@ async function insideFile(
 ): Promise<{ resolved: string; real: string }> {
     const inside = await checkInsideProject(folder, rule, path, worktreePaths);
     if (!(await stat(inside.real)).isFile()) {
-        throw new VerbRefusal(rule.badCode, `${inside.resolved} is not a file; ${rule.flag} is resolved against the project folder unless it is absolute`);
+        throw new ToolRefusal(rule.badCode, `${inside.resolved} is not a file; ${rule.flag} is resolved against the project folder unless it is absolute`);
     }
     return inside;
 }
@@ -158,7 +158,7 @@ export async function checkPath(folder: string, path: string): Promise<string> {
     const resolved = resolve(folder, path);
     const info = await stat(resolved).catch(() => null);
     if (!info?.isFile()) {
-        throw new VerbRefusal('bad-path', `${resolved} is not a file; --path is resolved against the project folder unless it is absolute`);
+        throw new ToolRefusal('bad-path', `${resolved} is not a file; path is resolved against the project folder unless it is absolute`);
     }
     return resolved;
 }

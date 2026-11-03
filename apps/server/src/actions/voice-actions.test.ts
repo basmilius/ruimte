@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { AgentInfo, ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { VoiceFollowHost } from '../voice/voice-follower.ts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from './context.ts';

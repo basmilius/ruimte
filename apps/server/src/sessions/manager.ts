@@ -11,7 +11,7 @@ import { isTerminalReply } from './terminal-replies.ts';
 import { offersKind } from '../providers/kinds.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { narrowerMode, launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers';
-import { contextHint, verbsNote } from '../context/context-note.ts';
+import { contextHint, toolsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { ShellEnvironment } from './shell-integration.ts';
@@ -120,10 +120,10 @@ export interface SessionManagerOptions {
     firstPrompt?: (sessionId: string) => Promise<string | null>;
     // Messages another node left for this one before it started, taken once and shown above the first prompt.
     firstNotices?: (sessionId: string) => string[];
-    // How deep a session sits in a chain of agents, which decides what the note about the verbs offers its CLI.
+    // How deep a session sits in a chain of agents, which decides what the note about the tools offers its CLI.
     depthOf?: (sessionId: string) => number;
     standalone?: (sessionId: string) => boolean;
-    // Whether computer use is on for this machine, which is when the note names the `computer` noun.
+    // Whether computer use is on for this machine, which is when the note names the `computer_*` tools.
     computerUse?: () => boolean;
     /* Whether agents may reach the machine's other open projects, read when a terminal agent starts. */
     reachOpenProjects?: () => boolean;
@@ -303,7 +303,7 @@ export class SessionManager {
 
     /*
      * One create per id at a time, and every caller shares its outcome. The daemon starts an agent
-     * node the moment a verb writes it while a client with that view open mounts it just as fast,
+     * node the moment a tool writes it while a client with that view open mounts it just as fast,
      * and two creates that both pass the check below would spawn two shells, one of them holding
      * the prompt and lost from the map.
      */
@@ -824,9 +824,9 @@ export class SessionManager {
         }
     }
 
-    /* The note about the verbs a CLI of this session starts with. */
+    /* The note about the tools a CLI of this session starts with. */
     private noteFor(sessionId: string): string {
-        return verbsNote({
+        return toolsNote({
             depth: this.depthOf(sessionId),
             standalone: this.standalone(sessionId),
             terminal: true,

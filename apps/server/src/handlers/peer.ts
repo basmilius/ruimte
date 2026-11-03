@@ -1,7 +1,7 @@
 import { isCanvasView, sessionNodesOfView, type PeerLink, type ProjectCanvasView, type ProjectEdge } from '@ruimte/contracts';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
-import { VerbRefusal } from '../canvas/verb.ts';
-import { checkCwd } from '../canvas/project-paths.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { checkCwd } from '../tools/project-paths.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import { peerCanvasId, type PeerLinks } from '../peering/links.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from '../peering/peer-canvas.ts';
@@ -117,7 +117,7 @@ export function registerPeerHandlers(dispatcher: Dispatcher, { links, lineage, t
         for (const node of nodes) {
             if (node.cwd !== undefined) {
                 await checkCwd(folder, node.cwd, worktreePaths).catch((e: unknown) => {
-                    throw e instanceof VerbRefusal ? new RequestError('cwd-outside', e.message) : e;
+                    throw e instanceof ToolRefusal ? new RequestError('cwd-outside', e.message) : e;
                 });
             }
         }

@@ -20,7 +20,7 @@ import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 /* The projects of this machine and the drawing and diagram files beside them. */
 export interface ProjectsBundle {
     store: ProjectStore;
-    /* What a retried `agent --request-id` answers with. */
+    /* What a retried `agent request_id` answers with. */
     startClaims: StartClaims;
     drawings: DrawingStore;
     diagrams: DiagramStore;

@@ -13,7 +13,7 @@ import type { DatabasePasswords } from './agent-passwords.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
 import { realOrSelf } from '../fs/real-path.ts';
 
-/* How long one verb may keep its session; past it the call is cancelled and its session closed. */
+/* How long one tool may keep its session; past it the call is cancelled and its session closed. */
 export const AGENT_DATABASE_LIMIT_MS = 120_000;
 
 /* The longest text or binary value a row prints whole; a longer one prints its start and its length. */
@@ -66,7 +66,7 @@ interface AgentExecution {
     inTransaction: boolean;
 }
 
-/* What the agents reach a project's databases through, the verbs' side of `AgentDatabases`. */
+/* What the agents reach a project's databases through, the tools' side of `AgentDatabases`. */
 export type DatabaseAgentHost = Pick<AgentDatabases, 'list' | 'tables' | 'describe' | 'query' | 'execute' | 'tableOf'>;
 
 interface AgentDatabasesOptions {
@@ -151,7 +151,7 @@ export function openConfig(connection: DatabaseConnection, passwordOf: (target: 
  * The databases of a project as its agents reach them, and what a person sets for that. Every call
  * opens a session of its own under an owner of its own and releases it before it answers, so no
  * session, transaction or temporary table outlives the call. A read runs on a session opened read
- * only; a write needs the connection set to `write` by a person, which no verb can do.
+ * only; a write needs the connection set to `write` by a person, which no tool can do.
  */
 export class AgentDatabases {
     private readonly options: AgentDatabasesOptions;
@@ -246,7 +246,7 @@ export class AgentDatabases {
         const connection = await this.named(place, wanted);
         const resolved = schema ?? startDatabaseOf(connection);
         if (resolved === null) {
-            refuse('schema-required', `${connection.name} starts in no database; name one with --schema`);
+            refuse('schema-required', `${connection.name} starts in no database; name one with schema`);
         }
         return { connectionId: connection.id, schema: resolved };
     }
@@ -458,7 +458,7 @@ export class AgentDatabases {
         const { schemas } = await call<{ schemas: SchemaInfo[] }>('schemas', {});
         refuse(
             'schema-required',
-            `${connection.name} starts in no database; name one with --schema`,
+            `${connection.name} starts in no database; name one with schema`,
             schemas.filter((schema) => !schema.system).map((schema) => `schema\t${schema.name}`)
         );
     }

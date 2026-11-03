@@ -25,7 +25,7 @@ export function leadProject(): ProjectContent {
     };
 }
 
-/* `leadProject` with a terminal beside the chat, for the verbs that only an AI chat may call. */
+/* `leadProject` with a terminal beside the chat, for the tools that only an AI chat may call. */
 export function leadAndShellProject(): ProjectContent {
     const project = leadProject();
     const [canvas] = project.views;

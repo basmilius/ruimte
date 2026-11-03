@@ -5,7 +5,7 @@ import { AttachmentStore, BookmarkStore, ChatStore, ClaudeTitleReader, VisualSto
 import { AgentStore } from '../agents/agent-store.ts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { startCwdGuard } from '../canvas/project-paths.ts';
+import { startCwdGuard } from '../tools/project-paths.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ruimteUiSources } from '../chat/ui-sources.ts';
 import { restartConnectPeers } from '../remote/connect-peer.ts';

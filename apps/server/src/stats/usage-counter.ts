@@ -57,7 +57,7 @@ export type UsageDayRecord = Omit<z.infer<typeof DaySchema>, 'counts' | 'timings
     timings: Partial<Record<UsageReportTiming, number[]>>;
 };
 
-/* A day as an older version kept it, under the report's names; a counter without one, such as a verb group, is dropped. */
+/* A day as an older version kept it, under the report's names; a counter without one, such as a tool group, is dropped. */
 function currentDay(day: z.infer<typeof DaySchema>): UsageDayRecord {
     const { timings, counts, ...description } = day;
     const current: UsageDayRecord = { ...description, counts: {}, timings: {} };

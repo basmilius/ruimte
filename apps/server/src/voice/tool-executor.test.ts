@@ -7,7 +7,7 @@ import { settle } from './voice-fakes.ts';
 import type { ProjectContent } from '@ruimte/contracts';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 
 const PLACE: IndexedPlace = { projectId: 'project-1', folder: '/work/app', canvasId: 'main' };

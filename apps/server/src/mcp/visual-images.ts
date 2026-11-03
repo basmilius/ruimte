@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { open, stat } from 'node:fs/promises';
 import { VISUAL_LIMITS } from '@ruimte/contracts';
-import { field } from '@adecore/agents/context';
+import { field, ToolRefusal } from '@adecore/agents/context';
 
 /*
  * A visual's page may name a local image by its absolute path, and the MCP tool puts that image in the
@@ -34,8 +34,6 @@ const SINGLE_QUOTE = 0x27;
 const BACKTICK = 0x60;
 const LINE_FEED = 0x0a;
 const CARRIAGE_RETURN = 0x0d;
-
-const HELP_LINE = 'detail\truimte-context help visual';
 
 interface ImageReference {
     /* Where the path stands in the page, without its quotes or `url(`. */
@@ -75,9 +73,11 @@ interface EmbedOptions {
     readonly files?: ImageFiles;
 }
 
-type PreparedPage =
-    | { readonly argv: string[]; readonly lines: string[] }
-    | { readonly refusal: { readonly code: string; readonly message: string; readonly lines: string[] } };
+interface PreparedPage {
+    readonly html: string;
+    /* One per local image a preview left as written. */
+    readonly lines: string[];
+}
 
 /* A directory, a device or a pipe under an image's name. */
 class NotAFile extends Error {}
@@ -577,9 +577,9 @@ function listed(problems: readonly ImageProblem[]): string {
     return problems.map((problem) => problem.path).join(', ');
 }
 
-/* What `visual show` is refused with when the page cannot go out with every image it names. */
+/* What `visual_show` is refused with when the page cannot go out with every image it names. */
 function showRefusal(page: EmbeddedPage, imageLimit: number, pageLimit: number): { code: string; message: string; lines: string[] } | null {
-    const lines = [...page.problems.map(problemLine), HELP_LINE];
+    const lines = page.problems.map(problemLine);
     const missing = page.problems.filter((problem) => problem.kind === 'missing');
     if (missing.length > 0) {
         const one = missing.length === 1;
@@ -608,39 +608,18 @@ function showRefusal(page: EmbeddedPage, imageLimit: number, pageLimit: number):
     return null;
 }
 
-/* Where the page is among the words: `--html=<page>`, or `--html` with the page after it. */
-function pageIndex(argv: readonly string[]): { index: number; inline: boolean } | null {
-    const index = argv.findIndex((word) => word === '--html' || word.startsWith('--html='));
-    if (index === -1) {
-        return null;
-    }
-    const inline = argv[index] !== '--html';
-    return inline || index + 1 < argv.length ? { index, inline } : null;
-}
-
 /*
- * The words of `visual show` or `visual preview` with the page's local images embedded. A show is
- * refused here when an image cannot go along, so nothing goes out; a preview embeds what it can and
- * hands back a line per image it left as written.
+ * The page of `visual_show` or `visual_preview` with its local images embedded. A show is refused
+ * here when an image cannot go along, so nothing goes out; a preview embeds what it can and hands
+ * back a line per image it left as written.
  */
-export async function prepareVisualPage(action: 'show' | 'preview', argv: string[], options: Omit<EmbedOptions, 'partial'> = {}): Promise<PreparedPage> {
-    const at = pageIndex(argv);
-    if (at === null) {
-        return { argv, lines: [] };
-    }
-    const html = at.inline ? argv[at.index]!.slice('--html='.length) : argv[at.index + 1]!;
+export async function prepareVisualPage(action: 'show' | 'preview', html: string, options: Omit<EmbedOptions, 'partial'> = {}): Promise<PreparedPage> {
     const page = await embedLocalImages(html, { ...options, partial: action === 'preview' });
     if (action === 'show') {
         const refusal = showRefusal(page, options.imageBytes ?? VISUAL_IMAGE_BYTES, options.pageBytes ?? VISUAL_LIMITS.bytes);
         if (refusal !== null) {
-            return { refusal };
+            throw new ToolRefusal(refusal.code, refusal.message, refusal.lines);
         }
     }
-    const words = [...argv];
-    if (at.inline) {
-        words[at.index] = `--html=${page.html}`;
-    } else {
-        words[at.index + 1] = page.html;
-    }
-    return { argv: words, lines: page.problems.map(problemLine) };
+    return { html: page.html, lines: page.problems.map(problemLine) };
 }

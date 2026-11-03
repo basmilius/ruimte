@@ -19,7 +19,7 @@ const StartAgentSchema = z.object({
         selection: ModelSelectionSchema.optional(),
         // Null starts where a session without a directory starts, which is the machine's home.
         cwd: z.string().nullable(),
-        // The mode `--mode` asked for, the mode of the chat that opened a chat, or the mode a terminal was written down with.
+        // The mode `mode` asked for, the mode of the chat that opened a chat, or the mode a terminal was written down with.
         runtimeMode: RuntimeModeSchema.optional(),
         // The mode of the node that opened it, which nothing the agent starts with may be wider than; absent on an older entry.
         ceiling: RuntimeModeSchema.optional(),
@@ -76,7 +76,7 @@ const StartRemoteAgentSchema = z.object({
         provider: AgentKindSchema,
         // The node here that gave the task, which that machine counts its agents under.
         parentId: z.string().min(1),
-        // What the verb asked and the mode its parent has; that machine narrows both again.
+        // What the tool asked and the mode its parent has; that machine narrows both again.
         mode: RuntimeModeSchema.optional(),
         ceiling: RuntimeModeSchema,
         depth: z.number().int().min(0),

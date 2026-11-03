@@ -49,7 +49,7 @@ export function recordTiming(timing: UsageReportTiming, ms: number): void {
     }
 }
 
-// What a person asks over the wire that counts, beside what agents do through their verbs; only once it was answered.
+// What a person asks over the wire that counts, beside what agents do through their tools; only once it was answered.
 const REQUEST_COUNTERS: Readonly<Record<string, readonly UsageReportCounter[]>> = {
     'browser.navigate': ['actions.browser'],
     'browser.command': ['actions.browser'],
@@ -84,8 +84,8 @@ function fieldOf(payload: unknown, name: string): unknown {
     return isRecord(payload) ? payload[name] : undefined;
 }
 
-// The verbs that also count on the day itself: what an agent delegates, and what it does in a feature a person can use too.
-const VERB_DAY_COUNTERS: Readonly<Record<string, UsageReportCounter>> = {
+// The tool counters that also count on the day itself: what an agent delegates, and what it does in a feature a person can use too.
+const TOOL_DAY_COUNTERS: Readonly<Record<string, UsageReportCounter>> = {
     agent: 'agents.delegated',
     team: 'teams.delegated',
     browser: 'actions.browser',
@@ -94,7 +94,7 @@ const VERB_DAY_COUNTERS: Readonly<Record<string, UsageReportCounter>> = {
     computer: 'actions.computer'
 };
 
-const VERBS: ReadonlySet<string> = new Set(Object.keys(USAGE_VERB_COUNTERS));
+const TOOL_COUNTERS: ReadonlySet<string> = new Set(Object.keys(USAGE_VERB_COUNTERS));
 const VIEW_KINDS: ReadonlySet<string> = new Set(Object.keys(USAGE_VIEW_COUNTERS));
 
 /*
@@ -120,12 +120,12 @@ export function countRequest(type: string, payload?: unknown): void {
     }
 }
 
-/* A `ruimte-context` verb that ran. */
-export function countVerb(name: string): void {
-    if (VERBS.has(name)) {
-        countUsage(`verbs.${name}` as UsageReportCounter);
+/* A tool call that ran, under its tool's counter; the `verbs.` keys are the usage report's own, kept from the CLI the tools replaced. */
+export function countToolCall(counter: string): void {
+    if (TOOL_COUNTERS.has(counter)) {
+        countUsage(`verbs.${counter}` as UsageReportCounter);
     }
-    const day = VERB_DAY_COUNTERS[name];
+    const day = TOOL_DAY_COUNTERS[counter];
     if (day !== undefined) {
         countUsage(day);
     }

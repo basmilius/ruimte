@@ -20,7 +20,7 @@ import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { ChatManager } from './chat-manager.ts';
-import { verbsNote } from '../context/context-note.ts';
+import { toolsNote } from '../context/context-note.ts';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
@@ -252,10 +252,10 @@ describe('forking a Claude chat', () => {
         await daemon.chats.create({ chatId: nodeId });
         await say(nodeId, 'go on');
         const reply = assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)!;
-        // The note about the verbs went in as developer instructions, so only the handoff stands before the text.
+        // The note about the tools went in as developer instructions, so only the handoff stands before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
-        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(verbsNote({ depth: 0, visuals: true }));
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(toolsNote({ depth: 0, visuals: true }));
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
 

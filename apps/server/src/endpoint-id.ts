@@ -39,10 +39,10 @@ const FileSchema = z.object({
        rather than refused: the id and key pair every client pinned are worth more than a name. */
     name: z.string().min(1).optional().catch(undefined),
     icon: ProjectIconChoiceSchema.optional().catch(undefined),
-    /* Whether an agent's `view delete` may remove any view here, not only the ones it made. A machine
+    /* Whether an agent's `view_delete` may remove any view here, not only the ones it made. A machine
        setting because the daemon enforces it. Absent is off. */
     agentsDeleteAnyView: z.boolean().optional().catch(undefined),
-    /* Whether an agent may reach the other projects open here with `--project`. A machine setting because
+    /* Whether an agent may reach the other projects open here with the field `project`. A machine setting because
        the daemon enforces it. Absent is off. */
     reachOpenProjects: z.boolean().optional().catch(undefined),
     /* Whether a message of an agent joins a running turn. The person's "Send to a working agent right away",

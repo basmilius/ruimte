@@ -165,7 +165,7 @@ describe("the project store's save listener", () => {
         await rm(root, { recursive: true, force: true });
     });
 
-    test("hears a person's save with what came before it, and never a verb's write", async () => {
+    test("hears a person's save with what came before it, and never a tool's write", async () => {
         const heard: string[][] = [];
         links.personSaved = async (_folder, before, after) => {
             heard.push(commandsSet(before, after).map(({ nodeId, command }) => `${nodeId} ${command}`));

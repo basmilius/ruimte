@@ -192,7 +192,7 @@ export class VisualRenderer {
             if (answer.code === 'browser-unavailable') {
                 throw new VisualRenderError(
                     'preview-unavailable',
-                    `This machine has no Chrome to render a preview with (${answer.message}); show the page with visual show without a preview`
+                    `This machine has no Chrome to render a preview with (${answer.message}); show the page with visual_show without a preview`
                 );
             }
             throw new VisualRenderError('preview-failed', `The preview failed: ${answer.message}`);

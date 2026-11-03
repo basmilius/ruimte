@@ -166,7 +166,7 @@ export interface ProjectMutation<T> {
     overlayFields?: readonly string[];
     /*
      * Nodes this change adds that run on another machine, by node id to the daemon id of that machine:
-     * the daemon's own way to bind one, since a verb's content never carries `machine`. Refused for a node
+     * the daemon's own way to bind one, since a tool's content never carries `machine`. Refused for a node
      * on a canvas that is shared. Bound before the write, like a person's save, so no client starts the node here.
      */
     bindMachines?: ReadonlyMap<string, string>;
@@ -221,7 +221,7 @@ export interface ProjectLinks {
     tracked: TrackedProbe;
     /* The store knows which sessions a project holds; the managers know how to stop one. */
     endSession: SessionEnder;
-    /* Only `save` tells it, which only a client's `project.save` calls: a verb, a watcher or a pull never does. */
+    /* Only `save` tells it, which only a client's `project.save` calls: a tool, a watcher or a pull never does. */
     personSaved: SaveListener;
     launches: ProjectLaunches;
     language: ProjectLanguage;
@@ -841,7 +841,7 @@ export class ProjectStore {
             throw new ProjectError('rev-conflict', revisionConflictMessage('The project', expectedRev, rev));
         }
         /* A bound node keeps its machine through the change so `toPortable` leaves its folder alone,
-           and a machine a verb names for any other node is dropped: only a person's save binds one. */
+           and a machine a tool names for any other node is dropped: only a person's save binds one. */
         const bound = this.remote.nodesOf(projectId);
         const content = withMachines(current.content, bound);
         const before = [...content.views];
@@ -893,7 +893,7 @@ export class ProjectStore {
     }
 
     /*
-     * What every write of this daemon ends with, a save and a verb alike. `announce` runs once the files
+     * What every write of this daemon ends with, a save and a tool alike. `announce` runs once the files
      * are settled and before `project.changed` goes out to every client but `origin`. The watcher reads
      * the write as our own and stays quiet, so a second client hears of it here or not at all. It runs
      * inside the lock, so a save this write makes stale finds the new document before its refusal.
@@ -928,7 +928,7 @@ export class ProjectStore {
     /*
      * Asks the clients that have this project on screen to show a view of it. Nothing is written:
      * what a person looks at is theirs, so this is an event a client may still ignore. False when
-     * nobody was watching, which is what the verb reports back rather than failing over.
+     * nobody was watching, which is what the tool reports back rather than failing over.
      */
     showView(projectId: string, viewId: string, by: string): boolean {
         let told = 0;
@@ -977,7 +977,7 @@ export class ProjectStore {
         return current;
     }
 
-    /* Deliberately not `readSharedFile`: a verb that finds a broken file refuses, it does not move a person's file aside. */
+    /* Deliberately not `readSharedFile`: a tool that finds a broken file refuses, it does not move a person's file aside. */
     private async readCurrent(
         projectId: string,
         readOnly = false
@@ -1085,7 +1085,7 @@ export class ProjectStore {
         if (otherClients > 0) {
             return { ended: 0, otherClients };
         }
-        /* The sessions go before the write, the rule `view delete` follows: a shell that outlived
+        /* The sessions go before the write, the rule `view_delete` follows: a shell that outlived
            the project it stood in would answer to a canvas nobody can open any more. */
         const sessions = this.index.sessionNodes(projectId);
         /* A client may open the project while its sessions end, and keeps what is left of it. An open
@@ -1252,7 +1252,7 @@ export class ProjectStore {
                 state.cancelSettle?.();
                 state.cancelSettle = this.seams.schedule(() => {
                     state.cancelSettle = null;
-                    // Under the lock, so a save or a verb never reads the rev between the file and the bump.
+                    // Under the lock, so a save or a tool never reads the rev between the file and the bump.
                     return this.locked(state.entry.projectId, () => this.reload(state, path)).catch((e: unknown) => {
                         console.warn(`An outside edit to ${path} could not be taken in:`, errorText(e));
                     });
@@ -1327,7 +1327,7 @@ export class ProjectStore {
 
     /*
      * The rev goes up for this machine: what arrived is a state no client here has, and every one of
-     * them has to base its next save on it. It goes into the private file too, since a verb reads the
+     * them has to base its next save on it. It goes into the private file too, since a tool reads the
      * rev from disk and would otherwise hand a different document out under the same number.
      */
     private async takeOutsideEdit(state: OpenProject, path: string, text: string, read: SharedFileRead): Promise<void> {

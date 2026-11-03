@@ -15,7 +15,8 @@ import type {
 } from '@ruimte/contracts';
 import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
 import { CodedError } from '@adecore/agents';
-import { VerbRefusal, type CanvasHost } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { type CanvasHost } from '../tools/host.ts';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { voicePolicy } from './action-policy.ts';
@@ -366,10 +367,10 @@ export class VoiceSession {
         const viewId = projectId === this.#start.payload.projectId ? this.#start.payload.viewId : undefined;
         const place = project === undefined ? null : this.#deps.places.placeOf(projectId, viewId);
         if (project === undefined || place === null) {
-            throw new VerbRefusal('unknown-project', 'No project in use on this machine has that id; read project.list for the ids');
+            throw new ToolRefusal('unknown-project', 'No project in use on this machine has that id; read project.list for the ids');
         }
         if (this.#phase !== 'active') {
-            throw new VerbRefusal('voice-ended', 'This Voice session has ended');
+            throw new ToolRefusal('voice-ended', 'This Voice session has ended');
         }
         if (this.#place?.projectId !== projectId) {
             this.#cancelContext?.();

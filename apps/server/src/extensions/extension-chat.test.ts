@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 import { ManualClock } from '@adecore/agents/testing';
 import { EXTENSION_API_VERSION, type ProjectContent } from '@ruimte/contracts';
 import { serverActions } from '../actions/server-actions.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';

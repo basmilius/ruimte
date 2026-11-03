@@ -2,11 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { CanvasHost, LanguageAgentHost, Noun, Verb } from './verb.ts';
-import { printed } from './verb-test-helpers.ts';
-import { verbNamed } from './verbs.ts';
-
-const noun = verbNamed('language') as Noun;
+import { toolAnswer, toolCall } from './tool-test-helpers.ts';
+import type { CanvasHost, LanguageAgentHost } from './host.ts';
 
 let root = '';
 let folder = '';
@@ -17,7 +14,7 @@ let host: CanvasHost;
 const SERVERS = [{ kind: 'sql-native', state: 'ready' }];
 
 beforeEach(async () => {
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-language-verb-')));
+    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-language-tools-')));
     folder = join(root, 'repo');
     await mkdir(join(folder, 'db'), { recursive: true });
     await writeFile(join(folder, 'db', 'report.sql'), 'SELECT emial FROM users;\n');
@@ -139,13 +136,21 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-function run(argv: string[]): Promise<string[]> {
-    return printed(noun, argv, { caller: 'chat-1', host });
+async function ask(tool: string, input: Record<string, unknown>): Promise<string[]> {
+    return (await toolAnswer(tool, input, toolCall('chat-1', host))).lines;
 }
 
-describe('ruimte-context language', () => {
+function file(action: string, path: string, json?: boolean): Promise<string[]> {
+    return ask('language_file', { action, path, json });
+}
+
+function lookup(action: string, path: string, line: unknown, column?: unknown): Promise<string[]> {
+    return ask('language_lookup', { action, path, line, column });
+}
+
+describe('language tools', () => {
     test('prints the problems of a file a line each, with the servers and a note on unsaved text', async () => {
-        expect(await run(['diagnostics', 'db/report.sql'])).toEqual([
+        expect(await file('diagnostics', 'db/report.sql')).toEqual([
             'server\tsql-native\tready',
             "note\tThe file is open in an editor with changes that are not saved; these answers are about the editor's text, not the file on disk",
             "diagnostic\tdb/report.sql:1:8\terror\tsql/unresolved-column\tUnknown column 'emial'"
@@ -153,63 +158,62 @@ describe('ruimte-context language', () => {
         expect(asked).toEqual([{ action: 'diagnostics', path: join(folder, 'db', 'report.sql') }]);
     });
 
-    test('prints JSON on --json', async () => {
-        const [text] = await run(['diagnostics', 'db/report.sql', '--json']);
-        expect(JSON.parse(text!)).toMatchObject({ path: 'db/report.sql', diagnostics: [{ code: 'unresolved-column' }] });
+    test('prints JSON when json is true', async () => {
+        const lines = await file('diagnostics', 'db/report.sql', true);
+        expect(JSON.parse(lines.join('\n'))).toMatchObject({ path: 'db/report.sql', diagnostics: [{ code: 'unresolved-column' }] });
     });
 
     test('takes a place as a line and a column from 1', async () => {
-        expect(await run(['hover', 'db/report.sql', '1', '19'])).toEqual([
+        expect(await lookup('hover', 'db/report.sql', 1, 19)).toEqual([
             'server\tsql-native\tready',
             'hover\tdb/report.sql:1:19',
-            '**users**\n\n- id bigint'
+            '**users**',
+            '',
+            '- id bigint'
         ]);
         expect(asked.at(-1)).toMatchObject({ action: 'hover', position: { line: 1, column: 19 } });
-        expect(await run(['references', 'db/report.sql', '1', '19'])).toEqual(['server\tsql-native\tready', 'location\tdb/report.sql:1:19\t1:24']);
-        expect((await run(['definition', 'db/report.sql', '1', '19'])).at(-1)).toStartWith('note\t');
-        expect((await run(['hover', 'db/report.sql', '0', '1']))[0]).toStartWith('refused\t');
-        expect((await run(['hover', 'db/report.sql', '1']))[0]).toStartWith('refused\t');
+        expect(await lookup('references', 'db/report.sql', 1, 19)).toEqual(['server\tsql-native\tready', 'location\tdb/report.sql:1:19\t1:24']);
+        expect((await lookup('definition', 'db/report.sql', 1, 19)).at(-1)).toStartWith('note\t');
+        expect((await lookup('hover', 'db/report.sql', 0, 1))[0]).toBe('refused\tbad-arguments\tline is a whole number from 1');
+        expect((await lookup('hover', 'db/report.sql', 1))[0]).toBe('refused\tbad-arguments\tcolumn is a whole number from 1');
+        expect((await lookup('rename', 'db/report.sql', 1, 1))[0]).toStartWith('refused\tbad-arguments\tlanguage_lookup needs action, one of hover');
     });
 
     test('lists the symbols with how deep each sits', async () => {
-        expect(await run(['symbols', 'db/report.sql'])).toEqual(['server\tsql-native\tready', 'symbol\t0\tclass\tusers\t1:19\t-']);
+        expect(await file('symbols', 'db/report.sql')).toEqual(['server\tsql-native\tready', 'symbol\t0\tclass\tusers\t1:19\t-']);
     });
 
     test('prints the problems of the whole project, with a note for what was cut and what was withheld', async () => {
-        expect(await run(['problems'])).toEqual([
+        expect(await ask('language_problems', {})).toEqual([
             'server\ttypescript\ttypescript',
             'diagnostic\tsrc/a.ts:2:5\twarning\tts/6133\tunused',
-            'note\tOnly the first 500 problems are listed; language diagnostics <path> reads one file whole',
+            'note\tOnly the first 500 problems are listed; language_file with action diagnostics reads one file whole',
             'note\tWithheld from 2 files read against a connection turned off for agents'
         ]);
         expect(asked.at(-1)).toEqual({ action: 'problems', path: '' });
 
-        await run(['problems', 'db/report.sql']);
+        await ask('language_problems', { path: 'db/report.sql' });
 
         expect(asked.at(-1)).toEqual({ action: 'problems', path: join(folder, 'db', 'report.sql') });
-        expect(JSON.parse((await run(['problems', '--json']))[0]!)).toMatchObject({ files: 3, truncated: true, withheld: 2 });
+        expect(JSON.parse((await ask('language_problems', { json: true })).join('\n'))).toMatchObject({ files: 3, truncated: true, withheld: 2 });
     });
 
     test('notes that no whole-project check ran yet, and still prints what it has', async () => {
         pulled = false;
 
-        expect(await run(['problems'])).toContain('note\tNo whole-project check ran yet; a person starts one from the Problems panel');
-        expect(await run(['problems'])).toContain('diagnostic\tsrc/a.ts:2:5\twarning\tts/6133\tunused');
+        expect(await ask('language_problems', {})).toContain('note\tNo whole-project check ran yet; a person starts one from the Problems panel');
+        expect(await ask('language_problems', {})).toContain('diagnostic\tsrc/a.ts:2:5\twarning\tts/6133\tunused');
     });
 
     test('prints the type at a place and one location per supertype or subtype', async () => {
-        expect(await run(['supertypes', 'db/report.sql', '2', '7'])).toEqual([
-            'server\tsql-native\tready',
-            'type\tB\tclass\t-',
-            'location\tsrc/a.ts:1:7\t1:8\tA'
-        ]);
+        expect(await lookup('supertypes', 'db/report.sql', 2, 7)).toEqual(['server\tsql-native\tready', 'type\tB\tclass\t-', 'location\tsrc/a.ts:1:7\t1:8\tA']);
         expect(asked.at(-1)).toMatchObject({ action: 'supertypes', position: { line: 2, column: 7 } });
-        expect((await run(['subtypes', 'db/report.sql', '1', '7'])).at(-1)).toStartWith('note\t');
-        expect((await run(['supertypes', 'db/report.sql', '1']))[0]).toStartWith('refused\t');
+        expect((await lookup('subtypes', 'db/report.sql', 1, 7)).at(-1)).toStartWith('note\t');
+        expect((await lookup('supertypes', 'db/report.sql', 1))[0]).toStartWith('refused\t');
     });
 
     test('says which connection and snapshot a SQL file reads, and how to check it from a shell', async () => {
-        expect(await run(['sql', 'db/report.sql'])).toEqual([
+        expect(await file('sql', 'db/report.sql')).toEqual([
             'source\tfile',
             'connection\tshop\tShop\tmysql',
             'database\tshop',
@@ -221,17 +225,10 @@ describe('ruimte-context language', () => {
     });
 
     test('a path outside the project folder or its worktrees is refused, a link out of it too', async () => {
-        expect((await run(['diagnostics', join(root, 'outside.sql')]))[0]).toStartWith('refused\tpath-outside-project\t');
-        expect((await run(['diagnostics', 'db/linked.sql']))[0]).toStartWith('refused\tpath-outside-project\t');
-        expect((await run(['diagnostics', 'db/missing.sql']))[0]).toStartWith('refused\tbad-path\t');
-        expect((await run(['diagnostics', 'db']))[0]).toStartWith('refused\tbad-path\t');
+        expect((await file('diagnostics', join(root, 'outside.sql')))[0]).toStartWith('refused\tpath-outside-project\t');
+        expect((await file('diagnostics', 'db/linked.sql'))[0]).toStartWith('refused\tpath-outside-project\t');
+        expect((await file('diagnostics', 'db/missing.sql'))[0]).toStartWith('refused\tbad-path\t');
+        expect((await file('diagnostics', 'db'))[0]).toStartWith('refused\tbad-path\t');
         expect(asked).toEqual([]);
-    });
-
-    test('help says what each action prints and how a SQL file is read', async () => {
-        const help = (await (verbNamed('help') as Verb).run(['language'], { caller: 'chat-1', host })).join('\n');
-        expect(help).toContain('language sql');
-        expect(help).toContain('database-access-off');
-        expect(help).toContain('sql-language-server check');
     });
 });

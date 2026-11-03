@@ -175,7 +175,7 @@ export function withMachines<T extends ProjectContent>(content: T, nodes: Readon
     return mapNodes(content, (node) => (Object.hasOwn(nodes, node.id) ? { ...node, machine: nodes[node.id]! } : node));
 }
 
-/* A change from a verb or an outside edit keeps the machines the store holds and drops every other one. */
+/* A change from a tool or an outside edit keeps the machines the store holds and drops every other one. */
 export function withBoundMachines<T extends ProjectContent>(content: T, nodes: Readonly<Record<string, string>>): T {
     return mapNodes(content, (node) => {
         if (node.machine === undefined || (Object.hasOwn(nodes, node.id) && nodes[node.id] === node.machine)) {

@@ -8,7 +8,7 @@ import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } 
 import { Worktrees } from '../git/worktrees.ts';
 import { ManualClock } from '@adecore/agents/testing';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 
 function content(): ProjectContent {
@@ -39,7 +39,7 @@ let store: ProjectStore;
 let daemon: TestDaemon;
 
 beforeAll(async () => {
-    template = await repoTemplate('ruimte-worktree-verb', async (dir) => {
+    template = await repoTemplate('ruimte-worktree-tool', async (dir) => {
         const repo = join(dir, 'repo');
         await initRepo(repo, { 'shared.txt': 'base\n' });
         // The commits a merge makes take the repository's identity; a worktree shares its config.
@@ -86,7 +86,7 @@ function firstTurn(chatId: string): ChatTurnItem | undefined {
 async function team(...roles: { title: string; writes: string }[]): Promise<string[]> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     const asked = roles.map(({ title, writes }) => ({ title, prompt: `write: ${writes}`, provider: 'claude' }));
-    const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--worktree', '--roles', JSON.stringify(asked)]);
+    const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', worktree: true, roles: JSON.stringify(asked) });
     const nodes = lines.slice(1).map((line) => line.split('\t')[0]!);
     daemon.worker.start();
     await daemon.worker.settled();
@@ -122,13 +122,13 @@ test('two roles that change the same file each work in a worktree of their own, 
     expect(parserDiff?.files[0]?.diff).not.toContain('lexer');
 });
 
-test('a worktree an agent verb makes is written down with the branch and commit the project was on, the project and the node', async () => {
+test('a worktree an agent tool makes is written down with the branch and commit the project was on, the project and the node', async () => {
     await gitIn(folder, ['checkout', '--quiet', '-b', 'feature']);
     await gitIn(folder, ['commit', '--quiet', '--allow-empty', '--message', 'on feature']);
     const featureHead = (await gitIn(folder, ['rev-parse', 'HEAD'])).trim();
     const projectId = store.index.locate('chat-lead')!.projectId;
 
-    const lines = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--worktree', '--title', 'Lexer']);
+    const lines = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', worktree: true, title: 'Lexer' });
     const nodeId = lines[0]!.split('\t')[0]!;
 
     const worktrees = new Worktrees(join(root, 'home'), NO_WORKTREE_AGENTS);
@@ -143,7 +143,7 @@ test('a worktree an agent verb makes is written down with the branch and commit 
 test('a lead lists the worktrees of its team with their nodes and counts', async () => {
     const [lexer, parser] = (await team(LEXER, PARSER)) as [string, string];
 
-    const listed = await runVerb(daemon, 'chat-lead', 'worktree', ['list']);
+    const listed = await invokeTool(daemon, 'chat-lead', 'worktree_list', {});
     const rows = listed.map((line) => line.split('\t'));
     expect(rows.map((row) => [row[0], row[2], row[3], row[4], row[5], row[6]])).toEqual([
         ['lexer', lexer, 'main', '0', '1', '0'],
@@ -154,21 +154,21 @@ test('a lead lists the worktrees of its team with their nodes and counts', async
 test('a lead reads what a child wrote', async () => {
     await team(LEXER);
 
-    expect(await runVerb(daemon, 'chat-lead', 'worktree', ['diff', 'lexer', '--stat'])).toEqual(['file\tlexer.txt\t1\t0']);
-    const diff = await runVerb(daemon, 'chat-lead', 'worktree', ['diff', 'lexer', '--tail', '1']);
+    expect(await invokeTool(daemon, 'chat-lead', 'worktree_diff', { branch: 'lexer', stat: true })).toEqual(['file\tlexer.txt\t1\t0']);
+    const diff = await invokeTool(daemon, 'chat-lead', 'worktree_diff', { branch: 'lexer', tail: 1 });
     expect(diff).toEqual(['+from the lexer']);
 });
 
 test('a lead merges the worktree of its child into main, and the worktree, its branch and the child stay', async () => {
     const [lexer] = await team(LEXER);
 
-    const lines = await runVerb(daemon, 'chat-lead', 'worktree', ['merge', 'lexer', '--squash']);
+    const lines = await invokeTool(daemon, 'chat-lead', 'worktree_merge', { branch: 'lexer', squash: true });
 
     expect(lines[0]).toBe('merged\tlexer\tmain\tsquash');
     expect(lines[2]).toBe('kept\tthe worktree and its branch stay until a person removes them');
     expect(await readFile(join(folder, 'lexer.txt'), 'utf8')).toBe('from the lexer\n');
     expect((await gitIn(folder, ['log', '-1', '--format=%s'])).trim()).toBe('Lexer: work of the agent');
-    expect((await runVerb(daemon, 'chat-lead', 'worktree', ['list'])).map((line) => line.split('\t')[0])).toEqual(['lexer']);
+    expect((await invokeTool(daemon, 'chat-lead', 'worktree_list', {})).map((line) => line.split('\t')[0])).toEqual(['lexer']);
     expect((await gitIn(folder, ['branch', '--list', 'lexer'])).trim()).not.toBe('');
     expect(daemon.chats.get(lexer!)?.info.running).toBe(true);
 });
@@ -176,7 +176,7 @@ test('a lead merges the worktree of its child into main, and the worktree, its b
 test('a node that is not an opener of the worktree gets not-yours, and nothing is merged', async () => {
     await team(LEXER);
 
-    const refused = await runVerb(daemon, 'chat-stranger', 'worktree', ['merge', 'lexer']);
+    const refused = await invokeTool(daemon, 'chat-stranger', 'worktree_merge', { branch: 'lexer' });
 
     expect(refused[0]?.startsWith('refused\tnot-yours\t')).toBe(true);
     expect(await fileExists(join(folder, 'lexer.txt'))).toBe(false);
@@ -188,7 +188,7 @@ test('a conflict is taken back and refused, leaving the target clean', async () 
     await writeFile(join(folder, 'shared.txt'), 'from the lexer\n');
     await gitIn(folder, ['commit', '--quiet', '--all', '--message', 'shared.txt on main']);
 
-    const refused = await runVerb(daemon, 'chat-lead', 'worktree', ['merge', 'parser']);
+    const refused = await invokeTool(daemon, 'chat-lead', 'worktree_merge', { branch: 'parser' });
 
     expect(refused[0]).toStartWith('refused\tmerge-conflict\tMerging parser into main conflicts in 1 file: shared.txt.');
     expect((await gitIn(folder, ['status', '--porcelain', '--untracked-files=no'])).trim()).toBe('');
@@ -201,7 +201,7 @@ test('a target checkout with uncommitted files of its own is refused', async () 
     await team(LEXER);
     await writeFile(join(folder, 'shared.txt'), 'a person is working here\n');
 
-    const refused = await runVerb(daemon, 'chat-lead', 'worktree', ['merge', 'lexer']);
+    const refused = await invokeTool(daemon, 'chat-lead', 'worktree_merge', { branch: 'lexer' });
 
     expect(refused[0]?.startsWith('refused\ttarget-dirty\t')).toBe(true);
     expect(await fileExists(join(folder, 'lexer.txt'))).toBe(false);

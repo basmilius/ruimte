@@ -356,18 +356,19 @@ describe('prepareVisualPage', () => {
         await rm(folder, { recursive: true, force: true });
     });
 
-    test('the page goes back in the word it came in, as --html=<page> or after --html', async () => {
+    test('the page comes back with its local images embedded', async () => {
         const shot = join(folder, 'shot.png');
         await writeFile(shot, PNG);
         const png = dataUri('image/png', PNG);
-        expect(await prepareVisualPage('show', ['--title', 'T', `--html=<img src="${shot}">`])).toEqual({
-            argv: ['--title', 'T', `--html=<img src="${png}">`],
-            lines: []
-        });
-        expect(await prepareVisualPage('preview', ['--html', `<img src="${shot}">`, '--width', '400'])).toEqual({
-            argv: ['--html', `<img src="${png}">`, '--width', '400'],
-            lines: []
-        });
-        expect(await prepareVisualPage('show', ['--title', 'T', '--html'])).toEqual({ argv: ['--title', 'T', '--html'], lines: [] });
+        expect(await prepareVisualPage('show', `<img src="${shot}">`)).toEqual({ html: `<img src="${png}">`, lines: [] });
+        expect(await prepareVisualPage('preview', `<img src="${shot}">`)).toEqual({ html: `<img src="${png}">`, lines: [] });
+    });
+
+    test('a show is refused when an image cannot go along, and a preview names the image it left as written', async () => {
+        const missing = join(folder, 'missing.png');
+        await expect(prepareVisualPage('show', `<img src="${missing}">`)).rejects.toMatchObject({ code: 'visual-images-missing' });
+        const preview = await prepareVisualPage('preview', `<img src="${missing}">`);
+        expect(preview.html).toBe(`<img src="${missing}">`);
+        expect(preview.lines).toEqual([expect.stringMatching(new RegExp(`^missing\t${missing}\tnot embedded: `))]);
     });
 });

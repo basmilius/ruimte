@@ -138,7 +138,7 @@ describe('durable project saves', () => {
         projects.closeAll();
         projects = new ProjectStore(home, projectLinks(), new FakeWatch());
         const refused = await projects.openProject({ projectId }).catch((e: unknown) => e);
-        // A coded error, so a verb is refused instead of failing, and it names the file that lets the save go.
+        // A coded error, so a tool is refused instead of failing, and it names the file that lets the save go.
         expect(refused).toMatchObject({ code: 'project-invalid' });
         expect((refused as Error).message).toContain('changed since');
         expect((refused as Error).message).toContain(pendingWritePathOf(path));

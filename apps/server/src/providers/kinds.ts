@@ -1,6 +1,6 @@
 /*
  * The agent CLIs this daemon offers, then the API providers, in the order every menu lists them. Apart from
- * the providers so a note or a verb can name them at load without importing every backend.
+ * the providers so a note or a tool can name them at load without importing every backend.
  */
 export const BUILT_IN_KINDS = ['claude', 'codex', 'antigravity', 'copilot', 'grok', 'nanogpt', 'anthropic-claude-api'] as const;
 

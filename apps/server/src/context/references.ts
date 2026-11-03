@@ -43,7 +43,7 @@ export interface Reference {
     sources: ContextSource[];
     /* The table a database view shows, which `read` names with the command that reads it. */
     database?: ProjectDatabaseTarget;
-    /* The other project it stands in; its commands then take `--project`, which checks the reach at every call. */
+    /* The other project it stands in; its commands then take `project`, which checks the reach at every call. */
     project?: string;
 }
 
@@ -196,25 +196,25 @@ function writeCommand(reference: Reference): string | null {
             return `write with ${command('view_diagram', reference.sources[0]?.id ?? id)}`;
         case 'drawing': {
             const viewId = reference.sources[0]?.id ?? id;
-            return `see its elements with ${command('context_read', `${viewId} --elements`)} · write with ${command('view_drawing', `${viewId} --revision R`)}`;
+            return `see its elements with ${command('context_read', `${viewId} form elements`)} · write with ${command('view_drawing', `${viewId} revision R`)}`;
         }
         // A browser or a device that is a view of its own has no node the tools drive.
         case 'browser':
-            return canvas === null ? null : `drive it with ${command('browser_go', `${id} --url U`)}`;
+            return canvas === null ? null : `drive it with ${command('browser_go', `${id} url U`)}`;
         case 'device':
             return canvas === null ? null : `operate it with ${command('device_shot', id)} and the other device tools`;
         case 'canvas':
-            return `read any node on it with ${command('context_read', '<id>')} · add nodes with ${command('node_new', `<kind> --view ${id}`)}`;
+            return `read any node on it with ${command('context_read', '<id>')} · add nodes with ${command('node_new', `<kind> view ${id}`)}`;
         default:
             return null;
     }
 }
 
-/* In another project only what `--project` crosses with: reading, and a message to a terminal or a chat. */
+/* In another project only what `project` crosses with: reading, and a message to a terminal or a chat. */
 function crossingLine(reference: Reference, what: string, project: string): string {
-    const read = command('context_read', `${reference.id} --project ${project}`);
+    const read = command('context_read', `${reference.id} project ${project}`);
     const write =
-        reference.kind === 'chat' || reference.kind === 'terminal' ? ` · message it with ${command('notify', `${reference.id} --project ${project}`)}` : '';
+        reference.kind === 'chat' || reference.kind === 'terminal' ? ` · message it with ${command('notify', `${reference.id} project ${project}`)}` : '';
     return `- ${JSON.stringify(reference.name)} (${what} in project ${project}): ${read}${write}`;
 }
 

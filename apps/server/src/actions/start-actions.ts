@@ -12,38 +12,28 @@ import {
     type ProjectNode,
     type RuntimeMode
 } from '@ruimte/contracts';
-import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../canvas/agents.ts';
-import { depthForOpening } from '../canvas/depth.ts';
-import { modeForOpening } from '../canvas/mode.ts';
-import { EFFORT_REFUSALS, selectionForOpening } from '../canvas/model.ts';
-import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from '../canvas/nodes.ts';
-import { refuseMissingNodes } from '../canvas/own-view.ts';
-import { refuseRemoteStart, resolveMachine, sourceCheckout } from '../canvas/remote-agent.ts';
-import { groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from '../canvas/placement.ts';
-import { checkCwd } from '../canvas/project-paths.ts';
-import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../canvas/tasks.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../tools/agents.ts';
+import { depthForOpening } from '../tools/depth.ts';
+import { modeForOpening } from '../tools/mode.ts';
+import { EFFORT_REFUSALS, selectionForOpening } from '../tools/model.ts';
+import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from '../tools/nodes.ts';
+import { refuseMissingNodes } from '../tools/own-view.ts';
+import { refuseRemoteStart, resolveMachine, sourceCheckout } from '../tools/remote-agent.ts';
+import { groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from '../tools/placement.ts';
+import { checkCwd } from '../tools/project-paths.ts';
+import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../tools/tasks.ts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
-import {
-    NEW_NODE,
-    OPENING_OFF_CANVAS,
-    VerbRefusal,
-    canvasFor,
-    canvasLines,
-    field,
-    newNode,
-    type ProjectHost,
-    type VerbCall,
-    type WorktreeWant
-} from '../canvas/verb.ts';
-import { reachedPlace } from '../canvas/reach.ts';
+import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall, type WorktreeWant } from '../tools/host.ts';
+import { reachedPlace } from '../tools/reach.ts';
 import { KeyedQueue } from '../keyed-queue.ts';
-import { MAX_PROJECT_VIEWS } from '../canvas/views.ts';
-import { branchSlug, makeWorktrees, requireRepository } from '../canvas/worktree.ts';
+import { MAX_PROJECT_VIEWS } from '../tools/views.ts';
+import { branchSlug, makeWorktrees, requireRepository } from '../tools/worktree.ts';
 import { errorText } from '../error-text.ts';
 import { untrustedStartProblem } from '../peering/untrusted.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { providerFor } from '../providers/registry.ts';
-import { verbCallOf, type ServerActionContext } from './context.ts';
+import { agentCallOf, type ServerActionContext } from './context.ts';
 import { startInputHash } from './start-claims.ts';
 import { operationIdOf } from './operation-actions.ts';
 
@@ -73,19 +63,19 @@ function refuseUntrustedStart(
     for (const agent of agents) {
         const problem = untrustedStartProblem(agent.provider, !agent.chat);
         if (problem !== null) {
-            throw new VerbRefusal('untrusted-folder', problem);
+            throw new ToolRefusal('untrusted-folder', problem);
         }
     }
 }
 
 /*
  * One start at a time per caller. Its count is checked again under the lock of the project it writes
- * in, and since `--project` lets two starts write in two projects, that lock alone would let both pass.
+ * in, and since `project` lets two starts write in two projects, that lock alone would let both pass.
  */
 const callerStarts = new KeyedQueue();
 
 /*
- * What a start in another project `--project` reached may not do: stand nowhere a person there sees it,
+ * What a start in another project `project` reached may not do: stand nowhere a person there sees it,
  * or go on to another machine. The caller is judged in its own project, before the other one's lock.
  */
 async function refuseCrossingStart(
@@ -98,12 +88,12 @@ async function refuseCrossingStart(
         return;
     }
     if (input.machine != null) {
-        throw new VerbRefusal('cross-project-refused', '--machine works only from your own project; leave out --project or --machine');
+        throw new ToolRefusal('cross-project-refused', 'machine works only from your own project; leave out project or machine');
     }
     if (input.viewId == null) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'view-required',
-            `An agent in ${place.projectId} opens on one of its canvases, where a person there sees it; name one with --view`,
+            `An agent in ${place.projectId} opens on one of its canvases, where a person there sees it; name one with view`,
             canvasLines(await host.projects.read(place.projectId))
         );
     }
@@ -133,13 +123,13 @@ const VOICE_CEILING: RuntimeMode = 'supervised';
  */
 function refuseVoiceStart(input: StartInput): void {
     if (input.terminal) {
-        throw new VerbRefusal('voice-chat-only', 'Voice starts an AI Chat, never a terminal');
+        throw new ToolRefusal('voice-chat-only', 'Voice starts an AI Chat, never a terminal');
     }
     if (!providerFor(input.provider).capabilities.chat) {
-        throw new VerbRefusal('voice-chat-only', `${nameOf(input.provider)} has no AI Chat, and Voice starts only AI Chats`);
+        throw new ToolRefusal('voice-chat-only', `${nameOf(input.provider)} has no AI Chat, and Voice starts only AI Chats`);
     }
     if (input.mode != null && input.mode !== VOICE_CEILING) {
-        throw new VerbRefusal('mode-above-voice', `A chat Voice starts runs supervised at most, never ${input.mode}`);
+        throw new ToolRefusal('mode-above-voice', `A chat Voice starts runs supervised at most, never ${input.mode}`);
     }
 }
 
@@ -213,7 +203,7 @@ async function withdrawStarted(projects: ProjectHost, projectId: string, written
  * task starts; one here is made now, before the lock, so a slow repository holds up no save.
  */
 async function startWorktrees(
-    caller: VerbCall,
+    caller: AgentCall,
     place: IndexedPlace,
     remote: boolean,
     dryRun: boolean,
@@ -236,7 +226,7 @@ const startAgent: StartHandler = (input, call) => callerStarts.run(call.actor.id
 const startAgentNow: StartHandler = async (input, call) => {
     const { context, dryRun = false } = call;
     const { host, place } = context;
-    const caller = verbCallOf(call);
+    const caller = agentCallOf(call);
     const kind = input.provider;
     const voice = call.actor.kind === 'voice';
     if (voice) {
@@ -261,31 +251,31 @@ const startAgentNow: StartHandler = async (input, call) => {
             hidden
         });
     }
-    const depth = depthForOpening(caller, 'agent', 1);
+    const depth = depthForOpening(caller, 'agent_start', 1);
     // Voice is no node, so the daemon knows no mode of its own; what it starts is held to supervised, whatever the host says.
     const ceiling = voice ? VOICE_CEILING : modeForOpening(caller, input.mode ?? undefined);
     const chat = !input.terminal && providerFor(kind).capabilities.chat;
     const selection = selectionForOpening(kind, chat, input.model ?? undefined, input.effort ?? undefined, host.starts.preferredSelection(kind));
     if (input.branch != null && !input.worktree) {
-        throw new VerbRefusal('branch-needs-worktree', '--branch names the branch of a worktree; add --worktree');
+        throw new ToolRefusal('branch-needs-worktree', 'branch names the branch of a worktree; add worktree');
     }
     if (input.base != null && !input.worktree) {
-        throw new VerbRefusal('base-needs-worktree', '--base says where the branch of a worktree starts; add --worktree');
+        throw new ToolRefusal('base-needs-worktree', 'base says where the branch of a worktree starts; add worktree');
     }
     if (input.worktree && input.cwd != null) {
-        throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agent starts; give one of them');
+        throw new ToolRefusal('worktree-and-cwd', 'worktree and cwd both say where the agent starts; give one of them');
     }
     if (input.beside != null && input.group != null) {
-        throw new VerbRefusal('two-places', '--beside and --group both say where the node goes; give one of them');
+        throw new ToolRefusal('two-places', 'beside and group both say where the node goes; give one of them');
     }
     if (hidden && (input.beside != null || input.group != null || readIds.length > 0)) {
-        throw new VerbRefusal('view-required', '--beside, --group and --reads place nodes or lines on a canvas; name one with --view');
+        throw new ToolRefusal('view-required', 'beside, group and reads place nodes or lines on a canvas; name one with view');
     }
     if (loose && input.beside != null) {
-        throw new VerbRefusal('no-canvas', 'This project has no canvas, so the chat opens as a view of its own and stands beside nothing');
+        throw new ToolRefusal('no-canvas', 'This project has no canvas, so the chat opens as a view of its own and stands beside nothing');
     }
     if (hidden && host.hiddenAgents === undefined) {
-        throw new VerbRefusal('view-required', OPENING_OFF_CANVAS);
+        throw new ToolRefusal('view-required', OPENING_OFF_CANVAS);
     }
     // An agent on another machine runs that machine's CLI, which it checks itself when the task starts.
     if (remote === null) {
@@ -295,10 +285,10 @@ const startAgentNow: StartHandler = async (input, call) => {
     // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
     const prompt = await startPrompt(input.prompt ?? null, input.promptFile ?? null, host, place.folder);
     if (input.task != null && prompt === null) {
-        throw new VerbRefusal('task-needs-prompt', '--task gives a task and the prompt is what it asks; add --prompt or --prompt-file');
+        throw new ToolRefusal('task-needs-prompt', 'task gives a task and the prompt is what it asks; add prompt or promptFile');
     }
     if (input.task != null && prompt !== null && prompt.length > MAX_TASK_PROMPT_LENGTH) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'prompt-too-long',
             `The prompt is ${prompt.length} characters and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back; put the rest in a file and tell the agent to read it`
         );
@@ -323,7 +313,7 @@ const startAgentNow: StartHandler = async (input, call) => {
     return host.projects
         .mutate<{ output: ActionOutput<'agent.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
             // Counted again under the lock the last start wrote its node down in: a call at the same moment read the same count.
-            depthForOpening(caller, 'agent', 1);
+            depthForOpening(caller, 'agent_start', 1);
             await requireStillReached(context, caller.caller);
             // After the last await before the node is written, under the lock it is written in.
             context.stillAllowed?.();
@@ -332,7 +322,7 @@ const startAgentNow: StartHandler = async (input, call) => {
             }
             const canvas = hidden || loose ? null : canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
             if (loose && content.views.length + 1 > MAX_PROJECT_VIEWS) {
-                throw new VerbRefusal('too-many-views', `This project has ${content.views.length} views and a project holds at most ${MAX_PROJECT_VIEWS}`);
+                throw new ToolRefusal('too-many-views', `This project has ${content.views.length} views and a project holds at most ${MAX_PROJECT_VIEWS}`);
             }
             if (canvas && canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
@@ -343,7 +333,7 @@ const startAgentNow: StartHandler = async (input, call) => {
             }
             const group = input.group == null ? undefined : canvas?.nodes.find((node) => node.id === input.group && node.kind === 'group');
             if (canvas && input.group != null && !group) {
-                throw new VerbRefusal('unknown-group', `${input.group} is not a group on ${canvas.id}`, groupLines(canvas));
+                throw new ToolRefusal('unknown-group', `${input.group} is not a group on ${canvas.id}`, groupLines(canvas));
             }
             const read = canvas ? nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agent this opens' }) : [];
 
@@ -395,7 +385,7 @@ const startAgentNow: StartHandler = async (input, call) => {
             const edge: ProjectEdge | null = self && remote === null ? { id: mint(), from: self.id, to: id, label: 'context' } : null;
             const reading: ProjectEdge[] = [];
             const readLines = read.map((source) => {
-                /* Your own line is the one drawn above: naming yourself in --reads is that line
+                /* Your own line is the one drawn above: naming yourself in reads is that line
                    reported again, never a second one beside it. */
                 const line = edge && edge.from === source.id ? edge : { id: mint(), from: source.id, to: id, label: 'context' };
                 if (line !== edge) {
@@ -520,7 +510,7 @@ const startAgentNow: StartHandler = async (input, call) => {
             const stays = written !== null && !(await withdrawStarted(host.projects, place.projectId, written)) ? written.id : null;
             await worktrees?.undo();
             if (stays !== null) {
-                throw new VerbRefusal(
+                throw new ToolRefusal(
                     'failed',
                     `The start was refused after its node ${stays} was written, and ${stays} stays in the project without its agent`
                 );
@@ -573,7 +563,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
 async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awaited<ReturnType<TeamHandler>>> {
     const { context, dryRun = false } = call;
     const { host, place } = context;
-    const caller = verbCallOf(call);
+    const caller = agentCallOf(call);
     const { roles } = input;
     await refuseCrossingStart(context, caller.caller, { viewId: input.viewId, machine: input.machine, task: input.task });
     const selections = roles.map((role, index): ModelSelection | undefined => {
@@ -586,31 +576,31 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
                 host.starts.preferredSelection(role.provider)
             );
         } catch (e) {
-            if (e instanceof VerbRefusal) {
-                throw new VerbRefusal(e.code, `role ${index} (${EFFORT_REFUSALS.has(e.code) ? 'effort' : 'model'}): ${e.message}`, e.lines);
+            if (e instanceof ToolRefusal) {
+                throw new ToolRefusal(e.code, `role ${index} (${EFFORT_REFUSALS.has(e.code) ? 'effort' : 'model'}): ${e.message}`, e.lines);
             }
             throw e;
         }
     });
     const long = input.task ? roles.findIndex((role) => role.prompt.length > MAX_TASK_PROMPT_LENGTH) : -1;
     if (long !== -1) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'prompt-too-long',
             `role ${long} (prompt): ${roles[long]!.prompt.length} characters, and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back`
         );
     }
-    const depth = depthForOpening(caller, 'team', roles.length);
+    const depth = depthForOpening(caller, 'agent_team', roles.length);
     const ceiling = modeForOpening(caller, input.mode ?? undefined);
     const readIds = readsOf(input.reads);
     const hidden = input.viewId === null && place.canvasId === null;
     if (hidden && readIds.length > 0) {
-        throw new VerbRefusal('view-required', '--reads draws lines on a canvas; name one with --view');
+        throw new ToolRefusal('view-required', 'reads draws lines on a canvas; name one with view');
     }
     if (hidden && host.hiddenAgents === undefined) {
-        throw new VerbRefusal('view-required', OPENING_OFF_CANVAS);
+        throw new ToolRefusal('view-required', OPENING_OFF_CANVAS);
     }
     if (input.worktree && input.cwd !== null) {
-        throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agents start; give one of them');
+        throw new ToolRefusal('worktree-and-cwd', 'worktree and cwd both say where the agents start; give one of them');
     }
     const remote = input.machine == null ? null : resolveMachine(host, place.projectId, input.machine);
     if (remote !== null) {
@@ -651,7 +641,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
 
     return host.projects
         .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
-            depthForOpening(caller, 'team', roles.length);
+            depthForOpening(caller, 'agent_team', roles.length);
             await requireStillReached(context, caller.caller);
             if (input.task && context.origin === undefined) {
                 requireChatParent(content, caller.caller, host.hiddenAgents?.get(caller.caller)?.node.kind);
@@ -731,7 +721,7 @@ async function startTeam(...[input, call]: Parameters<TeamHandler>): Promise<Awa
                     edges.push(edge);
                 }
                 for (const source of read) {
-                    /* Your own line is the one every role already gets: naming yourself in --reads
+                    /* Your own line is the one every role already gets: naming yourself in reads
                            is that line reported again, never a second one beside it. */
                     if (edge && source.id === edge.from) {
                         output.reads.push({ edgeId: edge.id, from: source.id, to: id });

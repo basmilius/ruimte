@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { compileUi } from '@adecore/intelligent-ui';
 import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { catalog } from '../mcp/catalog.ts';
 import { callTool } from '../mcp/mcp-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
@@ -213,7 +213,7 @@ describe('ContextStore', () => {
         expect(await store.read('agent', 'nope')).toBeNull();
     });
 
-    test('--tail is the last lines of each kind, and every kind really gets shorter', async () => {
+    test('tail is the last lines of each kind, and every kind really gets shorter', async () => {
         linked.set('agent', [
             { id: 'note', kind: 'text', title: 'Sprint', text: Array.from({ length: 10 }, (_, i) => `note line ${i}`).join('\n') },
             { id: 'term', kind: 'terminal', title: 'dev server' },
@@ -407,7 +407,7 @@ describe('renderTranscript', () => {
         expect(text.match(/A guide is missing\./g)).toHaveLength(1);
     });
 
-    test('a Workflow row lists each phase with its agents, their state and the id a --subagent read takes', () => {
+    test('a Workflow row lists each phase with its agents, their state and the id a subagent read takes', () => {
         const workflow = (name: string | null, agents: ChatWorkflowAgent[]): ChatItem => ({
             id: 'wf',
             kind: 'tool',
@@ -454,13 +454,13 @@ describe('renderTranscript', () => {
             ])
         ]);
         expect(text.split('\n').slice(1)).toEqual([
-            'Workflow "write-and-read", each agent readable with --subagent and the id beside it:',
+            'Workflow "write-and-read", each agent readable with subagent and the id beside it:',
             '- phase 1 "Write": write-file (done, workflow-agent:a-writer)',
             '- phase 2 "Read": read-file (running, workflow-agent:a-reader), read-again (running, not started yet)',
             '- phase 3 "Check": not started yet',
             '- outside a phase: tidy (failed, workflow-agent:a-tidy)'
         ]);
-        expect(renderTranscript([workflow(null, [])]).split('\n')[1]).toBe('Workflow, each agent readable with --subagent and the id beside it:');
+        expect(renderTranscript([workflow(null, [])]).split('\n')[1]).toBe('Workflow, each agent readable with subagent and the id beside it:');
     });
 });
 
@@ -600,7 +600,7 @@ describe('a diagram as context', () => {
         expect(svg).toContain('<svg');
     });
 
-    test('--tail counts the reading order alone and never reaches the SVG', async () => {
+    test('tail counts the reading order alone and never reaches the SVG', async () => {
         linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
         expect(await store.read('agent', 'flow-1', 2)).toBe('Daemon -> Disk\nMachine wraps: Daemon, Disk');
         // A tail longer than the list is the whole list and still no heading and no markup.
@@ -708,7 +708,7 @@ describe('a routine node read', () => {
         routineReport: async (targetId, routineId) => (targetId === 'agent' && routineId === 'morning' ? 'routine\tmorning\nrun\trun-1' : null)
     });
 
-    test("gives the report of the node's routine, and --tail counts its lines", async () => {
+    test("gives the report of the node's routine, and tail counts its lines", async () => {
         expect(await reading.read('agent', 'morning-node')).toEndWith('routine\tmorning\nrun\trun-1');
         expect(await reading.read('agent', 'morning-node', 1)).toEndWith('run\trun-1');
         expect(await reading.read('stranger', 'morning-node')).toBeNull();

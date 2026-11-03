@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { CONTEXT_VERBS } from '@ruimte/contracts';
 import { USAGE_VERB_COUNTERS } from '@ruimte/pulsar';
-import { VERBS } from '../canvas/verbs.ts';
+import { TOOLKITS } from '../tools/toolkits.ts';
 import { UsageCounter } from './usage-counter.ts';
 import {
     countClient,
@@ -9,7 +10,7 @@ import {
     countRequest,
     countTurn,
     countUsage,
-    countVerb,
+    countToolCall,
     countViewShown,
     installUsageCounter
 } from './usage-stats.ts';
@@ -48,18 +49,20 @@ describe('counting at the sites', () => {
         expect(counts()).toEqual({});
     });
 
-    test('every verb of ruimte-context counts in its group', () => {
-        for (const verb of VERBS) {
-            expect(Object.keys(USAGE_VERB_COUNTERS)).toContain(verb.name);
-        }
+    // A counter the client does not know reads as plain "Ruimte" in a chat; `help` stays for old chats that called the CLI.
+    test('every tool counts in a usage group, under a name the client knows', () => {
+        const counters = new Set(TOOLKITS.flatMap((toolkit) => toolkit.tools.map((tool) => tool.counter)));
+
+        expect([...counters].filter((counter) => !Object.hasOwn(USAGE_VERB_COUNTERS, counter))).toEqual([]);
+        expect([...counters, 'help'].sort()).toEqual([...CONTEXT_VERBS].sort());
     });
 
-    test('a verb counts under its own name, and delegating and feature verbs on the day as well', () => {
-        countVerb('agent');
-        countVerb('team');
-        countVerb('browser');
-        countVerb('read');
-        countVerb('no-such-verb');
+    test('a tool call counts under its counter, and delegating and feature tools on the day as well', () => {
+        countToolCall('agent');
+        countToolCall('team');
+        countToolCall('browser');
+        countToolCall('read');
+        countToolCall('no-such-counter');
         expect(counts()).toEqual({
             'verbs.agent': 1,
             'verbs.team': 1,

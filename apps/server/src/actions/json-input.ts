@@ -1,4 +1,4 @@
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 
 // Enough to repair a document in one pass, few enough that a broken one does not fill the window.
 export const MAX_PROBLEMS = 20;
@@ -8,7 +8,7 @@ export function parseJson(source: string, what: string): unknown {
     try {
         return JSON.parse(source);
     } catch (e) {
-        throw new VerbRefusal('bad-json', `The ${what} is not JSON: ${e instanceof Error ? e.message : 'it does not parse'}`);
+        throw new ToolRefusal('bad-json', `The ${what} is not JSON: ${e instanceof Error ? e.message : 'it does not parse'}`);
     }
 }
 
@@ -18,10 +18,10 @@ export function pathOf(path: readonly PropertyKey[]): string {
 }
 
 /* Every problem of a document as a line of its own, led by the first in the message. */
-export function problemsRefusal(code: string, problems: readonly { path: string; text: string }[]): VerbRefusal {
+export function problemsRefusal(code: string, problems: readonly { path: string; text: string }[]): ToolRefusal {
     const [first] = problems;
 
-    return new VerbRefusal(code, `${first!.path} ${first!.text}`, [
+    return new ToolRefusal(code, `${first!.path} ${first!.text}`, [
         ...problems.slice(0, MAX_PROBLEMS).map((problem) => `problem\t${problem.path}\t${problem.text}`),
         ...(problems.length > MAX_PROBLEMS ? [`note\t${problems.length - MAX_PROBLEMS} more past these`] : [])
     ]);

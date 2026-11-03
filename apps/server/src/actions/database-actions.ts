@@ -1,7 +1,7 @@
 import { DATABASE_QUERY_ROWS, type ActionHandlers } from '@ruimte/actions';
 import { MODE_ORDER } from '@adecore/agents/providers';
 import { CodedError } from '@adecore/agents';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentQuery, DatabaseAgentHost } from '../database/agent-databases.ts';
 import { tableVisual } from '../database/table-visual.ts';
 import { hostService, type ServerActionContext } from './context.ts';
@@ -65,7 +65,7 @@ export const databaseActions: ActionHandlers<ServerActionContext> = {
         const mode = context.host.starts.modeOf(actor.id);
         // The narrowest mode promises the person that nothing changes without asking them, and a statement cannot ask.
         if (mode === MODE_ORDER[0]) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'database-write-mode',
                 `You run in ${mode}, which changes nothing without asking the person, and a statement cannot ask; give them the statements to run, or ask them for a wider mode`
             );

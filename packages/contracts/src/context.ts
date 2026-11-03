@@ -28,8 +28,8 @@ export const ContextSourceSchema = z.object({
 export type ContextSource = z.infer<typeof ContextSourceSchema>;
 
 /*
- * The first word of every agent verb, the noun of its tool, in the order the verb table lists them. The daemon's verb table
- * is the source and a test of its own holds this list to it; a client reads it to name what a call does.
+ * The usage counter of every toolkit, named after the `ruimte-context` command it replaced, and `help`, which only that CLI had.
+ * A client draws a tool call and an old chat's CLI call by it; the daemon's toolkits are the source and a test holds this list to them.
  */
 export const CONTEXT_VERBS = [
     'help',

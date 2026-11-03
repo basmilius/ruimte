@@ -287,7 +287,7 @@ function translated(error: unknown): unknown {
  * and the one owner of each document's text and version, so any number of clients share what a
  * server sees. A server starts when a document that needs it opens (and it is installed), and ends
  * only when its project closes, since starting one again for every file opened costs seconds of
- * indexing. Installing happens only through `install`, which a person's request calls, so no verb and
+ * indexing. Installing happens only through `install`, which a person's request calls, so no tool and
  * no agent reaches it.
  */
 export class LanguageHost {

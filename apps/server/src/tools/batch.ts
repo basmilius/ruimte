@@ -1,37 +1,45 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { MAX_PER_CALL } from '@ruimte/actions';
 import { z } from 'zod';
-import { idList } from './nodes.ts';
-import { VerbRefusal } from './verb.ts';
 
-/* What every verb that changes several at once says of it, so an agent reaches for the one call and not a loop. */
+/* What every tool that changes several at once says of it, so an agent reaches for the one call and not a loop. */
 export const ONE_WRITE = 'one write of the project, one update on every screen, and the call changes all of them or, refused, none';
 
-/* The ids a verb takes in one argument, separated by commas, at most as many as one call changes. */
-export function idBatch(raw: string, verb: string): string[] {
-    const ids = idList(raw, verb);
-    if (ids.length > MAX_PER_CALL) {
-        throw new VerbRefusal('bad-arguments', `${verb} takes at most ${MAX_PER_CALL} ids at once; split the rest over another call`);
-    }
-    return ids;
+/*
+ * A field of ids, at most as many as one call changes, in the order given and without the repeats:
+ * naming a node twice is one node, the way a person's selection holds it once.
+ */
+export function idsInput(field: string, what: string) {
+    return z
+        .array(z.string().trim().min(1, `${field} has an empty id in it`), { error: `${field} needs the ids of the ${what}` })
+        .min(1, `${field} needs the ids of the ${what}`)
+        .max(MAX_PER_CALL, `${field} takes at most ${MAX_PER_CALL} ids at once; split the rest over another call`)
+        .transform((ids) => [...new Set(ids)]);
 }
 
-/* The objects of a --json call, refused by the place in the array of the one that is wrong, never dropped. */
-export function jsonBatch<Item extends z.ZodType>(json: string, item: Item, example: string): z.output<Item>[] {
+/* The objects of a `json` field, refused by the place in the array of the one that is wrong, never dropped. */
+export function jsonBatch<Item extends z.ZodType>(json: string, item: Item, example: string, what: string): z.output<Item>[] {
     let parsed: unknown;
+
     try {
         parsed = JSON.parse(json);
     } catch {
-        throw new VerbRefusal('bad-json', '--json is not JSON; it takes an array of nodes', [`example\t${example}`]);
+        throw new ToolRefusal('bad-json', `json is not JSON; it takes an array of ${what}s`, [`example\t${example}`]);
     }
+
     const result = z
-        .array(item, { error: '--json needs an array of nodes' })
-        .min(1, '--json needs at least one node')
-        .max(MAX_PER_CALL, `--json takes at most ${MAX_PER_CALL} nodes; split the rest over another call`)
+        .array(item, { error: `json needs an array of ${what}s` })
+        .min(1, `json needs at least one ${what}`)
+        .max(MAX_PER_CALL, `json takes at most ${MAX_PER_CALL} ${what}s; split the rest over another call`)
         .safeParse(parsed);
+
     if (!result.success) {
         const issue = result.error.issues[0]!;
         const [index] = issue.path;
-        throw new VerbRefusal('bad-json', typeof index === 'number' ? `Node ${index + 1}: ${issue.message}` : issue.message, [`example\t${example}`]);
+        const place = typeof index === 'number' ? `${what.charAt(0).toUpperCase()}${what.slice(1)} ${index + 1}: ` : '';
+
+        throw new ToolRefusal('bad-json', `${place}${issue.message}`, [`example\t${example}`]);
     }
+
     return result.data;
 }

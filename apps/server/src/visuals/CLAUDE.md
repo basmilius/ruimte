@@ -1,6 +1,6 @@
 # Visuals
 
-`canvas/visual-verb.ts` says how an agent shows, previews and measures a page.
+`apps/server/src/tools/visual-tools.ts` says how an agent shows, previews and measures a page.
 
 - A render child (`render-child.ts`) runs its own Chrome on a throwaway profile, never the daemon's under `$RUIMTE_HOME/browser`.
 - Its Chrome sends everything through a public-only SOCKS5 proxy (`socks-proxy.ts`) that refuses loopback, local networks and the machine's own addresses (`local-address.ts`) on the resolved address, and connects only to an address it checked. WebRTC is held to proxied UDP and QUIC is off.
@@ -9,7 +9,7 @@
 - The MCP tool embeds a page's local images as `data:` URIs before the visual is kept, reading a path only inside the folders an agent's files may come from (`apps/server/src/mcp/files.ts`) and only a file whose bytes are an image (`apps/server/src/mcp/visual-images.ts`).
 - The daemon never serves a page inline; it goes out as a download with `nosniff`, shown only in a sandboxed frame.
 - Every permission mode may show a visual.
-- Sources and previews live in `$RUIMTE_HOME/chats/<chatId>.visuals/`. `visual write` writes only a validated filename in the caller's own chat folder. A clear or delete removes it (`VisualStore.removeChat`); a fork copies only published pages.
+- Sources and previews live in `$RUIMTE_HOME/chats/<chatId>.visuals/`. `visual_write` writes only a validated filename in the caller's own chat folder. A clear or delete removes it (`VisualStore.removeChat`); a fork copies only published pages.
 
 ## Product rules
 

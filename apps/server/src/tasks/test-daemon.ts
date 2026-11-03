@@ -5,8 +5,8 @@ import { NODE_SIZE, type AgentKind, type ChatItem, type ChatTurnItem, type Proje
 import { agentStates } from '../agents/agent-state.ts';
 import { chatRequests, AgentLineageStore, NoticeNotes, NoticeStore, restartBackgroundLimits, TaskStore } from '@adecore/agents/coordination';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import type { CanvasHost, VisualHost } from '../canvas/verb.ts';
-import { answerOf } from '../canvas/verb-test-helpers.ts';
+import type { CanvasHost, VisualHost } from '../tools/host.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { AttachmentStore, ChatStore, VisualStore } from '@adecore/agents/chat';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { continueOn } from '../chat/continue-on.ts';
@@ -106,7 +106,7 @@ interface TestDaemonOptions {
     /* What runs a terminal; the fake adapter unless a measurement needs real processes. */
     ptyAdapter?: PtyAdapter;
     checkpoints?: CheckpointService;
-    /* Real worktrees for the verbs; without them a project is in no repository. */
+    /* Real worktrees for the tools; without them a project is in no repository. */
     worktrees?: Worktrees;
     /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
     installed?: AgentKind[];
@@ -551,7 +551,7 @@ export function turnsOf(daemon: Pick<TestDaemon, 'chats'>, chatId: string): Chat
     return itemsOf(daemon, chatId).filter((item): item is ChatTurnItem => item.kind === 'turn');
 }
 
-/* A verb the node `caller` runs as a tool call does: its lines, or a refusal as its `refused` rows. */
-export async function runVerb(daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, argv: string[]): Promise<string[]> {
-    return (await answerOf(name, argv, caller, daemon.host)).lines;
+/* A tool of a toolkit the node `caller` calls with JSON input: its lines, or a refusal as its `refused` rows. */
+export async function invokeTool(daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, input: Record<string, unknown>): Promise<string[]> {
+    return (await toolAnswer(name, input, toolCall(caller, daemon.host))).lines;
 }

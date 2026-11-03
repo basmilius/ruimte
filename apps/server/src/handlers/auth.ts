@@ -228,7 +228,7 @@ export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, h
 
     /*
      * Any client the machine let in may set it, like a name: the size is the machine's, so a node an
-     * agent adds here matches what a person's click would make. No verb reaches it.
+     * agent adds here matches what a person's click would make. No tool reaches it.
      */
     dispatcher.register('endpoint.setNodeSize', async (payload, client) => {
         await identity.setNodeSize(payload.kind, payload.size);

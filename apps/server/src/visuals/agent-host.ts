@@ -1,5 +1,5 @@
 import type { VisualStore } from '@adecore/agents/chat';
-import type { VisualHost } from '../canvas/verb.ts';
+import type { VisualHost } from '../tools/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { previewVisual, type VisualRenderer } from './renderer.ts';
@@ -13,7 +13,7 @@ interface AgentVisualDeps {
     renderer?: VisualRenderer;
 }
 
-/* The pages the caller's own chat shows above its replies, as the `visual` verb reaches them. */
+/* The pages the caller's own chat shows above its replies, as the `visual` tool reaches them. */
 export function agentVisuals(deps: AgentVisualDeps): VisualHost {
     const { visuals, chats, renderer } = deps;
     return {

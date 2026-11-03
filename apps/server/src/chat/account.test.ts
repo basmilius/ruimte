@@ -8,7 +8,7 @@ import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { ProviderAccountsService } from '@adecore/agents/providers';
 import type { LimitsUpdate } from '@adecore/agents/usage';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { turnsOf } from './chat-test-helpers.ts';
 import { sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
@@ -93,8 +93,8 @@ function say(chatId: string, text: string): Promise<void> {
 }
 
 /* Has the lead chat start an agent and answers its node id. */
-async function openAgent(argv: string[]): Promise<string> {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', argv);
+async function openAgent(input: Record<string, unknown>): Promise<string> {
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', input);
     return line!.split('\t')[0]!;
 }
 
@@ -406,9 +406,9 @@ describe('a child an agent opens', () => {
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude_personal' });
         await say('chat-lead', 'plan');
 
-        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
-        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
-        const codexChild = await openAgent(['codex', '--prompt', 'look around']);
+        const chatChild = await openAgent({ cli: 'claude', prompt: 'look around' });
+        const terminalChild = await openAgent({ cli: 'claude', terminal: true, prompt: 'look around' });
+        const codexChild = await openAgent({ cli: 'codex', prompt: 'look around' });
         await daemon.until(
             () => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined && daemon.chats.get(codexChild) !== undefined
         );
@@ -451,9 +451,9 @@ describe('the top account of the order', () => {
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, account: 'claude' });
         await say('chat-lead', 'plan');
 
-        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
-        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
-        const codexChild = await openAgent(['codex', '--prompt', 'look around']);
+        const chatChild = await openAgent({ cli: 'claude', prompt: 'look around' });
+        const terminalChild = await openAgent({ cli: 'claude', terminal: true, prompt: 'look around' });
+        const codexChild = await openAgent({ cli: 'codex', prompt: 'look around' });
         await daemon.until(
             () => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined && daemon.chats.get(codexChild) !== undefined
         );
@@ -516,8 +516,8 @@ describe("a project's accounts", () => {
         await say('chat-lead', 'plan');
         await setProjectAccounts(store, { projectId, kind: 'claude', default: 'claude_personal', off: ['claude'] });
 
-        const chatChild = await openAgent(['claude', '--prompt', 'look around']);
-        const terminalChild = await openAgent(['claude', '--terminal', '--prompt', 'look around']);
+        const chatChild = await openAgent({ cli: 'claude', prompt: 'look around' });
+        const terminalChild = await openAgent({ cli: 'claude', terminal: true, prompt: 'look around' });
         await daemon.until(() => daemon.chats.get(chatChild) !== undefined && daemon.sessions.get(terminalChild) !== undefined);
 
         expect(daemon.chats.get(chatChild)!.info.account).toBe('claude_personal');

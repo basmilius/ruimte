@@ -243,7 +243,7 @@ describe('ProjectStore', () => {
         expect(await readdir(join(folder, '.ruimte'))).toEqual(['project.json']);
     });
 
-    test('a newer file refuses a verb too, so nothing an agent does writes over it', async () => {
+    test('a newer file refuses a tool too, so nothing an agent does writes over it', async () => {
         const opened = await store.openProject({ folder });
         const projectId = opened.summary.projectId;
         store.release(projectId);
@@ -1139,7 +1139,7 @@ describe('the two files of a project', () => {
         expect((await privateFileOnDisk(folder)).overlay).toEqual({});
     });
 
-    test('a node an agent adds to a shared canvas travels with it, and a verb never moves a view between the files', async () => {
+    test('a node an agent adds to a shared canvas travels with it, and a tool never moves a view between the files', async () => {
         const opened = await store.openProject({ folder });
         const projectId = opened.summary.projectId;
         await store.save(projectId, 0, content(), ['main']);
@@ -1182,7 +1182,7 @@ describe('what the shared file may decide', () => {
         expect(node).not.toHaveProperty('runtimeMode');
         expect(node).not.toHaveProperty('resume');
         expect(node).not.toHaveProperty('cwd');
-        // An agent reads the same document, so a verb never sees them either.
+        // An agent reads the same document, so a tool never sees them either.
         expect(canvas(await store.read(opened.summary.projectId)).nodes[0]).not.toHaveProperty('runtimeMode');
     });
 
@@ -1292,7 +1292,7 @@ describe('saves and outside edits', () => {
         projectDirWatcher().emit('project.json');
         await fake.settle();
         expect(changed.at(-1)).toMatchObject({ payload: { document: { rev: 2, name: 'from git' } } });
-        // The bump is on disk too, which is where a verb reads the rev.
+        // The bump is on disk too, which is where a tool reads the rev.
         expect((await privateFileOnDisk(folder)).rev).toBe(2);
         expect(await store.revision(projectId)).toBe(2);
 
@@ -1710,7 +1710,7 @@ describe('the machine of a node', () => {
         expect(canvas((await store.openProject({ projectId })).document).nodes[0]).not.toHaveProperty('machine');
     });
 
-    test('is set by no verb, which may still change the node it is on', async () => {
+    test('is set by no tool, which may still change the node it is on', async () => {
         const projectId = await openBound();
         await store.mutate(projectId, (current) => {
             const view = canvas(current);
@@ -1789,7 +1789,7 @@ describe('the machine of a node', () => {
         expect(await store.save(projectId, 1, bound('machine-b'))).toBe(2);
     });
 
-    test('stays a node on a canvas: becoming a view of its own is refused, and so is a verb doing it', async () => {
+    test('stays a node on a canvas: becoming a view of its own is refused, and so is a tool doing it', async () => {
         const projectId = await openBound();
         const promoted: ProjectContent = { ...content(), views: [{ kind: 'terminal', id: 'n1', name: 'shell', node: {} }] };
         await expect(store.save(projectId, 1, promoted)).rejects.toMatchObject({ code: 'remote-node-view' });
@@ -1860,7 +1860,7 @@ describe('the machine of a node', () => {
         await store.save(projectId, 0, { ...content(), views: [{ ...view, nodes: [node] }] });
         expect(await textOfProjectFiles()).toContain(JSON.stringify(underThisFolder));
         expect(canvas((await store.openProject({ projectId })).document).nodes[0]!.cwd).toBe(underThisFolder);
-        await store.mutate(projectId, (current) => ({ content: { ...current, name: 'by verb' }, result: null }));
+        await store.mutate(projectId, (current) => ({ content: { ...current, name: 'by tool' }, result: null }));
         expect(await textOfProjectFiles()).toContain(JSON.stringify(underThisFolder));
     });
 });
@@ -1947,8 +1947,8 @@ describe('locks and reads from memory', () => {
         const opened = await store.openProject({ folder });
         const projectId = opened.summary.projectId;
         expect(await store.revision(projectId)).toBe(0);
-        await store.mutate(projectId, (current) => ({ content: { ...current, name: 'by verb' }, result: null }));
-        expect((await store.read(projectId)).name).toBe('by verb');
+        await store.mutate(projectId, (current) => ({ content: { ...current, name: 'by tool' }, result: null }));
+        expect((await store.read(projectId)).name).toBe('by tool');
         await store.save(projectId, 1, content('by person'));
         expect((await store.read(projectId)).name).toBe('by person');
         expect(await store.revision(projectId)).toBe(2);

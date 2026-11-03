@@ -1,5 +1,4 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { VerbRefusal } from '../canvas/verb.ts';
 import {
     AGENT_IMAGE_BYTES,
     AGENT_IMAGE_TYPES,
@@ -8,6 +7,7 @@ import {
     agentAttachmentBytes,
     agentAttachmentType
 } from '../chat/attachment-type.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { imageType } from '../mcp/visual-images.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
 
@@ -19,11 +19,11 @@ export const chatAttachActions: ActionHandlers<ServerActionContext> = {
         await requireChatCaller(
             context,
             actor.id,
-            (you) => new VerbRefusal('attach-needs-chat', `A file attaches only to the thread of an AI chat, and you are ${you}: describe it in text instead`)
+            (you) => new ToolRefusal('attach-needs-chat', `A file attaches only to the thread of an AI chat, and you are ${you}: describe it in text instead`)
         );
         const bytes = Buffer.from(data, 'base64');
         if (bytes.byteLength > AGENT_MODEL_BYTES) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'attach-too-large',
                 `The file is ${Math.ceil(bytes.byteLength / MIB)} MiB and at most ${AGENT_MODEL_BYTES / MIB} MiB attach for a model, ${AGENT_IMAGE_BYTES / MIB} MiB for an image`
             );
@@ -31,13 +31,13 @@ export const chatAttachActions: ActionHandlers<ServerActionContext> = {
         // The bytes decide the type: the daemon trusts no CLI to have checked them.
         const type = agentAttachmentType(bytes);
         if (type === null) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'attach-not-image',
                 `Only a ${Object.values(AGENT_IMAGE_TYPES).join(', ')} image or a ${Object.values(AGENT_MODEL_TYPES).join(', ')} model attaches, and these bytes are ${imageType(bytes) ?? 'neither'}`
             );
         }
         if (bytes.byteLength > agentAttachmentBytes(type.kind)) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'attach-too-large',
                 `The image is ${Math.ceil(bytes.byteLength / MIB)} MiB and at most ${AGENT_IMAGE_BYTES / MIB} MiB attach`
             );

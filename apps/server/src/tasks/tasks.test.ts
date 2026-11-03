@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import type { ChatItem, ChatSubagentItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
-import { nextLine } from '../canvas/task-verbs.ts';
+import { nextLine } from '../tools/task-tools.ts';
 import { claudeStoppingOnResume, fakeClaude, fakeCodexWith, ManualClock } from '@adecore/agents/testing';
 import { BRIEF_TITLE } from '../chat/chat-manager.ts';
-import { taskFirstPrompt } from '../canvas/tasks.ts';
+import { taskFirstPrompt } from '../tools/tasks.ts';
 import { START_LINE_ENV } from '../sessions/session.ts';
 import type { FakeCli } from '@adecore/agents/testing';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, runVerb, turnsOf, type TestDaemon } from './test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from './test-daemon.ts';
 import { WAITING_GRACE_MS } from '@adecore/agents/coordination';
 
 type Daemon = TestDaemon;
@@ -89,16 +89,16 @@ function briefBehind(cli: FakeCli): FakeCli {
 }
 
 async function delegate(daemon: Daemon, title: string, prompt: string, chat = true): Promise<{ childId: string; taskId: string }> {
-    const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', ...(chat ? [] : ['--terminal']), '--task', title, '--prompt', prompt]);
+    const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: !chat, task: title, prompt });
     const fields = line!.split('\t');
     expect(fields).toHaveLength(6);
     return { childId: fields[0]!, taskId: fields[5]! };
 }
 
-/* Opens a team of terminal roles with --task, each settling only once it calls done. */
+/* Opens a team of terminal roles with task, each settling only once it calls done. */
 async function delegateTeam(daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> {
     const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude', terminal: true }));
-    const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
+    const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', task: true, roles: JSON.stringify(roles) });
     expect(lines).toHaveLength(titles.length + 2);
     expect(lines.at(-1)).toBe(nextLine(true));
     return lines.slice(1, -1).map((line) => {
@@ -109,7 +109,7 @@ async function delegateTeam(daemon: Daemon, titles: readonly string[]): Promise<
 
 /* A terminal child reporting back, and the outbox done with whatever that owed. */
 async function report(daemon: Daemon, child: { childId: string; taskId: string }, result: string): Promise<void> {
-    expect(await runVerb(daemon, child.childId, 'done', ['--result', result])).toEqual([`done\t${child.taskId}\tchat-lead`]);
+    expect(await invokeTool(daemon, child.childId, 'task_done', { result })).toEqual([`done\t${child.taskId}\tchat-lead`]);
     await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'wake-parent' && work.payload.taskId === child.taskId));
     await daemon.worker.settled();
 }
@@ -133,7 +133,7 @@ function leadItems(daemon: Daemon): ChatItem[] {
     return daemon.chats.get('chat-lead')?.thread.list() ?? [];
 }
 
-/* The lead in the middle of a turn, as it is while it runs the verbs. */
+/* The lead in the middle of a turn, as it is while it calls the tools. */
 async function leadWorking(daemon: Daemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'slow');
@@ -200,9 +200,9 @@ describe('a task wakes the chat that gave it', () => {
         expect(page.live).toBe(false);
         expect(page.context).toEqual({ provider: 'claude', cwd: folder, chatId: children[0]!.childId });
 
-        // What `tasks` shows the lead: nothing current once the wake went, and the history under --all.
-        expect((await runVerb(daemon, 'chat-lead', 'task', ['list'])).map((line) => line.split('\t')[0])).toEqual(['note']);
-        expect((await runVerb(daemon, 'chat-lead', 'task', ['list', '--all'])).map((line) => line.split('\t').slice(0, 4).join('\t'))).toEqual(
+        // What `tasks` shows the lead: nothing current once the wake went, and the history under all.
+        expect((await invokeTool(daemon, 'chat-lead', 'task_list', {})).map((line) => line.split('\t')[0])).toEqual(['note']);
+        expect((await invokeTool(daemon, 'chat-lead', 'task_list', { all: true })).map((line) => line.split('\t').slice(0, 4).join('\t'))).toEqual(
             children.map((child) => `task\t${child.taskId}\tgave\tdone`)
         );
     });
@@ -360,7 +360,7 @@ describe('a task wakes the chat that gave it', () => {
         const child = await delegate(daemon, 'Lexer', 'fix the tokenizer', false);
         await daemon.worker.settled();
 
-        expect(await runVerb(daemon, child.childId, 'done', ['--result', 'Both bugs fixed'])).toEqual([`done\t${child.taskId}\tchat-lead`]);
+        expect(await invokeTool(daemon, child.childId, 'task_done', { result: 'Both bugs fixed' })).toEqual([`done\t${child.taskId}\tchat-lead`]);
         daemon.adapter.forSession(child.childId).exit(0);
         await untilWoken(daemon);
         expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', result: { source: 'done', text: 'Both bugs fixed' } });
@@ -369,7 +369,7 @@ describe('a task wakes the chat that gave it', () => {
 
     test('a terminal agent is refused a task', async () => {
         const daemon = await boot();
-        const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--task', 'Lexer', '--prompt', 'fix it']);
+        const [line] = await invokeTool(daemon, 'term-lead', 'agent_start', { cli: 'claude', task: 'Lexer', prompt: 'fix it' });
         expect(line).toStartWith('refused\tnot-a-chat-parent\t');
         expect(daemon.tasks.involving('term-lead')).toEqual([]);
     });
@@ -494,7 +494,7 @@ describe('the tasks of one team call wake the lead together', () => {
         expect(daemon.tasks.ofParent('chat-lead').map((task) => task.wake)).toEqual(['sent', 'sent', 'sent']);
         expect(daemon.outbox.list()).toEqual([]);
         const batchId = [...batchIds][0]!;
-        expect((await runVerb(daemon, 'chat-lead', 'task', ['list', '--all'])).map((line) => line.split('\t').at(-1))).toEqual([batchId, batchId, batchId]);
+        expect((await invokeTool(daemon, 'chat-lead', 'task_list', { all: true })).map((line) => line.split('\t').at(-1))).toEqual([batchId, batchId, batchId]);
     });
 
     test('a role that fails and a role a person removes still complete the team', async () => {
@@ -593,7 +593,7 @@ describe('waiting on owed work', () => {
         await leadIdle(daemon);
         const single = await delegate(daemon, 'Review', 'review the plan', false);
         await daemon.worker.settled();
-        expect(await runVerb(daemon, single.childId, 'done', ['--result', 'Looks fine'])).toEqual([`done\t${single.taskId}\tchat-lead`]);
+        expect(await invokeTool(daemon, single.childId, 'task_done', { result: 'Looks fine' })).toEqual([`done\t${single.taskId}\tchat-lead`]);
         await untilWoken(daemon);
         await daemon.worker.settled();
 
@@ -771,7 +771,7 @@ describe('resume at reset', () => {
         daemon.worker.start();
         await leadIdle(daemon);
 
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['codex', '--task', 'Parser', '--prompt', 'fix the parser\noverloaded']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', task: 'Parser', prompt: 'fix the parser\noverloaded' });
         const fields = line!.split('\t');
         const childId = fields[0]!;
         const taskId = fields[5]!;
@@ -941,7 +941,9 @@ describe('a child that waits on input', () => {
             `agent_answer with id "${child.childId}", request "req-q" and answer "<a choice label as written, or your own words>"`
         );
 
-        expect(await runVerb(daemon, 'chat-lead', 'answer', [child.childId, 'req-q', '--answer', 'Red'])).toEqual([`answered\t${child.childId}\treq-q`]);
+        expect(await invokeTool(daemon, 'chat-lead', 'agent_answer', { id: child.childId, request: 'req-q', answer: 'Red' })).toEqual([
+            `answered\t${child.childId}\treq-q`
+        ]);
         const person = await daemon.request('chat.answer', { chatId: child.childId, requestId: 'req-q', answers: { '0': 'Blue' } });
         expect(person).toMatchObject({ ok: false, error: { code: 'request-not-found' } });
 
@@ -958,7 +960,7 @@ describe('a child that waits on input', () => {
         const child = await asking(daemon, 'ask: which color');
 
         expect(await daemon.request('chat.answer', { chatId: child.childId, requestId: 'req-q', answers: { '0': 'Blue' } })).toMatchObject({ ok: true });
-        const [refused] = await runVerb(daemon, 'chat-lead', 'answer', [child.childId, 'req-q', '--answer', 'Red']);
+        const [refused] = await invokeTool(daemon, 'chat-lead', 'agent_answer', { id: child.childId, request: 'req-q', answer: 'Red' });
         expect(refused).toBe('refused\tnot-pending\treq-q no longer waits: it was answered');
 
         await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'done');
@@ -970,18 +972,20 @@ describe('a child that waits on input', () => {
         await leadIdle(daemon);
         const asker = await asking(daemon, 'ask: which color');
 
-        const [foreign] = await runVerb(daemon, 'term-lead', 'answer', [asker.childId, 'req-q', '--answer', 'Red']);
+        const [foreign] = await invokeTool(daemon, 'term-lead', 'agent_answer', { id: asker.childId, request: 'req-q', answer: 'Red' });
         expect(foreign).toBe(`refused\tnot-yours\t${asker.childId} is not a node you opened; you only answer the questions of an agent you opened yourself`);
 
-        const [several] = await runVerb(daemon, 'chat-lead', 'answer', [asker.childId, 'req-q', '--answers', '{"0":"Red","1":"Blue"}']);
+        const [several] = await invokeTool(daemon, 'chat-lead', 'agent_answer', { id: asker.childId, request: 'req-q', answers: '{"0":"Red","1":"Blue"}' });
         expect(several).toBe('refused\tunknown-question\t1 is not a question of this request; its ids are 0');
-        expect(await runVerb(daemon, 'chat-lead', 'answer', [asker.childId, 'req-q', '--answer', 'Red'])).toEqual([`answered\t${asker.childId}\treq-q`]);
-        const [again] = await runVerb(daemon, 'chat-lead', 'answer', [asker.childId, 'req-q', '--answer', 'Blue']);
+        expect(await invokeTool(daemon, 'chat-lead', 'agent_answer', { id: asker.childId, request: 'req-q', answer: 'Red' })).toEqual([
+            `answered\t${asker.childId}\treq-q`
+        ]);
+        const [again] = await invokeTool(daemon, 'chat-lead', 'agent_answer', { id: asker.childId, request: 'req-q', answer: 'Blue' });
         expect(again).toBe('refused\tnot-pending\treq-q no longer waits: it was answered');
         await daemon.until(() => daemon.tasks.get(asker.taskId)?.status === 'done');
 
         const approver = await asking(daemon, 'tool: date', 'Runner');
-        const approval = await runVerb(daemon, 'chat-lead', 'answer', [approver.childId, 'req-1', '--answer', 'allow']);
+        const approval = await invokeTool(daemon, 'chat-lead', 'agent_answer', { id: approver.childId, request: 'req-1', answer: 'allow' });
         expect(approval[0]).toStartWith('refused\tnot-a-question\treq-1 asks a person to approve Bash;');
         expect(approval.slice(1)).toEqual([`approval\t${approver.childId}\treq-1\tBash\ta person's alone`]);
         expect(daemon.chats.get(approver.childId)?.thread.get('approval-req-1')).toMatchObject({ decision: 'pending' });
@@ -1069,7 +1073,7 @@ describe('a child with work running in the background', () => {
         await leadIdle(daemon);
         const child = await launched(daemon);
 
-        expect(await runVerb(daemon, child.childId, 'done', ['--result', 'the survey is under way'])).toEqual([`done\t${child.taskId}\tchat-lead`]);
+        expect(await invokeTool(daemon, child.childId, 'task_done', { result: 'the survey is under way' })).toEqual([`done\t${child.taskId}\tchat-lead`]);
         await untilWoken(daemon);
         later(daemon);
         later(daemon);
@@ -1088,7 +1092,7 @@ describe('a child with work running in the background', () => {
             { title: 'Survey', prompt: 'background: read the docs', provider: 'claude' },
             { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' }
         ];
-        const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
+        const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', task: true, roles: JSON.stringify(roles) });
         const [survey, lexer] = lines.slice(1, -1).map((line) => {
             const fields = line.split('\t');
             return { childId: fields[0]!, taskId: fields[6]! };
@@ -1130,7 +1134,7 @@ describe('a child with work running in the background', () => {
         running.push(daemon);
         daemon.worker.start();
         await leadIdle(daemon);
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['codex', '--task', 'Survey', '--prompt', 'spawn agent: survey the docs']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', task: 'Survey', prompt: 'spawn agent: survey the docs' });
         const fields = line!.split('\t');
         const childId = fields[0]!;
         const taskId = fields[5]!;

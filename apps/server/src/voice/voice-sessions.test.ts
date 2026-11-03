@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatItem, ProjectContent, ProjectSummary, ServerFrame, VoicePreferences, VoiceStartPayload } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { ClientConnection } from '../dispatcher.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { LiveError } from './openai-live.ts';

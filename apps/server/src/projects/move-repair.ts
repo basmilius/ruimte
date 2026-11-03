@@ -1,6 +1,6 @@
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import type { ChatInfo, ProjectView } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import type { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';

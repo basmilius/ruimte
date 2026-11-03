@@ -1,5 +1,6 @@
 import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
-import { VerbRefusal, type VerbCall } from './verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { type AgentCall } from './host.ts';
 
 // Teams stop at depth 1 to prevent exponential fan-out; single helpers may reach depth 2.
 export const MAX_AGENT_DEPTH = 2;
@@ -11,37 +12,30 @@ function depthLines(mine: number): string[] {
     return [
         `depth\tyou\t${mine}`,
         'depth\t0\ta node a person opened',
-        `depth\tagent\topens up to depth ${MAX_AGENT_DEPTH}`,
-        `depth\tteam\topens up to depth ${MAX_TEAM_DEPTH}`
+        `depth\tagent_start\topens up to depth ${MAX_AGENT_DEPTH}`,
+        `depth\tagent_team\topens up to depth ${MAX_TEAM_DEPTH}`
     ];
 }
-
-export const DEPTH_LIMIT_LINES: readonly string[] = [
-    `depth\tA node a person opened is depth 0 and one an agent opens is one deeper; agent opens up to depth ${MAX_AGENT_DEPTH}, team up to depth ${MAX_TEAM_DEPTH}`,
-    `depth\tAt depth ${MAX_TEAM_DEPTH} you may open a single agent with agent and no team of your own; at depth ${MAX_AGENT_DEPTH} neither verb opens anything`,
-    `depth\tThe daemon writes the depth down beside the node, outside the project, so a restart does not start the count over`,
-    `limit\tOne caller may have ${MAX_OPENED_PER_CALLER} agents open at a time; removing a canvas node or finishing a hidden agent frees the count`
-];
 
 /*
  * The depth the nodes this call would open land at, refusing when the chain has run far enough or
  * this caller has opened enough. `making` is how many nodes are about to be opened, so a team is
  * weighed whole rather than one role at a time.
  */
-export function depthForOpening(call: VerbCall, verb: 'agent' | 'team', making: number): number {
+export function depthForOpening(call: AgentCall, tool: 'agent_start' | 'agent_team', making: number): number {
     const mine = call.host.lineage.depthOf(call.caller);
     const depth = mine + 1;
-    const max = verb === 'team' ? MAX_TEAM_DEPTH : MAX_AGENT_DEPTH;
+    const max = tool === 'agent_team' ? MAX_TEAM_DEPTH : MAX_AGENT_DEPTH;
     if (depth > max) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'too-deep',
-            `You sit at depth ${mine} and ${verb} would open agents at depth ${depth}; ${verb} opens up to depth ${max}`,
+            `You sit at depth ${mine} and ${tool} would open agents at depth ${depth}; ${tool} opens up to depth ${max}`,
             depthLines(mine)
         );
     }
     const already = call.host.starts.openedCount(call.caller);
     if (already + making > MAX_OPENED_PER_CALLER) {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'too-many-agents',
             `You have ${already} agents open and this would open ${making} more; one caller may have ${MAX_OPENED_PER_CALLER} open at a time. Removing a canvas node or finishing a hidden agent frees the count`
         );

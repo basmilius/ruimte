@@ -9,7 +9,7 @@ interface ClosedProjectDeps {
 
 /*
  * The last window closed a project, which ends its sessions. An agent another project started there
- * with `--project` fails its task first, saying so, so its parent there is woken once and knows why.
+ * with `project` fails its task first, saying so, so its parent there is woken once and knows why.
  * Told while the index still places the nodes, since a task settles only for a placed child.
  */
 export function failTasksOfClosedProject(deps: ClosedProjectDeps, name: string, nodeIds: readonly string[]): void {

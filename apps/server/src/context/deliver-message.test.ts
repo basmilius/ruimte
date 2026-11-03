@@ -4,7 +4,7 @@ import type { ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '@adecore/agents/testing';
 import { NO_REPLY_NOTICE } from './notices.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, itemsOf, releasedProject, runVerb, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, itemsOf, releasedProject, turnsOf, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
 
 /* Two chats a person opened beside each other, plus a note nothing links to: a message travels only along a line. */
 function content(): ProjectContent {
@@ -70,13 +70,13 @@ async function idle(daemon: TestDaemon, chatId: string): Promise<void> {
     await daemon.until(() => turnsOf(daemon, chatId).some((turn) => turn.state === 'done'));
 }
 
-/* The line a message travels along; `--to` on a chat draws it both ways, so the two can answer each other. */
+/* The line a message travels along; `to` on a chat draws it both ways, so the two can answer each other. */
 async function link(daemon: TestDaemon, from: string, to: string): Promise<void> {
-    await runVerb(daemon, from, 'link', ['new', '--to', to]);
+    await invokeTool(daemon, from, 'link_new', { to });
 }
 
 async function notify(daemon: TestDaemon, from: string, to: string, text: string): Promise<string[]> {
-    return runVerb(daemon, from, 'notify', [to, '--text', text]);
+    return invokeTool(daemon, from, 'notify', { id: to, text });
 }
 
 /* The line notify prints, which every answer ends with the same way. */
@@ -185,7 +185,7 @@ describe('a message to a chat', () => {
     test('to a terminal changes nothing: it goes on the screen and starts no turn', async () => {
         const daemon = await boot();
         await idle(daemon, 'chat-lead');
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--prompt', 'look around']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, prompt: 'look around' });
         const termId = line!.split('\t')[0]!;
         await daemon.until(() => daemon.sessions.get(termId) !== undefined);
 

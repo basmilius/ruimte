@@ -4,7 +4,7 @@ import { heapStats } from 'bun:jsc';
 import type { ProjectContent } from '@ruimte/contracts';
 import { ChatStore } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../src/tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../src/tasks/test-daemon.ts';
 
 /*
  * The daemon's memory over a long session: a lead with a team of five chat children that keep getting
@@ -95,13 +95,13 @@ async function roundDone(taskIds: readonly string[], children: readonly string[]
 
 const task = `output:${outputBytes}`;
 const roles = ROLES.map((title) => ({ title, prompt: task, provider: 'claude' }));
-const lines = await runVerb(daemon, LEAD, 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
+const lines = await invokeTool(daemon, LEAD, 'agent_team', { label: 'Crew', task: true, roles: JSON.stringify(roles) });
 const team = lines.slice(1, -1).map((line) => {
     const fields = line.split('\t');
     return { childId: fields[0]!, taskId: fields[6]! };
 });
 if (team.length !== ROLES.length) {
-    throw new Error(`the team verb answered ${lines.join(' | ')}`);
+    throw new Error(`agent_team answered ${lines.join(' | ')}`);
 }
 const children = team.map((member) => member.childId);
 await roundDone(
@@ -112,10 +112,10 @@ await roundDone(
 async function round(): Promise<void> {
     const taskIds: string[] = [];
     for (const childId of children) {
-        const [line = ''] = await runVerb(daemon, LEAD, 'task', ['new', childId, '--prompt', task, '--title', 'Next part']);
+        const [line = ''] = await invokeTool(daemon, LEAD, 'task_new', { id: childId, prompt: task, title: 'Next part' });
         const taskId = line.split('\t')[1];
         if (!line.startsWith('task\t') || taskId === undefined) {
-            throw new Error(`task new answered ${line}`);
+            throw new Error(`task_new answered ${line}`);
         }
         taskIds.push(taskId);
     }

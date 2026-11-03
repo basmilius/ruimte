@@ -1,3 +1,4 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import {
     chatHostOf,
     isSessionView,
@@ -8,7 +9,6 @@ import {
     type ProjectDeviceView,
     type ProjectTerminalView
 } from '@ruimte/contracts';
-import { VerbRefusal } from './verb.ts';
 
 /* A chat, design, terminal, browser or device the project keeps as a view of its own, its session inside it. */
 type OwnView = ProjectBrowserView | ProjectChatView | ProjectDesignView | ProjectDeviceView | ProjectTerminalView;
@@ -36,8 +36,8 @@ function ownViewSentence(view: OwnView, id: string): string {
  * "Not a node on this canvas" would send an agent through every view of the project looking for it,
  * so the refusal says the id is a view of its own.
  */
-export function refuseOwnView(view: OwnView, cannot: string, lines: string[] = [], id: string = view.id): VerbRefusal {
-    return new VerbRefusal('not-on-a-canvas', `${ownViewSentence(view, id)}, not a node on any canvas of this project, so ${cannot}`, lines);
+export function refuseOwnView(view: OwnView, cannot: string, lines: string[] = [], id: string = view.id): ToolRefusal {
+    return new ToolRefusal('not-on-a-canvas', `${ownViewSentence(view, id)}, not a node on any canvas of this project, so ${cannot}`, lines);
 }
 
 /*
@@ -50,7 +50,7 @@ export function refuseMissingNodes(
     canvasId: string,
     cannot: string,
     lines: string[] = []
-): VerbRefusal {
+): ToolRefusal {
     const own = missing.flatMap((id) => {
         const view = ownViewOf(content, id);
         return view === null ? [] : [{ id, view }];
@@ -58,7 +58,7 @@ export function refuseMissingNodes(
     if (missing.length === 1 && own.length === 1) {
         return refuseOwnView(own[0]!.view, cannot, lines, own[0]!.id);
     }
-    return new VerbRefusal('unknown-node', `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvasId}`, [
+    return new ToolRefusal('unknown-node', `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvasId}`, [
         // One call named several ids, so the ones the sidebar holds are named under the sentence instead.
         ...own.map(({ id, view }) => `note\t${ownViewSentence(view, id)}, not a node on any canvas of this project`),
         ...lines

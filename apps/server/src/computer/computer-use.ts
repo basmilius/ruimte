@@ -59,18 +59,18 @@ type HeldCode = 'paused' | 'taken-over';
 
 /* The person holds the Mac. Nothing the agent does changes that, so the words steer it away from trying. */
 const HELD_WORDS: Record<HeldCode, string> = {
-    paused: 'The person paused the session. Call computer state again with --wait 60, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
+    paused: 'The person paused the session. Call computer_state again with wait 60, which holds until they resume, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile',
     'taken-over':
-        'The person took over the Mac. Call computer state again with --wait 60, which holds until they hand it back, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile'
+        'The person took over the Mac. Call computer_state again with wait 60, which holds until they hand it back, and act only after it: they may have changed the window. Do not try to reach the app another way meanwhile'
 };
 
-const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer state';
+const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer_state';
 
 /* One agent operates the Mac at a time; the words name the one that does, by the title the person sees. */
 function busyRefusal(nodeTitle: string | null): ComputerRefusal {
     return new ComputerRefusal(
         'busy',
-        `Another agent operates this Mac now${nodeTitle === null ? '' : `, from "${nodeTitle}"`}; call again with --wait 60, which holds until it is free, or go on with work that needs no app`
+        `Another agent operates this Mac now${nodeTitle === null ? '' : `, from "${nodeTitle}"`}; call again with wait 60, which holds until it is free, or go on with work that needs no app`
     );
 }
 
@@ -321,7 +321,7 @@ export class ComputerUse {
         return this.store.enabled;
     }
 
-    /* On, and with both grants as the helper last reported them: only then do agents hear of the noun. */
+    /* On, and with both grants as the helper last reported them: only then do agents hear of the tools. */
     get usable(): boolean {
         return this.store.enabled && this.current.accessibility === true && this.current.screenRecording === true;
     }
@@ -475,7 +475,7 @@ export class ComputerUse {
         return this.current;
     }
 
-    /* Writes the pill's words for a helper that is on, and asks it for the grants so agents hear of the noun without a client asking first. */
+    /* Writes the pill's words for a helper that is on, and asks it for the grants so agents hear of the tools without a client asking first. */
     async start(): Promise<void> {
         if (this.store.enabled) {
             await this.writeOverlay();
@@ -578,7 +578,7 @@ export class ComputerUse {
         if (outcome === 'waiting') {
             throw new ComputerRefusal(
                 'awaiting-approval',
-                `A card asking the person to let you operate ${app.name} is up in Ruimte; tell them, then call again with --wait 60, which holds until they answer`
+                `A card asking the person to let you operate ${app.name} is up in Ruimte; tell them, then call again with wait 60, which holds until they answer`
             );
         }
         if (outcome === 'declined') {

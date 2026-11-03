@@ -12,7 +12,7 @@ import {
     sniffImageMime
 } from '@ruimte/contracts';
 import { CodedError, isNotFound } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { isRuimteState } from '../projects/project-files.ts';
 import { realOrNull } from '../fs/real-path.ts';
 

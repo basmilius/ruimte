@@ -24,7 +24,7 @@ interface EndChildrenWiringDeps {
     ended?: (nodeIds: readonly string[]) => Promise<void>;
     /* Ends what runs on another machine for a node, which nothing here shows. */
     remoteStop?: ((nodeId: string) => Promise<void>) | undefined;
-    /* Whether another project of this machine places the node, as it does the opener of an agent started there with `--project`. */
+    /* Whether another project of this machine places the node, as it does the opener of an agent started there with `project`. */
     placedElsewhere?: (nodeId: string, projectId: string) => boolean;
 }
 
@@ -85,7 +85,7 @@ export function wireEndChildren({
             return;
         }
         /* An agent another machine's agent opened has its opener there, a chat Voice started has a Voice
-           session for one, and one started with `--project` has it in another project here: none of them
+           session for one, and one started with `project` has it in another project here: none of them
            is ever in this project, and a Voice session that ends leaves what it started running. */
         for (const openedBy of new Set(
             lineage

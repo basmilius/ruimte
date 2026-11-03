@@ -1,9 +1,9 @@
-import type { RoutineAgentHost } from '../canvas/verb.ts';
+import type { RoutineAgentHost } from '../tools/host.ts';
 import type { Routines } from './routines.ts';
 
 /*
- * The routines as the verbs reach them. Every save goes through `saveByAgent`, which never approves,
- * and names the calling chat as its maker, so no verb can save a routine as a person.
+ * The routines as the tools reach them. Every save goes through `saveByAgent`, which never approves,
+ * and names the calling chat as its maker, so no tool can save a routine as a person.
  */
 export function agentRoutines(
     routines: Pick<Routines, 'list' | 'saveByAgent' | 'pause' | 'resume' | 'runNow'>,

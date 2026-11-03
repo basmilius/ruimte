@@ -8,7 +8,7 @@ import {
     type ProjectNewInlineChatResult
 } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import type { ProjectStore } from './project-store.ts';
 import { newChatId } from './scratch-project.ts';
 

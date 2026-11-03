@@ -1,6 +1,6 @@
 import { join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
 import { realOrSelf } from './real-path.ts';
 

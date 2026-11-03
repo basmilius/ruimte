@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import type { ProjectContent } from '@ruimte/contracts';
 import { callerKind } from './tasks.ts';
 
-test('the caller in a design is its chat, so a verb that needs a chat takes it', () => {
+test('the caller in a design is its chat, so a tool that needs a chat takes it', () => {
     const content = {
         views: [
             {

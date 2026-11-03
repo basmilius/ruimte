@@ -1,5 +1,5 @@
 import type { TaskWords } from '@adecore/agents/coordination';
-import { taskBrief } from '../canvas/task-verbs.ts';
+import { taskBrief } from '../tools/tasks.ts';
 
 /* What Ruimte's tasks say in a parent's and a child's thread, in the tools of its MCP server. */
 export const TASK_WORDS: TaskWords = {
@@ -13,7 +13,7 @@ export const TASK_WORDS: TaskWords = {
         const shape = Object.fromEntries(item.questions.map((question) => [question.id, '...']));
         return `${target} and answers '${JSON.stringify(shape)}', one answer per question id`;
     },
-    // The assignment plus the line a child opened with --task also gets.
+    // The assignment plus the line a child opened with task also gets.
     assignment: (task) => `${task.prompt}${taskBrief(true)}`,
-    restOf: (childId) => `context_read ${childId} shows the rest once a line runs from that node into you; link_new --to ${childId} draws it.`
+    restOf: (childId) => `context_read ${childId} shows the rest once a line runs from that node into you; link_new to ${childId} draws it.`
 };

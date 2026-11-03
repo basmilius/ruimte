@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { open, realpath, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { MAX_FILE_BYTES } from './grep-lines.ts';
 import { isMachineStatePath, type MachineHomePolicy } from './machine-home.ts';
 import { realOrNull, realOrSelf } from './real-path.ts';

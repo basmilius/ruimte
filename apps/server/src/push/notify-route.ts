@@ -1,6 +1,6 @@
 import { MachineNotifyRequestSchema } from '@ruimte/contracts';
 import { decideAccess, isOwner, type AccessOptions } from '../auth/access.ts';
-import type { MessageHost } from '../canvas/verb.ts';
+import type { MessageHost } from '../tools/host.ts';
 import { errorText } from '../error-text.ts';
 
 /* `ruimte notify`: only the local secret, since a process that holds it is a person on this machine. */

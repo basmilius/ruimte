@@ -9,12 +9,9 @@ import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseService } from '../database/database-service.ts';
 import { FakeHelper, type FakeAnswer } from '../database/fake-helper.ts';
 import { MachineHome } from '../fs/machine-home.ts';
-import { SHOWN_LINE } from './visual-verb.ts';
-import { type CanvasHost, type Noun, type Verb } from './verb.ts';
-import { printed } from './verb-test-helpers.ts';
-import { verbNamed } from './verbs.ts';
-
-const noun = verbNamed('database') as Noun;
+import { toolAnswer, toolCall } from './tool-test-helpers.ts';
+import type { CanvasHost } from './host.ts';
+import { SHOWN_LINE } from './visual-tools.ts';
 
 const PAGE = {
     columns: [
@@ -89,7 +86,7 @@ function shop(config: Record<string, unknown> = {}): DatabaseConnection {
 }
 
 beforeEach(async () => {
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-database-verb-')));
+    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-database-tools-')));
     folder = join(root, 'repo');
     await mkdir(join(folder, 'data'), { recursive: true });
     await writeFile(join(folder, 'data', 'local.sqlite'), '');
@@ -149,18 +146,18 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-function run(argv: string[], caller = 'chat-1'): Promise<string[]> {
-    return printed(noun, argv, { caller, host });
+async function run(tool: string, input: Record<string, unknown> = {}, caller = 'chat-1'): Promise<string[]> {
+    return (await toolAnswer(tool, input, toolCall(caller, host))).lines;
 }
 
 function opened(): Record<string, unknown>[] {
     return helper.written.filter((message) => message.method === 'open').map((message) => message.params.connection as Record<string, unknown>);
 }
 
-describe('ruimte-context database', () => {
+describe('database tools', () => {
     test('lists the connections with where they point and what agents may do, never a password', async () => {
         await agents.setAccess('p1', 'local', 'write', 'client-1', true);
-        const lines = await run(['list']);
+        const lines = await run('database_list');
         expect(lines).toEqual([
             'shop\tShop\tmysql\troot@127.0.0.1:3306/shop\tread',
             `local\tLocal\tsqlite\t${join(folder, 'data', 'local.sqlite')}\twrite`,
@@ -172,14 +169,14 @@ describe('ruimte-context database', () => {
 
     test('a query runs through page on a session opened read only, and the call releases what it opened', async () => {
         script = (method) => (method === 'page' ? { result: PAGE } : undefined);
-        const lines = await run(['query', 'Local', '--sql', 'SELECT id, note, total FROM orders', '--limit', '3']);
+        const lines = await run('database_query', { connection: 'Local', sql: 'SELECT id, note, total FROM orders', limit: 3 });
         expect(lines).toEqual([
             'columns\tid\tnote\ttotal',
             'row\t1\t<script>alert(1)</script>\t1234.50',
             'row\t2\tNULL\t99.00',
             'row\t3\ttab\\there\\nnew line\tabc… [900 characters]',
             'rows\t3',
-            'more\tThe result holds more rows than these 3; raise --limit, at most 1000, or narrow the query',
+            'more\tThe result holds more rows than these 3; raise limit, at most 1000, or narrow the query',
             'elapsed\t1.3 ms'
         ]);
         expect(opened()).toEqual([{ engine: 'sqlite', path: join(folder, 'data', 'local.sqlite'), readOnly: true }]);
@@ -192,15 +189,19 @@ describe('ruimte-context database', () => {
 
     test('a failure of the server comes back under its own code with its words, and the session still goes', async () => {
         script = (method) => (method === 'page' ? { error: { code: 'query-failed', message: "Unknown column 'totl'", sqlState: '42S22' } } : undefined);
-        expect(await run(['query', 'local', '--sql', 'SELECT totl FROM orders'])).toEqual(["refused\tquery-failed\tUnknown column 'totl' (SQLSTATE 42S22)"]);
+        expect(await run('database_query', { connection: 'local', sql: 'SELECT totl FROM orders' })).toEqual([
+            "refused\tquery-failed\tUnknown column 'totl' (SQLSTATE 42S22)"
+        ]);
         script = (method) => (method === 'page' ? { error: { code: 'unsupported', message: 'Only a statement that reads can be paged' } } : undefined);
-        expect((await run(['query', 'local', '--sql', 'DELETE FROM orders']))[0]).toBe('refused\tunsupported\tOnly a statement that reads can be paged');
+        expect((await run('database_query', { connection: 'local', sql: 'DELETE FROM orders' }))[0]).toBe(
+            'refused\tunsupported\tOnly a statement that reads can be paged'
+        );
         expect(released).toHaveLength(2);
     });
 
-    test('--show puts the rows as an escaped table above the reply', async () => {
+    test('show puts the rows as an escaped table above the reply', async () => {
         script = (method) => (method === 'page' ? { result: PAGE } : undefined);
-        const lines = await run(['query', 'shop', '--sql', 'SELECT 1', '--show', 'Orders above 1000']);
+        const lines = await run('database_query', { connection: 'shop', sql: 'SELECT 1', show: 'Orders above 1000' });
         expect(lines.slice(-2)).toEqual([`visual\tvisual-1\tOrders above 1000\t${published[0]!.html.length} bytes`, SHOWN_LINE]);
         const { title, html } = published[0]!;
         expect(title).toBe('Orders above 1000');
@@ -213,14 +214,14 @@ describe('ruimte-context database', () => {
         expect(html).toContain('<p>3 rows from shop on Shop, and more in the database</p>');
     });
 
-    test('--show leaves the table out with a note when visual replies are off, or the caller has no thread', async () => {
+    test('show leaves the table out with a note when visual replies are off, or the caller has no thread', async () => {
         script = (method) => (method === 'page' ? { result: PAGE } : undefined);
         visualsOn = false;
-        const off = await run(['query', 'shop', '--sql', 'SELECT 1', '--show', 'Orders']);
+        const off = await run('database_query', { connection: 'shop', sql: 'SELECT 1', show: 'Orders' });
         expect(off.at(-1)).toStartWith('note\tThe table was not shown: A person turned visual replies off on this machine');
         expect(off).toContain('rows\t3');
         visualsOn = true;
-        const terminal = await run(['query', 'shop', '--sql', 'SELECT 1', '--show', 'Orders'], 'term-1');
+        const terminal = await run('database_query', { connection: 'shop', sql: 'SELECT 1', show: 'Orders' }, 'term-1');
         expect(terminal.at(-1)).toStartWith('note\tThe table was not shown: A visual shows only in the thread of an AI chat');
         expect(published).toEqual([]);
     });
@@ -245,14 +246,14 @@ describe('ruimte-context database', () => {
                       }
                   }
                 : undefined;
-        const sql = ['execute', 'local', '--sql', 'UPDATE orders SET total = 0 WHERE id = 1; SELECT id FROM orders'];
-        expect((await run(sql))[0]).toStartWith('refused\tdatabase-write-off\tAgents may only read Local;');
+        const sql = { connection: 'local', sql: 'UPDATE orders SET total = 0 WHERE id = 1; SELECT id FROM orders' };
+        expect((await run('database_execute', sql))[0]).toStartWith('refused\tdatabase-write-off\tAgents may only read Local;');
         await agents.setAccess('p1', 'local', 'write', 'client-1', true);
         mode = 'supervised';
-        expect((await run(sql))[0]).toStartWith('refused\tdatabase-write-mode\tYou run in supervised');
+        expect((await run('database_execute', sql))[0]).toStartWith('refused\tdatabase-write-mode\tYou run in supervised');
         expect(opened()).toEqual([]);
         mode = 'auto-accept-edits';
-        expect(await run(sql)).toEqual([
+        expect(await run('database_execute', sql)).toEqual([
             'statement\t1\tUPDATE orders SET total = 0 WHERE id = 1',
             'done\t1',
             'elapsed\t2 ms',
@@ -285,7 +286,7 @@ describe('ruimte-context database', () => {
                       }
                   }
                 : undefined;
-        expect(await run(['execute', 'local', '--sql', 'INSERT INTO t VALUES (1); INSERT INTO nope VALUES (1)'])).toEqual([
+        expect(await run('database_execute', { connection: 'local', sql: 'INSERT INTO t VALUES (1); INSERT INTO nope VALUES (1)' })).toEqual([
             'refused\tquery-failed\tStatement 2 failed: no such table: nope',
             'statement\t1\tINSERT INTO t VALUES (1)',
             'done\t1\tlast-insert-id\t7',
@@ -297,9 +298,9 @@ describe('ruimte-context database', () => {
 
     test('a connection a person turned off refuses every action, and a file outside the project is never opened', async () => {
         await agents.setAccess('p1', 'shop', 'off', 'client-1', true);
-        expect((await run(['tables', 'shop']))[0]).toStartWith('refused\tdatabase-access-off\tA person turned Shop off for agents');
-        expect((await run(['query', 'away', '--sql', 'SELECT 1']))[0]).toStartWith('refused\tdatabase-outside-project\t');
-        expect((await run(['describe', 'linked', 'orders']))[0]).toStartWith('refused\tdatabase-outside-project\t');
+        expect((await run('database_tables', { connection: 'shop' }))[0]).toStartWith('refused\tdatabase-access-off\tA person turned Shop off for agents');
+        expect((await run('database_query', { connection: 'away', sql: 'SELECT 1' }))[0]).toStartWith('refused\tdatabase-outside-project\t');
+        expect((await run('database_describe', { connection: 'linked', table: 'orders' }))[0]).toStartWith('refused\tdatabase-outside-project\t');
         expect(opened()).toEqual([]);
     });
 
@@ -312,7 +313,9 @@ describe('ruimte-context database', () => {
             return method === 'tables' ? { result: { tables: [{ name: 'orders', kind: 'table', rowEstimate: 12000, comment: null }] } } : undefined;
         };
         connections = [shop()];
-        expect((await run(['tables', 'shop']))[0]).toStartWith('refused\tdatabase-locked\tShop needs a password this machine does not have;');
+        expect((await run('database_tables', { connection: 'shop' }))[0]).toStartWith(
+            'refused\tdatabase-locked\tShop needs a password this machine does not have;'
+        );
 
         await agents.handPasswords('p1', 'client-1', { shop: 'hunter2' });
         script = (
@@ -328,10 +331,10 @@ describe('ruimte-context database', () => {
                       }
                     : previous(method, params)
         )(script);
-        expect(await run(['tables', 'shop'])).toEqual(['schema\tshop', 'table\tshop\torders\ttable\t12000']);
+        expect(await run('database_tables', { connection: 'shop' })).toEqual(['schema\tshop', 'table\tshop\torders\ttable\t12000']);
 
         connections = [shop({ host: 'evil.example.com' })];
-        expect((await run(['tables', 'shop']))[0]).toStartWith('refused\tdatabase-locked\t');
+        expect((await run('database_tables', { connection: 'shop' }))[0]).toStartWith('refused\tdatabase-locked\t');
         expect(opened().at(-1)).not.toHaveProperty('password');
         expect(passwords.passwordOf('p1', 'shop', connectionTarget(shop().config))).toBe('hunter2');
     });
@@ -355,7 +358,7 @@ describe('ruimte-context database', () => {
 
     test('describes a table with its columns, keys, indexes and foreign keys', async () => {
         script = (method) => (method === 'structure' ? { result: STRUCTURE } : undefined);
-        expect(await run(['describe', 'local', 'orders'])).toEqual([
+        expect(await run('database_describe', { connection: 'local', table: 'orders' })).toEqual([
             'table\tshop\torders\ttable',
             'column\tid\tbigint\tnot-null\t-\tprimary-key,auto-increment',
             'column\ttotal\tdecimal(12,2)\tnot-null\t0.00\t-',
@@ -368,7 +371,7 @@ describe('ruimte-context database', () => {
     });
 
     test('names the connections there are for one it does not know, and refuses in the Chats project', async () => {
-        expect(await run(['tables', 'nope'])).toEqual([
+        expect(await run('database_tables', { connection: 'nope' })).toEqual([
             'refused\tunknown-connection\tThis project has no database connection nope',
             'connection\tshop\tShop',
             'connection\tlocal\tLocal',
@@ -376,18 +379,7 @@ describe('ruimte-context database', () => {
             'connection\tlinked\tLinked'
         ]);
         host = { ...host, projects: { ...host.projects, locate: () => ({ projectId: 'scratch', folder: join(root, 'home', 'scratch'), canvasId: null }) } };
-        expect((await run(['list']))[0]).toStartWith('refused\tdatabase-no-project\tYou are a chat in the Chats project');
-    });
-
-    test('help explains when to use it and prints every action', async () => {
-        const help = verbNamed('help') as Verb;
-        const lines = await help.run(['database'], { caller: 'chat-1', host });
-        expect(lines.some((line) => line.startsWith("when\tA question about the project's data"))).toBe(true);
-        for (const action of ['list', 'tables', 'describe', 'query', 'execute']) {
-            expect(lines.some((line) => line.includes(`database ${action}`))).toBe(true);
-        }
-        const query = await help.run(['database', 'query'], { caller: 'chat-1', host });
-        expect(query.some((line) => line.startsWith('flag\t--show TITLE\toptional\tAlso shows the rows as a table above your reply'))).toBe(true);
+        expect((await run('database_list'))[0]).toStartWith('refused\tdatabase-no-project\tYou are a chat in the Chats project');
     });
 });
 
@@ -438,7 +430,7 @@ describe('UI database access', () => {
 });
 
 describe('a write grant follows where the connection points', () => {
-    const write = ['execute', 'local', '--sql', 'DELETE FROM orders'];
+    const write = { connection: 'local', sql: 'DELETE FROM orders' };
 
     function point(id: string, config: Record<string, unknown>): void {
         const index = connections.findIndex((connection) => connection.id === id);
@@ -456,14 +448,14 @@ describe('a write grant follows where the connection points', () => {
         await writeFile(join(folder, 'data', 'other.sqlite'), '');
         await agents.setAccess('p1', 'local', 'write', 'client-1', true);
         point('local', { path: join(folder, 'data', 'other.sqlite') });
-        expect((await run(write))[0]).toStartWith('refused\tdatabase-write-off\t');
+        expect((await run('database_execute', write))[0]).toStartWith('refused\tdatabase-write-off\t');
         expect(opened()).toEqual([]);
         expect(await agents.accessFor('p1', 'client-1')).toEqual({ access: {} });
 
         await agents.connectionsChanged('p1', connections);
         point('local', { path: join(folder, 'data', 'local.sqlite') });
         await agents.connectionsChanged('p1', connections);
-        expect((await run(write))[0]).toStartWith('refused\tdatabase-write-off\t');
+        expect((await run('database_execute', write))[0]).toStartWith('refused\tdatabase-write-off\t');
     });
 
     test('a link whose file changes under the same path loses the grant', async () => {
@@ -509,7 +501,7 @@ describe('a write grant follows where the connection points', () => {
         await agents.connectionsChanged('p1', connections);
         expect(heard).toHaveLength(1);
         expect(await levelOf('local')).toBe('read');
-        expect((await run(write))[0]).toStartWith('refused\tdatabase-write-off\t');
+        expect((await run('database_execute', write))[0]).toStartWith('refused\tdatabase-write-off\t');
     });
 
     test('a write is granted only for a connection the project has, and only by the local secret', async () => {

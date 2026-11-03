@@ -1,7 +1,8 @@
 import { designNodeChats, isCanvasView, isChatNode, isDesignView, viewChats, type ProjectContent, type Task } from '@ruimte/contracts';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
-import { VerbRefusal, field } from './verb.ts';
+import { field } from './host.ts';
 
 /* A result past this is a document, not an answer; the wake shows at most the first 8 KiB of it anyway. */
 export const MAX_RESULT_LENGTH = 32_000;
@@ -61,10 +62,10 @@ export function callerKind(content: ProjectContent, caller: string): string | nu
 export function requireChatParent(content: ProjectContent, caller: string, hiddenKind?: string): void {
     const kind = callerKind(content, caller) ?? hiddenKind ?? null;
     if (kind !== 'chat') {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'not-a-chat-parent',
             `Only a chat can give a task, and you are ${kind === null ? 'not a node of this project' : `a ${kind}`}: a task wakes the chat that gave it with the result, and nothing else can be woken`,
-            ['see\tagent_start\twithout --task it opens the same agent, and context_read on its id shows what it did once a line runs from it into you']
+            ['see\tagent_start\twithout task it opens the same agent, and context_read on its id shows what it did once a line runs from it into you']
         );
     }
 }
@@ -73,7 +74,7 @@ function firstLine(text: string): string {
     return field(text.split('\n').find((line) => line.trim() !== '') ?? '').slice(0, 200);
 }
 
-/* One row of `task list`, from the side of the node that asks. */
+/* One row of `task_list`, from the side of the node that asks. */
 export function taskLine(task: Task, nodeId: string): string {
     const gave = task.parentId === nodeId;
     return [

@@ -1,4 +1,4 @@
-import type { CheckoutHost } from '../canvas/verb.ts';
+import type { CheckoutHost } from '../tools/host.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import { SharedWatch } from '../fs/shared-watch.ts';

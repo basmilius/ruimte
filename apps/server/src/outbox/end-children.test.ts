@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import type { ChatItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, runVerb, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
 import { ENDED_REASON, wireEndChildren } from './end-children.ts';
@@ -60,7 +60,7 @@ async function boot(): Promise<TestDaemon> {
     return daemon;
 }
 
-/* The lead in the middle of a turn, as it is while it runs the verbs. */
+/* The lead in the middle of a turn, as it is while it calls the tools. */
 async function leadWorking(daemon: TestDaemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'slow');
@@ -69,8 +69,8 @@ async function leadWorking(daemon: TestDaemon): Promise<void> {
 
 /* A chat child that is still working on its task, and a terminal child whose shell runs. */
 async function twoRunningChildren(daemon: TestDaemon): Promise<{ chat: string; terminal: string }> {
-    const [chatLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Slow', '--prompt', 'slow']);
-    const [terminalLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--task', 'Shell', '--prompt', 'work']);
+    const [chatLine] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'Slow', prompt: 'slow' });
+    const [terminalLine] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', terminal: true, task: 'Shell', prompt: 'work' });
     const chat = idOf(chatLine);
     const terminal = idOf(terminalLine);
     await daemon.worker.settled();
@@ -195,7 +195,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         const daemon = await boot();
         daemon.worker.start();
         await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
-        const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--terminal', '--prompt', 'work']);
+        const [line] = await invokeTool(daemon, 'term-lead', 'agent_start', { cli: 'claude', terminal: true, prompt: 'work' });
         const child = idOf(line);
         await daemon.worker.settled();
 
@@ -227,11 +227,11 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
     test('an agent never opens one in a wider mode than its own', async () => {
         const daemon = await boot();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
-        const [refusal] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--mode', 'full-access']);
+        const [refusal] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', mode: 'full-access' });
         expect(refusal).toStartWith('refused\tmode-above-parent\t');
         // A person's wider composer pick does not reach a chat the lead opens either.
         daemon.chats.composerPreferences.set('client-1', { runtimeMode: 'full-access', changedAt: 1 });
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude' });
         daemon.worker.start();
         await daemon.worker.settled();
         expect(daemon.chats.get(idOf(line))?.info.runtimeMode).toBe('supervised');
@@ -242,11 +242,11 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
         const token = daemon.sessions.get('term-lead')!.hookToken;
         await daemon.sessions.applyHook('claude', token, { session_id: 'c1', hook_event_name: 'UserPromptSubmit', permission_mode: 'default' });
-        const [refusal] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'auto-accept-edits']);
+        const [refusal] = await invokeTool(daemon, 'term-lead', 'agent_start', { cli: 'claude', mode: 'auto-accept-edits' });
         expect(refusal).toStartWith('refused\tmode-above-parent\tYou run in supervised');
 
         await daemon.sessions.applyHook('claude', token, { session_id: 'c1', hook_event_name: 'Stop', permission_mode: 'bypassPermissions' });
-        const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'full-access']);
+        const [line] = await invokeTool(daemon, 'term-lead', 'agent_start', { cli: 'claude', mode: 'full-access' });
         expect(line).not.toStartWith('refused');
     });
 
@@ -258,7 +258,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         const token = daemon.sessions.get('term-lead')!.hookToken;
         await daemon.sessions.applyHook('claude', token, { session_id: 'c1', hook_event_name: 'UserPromptSubmit', permission_mode: 'bypassPermissions' });
         expect(daemon.host.starts.modeOf('term-lead')).toBe('auto');
-        const [refusal] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'full-access']);
+        const [refusal] = await invokeTool(daemon, 'term-lead', 'agent_start', { cli: 'claude', mode: 'full-access' });
         expect(refusal).toStartWith('refused\tmode-above-parent\t');
 
         await daemon.lineage.put({ projectId, nodeId: 'term-narrow', openedBy: 'chat-lead', depth: 1, agent: true, ceiling: 'auto' });

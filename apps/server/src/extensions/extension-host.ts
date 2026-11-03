@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { isNotFound } from '@adecore/agents';
 import { EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { z } from 'zod';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
@@ -577,7 +577,7 @@ export class ExtensionHost {
         const slash = tool.indexOf('/');
 
         if (slash === -1 || !this.tools.has(tool)) {
-            throw new VerbRefusal('no-tool', `No tool ${tool}. tool_list says what there is`);
+            throw new ToolRefusal('no-tool', `No tool ${tool}. tool_list says what there is`);
         }
 
         const id = tool.slice(0, slash);

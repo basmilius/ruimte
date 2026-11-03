@@ -73,7 +73,7 @@ A release build also counts how the machine is used and sends daily totals (`src
 
 `UsageCounter` counts in memory per UTC day and writes `usage/stats.json` at most once a minute and on shutdown, keeping today and the seven days before. A once-a-day count remembers its keys (project, view, session or machine id) in memory for that day only; they are never written or sent. Every name comes from the allow-list `USAGE_REPORT_COUNTERS` in `packages/pulsar/src/usage-report.ts`. A dotted name is one value of a dimension, with `other` where the set can grow, so nothing a person typed becomes a name.
 
-It counts distinct projects and views opened, terminals, new chats and turns (by provider, model family via `usageModelFamilyOf` and runtime mode), usage limits and resumes, verbs and delegations, launches, worktree merges, clients by kind and peers, files opened and saved, git actions, PR-watches, database queries, device boots, Voice sessions and peer tasks, plans and visuals. The app hands over dictations, connections, startup time and timings with `usage.count`, `usage.startup` and `usage.timing` (local secret only). Each count is one call at its site (`countUsage` in `src/stats/usage-stats.ts`).
+It counts distinct projects and views opened, terminals, new chats and turns (by provider, model family via `usageModelFamilyOf` and runtime mode), usage limits and resumes, tool calls (under the report's `verbs.` keys) and delegations, launches, worktree merges, clients by kind and peers, files opened and saved, git actions, PR-watches, database queries, device boots, Voice sessions and peer tasks, plans and visuals. The app hands over dictations, connections, startup time and timings with `usage.count`, `usage.startup` and `usage.timing` (local secret only). Each count is one call at its site (`countUsage` in `src/stats/usage-stats.ts`).
 
 `packages/pulsar/fixtures/usage.json` is a batch the daemon's own serializer made (`src/stats/usage-fixture.test.ts`), the contract Observatory builds against. A change to what goes out changes it, and Observatory takes the new one before the release that sends it.
 
@@ -117,8 +117,8 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | Setting | What it does |
 | --- | --- |
 | `name`, `icon` | The machine's name and Lucide icon. A null name falls back to `--label`, `RUIMTE_LABEL`, else the hostname. |
-| `agentsDeleteAnyView` | Lets an agent's `view delete`, `node delete` and `link delete` remove what it did not make. Off by default. |
-| `reachOpenProjects` | Lets an agent's `--project` read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
+| `agentsDeleteAnyView` | Lets an agent's `view_delete`, `node_delete` and `link_delete` remove what it did not make. Off by default. |
+| `reachOpenProjects` | Lets an agent's `project` field read the other projects open on this machine, message their terminals and chats, and start agents there. Off by default. |
 | `resumeAtReset` | Resumes a chat that stopped on a limit, on a clock. Off by default; a chat's own switch can say no. |
 | `visualReplies` | Lets an agent in a chat show a page above its reply. On by default; written only as `false`. |
 | `streamingAllowed` | Browser pages and device screens stream to clients. On by default. |
@@ -128,7 +128,7 @@ A bare `ruimte` at a terminal prints its address and the commands; under the ser
 | `lanDoor` | Whether the door on the local network is open. |
 | `worktreeRoot` | The folder new worktrees go in; absent is `worktrees` in the data folder. Local secret only. |
 | `usageStats` | Sends the daily usage counts of a release build. On by default; written only as `false`. Local secret only. |
-| `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no verb changes it. |
+| `nodeSizes` | The size a new node starts at, by kind, for people and agents alike. Missing kinds take `NODE_SIZE` in `packages/contracts`. Set one kind at a time with `endpoint.setNodeSize`; no tool changes it. |
 
 Keep awake is the daemon's own (`src/power/keep-awake.ts`), so it holds with no window open. On macOS it is a `caffeinate -w <daemon pid>` child, so a dead daemon never leaves the Mac awake. On Windows the daemon's own thread holds `SetThreadExecutionState`, which ends with it (`src/power/windows-keep-awake.ts`). Elsewhere `keepAwakeAvailable` is false.
 
@@ -183,7 +183,7 @@ $RUIMTE_HOME/
   outbox/<id>.json                 0700, work the daemon still owes (src/outbox/CLAUDE.md)
   tasks/<taskId>.json              0700, a task a chat gave a node it opened
   lineage/<nodeId>.json            0700, who opened a node, its depth, its mode ceiling and when it was ended
-  start-claims/                    what a retried agent start with the same `--request-id` answers, for a day
+  start-claims/                    what a retried agent start with the same `request_id` answers, for a day
   peers/<machineId>.json           0700, a machine that works in a project here: its label and, per project, the ceiling of its agents
   remote/<projectId>.json          0700, which node of the project runs on another machine, as node id to machine id
   command-approvals/<hash>.json    0700, a command, launch or routine a person approved for a node, or a task for the project's worktrees
@@ -218,7 +218,7 @@ $RUIMTE_HOME/
     overlay.json                   the words of the helper's cursor, session bar and menu
     agent.sock, screenshots/       the helper's own (apps/computer-use/README.md); captures swept after an hour
   browser/                         the profile of the pages the daemon runs for clients without a browser
-  screenshots/                     pngs `browser shot` and `device shot` wrote, swept after a day
+  screenshots/                     pngs `browser_shot` and `device_shot` wrote, swept after a day
   device-captures/                 a person's screenshots and recordings of a device, read over `bytes.read`, swept after a week
     placed/                        the screenshots a person placed on a canvas (`device.importCapture`), never swept
   anthropic-claude-api/            0600 key, model list, settings and conversations of the Claude API provider
@@ -262,7 +262,7 @@ Root `CLAUDE.md` and `src/projects/CLAUDE.md` cover the two project files, shari
 - `project.open` refuses a folder whose canvas uses node ids another open project uses (`project-ids-taken`), as two checkouts of one repository do. Close the other first.
 - `project.delete` forgets the project and, when asked, removes the canvas file, never other files.
 - The Chats project lives in `$RUIMTE_HOME/scratch`, one folder per chat that nothing removes. A home inside a git checkout answers `scratch-unavailable`.
-- An agent in Chats suggests making its chat a project with `project_propose`. The daemon raises one card per chat (`chat.proposals`) and holds the chat at `needs-you`; a person moves the chat (`chat.move`) or declines (`chat.proposalDecline`). The verb answers `waiting` at once and reports `declined` with the next suggestion. A card lapses after a day without a new suggestion, or when the chat stops or leaves Chats.
+- An agent in Chats suggests making its chat a project with `project_propose`. The daemon raises one card per chat (`chat.proposals`) and holds the chat at `needs-you`; a person moves the chat (`chat.move`) or declines (`chat.proposalDecline`). The tool answers `waiting` at once and reports `declined` with the next suggestion. A card lapses after a day without a new suggestion, or when the chat stops or leaves Chats.
 - Without a chosen icon the daemon looks in the folder (`.ruimte/icon.*`, IDE icons, favicons), jailed to it, sniffed by magic bytes, at most 256 KB. `GET /projects/<projectId>/icon` serves it behind the `/ws` access rules, with `nosniff` and, for an SVG, a policy that runs nothing.
 - An inline edit in the editor runs in a hidden chat view in the private project file (`src/projects/inline-chat.ts`). The client asks to remove old ones after seven days.
 
@@ -280,11 +280,11 @@ Passwords reach the daemon only through `database.passwords` from a project clie
 
 ## Launch secrets
 
-An agent in an AI chat asks for a secret a launch needs with `secret_request` (`src/canvas/secret-verb.ts`). The daemon raises a card in that chat (`secret.requests`, `src/secrets/secret-requests.ts`) and holds the chat at `needs-you`. One card stands per chat, launch and variable; it goes when the turn ends, the chat stops, or 15 minutes pass without a new ask. The verb answers only `saved`, `declined`, `cancelled`, `timed-out` or `waiting`, never the value.
+An agent in an AI chat asks for a secret a launch needs with `secret_request` (`src/tools/secret-tools.ts`). The daemon raises a card in that chat (`secret.requests`, `src/secrets/secret-requests.ts`) and holds the chat at `needs-you`. One card stands per chat, launch and variable; it goes when the turn ends, the chat stops, or 15 minutes pass without a new ask. The tool answers only `saved`, `declined`, `cancelled`, `timed-out` or `waiting`, never the value.
 
 A person answers with `secret.save` or `secret.decline`. The value goes into `$RUIMTE_HOME/secrets/<hash>.json` (`src/secrets/secret-store.ts`), one 0600 file per project. The launch gets the marker `ruimte:secret` (`LAUNCH_SECRET_REFERENCE`) in this machine's own launch file, and the approval covers the marker, not the value. A new value changes nothing an approval covers; a marker added or removed outside a person's save asks again. Only the started process gets the value (`resolveEnv` in `src/launches/runner.ts`); a marker without a secret leaves the variable unset.
 
-The value is never in a project file, chat log, event, agent reply or log line, and no verb or client file request reaches `secrets/` (`src/fs/machine-home.ts`).
+The value is never in a project file, chat log, event, agent reply or log line, and no tool or client file request reaches `secrets/` (`src/fs/machine-home.ts`).
 
 ## Sessions
 
@@ -531,7 +531,7 @@ Joining an account cuts off clients another account let in; leaving cuts off eve
 
 Which chat wrote which lines of a file, for the editor's gutter (`src/provenance/CLAUDE.md`). Each file has a record in `$RUIMTE_HOME/provenance/<projectId>/<hash of the path>.json`: line hashes as last read, and per run the chat, turn, provider, time, the first 400 characters of the prompt, the lines (`start`, `end`, one-based inclusive), the replaced lines (`before`), a review state (`pending`, `kept`, `undone`) and `via`.
 
-`provenance.read { projectId, path }` answers `{ mtime, lines, runs }` mapped onto the text on disk. `provenance.review { projectId, path, runIds, state }` sets a review state. Both refuse a path outside the project or under `$RUIMTE_HOME`. `provenance.changed` goes to the project's clients on a write, a review change and a turn's end. No verb reaches it and no setting turns it off.
+`provenance.read { projectId, path }` answers `{ mtime, lines, runs }` mapped onto the text on disk. `provenance.review { projectId, path, runIds, state }` sets a review state. Both refuse a path outside the project or under `$RUIMTE_HOME`. `provenance.changed` goes to the project's clients on a write, a review change and a turn's end. No tool reaches it and no setting turns it off.
 
 ## Git
 
@@ -557,7 +557,7 @@ On the machine whose person works elsewhere, `remote.link`, `remote.list` and `r
 
 ### Tasks on another machine
 
-`agent_start` with `machine` and `task` (or `agent_team`) gives a task to a linked machine (`machine-not-linked` otherwise); `task` is required and `cwd`, `reads`, `model` and `base` are refused. The node stands on a private canvas (`remote-node-shared` on a shared one). A `start-remote-agent` outbox entry waits for the link, sending the checkout as a bundle first with `--worktree`. `peer-busy` (4 open tasks) and `peer-bundle-limit` (2 transfers) keep it waiting; other refusals fail the task. The result comes back as `refs/remotes/ruimte-<machine>/ruimte/<name>` with a worktree that `worktree merge` brings in.
+`agent_start` with `machine` and `task` (or `agent_team`) gives a task to a linked machine (`machine-not-linked` otherwise); `task` is required and `cwd`, `reads`, `model` and `base` are refused. The node stands on a private canvas (`remote-node-shared` on a shared one). A `start-remote-agent` outbox entry waits for the link, sending the checkout as a bundle first with `worktree`. `peer-busy` (4 open tasks) and `peer-bundle-limit` (2 transfers) keep it waiting; other refusals fail the task. The result comes back as `refs/remotes/ruimte-<machine>/ruimte/<name>` with a worktree that `worktree_merge` brings in.
 
 ## Worktrees
 
@@ -569,13 +569,13 @@ A worktree the daemon makes lives under `$RUIMTE_HOME/worktrees/<repo>-<hash>/<b
 
 A line on the canvas into a terminal or chat lets that agent read the source. Every shell gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`) and its `RUIMTE_HOOK_TOKEN`. A chat gets the same URL, a token of its own per load in `RUIMTE_CONTEXT_TOKEN`, and `RUIMTE_MCP_URL` for a backend that runs inside the daemon.
 
-`context_list` lists the linked sources and `context_read` reads one (`tail`, `subagent`, `form`). A chat view names a canvas with `view` instead of a line (`src/canvas/chat-view.ts`).
+`context_list` lists the linked sources and `context_read` reads one (`tail`, `subagent`, `form`). A chat view names a canvas with `view` instead of a line (`src/tools/chat-view.ts`).
 
 ## Agent tools
 
 An agent Ruimte starts gets the daemon's MCP server: `/mcp` on the daemon's port, with the session's token (`src/providers/ruimte-mcp.ts`). Claude Code, Codex and Copilot take it on their command line and read the token from the environment. An ACP chat (Grok, Antigravity, Copilot, the registry agents) gets it in `session/new` with its tools allowed, when the agent advertises MCP over HTTP. The backends inside the daemon (Apple's model, the API providers) reach it through `RUIMTE_MCP_URL`. A Grok or Antigravity terminal gets no tools, since those CLIs take no server on their command line, and neither does a CLI a person types by hand in a terminal.
 
-`/mcp` speaks Streamable HTTP in stateless mode (`src/mcp/mcp-route.ts`). Every request carries the bearer token, which names the caller; an unknown one gets 401, and the `Mcp-Session-Id` names nobody. Each action of `src/canvas/verbs.ts`, the one registry, is a tool (`src/mcp/catalog.ts`). A call becomes the words the verb parses and runs through `runCanvasVerb` (`src/canvas/run-verb.ts`), which also checks `project`. The answer is one text block of tab-separated lines; a picture a tool wrote comes back as image content too. A refusal is an error result starting with `refused <code>: <message>`. A tool that takes a file takes a path, read only inside the folders of `src/mcp/files.ts`. `src/canvas/CLAUDE.md` and `src/outbox/CLAUDE.md` have the invariants.
+`/mcp` speaks Streamable HTTP in stateless mode (`src/mcp/mcp-route.ts`). Every request carries the bearer token, which names the caller; an unknown one gets 401, and the `Mcp-Session-Id` names nobody. The catalog (`src/mcp/catalog.ts`) lists the tools of the toolkits in `src/tools/toolkits.ts` and `guide`, which prints the guide topics the toolkits keep. Their JSON input runs through `runTool` (`src/tools/tool.ts`), which also checks `project`. The answer is one text block of tab-separated lines; a picture a tool wrote comes back as image content too. A refusal is an error result starting with `refused <code>: <message>`. A tool that takes a file takes a path, read only inside the folders of `src/mcp/files.ts`. `src/tools/CLAUDE.md` and `src/outbox/CLAUDE.md` have the invariants.
 
 ## Usage
 

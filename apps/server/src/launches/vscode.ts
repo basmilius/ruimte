@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { isAbsolute, relative, resolve } from 'node:path';
 import type { LaunchConfigEnv } from '@ruimte/contracts';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { isRecord } from '../is-record.ts';
 import { kindOfScript, portable, shellQuote, unsupported, type Built } from './detect.ts';
 

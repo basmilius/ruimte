@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LaunchConfigEntry, LaunchStartResult, LaunchStatus } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
-import { checkCwd } from '../canvas/project-paths.ts';
+import { checkCwd } from '../tools/project-paths.ts';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';

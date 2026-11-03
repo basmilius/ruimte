@@ -128,15 +128,15 @@ describe('the note in front of a message', () => {
         expect(note).toBe(
             [
                 'The person referenced views and nodes of this project in this message. Read each with the tool call beside it before you answer.',
-                '- "Sketch" (drawing): `context_read sketch` · see its elements with `context_read sketch --elements` · write with `view_drawing sketch --revision R`',
+                '- "Sketch" (drawing): `context_read sketch` · see its elements with `context_read sketch form elements` · write with `view_drawing sketch revision R`',
                 '- "Research" (note on "Planning"): `context_read research` · write with `node_edit research`',
                 '- "Auth \\"rewrite\\"" (chat on "Planning"): `context_read earlier` · message it with `notify earlier`',
                 '- "dev server" (terminal on "Planning"): `context_read shell` · message it with `notify shell`',
                 '- "Onboarding flow" (diagram): `context_read flow` · write with `view_diagram flow`',
-                '- "Preview" (browser on "Planning"): `context_read page` · drive it with `browser_go page --url U`',
+                '- "Preview" (browser on "Planning"): `context_read page` · drive it with `browser_go page url U`',
                 '- "Docs" (browser): `context_read docs`',
                 '- "Next steps" (text on "Planning"): `context_read label`',
-                '- "Planning" (canvas): `context_read main` · read any node on it with `context_read <id>` · add nodes with `node_new <kind> --view main`',
+                '- "Planning" (canvas): `context_read main` · read any node on it with `context_read <id>` · add nodes with `node_new <kind> view main`',
                 'When you refer back to one of them, write `#` and its name exactly as listed (#Name), and the person can open it from your answer.'
             ].join('\n')
         );
@@ -209,11 +209,11 @@ describe('a reference sent from the iPhone', () => {
 });
 
 describe('a reference in another project', () => {
-    test('names only what --project crosses with', () => {
+    test('names only what project crosses with', () => {
         const note = referenceNote([{ id: 'runner', kind: 'terminal', name: 'Runner', canvas: null, sources: [], project: 'other' }]);
 
-        expect(note).toContain('`context_read runner --project other`');
-        expect(note).toContain('`notify runner --project other`');
+        expect(note).toContain('`context_read runner project other`');
+        expect(note).toContain('`notify runner project other`');
         expect(note).not.toContain('of this project');
     });
 });

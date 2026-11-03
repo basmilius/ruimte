@@ -23,7 +23,7 @@ function clientOf(pages: BrowserPages, clientId: string): SessionEvent[] {
 }
 
 describe('BrowserPages', () => {
-    test('a page nobody holds is a null, which is what lets a verb say nobody is watching', async () => {
+    test('a page nobody holds is a null, which is what lets a tool say nobody is watching', async () => {
         const pages = new BrowserPages();
         expect(await pages.drive('page-1', { kind: 'back' })).toBeNull();
         expect(pages.state('page-1')).toBeNull();

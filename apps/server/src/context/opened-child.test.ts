@@ -74,7 +74,7 @@ async function refusalOf(reader: string, source: string): Promise<string> {
 }
 
 describe('a node the caller opened itself', () => {
-    test('reads without a line, whole, by --tail and by --subagent', async () => {
+    test('reads without a line, whole, by tail and by subagent', async () => {
         expect((await store.answer('parent', 'child', null, null)).text).toBe('## User\n\nthe thread of child\n\n## Assistant\n\nDone: the thread of child');
         expect((await store.answer('parent', 'child', 1, null)).text).toBe('Done: the thread of child');
         expect((await store.answer('parent', 'child', null, 'toolu_1')).text).toContain('toolu_1 of child');

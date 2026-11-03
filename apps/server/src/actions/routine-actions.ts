@@ -1,10 +1,11 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
 import { ROUTINE_LIMITS, RoutineSchema, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
-import { nameOf, requireInstalled } from '../canvas/agents.ts';
-import { selectionForOpening } from '../canvas/model.ts';
-import { isInside } from '../canvas/project-paths.ts';
-import { VerbRefusal, field, orNote, type RoutineAgentHost } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { nameOf, requireInstalled } from '../tools/agents.ts';
+import { selectionForOpening } from '../tools/model.ts';
+import { isInside } from '../tools/project-paths.ts';
+import { field, orNote, type RoutineAgentHost } from '../tools/host.ts';
 import { providerFor } from '../providers/registry.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { launchHostOf, named } from './launch-actions.ts';
@@ -19,10 +20,10 @@ const KIND_FIELDS: Record<RoutineKind, readonly (keyof RoutineFields)[]> = {
     launch: ['launch']
 };
 
-const FLAG_OF: Partial<Record<keyof RoutineFields, string>> = { perRun: '--per-run', provider: '--agent' };
+const FIELD_OF: Partial<Record<keyof RoutineFields, string>> = { perRun: 'per_run', provider: 'agent' };
 
-function flagOf(name: keyof RoutineFields): string {
-    return FLAG_OF[name] ?? `--${name}`;
+function fieldOf(name: keyof RoutineFields): string {
+    return FIELD_OF[name] ?? name;
 }
 
 export function routinesOf(context: ServerActionContext): RoutineAgentHost {
@@ -39,7 +40,7 @@ function routineLines(entries: readonly RoutineEntry[]): string[] {
 export function entryOf(entries: readonly RoutineEntry[], routineId: string): RoutineEntry {
     const entry = entries.find((candidate) => candidate.routine.id === routineId);
     if (entry === undefined) {
-        throw new VerbRefusal('routine-not-found', `This project has no routine ${routineId}`, routineLines(entries));
+        throw new ToolRefusal('routine-not-found', `This project has no routine ${routineId}`, routineLines(entries));
     }
     return entry;
 }
@@ -51,7 +52,7 @@ function refuseOtherKinds(kind: RoutineKind, input: RoutineFields): void {
         }
         const given = names.find((name) => input[name] !== undefined);
         if (given !== undefined) {
-            throw new VerbRefusal('wrong-kind', `${flagOf(given)} is for a routine of kind ${other}, and this one is ${kind}`);
+            throw new ToolRefusal('wrong-kind', `${fieldOf(given)} is for a routine of kind ${other}, and this one is ${kind}`);
         }
     }
 }
@@ -60,7 +61,7 @@ function refuseOtherKinds(kind: RoutineKind, input: RoutineFields): void {
 function cwdIn(folder: string, cwd: string): string | undefined {
     const path = isAbsolute(cwd) ? cwd : resolve(folder, cwd);
     if (!isInside(folder, path)) {
-        throw new VerbRefusal('cwd-outside-project', `${cwd} is outside the project folder; a routine's command runs inside it`);
+        throw new ToolRefusal('cwd-outside-project', `${cwd} is outside the project folder; a routine's command runs inside it`);
     }
     const inside = relative(folder, path).split(sep).join('/');
     return inside === '' ? undefined : inside;
@@ -87,16 +88,16 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
         const agent = same?.kind === 'agent' ? same : null;
         const prompt = input.prompt ?? agent?.prompt;
         if (prompt === undefined) {
-            throw new VerbRefusal('prompt-required', 'An agent routine needs --prompt: what the agent of every run is asked');
+            throw new ToolRefusal('prompt-required', 'An agent routine needs prompt: what the agent of every run is asked');
         }
         const provider = input.provider ?? agent?.provider ?? host.starts.accountOf?.(caller)?.kind;
         if (provider === undefined) {
-            throw new VerbRefusal('agent-required', 'Name the CLI of the agent with --agent; this session runs none to take after');
+            throw new ToolRefusal('agent-required', 'Name the CLI of the agent with agent; this session runs none to take after');
         }
         if (input.provider !== undefined || agent === null) {
             requireInstalled(await host.starts.installedAgents(), provider);
             if (!providerFor(provider).capabilities.chat) {
-                throw new VerbRefusal('agent-needs-chat', `${nameOf(provider)} has no chat, and a routine runs its agent as a chat`);
+                throw new ToolRefusal('agent-needs-chat', `${nameOf(provider)} has no chat, and a routine runs its agent as a chat`);
             }
         }
         const selection =
@@ -118,7 +119,7 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
         const command = same?.kind === 'command' ? same : null;
         const text = input.command ?? command?.command;
         if (text === undefined) {
-            throw new VerbRefusal('command-required', 'A command routine needs --command: what a shell runs in the project folder');
+            throw new ToolRefusal('command-required', 'A command routine needs command: what a shell runs in the project folder');
         }
         const cwd = input.cwd === undefined ? command?.cwd : cwdIn(place.folder, input.cwd);
         const { cwd: _cwd, ...kept } = command ?? {};
@@ -130,13 +131,13 @@ async function routineFrom(context: ServerActionContext, caller: string, id: str
             launchId = named(await launchHostOf(context).list(place.projectId), input.launch).launchId;
         }
         if (launchId === undefined) {
-            throw new VerbRefusal('launch-required', 'A launch routine needs --launch: the id of the launch it starts; launch_list names them');
+            throw new ToolRefusal('launch-required', 'A launch routine needs launch: the id of the launch it starts; launch_list names them');
         }
         routine = { ...launch, ...base, kind, launchId };
     }
     const parsed = RoutineSchema.safeParse(routine);
     if (!parsed.success) {
-        throw new VerbRefusal('bad-routine', parsed.error.issues[0]?.message ?? 'This routine is not one the machine can keep');
+        throw new ToolRefusal('bad-routine', parsed.error.issues[0]?.message ?? 'This routine is not one the machine can keep');
     }
     return parsed.data;
 }
@@ -172,7 +173,7 @@ export const routineActions: ActionHandlers<ServerActionContext> = {
     'routine.create': async ({ shared, ...input }, { actor, context }) => {
         const { routines } = await routinesOf(context).list(context.place.projectId);
         if (routines.length >= ROUTINE_LIMITS.perProject) {
-            throw new VerbRefusal('too-many-routines', `This project has ${routines.length} routines, the most one project keeps`);
+            throw new ToolRefusal('too-many-routines', `This project has ${routines.length} routines, the most one project keeps`);
         }
         const id = freeSlug(input.title, 'routine', new Set(routines.map((entry) => entry.routine.id)));
         const routine = await routineFrom(context, actor.id, id, input, null);
@@ -191,13 +192,13 @@ export const routineActions: ActionHandlers<ServerActionContext> = {
         const entry = entryOf((await host.list(context.place.projectId)).routines, routineId);
         const result = await host.runNow(context.place.projectId, routineId);
         if (result.outcome === 'held') {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'routine-held',
                 `${entry.routine.title} runs only once a person approves it on this machine as it stands now; they do so in Routines`
             );
         }
         if (result.outcome === 'busy' || result.runId === undefined) {
-            throw new VerbRefusal('routine-busy', `The previous run of ${entry.routine.title} still runs or waits on a person; nothing started`);
+            throw new ToolRefusal('routine-busy', `The previous run of ${entry.routine.title} still runs or waits on a person; nothing started`);
         }
         return { output: { routineId, title: entry.routine.title, runId: result.runId } };
     }

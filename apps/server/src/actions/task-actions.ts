@@ -1,14 +1,15 @@
 import type { ActionHandlers } from '@ruimte/actions';
 import { clipText, isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
-import { ownViewOf, refuseOwnView } from '../canvas/own-view.ts';
-import { readPromptFile, readResultFile } from '../canvas/project-paths.ts';
-import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, requireChatParent, taskLine } from '../canvas/tasks.ts';
-import { MAX_TITLE_LENGTH, VerbRefusal, field, orNote } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { ownViewOf, refuseOwnView } from '../tools/own-view.ts';
+import { readPromptFile, readResultFile } from '../tools/project-paths.ts';
+import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, requireChatParent, taskLine } from '../tools/tasks.ts';
+import { MAX_TITLE_LENGTH, field, orNote } from '../tools/host.ts';
 import type { ServerActionContext } from './context.ts';
 
-const NEEDS_RESULT = '--result needs what came of the task, in quotes';
+const NEEDS_RESULT = 'result needs what came of the task, in quotes';
 
-const NEEDS_PROMPT = '--prompt needs what the task asks, in quotes';
+const NEEDS_PROMPT = 'prompt needs what the task asks, in quotes';
 
 /*
  * Whether a task still asks anything of the node listing it. A task it gave is history once it settled
@@ -52,10 +53,10 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         const { host, place } = context;
         const caller = actor.id;
         if (nodeId === caller) {
-            throw new VerbRefusal('self-task', `${nodeId} is you; a task is what you give another agent`);
+            throw new ToolRefusal('self-task', `${nodeId} is you; a task is what you give another agent`);
         }
         const content = await host.projects.read(place.projectId);
-        // The caller is judged in its own project, which `--project` may have left for another.
+        // The caller is judged in its own project, which `project` may have left for another.
         const callerContent = context.origin === undefined ? content : await host.projects.read(context.origin.projectId);
         requireChatParent(callerContent, caller, host.hiddenAgents?.get(caller)?.node.kind);
         // Only the nodes this same call would accept, so a refusal answers with what can be asked instead.
@@ -68,7 +69,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
                         .filter((agent) => host.lineage.madeBy(agent.node.id) === caller)
                         .map((agent) => agent.node) ?? [])
                 ].map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
-                'You have opened no agent that is still in this project; agent_start --task opens one with a task of its own'
+                'You have opened no agent that is still in this project; agent_start task opens one with a task of its own'
             );
         const hidden = host.hiddenAgents?.get(nodeId);
         const target = nodeOf(content, nodeId) ?? (hidden?.projectId === place.projectId ? hidden.node : undefined);
@@ -77,51 +78,51 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
             if (own) {
                 throw refuseOwnView(own, 'there is no node there to give a task to', lines(), nodeId);
             }
-            throw new VerbRefusal('unknown-node', `${nodeId} is not a node of this project`, lines());
+            throw new ToolRefusal('unknown-node', `${nodeId} is not a node of this project`, lines());
         }
         if (!isAgentKind(target.kind)) {
-            throw new VerbRefusal('not-an-agent', `${nodeId} is a ${target.kind} node; only a terminal or a chat has an agent that could take a task`, lines());
+            throw new ToolRefusal('not-an-agent', `${nodeId} is a ${target.kind} node; only a terminal or a chat has an agent that could take a task`, lines());
         }
         // Only an agent the caller opened, as the daemon wrote it down: a line would let two agents set each other to work.
         if (host.lineage.madeBy(nodeId) !== caller) {
-            throw new VerbRefusal('not-yours', `${nodeId} is not a node you opened; a task only goes to an agent you opened yourself`, [
+            throw new ToolRefusal('not-yours', `${nodeId} is not a node you opened; a task only goes to an agent you opened yourself`, [
                 ...lines(),
                 `see\tnotify ${nodeId}\tsends it a message along a line, which it acts on itself and never reports back from`
             ]);
         }
         if (host.projects.machineOfNode(nodeId) !== null) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'task-on-other-machine',
-                `${nodeId} runs on another machine and takes the one task it was given there; open another agent there with agent --machine for more work`,
+                `${nodeId} runs on another machine and takes the one task it was given there; open another agent there with agent_start and machine for more work`,
                 lines()
             );
         }
         if (target.kind !== 'chat') {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'not-a-chat',
                 `${nodeId} is a terminal node: a task has to start a turn, and nothing is typed into a shell a person can type in`,
                 [
                     ...lines(),
                     `see\tnotify ${nodeId}\tsends it a message its agent hears at the start of its next turn; a terminal is never given a turn either`,
-                    'see\tagent_start --terminal --task\topens a terminal of its own with the task on the line its CLI starts with'
+                    'see\tagent_start terminal task\topens a terminal of its own with the task on the line its CLI starts with'
                 ]
             );
         }
         const running = host.tasks.involving(nodeId).find((task) => task.childId === nodeId && task.status === 'open');
         if (running) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'task-running',
                 `${nodeId} is working on the task "${field(running.title)}" and takes one at a time; wait for its result, which wakes you`,
-                [taskLine(running, caller), 'see\tagent_start --task\topens another agent for work that cannot wait']
+                [taskLine(running, caller), 'see\tagent_start task\topens another agent for work that cannot wait']
             );
         }
         const state = await host.tasks.chatState(nodeId);
         if (state === 'none') {
-            throw new VerbRefusal('no-agent', `${nodeId} runs no agent yet: nothing was started in it, so there is no turn a task could open`, lines());
+            throw new ToolRefusal('no-agent', `${nodeId} runs no agent yet: nothing was started in it, so there is no turn a task could open`, lines());
         }
 
         if (prompt !== null && promptFile != null) {
-            throw new VerbRefusal('prompt-twice', '--prompt and --prompt-file both say what the task asks; give one of them');
+            throw new ToolRefusal('prompt-twice', 'prompt and promptFile both say what the task asks; give one of them');
         }
         let text: string;
         if (promptFile != null) {
@@ -129,14 +130,14 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         } else if (prompt !== null) {
             text = prompt;
         } else {
-            throw new VerbRefusal('empty-prompt', NEEDS_PROMPT);
+            throw new ToolRefusal('empty-prompt', NEEDS_PROMPT);
         }
         text = text.trim();
         if (text === '') {
-            throw new VerbRefusal('empty-prompt', 'The prompt is empty; a task is what it asks, so say what that agent is to do');
+            throw new ToolRefusal('empty-prompt', 'The prompt is empty; a task is what it asks, so say what that agent is to do');
         }
         if (text.length > MAX_TASK_PROMPT_LENGTH) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'prompt-too-long',
                 `The prompt is ${text.length} characters and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the agent is also told how to report back; put the rest in a file and tell it to read that`
             );
@@ -154,13 +155,13 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         const { host, place } = context;
         const caller = actor.id;
         if (result !== null && resultFile != null) {
-            throw new VerbRefusal('result-twice', '--result and --result-file both carry the result; give one of them');
+            throw new ToolRefusal('result-twice', 'result and resultFile both carry the result; give one of them');
         }
         const open = host.tasks.involving(caller).find((task) => task.childId === caller && task.status === 'open');
         if (!open) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'no-open-task',
-                'You have no open task to report on: done is for a node another chat opened with --task, until that task settles',
+                'You have no open task to report on: task_done is for a node another chat opened with task, until that task settles',
                 host.tasks
                     .involving(caller)
                     .filter((task) => task.childId === caller)
@@ -173,14 +174,14 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         } else if (result !== null) {
             text = result;
         } else {
-            throw new VerbRefusal('empty-result', NEEDS_RESULT);
+            throw new ToolRefusal('empty-result', NEEDS_RESULT);
         }
         text = text.trim();
         if (text === '') {
-            throw new VerbRefusal('empty-result', 'The result is empty; say what came of the task, even when that is that nothing could be done');
+            throw new ToolRefusal('empty-result', 'The result is empty; say what came of the task, even when that is that nothing could be done');
         }
         if (text.length > MAX_RESULT_LENGTH) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'result-too-long',
                 `The result is ${text.length} characters and at most ${MAX_RESULT_LENGTH} fit; put the rest in a file and name it in the result`
             );
@@ -188,7 +189,7 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
         // Settling is what owes the parent its wake, once, through the outbox.
         const settled = await host.tasks.done(caller, text);
         if (!settled) {
-            throw new VerbRefusal('no-open-task', 'Your task settled a moment ago, before this result arrived');
+            throw new ToolRefusal('no-open-task', 'Your task settled a moment ago, before this result arrived');
         }
         return { output: { taskId: settled.id, parentId: settled.parentId } };
     }

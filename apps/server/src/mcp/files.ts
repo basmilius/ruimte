@@ -1,8 +1,8 @@
 import { stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { isInside } from '../canvas/project-paths.ts';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { isInside } from '../tools/project-paths.ts';
 import { realOrNull } from '../fs/real-path.ts';
 import { readAtMost, type ImageFiles } from './visual-images.ts';
 
@@ -34,11 +34,11 @@ export class AgentFiles {
         const real = await realOrNull(resolved);
 
         if (real === null || !(await stat(real)).isFile()) {
-            throw new VerbRefusal('bad-path', `${resolved} is no file; a path is resolved against the project folder unless it is absolute`);
+            throw new ToolRefusal('bad-path', `${resolved} is no file; a path is resolved against the project folder unless it is absolute`);
         }
 
         if (!this.roots.some((root) => isInside(root, real))) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'path-outside',
                 `${resolved} is outside the folders a tool reads from: the project folder, its worktrees, your chat folder and the temp folder`,
                 this.roots.map((root) => `folder\t${root}`)
@@ -54,7 +54,7 @@ export class AgentFiles {
             try {
                 return await this.file(path);
             } catch (e) {
-                if (e instanceof VerbRefusal && e.code === 'path-outside') {
+                if (e instanceof ToolRefusal && e.code === 'path-outside') {
                     throw Object.assign(new Error(e.message), { code: 'EACCES' });
                 }
 

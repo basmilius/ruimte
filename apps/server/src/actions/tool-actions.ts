@@ -1,5 +1,5 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function toolsOf(context: ServerActionContext) {
@@ -20,7 +20,7 @@ export const toolActions: ActionHandlers<ServerActionContext> = {
         try {
             parsed = JSON.parse(input);
         } catch {
-            throw new VerbRefusal('tool-input', 'The input is not JSON');
+            throw new ToolRefusal('tool-input', 'The input is not JSON');
         }
 
         return { output: { text: await toolsOf(context).runAgentTool(id, parsed, { caller: actor.id }) } };

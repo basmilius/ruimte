@@ -42,6 +42,6 @@ test('a cut result tells the parent in the tools of the MCP server where the res
     const text = 'x'.repeat(RESULT_PREVIEW_BYTES + 1);
     const prompt = wakePrompt([task('a', { result: { text, source: 'done', at: 1 } })], 0, TASK_WORDS.restOf);
     expect(prompt).toEndWith(
-        '\n\n[The result was cut at 8 KiB. context_read chat-a shows the rest once a line runs from that node into you; link_new --to chat-a draws it.]'
+        '\n\n[The result was cut at 8 KiB. context_read chat-a shows the rest once a line runs from that node into you; link_new to chat-a draws it.]'
     );
 });

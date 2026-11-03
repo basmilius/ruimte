@@ -1,7 +1,7 @@
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { z } from 'zod';
+import { ToolRefusal } from '@adecore/agents/context';
 import { providerFor } from '../providers/registry.ts';
-import { VerbRefusal } from './verb.ts';
 
 export const modelFlag = z.string().trim().min(1, 'model needs a model id').optional();
 
@@ -26,10 +26,10 @@ function effortOf(kind: AgentKind, slug: string): { choices: string[]; defaultCh
 function requireEffort(kind: AgentKind, slug: string, effort: string): void {
     const offered = effortOf(kind, slug);
     if (offered === null) {
-        throw new VerbRefusal('no-effort', `${slug} takes no reasoning effort; leave out the effort`, modelLines(kind));
+        throw new ToolRefusal('no-effort', `${slug} takes no reasoning effort; leave out the effort`, modelLines(kind));
     }
     if (!offered.choices.includes(effort)) {
-        throw new VerbRefusal('unknown-choice', `${effort} is no reasoning effort of ${slug}; it takes ${offered.choices.join(', ')}`, modelLines(kind));
+        throw new ToolRefusal('unknown-choice', `${effort} is no reasoning effort of ${slug}; it takes ${offered.choices.join(', ')}`, modelLines(kind));
     }
 }
 
@@ -60,13 +60,13 @@ export function selectionForOpening(
     }
     if (!chat) {
         throw model === undefined
-            ? new VerbRefusal('effort-needs-chat', 'Reasoning effort is supported for chat agents only; omit --terminal or leave out the effort')
-            : new VerbRefusal('model-needs-chat', 'Model selection is supported for chat agents only; omit --terminal or leave out the model');
+            ? new ToolRefusal('effort-needs-chat', 'Reasoning effort is supported for chat agents only; leave out terminal or the effort')
+            : new ToolRefusal('model-needs-chat', 'Model selection is supported for chat agents only; leave out terminal or the model');
     }
     const catalog = providerFor(kind).catalog;
     const resolved = model === undefined ? catalog.normalize(preferred).model : catalog.resolveModel(model);
     if (resolved === null) {
-        throw new VerbRefusal('unknown-model', `${model} is not a known model for ${kind}`, modelLines(kind));
+        throw new ToolRefusal('unknown-model', `${model} is not a known model for ${kind}`, modelLines(kind));
     }
     if (effort !== undefined) {
         requireEffort(kind, resolved, effort);

@@ -1,4 +1,4 @@
-import type { AgentStateHost } from '../canvas/verb.ts';
+import type { AgentStateHost } from '../tools/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxStore } from '../outbox/outbox.ts';
 import type { SessionManager } from '../sessions/manager.ts';

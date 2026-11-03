@@ -1,6 +1,6 @@
 # Databases
 
-`apps/server/README.md` ("Databases") has the files, the helper and the passwords. The verb: `apps/server/src/canvas/database-verb.ts`.
+`apps/server/README.md` ("Databases") has the files, the helper and the passwords. The agent tools: `apps/server/src/tools/database-tools.ts`.
 
 - The daemon runs the `@adecore/database` host behind `database.request`, with Ruimte's checks on connections and files; the compiled daemon carries the helper in `native/`. A project's connections live in `.ruimte/databases.json` and its private twin, never with a password.
 - The SQL server and SQL in PHP strings read the daemon's schema snapshots (`schema-snapshots.ts`). Which connection a file reads is one person's choice in the private project file (`sql-analysis.ts`).

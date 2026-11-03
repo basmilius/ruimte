@@ -1,8 +1,8 @@
 import { uiSessionNote } from '@adecore/intelligent-ui/text';
 import type { ContextSource } from '@ruimte/contracts';
-import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
+import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../tools/depth.ts';
 import { BUILT_IN_KINDS } from '../providers/kinds.ts';
-import { NODE_VERB_KINDS } from '../canvas/node-kinds.ts';
+import { NODE_NEW_KINDS } from '../tools/node-kinds.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import { uiSourceExamples } from '../chat/ui-source-args.ts';
 
@@ -15,7 +15,7 @@ import { uiSourceExamples } from '../chat/ui-source-args.ts';
 const CLI_NAMES = BUILT_IN_KINDS.join(', ');
 
 /* Told only that it places "nodes", a model asked for a note writes a file and the canvas stays empty. */
-const NODE_KINDS = NODE_VERB_KINDS.join(', ');
+const NODE_KINDS = NODE_NEW_KINDS.join(', ');
 
 // With tool search the tools are deferred, so a model that is not told they exist never looks.
 const PRODUCT_NOTE =
@@ -130,7 +130,7 @@ export const PUBLISHED_INLINE_NOTE =
 const REACH_NOTE =
     'This machine lets you reach its other open projects: `project_list` lists them, and the tools that take `project` work there. Use that only for what the person asks of another project.';
 
-export function verbsNote({
+export function toolsNote({
     depth,
     standalone = false,
     terminal = false,
@@ -294,9 +294,9 @@ export interface ChatPromptOptions {
 
 /* The part of a chat's prompt that is about Ruimte's tools, without the names of what is linked. */
 export function chatNote({ sources, depth, standalone, computer, visuals, databases, reach, design }: ChatPromptOptions): string {
-    const verbs = verbsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach });
+    const tools = toolsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach });
 
-    return design === null || design === undefined ? verbs : `${verbs} ${designNote(design.folder, design.onCanvas)}`;
+    return design === null || design === undefined ? tools : `${tools} ${designNote(design.folder, design.onCanvas)}`;
 }
 
 /*
@@ -320,7 +320,7 @@ export function hookContext(
         changed?: string | null;
         messages?: readonly string[];
         depth?: number;
-        verbs?: boolean;
+        tools?: boolean;
         computer?: boolean;
         standalone?: boolean;
         reach?: boolean;
@@ -329,9 +329,9 @@ export function hookContext(
     const start = event === 'SessionStart';
     const hint = contextHint(sources);
     const parts = [
-        ...(start && turn.verbs !== false
+        ...(start && turn.tools !== false
             ? [
-                  verbsNote({
+                  toolsNote({
                       depth: turn.depth ?? 0,
                       standalone: turn.standalone,
                       terminal: true,

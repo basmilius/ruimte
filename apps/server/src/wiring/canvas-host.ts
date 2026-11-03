@@ -1,8 +1,8 @@
 import { chatRequests } from '@adecore/agents/coordination';
 import { agentStates } from '../agents/agent-state.ts';
 import { openedAgentCount } from '../agents/hidden-agents.ts';
-import { projectReach } from '../canvas/reach.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import { projectReach } from '../tools/reach.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { chatForkDeps, forkForAgent } from '../chat/fork.ts';
 import { agentMessages } from '../context/agent-messages.ts';
@@ -53,7 +53,7 @@ interface CanvasHostInput {
     };
 }
 
-/* How a verb reads and prompts chats and asks which agent a terminal runs. */
+/* How a tool reads and prompts chats and asks which agent a terminal runs. */
 export function chatAccess(chats: ChatManager, sessions: SessionManager): Pick<CanvasHost, 'chatThreads' | 'chatPrompts' | 'terminals'> {
     return {
         // A chat nobody opened since a restart is read from its record, which starts no CLI.
@@ -75,7 +75,7 @@ export function chatAccess(chats: ChatManager, sessions: SessionManager): Pick<C
     };
 }
 
-/* The services the agent verbs reach the daemon through. */
+/* The services the agent tools reach the daemon through. */
 export function wireCanvasHost(input: CanvasHostInput): CanvasHost {
     const { identity, stores, providers, agents, work, launches, git, devices, databases, remote, usage, later } = input;
     const { lineage, outbox, tasks } = stores;

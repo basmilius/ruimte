@@ -1,7 +1,7 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 
-/* A client connection is always a person. The structure of a plan belongs to the agent, through its verbs. */
+/* A client connection is always a person. The structure of a plan belongs to the agent, through its tools. */
 export function registerPlanHandlers(dispatcher: Dispatcher, plans: PlanStore): void {
     dispatcher.register('plan.list', async ({ chatIds }) => ({ plans: await plans.list(chatIds) }));
 

@@ -1,6 +1,7 @@
 import { OPERATION_ACTIONS, type ActionHandlers, type ActionOutput, type OperationStatus } from '@ruimte/actions';
 import type { Task } from '@ruimte/contracts';
-import { VerbRefusal, type AgentState, type AgentStateHost, type CanvasHost } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { type AgentState, type AgentStateHost, type CanvasHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 type OperationAction = (typeof OPERATION_ACTIONS)[number];
@@ -26,7 +27,9 @@ function parseOperationId(operationId: string | null): { id: string; action: Ope
     const action = OPERATION_ACTIONS.find((candidate) => candidate === operationId?.slice(0, colon));
     const nodeIds = operationId?.slice(colon + 1).split(',') ?? [];
     if (operationId === null || colon === -1 || action === undefined || nodeIds.some((id) => id === '')) {
-        throw new VerbRefusal('unknown-operation', `${operationId ?? 'nothing'} is not an operation id; agent and team answer with one`, [...OPERATION_FORMS]);
+        throw new ToolRefusal('unknown-operation', `${operationId ?? 'nothing'} is not an operation id; agent_start and agent_team answer with one`, [
+            ...OPERATION_FORMS
+        ]);
     }
 
     return { id: operationId, action, nodeIds };
@@ -36,8 +39,8 @@ function agentsOf(context: ServerActionContext): AgentStateHost {
     return hostService(context, 'agents', 'no-operations', 'This machine cannot tell what runs in an agent node');
 }
 
-function noneOfYours(operationId: string): VerbRefusal {
-    return new VerbRefusal('unknown-operation', `${operationId} names no agent you opened that is still here; a deleted node without a task is forgotten`, [
+function noneOfYours(operationId: string): ToolRefusal {
+    return new ToolRefusal('unknown-operation', `${operationId} names no agent you opened that is still here; a deleted node without a task is forgotten`, [
         ...OPERATION_FORMS
     ]);
 }
@@ -61,9 +64,11 @@ function isOwnStart(host: CanvasHost, agents: AgentStateHost, caller: string, no
         return true;
     }
     if (startedBy !== null) {
-        throw new VerbRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to ${verb}`);
+        throw new ToolRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to ${verb}`);
     }
-    throw new VerbRefusal('unknown-operation', `${nodeId} is no agent that agent or team started, so ${operationId} names no start`, [...OPERATION_FORMS]);
+    throw new ToolRefusal('unknown-operation', `${nodeId} is no agent that agent_start or agent_team started, so ${operationId} names no start`, [
+        ...OPERATION_FORMS
+    ]);
 }
 
 function byTask(task: Task, state: AgentState): Pick<AgentOperation, 'status' | 'detail'> {
@@ -127,7 +132,7 @@ async function cancelNode(agents: AgentStateHost, operationId: string, nodeId: s
         return {
             operationId,
             status: 'cancelled',
-            detail: `${nodeId}: its turn is told to stop, and operation get reads cancelled once it has; the chat, its thread and its task stay`
+            detail: `${nodeId}: its turn is told to stop, and operation_get reads cancelled once it has; the chat, its thread and its task stay`
         };
     }
     if (state === 'owed') {

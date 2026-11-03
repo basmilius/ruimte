@@ -1,5 +1,6 @@
 import type { Worktree } from '@ruimte/contracts';
-import { VerbRefusal, type VerbCall, type WorktreeWant } from './verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { type AgentCall, type WorktreeWant } from './host.ts';
 import { errorText } from '../error-text.ts';
 
 export const WORKTREE_LINES: readonly string[] = [
@@ -20,9 +21,9 @@ export function branchSlug(title: string): string {
 }
 
 /* Refuses a project that is not in a git repository, before anything is made for it. */
-export async function requireRepository(call: VerbCall, folder: string): Promise<void> {
+export async function requireRepository(call: AgentCall, folder: string): Promise<void> {
     if ((await call.host.checkouts.branches(folder)) === null) {
-        throw new VerbRefusal('not-a-repository', `--worktree needs a git repository, and ${folder} is not in one`);
+        throw new ToolRefusal('not-a-repository', `worktree needs a git repository, and ${folder} is not in one`);
     }
 }
 
@@ -35,7 +36,7 @@ function nameOf(want: WorktreeWant): string {
  * `undo` takes back the ones made here when the write is refused; one that already existed stays.
  */
 export async function makeWorktrees(
-    call: VerbCall,
+    call: AgentCall,
     place: { folder: string; projectId: string },
     wants: readonly WorktreeWant[]
 ): Promise<{ worktrees: Worktree[]; undo(): Promise<void> }> {
@@ -58,7 +59,7 @@ export async function makeWorktrees(
             }
         } catch (e) {
             await undo();
-            throw new VerbRefusal('worktree-failed', `The worktree for ${nameOf(want)} could not be made: ${errorText(e)}`);
+            throw new ToolRefusal('worktree-failed', `The worktree for ${nameOf(want)} could not be made: ${errorText(e)}`);
         }
     }
     return { worktrees, undo };

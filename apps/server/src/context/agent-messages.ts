@@ -1,5 +1,5 @@
 import { chatNoticeTargets, showNotices, steerNotices, withinHops, type NoticeChat, type NoticeStore } from '@adecore/agents/coordination';
-import type { MessageHost } from '../canvas/verb.ts';
+import type { MessageHost } from '../tools/host.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxWork } from '../outbox/outbox.ts';

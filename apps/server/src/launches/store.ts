@@ -17,7 +17,7 @@ import {
     type LaunchesSharedFile
 } from '@ruimte/contracts';
 import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
@@ -62,7 +62,7 @@ export class LaunchError extends CodedError<LaunchErrorCode> {}
 interface LaunchProjects {
     /* The folder of a project this machine knows, open or not; null for one it does not. */
     folderOf(projectId: string): string | null;
-    /* The worktrees of the repository the folder is in, which a launch may run in as an agent's --cwd may. */
+    /* The worktrees of the repository the folder is in, which a launch may run in as an agent's cwd may. */
     worktreePaths(folder: string): Promise<string[]>;
 }
 
@@ -264,7 +264,7 @@ export class LaunchStore {
     }
 
     /*
-     * An agent's save of one launch, new or changed, through a verb. It approves nothing, so the launch
+     * An agent's save of one launch, new or changed, through a tool. It approves nothing, so the launch
      * is held until a person approves it as it stands. A launch that exists stays in its file with its
      * overlay; a new one goes where `shared` says. It never drops a secret, which only a person does.
      */

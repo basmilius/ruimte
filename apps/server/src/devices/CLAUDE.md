@@ -1,6 +1,6 @@
 # Devices
 
-`apps/server/README.md` ("Devices") compares the iOS and Android kinds. The verb: `apps/server/src/canvas/device-verb.ts`.
+`apps/server/README.md` ("Devices") compares the iOS and Android kinds. The tools: `apps/server/src/tools/device-tools.ts`.
 
 - On macOS and Linux the daemon drives Android emulators and phones with the SDK a person installed (`adb`, and `emulator` to start one; `android.ts`). It pushes the pinned scrcpy server for screen, touch and typing, which pastes through the device clipboard. Nothing is installed on the device.
 

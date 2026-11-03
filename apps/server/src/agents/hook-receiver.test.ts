@@ -88,10 +88,10 @@ describe('handleHookRequest', () => {
         const seen: string[] = [];
         const hint = (_token: string, event: string) => {
             seen.push(event);
-            return event === 'SessionStart' ? 'verbs' : null;
+            return event === 'SessionStart' ? 'tools' : null;
         };
         const start = await handleHookRequest(post('/hooks/claude', '{"hook_event_name":"SessionStart"}', 'tok'), '/hooks/claude', target('applied'), hint);
-        expect(await start.json()).toEqual({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: 'verbs' } });
+        expect(await start.json()).toEqual({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: 'tools' } });
         const prompt = await handleHookRequest(
             post('/hooks/claude', '{"hook_event_name":"UserPromptSubmit"}', 'tok'),
             '/hooks/claude',

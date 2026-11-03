@@ -6,14 +6,14 @@ import { VISUAL_LIMITS, type ChatVisual } from '@ruimte/contracts';
 import { visualFileName } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
 import { readBytes } from '../bytes/read-bytes.ts';
-import type { VisualHost } from '../canvas/verb.ts';
-import { IMAGES_LINE, SHOWN_LINE } from '../canvas/visual-verb.ts';
+import type { VisualHost } from '../tools/host.ts';
+import { SHOWN_LINE } from '../tools/visual-tools.ts';
 import { VisualRenderError, type VisualPreview } from '../visuals/renderer.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
-import { refusalCode } from '../canvas/verb-test-helpers.ts';
+import { refusalCode } from '../tools/tool-test-helpers.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { leadAndShellProject, sayAndSettle } from './lead-chat-test-helpers.ts';
 
@@ -73,12 +73,12 @@ function visualEvents(events: readonly SessionEvent[]): ChatVisual[][] {
     return events.flatMap((event) => (event.event === 'chat.visuals' ? [event.payload.visuals] : []));
 }
 
-async function show(daemon: TestDaemon, caller: string, argv: string[]): Promise<string[]> {
-    return runVerb(daemon, caller, 'visual', ['show', ...argv]);
+async function show(daemon: TestDaemon, caller: string, input: Record<string, unknown>): Promise<string[]> {
+    return invokeTool(daemon, caller, 'visual_show', input);
 }
 
 async function shown(daemon: TestDaemon, title: string, page = PAGE): Promise<string> {
-    const lines = await show(daemon, 'chat-lead', ['--title', title, `--html=${page}`]);
+    const lines = await show(daemon, 'chat-lead', { title, html: page });
     const [kind, id] = lines[0]!.split('\t');
     expect(kind).toBe('visual');
     return id!;
@@ -88,13 +88,13 @@ function pagePath(chatId: string, visualId: string): string {
     return join(home, 'attachments', encodeURIComponent(chatId), `${visualId}.html`);
 }
 
-describe('visual verbs', () => {
+describe('visual tools', () => {
     test('visual show from a chat stores the page, says it is shown above the reply, and an attached client hears it', async () => {
         const daemon = await bootWithChat();
         expect(await daemon.request('chat.attach', { chatId: 'chat-lead' })).toMatchObject({ ok: true, result: { visuals: [] } });
         const events = listen(daemon);
 
-        const lines = await show(daemon, 'chat-lead', ['--title', 'Open issues', '--height', '320', `--html=${PAGE}`]);
+        const lines = await show(daemon, 'chat-lead', { title: 'Open issues', height: 320, html: PAGE });
         const [kind, id, title, size] = lines[0]!.split('\t');
         expect([kind, title]).toEqual(['visual', 'Open issues']);
         expect(lines[1]).toBe(SHOWN_LINE);
@@ -117,7 +117,7 @@ describe('visual verbs', () => {
         const daemon = await bootWithChat();
         const events = listen(daemon);
         await daemon.request('chat.attach', { chatId: 'chat-lead' });
-        const lines = await show(daemon, 'chat-lead', ['--title', 'Dashboard', '--layout', 'wide', `--html=${PAGE}`]);
+        const lines = await show(daemon, 'chat-lead', { title: 'Dashboard', layout: 'wide', html: PAGE });
         expect(lines[0]).toStartWith('visual\t');
         const [visual] = await daemon.chats.listVisuals('chat-lead');
         expect(visual?.layout).toBe('wide');
@@ -125,12 +125,12 @@ describe('visual verbs', () => {
         expect(await daemon.request('chat.attach', { chatId: 'chat-lead' })).toMatchObject({ ok: true, result: { visuals: [visual] } });
         const stored = JSON.parse(await readFile(join(home, 'chats', visualFileName('chat-lead')), 'utf8'));
         expect(stored.visuals[0].layout).toBe('wide');
-        const invalid = await show(daemon, 'chat-lead', ['--title', 'Bad', '--layout', 'fullscreen', `--html=${PAGE}`]);
+        const invalid = await show(daemon, 'chat-lead', { title: 'Bad', layout: 'fullscreen', html: PAGE });
         expect(refusalCode(invalid)).toBe('bad-arguments');
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([visual!]);
     });
 
-    test('without --height the frame may take the most a visual may, and the page arrives byte for byte through --html', async () => {
+    test('without height the frame may take the most a visual may, and the page arrives byte for byte through html', async () => {
         const daemon = await bootWithChat();
         const page = '<p title="a\\nb">Ten\tcases</p>\n';
         const id = await shown(daemon, 'Cases', page);
@@ -142,49 +142,48 @@ describe('visual verbs', () => {
 
     test('a terminal is told a visual shows only in an AI chat', async () => {
         const daemon = await bootWithChat();
-        const lines = await show(daemon, 'term-lead', ['--title', 'Bars', `--html=${PAGE}`]);
+        const lines = await show(daemon, 'term-lead', { title: 'Bars', html: PAGE });
         expect(lines[0]).toBe('refused\tvisual-needs-chat\tA visual shows only in the thread of an AI chat, and you are a terminal: answer in text instead');
-        expect(refusalCode(await runVerb(daemon, 'term-lead', 'visual', ['list']))).toBe('visual-needs-chat');
+        expect(refusalCode(await invokeTool(daemon, 'term-lead', 'visual_list', {}))).toBe('visual-needs-chat');
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
     });
 
     test('with visual replies off a chat is told to answer in text, and what it showed before still lists', async () => {
         const daemon = await bootWithChat({ visualReplies: false });
-        const lines = await show(daemon, 'chat-lead', ['--title', 'Bars', `--html=${PAGE}`]);
+        const lines = await show(daemon, 'chat-lead', { title: 'Bars', html: PAGE });
         expect(lines[0]).toBe('refused\tvisuals-off\tA person turned visual replies off on this machine: answer in text, and do not call visual again');
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
-        expect(await runVerb(daemon, 'chat-lead', 'visual', ['list'])).toEqual(['note\tThis chat shows no visual']);
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_list', {})).toEqual(['note\tThis chat shows no visual']);
     });
 
     test('what the store refuses comes back under its own code and message', async () => {
         const daemon = await bootWithChat();
-        const empty = await show(daemon, 'chat-lead', ['--title', 'Bars', '--html=']);
+        const empty = await show(daemon, 'chat-lead', { title: 'Bars', html: '' });
         expect(empty).toEqual(['refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document']);
-        const blank = await show(daemon, 'chat-lead', ['--title', ' ', `--html=${PAGE}`]);
+        const blank = await show(daemon, 'chat-lead', { title: ' ', html: PAGE });
         expect(blank[0]).toBe('refused\tvisual-invalid\tA visual needs a title; give it a short one that says what the page shows');
-        const long = await show(daemon, 'chat-lead', ['--title', 'x'.repeat(VISUAL_LIMITS.title + 1), `--html=${PAGE}`]);
+        const long = await show(daemon, 'chat-lead', { title: 'x'.repeat(VISUAL_LIMITS.title + 1), html: PAGE });
         expect(refusalCode(long)).toBe('visual-invalid');
-        const large = await show(daemon, 'chat-lead', ['--title', 'Bars', `--html=${'x'.repeat(VISUAL_LIMITS.bytes + 1)}`]);
+        const large = await show(daemon, 'chat-lead', { title: 'Bars', html: 'x'.repeat(VISUAL_LIMITS.bytes + 1) });
         expect(refusalCode(large)).toBe('visual-too-large');
         expect(large[0]).toContain('load libraries from a public CDN URL');
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
     });
 
-    test('the command line is checked before anything is stored', async () => {
+    test('the input is checked before anything is stored', async () => {
         const daemon = await bootWithChat();
-        expect(await show(daemon, 'chat-lead', [`--html=${PAGE}`])).toEqual([
-            'refused\tbad-arguments\tvisual show needs --title, a few words that say what the page shows',
-            'usage\tvisual show\t--title T [--layout inline|wide] [--height H] (< page.html | --html H)',
-            'detail\truimte-context help visual show'
+        expect(await show(daemon, 'chat-lead', { html: PAGE })).toEqual([
+            'refused\tbad-arguments\tvisual_show needs title, a few words that say what the page shows',
+            'fields\ttitle\tlayout\theight\thtml'
         ]);
-        expect((await show(daemon, 'chat-lead', ['--title', 'Bars', '--height', 'tall', `--html=${PAGE}`]))[0]).toBe(
-            'refused\tbad-arguments\t--height takes a whole number of CSS pixels'
+        expect((await show(daemon, 'chat-lead', { title: 'Bars', height: 'tall', html: PAGE }))[0]).toBe(
+            'refused\tbad-arguments\theight takes a whole number of CSS pixels'
         );
-        expect((await show(daemon, 'chat-lead', ['--title', 'Bars', '--height', '40', `--html=${PAGE}`]))[0]).toBe(
-            `refused\tbad-arguments\t--height is from ${VISUAL_LIMITS.minHeight} to ${VISUAL_LIMITS.maxHeight} CSS pixels`
+        expect((await show(daemon, 'chat-lead', { title: 'Bars', height: 40, html: PAGE }))[0]).toBe(
+            `refused\tbad-arguments\theight is from ${VISUAL_LIMITS.minHeight} to ${VISUAL_LIMITS.maxHeight} CSS pixels`
         );
-        expect(refusalCode(await show(daemon, 'chat-lead', ['page.html', '--title', 'Bars']))).toBe('bad-arguments');
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'visual', ['remove']))).toBe('bad-arguments');
+        expect((await show(daemon, 'chat-lead', { page: 'page.html', title: 'Bars' }))[0]).toBe('refused\tbad-arguments\tvisual_show takes no page');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'visual_remove', {}))).toBe('bad-arguments');
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
     });
 
@@ -194,60 +193,24 @@ describe('visual verbs', () => {
         const first = await shown(daemon, 'Bars');
         const second = await shown(daemon, 'Lines');
         const [one, two] = await daemon.chats.listVisuals('chat-lead');
-        expect(await runVerb(daemon, 'chat-lead', 'visual', ['list'])).toEqual([
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_list', {})).toEqual([
             `visual\t${first}\tBars\t${one!.size} bytes`,
             `visual\t${second}\tLines\t${two!.size} bytes`
         ]);
 
         const events = listen(daemon);
-        expect(await runVerb(daemon, 'chat-lead', 'visual', ['remove', first])).toEqual([`removed\t${first}\tBars`]);
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_remove', { visual_id: first })).toEqual([`removed\t${first}\tBars`]);
         expect(await fileExists(pagePath('chat-lead', first))).toBe(false);
         expect(visualEvents(events)).toEqual([[two!]]);
 
-        const gone = await runVerb(daemon, 'chat-lead', 'visual', ['remove', first]);
+        const gone = await invokeTool(daemon, 'chat-lead', 'visual_remove', { visual_id: first });
         expect(gone).toEqual([`refused\tvisual-not-found\tThis chat shows no visual ${first}`, `visual\t${second}\tLines\t${two!.size} bytes`]);
 
         // A person removes one from its card; one that is already gone is no refusal.
         expect(await daemon.request('chat.removeVisual', { chatId: 'chat-lead', visualId: second })).toMatchObject({ ok: true, result: { visuals: [] } });
         expect(await daemon.request('chat.removeVisual', { chatId: 'chat-lead', visualId: second })).toMatchObject({ ok: true, result: { visuals: [] } });
         expect(visualEvents(events)).toEqual([[two!], []]);
-        expect(await runVerb(daemon, 'chat-lead', 'visual', ['list'])).toEqual(['note\tThis chat shows no visual']);
-    });
-
-    test('help visual carries the rules for a page and an example to copy', async () => {
-        const daemon = await boot();
-        const lines = await runVerb(daemon, 'chat-lead', 'help', ['visual']);
-        expect(lines[0]).toBe('usage\tvisual\t<write|preview|show|list|remove> ...');
-        expect(lines.some((line) => line.startsWith('preview\tPreview first, then show: visual_preview < page.html'))).toBe(true);
-        expect(lines).toContain(
-            'action\tvisual preview\t[--width W] [--appearance dark|light] (< page.html | --html H)\tRenders a self-contained HTML page the way this chat would draw it, without showing it, and answers a png of it, the height it needs and what it wrote to its console.'
-        );
-        expect(lines.some((line) => line.startsWith('page\tA visual is one self-contained HTML document'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('layout\t'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('theme\t') && line.includes('--chart-1'))).toBe(true);
-        expect(lines.filter((line) => line.startsWith('example\t'))[0]).toBe(`example\tvisual_show --title "Open issues per label" --height 160 <<'EOF'`);
-        expect(lines.filter((line) => line.startsWith('example\t')).at(-1)).toBe('example\tEOF');
-        expect(lines).toContain(IMAGES_LINE);
-        expect(lines.some((line) => line.startsWith('storage\t') && line.includes('outside the project'))).toBe(true);
-    });
-
-    test('help visual show and help visual preview say under stdin that local images are embedded', async () => {
-        const daemon = await boot();
-        expect(IMAGES_LINE).toBe(
-            'images\tA local image may be written as its absolute file path, as the whole of a quoted attribute or JS string or the bare argument of a CSS url(), such as <img src="/tmp/before.png">. ' +
-                'The CLI reads it in your own process and embeds it, so the page needs no file on this machine: at most 10 MiB per image and 16 MiB for the page with its images. ' +
-                'A file counts only when its bytes are an image. visual show refuses a page with an image it cannot embed; visual preview embeds what it can and prints a line for the rest'
-        );
-        for (const action of ['show', 'preview']) {
-            const lines = await runVerb(daemon, 'chat-lead', 'help', ['visual', action]);
-            expect(lines[lines.findIndex((line) => line.startsWith('stdin\t')) + 1]).toBe(IMAGES_LINE);
-        }
-        const show = await runVerb(daemon, 'chat-lead', 'help', ['visual', 'show']);
-        expect(show.find((line) => line.startsWith('refusals\t'))).toContain('\tvisual-images-missing\tvisual-image-too-large\t');
-        const preview = await runVerb(daemon, 'chat-lead', 'help', ['visual', 'preview']);
-        expect(preview).toContain(
-            'prints\tmissing|too-large\tpath\treason\tlast, one line per local image the CLI left as written, which visual show would refuse'
-        );
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_list', {})).toEqual(['note\tThis chat shows no visual']);
     });
 });
 
@@ -270,15 +233,15 @@ describe('previews and measured heights', () => {
             });
         };
         const daemon = await bootWithChat({ visualRender: { preview } });
-        expect(await runVerb(daemon, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`])).toEqual([
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_preview', { html: PAGE })).toEqual([
             'shot\t/home/screenshots/visual-1a2b-1.png\tthe png on this machine, which you open with your own tools',
             'height\t420\tthe height the page needs at 768px',
             'console\tlog\tdrawn 3 bars',
             'console\texception\tUncaught TypeError: x is not a function at page.html:12:5',
             'note\t4 more console messages were left out',
-            'next\tThis only checked the page; visual_show --title T with the same page on stdin shows it above your reply'
+            'next\tThis only checked the page; visual_show with a title and the same page in html shows it above your reply'
         ]);
-        await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '400', '--appearance', 'light', `--html=${PAGE}`]);
+        await invokeTool(daemon, 'chat-lead', 'visual_preview', { width: 400, appearance: 'light', html: PAGE });
         expect(asked).toEqual([
             { chatId: 'chat-lead', html: PAGE, width: 768, appearance: 'dark' },
             { chatId: 'chat-lead', html: PAGE, width: 400, appearance: 'light' }
@@ -288,7 +251,7 @@ describe('previews and measured heights', () => {
 
     test('a quiet page gets a note, and a page taller than its shot says how much the shot covers', async () => {
         const daemon = await bootWithChat({ visualRender: { preview: async () => previewed({ height: 5200, shotHeight: 4000 }) } });
-        const lines = await runVerb(daemon, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`]);
+        const lines = await invokeTool(daemon, 'chat-lead', 'visual_preview', { html: PAGE });
         expect(lines.slice(1, 4)).toEqual([
             'height\t5200\tthe height the page needs at 768px',
             'note\tThe shot covers the first 4000 of those pixels',
@@ -298,8 +261,8 @@ describe('previews and measured heights', () => {
 
     test('without a browser the preview is refused under a code of its own, and show still works', async () => {
         const daemon = await bootWithChat();
-        const lines = await runVerb(daemon, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`]);
-        expect(lines).toEqual(['refused\tpreview-unavailable\tThis machine renders no previews; show the page with visual show without a preview']);
+        const lines = await invokeTool(daemon, 'chat-lead', 'visual_preview', { html: PAGE });
+        expect(lines).toEqual(['refused\tpreview-unavailable\tThis machine renders no previews; show the page with visual_show without a preview']);
         await shown(daemon, 'Bars');
 
         const refusing = await bootWithChat({
@@ -307,13 +270,13 @@ describe('previews and measured heights', () => {
                 preview: async () => {
                     throw new VisualRenderError(
                         'preview-unavailable',
-                        'This machine has no Chrome to render a preview with; show the page with visual show without a preview'
+                        'This machine has no Chrome to render a preview with; show the page with visual_show without a preview'
                     );
                 }
             }
         });
-        expect(await runVerb(refusing, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`])).toEqual([
-            'refused\tpreview-unavailable\tThis machine has no Chrome to render a preview with; show the page with visual show without a preview'
+        expect(await invokeTool(refusing, 'chat-lead', 'visual_preview', { html: PAGE })).toEqual([
+            'refused\tpreview-unavailable\tThis machine has no Chrome to render a preview with; show the page with visual_show without a preview'
         ]);
     });
 
@@ -324,18 +287,18 @@ describe('previews and measured heights', () => {
             return previewed();
         };
         const daemon = await bootWithChat({ visualRender: { preview } });
-        expect(refusalCode(await runVerb(daemon, 'term-lead', 'visual', ['preview', `--html=${PAGE}`]))).toBe('visual-needs-chat');
-        expect(await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--html='])).toEqual([
+        expect(refusalCode(await invokeTool(daemon, 'term-lead', 'visual_preview', { html: PAGE }))).toBe('visual-needs-chat');
+        expect(await invokeTool(daemon, 'chat-lead', 'visual_preview', { html: '' })).toEqual([
             'refused\tvisual-invalid\tThe page is empty; pass one self-contained HTML document'
         ]);
-        expect((await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--width', '200', `--html=${PAGE}`]))[0]).toBe(
-            'refused\tbad-arguments\t--width is from 240 to 1600 CSS pixels'
+        expect((await invokeTool(daemon, 'chat-lead', 'visual_preview', { width: 200, html: PAGE }))[0]).toBe(
+            'refused\tbad-arguments\twidth is from 240 to 1600 CSS pixels'
         );
-        expect((await runVerb(daemon, 'chat-lead', 'visual', ['preview', '--appearance', 'sepia', `--html=${PAGE}`]))[0]).toBe(
-            'refused\tbad-arguments\t--appearance is dark or light'
+        expect((await invokeTool(daemon, 'chat-lead', 'visual_preview', { appearance: 'sepia', html: PAGE }))[0]).toBe(
+            'refused\tbad-arguments\tappearance is dark or light'
         );
         const off = await bootWithChat({ visualReplies: false, visualRender: { preview } });
-        expect(refusalCode(await runVerb(off, 'chat-lead', 'visual', ['preview', `--html=${PAGE}`]))).toBe('visuals-off');
+        expect(refusalCode(await invokeTool(off, 'chat-lead', 'visual_preview', { html: PAGE }))).toBe('visuals-off');
         expect(previews).toBe(0);
     });
 
@@ -353,7 +316,7 @@ describe('previews and measured heights', () => {
         const first = await shown(daemon, 'Bars');
         answer = undefined;
         const second = await shown(daemon, 'Lines');
-        await show(daemon, 'chat-lead', ['--title', 'Empty', '--html= ']);
+        await show(daemon, 'chat-lead', { title: 'Empty', html: ' ' });
         const [one, two] = await daemon.chats.listVisuals('chat-lead');
         expect(one).toMatchObject({
             id: first,
@@ -373,17 +336,17 @@ describe('visuals and the chat they belong to', () => {
     test("writes and replaces source only in the caller's chat storage, without publishing it", async () => {
         const daemon = await bootWithChat();
         const path = join(home, 'chats', 'chat-lead.visuals', 'chart.html');
-        const lines = await runVerb(daemon, 'chat-lead', 'visual', ['write', '--name', 'chart.html', `--html=${PAGE}`]);
+        const lines = await invokeTool(daemon, 'chat-lead', 'visual_write', { name: 'chart.html', html: PAGE });
         expect(lines[0]).toBe(`file\t${path}`);
         expect(await readFile(path, 'utf8')).toBe(PAGE);
-        await runVerb(daemon, 'chat-lead', 'visual', ['write', '--name', 'chart.html', '--html=<p>Updated</p>']);
+        await invokeTool(daemon, 'chat-lead', 'visual_write', { name: 'chart.html', html: '<p>Updated</p>' });
         expect(await readFile(path, 'utf8')).toBe('<p>Updated</p>');
         expect(await daemon.chats.listVisuals('chat-lead')).toEqual([]);
         expect(await fileExists(join(folder, 'chart.html'))).toBe(false);
-        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'visual', ['write', '--name', '../other.html', `--html=${PAGE}`]))).toBe('visual-invalid');
-        expect(refusalCode(await runVerb(daemon, 'term-lead', 'visual', ['write', '--name', 'chart.html', `--html=${PAGE}`]))).toBe('visual-needs-chat');
+        expect(refusalCode(await invokeTool(daemon, 'chat-lead', 'visual_write', { name: '../other.html', html: PAGE }))).toBe('visual-invalid');
+        expect(refusalCode(await invokeTool(daemon, 'term-lead', 'visual_write', { name: 'chart.html', html: PAGE }))).toBe('visual-needs-chat');
         const off = await bootWithChat({ visualReplies: false });
-        expect(refusalCode(await runVerb(off, 'chat-lead', 'visual', ['write', '--name', 'other.html', `--html=${PAGE}`]))).toBe('visuals-off');
+        expect(refusalCode(await invokeTool(off, 'chat-lead', 'visual_write', { name: 'other.html', html: PAGE }))).toBe('visuals-off');
     });
 
     test('a fork copies the visuals up to its cut, each with a page of its own', async () => {

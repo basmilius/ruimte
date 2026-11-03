@@ -1,5 +1,5 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
 import { launchHostOf, launchLines, named } from './launch-actions.ts';
 
@@ -14,19 +14,19 @@ export const secretActions: ActionHandlers<ServerActionContext> = {
             context,
             actor.id,
             (you) =>
-                new VerbRefusal(
+                new ToolRefusal(
                     'secret-needs-chat',
                     `A secret is asked for in a card of an AI chat, and you are ${you}: ask the person to add it to the launch themselves`
                 )
         );
         if (variable.toUpperCase().startsWith(RESERVED_PREFIX)) {
-            throw new VerbRefusal('reserved-variable', `${variable} is one of the variables this machine sets itself; pick another name`);
+            throw new ToolRefusal('reserved-variable', `${variable} is one of the variables this machine sets itself; pick another name`);
         }
         const { projectId } = context.place;
         const launches = await launchHostOf(context).list(projectId);
         const launch = named(launches, wanted);
         if (launch.kind === 'group') {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'launch-group',
                 `${launch.name} is a group and has no environment of its own; ask for the secret of one of the launches it starts`,
                 launchLines(launches.filter((candidate) => launch.members.includes(candidate.launchId)))

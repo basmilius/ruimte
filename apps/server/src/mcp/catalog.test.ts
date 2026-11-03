@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { VERBS } from '../canvas/verbs.ts';
-import { catalog, withToolNames, catalogNames, type ToolContext } from './catalog.ts';
+import { catalog, type ToolContext } from './catalog.ts';
 
 const DESIGN_NAMES = [
     'context_list',
@@ -32,15 +31,6 @@ const DESIGN_NAMES = [
 ];
 
 describe('catalog', () => {
-    test('every action of the registry has a tool, so a new verb cannot be left out', () => {
-        const covered = new Set(catalog().flatMap((tool) => tool.covers));
-        const registry = VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => action.name) : [entry.name])).filter(
-            (name) => name !== 'help'
-        );
-
-        expect(registry.filter((name) => !covered.has(name))).toEqual([]);
-    });
-
     test('the tools carry the names the design gives them', () => {
         const names = catalog().map((tool) => tool.name);
 
@@ -89,12 +79,6 @@ describe('catalog', () => {
         expect(pointing.map((tool) => tool.name)).toEqual([]);
     });
 
-    test('a CLI command in a sentence is written as its tool', () => {
-        expect(withToolNames('ruimte-context node list lists them, and ruimte-context read reads one', catalogNames())).toBe(
-            'node_list lists them, and context_read reads one'
-        );
-    });
-
     test('every guide topic prints its format with fields in place of flags', async () => {
         const guide = catalog().find((tool) => tool.name === 'guide')!;
         const topics = guide.inputSchema.properties.topic?.enum ?? [];
@@ -104,10 +88,5 @@ describe('catalog', () => {
         expect(guide.audience).toBe('everyone');
         expect(topics.filter((_topic, index) => printed[index]!.lines.length === 0)).toEqual([]);
         expect(printed.flatMap((outcome) => outcome.lines).filter((line) => /(^|\s)--[a-z]|ruimte-context/.test(line))).toEqual([]);
-    });
-
-    test('an action id is written as its tool, and an operation id stays as the daemon wrote it', () => {
-        expect(withToolNames('the id device.list gives it', catalogNames())).toBe('the id device_list gives it');
-        expect(withToolNames('operation_get agent.start:abc says how it goes', catalogNames())).toBe('operation_get agent.start:abc says how it goes');
     });
 });

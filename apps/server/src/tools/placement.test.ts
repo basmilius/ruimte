@@ -156,7 +156,7 @@ describe('placeTeam', () => {
 describe('arrangeRects', () => {
     const rect = (x: number, y: number, w = 200, h = 100): Rect => ({ x, y, w, h });
 
-    test('a grid without --cols is as square as the count allows and starts where the nodes already stood', () => {
+    test('a grid without cols is as square as the count allows and starts where the nodes already stood', () => {
         const rects = [rect(400, 300), rect(-20, 1000), rect(900, 20), rect(50, 50)];
         const placed = arrangeRects(rects, 'grid');
         expect(gridColumns(4)).toBe(2);
@@ -165,14 +165,14 @@ describe('arrangeRects', () => {
         expect(overlapping(placed)).toBe(false);
     });
 
-    test('--cols is how many go on a row, and the last row is as short as what is left', () => {
+    test('cols is how many go on a row, and the last row is as short as what is left', () => {
         const rects = Array.from({ length: 5 }, () => rect(0, 0));
         const placed = arrangeRects(rects, 'grid', 3);
         expect(placed.map((one) => one.x)).toEqual([0, 240, 480, 0, 240]);
         expect(placed.map((one) => one.y)).toEqual([0, 0, 0, 140, 140]);
     });
 
-    test('a row is one row and a column is one column, whatever --cols would have said', () => {
+    test('a row is one row and a column is one column, whatever cols would have said', () => {
         const rects = Array.from({ length: 3 }, () => rect(10, 10));
         expect(arrangeRects(rects, 'row').map((one) => one.y)).toEqual([10, 10, 10]);
         expect(arrangeRects(rects, 'row').map((one) => one.x)).toEqual([10, 250, 490]);

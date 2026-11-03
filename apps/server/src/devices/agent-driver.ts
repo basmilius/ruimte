@@ -67,7 +67,7 @@ export type AgentStep =
     | { kind: 'shot' }
     | { kind: ToolStepKind };
 
-/* The steps of the tools beside shots and taps, each named after its verb. */
+/* The steps of the tools beside shots and taps, each named after its tool. */
 type ToolStepKind = 'set' | 'open' | 'permission' | 'push' | 'biometric' | 'clipboard' | 'record' | 'install' | 'media' | 'terminate';
 
 /* An action of a device without the device it acts on, which the driver adds. */
@@ -402,7 +402,7 @@ export class DeviceDriver {
         // Simulator.app keeps the simulator's pasteboard in step with the Mac's, so reading it would read what the person copied.
         if (text === null && device.platform === 'ios') {
             throw new CodedError('device-action-unavailable', `An agent cannot read the clipboard of ${device.name}, which follows the clipboard of this Mac`, [
-                'note\tPutting text there with --text still works'
+                'note\tPutting text there with text still works'
             ]);
         }
         this.pass(caller, device, { kind: 'clipboard' });

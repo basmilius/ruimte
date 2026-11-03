@@ -1,17 +1,17 @@
 import { DEFAULT_TITLES } from '@ruimte/contracts';
 
-export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'diagram', 'file', 'device', 'terminal', 'chat', 'artifact', 'routine'] as const;
-type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
+export const NODE_NEW_KINDS = ['note', 'browser', 'drawing', 'diagram', 'file', 'device', 'terminal', 'chat', 'artifact', 'routine'] as const;
+type NodeNewKind = (typeof NODE_NEW_KINDS)[number];
 
-type FlaggedKind = 'artifact' | 'routine';
+type OwnFieldKind = 'artifact' | 'routine';
 
-// What --json takes: an artifact or a routine node names what it shows with flags of its own, which the batch does not carry.
-export const JSON_NODE_KINDS = NODE_VERB_KINDS.filter((kind): kind is Exclude<NodeVerbKind, FlaggedKind> => kind !== 'artifact' && kind !== 'routine');
+// What json takes: an artifact or a routine node names what it shows with fields of its own, which the batch does not carry.
+export const JSON_NODE_KINDS = NODE_NEW_KINDS.filter((kind): kind is Exclude<NodeNewKind, OwnFieldKind> => kind !== 'artifact' && kind !== 'routine');
 
-export type KindFlag = 'text' | 'url' | 'path' | 'source' | 'device' | 'cwd' | 'artifact' | 'version' | 'routine';
+export type KindField = 'text' | 'url' | 'path' | 'source' | 'device' | 'cwd' | 'artifact' | 'version' | 'routine';
 
-// The flags that only mean something on one kind; every kind takes --title, --view and --beside.
-export const KIND_FLAGS: Record<NodeVerbKind, readonly KindFlag[]> = {
+// The fields that only mean something on one kind; every kind takes title, view and beside.
+export const KIND_FIELDS: Record<NodeNewKind, readonly KindField[]> = {
     note: ['text'],
     browser: ['url'],
     drawing: ['source'],
@@ -24,7 +24,7 @@ export const KIND_FLAGS: Record<NodeVerbKind, readonly KindFlag[]> = {
     routine: ['routine']
 };
 
-export const REQUIRED_FLAG: Partial<Record<NodeVerbKind, KindFlag>> = {
+export const REQUIRED_FIELD: Partial<Record<NodeNewKind, KindField>> = {
     browser: 'url',
     drawing: 'source',
     diagram: 'source',
@@ -34,15 +34,15 @@ export const REQUIRED_FLAG: Partial<Record<NodeVerbKind, KindFlag>> = {
     routine: 'routine'
 };
 
-/* Which kinds a flag goes with, from the same table `run` refuses against, so help cannot claim another pairing. */
-export function kindsFor(flag: KindFlag): string {
-    return NODE_VERB_KINDS.filter((kind) => KIND_FLAGS[kind].includes(flag))
-        .map((kind) => (REQUIRED_FLAG[kind] === flag ? `${kind} (required)` : kind))
+/* Which kinds a field goes with, from the same table `run` refuses against, so a guide cannot claim another pairing. */
+export function kindsFor(field: KindField): string {
+    return NODE_NEW_KINDS.filter((kind) => KIND_FIELDS[kind].includes(field))
+        .map((kind) => (REQUIRED_FIELD[kind] === field ? `${kind} (required)` : kind))
         .join(', ');
 }
 
-/* What the title falls back to without `--title`, in the order `run` picks it. */
-function untitled(kind: NodeVerbKind): string {
+/* What the title falls back to without `title`, in the order `run` picks it. */
+function untitled(kind: NodeNewKind): string {
     if (kind === 'drawing' || kind === 'diagram') {
         return `the name of the ${kind} view`;
     }
@@ -61,10 +61,10 @@ function untitled(kind: NodeVerbKind): string {
     return `"${DEFAULT_TITLES[kind]}"`;
 }
 
-/* The line about one kind, in help and in a refusal about that kind, so both name the same flags. */
-export function kindLine(kind: NodeVerbKind): string {
-    return `kind\t${kind}\t${KIND_FLAGS[kind].map((flag) => `--${flag}${REQUIRED_FLAG[kind] === flag ? ' (required)' : ''}`).join(', ')}\tcalled ${untitled(kind)} without --title`;
-}
+/* The three fields no kind is without; a refusal about one kind would otherwise read as if they were gone. */
+export const EVERY_KIND_LINE = 'kind\tevery kind\ttitle, view, beside';
 
-/* The three flags no kind is without; a refusal about one kind would otherwise read as if they were gone. */
-export const EVERY_KIND_LINE = 'kind\tevery kind\t--title T, --view V, --beside N';
+/* The fields of one kind, as `guide` and a refusal about that kind print them, so both name the same fields. */
+export function kindLine(kind: NodeNewKind): string {
+    return `kind\t${kind}\t${KIND_FIELDS[kind].map((flag) => `${flag}${REQUIRED_FIELD[kind] === flag ? ' (required)' : ''}`).join(', ')}\tcalled ${untitled(kind)} without title`;
+}

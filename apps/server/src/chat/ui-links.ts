@@ -4,7 +4,7 @@ import type { ChatInfo } from '@ruimte/contracts';
 import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
 import { fileExists, isNotFound } from '@adecore/agents';
 import { ChatUiRefusal } from '@adecore/agents/chat';
-import { checkCwd, isInside } from '../canvas/project-paths.ts';
+import { checkCwd, isInside } from '../tools/project-paths.ts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { git, toplevel } from '../git/run.ts';

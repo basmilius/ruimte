@@ -1,8 +1,9 @@
 import type { ActionActor, ActionHandlers } from '@ruimte/actions';
 import type { Plan, PlanActor, PlanOp } from '@ruimte/contracts';
 import { parsePlanDraft, parsePlanMarkdown, progressText, type PlanApplied, type PlanRefusal } from '@adecore/plan';
-import { callerKind } from '../canvas/tasks.ts';
-import { VerbRefusal, field, orNote, type CanvasHost } from '../canvas/verb.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { callerKind } from '../tools/tasks.ts';
+import { field, orNote, type CanvasHost } from '../tools/host.ts';
 import { youAre, type ServerActionContext } from './context.ts';
 import { parseJson } from './json-input.ts';
 
@@ -15,7 +16,7 @@ function planActorOf(actor: ActionActor): PlanActor {
 async function callerChat({ host, place }: ServerActionContext, caller: string): Promise<string> {
     const kind = callerKind(await host.projects.read(place.projectId), caller);
     if (kind !== 'chat') {
-        throw new VerbRefusal('plan-needs-chat', `A plan belongs to a chat, and you are ${youAre(kind)}: only a chat has a record to keep a plan beside`);
+        throw new ToolRefusal('plan-needs-chat', `A plan belongs to a chat, and you are ${youAre(kind)}: only a chat has a record to keep a plan beside`);
     }
     return caller;
 }
@@ -29,27 +30,27 @@ function plansOrNote(plans: readonly Plan[]): string[] {
 }
 
 /* A refusal of the store, with what the agent can do next beside it. */
-async function refused(host: CanvasHost, chatId: string, refusal: PlanRefusal): Promise<VerbRefusal> {
+async function refused(host: CanvasHost, chatId: string, refusal: PlanRefusal): Promise<ToolRefusal> {
     switch (refusal.code) {
         case 'plan-not-found':
-            return new VerbRefusal(refusal.code, refusal.message, plansOrNote(await host.plans.read(chatId)));
+            return new ToolRefusal(refusal.code, refusal.message, plansOrNote(await host.plans.read(chatId)));
         case 'too-many-plans':
-            return new VerbRefusal(refusal.code, refusal.message, [
+            return new ToolRefusal(refusal.code, refusal.message, [
                 ...(await host.plans.read(chatId)).map(planRow),
-                'see\tplan_delete --plan P\tremoves a plan you no longer keep'
+                'see\tplan_delete plan P\tremoves a plan you no longer keep'
             ]);
         case 'plan-missing-item':
         case 'plan-not-a-step':
         case 'plan-parent-state':
-            return new VerbRefusal(refusal.code, refusal.message, ['see\tplan_read\tevery item with its id in brackets']);
+            return new ToolRefusal(refusal.code, refusal.message, ['see\tplan_read\tevery item with its id in brackets']);
         case 'set-by-person':
-            return new VerbRefusal(refusal.code, refusal.message, [
-                'see\tplan_note <stepId> --text T\ta note is always yours to add; or ask the person in the chat'
+            return new ToolRefusal(refusal.code, refusal.message, [
+                'see\tplan_note <stepId> text T\ta note is always yours to add; or ask the person in the chat'
             ]);
         case 'plan-invalid':
-            return new VerbRefusal(refusal.code, refusal.message);
+            return new ToolRefusal(refusal.code, refusal.message);
         default:
-            return new VerbRefusal(refusal.code, refusal.message);
+            return new ToolRefusal(refusal.code, refusal.message);
     }
 }
 
@@ -78,18 +79,18 @@ export const planActions: ActionHandlers<ServerActionContext> = {
         }
         const plan = planId === null ? plans.at(-1)! : plans.find((candidate) => candidate.id === planId);
         if (!plan) {
-            throw new VerbRefusal('plan-not-found', `This chat has no plan ${planId}`, plansOrNote(plans));
+            throw new ToolRefusal('plan-not-found', `This chat has no plan ${planId}`, plansOrNote(plans));
         }
         return { output: { plan, others: plans.filter((other) => other !== plan) } };
     },
     'plan.create': async ({ document, markdown, title, kind, checks }, { actor, context, dryRun }) => {
         const chatId = await callerChat(context, actor.id);
         if (document !== null && markdown !== null) {
-            throw new VerbRefusal('two-documents', 'plan_new takes the JSON document or markdown, not both');
+            throw new ToolRefusal('two-documents', 'plan_new takes the JSON document or markdown, not both');
         }
         const source = markdown ?? document ?? '';
         if (source.trim() === '') {
-            throw new VerbRefusal('no-document', 'plan_new got an empty plan; pass it as JSON or as markdown');
+            throw new ToolRefusal('no-document', 'plan_new got an empty plan; pass it as JSON or as markdown');
         }
         const parsed = markdown === null ? parsePlanDraft(parseJson(source, 'document')) : parsePlanMarkdown(source);
         if (!parsed.ok) {
@@ -128,7 +129,7 @@ export const planActions: ActionHandlers<ServerActionContext> = {
     },
     'plan.editItem': async ({ planId, itemId, title, description, checks }, { actor, context }) => {
         if (title === null && description === null && checks === null) {
-            throw new VerbRefusal('nothing-to-edit', 'plan edit needs at least one of --title, --description and --checks');
+            throw new ToolRefusal('nothing-to-edit', 'plan_edit needs at least one of title, description and checks');
         }
         return changed(
             await applyOps(actor, context, planId, [

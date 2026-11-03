@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import type { LaunchConfig, LaunchConfigEnv, LaunchConfigKind, LaunchSuggestion } from '@ruimte/contracts';
 import { fileExists } from '@adecore/agents';
-import { isInside } from '../canvas/project-paths.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { isRecord } from '../is-record.ts';
 import { readVscodeLaunch } from './vscode.ts';
 

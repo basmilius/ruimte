@@ -5,7 +5,7 @@ import type { ChatTurnItem, ProjectCanvasView, ProjectContent, ProjectNode, Runt
 import { ManualClock } from '@adecore/agents/testing';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, releasedProject, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER } from './depth.ts';
 
 function chatNode(id: string, title: string, x: number): ProjectNode {
@@ -43,7 +43,7 @@ describe('fork', () => {
     let daemon: TestDaemon;
 
     beforeEach(async () => {
-        ({ root, home, folder, store, projectId } = await releasedProject('ruimte-fork-verb-', content()));
+        ({ root, home, folder, store, projectId } = await releasedProject('ruimte-fork-tool-', content()));
         daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
         daemon.worker.start();
     });
@@ -83,10 +83,10 @@ describe('fork', () => {
     test('an agent forks a chat it opened into a child of its own beside the original, which takes a task from it', async () => {
         await leadWithChild();
 
-        const lines = await runVerb(daemon, 'chat-lead', 'fork', ['chat-kid', '--title', 'Lexer B']);
+        const lines = await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-kid', title: 'Lexer B' });
         const [, forkId, viewId, branch] = lines[0]!.split('\t');
         expect([lines[0]!.split('\t')[0], viewId, branch]).toEqual(['fork', 'main', '-']);
-        expect(lines[1]).toBe(`next\tGive it work with task_new ${forkId} --prompt T; its result wakes you once it settled`);
+        expect(lines[1]).toBe(`next\tGive it work with task_new with id ${forkId} and a prompt; its result wakes you once it settled`);
 
         expect(daemon.lineage.startedBy(forkId!)).toBe('chat-lead');
         expect(daemon.lineage.madeBy(forkId!)).toBe('chat-lead');
@@ -99,7 +99,7 @@ describe('fork', () => {
         expect(canvas.nodes.find((node) => node.id === forkId)).toMatchObject({ kind: 'chat', title: 'Lexer B' });
         expect(canvas.edges).toEqual([expect.objectContaining({ from: 'chat-kid', to: forkId })]);
 
-        const [given] = await runVerb(daemon, 'chat-lead', 'task', ['new', forkId!, '--prompt', 'go on']);
+        const [given] = await invokeTool(daemon, 'chat-lead', 'task_new', { id: forkId!, prompt: 'go on' });
         expect(given).toStartWith(`task\t`);
         expect(given!.split('\t')[2]).toBe(forkId!);
     });
@@ -110,7 +110,7 @@ describe('fork', () => {
         await chatWithTurn('chat-lead', 'supervised');
         await chatWithTurn('chat-hid', 'supervised');
 
-        const [line] = await runVerb(daemon, 'chat-lead', 'fork', ['chat-hid']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-hid' });
         const [, forkId, viewId] = line!.split('\t');
 
         expect(viewId).toBe(forkId!);
@@ -122,7 +122,7 @@ describe('fork', () => {
     test('the fork runs no wider than the forking agent, whatever mode the original ran in', async () => {
         await leadWithChild();
 
-        const [line] = await runVerb(daemon, 'chat-lead', 'fork', ['chat-kid']);
+        const [line] = await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-kid' });
         const forkId = line!.split('\t')[1]!;
 
         expect(daemon.lineage.ceilingOf(forkId)).toBe('supervised');
@@ -133,20 +133,20 @@ describe('fork', () => {
         await leadWithChild();
         await chatWithTurn('chat-other', 'supervised');
 
-        expect((await runVerb(daemon, 'chat-lead', 'fork', ['chat-other']))[0]).toBe(
+        expect((await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-other' }))[0]).toBe(
             'refused\tnot-yours\tchat-other is not a node you opened; you only fork a chat you opened yourself'
         );
-        expect((await runVerb(daemon, 'chat-kid', 'fork', ['chat-lead']))[0]).toStartWith('refused\tnot-yours\t');
-        expect((await runVerb(daemon, 'chat-lead', 'fork', ['chat-lead']))[0]).toStartWith('refused\tself-fork\t');
+        expect((await invokeTool(daemon, 'chat-kid', 'agent_fork', { id: 'chat-lead' }))[0]).toStartWith('refused\tnot-yours\t');
+        expect((await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-lead' }))[0]).toStartWith('refused\tself-fork\t');
         expect(((await store.read(projectId)).views[0] as ProjectCanvasView).nodes.map((node) => node.id)).toEqual(['chat-lead', 'chat-kid', 'chat-other']);
     });
 
     test('the fork lands one deeper than the forking agent, and is refused past the depth limit', async () => {
         await leadWithChild(MAX_AGENT_DEPTH);
 
-        const [refused] = await runVerb(daemon, 'chat-lead', 'fork', ['chat-kid']);
+        const [refused] = await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-kid' });
         expect(refused).toBe(
-            `refused\ttoo-deep\tYou sit at depth ${MAX_AGENT_DEPTH} and agent would open agents at depth ${MAX_AGENT_DEPTH + 1}; agent opens up to depth ${MAX_AGENT_DEPTH}`
+            `refused\ttoo-deep\tYou sit at depth ${MAX_AGENT_DEPTH} and agent_start would open agents at depth ${MAX_AGENT_DEPTH + 1}; agent_start opens up to depth ${MAX_AGENT_DEPTH}`
         );
         expect(((await store.read(projectId)).views[0] as ProjectCanvasView).nodes).toHaveLength(3);
     });
@@ -157,7 +157,7 @@ describe('fork', () => {
             await daemon.lineage.put({ projectId, nodeId: `chat-held-${i}`, openedBy: 'chat-lead', depth: 1, agent: true });
         }
 
-        const [refused] = await runVerb(daemon, 'chat-lead', 'fork', ['chat-kid']);
+        const [refused] = await invokeTool(daemon, 'chat-lead', 'agent_fork', { id: 'chat-kid' });
         expect(refused).toStartWith(`refused\ttoo-many-agents\tYou have ${MAX_OPENED_PER_CALLER} agents open and this would open 1 more`);
     });
 });

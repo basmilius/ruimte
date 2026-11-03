@@ -24,8 +24,7 @@ import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, pr
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
-import { CANVAS_REQUEST_TIMEOUT_S } from '../canvas/run-verb.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
@@ -34,7 +33,7 @@ import type { ClientAccess } from '../dispatcher.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
-import { handleMcpRequest, MCP_PATH } from '../mcp/mcp-route.ts';
+import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
 import { handleMachineNotify } from '../push/notify-route.ts';
 import { takesNoteOnLine } from '../providers/launch.ts';
@@ -67,10 +66,10 @@ const VoiceKeyRequestSchema = z.object({ key: z.string() });
 const ExtensionLinkSchema = z.object({ folder: z.string().min(1), owner: z.string().min(1).optional() });
 const ExtensionUnlinkSchema = z.object({ id: z.string().min(1), owner: z.string().min(1).optional() });
 
-// Past anything a hook or a verb sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
+// Past anything a hook or a tool call sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
 const MAX_REQUEST_BODY_BYTES = 24 * 1024 * 1024;
-// A model an agent attaches, 50 MiB as base64 with its other words; the verb route checks the token before it reads the body. Also the server's ceiling.
-const MAX_VERB_BODY_BYTES = 72 * 1024 * 1024;
+// A model an agent attaches, 50 MiB as base64 with its other fields; the MCP route checks the token before it reads the body. Also the server's ceiling.
+const MAX_MCP_BODY_BYTES = 72 * 1024 * 1024;
 
 export type SocketData = ClientAccess & { protocolRefused: boolean; ticket: string | null };
 
@@ -294,14 +293,14 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     // Asked on every event that can carry an answer, so the memory of what this
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
-                    // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
-                    const verbs = !(takesNoteOnLine(kind) && sessions.get(sessionId)?.launch?.kind === kind);
+                    // A CLI the node launched got the tools note on its line; one typed by hand in the shell did not.
+                    const tools = !(takesNoteOnLine(kind) && sessions.get(sessionId)?.launch?.kind === kind);
                     return hookContext(event, context.list(sessionId), {
                         changed,
                         messages: agents.messagesFor(sessionId),
                         depth: stores.lineage.depthOf(sessionId),
                         standalone: projects.store.index.locate(sessionId)?.canvasId === null,
-                        verbs,
+                        tools,
                         computer: devices.computer.usable,
                         reach: identity.reachOpenProjects
                     });
@@ -309,9 +308,9 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
         },
         {
             exact: [MCP_PATH],
-            bodyBytes: MAX_VERB_BODY_BYTES,
+            bodyBytes: MAX_MCP_BODY_BYTES,
             handle: ({ request, server }) => {
-                server.timeout(request, CANVAS_REQUEST_TIMEOUT_S);
+                server.timeout(request, MCP_REQUEST_TIMEOUT_S);
                 return handleMcpRequest(request, {
                     targetForToken: agents.targetForToken,
                     host: canvasHost,
@@ -332,7 +331,7 @@ export function serveDaemon(input: HttpInput): Server<SocketData> {
     return Bun.serve<SocketData>({
         hostname: config.host,
         port: config.port,
-        maxRequestBodySize: MAX_VERB_BODY_BYTES,
+        maxRequestBodySize: MAX_MCP_BODY_BYTES,
         async fetch(request, server) {
             const cors = crossOriginHeaders(request);
             if (cors !== null && request.method === 'OPTIONS') {

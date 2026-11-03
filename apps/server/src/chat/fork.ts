@@ -33,11 +33,11 @@ import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/cha
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions } from '@adecore/agents/providers';
 import type { HiddenAgent, HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { agentNode, nameOf } from '../canvas/agents.ts';
-import { MAX_CANVAS_NODES, newId } from '../canvas/nodes.ts';
-import { placeFree } from '../canvas/placement.ts';
-import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../canvas/verb.ts';
-import { branchSlug } from '../canvas/worktree.ts';
+import { agentNode, nameOf } from '../tools/agents.ts';
+import { MAX_CANVAS_NODES, newId } from '../tools/nodes.ts';
+import { placeFree } from '../tools/placement.ts';
+import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../tools/host.ts';
+import { branchSlug } from '../tools/worktree.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';

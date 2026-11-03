@@ -142,7 +142,7 @@ const NOTE_FLAGS: Partial<Record<AgentKind, (note: string) => string[]>> = {
     codex: (note) => ['-c', quote(`developer_instructions=${JSON.stringify(note)}`)]
 };
 
-/* Whether a launch line of this kind carries the verbs note, so a hook must not say it a second time. */
+/* Whether a launch line of this kind carries the tools note, so a hook must not say it a second time. */
 export function takesNoteOnLine(kind: AgentKind): boolean {
     return NOTE_FLAGS[kind] !== undefined;
 }

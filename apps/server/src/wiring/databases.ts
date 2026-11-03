@@ -11,7 +11,7 @@ import type { MachineHome } from '../fs/machine-home.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { LanguageBundle } from './language.ts';
 
-/* A project's databases, for a person through the views and for an agent through its verb. */
+/* A project's databases, for a person through the views and for an agent through its tool. */
 export interface DatabasesBundle {
     service: DatabaseService;
     connections: DatabaseConnectionStore;

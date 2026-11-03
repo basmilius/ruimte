@@ -44,7 +44,7 @@ function settingsFor(into: string): string[] {
     ].flatMap((setting) => ['-c', setting]);
 }
 
-/* What the agent verb holds a merge to on top of what a person's merge is held to. */
+/* What `worktree_merge` holds a merge to on top of what a person's merge is held to. */
 interface MergeLimits {
     /* Refuses a target checkout with uncommitted changes to tracked files. */
     cleanTarget?: boolean;

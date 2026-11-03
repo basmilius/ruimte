@@ -46,7 +46,7 @@ function asReading(text: string | null): ContextReading | null {
 /* A read that found nothing to answer, under the code and the sentence that say why. */
 export class ContextRefusal extends CodedError {}
 
-/* A `--subagent` read that cannot be answered, with the sentence that says why. */
+/* A `subagent` read that cannot be answered, with the sentence that says why. */
 export class SubagentUnreadable extends ContextRefusal {
     constructor(message: string) {
         super('unknown-subagent', message);
@@ -62,7 +62,7 @@ interface ContextReaders {
        never listed or announced as one: the message that pointed at them already said where they are. */
     referenced?(targetId: string): Reference[];
     /* The agent under `sourceId` when `targetId` opened it itself. Readable like a line and never listed,
-       since the verb that opened it already named it. */
+       since the tool that opened it already named it. */
     opened?(targetId: string, sourceId: string): ContextSource | null;
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
@@ -133,7 +133,7 @@ function pendingQuestionLine(question: ChatQuestion): string {
     return `- question ${question.id}: ${how}`;
 }
 
-/* An agent of a workflow, by the id `--subagent` reads its conversation under. */
+/* An agent of a workflow, by the id `subagent` reads its conversation under. */
 function workflowAgentText(agent: ChatWorkflowAgent): string {
     return `${agent.label} (${agent.status}, ${agent.agentId === null ? 'not started yet' : workflowAgentRef(agent.agentId)})`;
 }
@@ -147,7 +147,7 @@ function workflowLines(workflow: ChatWorkflow): string[] {
     });
     const loose = workflow.agents.filter((agent) => !workflow.phases.some((phase) => phase.index === agent.phaseIndex));
     return [
-        `Workflow${workflow.name === null ? '' : ` "${workflow.name}"`}, each agent readable with --subagent and the id beside it:`,
+        `Workflow${workflow.name === null ? '' : ` "${workflow.name}"`}, each agent readable with subagent and the id beside it:`,
         ...phases,
         ...(loose.length === 0 ? [] : [`- outside a phase: ${loose.map(workflowAgentText).join(', ')}`])
     ];
@@ -156,7 +156,7 @@ function workflowLines(workflow: ChatWorkflow): string[] {
 /*
  * A chat thread as an agent should read it: who said what, and what tools ran. A subagent is one line:
  * the work it did inside its row is its own, and printed between the parent's lines it would read as
- * if the parent had done it. Its whole conversation is `read <id> --subagent <toolUseId>`.
+ * if the parent had done it. Its whole conversation is `read <id> subagent <toolUseId>`.
  */
 export function renderTranscript(items: ChatItem[]): string {
     const lines: string[] = [];
@@ -281,7 +281,7 @@ export class ContextStore {
                 return asReading(lastLines(source.text ?? '', tail));
             case 'terminal': {
                 const text = await this.readers.terminalText(source.id);
-                // The screen cap stays the ceiling: a --tail past it cannot reach further back than the daemon keeps.
+                // The screen cap stays the ceiling: a tail past it cannot reach further back than the daemon keeps.
                 return asReading(text === null ? null : lastLines(text, Math.min(tail ?? MAX_SCREEN_LINES, MAX_SCREEN_LINES)));
             }
             case 'chat':

@@ -1,6 +1,6 @@
 import { nodeSessionFs } from '@adecore/agents/chat';
 import { usageRootsOf } from '@adecore/agents/usage';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { continueOn } from '../chat/continue-on.ts';
 import { ExternalChatSessions, ownSessionSources } from '../chat/external.ts';
 import { chatForkDeps, forkChat, readForkInfo, readHandoff } from '../chat/fork.ts';

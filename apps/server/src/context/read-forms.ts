@@ -2,9 +2,9 @@ import { VISUAL_LIMITS, isCanvasView, type ContextSource, type DrawingElement } 
 import { DEFAULT_PALETTE, toSvg as drawingSvg } from '@adecore/drawing';
 import { toSvg as diagramSvg } from '@adecore/diagram';
 import { CodedError } from '@adecore/agents';
+import { ToolRefusal } from '@adecore/agents/context';
 import { callerChat } from '../actions/visual-actions.ts';
 import type { ServerActionContext } from '../actions/context.ts';
-import { VerbRefusal } from '../canvas/verb.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { SHOT_MAX_HEIGHT } from '../visuals/render-protocol.ts';
 import { canvasSvg, renderCanvas } from './context-canvas.ts';
@@ -17,10 +17,10 @@ export type ReadForm = 'elements' | 'image';
 const PAPER = '#ffffff';
 const PREVIEW_REFUSALS: ReadonlySet<string> = new Set(['preview-unavailable', 'preview-timeout', 'preview-failed']);
 
-function formRefusal(form: ReadForm, kind: string): VerbRefusal {
+function formRefusal(form: ReadForm, kind: string): ToolRefusal {
     return form === 'elements'
-        ? new VerbRefusal('bad-arguments', `--elements reads only a drawing, and this is a ${kind}; read it without the flag`)
-        : new VerbRefusal('bad-arguments', `--image draws only a drawing, a diagram or a canvas, and this is a ${kind}; read it without the flag`);
+        ? new ToolRefusal('bad-arguments', `form elements reads only a drawing, and this is a ${kind}; read it without form`)
+        : new ToolRefusal('bad-arguments', `form image draws only a drawing, a diagram or a canvas, and this is a ${kind}; read it without form`);
 }
 
 /* The width a picture is rendered at: its own, within what a preview takes, and narrower where it would run past the tallest png. */
@@ -38,17 +38,17 @@ export function imagePage(svg: string, width: number): string {
     return `<!doctype html><html><head><style>html,body{margin:0;background:${PAPER}}svg{display:block;width:${width}px;height:auto}</style></head><body>${svg}</body></html>`;
 }
 
-/* A picture through the render children `visual preview` uses, as a png in the caller's own chat folder. */
+/* A picture through the render children `visual_preview` uses, as a png in the caller's own chat folder. */
 async function image(context: ServerActionContext, caller: string, title: string, svg: string): Promise<ContextReading> {
     const chatId = await callerChat(context, caller);
     const visuals = context.host.visuals;
     if (!visuals?.preview) {
-        throw new VerbRefusal('preview-unavailable', 'This machine renders no pictures; read the source without --image');
+        throw new ToolRefusal('preview-unavailable', 'This machine renders no pictures; read the source without form image');
     }
     const width = imageWidth(svg);
     const html = imagePage(svg, width);
     if (Buffer.byteLength(html, 'utf8') > VISUAL_LIMITS.bytes) {
-        throw new VerbRefusal('visual-too-large', `${title} is too large to render as one picture; read its text or its elements instead`);
+        throw new ToolRefusal('visual-too-large', `${title} is too large to render as one picture; read its text or its elements instead`);
     }
     try {
         const preview = await visuals.preview(chatId, { html, width, appearance: 'light' });
@@ -62,7 +62,7 @@ async function image(context: ServerActionContext, caller: string, title: string
         };
     } catch (e) {
         if (e instanceof CodedError && PREVIEW_REFUSALS.has(e.code)) {
-            throw new VerbRefusal(e.code, e.message);
+            throw new ToolRefusal(e.code, e.message);
         }
         throw e;
     }

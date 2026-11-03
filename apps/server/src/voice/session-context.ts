@@ -1,5 +1,5 @@
 import type { VoiceOpenProject } from '../actions/context.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { agentReading } from './agent-reading.ts';
 import { openableViews, projectAgents, visibleCanvas } from './project-reading.ts';

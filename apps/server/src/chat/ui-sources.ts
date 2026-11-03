@@ -14,8 +14,8 @@ import {
     type Task
 } from '@ruimte/contracts';
 import { ChatUiRefusal, type ChatUiHost, type ChatUiSource } from '@adecore/agents/chat';
-import { checkCwd, isInside } from '../canvas/project-paths.ts';
-import type { LaunchReading } from '../canvas/verb.ts';
+import { checkCwd, isInside } from '../tools/project-paths.ts';
+import type { LaunchReading } from '../tools/host.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
 import { UI_SOURCE_ARGS } from './ui-source-args.ts';

@@ -43,7 +43,7 @@ export class PlanStore {
     readonly dir: string;
     private readonly now: () => number;
     private readonly mintId: () => string;
-    // A person's click and an agent's verb run after each other per chat; two chats never wait on each other.
+    // A person's click and an agent's tool run after each other per chat; two chats never wait on each other.
     private readonly writes = new KeyedSerializer();
     private readonly sinks = new ClientSinks();
 
@@ -77,7 +77,7 @@ export class PlanStore {
         return result;
     }
 
-    /* A new plan from an agent's draft, last in the chat's list and so the one a verb without `--plan` works on. */
+    /* A new plan from an agent's draft, last in the chat's list and so the one a tool without `plan` works on. */
     create(chatId: string, input: PlanCreateInput): Promise<PlanApplied | PlanRefusal> {
         return this.inChain(chatId, async () => {
             const plans = await this.readFile(chatId);

@@ -3,13 +3,13 @@ import type { AgentStatus, ComputerApproval, ComputerApprovalChoice, ComputerThi
 import { realTimers, type Timers } from '../timers.ts';
 
 /*
- * How long a verb holds its call while the card is up, unless the agent asks for longer with `--wait`.
+ * How long a tool holds its call while the card is up, unless the agent asks for longer with `wait`.
  * An agent CLI may end a shell command after 10 s unless the model asked for more, and an approved
  * call still has to run its action inside that. Past this the agent hears `awaiting-approval`.
  */
 export const APPROVAL_WAIT_MS = 6_000;
 
-/* The longest hold `--wait` asks for, under the two minutes some agent CLIs give a shell command by default. */
+/* The longest hold `wait` asks for, under the two minutes some agent CLIs give a shell command by default. */
 export const MAX_HOLD_MS = 110_000;
 
 /* How long a card stands after the agent last asked: long enough to answer after a coffee, short enough that a card for an agent that gave up goes. */

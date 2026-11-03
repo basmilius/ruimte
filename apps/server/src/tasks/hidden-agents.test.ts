@@ -3,9 +3,9 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { MAX_OPENED_PER_CALLER } from '../canvas/depth.ts';
+import { MAX_OPENED_PER_CALLER } from '../tools/depth.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 
 let root: string;
@@ -58,7 +58,7 @@ async function leadIdle(daemon: TestDaemon): Promise<void> {
 }
 
 async function delegate(daemon: TestDaemon, caller = 'chat-lead', prompt = 'count primes'): Promise<{ childId: string; taskId: string }> {
-    const lines = await runVerb(daemon, caller, 'agent', ['codex', '--model', 'gpt-6.1-sol', '--task', 'Primes', '--prompt', prompt]);
+    const lines = await invokeTool(daemon, caller, 'agent_start', { cli: 'codex', model: 'gpt-6.1-sol', task: 'Primes', prompt });
     const fields = lines[0]!.split('\t');
     expect(fields.slice(1, 5)).toEqual(['chat', '-', 'codex', '-']);
     return { childId: fields[0]!, taskId: fields[5]! };
@@ -122,16 +122,13 @@ test.each([
 ] as const)('a client opening before the outbox preserves $name', async ({ parentMode, requested, clientMode, expected, policy }) => {
     const daemon = await boot();
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: parentMode });
-    const lines = await runVerb(daemon, 'chat-lead', 'agent', [
-        'codex',
-        '--model',
-        'gpt-6.1-sol',
-        '--task',
-        'Review',
-        '--prompt',
-        'Read the project without changing files',
-        ...(requested === undefined ? [] : ['--mode', requested])
-    ]);
+    const lines = await invokeTool(daemon, 'chat-lead', 'agent_start', {
+        cli: 'codex',
+        model: 'gpt-6.1-sol',
+        task: 'Review',
+        prompt: 'Read the project without changing files',
+        ...(requested === undefined ? {} : { mode: requested })
+    });
     const [childId, , , , , taskId] = lines[0]!.split('\t');
     await daemon.chats.create({ chatId: childId!, provider: 'codex', cwd: folder, runtimeMode: clientMode });
     await daemon.until(
@@ -157,15 +154,13 @@ test.each([
 test('hidden agent and team previews leave no sessions, records or project writes', async () => {
     const daemon = await boot();
     const revision = await store.revision(projectId);
-    const agent = await runVerb(daemon, 'chat-lead', 'agent', ['codex', '--model', 'gpt-6.1-sol', '--prompt', 'count', '--dry-run']);
+    const agent = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex', model: 'gpt-6.1-sol', prompt: 'count', dry_run: true });
     expect(agent).toEqual(['dry-run\tchat\t-\tcodex\t-']);
-    const team = await runVerb(daemon, 'chat-lead', 'team', [
-        '--label',
-        'Counters',
-        '--roles',
-        JSON.stringify([{ title: 'Counter', prompt: 'count', provider: 'codex', model: 'gpt-6.1-sol' }]),
-        '--dry-run'
-    ]);
+    const team = await invokeTool(daemon, 'chat-lead', 'agent_team', {
+        label: 'Counters',
+        roles: JSON.stringify([{ title: 'Counter', prompt: 'count', provider: 'codex', model: 'gpt-6.1-sol' }]),
+        dry_run: true
+    });
     expect(team).toEqual(['dry-run\tchat\tCounter\t-\tcodex\t-']);
     expect(store.hiddenAgents.inProject(projectId)).toEqual([]);
     expect(daemon.outbox.list()).toEqual([]);
@@ -176,16 +171,14 @@ test('a hidden team returns all results in one wake without a group on a canvas'
     const daemon = await boot();
     daemon.worker.start();
     await leadIdle(daemon);
-    const lines = await runVerb(daemon, 'chat-lead', 'team', [
-        '--label',
-        'Counters',
-        '--task',
-        '--roles',
-        JSON.stringify([
+    const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', {
+        label: 'Counters',
+        task: true,
+        roles: JSON.stringify([
             { title: 'Counter', prompt: 'count primes', provider: 'codex', model: 'gpt-6.1-sol' },
             { title: 'Checker', prompt: 'check primes', provider: 'claude' }
         ])
-    ]);
+    });
     expect(lines).toHaveLength(3);
     const taskIds = lines.slice(0, 2).map((line) => line.split('\t')[6]!);
     await daemon.until(() => taskIds.every((id) => daemon.tasks.get(id)?.wake === 'sent'));
@@ -226,8 +219,8 @@ test('a hidden chat can open a hidden helper and is held to the same depth and p
     const grandchild = await delegate(daemon, childId);
     expect(daemon.lineage.depthOf(grandchild.childId)).toBe(2);
     expect(daemon.tasks.get(grandchild.taskId)?.parentId).toBe(childId);
-    expect((await runVerb(daemon, grandchild.childId, 'agent', ['codex']))[0]).toStartWith('refused\ttoo-deep\t');
-    expect((await runVerb(daemon, childId, 'agent', ['codex', '--mode', 'full-access']))[0]).toStartWith('refused\tmode-above-parent\t');
+    expect((await invokeTool(daemon, grandchild.childId, 'agent_start', { cli: 'codex' }))[0]).toStartWith('refused\ttoo-deep\t');
+    expect((await invokeTool(daemon, childId, 'agent_start', { cli: 'codex', mode: 'full-access' }))[0]).toStartWith('refused\tmode-above-parent\t');
 });
 
 test('a hidden agent accepts a follow-up task from its parent', async () => {
@@ -237,7 +230,7 @@ test('a hidden agent accepts a follow-up task from its parent', async () => {
     const { childId, taskId } = await delegate(daemon);
     await daemon.until(() => daemon.tasks.get(taskId)?.wake === 'sent');
     await daemon.worker.settled();
-    const lines = await runVerb(daemon, 'chat-lead', 'task', ['new', childId, '--prompt', 'check the count']);
+    const lines = await invokeTool(daemon, 'chat-lead', 'task_new', { id: childId, prompt: 'check the count' });
     const followup = lines[0]!.split('\t')[1]!;
     await daemon.until(() => daemon.tasks.get(followup)?.wake === 'sent');
     await daemon.worker.settled();
@@ -249,7 +242,7 @@ test('queued hidden agents count toward the concurrent agent limit', async () =>
     for (let i = 0; i < MAX_OPENED_PER_CALLER; i++) {
         await delegate(daemon);
     }
-    expect((await runVerb(daemon, 'chat-lead', 'agent', ['codex']))[0]).toStartWith('refused\ttoo-many-agents\t');
+    expect((await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'codex' }))[0]).toStartWith('refused\ttoo-many-agents\t');
 });
 
 test('deleting the parent chat stops its hidden agents and removes their placement', async () => {

@@ -516,7 +516,7 @@ describe('naming an app', () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;
         await letIn(setup);
-        helper.error = 'A drag needs the real pointer, and so the app in front. Call again with --front: that brings the app forward';
+        helper.error = 'A drag needs the real pointer, and so the app in front. Call again with front: that brings the app forward';
         helper.errorCode = 'needs-front';
         const refusal = await computer.operate('chat-1', 'drag', 'TextEdit', { element: 1, toElement: 2 }).catch((error: unknown) => error);
         expect(refusal).toMatchObject({ code: 'needs-front', message: helper.error });
@@ -814,7 +814,7 @@ describe('one agent at a time', () => {
         const refusal = await refusalOf(computer.operate('term-1', 'click', 'TextEdit', { element: 1 }));
         expect(refusal?.code).toBe('busy');
         expect(refusal?.message).toContain('Node chat-1');
-        expect(refusal?.message).toContain('--wait 60');
+        expect(refusal?.message).toContain('wait 60');
         expect(helper.acted).toEqual([]);
         await computer.operate('chat-1', 'click', 'TextEdit', { element: 1 });
         expect(helper.acted.map((request) => request.command)).toEqual(['click']);

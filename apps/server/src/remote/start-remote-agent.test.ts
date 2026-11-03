@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { MAX_RESULT_LENGTH } from '../canvas/tasks.ts';
+import { MAX_RESULT_LENGTH } from '../tools/tasks.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
 import type { PeerLink } from './peer-connection.ts';
 import { leadContent } from './test-helpers.ts';
 
@@ -74,12 +74,12 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const give = (...flags: string[]): Promise<string[]> =>
-    runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Fix the lexer', '--prompt', 'Fix it', '--machine', 'Studio', ...flags]);
+const give = (input: Record<string, unknown> = {}): Promise<string[]> =>
+    invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'Fix the lexer', prompt: 'Fix it', machine: 'Studio', ...input });
 
 describe('agent --machine', () => {
     test('refuses a machine the project is not linked to, and lists the ones it is', async () => {
-        const [first] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'T', '--prompt', 'P', '--machine', 'Nowhere']);
+        const [first] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', task: 'T', prompt: 'P', machine: 'Nowhere' });
         expect(first).toStartWith('refused\tmachine-not-linked\t');
         linked = false;
         const [second, ...lines] = await give();
@@ -111,15 +111,12 @@ describe('agent --machine', () => {
         };
         const [line] = await give();
         expect(line).not.toStartWith('refused');
-        const [team] = await runVerb(daemon, 'chat-lead', 'team', [
-            '--label',
-            'Crew',
-            '--task',
-            '--machine',
-            'Studio',
-            '--roles',
-            JSON.stringify([{ title: 'Role', prompt: 'Do it', provider: 'claude' }])
-        ]);
+        const [team] = await invokeTool(daemon, 'chat-lead', 'agent_team', {
+            label: 'Crew',
+            task: true,
+            machine: 'Studio',
+            roles: JSON.stringify([{ title: 'Role', prompt: 'Do it', provider: 'claude' }])
+        });
         expect(team).not.toStartWith('refused');
         await daemon.worker.settled();
         expect(daemon.tasks.get(line!.split('\t')[5]!)).toMatchObject({
@@ -131,23 +128,23 @@ describe('agent --machine', () => {
     test('a task is not given to an agent that runs on another machine', async () => {
         const [line] = await give();
         const nodeId = line!.split('\t')[0]!;
-        const [first] = await runVerb(daemon, 'chat-lead', 'task', ['new', nodeId, '--prompt', 'and one more thing']);
+        const [first] = await invokeTool(daemon, 'chat-lead', 'task_new', { id: nodeId, prompt: 'and one more thing' });
         expect(first).toStartWith('refused\ttask-on-other-machine\t');
         expect(daemon.tasks.involving(nodeId)).toHaveLength(1);
     });
 
     test('refuses what means nothing on another machine', async () => {
-        const cases: Array<[string[], string]> = [
-            [['--cwd', folder], 'machine-and-cwd'],
-            [['--reads', 'chat-lead'], 'machine-and-reads'],
-            [['--model', 'x'], 'machine-and-model'],
-            [['--effort', 'high'], 'machine-and-effort']
+        const cases: Array<[Record<string, unknown>, string]> = [
+            [{ cwd: folder }, 'machine-and-cwd'],
+            [{ reads: 'chat-lead' }, 'machine-and-reads'],
+            [{ model: 'x' }, 'machine-and-model'],
+            [{ effort: 'high' }, 'machine-and-effort']
         ];
         for (const [flags, code] of cases) {
-            const [first] = await give(...flags);
+            const [first] = await give(flags);
             expect(first).toStartWith(`refused\t${code}\t`);
         }
-        const [noTask] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--prompt', 'P', '--machine', 'Studio']);
+        const [noTask] = await invokeTool(daemon, 'chat-lead', 'agent_start', { cli: 'claude', prompt: 'P', machine: 'Studio' });
         expect(noTask).toStartWith('refused\tmachine-needs-task\t');
         expect(await store.read(projectId).then((doc) => doc.views.flatMap((view) => (view.kind === 'canvas' ? view.nodes : [])))).toHaveLength(1);
     });
@@ -166,7 +163,7 @@ describe('agent --machine', () => {
     });
 
     test('waits while the machine is away, owes the reconnect, and starts once the link opens', async () => {
-        const [line] = await give('--mode', 'supervised');
+        const [line] = await give({ mode: 'supervised' });
         const [nodeId, , , , , taskId] = line!.split('\t');
         await daemon.worker.settled();
         expect(requests).toEqual([]);
@@ -226,7 +223,7 @@ describe('agent --machine', () => {
             return settled.has(nodeId) ? { status: 'done', result: { text: `${nodeId} done`, source: 'turn', at: 5 }, bundle: null } : STILL_OPEN;
         };
         const roles = Array.from({ length: 6 }, (_, i) => ({ title: `Role ${i}`, prompt: `Do part ${i}`, provider: 'claude' }));
-        const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--machine', 'Studio', '--roles', JSON.stringify(roles)]);
+        const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', task: true, machine: 'Studio', roles: JSON.stringify(roles) });
         const ids = lines.slice(1, 7).map((line) => line.split('\t')[0]!);
         await daemon.worker.settled();
 
@@ -601,7 +598,7 @@ describe('agent --machine', () => {
             { title: 'Lexer', prompt: 'Fix the lexer', provider: 'claude' },
             { title: 'Parser', prompt: 'Fix the parser', provider: 'claude' }
         ];
-        const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--machine', 'Studio', '--roles', JSON.stringify(roles)]);
+        const lines = await invokeTool(daemon, 'chat-lead', 'agent_team', { label: 'Crew', task: true, machine: 'Studio', roles: JSON.stringify(roles) });
         const ids = lines.slice(1, 3).map((line) => line.split('\t')[0]!);
         await daemon.worker.settled();
         expect(ids.map((id) => store.remote.machineOf(projectId, id))).toEqual([MACHINE, MACHINE]);

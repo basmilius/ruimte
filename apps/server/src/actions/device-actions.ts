@@ -1,10 +1,11 @@
 import type { ActionHandlers } from '@ruimte/actions';
 import { deviceButtons, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
-import { checkDevicePath } from '../canvas/project-paths.ts';
-import { refuseOtherMachine } from '../canvas/remote-node.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { checkDevicePath } from '../tools/project-paths.ts';
+import { refuseOtherMachine } from '../tools/remote-node.ts';
 import type { DeviceActionBody } from '../devices/agent-driver.ts';
-import { VerbRefusal, field, orNote, type CanvasHost, type DeviceDriveHost } from '../canvas/verb.ts';
+import { field, orNote, type CanvasHost, type DeviceDriveHost } from '../tools/host.ts';
 import type { ServerActionContext } from './context.ts';
 
 const NO_DEVICES = 'This machine has no simulator, emulator or phone right now; the person brings one';
@@ -17,7 +18,7 @@ interface DeviceTarget {
 
 function driverOf(host: CanvasHost): DeviceDriveHost {
     if (!host.devices) {
-        throw new VerbRefusal('unavailable', 'This machine has no devices to operate');
+        throw new ToolRefusal('unavailable', 'This machine has no devices to operate');
     }
     return host.devices;
 }
@@ -32,7 +33,7 @@ function referenceOf(device: DeviceInfo): DeviceReference {
 }
 
 /*
- * The device an agent names, by the id `device list` gives it or by a device node of its project, with
+ * The device an agent names, by the id `device_list` gives it or by a device node of its project, with
  * no line or view: the device is a sandbox of its own, and one agent at a time holds it. Work another
  * machine gave drives no device here, and a node bound to another machine is that machine's.
  */
@@ -42,7 +43,7 @@ async function targetOf({ host, place }: ServerActionContext, caller: string, id
     const callerCanvas = canvases.find((view) => view.nodes.some((candidate) => candidate.id === caller));
 
     if (callerCanvas?.hidden === true || host.untrusted?.fromPeer(caller) === true) {
-        throw new VerbRefusal('peer-no-device', 'Work another machine gave this one drives no device here');
+        throw new ToolRefusal('peer-no-device', 'Work another machine gave this one drives no device here');
     }
 
     const driver = driverOf(host);
@@ -52,13 +53,13 @@ async function targetOf({ host, place }: ServerActionContext, caller: string, id
         refuseOtherMachine(host, id);
 
         if (node.kind !== 'device') {
-            throw new VerbRefusal('not-a-device', `${id} is a ${node.kind} node, and only a device node has a device to operate`, [
+            throw new ToolRefusal('not-a-device', `${id} is a ${node.kind} node, and only a device node has a device to operate`, [
                 'see\tdevice_list\tthe devices of this machine, by the id every device tool takes'
             ]);
         }
 
         if (!node.device) {
-            throw new VerbRefusal('no-device', `${id} points at no device yet; a person picks one on the node`);
+            throw new ToolRefusal('no-device', `${id} points at no device yet; a person picks one on the node`);
         }
 
         return { reference: node.device, device: await driver.find(node.device) };
@@ -68,7 +69,7 @@ async function targetOf({ host, place }: ServerActionContext, caller: string, id
     const device = devices.find((candidate) => candidate.deviceId === id);
 
     if (!device) {
-        throw new VerbRefusal('unknown-device', `${id} is not a device of this machine right now`, orNote(devices.map(machineDeviceLine), NO_DEVICES));
+        throw new ToolRefusal('unknown-device', `${id} is not a device of this machine right now`, orNote(devices.map(machineDeviceLine), NO_DEVICES));
     }
 
     return { reference: referenceOf(device), device };
@@ -81,8 +82,8 @@ function claim({ host, extension }: ServerActionContext, caller: string, device:
     }
 }
 
-function missing(reference: DeviceReference): VerbRefusal {
-    return new VerbRefusal('device-missing', `This machine has no ${reference.name} (${reference.runtime}) right now`, [
+function missing(reference: DeviceReference): ToolRefusal {
+    return new ToolRefusal('device-missing', `This machine has no ${reference.name} (${reference.runtime}) right now`, [
         'note\tA phone that is unplugged or a simulator that was removed is not there to be found; the person brings it back'
     ]);
 }
@@ -96,7 +97,7 @@ async function bootedDevice(context: ServerActionContext, caller: string, id: st
     }
 
     if (device.state !== 'booted') {
-        throw new VerbRefusal(
+        throw new ToolRefusal(
             'device-not-booted',
             `${device.name} is not running${device.state === 'transitioning' ? ' yet: it is starting or stopping' : ''}`,
             [
@@ -117,7 +118,7 @@ export async function machineDevice(host: CanvasHost, deviceId: string): Promise
     const devices = await driverOf(host).list();
     const device = devices.find((candidate) => candidate.deviceId === deviceId);
     if (!device) {
-        throw new VerbRefusal('unknown-device', `${deviceId} is not a device of this machine right now`, orNote(devices.map(machineDeviceLine), NO_DEVICES));
+        throw new ToolRefusal('unknown-device', `${deviceId} is not a device of this machine right now`, orNote(devices.map(machineDeviceLine), NO_DEVICES));
     }
     return referenceOf(device);
 }
@@ -151,12 +152,12 @@ function setBodies(input: {
     if (input.battery != null) {
         bodies.push({ action: 'setBattery', level: input.battery, charging: input.charging ?? false });
     } else if (input.charging != null) {
-        throw new VerbRefusal('bad-arguments', '--charging goes with --battery N, the level it charges at');
+        throw new ToolRefusal('bad-arguments', 'charging goes with battery, the level it charges at');
     }
     const { latitude, longitude } = input;
     const located = latitude != null && longitude != null;
     if (located && input.clearLocation) {
-        throw new VerbRefusal('bad-arguments', 'A device takes --location or --clear-location, not both');
+        throw new ToolRefusal('bad-arguments', 'A device takes location or clear_location, not both');
     }
     if (located) {
         bodies.push({ action: 'setLocation', latitude, longitude });
@@ -164,8 +165,8 @@ function setBodies(input: {
         bodies.push({ action: 'clearLocation' });
     }
     if (bodies.length === 0) {
-        throw new VerbRefusal('bad-arguments', 'device set needs something to change', [
-            'note\t--appearance, --text-size, --status-bar, --battery with --charging, --location or --clear-location'
+        throw new ToolRefusal('bad-arguments', 'device_set needs something to change', [
+            'note\tappearance, text_size, status_bar, battery with charging, location or clear_location'
         ]);
     }
     return bodies;
@@ -188,13 +189,13 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         }
 
         if (device.kind === 'physical') {
-            throw new VerbRefusal('device-not-startable', `${device.name} is a phone, and Ruimte starts only a simulator or an emulator`, [
+            throw new ToolRefusal('device-not-startable', `${device.name} is a phone, and Ruimte starts only a simulator or an emulator`, [
                 'note\tAsk the person to turn it on and unlock it, then call again'
             ]);
         }
 
         if (!device.capabilities.boot) {
-            throw new VerbRefusal('device-not-startable', `Ruimte cannot start ${device.name} on this machine`);
+            throw new ToolRefusal('device-not-startable', `Ruimte cannot start ${device.name} on this machine`);
         }
 
         claim(context, actor.id, device);
@@ -268,7 +269,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         const handle = element ?? null;
         const pixel = x == null || y == null ? null : { x, y };
         if (handle === null ? pixel === null : (x ?? y ?? null) !== null) {
-            throw new VerbRefusal('bad-arguments', 'A tap takes either an element of the last state or a pixel of the last shot as x and y', [
+            throw new ToolRefusal('bad-arguments', 'A tap takes either an element of the last state or a pixel of the last shot as x and y', [
                 'see\tdevice_state\tnumbers the elements',
                 'see\tdevice_shot\ttakes a picture to count pixels in'
             ]);
@@ -292,7 +293,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         const buttons = deviceButtons(device);
         const named = buttons.find((candidate) => candidate === button);
         if (named === undefined) {
-            throw new VerbRefusal(
+            throw new ToolRefusal(
                 'unknown-button',
                 `${device.name} has no ${button} button`,
                 orNote(
@@ -370,7 +371,7 @@ export const deviceActions: ActionHandlers<ServerActionContext> = {
         const device = await bootedDevice(context, actor.id, nodeId);
         const driver = driverOf(context.host);
         if (!driver.abilities(device).launch) {
-            throw new VerbRefusal('device-action-unavailable', `Ruimte cannot open an app on ${device.name}`);
+            throw new ToolRefusal('device-action-unavailable', `Ruimte cannot open an app on ${device.name}`);
         }
         await driver.launch(actor.id, device, app);
         return { output: { nodeId, device: device.name } };

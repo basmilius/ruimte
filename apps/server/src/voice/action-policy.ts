@@ -44,7 +44,7 @@ function given(value: unknown): boolean {
 
 /*
  * The policy of a session, derived from `DAEMON_VOICE_ACTIONS`. The registry checks the actor and the
- * catalog's fields as well; this is what keeps Voice off every daemon handler that an agent's verb would
+ * catalog's fields as well; this is what keeps Voice off every daemon handler that an agent's tool would
  * reach, whatever a catalog entry opens to Voice for the desktop.
  */
 export function voicePolicy(): VoicePolicy {

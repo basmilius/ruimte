@@ -3,7 +3,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LaunchStatus } from '@ruimte/contracts';
-import { checkCwd } from '../canvas/project-paths.ts';
+import { checkCwd } from '../tools/project-paths.ts';
 import { foregroundGroup } from '../processes/foreground.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';

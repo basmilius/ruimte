@@ -19,11 +19,11 @@ import {
 import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { narrowerMode } from '@adecore/agents/providers';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { MAX_AGENT_DEPTH } from '../canvas/depth.ts';
-import { checkCwd } from '../canvas/project-paths.ts';
-import { taskFirstPrompt } from '../canvas/tasks.ts';
-import { VerbRefusal } from '../canvas/verb.ts';
+import { MAX_AGENT_DEPTH } from '../tools/depth.ts';
+import { checkCwd } from '../tools/project-paths.ts';
+import { taskFirstPrompt } from '../tools/tasks.ts';
 import { RequestError } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore, fetchBundle, makeBundle } from '../git/bundles.ts';
@@ -213,7 +213,7 @@ export class PeerTasks {
             await deps.links.recordTask(machineId, nodeId, { projectId, cwd, worktree: made.path !== undefined });
         }
         await checkCwd(folder, cwd, deps.worktreePaths).catch((e: unknown) => {
-            throw e instanceof VerbRefusal ? new RequestError('cwd-outside', e.message) : e;
+            throw e instanceof ToolRefusal ? new RequestError('cwd-outside', e.message) : e;
         });
 
         await this.place(

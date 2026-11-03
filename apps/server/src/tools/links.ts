@@ -1,5 +1,5 @@
 import { EDGE_ROLES, type ProjectCanvasView, type ProjectEdge } from '@ruimte/contracts';
-import { field, orNote, type VerbCall } from './verb.ts';
+import { field, orNote, type AgentCall } from './host.ts';
 
 // Lines drawn per call. Past this it is not linking any more, it is an agent in a loop.
 export const MAX_LINKS = 20;
@@ -19,7 +19,7 @@ const EDGE_LINES_MAX = 20;
 export function edgeLines(canvas: ProjectCanvasView, takes: (edge: ProjectEdge) => boolean): string[] {
     const edges = canvas.edges.filter(takes);
     if (edges.length > EDGE_LINES_MAX) {
-        return [`detail\tlink_list --view ${canvas.id}\tthe ${canvas.edges.length} lines of ${canvas.id}`];
+        return [`detail\tlink_list view ${canvas.id}\tthe ${canvas.edges.length} lines of ${canvas.id}`];
     }
     return orNote(
         edges.map((edge) => ['edge', edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t')),
@@ -30,10 +30,10 @@ export function edgeLines(canvas: ProjectCanvasView, takes: (edge: ProjectEdge) 
 }
 
 /*
- * Who drew a line is written down nowhere, so it is read off its ends, the rule `node delete` follows
+ * Who drew a line is written down nowhere, so it is read off its ends, the rule `node_delete` follows
  * for a node: an end is yours when it is you or a node you made. Both ends have to be, since a line a
  * person drew into an agent is the context that person gave it.
  */
-export function ownEnd(id: string, call: VerbCall): boolean {
+export function ownEnd(id: string, call: AgentCall): boolean {
     return id === call.caller || call.host.lineage.madeBy(id) === call.caller;
 }

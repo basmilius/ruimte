@@ -9,11 +9,12 @@ import {
     type ProjectCanvasView,
     type ProjectNode
 } from '@ruimte/contracts';
-import { arrangedCanvas, isChatView, notOnView, viewRequired } from '../canvas/chat-view.ts';
+import { ToolRefusal } from '@adecore/agents/context';
+import { arrangedCanvas, isChatView, notOnView, viewRequired } from '../tools/chat-view.ts';
 import type { DriveOutcome } from '../browser/drive.ts';
-import { checkUrl } from '../canvas/nodes.ts';
-import { refuseOtherMachine } from '../canvas/remote-node.ts';
-import { VerbRefusal, field, orNote, referencedBy, type BrowserDriveHost, type CanvasHost } from '../canvas/verb.ts';
+import { checkUrl } from '../tools/nodes.ts';
+import { refuseOtherMachine } from '../tools/remote-node.ts';
+import { field, orNote, referencedBy, type BrowserDriveHost, type CanvasHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 /* Where a page is now when somebody holds it, else the address stored on its node. Reading it wakes nobody. */
@@ -37,14 +38,14 @@ async function browserLines(host: CanvasHost, sources: readonly ContextSource[],
 /* What to say when the caller may drive no browser node at all, by where it stands. */
 function noBrowserNote(callerCanvas: string | null, chatView: boolean, arranged: ProjectCanvasView | null): string {
     if (arranged !== null) {
-        return `${arranged.id} has no browser node; node_new browser --url U --view ${arranged.id} puts one there`;
+        return `${arranged.id} has no browser node; node_new browser url U view ${arranged.id} puts one there`;
     }
     if (chatView) {
-        return 'A chat view drives the browser nodes of a canvas it names with --view; node_list --view <id> lists them';
+        return 'A chat view drives the browser nodes of a canvas it names with view; node_list view <id> lists them';
     }
     return callerCanvas === null
         ? 'No browser node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
-        : 'No browser node is linked to you; link_new --to <id> draws the line to one on your canvas';
+        : 'No browser node is linked to you; link_new to <id> draws the line to one on your canvas';
 }
 
 /*
@@ -58,11 +59,11 @@ function lineLines(id: string, url: string | undefined, callerCanvas: string | n
         ];
     }
     if (callerCanvas === pageCanvas) {
-        return [`see\tlink_new --to ${id}\tdraws it`];
+        return [`see\tlink_new to ${id}\tdraws it`];
     }
     return [
         `note\t${id} stands on ${pageCanvas} and you on ${callerCanvas}, and a line only runs between two nodes of one canvas`,
-        `see\tnode_new browser --url ${url ?? '<url>'}\topens a page of your own on your canvas, with the line to it drawn`
+        `see\tnode_new browser url ${url ?? '<url>'}\topens a page of your own on your canvas, with the line to it drawn`
     ];
 }
 
@@ -81,20 +82,20 @@ async function targetOf({ host, place, extension }: ServerActionContext, caller:
     const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === id));
     const node = canvas?.nodes.find((candidate) => candidate.id === id);
     if (!canvas || !node) {
-        throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, await lines());
+        throw new ToolRefusal('unknown-node', `${id} is not a node of this project`, await lines());
     }
     refuseOtherMachine(host, id);
     if (arranged !== null && arranged.id !== canvas.id) {
         throw notOnView(id, canvas, arranged, `browser_state ${id}`);
     }
     if (node.kind !== 'browser') {
-        throw new VerbRefusal('not-a-browser', `${id} is a ${node.kind} node, and only a browser node has a page to drive`, await lines());
+        throw new ToolRefusal('not-a-browser', `${id} is a ${node.kind} node, and only a browser node has a page to drive`, await lines());
     }
     if (extension !== true && !sources.some((source) => source.id === id) && !referencedBy(host, caller, id)) {
         if (chatView) {
             throw viewRequired(id, canvas, `browser_state ${id}`);
         }
-        throw new VerbRefusal('not-linked', `No line runs between you and ${id}, and that line is what lets you drive its page`, [
+        throw new ToolRefusal('not-linked', `No line runs between you and ${id}, and that line is what lets you drive its page`, [
             ...lineLines(id, await addressOf(host, id, node.url), place.canvasId, canvas.id),
             ...(await lines())
         ]);
@@ -161,7 +162,7 @@ export const browserActions: ActionHandlers<ServerActionContext> = {
             return { output: { nodeId, open: false, page: null, error: null, path: null } };
         }
         if (outcome.path === null) {
-            throw new VerbRefusal('shot-failed', outcome.error ?? 'The page could not be photographed');
+            throw new ToolRefusal('shot-failed', outcome.error ?? 'The page could not be photographed');
         }
         return { output: { nodeId, open: true, page: pageOf(outcome.state), error: outcome.state?.error ?? null, path: outcome.path } };
     }

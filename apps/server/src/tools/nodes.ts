@@ -1,24 +1,25 @@
 import { randomBytes } from 'node:crypto';
 import { idsInViews, isAgentKind, type ProjectCanvasView, type ProjectContent, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { refuseMissingNodes } from './own-view.ts';
-import { VerbRefusal, field, orNote } from './verb.ts';
+import { field, orNote } from './host.ts';
 
 // A ceiling, not a budget: it is there to stop an agent in a loop long before a canvas stops drawing.
 export const MAX_CANVAS_NODES = 500;
 
 /* The same sentence wherever a canvas is full: what is on it, what this call needs, and the cap. */
-export function canvasFull(canvas: ProjectCanvasView, adding: number): VerbRefusal {
-    return new VerbRefusal(
+export function canvasFull(canvas: ProjectCanvasView, adding: number): ToolRefusal {
+    return new ToolRefusal(
         'canvas-full',
         `${canvas.name} holds ${canvas.nodes.length} nodes and this would add ${adding} more; a canvas holds at most ${MAX_CANVAS_NODES}`
     );
 }
 
-// What a caller may pick instead of a --beside that is nowhere; a full canvas would bury the refusal, so it says where to look.
+// What a caller may pick instead of a beside that is nowhere; a full canvas would bury the refusal, so it says where to look.
 const BESIDE_LINES_MAX = 20;
 
 /*
- * What a refusal about a node id may offer instead. `takes` is what the verb that refused would
+ * What a refusal about a node id may offer instead. `takes` is what the tool that refused would
  * actually accept, since an alternative that is refused a line later is worse than no list at all,
  * and `empty` is what to say when that leaves nothing.
  */
@@ -33,10 +34,10 @@ export function nodeLines(canvas: ProjectCanvasView, options: { takes?: (node: P
     );
 }
 
-/* A group is never one of --nodes: `node group` and `node arrange` both refuse one, so neither offers one. */
+/* A group is never one of nodes: `node_group` and `node_arrange` both refuse one, so neither offers one. */
 export const NOT_A_GROUP = {
     takes: (node: ProjectNode): boolean => node.kind !== 'group',
-    empty: 'This canvas holds nothing but frames, and a frame is never one of --nodes'
+    empty: 'This canvas holds nothing but frames, and a frame is never one of nodes'
 };
 
 /*
@@ -46,12 +47,12 @@ export const NOT_A_GROUP = {
 export function idList(raw: string, flag: string): string[] {
     const ids = [...new Set(raw.split(',').map((id) => id.trim()))];
     if (ids.some((id) => id === '')) {
-        throw new VerbRefusal('bad-arguments', `${flag} has an empty id in it; write the ids separated by commas, as a,b,c`);
+        throw new ToolRefusal('bad-arguments', `${flag} has an empty id in it; write the ids separated by commas, as a,b,c`);
     }
     return ids;
 }
 
-/* The nodes those ids name on this canvas, refused with what this verb takes when one of them names none. */
+/* The nodes those ids name on this canvas, refused with what this tool takes when one of them names none. */
 export function nodesNamed(
     content: Pick<ProjectContent, 'views'>,
     canvas: ProjectCanvasView,
@@ -86,16 +87,16 @@ export function checkUrl(url: string): string {
     try {
         parsed = new URL(url);
     } catch {
-        throw new VerbRefusal('bad-url', `${url} is not a URL; --url takes a whole http or https address, scheme and all`);
+        throw new ToolRefusal('bad-url', `${url} is not a URL; url takes a whole http or https address, scheme and all`);
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new VerbRefusal('bad-url', `${url} is not an http or https address; a browser node opens nothing else`);
+        throw new ToolRefusal('bad-url', `${url} is not an http or https address; a browser node opens nothing else`);
     }
     return parsed.href;
 }
 
 /*
- * The line `node new` draws from whoever called it into what it made. A terminal or a chat reads
+ * The line `node_new` draws from whoever called it into what it made. A terminal or a chat reads
  * what a line brings it, so it gets the context line `agent` draws, label and all; nothing else
  * reads, so its line carries the role that says who put the node there and nothing more.
  */

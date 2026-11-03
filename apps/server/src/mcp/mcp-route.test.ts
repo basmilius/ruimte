@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { NODE_SIZE, type ProjectContent } from '@ruimte/contracts';
 import { ContextRefusal } from '../context/context-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
-import type { CanvasHost } from '../canvas/verb.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { callTool, handleMcpRequest, visibleTools } from './mcp-route.ts';
 import type { ToolContext } from './catalog.ts';
 import { AgentFiles } from './files.ts';
@@ -176,20 +176,11 @@ describe('calls', () => {
         expect(textOf(result)).toBe('refused nothing-to-change: node_update needs one of title, color');
     });
 
-    test('a field the tool does not take is refused before the verb runs', async () => {
+    test('a field the tool does not take is refused before the tool runs, with the fields it takes', async () => {
         const result = await call('chat-1', 'alert', { text: 'hi', loud: true });
 
-        expect(textOf(result).split('\n')[0]).toBe('refused bad-arguments: alert takes no loud');
+        expect(textOf(result).split('\n')).toEqual(['refused bad-arguments: alert takes no loud', 'fields\ttext']);
         expect(alerts).toEqual([]);
-    });
-
-    test('a refusal keeps its lines but drops the pointers to CLI help', async () => {
-        const result = await call('chat-1', 'alert', {});
-        const lines = textOf(result).split('\n');
-
-        expect(result.isError).toBe(true);
-        expect(lines[0]).toStartWith('refused bad-arguments: ');
-        expect(lines.some((line) => line.startsWith('usage\t') || line.includes('ruimte-context help'))).toBe(false);
     });
 
     test('a project write refused by the store comes back as a refusal', async () => {

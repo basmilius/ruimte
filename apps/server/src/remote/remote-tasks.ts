@@ -1,7 +1,7 @@
 import { BYTES_CHUNK_MAX, type PeerResultResult, type PeerTaskStartPayload, type PeerTaskStartResult } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import type { TaskCoordinator, TaskStore } from '@adecore/agents/coordination';
-import { MAX_RESULT_LENGTH } from '../canvas/tasks.ts';
+import { MAX_RESULT_LENGTH } from '../tools/tasks.ts';
 import { BundleStore, bundleIdFor, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { Worktrees } from '../git/worktrees.ts';
