@@ -4,23 +4,15 @@ on:
   push:
     branches: [main]
   pull_request:
-  # release.yml runs these jobs on the tagged commit, so a red one keeps the draft from being published.
-  workflow_call:
-    inputs:
-      full:
-        description: Run all native checks regardless of changed paths
-        type: boolean
-        default: true
 
-# Only a pull request gives way to its next push. Every commit on main and every tag keeps a run of
-# its own, since a deploy waits on the run of the commit it ships.
+# Only a pull request gives way to its next push. Every commit on main keeps a run of its own, since
+# a deploy or a release waits on the run of the commit it ships.
 concurrency:
   group: ci-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
-    if: ${{ !inputs.full }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -146,7 +138,7 @@ jobs:
 
   rust:
     needs: changes
-    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.rust == 'true') }}
+    if: ${{ !cancelled() && needs.changes.outputs.rust == 'true' }}
     runs-on: macos-latest
     strategy:
       matrix:
@@ -165,7 +157,7 @@ jobs:
   swift-pulsar:
     name: swift (RuimtePulsar)
     needs: changes
-    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_pulsar == 'true') }}
+    if: ${{ !cancelled() && needs.changes.outputs.swift_pulsar == 'true' }}
     runs-on: xcode-27
     defaults:
       run:
@@ -177,7 +169,7 @@ jobs:
   swift-transport:
     name: swift (RuimteTransport)
     needs: changes
-    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_transport == 'true') }}
+    if: ${{ !cancelled() && needs.changes.outputs.swift_transport == 'true' }}
     runs-on: xcode-27
     defaults:
       run:
@@ -190,7 +182,7 @@ jobs:
   # macos-latest, the runner the release itself builds on.
   computer-use:
     needs: changes
-    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.computer_use == 'true') }}
+    if: ${{ !cancelled() && needs.changes.outputs.computer_use == 'true' }}
     runs-on: xcode-27
     defaults:
       run:
