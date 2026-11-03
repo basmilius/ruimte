@@ -86,6 +86,10 @@ export function headMoved(before: GitStatus | null, after: GitStatus): boolean {
     );
 }
 
+/* How often a checkout the daemon does not watch is read while the panel shows it. Each read also
+   times the status again, which is how a checkout that was only slow for a while gets its watch back. */
+const DEAD_READ_MS = 10_000;
+
 const BLANK: Entry = { status: null, failure: null, revision: 0 };
 
 // One object for "nothing read yet", so the lists below are not rebuilt on a render that changed nothing.
@@ -357,13 +361,22 @@ export function useGitCheckouts(refs: readonly GitCheckoutRef[]): GitCheckouts {
         if (dead === '') {
             return;
         }
-        const onFocus = (): void => {
+        const readDead = (): void => {
             for (const cwd of dead.split('\n')) {
                 void read(cwd);
             }
         };
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
+        // A commit made from inside Ruimte never takes the focus away, so a window that keeps it reads on a clock too.
+        const timer = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                readDead();
+            }
+        }, DEAD_READ_MS);
+        window.addEventListener('focus', readDead);
+        return () => {
+            window.clearInterval(timer);
+            window.removeEventListener('focus', readDead);
+        };
     }, [dead, read]);
 
     useEffect(() => {

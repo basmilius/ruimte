@@ -14,8 +14,9 @@ import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 const SETTLE_MS = 300;
 // A status run past this makes a live watch cost more than it is worth on this repository.
 const SLOW_STATUS_MS = 1000;
-// And so does a repository this big, before the first run even proves it.
-const MAX_TRACKED_FILES = 5000;
+// And so does a repository this big, before the first run even proves it. The timed runs catch a
+// repository that is slow at any size, so this only keeps out the ones no watch should try.
+const MAX_TRACKED_FILES = 25_000;
 // What made a run slow (an install, a busy machine) passes, so a slow root gets another chance after this.
 const DEGRADED_MS = 5 * 60 * 1000;
 
