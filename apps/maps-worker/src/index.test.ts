@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { MapsErrorSchema, mapsTicketSubject, signMapsPath, signMapsTicket } from '@ruimte/pulsar';
+import { MapsErrorSchema, mapsTicketBytes, mapsTicketSubject, signMapsPath, signMapsTicket } from '@ruimte/pulsar';
 import { KEY, ORIGIN, SECRET, assertWorkerdFetchOptions, harness } from './test/harness.ts';
 
 const SPRITE = `https://api.tomtom.com/maps/orbis/assets/sprites/1.0.0/basic_mono-light/sprite?apiVersion=1&key=${KEY}`;
@@ -46,6 +46,70 @@ function pathOf(address: string): string {
     return address.slice(ORIGIN.length);
 }
 
+describe('the ticket check', () => {
+    const OTHER_SECRET = 'Zk3mQ8vJx1LpT5aRn0cWy7DbHfUe2GsOi9NtV4Xr6Ml';
+
+    async function refused(maps: Maps, ticket: string | null): Promise<void> {
+        const response = await maps.request('/v1/style?theme=light', { ticket });
+        expect(response.status).toBe(401);
+        expect(await errorCode(response)).toBe('bad-ticket');
+        expect(maps.upstream).toEqual([]);
+        expect(maps.limited).toEqual([]);
+    }
+
+    test('a ticket the address book signed with the secret, and not yet ended, is let through', async () => {
+        const maps = harness();
+        maps.answers = [() => json(TOMTOM_STYLE)];
+        const response = await maps.request('/v1/style?theme=light', { ticket: await maps.ticket('account-1', 1) });
+        expect(response.status).toBe(200);
+        expect(maps.limited).toEqual([await mapsTicketSubject(SECRET, 'account-1')]);
+    });
+
+    test('an ended ticket is refused, also one that ends at this moment', async () => {
+        const maps = harness();
+        await refused(maps, await maps.ticket('account-1', -1_000));
+        await refused(maps, await maps.ticket('account-1', 0));
+    });
+
+    test('a ticket signed with another secret is refused', async () => {
+        const maps = harness();
+        const foreign = await signMapsTicket(OTHER_SECRET, await mapsTicketSubject(OTHER_SECRET, 'account-1'), maps.now + 3_600_000);
+        await refused(maps, foreign.ticket);
+    });
+
+    test('a ticket with a forged or changed mac is refused', async () => {
+        const maps = harness();
+        const [subject, expiresAt, mac] = (await maps.ticket()).split('.');
+        await refused(maps, `${subject}.${expiresAt}.${'A'.repeat(43)}`);
+        await refused(maps, `${subject}.${Number(expiresAt) + 1}.${mac}`);
+    });
+
+    test('a mark this service made for an address is no ticket, over the same bytes', async () => {
+        const maps = harness();
+        const [subject = '', expiry = ''] = (await maps.ticket()).split('.');
+        const mark = await signMapsPath(SECRET, mapsTicketBytes(subject, Number(expiry)));
+        await refused(maps, `${subject}.${expiry}.${mark}`);
+    });
+
+    test('a malformed ticket, or none, is refused', async () => {
+        const maps = harness();
+        const [subject, expiresAt, mac] = (await maps.ticket()).split('.');
+        for (const ticket of [
+            null,
+            '',
+            'nonsense',
+            `${subject}.${expiresAt}`,
+            `${subject}.0${expiresAt}.${mac}`,
+            `${subject}.${expiresAt}.${mac}.extra`,
+            `${subject}.soon.${mac}`
+        ]) {
+            await refused(maps, ticket);
+        }
+        const unprefixed = await maps.request('/v1/style?theme=light', { ticket: null, headers: { authorization: await maps.ticket() } });
+        expect(unprefixed.status).toBe(401);
+    });
+});
+
 describe('before anything is asked of TomTom', () => {
     test('health answers without a ticket and says nothing about the configuration', async () => {
         const maps = harness({ TOMTOM_API_KEY: undefined });
@@ -62,21 +126,6 @@ describe('before anything is asked of TomTom', () => {
             expect(await errorCode(response)).toBe('maps-unconfigured');
             expect(maps.upstream).toEqual([]);
         }
-    });
-
-    test('a request with no ticket, a forged one, one for another secret or an ended one is refused and fetches nothing', async () => {
-        const maps = harness();
-        const forged = `${(await maps.ticket()).split('.').slice(0, 2).join('.')}.${'A'.repeat(43)}`;
-        const ended = await maps.ticket('account-1', -1_000);
-        const otherSecret = 'Zk3mQ8vJx1LpT5aRn0cWy7DbHfUe2GsOi9NtV4Xr6Ml';
-        const foreign = await signMapsTicket(otherSecret, await mapsTicketSubject(otherSecret, 'account-1'), maps.now + 3_600_000);
-        for (const ticket of [null, 'nonsense', forged, ended, foreign.ticket]) {
-            const response = await maps.request('/v1/style?theme=light', { ticket });
-            expect(response.status).toBe(401);
-            expect(await errorCode(response)).toBe('bad-ticket');
-        }
-        expect(maps.upstream).toEqual([]);
-        expect(maps.limited).toEqual([]);
     });
 
     test('a ticket in the query is no ticket: it travels in the header only', async () => {
