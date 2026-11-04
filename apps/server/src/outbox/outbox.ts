@@ -6,6 +6,7 @@ import {
     BackgroundLimitWorkSchema,
     DeliverWaitingWorkSchema,
     GiveTaskWorkSchema,
+    ResumeRunWorkSchema,
     WakeParentWorkSchema
 } from '@adecore/agents/coordination';
 import { AgentKindSchema, ModelSelectionSchema, ProviderAccountIdSchema, RuntimeModeSchema } from '@ruimte/contracts';
@@ -26,12 +27,6 @@ const StartAgentSchema = z.object({
         // The account of its CLI, inherited from the node that opened it; absent is the default account.
         account: ProviderAccountIdSchema.optional()
     })
-});
-
-const ResumeRunSchema = z.object({
-    kind: z.literal('resume-run'),
-    // The target is the chat; the turn it was running and the attempt that takes it up again.
-    payload: z.object({ turnId: z.string().min(1), attempt: z.number().int().positive() })
 });
 
 const ResumeLimitSchema = z.object({
@@ -117,7 +112,7 @@ const RoutineRunWorkSchema = z.object({
 // The kinds of tasks, ending children and delivering a message are @adecore/agents' own.
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
-    ResumeRunSchema,
+    ResumeRunWorkSchema,
     ResumeLimitSchema,
     BackgroundLimitWorkSchema,
     WakeParentWorkSchema,

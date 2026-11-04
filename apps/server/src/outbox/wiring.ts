@@ -1,5 +1,15 @@
 import { chatOpener, limitResumeAt } from '@adecore/agents/chat';
-import { deliverMessageHandler, OutboxWorker, type AgentLineageStore, type NoticeStore, type OutboxClock, type TaskStore } from '@adecore/agents/coordination';
+import {
+    deliverMessageHandler,
+    OutboxWorker,
+    oweResume,
+    resumeRunHandler,
+    resumeRunParked,
+    type AgentLineageStore,
+    type NoticeStore,
+    type OutboxClock,
+    type TaskStore
+} from '@adecore/agents/coordination';
 import type { Task } from '@ruimte/contracts';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
@@ -23,7 +33,6 @@ import type {
     StopRemoteAgentEntry,
     TakeRemoteResultEntry
 } from './outbox.ts';
-import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 import { startAgentHandler } from './start-agent.ts';
 
 interface OutboxLinkOptions {

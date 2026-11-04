@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
 import type { SpawnChatProcess } from '@adecore/agents/chat';
-import { OutboxWorker, RETRY_DELAYS_MS } from '@adecore/agents/coordination';
+import { OutboxWorker, oweResume, resumeRunHandler, resumeRunParked, RETRY_DELAYS_MS } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli, ManualClock } from '@adecore/agents/testing';
 import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { ChatManager, RESUME_PROMPT } from '../chat/chat-manager.ts';
@@ -12,7 +12,6 @@ import { releasedProject } from '../tasks/test-daemon.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork } from './outbox.ts';
-import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
