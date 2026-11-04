@@ -1,5 +1,5 @@
+import { renderTranscript } from '@adecore/agents/context';
 import type { ChatItem } from '@ruimte/contracts';
-import { renderTranscript } from '../context/context-store.ts';
 
 /*
  * How much of the conversation a new CLI reads as text before its first prompt. It is the dearest
