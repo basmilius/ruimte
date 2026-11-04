@@ -110,8 +110,8 @@ final class ChatScrollTests: XCTestCase {
         list.beginUserScroll()
         list.setContentOffset(.zero, animated: false)
         list.finishUserScroll()
+        // Take over in the turn the animation starts; on a slow runner a few frames are enough to finish it.
         list.setContentOffset(CGPoint(x: 0, y: 400), animated: true)
-        await fixture.renderFrames()
         XCTAssertTrue(list.isScrollAnimating)
         list.scrollToLatest(animated: false)
         XCTAssertFalse(list.isScrollAnimating)
