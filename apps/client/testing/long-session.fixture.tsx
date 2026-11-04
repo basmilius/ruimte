@@ -5,6 +5,7 @@ import { App } from '../src/App';
 import { CHAT_HOST, configureChat } from '../src/chat/host';
 import { initI18n } from '../src/i18n';
 import { startFileReadPreparation } from '../src/project/file-read-preparation';
+import { showView } from '../src/project/views';
 import { defaultCanvases } from '../src/state/canvas';
 import { defaultDocumentStore } from '../src/state/document';
 import { useFiles } from '../src/state/files';
@@ -12,7 +13,7 @@ import { folderWatches } from '../src/state/fs-watch';
 import { currentEndpointId } from '../src/state/keys';
 import { defaultProjectStore } from '../src/state/project';
 import { startSessionLifecycle } from '../src/terminal/lifecycle';
-import { screenOf } from '../src/terminal/registry';
+import { exposeTerminalTestHooks, screenOf } from '../src/terminal/registry';
 import { chatInfoOf } from './chat-info';
 import { FakeMachine } from './fake-machine';
 import { claudeProvider } from './fake-provider';
@@ -25,6 +26,7 @@ import { openFakeWorkspace } from './fake-workspace';
 const CHAT_NODE: ProjectNode = { id: 'chat-node', kind: 'chat', title: 'Chat', x: 0, y: 0, w: 560, h: 520, provider: 'claude' };
 const SHELL: ProjectNode = { id: 'shell', kind: 'terminal', title: 'Shell', x: 600, y: 0, w: 560, h: 360 };
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [CHAT_NODE, SHELL], texts: [], edges: [], layouts: [] };
+const ELSEWHERE: ProjectCanvasView = { kind: 'canvas', id: 'elsewhere', name: 'Elsewhere', nodes: [], texts: [], edges: [], layouts: [] };
 const SENTENCE = 'The parser keeps its position in the stream, so a token that spans two chunks still reads as one. ';
 
 const machine = new FakeMachine();
@@ -109,11 +111,26 @@ function screensOfClosed(): number {
     return closed.filter((id) => screenOf(endpointId, id) !== null).length;
 }
 
+/* Shows a view of its own, or the one the shell is on, so the shell goes out of sight and comes back. */
+function show(viewId: 'main' | 'elsewhere'): void {
+    showView(viewId === 'main' ? MAIN.id : ELSEWHERE.id);
+}
+
+/* How many lines this window keeps of the shell; the whole scrollback while it is on screen. */
+function linesOfShell(): number {
+    return screenOf(currentEndpointId(), SHELL.id)?.length ?? 0;
+}
+
+function shellMounted(): boolean {
+    return window.ruimte?.terminalText(SHELL.id) != null;
+}
+
 configureChat();
+exposeTerminalTestHooks();
 startSessionLifecycle();
 startFileReadPreparation(defaultProjectStore, defaultDocumentStore, folderWatches, useFiles);
 await initI18n();
-await openFakeWorkspace(machine, { views: [MAIN] }, { activeViewId: MAIN.id, views: {} });
+await openFakeWorkspace(machine, { views: [MAIN, ELSEWHERE] }, { activeViewId: MAIN.id, views: {} });
 
 createRoot(document.getElementById('root')!).render(
     <ChatHostProvider host={CHAT_HOST}>
@@ -122,5 +139,5 @@ createRoot(document.getElementById('root')!).render(
 );
 
 Object.assign(window, {
-    longSession: { streamTurn, terminalOutput, openNodes, nodeIds, closeOpened, screensOfClosed, shell: SHELL.id }
+    longSession: { streamTurn, terminalOutput, openNodes, nodeIds, closeOpened, screensOfClosed, show, linesOfShell, shellMounted, shell: SHELL.id }
 });

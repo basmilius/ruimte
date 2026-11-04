@@ -32,6 +32,17 @@ async function settle(view: View): Promise<void> {
     }
 }
 
+/* Waits frame by frame until `condition` holds in the page, for what lands a few renders later (a view shown). */
+async function until(view: View, condition: string): Promise<void> {
+    for (let index = 0; index < 100; index++) {
+        if (await view.evaluate<boolean>(condition)) {
+            return;
+        }
+        await view.evaluate(frame);
+    }
+    throw new Error(`never held: ${condition}`);
+}
+
 async function weigh(view: View): Promise<Sample> {
     await settle(view);
     // Twice, so what a finalizer of the first pass let go is collected as well.
@@ -136,5 +147,26 @@ describe('a long session', () => {
         // The count moves by about 260 nodes from one round to the next without growing.
         expect(gained.nodes).toBeLessThan(500);
         expect(gained.listeners).toBeLessThan(100);
+    }, 120_000);
+
+    test('a terminal out of sight keeps its last lines, not its scrollback', async () => {
+        const kept: number[] = [];
+        let round = 0;
+        const samples = await replay(2, async (view) => {
+            await view.evaluate(`window.longSession.show('main')`);
+            await until(view, 'window.longSession.shellMounted()');
+            // The first round weighs the shell out of sight with a screen of output, the second with full scrollback.
+            await view.evaluate(`window.longSession.terminalOutput(window.longSession.shell, ${round === 0 ? 20 : 6000})`);
+            await settle(view);
+            await view.evaluate(`window.longSession.show('elsewhere')`);
+            await until(view, '!window.longSession.shellMounted()');
+            kept.push(await view.evaluate<number>('window.longSession.linesOfShell()'));
+            round += 1;
+        });
+        const gained = growth(samples, 0);
+
+        expect(kept[1]).toBe(200);
+        // Its 5000 lines of scrollback, kept as strings, weighed 5.7 MB more here; 200 lines weigh 1.7 MB, most of it code compiled on the way.
+        expect(gained.heap).toBeLessThan(3 * MB);
     }, 120_000);
 });

@@ -1,28 +1,43 @@
 import { webglTerminals } from '@adecore/terminal';
+import { MAX_TERMINAL_READ_LINES } from '@ruimte/actions';
 import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 
+/* What a window keeps of a terminal out of sight: the lines `terminal.read` may ask for, and how many of them its screen showed. */
+interface LastScreen {
+    lines: string[];
+    rows: number;
+}
+
 /*
  * Live xterm instances, and the last screen of the ones that were unmounted. Keyed on the machine
- * as well as the node, so a terminal of one daemon never repaints with another daemon's screen.
+ * as well as the node, so a terminal of one daemon never repaints with another daemon's screen. A
+ * remount draws from `session.attach`, never from here, so the whole scrollback need not stay.
  */
 const live = new Map<string, Terminal>();
-const lastScreens = new Map<string, string[]>();
+const lastScreens = new Map<string, LastScreen>();
 const nodeOf = new WeakMap<Terminal, string>();
 /* Live terminals whose node left the document; the node leaves before React unmounts it, so its unmount must not keep a screen. */
 const forgotten = new WeakSet<Terminal>();
 
-function screenLines(term: Terminal): string[] {
+/* The last `limit` lines of the buffer, leaving out the empty rows under the last one written. */
+function screenLines(term: Terminal, limit = Infinity): string[] {
     const buffer = term.buffer.active;
+    const lineAt = (index: number): string => buffer.getLine(index)?.translateToString(true) ?? '';
+    let end = buffer.length;
+
+    while (end > 0 && lineAt(end - 1) === '') {
+        end--;
+    }
+
     const lines: string[] = [];
-    for (let i = 0; i < buffer.length; i++) {
-        lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
+
+    for (let i = Math.max(0, end - limit); i < end; i++) {
+        lines.push(lineAt(i));
     }
-    while (lines.length > 0 && lines[lines.length - 1] === '') {
-        lines.pop();
-    }
+
     return lines;
 }
 
@@ -36,7 +51,7 @@ export function registerTerminal(endpointId: string, nodeId: string, term: Termi
         }
 
         if (!forgotten.has(term)) {
-            lastScreens.set(key, screenLines(term));
+            lastScreens.set(key, { lines: screenLines(term, Math.max(MAX_TERMINAL_READ_LINES, term.rows)), rows: term.rows });
         }
     };
 }
@@ -45,15 +60,23 @@ export function focusTerminal(endpointId: string, nodeId: string): void {
     live.get(endpointKey(endpointId, nodeId))?.focus();
 }
 
+/* The rows the terminal showed when it was last on screen, for the plate that stands in for it. */
 export function lastScreenOf(endpointId: string, nodeId: string): string[] {
-    return lastScreens.get(endpointKey(endpointId, nodeId)) ?? [];
+    const screen = lastScreens.get(endpointKey(endpointId, nodeId));
+
+    return screen === undefined ? [] : screen.lines.slice(-screen.rows);
 }
 
-/* What a terminal shows now, or showed when it was last on screen; null for one this window never drew. */
+/* What a terminal holds now, or its last lines when it was last on screen; null for one this window never drew. */
 export function screenOf(endpointId: string, nodeId: string): string[] | null {
     const key = endpointKey(endpointId, nodeId);
     const term = live.get(key);
-    return term ? screenLines(term) : (lastScreens.get(key) ?? null);
+
+    if (term !== undefined) {
+        return screenLines(term);
+    }
+
+    return lastScreens.get(key)?.lines ?? null;
 }
 
 export function forgetScreen(endpointId: string, nodeId: string): void {
