@@ -41,6 +41,7 @@ protocol CrashDedupeStore: Sendable {
 
 struct DefaultsCrashDedupeStore: CrashDedupeStore {
     static let key = "ruimte.telemetry.sent"
+    // Foundation documents `UserDefaults` as thread-safe, which the SDK does not mark as `Sendable`.
     nonisolated(unsafe) let defaults: UserDefaults
 
     func read() -> [String: Double] {

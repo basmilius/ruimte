@@ -90,7 +90,7 @@ import UIKit
     }
 }
 
-private final class NotificationDeliveryBridge: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+private final class NotificationDeliveryBridge: NSObject, UNUserNotificationCenterDelegate, Sendable {
     func userNotificationCenter(
         _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping @Sendable (UNNotificationPresentationOptions) -> Void

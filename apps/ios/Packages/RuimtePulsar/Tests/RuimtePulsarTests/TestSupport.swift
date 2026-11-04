@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 
 @testable import RuimtePulsar
@@ -8,12 +9,11 @@ func wireFixture() throws -> JSONValue {
     try JSONValue.decode(Data(contentsOf: #require(Bundle.module.url(forResource: "wire", withExtension: "json"))))
 }
 
-final class MemorySessionStore: SessionStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var session: StoredSession?
+final class MemorySessionStore: SessionStore {
+    private let session = Mutex<StoredSession?>(nil)
 
-    func read() -> StoredSession? { lock.withLock { session } }
-    func write(_ session: StoredSession?) { lock.withLock { self.session = session } }
+    func read() -> StoredSession? { session.withLock { $0 } }
+    func write(_ session: StoredSession?) { self.session.withLock { $0 = session } }
 }
 
 /// An HTTP answer to `request`, as a fake `fetch` hands it back.

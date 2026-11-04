@@ -80,7 +80,7 @@ import Foundation
     public var route: String? { session.currentRoute.outputs.first?.portName }
 
     /// `LKRTCAudioSession` calls its delegates on a notification thread of the system.
-    private final class Listener: NSObject, LKRTCAudioSessionDelegate, @unchecked Sendable {
+    private final class Listener: NSObject, LKRTCAudioSessionDelegate, Sendable {
         @MainActor var changed: (@MainActor (VoiceAudioChange) -> Void)?
 
         private func send(_ change: VoiceAudioChange) {

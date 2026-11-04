@@ -2,6 +2,7 @@
 import AVFAudio
 import Foundation
 @preconcurrency import LiveKitWebRTC
+import Synchronization
 
 public enum VoiceMediaFailure: Error, LocalizedError, Sendable, Equatable {
     case unavailable(String)
@@ -212,11 +213,10 @@ extension VoiceMediaPeer: LKRTCPeerConnectionDelegate, LKRTCDataChannelDelegate 
 /// Wires LiveKit's audio engine the way it does without an observer, and taps the node that carries the microphone
 /// into WebRTC. The tap runs on an audio thread; the samples are floats, averaged over the channels as Web Audio
 /// downmixes them.
-private final class EngineObserver: NSObject, LKRTCAudioDeviceModuleDelegate, @unchecked Sendable {
+private final class EngineObserver: NSObject, LKRTCAudioDeviceModuleDelegate, Sendable {
     private let window: VoiceSampleWindow
-    private let lock = NSLock()
     /// The node the tap sits on, so a new configuration or a released engine takes it off again.
-    private var tapped: AVAudioNode?
+    private let tapped = Mutex<AVAudioNode?>(nil)
 
     init(window: VoiceSampleWindow) {
         self.window = window
@@ -232,7 +232,7 @@ private final class EngineObserver: NSObject, LKRTCAudioDeviceModuleDelegate, @u
         source.installTap(onBus: 0, bufferSize: 256, format: format) { [weak self] buffer, _ in
             self?.take(buffer)
         }
-        lock.withLock { tapped = source }
+        tapped.withLock { $0 = source }
         return 0
     }
 
@@ -269,9 +269,9 @@ private final class EngineObserver: NSObject, LKRTCAudioDeviceModuleDelegate, @u
     func audioDeviceModuleDidUpdateDevices(_ audioDeviceModule: LKRTCAudioDeviceModule) {}
 
     private func removeTap() {
-        lock.withLock {
-            tapped?.removeTap(onBus: 0)
-            tapped = nil
+        tapped.withLock { node in
+            node?.removeTap(onBus: 0)
+            node = nil
         }
         window.clear()
     }

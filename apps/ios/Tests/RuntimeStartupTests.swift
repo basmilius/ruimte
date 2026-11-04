@@ -1,6 +1,7 @@
 import Foundation
 import RuimtePulsar
 import RuimteTransport
+import Synchronization
 import XCTest
 
 @testable import Ruimte
@@ -308,12 +309,11 @@ private struct RuntimeStartupSessionAPI: SessionAPI {
     func endSession(accessToken: String) async throws {}
 }
 
-private final class RuntimeStartupStore: SessionStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var session: StoredSession?
-    init(_ session: StoredSession) { self.session = session }
-    func read() throws -> StoredSession? { lock.withLock { session } }
-    func write(_ session: StoredSession?) throws { lock.withLock { self.session = session } }
+private final class RuntimeStartupStore: SessionStore {
+    private let session: Mutex<StoredSession?>
+    init(_ session: StoredSession) { self.session = Mutex(session) }
+    func read() throws -> StoredSession? { session.withLock { $0 } }
+    func write(_ session: StoredSession?) throws { self.session.withLock { $0 = session } }
 }
 
 private actor RuntimeStartupProbe {

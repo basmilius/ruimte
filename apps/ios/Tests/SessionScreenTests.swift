@@ -1,6 +1,7 @@
 import Observation
 import RuimtePulsar
 import RuimteTransport
+import Synchronization
 import XCTest
 
 @testable import Ruimte
@@ -168,8 +169,12 @@ final class SessionScreenTests: XCTestCase {
     }
 }
 
-private final class InvalidationFlag: @unchecked Sendable {
-    var raised = false
+private final class InvalidationFlag: Sendable {
+    private let state = Mutex(false)
+    var raised: Bool {
+        get { state.withLock { $0 } }
+        set { state.withLock { $0 = newValue } }
+    }
 }
 
 @MainActor private final class SessionClientFake: MachineRequesting {

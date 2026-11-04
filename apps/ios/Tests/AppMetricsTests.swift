@@ -41,7 +41,7 @@ import XCTest
 
     func testAQuarterSendsACountsSumAGaugesLastAndADistributionsMedianAndMaximum() {
         let sent = Mutex<[[String]]>([])
-        nonisolated(unsafe) var tick: (@Sendable () -> Void)?
+        var tick: (@Sendable () -> Void)?
         var every: Duration?
         let meter = QuarterMeter(
             sink: { items in sent.withLock { $0.append(items.map(Self.describe)) } },

@@ -78,6 +78,8 @@ enum UiModelFormat: Equatable {
 
 /// A model opened for SceneKit, framed on its bounds. The file ModelIO read goes with it, since a USDZ's textures may
 /// still be read from it.
+// Unchecked because SceneKit's objects are not `Sendable`: a detached task builds the scene and hands it over once,
+// and from then on only the main actor touches it.
 final class UiModelScene: @unchecked Sendable {
     let scene: SCNScene
     let camera: SCNNode

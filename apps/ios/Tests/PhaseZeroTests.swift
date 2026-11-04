@@ -2,6 +2,7 @@ import CryptoKit
 import RuimtePulsar
 import RuimteTransport
 import Security
+import Synchronization
 import XCTest
 
 @testable import Ruimte
@@ -128,11 +129,10 @@ final class PhaseZeroTests: XCTestCase {
     }
 }
 
-private final class ProbeSessionStore: SessionStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var session: StoredSession?
-    func read() -> StoredSession? { lock.withLock { session } }
-    func write(_ session: StoredSession?) { lock.withLock { self.session = session } }
+private final class ProbeSessionStore: SessionStore {
+    private let session = Mutex<StoredSession?>(nil)
+    func read() -> StoredSession? { session.withLock { $0 } }
+    func write(_ session: StoredSession?) { self.session.withLock { $0 = session } }
 }
 
 private actor MachineListGate {
