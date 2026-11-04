@@ -249,9 +249,10 @@ struct ConnectionReport: Equatable {
             message = "The direct link to a remote machine dropped"
             fingerprint = ["connection-dropped", "remote", "direct"]
             tags = place.merging(["problem": "connection-dropped"]) { $1 }
+        // A machine that stops answering leaves every pending request without one, so they group by the link and not the request.
         case .timeout(let request):
-            message = "\(request) got no answer in time"
-            fingerprint = ["request-timeout", request]
+            message = "A request to a remote machine got no answer in time"
+            fingerprint = ["request-timeout", "remote", "direct"]
             tags = place.merging(["problem": "request-timeout", "request": request]) { $1 }
         case .refused(let mismatch):
             message = "A machine was refused at the protocol check (\(mismatch.rawValue))"

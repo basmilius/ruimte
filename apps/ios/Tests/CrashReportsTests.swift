@@ -191,8 +191,8 @@ final class CrashReportsTests: XCTestCase {
 
     func testAConnectionProblemReadsAsTheDesktopsDoes() {
         let timeout = ConnectionReport(.timeout(request: "chat.attach"))
-        XCTAssertEqual(timeout.message, "chat.attach got no answer in time")
-        XCTAssertEqual(timeout.fingerprint, ["request-timeout", "chat.attach"])
+        XCTAssertEqual(timeout.message, "A request to a remote machine got no answer in time")
+        XCTAssertEqual(timeout.fingerprint, ["request-timeout", "remote", "direct"])
         XCTAssertEqual(
             timeout.tags,
             ["problem": "request-timeout", "machine": "remote", "link": "direct", "request": "chat.attach"])
