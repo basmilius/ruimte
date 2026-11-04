@@ -1,4 +1,4 @@
-import { PromptDialog, useColumnResize, Banner, Button, FormError, Icon, IconButton, PanelEmpty, Menu, messageOf } from '@adecore/ui';
+import { PromptDialog, useColumnResize, Banner, Button, FormError, Icon, IconButton, PanelEmpty, Menu, messageOf, Separator } from '@adecore/ui';
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { Archive, ChevronsDownUp, ChevronsUpDown, Folder, GitBranch, GitMerge, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
@@ -554,8 +554,20 @@ export function GitPanel() {
                         of them sits on its row in the list and in its own level of the branch menu. */}
                         {!named && cwd !== null ? repoActions(cwd) : undefined}
                     </ActionsMenu>
-                    {cwd !== null && <SlotRow place="diffToolbar" context={{ repository: cwd }} />}
                 </PanelHeaderActions>
+                {/* Outside the groups, since an empty row still counts as one and would leave a line at the end. */}
+                {cwd !== null && (
+                    <SlotRow
+                        place="diffToolbar"
+                        context={{ repository: cwd }}
+                        wrap={(row) => (
+                            <>
+                                <Separator />
+                                {row}
+                            </>
+                        )}
+                    />
+                )}
             </PanelHeaderSlot>
             {worktree !== null && (
                 /* While the selection put the panel here, the row says so; the chip's project row leaves. */
