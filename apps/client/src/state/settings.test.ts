@@ -187,7 +187,9 @@ describe('help from the editor model', () => {
     test('is decided once for an older blob, written back, and a person turning it on keeps it on', () => {
         const previousStorage = globalThis.localStorage;
         const previous = useSettings.getState();
-        const items = new Map<string, string>([[SETTINGS_STORAGE_KEY, JSON.stringify({ aiOnDeviceHelp: true, accent: 'blue' })]]);
+        const items = new Map<string, string>([
+            [SETTINGS_STORAGE_KEY, JSON.stringify({ aiOnDeviceHelp: true, accent: 'blue', pets: true, petsSets: ['animals'] })]
+        ]);
         const stored = (): Record<string, unknown> => JSON.parse(items.get(SETTINGS_STORAGE_KEY)!);
         globalThis.localStorage = {
             getItem: (key: string) => items.get(key) ?? null,
@@ -196,8 +198,8 @@ describe('help from the editor model', () => {
         try {
             useSettings.getState().reload();
             expect(useSettings.getState().aiCodeHelp).toBe(false);
-            expect(stored()).toMatchObject({ aiCodeHelp: false, accent: 'blue' });
-            expect(stored().aiOnDeviceHelp).toBeUndefined();
+            // The pets read their choices from this blob after it, so what this store no longer knows stays.
+            expect(stored()).toMatchObject({ aiCodeHelp: false, accent: 'blue', pets: true, petsSets: ['animals'] });
 
             useSettings.getState().update({ aiCodeHelp: true });
             useSettings.getState().reload();
