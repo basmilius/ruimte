@@ -11,6 +11,18 @@ export const frame = 'new Promise(resolve => requestAnimationFrame(() => request
 // What Vite puts in `import.meta.env` for the client; Bun.build leaves it undefined.
 const viteEnv = { 'import.meta.env': JSON.stringify({ DEV: false, PROD: true, MODE: 'test', BASE_URL: '/' }) };
 
+const BUN_TEST_SHIM = `
+export function spyOn(target, key) {
+    const original = target[key];
+    return {
+        mockImplementation(implementation) { target[key] = implementation; return this; },
+        mockRestore() { target[key] = original; }
+    };
+}
+export function afterEach() {}
+export function beforeEach() {}
+`;
+
 interface BrowserFixtureOptions {
     /* A script that runs before the bundle, for what has to be in place before React loads (a devtools hook). */
     head?: string;
@@ -57,6 +69,9 @@ export async function withBrowserFixture(
                         builder.onResolve({ filter: /^(react|react-dom|react-i18next|i18next)(\/.*)?$/ }, ({ path }) => ({
                             path: Bun.resolveSync(path, clientDirectory)
                         }));
+                        // The page has no test runner, and the fakes a fixture shares with the DOM run reach for its spy and hooks.
+                        builder.onResolve({ filter: /^bun:test$/ }, () => ({ path: 'bun:test', namespace: 'bun-test-shim' }));
+                        builder.onLoad({ filter: /.*/, namespace: 'bun-test-shim' }, () => ({ loader: 'js', contents: BUN_TEST_SHIM }));
                         // Resolve the shell through its desktop consumer in isolated installs.
                         builder.onResolve({ filter: /^@adecore\/shell\/bridge$/ }, ({ path }) => ({
                             path: Bun.resolveSync(path, join(clientDirectory, '../desktop'))
