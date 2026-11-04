@@ -4,6 +4,7 @@ import {
     blankQuoted,
     createDailyDedupe,
     createScrubber,
+    DEFAULT_EXTRAS,
     startQuarterMeter,
     TELEMETRY_DATA_COLLECTION,
     TELEMETRY_DSN,
@@ -88,6 +89,8 @@ function daemonScrubber(current: TelemetrySettings, redactions: () => Iterable<s
         hostname: current.hostname,
         redactions,
         tags: ['launcher', 'platform', 'arch', 'helper', 'language_server', 'hang'],
+        // What the hang watchdog adds: the request and tool types the main thread began last, never a payload.
+        extras: [...DEFAULT_EXTRAS, 'activity'],
         breadcrumbs: Object.keys(DAEMON_MOMENTS)
     });
 }

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { AgentFiles } from '../mcp/files.ts';
 import type { ArtifactUploads } from '../mcp/uploads.ts';
 import { countToolCall } from '../stats/usage-stats.ts';
+import { noteActivity } from '../telemetry/activity.ts';
 import type { AgentCall } from './host.ts';
 import { reachedPlace } from './reach.ts';
 
@@ -105,6 +106,8 @@ export function defineToolkit(name: string, tools: readonly Tool[], guides: read
  * on. Throws a `ToolRefusal` or a `ProjectError` for a refusal.
  */
 export async function runTool(tool: Tool, raw: unknown, call: ToolCaller): Promise<ToolOutcome> {
+    noteActivity(`tool ${tool.name}`);
+
     const input = parseToolInput(tool, raw) as Record<string, unknown>;
     const { reached: _reached, expectedRevision: _revision, ...own } = call;
     const project = typeof input.project === 'string' ? input.project : undefined;
