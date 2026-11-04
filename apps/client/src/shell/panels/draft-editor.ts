@@ -40,9 +40,11 @@ export function bindDraftEditor(editor: Editor, drafts: TextDrafts, endpointId: 
         const row = state.rows[key];
         const text = row?.text;
         if (text !== undefined && text !== previous.rows[key]?.text && text !== editor.getText()) {
-            editor.setText(text);
-            // A reload brought in what is on disk, which is where "modified lines" counts from again.
-            if (text === row?.disk) {
+            // A reload brought in what is on disk: undo never steps back past it, and "modified lines" counts from there again.
+            // Unsaved text (another editor's typing, a merge with what moved on disk) differs from `disk` and stays one undo step.
+            const reloaded = text === row?.disk;
+            editor.setText(text, { clearHistory: reloaded });
+            if (reloaded) {
                 editor.markSaved?.();
             }
         }

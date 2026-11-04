@@ -1,5 +1,5 @@
 import { ChatHostProvider, onLazyOpenError as onChatLazyOpenError } from '@adecore/agents-react';
-import { onLazyOpenError, prefetcher } from '@adecore/ui';
+import { onLazyOpenError, prefetcher, syncAnimations } from '@adecore/ui';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
 import { startPageHolds } from '@/browser/page-hold';
@@ -110,6 +110,7 @@ startWindowTabs();
 void bootWindow();
 startShowViewWatch();
 startPageHolds();
+syncAnimations(['status-pulse']);
 startKeepAwake();
 startKeepAwakeMove();
 /* Before the account, since a `/link` address must leave the address bar and wait for whoever signs in. */
