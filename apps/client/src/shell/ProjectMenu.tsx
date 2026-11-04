@@ -92,6 +92,8 @@ export function ProjectMenu() {
     return (
         <>
             <ProjectSwitcher
+                // A lone cell's tabs share the row and scroll, so they give way first, not the project's name.
+                className="max-w-1/3 shrink-0"
                 current={
                     current === null
                         ? null
