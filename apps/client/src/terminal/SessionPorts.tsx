@@ -15,6 +15,7 @@ import { openVerifiedSessionPort } from './open-session-port';
 import { publishSessionPortControls, useSessionPortControl } from './session-port-controls';
 import { SessionPortWatch } from './session-ports';
 
+// The React Compiler leaves this as written (a try with a finally), so its memo stays by hand.
 export function SessionPortMonitor({ id, endpointId }: { id: string; endpointId: string }) {
     const { t } = useTranslation('canvas');
     const [result, setResult] = useState<SessionPortsResult | null>(null);

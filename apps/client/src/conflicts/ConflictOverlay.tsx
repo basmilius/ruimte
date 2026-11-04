@@ -43,7 +43,8 @@ interface AiRun {
  * Resolving what a pull, a merge or a rebase left behind. The merged file is the one editable side,
  * with every conflict marked where it sits; the two versions it came from are under it, a button
  * each. Nothing is written until a file is marked resolved, and the operation itself is only
- * finished or taken back from the row at the bottom.
+ * finished or taken back from the row at the bottom. The React Compiler leaves this as written (a try
+ * with a finally), so its memos stay by hand.
  */
 export function ConflictOverlay() {
     const { t } = useTranslation(['conflicts', 'common']);

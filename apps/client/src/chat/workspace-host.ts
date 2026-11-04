@@ -73,6 +73,7 @@ export const WORKSPACE_CHAT_HOST: Partial<ChatHost> = {
             const requests = useNodeComputerApprovals(endpointId, chatId);
             const secrets = useNodeSecretRequests(endpointId, chatId);
             const proposals = useNodeProposals(endpointId, chatId);
+            // Kept by hand: the React Compiler leaves a hook in an object literal as written.
             return useMemo(
                 () => [
                     ...requests.map((request) => computerPrompt(chatId, request)),

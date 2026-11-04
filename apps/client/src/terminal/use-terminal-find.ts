@@ -57,6 +57,7 @@ export function useTerminalFind(
     const [counted, setCounted] = useState<{ search: TerminalSearch; result: TerminalFindResult } | null>(null);
     const [failed, setFailed] = useState(false);
     const { open, query } = find;
+    // Kept by hand: an effect depends on it.
     const compiled = useMemo(() => compileFind(query), [query]);
 
     useEffect(() => {

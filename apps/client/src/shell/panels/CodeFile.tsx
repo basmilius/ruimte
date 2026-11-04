@@ -195,6 +195,7 @@ export function CodeText({ text, language }: { text: string; language: string | 
     const wrap = useSettings((s) => s.codeWrap);
     const { chunks, lineCount } = chunksOf(text);
     const plain = text.length > FS_READ_MAX_TEXT_BYTES || lineCount > HIGHLIGHT_MAX_LINES;
+    // Kept by hand: an effect of `CodeChunk` depends on it.
     const highlight = useMemo(
         () =>
             plain
@@ -264,6 +265,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     const bulky = read.size > FS_READ_MAX_TEXT_BYTES;
     const plain = bulky || tooManyLines;
     const language = plain ? null : (read.language ?? 'text');
+    // Kept by hand: an effect of `CodeChunk` depends on it.
     const highlight = useMemo(
         () =>
             language === null

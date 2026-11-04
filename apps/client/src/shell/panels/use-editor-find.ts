@@ -81,6 +81,7 @@ function queryOf(query: FindQuery) {
 export function useEditorFind(find: FindState, editor: Editor | null): EditorFind {
     const { t } = useTranslation('editor');
     const [state, setState] = useState<EditorFindState>(NOTHING);
+    // Kept by hand: an effect depends on it.
     const compiled = useMemo(() => compileFind(find.query), [find.query]);
     const wasOpen = useRef(false);
     const latest = useRef({ find, compiled });

@@ -110,6 +110,7 @@ interface ListProps {
  */
 export function GitFileList({ checkouts, reposTruncated, ...props }: ListProps) {
     const { t } = useTranslation('panels');
+    // Kept by hand: an effect of `GitTree` depends on it.
     const layout = useMemo(
         () =>
             buildGitTree(
@@ -181,6 +182,7 @@ function GitTree({
        tree that did not change would throw away which folders stand folded. */
     const builtRef = useRef('');
 
+    // Kept by hand: an effect depends on it.
     const keyOf = useCallback<FoldKeyOf>((rowPath) => {
         const node = nodeOf(layoutRef.current, rowPath);
         return node === undefined || node.kind === 'file' ? null : node.key;

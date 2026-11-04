@@ -267,7 +267,8 @@ export interface GitCheckouts {
 
 /*
  * The status of every checkout the panel shows, each with its own watch and its own pace, so an agent
- * writing in one repository does not hold up the redraw of another.
+ * writing in one repository does not hold up the redraw of another. The React Compiler leaves this as
+ * written (an optional chain inside a try), and the panels that read it too, so its memos stay by hand.
  */
 export function useGitCheckouts(refs: readonly GitCheckoutRef[]): GitCheckouts {
     const transport = useTransport();
@@ -385,7 +386,6 @@ export function useGitCheckouts(refs: readonly GitCheckoutRef[]): GitCheckouts {
         }
     }, [entries, endpointId]);
 
-    // The compiler leaves this hook and the panels that read it as written, so these keep their identity by hand.
     const checkouts = useMemo(() => refs.map((ref) => ({ ...ref, ...(knownEntry(entries, endpointId, ref.path) ?? BLANK) })), [refs, entries, endpointId]);
 
     const refresh = useCallback(

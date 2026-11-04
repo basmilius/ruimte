@@ -63,7 +63,10 @@ function filesOf(work: readonly GitWork[]): GitFile[] {
     return work.flatMap((step) => step.files);
 }
 
-/* Staged files choose the commit's repositories; a worktree can take over the whole panel. */
+/*
+ * Staged files choose the commit's repositories; a worktree can take over the whole panel. The React
+ * Compiler leaves this as written (a try without a catch), so its memos stay by hand.
+ */
 export function GitPanel() {
     const { t } = useTranslation('panels');
     const nodes = useCanvas((s) => s.nodes);

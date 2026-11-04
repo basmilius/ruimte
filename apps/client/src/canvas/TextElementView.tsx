@@ -11,6 +11,7 @@ import { loadDrawingFont } from '@/drawing/fonts';
 import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
 
+// Kept by hand: a row of a long list.
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();

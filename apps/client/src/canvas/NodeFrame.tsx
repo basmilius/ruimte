@@ -331,7 +331,8 @@ function NodeBodyBoundary({ kind, children }: { kind: CanvasNodeKind; children: 
 
 /*
  * A node that runs on another machine is drawn from that machine: everything in its frame reads
- * the transport, the rows and the prompts of the machine it names.
+ * the transport, the rows and the prompts of the machine it names. Kept in `memo` by hand: a row of a
+ * long list.
  */
 export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: number }) {
     const machine = useCanvas((s) => s.nodes[id]?.machine);

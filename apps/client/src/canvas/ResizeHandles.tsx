@@ -55,6 +55,7 @@ export function ResizeHandles({ rootRef }: { rootRef: RefObject<HTMLDivElement |
     // The edge a press took, so a running resize keeps it whatever the pointer passes over.
     const [grabbed, setGrabbed] = useState<{ nodeId: string; edge: ResizeEdge } | null>(null);
 
+    // Kept by hand: an effect depends on it, through `handle` and `current`.
     const candidates = useMemo<ResizeCandidate[]>(() => {
         const stacking = stackingOrder(nodes, order);
 
@@ -84,6 +85,7 @@ export function ResizeHandles({ rootRef }: { rootRef: RefObject<HTMLDivElement |
         ];
     }, [cards, hidden, nodes, order, selection]);
 
+    // Kept by hand: an effect depends on it, through `current`.
     const handle = useMemo(() => {
         if (locked || point === null) {
             return null;
@@ -111,6 +113,7 @@ export function ResizeHandles({ rootRef }: { rootRef: RefObject<HTMLDivElement |
         return () => window.clearTimeout(timer);
     }, [morphing, lastShape]);
 
+    // Kept by hand: an effect depends on it.
     const current = useMemo(
         () => (handle === null ? null : { handle, rail: handleRail((nodes[handle.nodeId] ?? cards[handle.nodeId]?.rect)!, handle, zoom) }),
         [cards, handle, nodes, zoom]

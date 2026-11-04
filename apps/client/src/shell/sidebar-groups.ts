@@ -19,6 +19,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
     const current = useProject((state) => state.current);
     const currentEndpointId = useProject((state) => state.currentEndpointId);
     const cached = useProjectList((state) => state.projects);
+    // Kept by hand: an effect depends on it, through `result`.
     const selected = useMemo(
         () => sidebarSelection(cached, listedEndpoints(endpoints), current && currentEndpointId ? { endpointId: currentEndpointId, summary: current } : null),
         [cached, endpoints, current, currentEndpointId]
@@ -33,6 +34,7 @@ export function useSidebarGroups(enabled: boolean, active: SidebarProject, expan
     const sessions = useSessions((state) => state.byKey);
     const chats = useChats((state) => state.statusByKey);
     const waitingSince = useWaitingSince((state) => state.byKey);
+    // Kept by hand: an effect depends on it.
     const result = useMemo(() => {
         if (!enabled) {
             return { groups: [], incomplete: [], order: [], separators: { before: {}, trailing: [] } as SeparatorPlaces };

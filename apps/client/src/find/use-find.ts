@@ -60,6 +60,7 @@ export function useFind(surfaceRef: RefObject<HTMLElement | null>, enabled = tru
         seedRef.current = seed;
     });
 
+    // Kept by hand: an effect depends on it.
     const setQuery = useCallback((next: FindQuery): void => {
         lastQuery = next;
         setQueryState(next);

@@ -71,7 +71,7 @@ function usePdfSource(origin: FileSource, read: FsReadBinary): Source | null {
         };
     }, [whole, own, endpointId, wire, key]);
 
-    // One object per source, since opening the document hangs on its identity.
+    // Kept by hand: one object per source, since the effect that opens the document hangs on its identity.
     return useMemo((): Source | null => {
         if (machine.failure !== null) {
             return { kind: 'failed', reason: machine.failure };

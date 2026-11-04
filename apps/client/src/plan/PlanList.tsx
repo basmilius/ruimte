@@ -117,6 +117,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
     // A reveal asked for before this list mounted is not one to act on.
     const handled = useRef(target?.nonce ?? null);
 
+    // Kept by hand: an effect depends on it.
     const rows = useMemo(() => planRows(plan, { filter, collapseDone, collapsed: new Set(collapsedIds) }), [plan, filter, collapseDone, collapsedIds]);
     const progress = planProgress(plan.items);
 

@@ -2,7 +2,7 @@ import { AgentIcon } from '@adecore/agents-react/providers';
 import { Icon } from '@adecore/ui';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { Blocks, SlidersHorizontal, Zap } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import { openProjectAction } from '@/actions/client-actions';
@@ -66,7 +66,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         }
     }, [open]);
 
-    const catalog = useMemo(() => {
+    const catalog = (() => {
         if (!enabled) {
             return null;
         }
@@ -127,22 +127,7 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
             });
         const commands = appCommands(prRepos, { commands: extensionCommands, slotEntries: extensionActions });
         return { jumps, viewSwitches, switches, commands };
-    }, [
-        enabled,
-        connected,
-        endpoints,
-        nodesByView,
-        pages,
-        views,
-        activeViewId,
-        projects,
-        currentProjectId,
-        currentEndpointId,
-        prRepos,
-        extensionCommands,
-        extensionActions,
-        t
-    ]);
+    })();
 
     const hits = usePaletteHits(query, enabled);
     const fromExtensions: readonly Entry[] = hits.map((hit) => ({

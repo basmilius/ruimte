@@ -176,6 +176,7 @@ function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompt
     }, [inspects, endpointId, node.id, revision]);
 
     const chat = held ? heldChat : (read?.chat ?? undefined);
+    // Kept by hand: an effect of `WaitingPrompt` depends on it.
     const prompts = useMemo(() => {
         if (inspects && read === null) {
             return null;

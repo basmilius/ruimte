@@ -2,7 +2,7 @@ import type { ExplorerFolder } from '@adecore/database';
 import { ContextMenu, Icon, PromptDialog, messageOf } from '@adecore/ui';
 import { ActionRefusal } from '@ruimte/actions';
 import { Pencil, SquareTerminal, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
 import { openConsoleFile } from '@/database/console-file';
@@ -33,35 +33,32 @@ export function useConsoleFolders(): { folders: Record<string, readonly Explorer
     const [question, setQuestion] = useState<ConsoleQuestion | null>(null);
     const [busy, setBusy] = useState(false);
 
-    const folders = useMemo(() => {
-        const byConnection: Record<string, readonly ExplorerFolder[]> = {};
-        for (const [connectionId, paths] of Object.entries(files)) {
-            byConnection[connectionId] = [
-                {
-                    id: 'consoles',
-                    label: t('panel.consoles'),
-                    items: paths.map((path) => ({
-                        id: path,
-                        label: basenameOf(path),
-                        icon: SquareTerminal,
-                        onOpen: ({ preview }: { preview: boolean }) => openConsoleFile(path, connectionId, preview),
-                        menu: (
-                            <>
-                                <ContextMenu.Item onClick={() => setQuestion({ kind: 'rename', path })}>
-                                    <Icon icon={Pencil} size={14} /> {t('panels:files.rename.menu')}
-                                </ContextMenu.Item>
-                                <ContextMenu.Separator />
-                                <ContextMenu.Item className="text-status-error" onClick={() => setQuestion({ kind: 'delete', path })}>
-                                    <Icon icon={Trash2} size={14} /> {t('panels:files.delete')}
-                                </ContextMenu.Item>
-                            </>
-                        )
-                    }))
-                }
-            ];
-        }
-        return byConnection;
-    }, [files, t]);
+    const folders: Record<string, readonly ExplorerFolder[]> = {};
+    for (const [connectionId, paths] of Object.entries(files)) {
+        folders[connectionId] = [
+            {
+                id: 'consoles',
+                label: t('panel.consoles'),
+                items: paths.map((path) => ({
+                    id: path,
+                    label: basenameOf(path),
+                    icon: SquareTerminal,
+                    onOpen: ({ preview }: { preview: boolean }) => openConsoleFile(path, connectionId, preview),
+                    menu: (
+                        <>
+                            <ContextMenu.Item onClick={() => setQuestion({ kind: 'rename', path })}>
+                                <Icon icon={Pencil} size={14} /> {t('panels:files.rename.menu')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator />
+                            <ContextMenu.Item className="text-status-error" onClick={() => setQuestion({ kind: 'delete', path })}>
+                                <Icon icon={Trash2} size={14} /> {t('panels:files.delete')}
+                            </ContextMenu.Item>
+                        </>
+                    )
+                }))
+            }
+        ];
+    }
 
     const failureOf = (error: unknown): string =>
         error instanceof ActionRefusal

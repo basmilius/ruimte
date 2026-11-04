@@ -207,7 +207,10 @@ export async function runManyJobs(
     return { done, failed: failed.length, diverged };
 }
 
-/* Running the panel's actions and saying how they went. */
+/*
+ * Running the panel's actions and saying how they went. The React Compiler leaves this as written (a
+ * try with a finally), so its memos stay by hand.
+ */
 export function useGitActions(): GitActions {
     /* Which toast a running action writes to, and the title it has to keep; an action that is over
        is not in here. A run over several repositories owns its title, since that is where the one

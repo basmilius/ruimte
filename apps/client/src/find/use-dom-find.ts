@@ -46,6 +46,7 @@ export function useDomFind(find: FindState, contentRef: RefObject<HTMLElement | 
     const [marks, setMarks] = useState<number[]>([]);
     const [currentMark, setCurrentMark] = useState<number | null>(null);
 
+    // Kept by hand: an effect depends on it.
     const show = useCallback(
         (index: number | null, scroll: boolean): void => {
             currentRef.current = index;

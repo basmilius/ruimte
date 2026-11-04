@@ -42,6 +42,7 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
     const [attempt, setAttempt] = useState(0);
     const [indent, setIndent] = useState<{ endpointId: string; path: string; value: EditorStyle } | null>(null);
 
+    // Kept by hand: an effect depends on it.
     const roots = useMemo(
         () => (folder === null ? [] : [folder, ...worktrees.filter((worktree) => worktree.missing !== true).map((worktree) => worktree.path)]),
         [folder, worktrees]

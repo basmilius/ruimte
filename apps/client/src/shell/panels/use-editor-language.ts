@@ -22,6 +22,7 @@ function useOwnLanguageId(enabled: boolean, path: string, language: string | und
     const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const folder = useProject((s) => s.current?.folder ?? null);
+    // Kept by hand: an effect depends on it.
     const holder = useMemo(() => createHolder<string>(), []);
 
     useEffect(() => {
@@ -54,6 +55,7 @@ export function useEditorLanguage(editor: Editor | null, path: string, language:
     const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const folder = useProject((s) => s.current?.folder ?? null);
+    // Kept by hand: an effect depends on it.
     const holder = useMemo(() => createHolder<EditorLanguage>(), []);
     const builtIn = lspLanguageIdOf(language);
     const ownId = useOwnLanguageId(editor !== null && builtIn === null, path, language);

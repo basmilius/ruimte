@@ -48,6 +48,7 @@ interface TrackedPointer {
     edge?: 'bottom';
 }
 
+// The React Compiler leaves this as written (an optional chain inside a try), so its memo stays by hand.
 export function DeviceStream({ device }: { device: DeviceInfo }) {
     const { t } = useTranslation('machines');
     const endpointId = useEndpointId();

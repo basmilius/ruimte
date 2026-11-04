@@ -43,6 +43,7 @@ export function CommitFileTree({ files, shown, onPick, marks = diffFileParts, me
     /* The paths the tree was last built from: a checkout is read again on every write in it. */
     const builtRef = useRef('');
 
+    // Kept by hand: an effect depends on it.
     const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
 
     const decorate = (item: FileTreeVisibleRow) => {

@@ -30,6 +30,7 @@ function ProviderMark({ kind }: { kind: AgentKind }) {
 function Proposal({ language, session }: { language: EditorLanguage; session: InlineEditSession }) {
     const { selectedText, proposal, range } = useStore(session.store, (state) => state);
     const ref = useRef<HTMLDivElement>(null);
+    // Kept by hand: an effect depends on it.
     const segments = useMemo(
         () => (proposal === null ? [] : diffSegments(selectedText, proposal, range.start.line + 1)),
         [selectedText, proposal, range.start.line]

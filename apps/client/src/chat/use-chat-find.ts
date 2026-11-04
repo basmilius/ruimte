@@ -41,7 +41,7 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
     const endpointId = useEndpointId();
     const nameOf = useContextNames(endpointId, chatId);
     const hideTools = useDesignHidesToolCalls(endpointId, chatId);
-    // The structure and not the items, so a streamed word does not search the whole thread again; a reply is searched once it settles.
+    // The structure and not the items, so a streamed word does not search the whole thread again; a reply is searched once it settles. Kept by hand: an effect depends on it, through `ordered` and `withHits`.
     const search = useMemo(() => {
         if (!find.open || structure === undefined || order === undefined) {
             return NOTHING;
@@ -53,8 +53,9 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
             hideTools
         );
     }, [find.open, find.query, structure, order, nameOf, hideTools]);
+    // Kept by hand: an effect depends on it.
     const rowIndex = useMemo(() => indexRows(rows), [rows]);
-    // In the order the thread shows them, which is not always the order the items came in.
+    // In the order the thread shows them, which is not always the order the items came in. Kept by hand: an effect depends on it.
     const ordered = useMemo(
         () =>
             search.hits
@@ -149,6 +150,7 @@ function useChatFind(options: TimelineFindOptions): ChatFind {
 
     const compiled = compileFind(find.query);
     const pattern = find.open && compiled.kind === 'pattern' ? compiled.pattern : null;
+    // Kept by hand: an effect depends on it.
     const withHits = useMemo(() => new Set(search.hits.map((hit) => hit.itemId)), [search]);
     const paintRef = useRef<() => void>(() => undefined);
 

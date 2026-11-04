@@ -120,7 +120,8 @@ const EMPTY_CACHE: EntryCache = new Map();
  * The folder of the open project, or one of its worktrees, as a tree; the file it opens is drawn by
  * the preview panel next to it. Directories are listed one at a time: the first `fs.list` is the
  * folder itself, and every expand asks for what it opened. The daemon watches the folder while the
- * panel is up, so a file an agent writes shows up on its own.
+ * panel is up, so a file an agent writes shows up on its own. The React Compiler leaves this as written
+ * (a try without a catch), so its memos stay by hand.
  */
 export function FilesPanel() {
     const { t } = useTranslation('panels');

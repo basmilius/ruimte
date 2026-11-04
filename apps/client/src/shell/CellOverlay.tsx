@@ -73,6 +73,7 @@ function OverlayBox({ viewId }: { readonly viewId: string }) {
 /* The layer itself, mounted once over the parked pages. */
 export function CellOverlayLayer() {
     const layout = useDocument((s) => s.layout);
+    // Kept by hand: an effect depends on it.
     const ids = useMemo(() => (layout === null ? [] : shownViewIdsIn(layout)), [layout]);
     const root = useRef<HTMLDivElement>(null);
 

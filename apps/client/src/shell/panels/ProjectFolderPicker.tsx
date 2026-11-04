@@ -5,7 +5,8 @@ import type { Transport } from '@/transport';
 
 /*
  * The folders of a project to pick one from, read a level at a time as a person opens them. `onSelect`
- * hands the folder relative to `root`, the empty string for the root itself.
+ * hands the folder relative to `root`, the empty string for the root itself. The React Compiler leaves
+ * this as written (a try with a finally), so its memo stays by hand.
  */
 export function ProjectFolderPicker({
     root,

@@ -226,6 +226,7 @@ function sameRow(before: CommitRowProps, after: CommitRowProps): boolean {
     );
 }
 
+// Kept by hand: a row of a long list.
 const CommitRow = memo(function CommitRow({ commit, picture, selected, now, onOpen }: CommitRowProps) {
     const { t } = useTranslation('panels');
     const refs = shownRefs(commit);

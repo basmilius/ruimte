@@ -97,6 +97,7 @@ export function WebviewParking() {
     return isDesktop() ? <DesktopWebviewParking /> : null;
 }
 
+// The React Compiler leaves this as written (a `??=`), so its memo stays by hand.
 function DesktopWebviewParking() {
     // Selects the object and derives the keys separately, since a selector that builds a new array loops forever.
     const byKey = useBrowser((s) => s.byKey);

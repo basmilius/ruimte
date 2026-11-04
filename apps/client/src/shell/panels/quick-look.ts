@@ -92,6 +92,7 @@ export class QuickLook {
 
 /* Quick Look for the files of one project folder, closed again when the folder or the panel goes. */
 export function useQuickLook(endpointId: string, folder: string | null): QuickLook | null {
+    // Kept by hand: an effect depends on it.
     const quickLook = useMemo(() => {
         const shell = folder === null ? null : quickLookShell(endpointId);
         return shell === null ? null : new QuickLook(shell);

@@ -153,7 +153,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
     const linkWait = browse !== null && !browse.machines ? (browse.link ?? null) : null;
     const browseRow = machines.find((row) => row.endpointId === browseEndpointId) ?? null;
 
-    /* A relative path counts from the open project's folder, and that folder is on one machine. */
+    /* A relative path counts from the open project's folder, and that folder is on one machine. Kept by hand: an effect depends on it. */
     const cwdFor = useCallback((endpointId: string): string | null => (currentEndpointId === endpointId ? folder : null), [currentEndpointId, folder]);
 
     /* A typed path browses the machine the app is pointed at, which the idle row of the web client is not. */
@@ -219,7 +219,8 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
 
     /*
      * Every step fetches before it commits, so the path and the list change in the same frame and
-     * there is never an empty flash between a click and the folder it opens.
+     * there is never an empty flash between a click and the folder it opens. Kept by hand: an effect
+     * depends on it, through `startBrowsing`.
      */
     const commitBrowse = useCallback(
         (endpointId: string, path: string, answer: BrowseAnswer): void => {
@@ -231,6 +232,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         [setQuery]
     );
 
+    // Kept by hand: an effect depends on it, through `startBrowsing`.
     const navigateTo = useCallback(
         async (path: string, endpointId: string): Promise<void> => {
             const mine = ++generation.current;
@@ -243,7 +245,7 @@ export function usePaletteBrowse(context: PaletteContext, blocked: boolean) {
         [transport, commitBrowse, cwdFor]
     );
 
-    /* The start folder is one setting for every machine, so it may not exist on this one; home always does. */
+    /* The start folder is one setting for every machine, so it may not exist on this one; home always does. Kept by hand: an effect depends on it. */
     const startBrowsing = useCallback(
         async (endpointId: string): Promise<void> => {
             const { start: from, home } = browseStart(browseStartFolder, separatorFor(serverInfoOf(endpointId).platform));
