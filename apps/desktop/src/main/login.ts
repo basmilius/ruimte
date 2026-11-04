@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { AppIpc } from '@adecore/shell';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionKeyUnavailableError, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
+import { heedBodyless } from '../net-response';
 import { listenForLogin, type LoopbackLogin } from '../pulsar-login';
 import { fileSessionKey, fileSessionStore } from '../pulsar-store';
 import { electron } from './electron';
@@ -20,7 +21,7 @@ export function installLogin(ipc: AppIpc): { signedIn(): Promise<boolean> } {
 
     const pulsarSessions = (): SessionVault => {
         pulsarVault ??= new SessionVault({
-            client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init) }),
+            client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init).then(heedBodyless) }),
             store,
             signer: fileSessionKey(join(app.getPath('userData'), 'pulsar-key.bin'), safeStorage),
             onForget: (reason) => {

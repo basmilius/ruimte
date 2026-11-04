@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { AppIpc } from '@adecore/shell';
 import type { OpenAiCredentialStatus } from '@ruimte/desktop-bridge';
 import { databaseSecretFile, parseSecret, parseSecretKey } from '../database-bridge';
+import { heedBodyless } from '../net-response';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from '../openai-live';
 import { fileSecretStore, type SecretStore } from '../secret-store';
 import { electron } from './electron';
@@ -88,7 +89,7 @@ export function installSecrets(ipc: AppIpc, handVoiceKey: ((key: string) => Prom
         if (apiKey === null) {
             throw new Error('Add an OpenAI API key in Settings first');
         }
-        return createOpenAiLiveSession((input, init) => net.fetch(input, init), apiKey, sdp, requested);
+        return createOpenAiLiveSession((input, init) => net.fetch(input, init).then(heedBodyless), apiKey, sdp, requested);
     });
 
     return { handOverVoiceKey };

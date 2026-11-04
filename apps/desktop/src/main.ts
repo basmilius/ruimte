@@ -39,6 +39,7 @@ import { createMachine } from './main/service';
 import { installSpeech } from './main/speech';
 import { startTelemetry } from './main/telemetry';
 import { installUsage } from './main/usage';
+import { heedBodyless } from './net-response';
 import { quitQuestion } from './quit-question';
 import { createReleaseNotes } from './release-notes';
 import { runSmoke } from './smoke';
@@ -825,7 +826,7 @@ ipc.on('update:install', (_event, confirmed: unknown) => void installUpdate(conf
 /* From the REST API: the updater's atom feed carries rendered HTML, only the versions up to the next one,
    and tags whose release is still a draft. */
 const releaseNotes = createReleaseNotes({
-    fetch: (url, init) => net.fetch(url, init),
+    fetch: (url, init) => net.fetch(url, init).then(heedBodyless),
     // A new name, or GitHub's 304 would keep the list from before it held prereleases.
     cacheFile: join(app.getPath('userData'), 'release-notes-with-prereleases.json')
 });

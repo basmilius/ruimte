@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { AppIpc } from '@adecore/shell';
 import type { MachineMode } from '@ruimte/desktop-bridge';
 import { TELEMETRY_DSN, usageIngestUrl } from '@ruimte/telemetry';
+import { heedBodyless } from '../net-response';
 import { countFromPage, DesktopUsage, fileDesktopUsageStore, flushDesktopUsage, sendDesktopUsage, usageCounts, usageSettingOf } from '../usage';
 import { electron } from './electron';
 import { telemetryBuild } from './telemetry';
@@ -56,7 +57,7 @@ export function installUsage(ipc: AppIpc, options: UsageOptions): UsageHandle {
         // A switch a person turned off a moment ago holds before anything leaves, not a minute later.
         settingReadAt = Number.NEGATIVE_INFINITY;
         void flushDesktopUsage(usage, {
-            send: (batch) => sendDesktopUsage(url, batch, (input, init) => net.fetch(input as string, init)),
+            send: (batch) => sendDesktopUsage(url, batch, (input, init) => net.fetch(input as string, init).then(heedBodyless)),
             signedIn: options.signedIn,
             platform: process.platform,
             arch: process.arch

@@ -2,6 +2,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { DESKTOP_APP_ORIGIN } from '@ruimte/contracts';
 import { BrowserWindow, net, session } from 'electron';
 import { STORAGE_MOVE_PATH, storageMovePage } from './app-scheme';
+import { heedBodyless } from './net-response';
 
 /*
  * Once per profile, moves the page's `localStorage` from `http://127.0.0.1:<port>`, where the daemon used
@@ -18,7 +19,9 @@ export async function moveLegacyStorage(port: number, flagPath: string): Promise
     const window = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true, nodeIntegration: false } });
     try {
         own.protocol.handle('http', (request) =>
-            request.url === `${oldOrigin}${STORAGE_MOVE_PATH}` ? storageMovePage() : net.fetch(request, { bypassCustomProtocolHandlers: true })
+            request.url === `${oldOrigin}${STORAGE_MOVE_PATH}`
+                ? storageMovePage()
+                : net.fetch(request, { bypassCustomProtocolHandlers: true }).then(heedBodyless)
         );
         let entries: Array<[string, string]>;
         try {

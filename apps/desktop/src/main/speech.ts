@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import type { AppIpc } from '@adecore/shell';
+import { heedBodyless } from '../net-response';
 import { SpeechService, speechHelperPath } from '../speech';
 import { SpeechModel } from '../speech-model';
 import { electron } from './electron';
@@ -28,7 +29,7 @@ export function installSpeech(ipc: AppIpc, options: SpeechOptions): void {
         options.ruimteHome,
         speechHelper,
         (state) => options.send('speech:state', state),
-        (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init)
+        (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init).then(heedBodyless)
     );
     /* A run's words go back to the page that started it. There is one helper, so one run at a time. */
     const speechService = new SpeechService<Electron.WebContents>(speechHelper, speechModel.directory, speechModel.cacheDirectory, (event, owner) => {
