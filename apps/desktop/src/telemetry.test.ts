@@ -39,6 +39,13 @@ describe('problemEvent', () => {
         });
     });
 
+    test('a renderer that ran out of memory says how large it was and how long it ran', () => {
+        const memory = { memoryMb: 3900, peakMemoryMb: 4010, uptimeMin: 312, guests: 4 };
+        const event = problemEvent({ kind: 'process-gone', process: 'renderer', reason: 'oom', exitCode: 5, memory });
+        expect(event.extra).toEqual({ exit_code: 5, memory_mb: 3900, peak_memory_mb: 4010, uptime_min: 312, guests: 4 });
+        expect(shellBeforeSend({ home: '/Users/jane', username: 'jane', hostname: 'box' }, memoryDedupeStore())(event)?.extra).toEqual(event.extra);
+    });
+
     test('says which step of the service failed', () => {
         const event = problemEvent({ kind: 'service-fallback', step: 'install', reason: 'Bootstrap failed: 5' });
         expect(event.tags).toEqual({ problem: 'service-fallback', step: 'install' });
