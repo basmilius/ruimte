@@ -15,19 +15,6 @@ export function assistantTexts(items: readonly ChatItem[]): string[] {
     return items.flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
 }
 
-/* A body that arrives in the pieces given, so a frame or a line ending can fall across two of them. */
-export function streamBody(...pieces: string[]): ReadableStream<Uint8Array> {
-    const encoder = new TextEncoder();
-    return new ReadableStream({
-        start(controller) {
-            for (const piece of pieces) {
-                controller.enqueue(encoder.encode(piece));
-            }
-            controller.close();
-        }
-    });
-}
-
 /* What a backend reported, with a wait for the first event that fits (one already seen counts). */
 export class BackendEventLog {
     readonly events: BackendEvent[] = [];

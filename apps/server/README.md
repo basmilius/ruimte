@@ -400,9 +400,9 @@ A chat runs the person's installed `claude` through the same Agent SDK backend a
 
 ### NanoGPT
 
-NanoGPT's subscription API is a chat with no CLI (`src/providers/nanogpt-provider.ts`, `src/chat/nanogpt-backend.ts`). `nanogpt.configure` checks a key against `/usage` before keeping it. The daemon only calls `https://nano-gpt.com/api/subscription/v1`, so no setting or redirect reaches pay as you go, and slugs with a suffix (`:online`) are never offered.
+NanoGPT's subscription API is a chat with no CLI (`src/providers/nanogpt-provider.ts`, on the chat completions backend of `@adecore/agents`, with Ruimte's tools from `src/chat/ruimte-api-tools.ts`). `nanogpt.configure` checks a key against `/usage` before keeping it. The daemon only calls `https://nano-gpt.com/api/subscription/v1`, so no setting or redirect reaches pay as you go, and slugs with a suffix (`:online`) are never offered.
 
-The key is a 0600 file in `$RUIMTE_HOME/nanogpt`, which no client reads; only the owner sets or removes it. `supervised` asks for every tool, `auto-accept-edits` and `auto` ask only for commands, `full-access` for none. An `ask_user` tool opens a question card in every mode. Settings (`nanogpt/settings.json`): `roundsPerRun` (40 by default, 5 to 200) and, with continuing on by default, `runs` (5 by default, 1 to 20). Models group by `vendor` (`src/providers/nanogpt-vendor.ts`). Every call appends to `nanogpt/usage/<year>-<month>.jsonl`, which the scanner reads without prices; plan windows come from `/usage` on the limits monitor's clock.
+The key is a 0600 file in `$RUIMTE_HOME/nanogpt`, which no client reads; only the owner sets or removes it. `supervised` asks for every tool, `auto-accept-edits` and `auto` ask only for commands, `full-access` for none. An `ask_user` tool opens a question card in every mode. Settings (`nanogpt/settings.json`): `roundsPerRun` (40 by default, 5 to 200) and, with continuing on by default, `runs` (5 by default, 1 to 20). Models group by `vendor` (`nanoGptVendorOf` of `@adecore/agents`). Every call appends to `nanogpt/usage/<year>-<month>.jsonl`, which the scanner reads without prices; plan windows come from `/usage` on the limits monitor's clock.
 
 ## Voice for a phone
 

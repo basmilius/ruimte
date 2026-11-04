@@ -4,8 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CallToolResult, Tool } from '@modelcontextprotocol/client';
 import { ApiMcpPool, expandMcpEnvironment, readApiMcpConfig, type ApiMcpConnection, type ApiMcpServer, type ConnectApiMcp } from './api-mcp.ts';
-import { apiTextResult, closeApiNetworkTools, executeApiNetworkTool } from './api-network-tools.ts';
-import type { ApiToolCall, ApiToolContext } from './api-tools.ts';
+import { apiTextResult, closeApiNetworkTools, executeApiNetworkTool, type ApiNetworkToolCall, type ApiToolContext } from './api-network-tools.ts';
 import type { ApiWebRequest } from './api-web.ts';
 
 const NEVER_ABORTED = new AbortController().signal;
@@ -24,8 +23,8 @@ const configured: ApiMcpServer = { command: 'configured-server', args: [], env: 
 function tool(name: string): Tool {
     return { name, description: `${name} tool`, inputSchema: { type: 'object', properties: { message: { type: 'string' } } } };
 }
-const listCall: ApiToolCall = { type: 'tool.call', id: 'list', name: 'mcp_list_tools', server: 'local' };
-const echoCall: ApiToolCall = { type: 'tool.call', id: 'call', name: 'mcp_call', server: 'local', tool: 'echo', arguments: '{"message":"hello"}' };
+const listCall: ApiNetworkToolCall = { type: 'tool.call', id: 'list', name: 'mcp_list_tools', server: 'local' };
+const echoCall: ApiNetworkToolCall = { type: 'tool.call', id: 'call', name: 'mcp_call', server: 'local', tool: 'echo', arguments: '{"message":"hello"}' };
 /* A connection with nothing to list or return, which tells `onClose` when it is closed. */
 function emptyConnection(onClose: () => void = () => undefined): ApiMcpConnection {
     return { list: async () => [], call: async () => ({ content: [] }), close: async () => onClose() };

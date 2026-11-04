@@ -3,8 +3,30 @@ import { join } from 'node:path';
 import { isRecord } from '@adecore/utils/record';
 import type { Tool } from '@modelcontextprotocol/client';
 import { ApiMcpPool, mcpResultText, readApiMcpConfig, type ConnectApiMcp } from './api-mcp.ts';
-import type { ApiToolCall, ApiToolContext, ApiToolResult } from './api-tools.ts';
 import { extractApiPage, limitApiText, publicWebUrl, requestPublicWeb, type ApiWebRequest } from './api-web.ts';
+
+interface NetworkCallBase {
+    type: 'tool.call';
+    id: string;
+}
+
+export type ApiNetworkToolCall = NetworkCallBase &
+    (
+        | { name: 'web_search'; query: string }
+        | { name: 'fetch_page'; url: string }
+        | { name: 'mcp_list_tools'; server?: string; tool?: string }
+        | { name: 'mcp_call'; server: string; tool: string; arguments: string }
+    );
+
+export interface ApiToolContext {
+    env: Record<string, string>;
+    home: string;
+}
+
+interface ApiToolResult {
+    output: string;
+    failed: boolean;
+}
 
 interface NetworkDependencies {
     request?: ApiWebRequest;
@@ -61,7 +83,7 @@ function toolListing(server: string, tools: Tool[]): string {
 
 export async function executeApiNetworkTool(
     cwd: string,
-    call: ApiToolCall,
+    call: ApiNetworkToolCall,
     signal?: AbortSignal,
     context: ApiToolContext = fallbackContext,
     dependencies: NetworkDependencies = {}

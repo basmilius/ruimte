@@ -1,9 +1,10 @@
+import type { ChatCompletionsUsage } from '@adecore/agents/chat';
+import { nanoGptVendorOf } from '@adecore/agents/providers';
 import type { ProbeResult } from '@adecore/agents/usage';
 import { DEFAULT_NANOGPT_SETTINGS, NanoGptSettingsSchema, type NanoGptSettings } from '@ruimte/contracts';
 import { z } from 'zod';
 import { readNanoGptUsage } from '../usage/nanogpt-plan.ts';
 import { KeyedApiService, type ApiFetch, type CatalogContent } from './keyed-api-service.ts';
-import { nanoGptVendorOf } from './nanogpt-vendor.ts';
 
 // Deliberately not configurable: neither a setting nor a redirect may route a chat to pay as you go.
 export const NANOGPT_URL = 'https://nano-gpt.com/api/subscription/v1';
@@ -19,17 +20,6 @@ const ModelsSchema = z.object({
     )
 });
 type NanoModel = z.infer<typeof ModelsSchema>['data'][number];
-
-/* One call a chat made, with the counts as NanoGPT reports them. */
-interface NanoGptCall {
-    model: string;
-    session: string;
-    cwd: string;
-    prompt: number;
-    cached: number;
-    completion: number;
-    reasoning: number;
-}
 
 /* A sentence for an HTTP status, never the body, which may quote the request and with it the key. */
 export function nanoHttpError(status: number): Error {
@@ -78,7 +68,7 @@ export class NanoGptService extends KeyedApiService<NanoGptSettings, NanoModel> 
      * NanoGPT counts the OpenAI way, a prompt that holds its cached part and a completion that holds its reasoning. The
      * log keeps the kinds apart, so the cached part leaves the input here. NanoGPT has no cache write to report.
      */
-    async logUsage(call: NanoGptCall): Promise<void> {
+    async logUsage(call: ChatCompletionsUsage): Promise<void> {
         const cacheRead = Math.min(call.prompt, call.cached);
         await this.appendUsage({
             model: call.model,
