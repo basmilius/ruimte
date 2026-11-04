@@ -270,3 +270,37 @@ test('a line between two nodes in a group is selected by a press on it, and the 
         }
     );
 }, 15000);
+
+test('a double-click on the title of a group renames it and adds no text', async () => {
+    await withBrowserFixture(
+        `
+        import { Canvas } from ${JSON.stringify(join(import.meta.dir, 'Canvas.tsx'))};
+        import { defaultCanvasStore } from ${JSON.stringify(join(import.meta.dir, '../state/canvas.ts'))};
+        import { ChatScopeProvider } from ${JSON.stringify(join(import.meta.dir, '../transport/ChatScopeProvider.tsx'))};
+        import { ConnectionContext } from ${JSON.stringify(join(import.meta.dir, '../transport/context.ts'))};
+        import { machineTransport } from ${JSON.stringify(join(import.meta.dir, '../transport/index.ts'))};
+        defaultCanvasStore.setState({
+            viewId: 'fixture', camera: { x: 0, y: 0, zoom: 1 }, texts: {}, order: ['group'],
+            nodes: { group: { id: 'group', kind: 'group', title: 'Group', x: 0, y: 0, w: 600, h: 500 } }
+        });
+        window.canvas = defaultCanvasStore;
+        createRoot(document.getElementById('root')).render(React.createElement(UIProvider, {i18n:i18next}, React.createElement(ConnectionContext.Provider, {value:{endpointId:'fixture',transport:machineTransport('fixture')}}, React.createElement(ChatScopeProvider, null, React.createElement(Canvas)))));
+    `,
+        '.absolute{position:absolute}.relative{position:relative}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.flex{display:flex}[data-canvas-surface]{position:relative;width:800px;height:600px;overflow:hidden}svg{overflow:visible}',
+        async (view) => {
+            await view.evaluate(frame);
+            const [x, y] = await view.evaluate<number[]>(
+                `(() => { const title = [...document.querySelectorAll('[data-node-id="group"] header span')].find((span) => span.textContent === 'Group'); const rect = title.getBoundingClientRect(); return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)]; })()`
+            );
+            for (const clickCount of [1, 2]) {
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount });
+                await view.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount });
+            }
+            await view.evaluate(frame);
+
+            expect(await view.evaluate<boolean>(`document.querySelector('[data-node-id="group"] header input') !== null`)).toBe(true);
+            expect(await view.evaluate<number>('Object.keys(window.canvas.getState().texts).length')).toBe(0);
+            expect(await view.evaluate<string[]>('window.errors')).toEqual([]);
+        }
+    );
+}, 15000);

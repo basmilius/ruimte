@@ -372,8 +372,11 @@ export function Canvas() {
             setActiveGesture(g.kind);
             canvasStore.getState().setGesturing(true);
         }
-        // Capture on text itself so a click still targets it when the browser builds a double-click.
-        const capture = (e.target as HTMLElement).closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? rootRef.current!;
+        /* Capture on the text, or on the part of a node's header that was pressed, so a click still targets it
+           when the browser builds a double-click: the title renames on one. */
+        const target = e.target as HTMLElement;
+        const pressedInNode = g.kind === 'move' && target.closest('[data-node-id]') !== null;
+        const capture = target.closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? (pressedInNode ? target : rootRef.current!);
         captureRef.current = { element: capture, pointerId: e.pointerId };
         capture.setPointerCapture(e.pointerId);
     };
