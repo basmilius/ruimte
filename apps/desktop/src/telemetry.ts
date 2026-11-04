@@ -7,7 +7,9 @@ export type ShellProblem =
     | { kind: 'daemon-start-failed'; reason: string; daemon?: DaemonStartupDiagnostics }
     | { kind: 'daemon-spawn-failed'; code: string }
     | { kind: 'daemon-gave-up'; ends: number }
-    | { kind: 'service-fallback'; step: 'install' | 'start' | 'restart'; reason: string };
+    | { kind: 'service-fallback'; step: 'install' | 'start' | 'restart'; reason: string }
+    | { kind: 'session-cleared'; reason: 'no-key' | 'unauthorized' | 'bad-request' | 'bad-signature' }
+    | { kind: 'session-key-unreadable' };
 
 export interface ShellEvent {
     message: string;
@@ -130,6 +132,22 @@ export function problemEvent(problem: ShellProblem): ShellEvent {
                 fingerprint: ['service-fallback', problem.step],
                 tags: { problem: problem.kind, step: problem.step },
                 extra: { reason: problem.reason }
+            };
+        case 'session-cleared':
+            return {
+                message: `The account session was cleared (${problem.reason})`,
+                level: 'error',
+                fingerprint: ['session-cleared', problem.reason],
+                tags: { problem: problem.kind, reason: problem.reason },
+                extra: {}
+            };
+        case 'session-key-unreadable':
+            return {
+                message: 'The keychain did not hand over the key of the account session',
+                level: 'error',
+                fingerprint: ['session-key-unreadable'],
+                tags: { problem: problem.kind },
+                extra: {}
             };
     }
 }

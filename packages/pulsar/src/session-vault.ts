@@ -5,7 +5,7 @@ import { sessionKeyMessage, sessionRefreshMessage } from './signing.ts';
 /* What is kept between starts. The access token is not: it lives a quarter of an hour and a refresh makes a new one. */
 export interface StoredSession {
     refreshToken: string;
-    // When the session ends whatever happens, counted from sign-in.
+    // When the session ends unless a refresh moves it on.
     expiresAt: number;
     account: Account;
 }
@@ -23,7 +23,24 @@ export interface SessionStore {
 export interface SessionSigner {
     /* The raw public key in base64url, the shape `PublicKeySchema` checks. */
     publicKey: string;
+
+    /*
+     * A key for this run only, standing in for one the keychain would not hand over. It refreshes only
+     * a session it opened itself: one kept from before is bound to the key that could not be read.
+     */
+    temporary?: boolean;
     sign(message: string): Promise<string>;
+}
+
+/* Why a kept session was cleared: past its end, no key to sign with, or the code the address book refused it with. */
+export type SessionForgetReason = 'expired' | 'no-key' | 'unauthorized' | 'bad-request' | 'bad-signature';
+
+/* A kept session that the key for this run cannot refresh; the session stays for a start that can read its key. */
+export class SessionKeyUnavailableError extends Error {
+    constructor() {
+        super('The key of this session cannot be read now');
+        this.name = 'SessionKeyUnavailableError';
+    }
 }
 
 /* A session as the side that uses it sees it: everything but the refresh token. */
@@ -45,6 +62,7 @@ export interface SessionVaultOptions {
      */
     exclusive?: <T>(run: () => Promise<T>) => Promise<T>;
     now?: () => number;
+    onForget?: (reason: SessionForgetReason) => void;
 }
 
 interface Rotation {
@@ -62,8 +80,12 @@ function viewOf(result: SessionResult): SessionView {
     };
 }
 
-function refused(e: unknown): boolean {
-    return e instanceof AddressBookRequestError && (e.code === 'unauthorized' || e.code === 'bad-request' || e.code === 'bad-signature');
+function refusal(e: unknown): SessionForgetReason | null {
+    if (!(e instanceof AddressBookRequestError)) {
+        return null;
+    }
+
+    return e.code === 'unauthorized' || e.code === 'bad-request' || e.code === 'bad-signature' ? e.code : null;
 }
 
 /*
@@ -81,7 +103,10 @@ export class SessionVault {
     private readonly signer: () => Promise<SessionSigner | null>;
     private readonly exclusive: <T>(run: () => Promise<T>) => Promise<T>;
     private readonly now: () => number;
+    private readonly onForget: (reason: SessionForgetReason) => void;
     private current: SessionView | null = null;
+    // The public key of the session this vault opened, which a temporary key may go on refreshing.
+    private openedWith: string | null = null;
     private refreshing: Promise<Rotation> | null = null;
     // Moves on with every sign-out and every session a sign-in kept; a rotation keeps its result only within the epoch it began in.
     private epoch = 0;
@@ -96,6 +121,7 @@ export class SessionVault {
         this.signer = options.signer;
         this.exclusive = options.exclusive ?? ((run) => run());
         this.now = options.now ?? Date.now;
+        this.onForget = options.onForget ?? (() => undefined);
     }
 
     async exchange(login: SessionLoginCode): Promise<SessionView> {
@@ -114,6 +140,7 @@ export class SessionVault {
             throw new Error('Signed out while signing in');
         }
         this.epoch += 1;
+        this.openedWith = signer.publicKey;
         const view = viewOf(result);
         await this.keep(view, result);
         return view;
@@ -128,6 +155,8 @@ export class SessionVault {
             }
             if (stored.expiresAt <= this.now()) {
                 await this.store.write(null);
+                this.onForget('expired');
+
                 return null;
             }
             return { account: stored.account, expiresAt: stored.expiresAt };
@@ -136,9 +165,9 @@ export class SessionVault {
 
     /*
      * A fresh access token. Null when there is no session any more (never signed in, ended, no key to
-     * sign with, or the address book refused the token), which clears what was kept; a network failure
-     * or a clock the address book calls off throws and keeps the session, since the token is still
-     * good once the address book answers again or the clock is right.
+     * sign with, or the address book refused the token), which clears what was kept. A network failure,
+     * a clock the address book calls off or a key the keychain would not hand over this run throws and
+     * keeps the session, since the token is still good once that is right again.
      */
     async refresh(): Promise<SessionView | null> {
         this.refreshing ??= this.exclusive(() => this.rotate()).finally(() => {
@@ -175,17 +204,29 @@ export class SessionVault {
     private async rotate(): Promise<Rotation> {
         const epoch = this.epoch;
         const stored = await this.queue(() => this.store.read());
-        const signer = stored && stored.expiresAt > this.now() ? await this.signer() : null;
-        if (!stored || !signer) {
-            await this.forget(epoch, stored !== null);
+        if (!stored) {
+            await this.forget(epoch, null);
             return { epoch, view: null };
+        }
+        if (stored.expiresAt <= this.now()) {
+            await this.forget(epoch, 'expired');
+            return { epoch, view: null };
+        }
+        const signer = await this.signer();
+        if (!signer) {
+            await this.forget(epoch, 'no-key');
+            return { epoch, view: null };
+        }
+        if (signer.temporary && signer.publicKey !== this.openedWith) {
+            throw new SessionKeyUnavailableError();
         }
         let result: SessionResult;
         try {
             result = await this.client.refresh(await this.refreshRequest(stored.refreshToken, signer));
         } catch (e) {
-            if (refused(e)) {
-                await this.forget(epoch, true);
+            const reason = refusal(e);
+            if (reason) {
+                await this.forget(epoch, reason);
                 return { epoch, view: null };
             }
             throw e;
@@ -200,7 +241,7 @@ export class SessionVault {
     /* Trades a kept refresh token for an access token without keeping what it rotated to. */
     private async spend(stored: StoredSession | null): Promise<string | null> {
         const signer = stored && stored.expiresAt > this.now() ? await this.signer() : null;
-        if (!stored || !signer) {
+        if (!stored || !signer || (signer.temporary && signer.publicKey !== this.openedWith)) {
             return null;
         }
         return (await this.client.refresh(await this.refreshRequest(stored.refreshToken, signer))).accessToken;
@@ -211,14 +252,18 @@ export class SessionVault {
         return { refreshToken, issuedAt, signature: await signer.sign(sessionRefreshMessage(refreshToken, issuedAt)) };
     }
 
-    /* Clears the session, unless a sign-out or a sign-in since the epoch already decided what is kept. */
-    private async forget(epoch: number, kept: boolean): Promise<void> {
+    /*
+     * Clears the session, unless a sign-out or a sign-in since the epoch already decided what is kept.
+     * A reason means a session was kept and goes now; null means there was none to clear.
+     */
+    private async forget(epoch: number, reason: SessionForgetReason | null): Promise<void> {
         if (epoch !== this.epoch) {
             return;
         }
         this.current = null;
-        if (kept) {
+        if (reason) {
             await this.queue(() => this.store.write(null));
+            this.onForget(reason);
         }
     }
 

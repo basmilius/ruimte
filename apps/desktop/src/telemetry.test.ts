@@ -51,6 +51,12 @@ describe('problemEvent', () => {
         expect(event.tags).toEqual({ problem: 'service-fallback', step: 'install' });
         expect(event.fingerprint).toEqual(['service-fallback', 'install']);
     });
+
+    test('says why the account session was cleared', () => {
+        const event = problemEvent({ kind: 'session-cleared', reason: 'bad-signature' });
+        expect(event.tags).toEqual({ problem: 'session-cleared', reason: 'bad-signature' });
+        expect(event.fingerprint).toEqual(['session-cleared', 'bad-signature']);
+    });
 });
 
 describe('shellBeforeSend', () => {

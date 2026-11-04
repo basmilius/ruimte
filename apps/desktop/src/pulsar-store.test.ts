@@ -105,6 +105,8 @@ describe('fileSessionKey', () => {
         const load = fileSessionKey(path, refusingCipher());
         const inMemory = await load();
         expect(inMemory.publicKey).not.toBe(first.publicKey);
+        expect(inMemory.temporary).toBe(true);
+        expect(first.temporary).toBeUndefined();
         expect((await load()).publicKey).toBe(inMemory.publicKey);
         expect(readFileSync(path)).toEqual(onDisk);
         expect((await fileSessionKey(path, fakeCipher())()).publicKey).toBe(first.publicKey);
