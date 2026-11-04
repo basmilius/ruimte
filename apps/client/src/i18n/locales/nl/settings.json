@@ -1156,6 +1156,7 @@
         "tagline": "Space for AI Engineering.",
         "version": "Versie {{version}}",
         "unknownVersion": "onbekend",
+        "byline": "Door <author>Bas Milius</author> · © 2026",
         "details": {
             "title": "Details",
             "copy": "Details kopiëren",

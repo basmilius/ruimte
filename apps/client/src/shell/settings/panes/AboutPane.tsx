@@ -5,7 +5,7 @@ import type { UpdateTrack } from '@ruimte/desktop-bridge';
 import i18next from 'i18next';
 import { ArrowDown, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck, Copy, LoaderCircle, RefreshCw, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { desktop, isDesktop, type Release, type UpdateState } from '@/desktop/bridge';
 import { openOnboarding } from '@/onboarding/open';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -26,6 +26,8 @@ const LINKS = [
     { id: 'report', href: 'https://github.com/basmilius/ruimte/issues/new' },
     { id: 'sponsor', href: SPONSOR_PAGE }
 ];
+
+const AUTHOR_PAGE = 'https://bas.dev';
 
 const ABOUT_ORBITS: readonly EclipseOrbit[] = [
     { size: 230, alpha: 0.1 },
@@ -122,6 +124,15 @@ export function AboutHero() {
                     <h3 className="text-lg font-semibold text-text">Ruimte</h3>
                     <p className="text-xs text-text-muted">{t('about.tagline')}</p>
                     <p className="mt-2.5 text-xs text-text-muted tabular-nums">{t('about.version', { version: version ?? t('about.unknownVersion') })}</p>
+                    <p className="-mt-1 text-2xs text-text-faint">
+                        <Trans
+                            t={t}
+                            i18nKey="about.byline"
+                            components={{
+                                author: <a href={AUTHOR_PAGE} target="_blank" rel="noreferrer" className="hover:text-text-muted hover:underline" />
+                            }}
+                        />
+                    </p>
                 </div>
             </div>
         </header>

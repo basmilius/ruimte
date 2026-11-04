@@ -1156,6 +1156,7 @@
         "tagline": "Space for AI Engineering.",
         "version": "Version {{version}}",
         "unknownVersion": "unknown",
+        "byline": "By <author>Bas Milius</author> · © 2026",
         "details": {
             "title": "Details",
             "copy": "Copy details",
