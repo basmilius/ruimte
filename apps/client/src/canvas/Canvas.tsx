@@ -259,6 +259,7 @@ export function Canvas() {
 
     /* A pan moves the world and the grid by hand, so the canvas and its nodes do not render once per frame for it. */
     useLayoutEffect(() => {
+        let lifted: { animation: Animation; effect: KeyframeEffect } | null = null;
         const follow = (camera: Camera): void => {
             const root = rootRef.current;
             const world = worldRef.current;
@@ -266,7 +267,9 @@ export function Canvas() {
                 return;
             }
             Object.assign(root.style, groundPlacement(camera));
-            world.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`;
+            const transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`;
+            world.style.transform = transform;
+            lifted?.effect.setKeyframes([{ transform }, { transform }]);
             const gesture = gestureRef.current;
             if (gesture?.kind === 'box') {
                 setBox(boxScreenRect(gesture, camera));
@@ -274,15 +277,31 @@ export function Canvas() {
         };
         /* While a pan runs the world is a layer of its own, so a frame moves pixels already drawn
            instead of drawing every node again. Only then: a layer kept through a zoom stays drawn at
-           the scale it had, and its text goes soft. */
+           the scale it had, and its text goes soft. An animation that never moves on its own holds
+           the layer, not `will-change`: Chromium hands an animated transform straight to the
+           compositor, where a changed inline one has it layerize the whole world again every frame,
+           a few ms once a zoomed-out canvas shows a hundred nodes. */
         const lift = (panning: boolean): void => {
-            if (worldRef.current) {
-                worldRef.current.style.willChange = panning ? 'transform' : '';
+            const world = worldRef.current;
+            if (!panning || !world) {
+                // Finished, not cancelled: a cancel rejects `finished`, which nothing here waits on.
+                lifted?.animation.finish();
+                lifted = null;
+                return;
             }
+            if (lifted !== null) {
+                return;
+            }
+            const { transform } = world.style;
+            // A day, as no pan lasts one; an effect that ran out would only leave the inline transform it mirrors.
+            const effect = new KeyframeEffect(world, [{ transform }, { transform }], { duration: 86_400_000 });
+            const animation = new Animation(effect, document.timeline);
+            animation.play();
+            lifted = { animation, effect };
         };
         follow(canvasStore.getState().camera);
         lift(canvasStore.getState().panning);
-        return canvasStore.subscribe((state, previous) => {
+        const unsubscribe = canvasStore.subscribe((state, previous) => {
             if (state.camera !== previous.camera) {
                 follow(state.camera);
             }
@@ -290,6 +309,10 @@ export function Canvas() {
                 lift(state.panning);
             }
         });
+        return () => {
+            unsubscribe();
+            lift(false);
+        };
     }, [canvasStore]);
 
     useEffect(() => {

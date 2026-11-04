@@ -375,6 +375,14 @@
         outline-offset: 2px;
     }
 
+    /* The wheel over a body nobody works in pans the canvas, so its scroller only moves from code
+       (`scrollTop`, the overlay bars). Hidden, Chromium does not composite it: a hundred composited
+       scrollers in sight made every frame of a zoomed-out pan merge layers for 17 ms. The native bar
+       stays hidden either way. */
+    [data-node-id]:not([data-node-active]) [data-node-body] .ade-scroll-viewport {
+        overflow: hidden;
+    }
+
     /* A text element is a `contenteditable`, so its placeholder is drawn from an attribute and its
        caret has to lose to the `cursor-default` the view puts on it while it is not being edited. */
     .text-element[contenteditable='plaintext-only'] {

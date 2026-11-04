@@ -430,6 +430,7 @@ function NodeFrameContent({ id, z }: { id: string; z: number }) {
                 data-node-id={id}
                 data-surface="node"
                 data-paper={isNote ? (notePaperOf(node) ?? 'yellow') : undefined}
+                data-node-active={active || maximized ? '' : undefined}
                 className={clsx(
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
                     'absolute isolate flex flex-col overflow-hidden focus-visible:outline-none',
