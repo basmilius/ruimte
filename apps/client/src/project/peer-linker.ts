@@ -5,9 +5,11 @@ type Requester = Pick<Transport, 'request'>;
 type PeerLinker = (machineId: string, self: Requester) => Promise<void>;
 
 // Loaded on use; the account code reaches back into the transport the callers are drawn from.
-const throughAccount: PeerLinker = async (machineId, self) => (await import('@/pulsar/peer-link')).linkPeerThroughAccount(machineId, self);
+async function throughAccount(machineId: string, self: Requester): Promise<void> {
+    return (await import('@/pulsar/peer-link')).linkPeerThroughAccount(machineId, self);
+}
 
-let linker = throughAccount;
+let linker: PeerLinker = throughAccount;
 
 // One attempt per machine at a time: a second caller (the mirror's renewal, a pill clicked meanwhile) joins it, so one failure costs one round trip to the address book.
 const running = new Map<string, Promise<void>>();

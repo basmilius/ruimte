@@ -274,11 +274,15 @@ void main() {
   }
 }`;
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
 
-const keyOf = (palette: boolean, repel: boolean, warp: boolean) => (palette ? 4 : 0) + (repel ? 2 : 0) + (warp ? 1 : 0);
+function keyOf(palette: boolean, repel: boolean, warp: boolean): number {
+    return (palette ? 4 : 0) + (repel ? 2 : 0) + (warp ? 1 : 0);
+}
 
-const start = (gl: WebGL2RenderingContext, palette: boolean, repel: boolean, warp: boolean) => {
+function start(gl: WebGL2RenderingContext, palette: boolean, repel: boolean, warp: boolean): WebGLProgram | null {
     const defines = `${palette ? '#define PALETTE\n' : ''}${repel ? '#define REPEL\n' : ''}${warp ? '#define WARP\n' : ''}`;
     const program = gl.createProgram();
     const vertex = gl.createShader(gl.VERTEX_SHADER);
@@ -297,9 +301,9 @@ const start = (gl: WebGL2RenderingContext, palette: boolean, repel: boolean, war
     gl.deleteShader(vertex);
     gl.deleteShader(fragment);
     return program;
-};
+}
 
-const finish = (gl: WebGL2RenderingContext, program: WebGLProgram): Program | null => {
+function finish(gl: WebGL2RenderingContext, program: WebGLProgram): Program | null {
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         return null;
     }
@@ -312,12 +316,14 @@ const finish = (gl: WebGL2RenderingContext, program: WebGLProgram): Program | nu
         }
     }
     return { program, uniforms };
-};
+}
 
 // WebGL's `useProgram` reads as a hook to the React Compiler, which would leave the component as written.
-const bindProgram = (gl: WebGL2RenderingContext, program: WebGLProgram) => gl.useProgram(program);
+function bindProgram(gl: WebGL2RenderingContext, program: WebGLProgram): void {
+    gl.useProgram(program);
+}
 
-const Galaxy = ({
+function Galaxy({
     onUnavailable,
     maxFps = 60,
     focal = [0.5, 0.5],
@@ -350,7 +356,7 @@ const Galaxy = ({
     className = '',
     style,
     ...rest
-}: GalaxyProps) => {
+}: GalaxyProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const wakeRef = useRef<(() => void) | null>(null);
@@ -738,6 +744,6 @@ const Galaxy = ({
             <canvas ref={canvasRef} className="galaxy-canvas" aria-hidden="true" />
         </div>
     );
-};
+}
 
 export default Galaxy;

@@ -65,7 +65,9 @@ const CHROMA_SHARE: Partial<Record<NeutralToken, number>> = {
     'term-fg': 0.2
 };
 
-const toGamma = (value: number): number => (value <= 0.0031308 ? 12.92 * value : 1.055 * Math.pow(value, 1 / 2.4) - 0.055);
+function toGamma(value: number): number {
+    return value <= 0.0031308 ? 12.92 * value : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+}
 
 /* OKLCH to a six-digit hex color. The chromas here are far inside sRGB, so clamping a channel never
    moves a hue. */

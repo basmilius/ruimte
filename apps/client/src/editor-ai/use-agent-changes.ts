@@ -17,7 +17,9 @@ import { mountAgentChanges } from './agent-changes-wiring';
 import type { AgentReview } from './agent-review';
 
 const NOT_DRAWN: AgentChangesState = { live: null, hover: null };
-const noSubscription = (): (() => void) => () => undefined;
+function noSubscription(): () => void {
+    return () => undefined;
+}
 
 interface AgentChangesView extends AgentChangesState {
     /* For the card, which stays open while the pointer is in it. */

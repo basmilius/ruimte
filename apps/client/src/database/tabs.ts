@@ -16,7 +16,9 @@ export function databaseTabId(key: string): string {
     return key.startsWith(KEY_PREFIX) ? key.slice(KEY_PREFIX.length) : key;
 }
 
-const focus = (state: TabPool, key: string): TabState => ({ tabs: state.tabs, active: key });
+function focus(state: TabPool, key: string): TabState {
+    return { tabs: state.tabs, active: key };
+}
 
 /*
  * What a database view asked for, as loose tabs, with the one to bring to the front; the tab limit applies

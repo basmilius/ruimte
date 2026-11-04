@@ -8,12 +8,16 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 // The pets are a built-in the client imports, so their client code is held to the client's rules.
 const SOURCE_FOLDERS = ['apps/client/src', 'extensions/pets/client'];
-const SOURCES = SOURCE_FOLDERS.flatMap((folder) => [...new Glob(`${folder}/**/*.{ts,tsx}`).scanSync(ROOT)])
-    // The rules below name files with forward slashes, which Windows does not hand back.
-    .map((path) => path.replaceAll('\\', '/'))
-    .filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'))
-    .sort()
-    .map((path) => ({ path, text: readFileSync(join(ROOT, path), 'utf8') }));
+function clientSources(): Array<{ path: string; text: string }> {
+    return (
+        SOURCE_FOLDERS.flatMap((folder) => [...new Glob(`${folder}/**/*.{ts,tsx}`).scanSync(ROOT)])
+            // The rules below name files with forward slashes, which Windows does not hand back.
+            .map((path) => path.replaceAll('\\', '/'))
+            .filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'))
+            .sort()
+            .map((path) => ({ path, text: readFileSync(join(ROOT, path), 'utf8') }))
+    );
+}
 
 const KEY_LISTENERS = new Set([
     'apps/client/src/shell/app-shortcuts.ts',
@@ -40,8 +44,45 @@ const COLOR_LITERALS = new Set([
 // A hex color, or a color function given numbers rather than a token, anywhere in a string.
 const COLOR_LITERAL = /(?:^|[\s[(:,'"])#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z])|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(\s*[\d.]/i;
 
-const problems: string[] = [];
-for (const { path, text } of SOURCES) {
+export interface TopLevelArrow {
+    line: number;
+    name: string;
+}
+
+/*
+ * Every top-level `const` bound straight to an arrow or function expression, which the root CLAUDE.md
+ * wants as a function declaration. What a factory or a wrapper returns stays a `const`.
+ */
+export function topLevelArrows(path: string, text: string): TopLevelArrow[] {
+    const found: TopLevelArrow[] = [];
+    const lineOf = (start: number): number => text.slice(0, start).split('\n').length;
+
+    for (const statement of parseSync(path, text).program.body) {
+        const declaration = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement;
+
+        if (declaration?.type !== 'VariableDeclaration' || declaration.kind !== 'const') {
+            continue;
+        }
+
+        for (const declarator of declaration.declarations) {
+            let init = declarator.init;
+
+            while (init?.type === 'ParenthesizedExpression') {
+                init = init.expression;
+            }
+
+            if (declarator.id.type === 'Identifier' && (init?.type === 'ArrowFunctionExpression' || init?.type === 'FunctionExpression')) {
+                found.push({ line: lineOf(declarator.start), name: declarator.id.name });
+            }
+        }
+    }
+
+    return found;
+}
+
+/* What a file of the client breaks of the rules above, one line per problem. */
+export function conventionProblems(path: string, text: string): string[] {
+    const problems: string[] = [];
     if (/(window|document)\.addEventListener\(\s*['"]key(down|up)['"]/.test(text) && !KEY_LISTENERS.has(path)) {
         problems.push(`${path}: bind window shortcuts in the designated shortcut modules`);
     }
@@ -74,8 +115,16 @@ for (const { path, text } of SOURCES) {
             }
         }).visit(program);
     }
+    for (const arrow of topLevelArrows(path, text)) {
+        problems.push(`${path}:${arrow.line}: declare ${arrow.name} as a function, not a const bound to an arrow`);
+    }
+    return problems;
 }
-for (const problem of problems) {
-    console.error(problem);
+
+if (import.meta.main) {
+    const problems = clientSources().flatMap(({ path, text }) => conventionProblems(path, text));
+    for (const problem of problems) {
+        console.error(problem);
+    }
+    process.exitCode = problems.length === 0 ? 0 : 1;
 }
-process.exitCode = problems.length === 0 ? 0 : 1;

@@ -78,8 +78,9 @@ export const DesignElementSchema = z.object({
 });
 export type DesignElement = z.infer<typeof DesignElementSchema>;
 
-const message = <Method extends string, Params extends z.ZodType>(method: Method, params: Params) =>
-    z.object({ jsonrpc: z.literal('2.0'), method: z.literal(method), params });
+function message<Method extends string, Params extends z.ZodType>(method: Method, params: Params) {
+    return z.object({ jsonrpc: z.literal('2.0'), method: z.literal(method), params });
+}
 
 const PageMessageSchema = z.discriminatedUnion('method', [
     message(DESIGN_METHODS.ready, z.object({ canvas: z.boolean(), tweaks: z.unknown() })),

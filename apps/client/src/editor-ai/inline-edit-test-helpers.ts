@@ -4,7 +4,10 @@ import type { DiskText } from '@/state/text-drafts';
 import type { InlineEditRecord } from './inline-edit-record';
 import type { InlineEditDeps } from './inline-edit-session';
 
-export const at = (line: number, character: number) => ({ line, character });
+export function at(line: number, character: number): { line: number; character: number } {
+    return { line, character };
+}
+
 export const TEXT = ['function skillOverlap(have, need) {', '  if (need.length === 0) return 1;', '  return hits / need.length;', '}', ''].join('\n');
 export const SELECTED = '  if (need.length === 0) return 1;\n  return hits / need.length;';
 export const RANGE = { start: at(1, 0), end: at(2, 28) };
