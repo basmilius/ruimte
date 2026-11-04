@@ -123,11 +123,14 @@ export async function decideAccess(request: Request, remoteAddress: string, opti
         return { ok: false, status: 403, reason: 'Origin not allowed' };
     }
     const reachability = reachabilityOf(remoteAddress);
-    const token = bearerOf(request) || (new URL(request.url).searchParams.get('token') ?? '');
+    const bearer = bearerOf(request);
+    // A browser cannot put a header on a WebSocket or an `<img>`, so a ticket may ride in the URL; the
+    // local secret never does, since a URL ends up in logs, history and copied links.
+    const token = bearer || (new URL(request.url).searchParams.get('token') ?? '');
     if (!token) {
         return { ok: false, status: 401, reason: 'Only the app on this machine or a device its account let in gets in' };
     }
-    if (sameSecret(token, options.localSecret)) {
+    if (bearer && sameSecret(bearer, options.localSecret)) {
         return { ok: true, access: { reachability, sessionId: null } };
     }
     if (use === 'local') {

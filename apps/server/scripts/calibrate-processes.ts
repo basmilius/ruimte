@@ -24,7 +24,9 @@ await mkdir(folder, { recursive: true });
 const file = join(folder, `calibration-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
 
 const secret = (await readLocalSecret(values.home)) ?? '';
-const socket = new WebSocket(`ws://127.0.0.1:${values.port}/ws?token=${encodeURIComponent(secret)}`);
+// The local secret goes in the Authorization header, the only place the daemon takes it from.
+const socketOptions: Bun.WebSocketOptions = { headers: { authorization: `Bearer ${secret}` } };
+const socket = new WebSocket(`ws://127.0.0.1:${values.port}/ws`, socketOptions as unknown as string[]);
 const pending = new Map<string, (result: unknown) => void>();
 let alerts: ProcessesAlerts['alerts'] = [];
 let lines = 0;

@@ -114,7 +114,9 @@ describe('access', () => {
     test('the local secret gets in, a loopback address alone does not', async () => {
         const options = { localSecret: 'the-local-secret', tickets: NO_TICKETS };
         const request = (token?: string, origin?: string) =>
-            new Request(`http://box:4210/ws${token ? `?token=${token}` : ''}`, { headers: { host: 'box:4210', ...(origin ? { origin } : {}) } });
+            new Request('http://box:4210/ws', {
+                headers: { host: 'box:4210', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(origin ? { origin } : {}) }
+            });
 
         // A tunnel or a reverse proxy makes every visitor loopback, so the address is no proof.
         expect(await decideAccess(request(), '127.0.0.1', options, 'socket')).toMatchObject({ ok: false, status: 401 });
@@ -126,6 +128,15 @@ describe('access', () => {
         expect(await decideAccess(request(), '192.168.1.20', options, 'socket')).toMatchObject({ ok: false, status: 401 });
         expect(await decideAccess(request(undefined, 'https://evil.example'), '127.0.0.1', options, 'socket')).toMatchObject({ ok: false, status: 403 });
         expect(await decideAccess(request('bogus'), '192.168.1.20', options, 'socket')).toMatchObject({ ok: false, status: 401 });
+    });
+
+    test('the local secret in the URL gets in nowhere', async () => {
+        const options = { localSecret: 'the-local-secret', tickets: NO_TICKETS };
+        const request = (path: string) => new Request(`http://box:4210${path}?token=the-local-secret`, { headers: { host: 'box:4210' } });
+
+        expect(await decideAccess(request('/ws'), '127.0.0.1', options, 'socket')).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request('/fs/file'), '127.0.0.1', options, 'bytes')).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request('/machine/registration'), '127.0.0.1', options, 'local')).toMatchObject({ ok: false, status: 403 });
     });
 
     test('a ticket gets in where the secret does', async () => {

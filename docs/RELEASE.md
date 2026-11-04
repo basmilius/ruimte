@@ -15,7 +15,7 @@ The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the
 - A person's update track (Settings, About) sets `allowPrerelease`: Stable reads the Latest release, Pre-release the newest entry of any kind. Until they choose, a build with a `-` in its version follows Pre-release. The notes follow the same choice, and Stable also keeps the notes of a beta that is still running.
 - electron-updater reads `https://github.com/basmilius/ruimte/releases.atom`, which GitHub caches for a few minutes. Wait before suspecting the updater.
 
-When a published release fails to start, run `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port, wait for `/health`, open a socket with `?protocol=N&token=<local.key>` and check that `endpoint.info` carries `protocol`. A client refuses a machine without it.
+When a published release fails to start, run `Contents/Resources/bin/ruimte` from the arm64 zip with a temporary `RUIMTE_HOME` and another port, wait for `/health`, open a socket with `?protocol=N` and `Authorization: Bearer <local.key>` (the daemon never takes the local secret from a URL) and check that `endpoint.info` carries `protocol`. A client refuses a machine without it.
 
 ## Secrets in CI
 

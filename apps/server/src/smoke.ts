@@ -8,11 +8,13 @@ import { DEFAULT_HOST, DEFAULT_PORT, parseServerArgs } from './config.ts';
 const address = process.argv[2] ?? `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`;
 // The daemon asks this machine's processes for the secret of its home (RUIMTE_HOME), not for their address.
 const secret = await readLocalSecret(parseServerArgs([]).home);
-const url = secret === null ? address : `${address}?token=${encodeURIComponent(secret)}`;
+const url = address;
 const sessionId = `smoke-${Date.now()}`;
 const SCREEN_DELAY_MS = 500;
 
-const socket = new WebSocket(url);
+// The daemon takes the local secret from the Authorization header only; Bun's constructor takes headers, the DOM's type does not.
+const options: Bun.WebSocketOptions = secret === null ? {} : { headers: { authorization: `Bearer ${secret}` } };
+const socket = new WebSocket(url, options as unknown as string[]);
 const pending = new Map<string, { resolve(result: unknown): void; reject(error: Error): void }>();
 let nextId = 1;
 let output = '';

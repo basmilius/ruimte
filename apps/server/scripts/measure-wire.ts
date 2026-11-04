@@ -120,7 +120,9 @@ async function capture(repository: string, chatSource: string): Promise<string[]
         let socket: WebSocket | null = null;
         for (let attempt = 0; attempt < 50 && socket === null; attempt++) {
             socket = await new Promise<WebSocket | null>((resolve) => {
-                const candidate = new WebSocket(`ws://127.0.0.1:${PORT}/ws?token=${encodeURIComponent(secret ?? '')}`);
+                // The local secret goes in the Authorization header, the only place the daemon takes it from.
+                const options: Bun.WebSocketOptions = { headers: { authorization: `Bearer ${secret ?? ''}` } };
+                const candidate = new WebSocket(`ws://127.0.0.1:${PORT}/ws`, options as unknown as string[]);
                 candidate.onopen = () => resolve(candidate);
                 candidate.onerror = () => resolve(null);
             });

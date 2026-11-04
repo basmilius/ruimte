@@ -102,8 +102,9 @@ class RemoteClient {
 
     /* `token` is the local secret of the daemon's home or a ticket a direct channel handed out. */
     static async connect(token: string | null, port: number = PORT): Promise<RemoteClient> {
-        const query = token === null ? '' : `?token=${encodeURIComponent(token)}`;
-        const socket = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`);
+        // A header, since the daemon never takes the local secret from a URL; Bun's constructor takes headers, the DOM's type does not.
+        const options: Bun.WebSocketOptions = token === null ? {} : { headers: { authorization: `Bearer ${token}` } };
+        const socket = new WebSocket(`ws://127.0.0.1:${port}/ws`, options as unknown as string[]);
         await new Promise<void>((resolve, reject) => {
             socket.onopen = () => resolve();
             socket.onclose = (event) => reject(new Error(`The daemon closed the socket: ${event.code} ${event.reason}`));
@@ -1550,8 +1551,10 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         await Bun.write(join(folder, 'here.gif'), Buffer.from(hereGif, 'base64'));
         await inContainer(['sh', '-c', `echo ${thereGif} | base64 -d > ${REPO}/there.gif`]);
 
-        const localSecret = encodeURIComponent((await readLocalSecret(home)) ?? '');
-        const mineBytes = await fetch(`${LOCAL_URL}/fs/file?path=${encodeURIComponent(join(folder, 'here.gif'))}&v=1-1&token=${localSecret}`);
+        const localSecret = (await readLocalSecret(home)) ?? '';
+        const mineBytes = await fetch(`${LOCAL_URL}/fs/file?path=${encodeURIComponent(join(folder, 'here.gif'))}&v=1-1`, {
+            headers: { authorization: `Bearer ${localSecret}` }
+        });
         expect(Buffer.from(await mineBytes.arrayBuffer()).toString('base64')).toBe(hereGif);
         const theirsBytes = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1&token=${encodeURIComponent(ticket)}`);
         expect(Buffer.from(await theirsBytes.arrayBuffer()).toString('base64')).toBe(thereGif);
