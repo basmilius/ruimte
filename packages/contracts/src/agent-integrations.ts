@@ -52,10 +52,8 @@ export const AgentIntegrationSetPayloadSchema = z.object({
     provider: AgentKindSchema,
     on: z.boolean()
 });
-export type AgentIntegrationSetPayload = z.infer<typeof AgentIntegrationSetPayloadSchema>;
 
 export const AgentIntegrationSetResultSchema = z.object({
     summary: AgentIntegrationsSummarySchema,
     report: z.array(AgentIntegrationReportSchema)
 });
-export type AgentIntegrationSetResult = z.infer<typeof AgentIntegrationSetResultSchema>;

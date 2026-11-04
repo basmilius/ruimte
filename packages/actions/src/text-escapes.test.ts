@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { escapeText, unescapeText } from './text-escapes.ts';
+import { unescapeText } from './text-escapes.ts';
 
 describe('unescapeText', () => {
     test('reads \\n, \\t and \\\\', () => {
@@ -21,13 +21,5 @@ describe('unescapeText', () => {
 
     test('a real newline passes through', () => {
         expect(unescapeText('a\nb')).toBe('a\nb');
-    });
-});
-
-describe('escapeText', () => {
-    test('survives a round trip byte for byte', () => {
-        for (const body of ['plain', 'a\nb', 'a\\nb', 'C:\\Users\\n', '\\', 'tab\there']) {
-            expect(unescapeText(escapeText(body))).toBe(body);
-        }
     });
 });

@@ -34,13 +34,6 @@ export const REQUIRED_FIELD: Partial<Record<NodeNewKind, KindField>> = {
     routine: 'routine'
 };
 
-/* Which kinds a field goes with, from the same table `run` refuses against, so a guide cannot claim another pairing. */
-export function kindsFor(field: KindField): string {
-    return NODE_NEW_KINDS.filter((kind) => KIND_FIELDS[kind].includes(field))
-        .map((kind) => (REQUIRED_FIELD[kind] === field ? `${kind} (required)` : kind))
-        .join(', ');
-}
-
 /* What the title falls back to without `title`, in the order `run` picks it. */
 function untitled(kind: NodeNewKind): string {
     if (kind === 'drawing' || kind === 'diagram') {

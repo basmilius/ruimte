@@ -134,14 +134,12 @@ export type EndpointInfo = z.infer<typeof EndpointInfoSchema>;
  * string rather than a list, so a machine that does not know a newer kind counts nothing instead of refusing.
  */
 export const EndpointInfoPayloadSchema = z.object({ client: z.string().max(32).optional() });
-export type EndpointInfoPayload = z.infer<typeof EndpointInfoPayloadSchema>;
 
 export const USAGE_CLIENT_KINDS = ['desktop', 'ios', 'station'] as const;
 export type UsageClientKind = (typeof USAGE_CLIENT_KINDS)[number];
 
 // `usage.startup`: how long the desktop app took from its start to its first connection, once per start.
 export const UsageStartupPayloadSchema = z.object({ ms: z.number().int().min(1).max(USAGE_MAX_STARTUP_MS) });
-export type UsageStartupPayload = z.infer<typeof UsageStartupPayloadSchema>;
 
 // `usage.count` and `usage.timing`: what only the app on this machine sees, for its anonymous usage counts.
 export const UsageCountPayloadSchema = z.object({ counter: z.enum(USAGE_CLIENT_COUNTERS) });
@@ -157,14 +155,12 @@ export const PairPayloadSchema = z.object({
     // The client's ed25519 public key, raw and base64url. A client that cannot sign leaves it off and is given a session token instead.
     publicKey: z.string().optional()
 });
-export type PairPayload = z.infer<typeof PairPayloadSchema>;
 
 export const PairResultSchema = z.object({
     // Only for a client that registered no public key; a key holder signs for a ticket per connection instead.
     sessionToken: z.string().min(1).optional(),
     endpoint: EndpointInfoSchema
 });
-export type PairResult = z.infer<typeof PairResultSchema>;
 
 /*
  * The switches a person sets on a machine, one schema for both requests that change them. Every field
@@ -194,7 +190,6 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     icon: ProjectIconChoiceSchema.nullable(),
     ...EndpointSettingsSchema.shape
 });
-export type EndpointSetIdentityPayload = z.infer<typeof EndpointSetIdentityPayloadSchema>;
 
 export const EndpointChangedEventSchema = z.object({
     id: z.string().min(1),
@@ -227,7 +222,6 @@ export const EndpointSetNodeSizePayloadSchema = z.object({
     kind: NodeKindSchema,
     size: z.object({ w: NodeSideSchema(NODE_SIZE_MIN.w), h: NodeSideSchema(NODE_SIZE_MIN.h) }).nullable()
 });
-export type EndpointSetNodeSizePayload = z.infer<typeof EndpointSetNodeSizePayloadSchema>;
 
 /*
  * `endpoint.closedLidRule`: the sudoers rule for exactly `pmset -a disablesleep 1` and `0`. Local secret
@@ -239,10 +233,8 @@ export const EndpointClosedLidRulePayloadSchema = z.object({
     // The line macOS shows in its dialog, in the language of the asking client; left out, an English one.
     prompt: z.string().min(1).max(300).optional()
 });
-export type EndpointClosedLidRulePayload = z.infer<typeof EndpointClosedLidRulePayloadSchema>;
 
 export const PairingOriginSchema = z.enum(['link', 'statement']);
-export type PairingOrigin = z.infer<typeof PairingOriginSchema>;
 
 export const AuthSessionSchema = z.object({
     id: z.string().min(1),
@@ -266,7 +258,6 @@ export type AuthSessionsResult = z.infer<typeof AuthSessionsResultSchema>;
 export const AuthRevokePayloadSchema = z.object({
     id: z.string().min(1)
 });
-export type AuthRevokePayload = z.infer<typeof AuthRevokePayloadSchema>;
 
 // `POST /auth/challenge`. The daemon's signature over the nonce makes its id a proof, not a string off the wire.
 export const AuthChallengeResultSchema = z.object({
@@ -314,12 +305,10 @@ export function clientAuthMessage(daemonId: string, challenge: string, publicKey
 export const EndpointSignRegistrationPayloadSchema = z.object({
     accountId: z.string().min(1).max(64)
 });
-export type EndpointSignRegistrationPayload = z.infer<typeof EndpointSignRegistrationPayloadSchema>;
 
 export const EndpointSignRegistrationResultSchema = z.object({
     registration: RegisterMachinePayloadSchema
 });
-export type EndpointSignRegistrationResult = z.infer<typeof EndpointSignRegistrationResultSchema>;
 
 /*
  * `endpoint.signPeerAccess`: this machine asking to work in `machineId`. Any client may ask, since it is a
@@ -330,7 +319,6 @@ export const EndpointSignPeerAccessPayloadSchema = z.object({
     machineId: MachineIdSchema,
     nonce: NonceSchema
 });
-export type EndpointSignPeerAccessPayload = z.infer<typeof EndpointSignPeerAccessPayloadSchema>;
 
 // Both signatures are over the same request: one by the peer key, one by this machine's own key.
 export const EndpointSignPeerAccessResultSchema = z.object({
@@ -339,7 +327,6 @@ export const EndpointSignPeerAccessResultSchema = z.object({
     peerSignature: SignatureSchema,
     machineSignature: SignatureSchema
 });
-export type EndpointSignPeerAccessResult = z.infer<typeof EndpointSignPeerAccessResultSchema>;
 
 /*
  * `endpoint.leaveAccount`, local secret only. Every client a statement let in loses its access until the
@@ -348,4 +335,3 @@ export type EndpointSignPeerAccessResult = z.infer<typeof EndpointSignPeerAccess
 export const EndpointLeaveAccountResultSchema = z.object({
     revoked: z.number().int().min(0)
 });
-export type EndpointLeaveAccountResult = z.infer<typeof EndpointLeaveAccountResultSchema>;

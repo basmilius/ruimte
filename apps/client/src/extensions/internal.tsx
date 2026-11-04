@@ -9,7 +9,6 @@ import {
     type BuiltInThemeContribution,
     type CanvasLayerContribution,
     type CanvasLayerProps,
-    type PanelContribution,
     type SettingsSectionContribution,
     type SharedStorageContribution,
     type ViewAccessoryContribution,
@@ -21,10 +20,6 @@ import {
  * core reaches it through these slots alone, so it never imports one.
  */
 export type LazyComponent<Props = {}> = () => Promise<{ default: ComponentType<Props> }>;
-
-export function definePanel(panel: Omit<PanelContribution, 'component'> & { component: LazyComponent }): () => void {
-    return contribute('panels', { ...panel, component: lazy(panel.component) });
-}
 
 export function defineSettingsPage(page: Omit<SettingsSectionContribution, 'component'> & { component: LazyComponent }): () => void {
     return contribute('settingsSections', { ...page, component: lazy(page.component) });

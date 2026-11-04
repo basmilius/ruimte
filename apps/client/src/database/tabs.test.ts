@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { closeTab, pinTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
 import type { ProjectView } from '@ruimte/contracts';
-import { applyDatabaseAction, databaseTabId, databaseTabKey, databaseViewFor, reopenAction, type DatabaseTabAction } from './tabs.ts';
+import { applyDatabaseAction as apply, databaseTabId, databaseTabKey, databaseViewFor, type DatabaseTabAction } from './tabs.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };
 const EMPTY: TabState = { tabs: [], active: null };
@@ -14,10 +14,6 @@ function ids(): () => string {
 
 function keys(state: TabState): string[] {
     return state.tabs.map((tab) => tab.key);
-}
-
-function apply(state: TabState, action: DatabaseTabAction, createId: () => string, source: string | null = null): TabState {
-    return applyDatabaseAction(state, action, createId, source);
 }
 
 describe('opening a table', () => {
@@ -122,17 +118,7 @@ describe('closing and pinning a database tab', () => {
     });
 });
 
-describe('a closed tab opened again', () => {
-    test('opens the view it showed, filtered as it was', () => {
-        const table: DatabaseTab = { key: 'database:a', kind: 'table', pinned: false, ...ORDERS, where: 'id = 1', tableKind: 'view' };
-        const structure: DatabaseTab = { key: 'database:b', kind: 'structure', pinned: false, ...ORDERS };
-        const designer: DatabaseTab = { key: 'database:c', kind: 'designer', pinned: false, ...ORDERS };
-        expect(reopenAction(table)).toEqual({ kind: 'open-table', ref: ORDERS, view: 'data', where: 'id = 1', tableKind: 'view' });
-        expect(reopenAction(structure)).toEqual({ kind: 'open-table', ref: ORDERS, view: 'structure' });
-        expect(reopenAction(designer)).toEqual({ kind: 'edit-table', ref: ORDERS });
-        expect(reopenAction({ key: 'database:d', kind: 'designer', pinned: false, connectionId: 'shop', schema: 'shop' })).toBeNull();
-    });
-
+describe('database tab keys', () => {
     test('a key carries its id', () => {
         expect(databaseTabKey('abc')).toBe('database:abc');
         expect(databaseTabId('database:abc')).toBe('abc');

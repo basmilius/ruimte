@@ -103,7 +103,6 @@ export const ProjectTemplatesSchema = z.object({
 export type ProjectTemplates = z.infer<typeof ProjectTemplatesSchema>;
 
 export const TemplateListPayloadSchema = z.object({ projectId: ProjectIdSchema.optional() });
-export type TemplateListPayload = z.infer<typeof TemplateListPayloadSchema>;
 
 /*
  * `project` is null without a `projectId`, and for a project this client does not hold. It is null as well
@@ -181,11 +180,9 @@ export const PersonalTemplatesFileSchema = z.looseObject({
     disabled: z.array(z.string()).optional(),
     settings: z.looseObject({}).optional()
 });
-export type PersonalTemplatesFile = z.infer<typeof PersonalTemplatesFileSchema>;
 
 export const ProjectTemplatesFileSchema = z.looseObject({
     version: z.number().int().positive(),
     live: z.array(z.unknown()).optional(),
     postfix: z.array(z.unknown()).optional()
 });
-export type ProjectTemplatesFile = z.infer<typeof ProjectTemplatesFileSchema>;

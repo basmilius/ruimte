@@ -37,13 +37,11 @@ export const ComputerUseSetEnabledPayloadSchema = z.object({
     // The interface language of the client that turned it on, which the helper's pill then speaks.
     language: z.string().min(2).max(16).optional()
 });
-export type ComputerUseSetEnabledPayload = z.infer<typeof ComputerUseSetEnabledPayloadSchema>;
 
 // The interface language of a client changed; the machine's overlay speaks it from then on, while computer use is on.
 export const ComputerSetLanguagePayloadSchema = z.object({
     language: z.string().min(2).max(16)
 });
-export type ComputerSetLanguagePayload = z.infer<typeof ComputerSetLanguagePayloadSchema>;
 
 /* The two macOS grants the helper needs; a person gives each in System Settings, on the Mac itself. */
 export const ComputerGrantSchema = z.enum(['accessibility', 'screenRecording']);
@@ -53,7 +51,6 @@ export type ComputerGrant = z.infer<typeof ComputerGrantSchema>;
 export const ComputerRequestGrantPayloadSchema = z.object({
     grant: ComputerGrantSchema
 });
-export type ComputerRequestGrantPayload = z.infer<typeof ComputerRequestGrantPayloadSchema>;
 
 export const ComputerRequestGrantResultSchema = ComputerUseStatusSchema.extend({
     // macOS showed its own dialog, whose button opens the pane; absent from a machine that never says.
@@ -68,7 +65,6 @@ export type ComputerControlAction = z.infer<typeof ComputerControlActionSchema>;
 export const ComputerControlPayloadSchema = z.object({
     action: ComputerControlActionSchema
 });
-export type ComputerControlPayload = z.infer<typeof ComputerControlPayloadSchema>;
 
 /*
  * An agent wants to operate an app it has not been let into. One card per agent and app, whatever
@@ -105,13 +101,11 @@ export const ComputerAnswerPayloadSchema = z.object({
     requestId: z.string().min(1),
     choice: ComputerApprovalChoiceSchema
 });
-export type ComputerAnswerPayload = z.infer<typeof ComputerAnswerPayloadSchema>;
 
 // False when the card was gone already: another client was first, or it expired.
 export const ComputerAnswerResultSchema = z.object({
     accepted: z.boolean()
 });
-export type ComputerAnswerResult = z.infer<typeof ComputerAnswerResultSchema>;
 
 /* An app as a person let it in, or as the machine first saw it running shells, and when. */
 export const ComputerAppEntrySchema = z.object({
@@ -157,4 +151,3 @@ export type ComputerRevokePayload = z.infer<typeof ComputerRevokePayloadSchema>;
 export const ComputerRevokeResultSchema = z.object({
     removed: z.boolean()
 });
-export type ComputerRevokeResult = z.infer<typeof ComputerRevokeResultSchema>;

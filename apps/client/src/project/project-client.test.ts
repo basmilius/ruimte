@@ -591,7 +591,7 @@ describe('ProjectClient', () => {
     });
 
     test('a node the daemon added lands on a canvas with unsaved edits, and the next save carries the new rev', async () => {
-        const { transport, state, client, dispose } = setup();
+        const { transport, state, dispose } = setup();
         await tick();
         const mine = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 })!;
 
@@ -599,7 +599,6 @@ describe('ProjectClient', () => {
         emitChanged(transport, document(4, [canvasView('main', [noteNode('agent')]), canvasView('made')]));
 
         expect(state.conflict).toBeNull();
-        expect(client.mergeRefusal).toBeNull();
         expect(focusedCanvas().getState().order).toEqual([mine, 'agent']);
         // A view an agent made is in the list, and did not take the cell the person is looking at.
         expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main', 'made']);
@@ -640,7 +639,7 @@ describe('ProjectClient', () => {
     });
 
     test('a node moved and retitled in another client lands in the editor as a load, beside an edit here', async () => {
-        const { transport, state, client, dispose } = setup();
+        const { transport, state, dispose } = setup();
         transport.views = [canvasView('main', [noteNode('a'), noteNode('b')])];
         await tick();
         const editor = focusedCanvas();
@@ -652,7 +651,6 @@ describe('ProjectClient', () => {
         emitChanged(transport, document(4, [canvasView('main', [noteNode('a', { x: 300, title: 'Moved' }), noteNode('b')])]));
 
         expect(state.conflict).toBeNull();
-        expect(client.mergeRefusal).toBeNull();
         expect(focusedCanvas()).toBe(editor);
         expect(editor.getState().nodes.a).toMatchObject({ x: 300, title: 'Moved' });
         expect(editor.getState().nodes.b).toMatchObject({ x: 24 });

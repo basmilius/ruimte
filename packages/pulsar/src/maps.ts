@@ -129,4 +129,3 @@ export const MapsErrorCodeSchema = z.enum([
 export type MapsErrorCode = z.infer<typeof MapsErrorCodeSchema>;
 
 export const MapsErrorSchema = z.object({ error: z.object({ code: MapsErrorCodeSchema, message: z.string().max(512) }) });
-export type MapsError = z.infer<typeof MapsErrorSchema>;

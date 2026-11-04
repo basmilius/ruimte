@@ -17,7 +17,6 @@ export const LanDoorHelloSchema = z.object({
     type: z.literal('hello'),
     nonce: NonceSchema
 });
-export type LanDoorHello = z.infer<typeof LanDoorHelloSchema>;
 
 /*
  * A signal for the machine, signed by the client over `signalMessage(from, machineKey, envelope)` as a
@@ -29,7 +28,6 @@ export const LanDoorSignalSchema = z.object({
     envelope: SignalEnvelopeSchema,
     signature: SignatureSchema
 });
-export type LanDoorSignal = z.infer<typeof LanDoorSignalSchema>;
 
 export const LanDoorClientFrameSchema = z.discriminatedUnion('type', [LanDoorHelloSchema, LanDoorSignalSchema]);
 export type LanDoorClientFrame = z.infer<typeof LanDoorClientFrameSchema>;
@@ -41,7 +39,6 @@ export const LanDoorProofSchema = z.object({
     publicKey: PublicKeySchema,
     signature: SignatureSchema
 });
-export type LanDoorProof = z.infer<typeof LanDoorProofSchema>;
 
 /*
  * A signal from the machine, signed over `signalMessage(machineKey, clientKey, envelope)`. A refusal is
@@ -52,7 +49,6 @@ export const LanDoorAnswerSchema = z.object({
     envelope: SignalEnvelopeSchema,
     signature: SignatureSchema
 });
-export type LanDoorAnswer = z.infer<typeof LanDoorAnswerSchema>;
 
 export const LanDoorErrorCodeSchema = z.enum([
     // The frame did not parse, came out of order (a signal before `hello`) or named a second key.
@@ -68,7 +64,6 @@ export const LanDoorErrorSchema = z.object({
     code: LanDoorErrorCodeSchema,
     message: z.string().max(512)
 });
-export type LanDoorError = z.infer<typeof LanDoorErrorSchema>;
 
 export const LanDoorMachineFrameSchema = z.discriminatedUnion('type', [LanDoorProofSchema, LanDoorAnswerSchema, LanDoorErrorSchema]);
 export type LanDoorMachineFrame = z.infer<typeof LanDoorMachineFrameSchema>;

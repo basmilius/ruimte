@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import {
     LanDoorMachineFrameSchema,
@@ -9,7 +10,7 @@ import {
     type SignalAccess
 } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
-import { closeQuietly, messageOf, withAccess, type SignalingOpener } from './signaling';
+import { closeQuietly, withAccess, type SignalingOpener } from './signaling';
 
 // 24 random bytes, comfortably above the 16 the door asks for.
 const NONCE_BYTES = 24;

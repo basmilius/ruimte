@@ -34,7 +34,6 @@ export const TerminalPrepareTargetSchema = z.object({
     title: z.string(),
     cwd: z.string().min(1)
 });
-export type TerminalPrepareTarget = z.infer<typeof TerminalPrepareTargetSchema>;
 export const TerminalPreparePreviewResultSchema = z.object({
     machineId: z.string().min(1),
     machine: z.string().min(1),

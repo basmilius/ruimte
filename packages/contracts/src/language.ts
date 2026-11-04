@@ -91,7 +91,6 @@ export type LanguageServerStatus = z.infer<typeof LanguageServerStatusSchema>;
 
 export const LanguageStatusPayloadSchema = z.object({ projectId: ProjectIdSchema });
 export const LanguageStatusResultSchema = z.object({ servers: z.array(LanguageServerStatusSchema) });
-export type LanguageStatusResult = z.infer<typeof LanguageStatusResultSchema>;
 
 /* The kinds install into `$RUIMTE_HOME/language-servers` for the whole machine, so no project is named. */
 export const LanguageInstallPayloadSchema = z.object({ server: LanguageServerKindSchema });
@@ -210,7 +209,6 @@ export const LanguageContentChangeSchema = z.object({
     range: LanguageRangeSchema.optional(),
     text: z.string()
 });
-export type LanguageContentChange = z.infer<typeof LanguageContentChangeSchema>;
 
 /*
  * Every accepted change raises the version by one. A change that names another base than the one
@@ -349,7 +347,6 @@ export const LanguageEditEventSchema = z.object({
     // LSP `WorkspaceEdit`.
     edit: z.unknown()
 });
-export type LanguageEditEvent = z.infer<typeof LanguageEditEventSchema>;
 
 export const LanguageEditAnswerPayloadSchema = z.object({
     projectId: ProjectIdSchema,
@@ -375,7 +372,6 @@ export const LanguageStatusEventSchema = z.object({
     projectId: ProjectIdSchema.nullable(),
     status: LanguageServerStatusSchema
 });
-export type LanguageStatusEvent = z.infer<typeof LanguageStatusEventSchema>;
 
 /* A server came up, registered a feature or asked for a refresh: what a document may ask changed. */
 export const LanguageProvidersEventSchema = z.object({
@@ -383,7 +379,6 @@ export const LanguageProvidersEventSchema = z.object({
     path: z.string(),
     providers: LanguageProvidersSchema
 });
-export type LanguageProvidersEvent = z.infer<typeof LanguageProvidersEventSchema>;
 
 /* LSP `TextDocumentSaveReason`: 1 a person's save, 2 after a delay, 3 the editor lost focus. */
 export const LanguageWillSavePayloadSchema = LanguageDocumentTargetPayloadSchema.extend({
@@ -398,7 +393,6 @@ export const LanguageWorkspaceProblemsResultSchema = z.object({
     servers: z.array(z.string()),
     files: z.number().int().nonnegative()
 });
-export type LanguageWorkspaceProblemsResult = z.infer<typeof LanguageWorkspaceProblemsResultSchema>;
 
 /* The answer to a `language.message` that has `actions`: the title of the one chosen, or null when the person dismissed it. */
 export const LanguageMessageAnswerPayloadSchema = z.object({
@@ -432,7 +426,6 @@ export type LanguageMessageEvent = z.infer<typeof LanguageMessageEventSchema>;
 
 /* To every holder: a message request was answered by any client or settled by the daemon, so its prompt goes. */
 export const LanguageMessageClosedEventSchema = z.object({ projectId: ProjectIdSchema, messageId: z.string().min(1) });
-export type LanguageMessageClosedEvent = z.infer<typeof LanguageMessageClosedEventSchema>;
 
 /* To the one client whose command runs on the server: a document to open, or an address to offer. */
 export const LanguageShowEventSchema = z

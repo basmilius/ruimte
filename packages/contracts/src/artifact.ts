@@ -120,10 +120,8 @@ export const ArtifactListPayloadSchema = z.object({ projectId: z.string().min(1)
 export type ArtifactListPayload = z.infer<typeof ArtifactListPayloadSchema>;
 
 export const ArtifactListResultSchema = z.object({ artifacts: z.array(ArtifactSummarySchema) });
-export type ArtifactListResult = z.infer<typeof ArtifactListResultSchema>;
 
 export const ArtifactGetPayloadSchema = z.object({ artifactId: ArtifactIdSchema });
-export type ArtifactGetPayload = z.infer<typeof ArtifactGetPayloadSchema>;
 
 export const ArtifactGetResultSchema = z.object({
     artifact: ArtifactSchema,
@@ -187,7 +185,6 @@ export const ArtifactCopyToProjectPayloadSchema = z.object({
 export type ArtifactCopyToProjectPayload = z.infer<typeof ArtifactCopyToProjectPayloadSchema>;
 
 export const ArtifactCopyToProjectResultSchema = z.object({ paths: z.array(z.string().min(1)) });
-export type ArtifactCopyToProjectResult = z.infer<typeof ArtifactCopyToProjectResultSchema>;
 
 export const ArtifactProjectStorageSchema = z.object({
     projectId: z.string().min(1),
@@ -214,7 +211,6 @@ export const ArtifactCleanupPayloadSchema = z.discriminatedUnion('mode', [
     // Exactly these versions, checked again against what is never proposed.
     z.object({ mode: z.literal('confirm'), versions: z.array(ArtifactVersionRefSchema).min(1).max(10_000) })
 ]);
-export type ArtifactCleanupPayload = z.infer<typeof ArtifactCleanupPayloadSchema>;
 
 export const ArtifactCleanupProposalSchema = z.object({
     id: z.string().min(1),
@@ -247,7 +243,6 @@ export const ArtifactImportFromPayloadSchema = z.object({
 export type ArtifactImportFromPayload = z.infer<typeof ArtifactImportFromPayloadSchema>;
 
 export const ArtifactImportFromResultSchema = ArtifactSaveResultSchema;
-export type ArtifactImportFromResult = z.infer<typeof ArtifactImportFromResultSchema>;
 
 /*
  * A person removing an artifact for good: these versions of it, or all of it without `versionIds`.
@@ -272,4 +267,3 @@ export const ArtifactCleanupResultSchema = z.object({
     removed: z.number().int().nonnegative().optional(),
     freedBytes: z.number().int().nonnegative().optional()
 });
-export type ArtifactCleanupResult = z.infer<typeof ArtifactCleanupResultSchema>;

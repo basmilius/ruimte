@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const EditorAssistProviderSchema = z.enum(['claude', 'codex', 'grok', 'antigravity']);
-export type EditorAssistProvider = z.infer<typeof EditorAssistProviderSchema>;
 
 /* Absent or null chooses the cheapest model of the first available provider in this order. */
 export const EDITOR_ASSIST_PROVIDERS = EditorAssistProviderSchema.options;
@@ -44,4 +43,3 @@ export type EditorAssistGenerateResult = z.infer<typeof EditorAssistGenerateResu
 
 export const EditorAssistCancelPayloadSchema = z.object({ id: z.string().min(1).max(80) });
 export const EditorAssistTextEventSchema = z.object({ id: z.string(), text: z.string() });
-export type EditorAssistTextEvent = z.infer<typeof EditorAssistTextEventSchema>;

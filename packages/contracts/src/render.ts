@@ -3,7 +3,6 @@ import { DrawingAlignSchema, DrawingColorSchema } from './drawing-host.ts';
 import { DrawingFontSchema } from '@adecore/drawing/protocol';
 
 export const RenderBoundsSchema = z.object({ x: z.number(), y: z.number(), w: z.number().nonnegative(), h: z.number().nonnegative() });
-export type RenderBounds = z.infer<typeof RenderBoundsSchema>;
 
 // The client resolves these names in its current theme; paper and edge are the sticky-note palettes.
 export const RenderColorSchema = z.object({ tone: DrawingColorSchema, palette: z.enum(['ink', 'paper', 'edge']) });

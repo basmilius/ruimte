@@ -1,4 +1,5 @@
-import { messageOf } from './signaling';
+import { messageOf } from '@adecore/ui';
+
 export interface BlobState {
     url: string | null;
     failure: string | null;

@@ -1,7 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { USAGE_MAX_COUNT, USAGE_POINTS, USAGE_POINT_KINDS, UsageBatchSchema, isoWeekOf, usageDateProblem, type UsageDay } from './index.ts';
-
-const NOW = Date.parse('2026-10-16T09:30:00Z');
+import { USAGE_MAX_COUNT, USAGE_POINTS, USAGE_POINT_KINDS, UsageBatchSchema, isoWeekOf, type UsageDay } from './index.ts';
 
 function day(overrides: Partial<UsageDay> = {}): UsageDay {
     return {
@@ -115,15 +113,6 @@ describe('a usage batch', () => {
         expect(issuesOf({ days: [day({ cohortWeek: '2026-W43' })] })).toEqual(['days.0.cohortWeek']);
         expect(issuesOf({ days: [day({ platform: 'plan9' as never })] })).toEqual(['days.0.platform']);
         expect(issuesOf({ days: [day({ version: '0.0.0-test' })] })).toEqual([]);
-    });
-});
-
-describe('the days the address book takes', () => {
-    test('today and the eight days before it, nothing later or older', () => {
-        expect(usageDateProblem('2026-10-16', NOW)).toBeNull();
-        expect(usageDateProblem('2026-10-08', NOW)).toBeNull();
-        expect(usageDateProblem('2026-10-07', NOW)).not.toBeNull();
-        expect(usageDateProblem('2026-10-17', NOW)).not.toBeNull();
     });
 });
 

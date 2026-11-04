@@ -55,10 +55,8 @@ export type PlanOfChat = z.infer<typeof PlanOfChatSchema>;
 
 // Without `chatIds` every chat that has a plan, which is how a client fills its pills on connect.
 export const PlanListPayloadSchema = z.object({ chatIds: z.array(ChatIdSchema).optional() });
-export type PlanListPayload = z.infer<typeof PlanListPayloadSchema>;
 
 export const PlanListResultSchema = z.object({ plans: z.array(PlanOfChatSchema) });
-export type PlanListResult = z.infer<typeof PlanListResultSchema>;
 
 // All or nothing, on the latest rev.
 export const PlanApplyPayloadSchema = z.object({
@@ -66,17 +64,12 @@ export const PlanApplyPayloadSchema = z.object({
     planId: PlanIdSchema,
     ops: z.array(PlanPersonOpSchema).min(1)
 });
-export type PlanApplyPayload = z.infer<typeof PlanApplyPayloadSchema>;
 
 export const PlanApplyResultSchema = z.object({ plan: PlanSchema });
-export type PlanApplyResult = z.infer<typeof PlanApplyResultSchema>;
 
 export const PlanChangedEventSchema = PlanOfChatSchema;
-export type PlanChangedEvent = z.infer<typeof PlanChangedEventSchema>;
 
 export const PlanRemovedEventSchema = z.object({ chatId: ChatIdSchema, planId: PlanIdSchema });
-export type PlanRemovedEvent = z.infer<typeof PlanRemovedEventSchema>;
 
 // Only after a new plan; a client moves the panel's anchor on this and never on `plan.changed`.
 export const PlanCreatedEventSchema = z.object({ chatId: ChatIdSchema, planId: PlanIdSchema });
-export type PlanCreatedEvent = z.infer<typeof PlanCreatedEventSchema>;

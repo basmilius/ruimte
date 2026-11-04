@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import {
     BrokerPeer,
@@ -11,7 +12,7 @@ import {
     type SignalEnvelope
 } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
-import { closeQuietly, messageOf, withAccess, type SignalingOpener } from './signaling';
+import { closeQuietly, withAccess, type SignalingOpener } from './signaling';
 
 interface Member {
     ready(iceServers: IceServer[]): void;

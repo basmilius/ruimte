@@ -26,7 +26,6 @@ export const BrokerProveSchema = z.object({
     type: z.literal('prove'),
     signature: SignatureSchema
 });
-export type BrokerProve = z.infer<typeof BrokerProveSchema>;
 
 /*
  * A signal for another key. The signature is the sender's, over `signalMessage`, and travels to the
@@ -47,7 +46,6 @@ export const BrokerIceRequestSchema = z.object({
     type: z.literal('ice'),
     id: FrameIdSchema
 });
-export type BrokerIceRequest = z.infer<typeof BrokerIceRequestSchema>;
 
 export const BrokerPeerFrameSchema = z.discriminatedUnion('type', [BrokerHelloSchema, BrokerProveSchema, BrokerRelaySchema, BrokerIceRequestSchema]);
 export type BrokerPeerFrame = z.infer<typeof BrokerPeerFrameSchema>;
@@ -58,19 +56,16 @@ export const BrokerChallengeSchema = z.object({
     broker: z.string().min(1).max(253),
     nonce: NonceSchema
 });
-export type BrokerChallenge = z.infer<typeof BrokerChallengeSchema>;
 
 export const BrokerReadySchema = z.object({
     type: z.literal('ready')
 });
-export type BrokerReady = z.infer<typeof BrokerReadySchema>;
 
 // The broker wrote the relay to the receiver's socket; not that the receiver read it.
 export const BrokerDeliveredSchema = z.object({
     type: z.literal('delivered'),
     id: FrameIdSchema
 });
-export type BrokerDelivered = z.infer<typeof BrokerDeliveredSchema>;
 
 // A relay as the receiver gets it, with the sender's key filled in by the broker from the socket it arrived on.
 export const BrokerRelayedSchema = z.object({
@@ -117,7 +112,6 @@ export const BrokerErrorCodeSchema = z.enum([
     'replaced',
     'internal'
 ]);
-export type BrokerErrorCode = z.infer<typeof BrokerErrorCodeSchema>;
 
 export const BrokerErrorSchema = z.object({
     type: z.literal('error'),

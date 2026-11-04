@@ -6,7 +6,6 @@ import { MachineWorkSchema } from './machine-http.ts';
  * newer app may grow a step, and a phone that refused the whole `endpoint.info` over it would lose the machine.
  */
 export const MachineUpdateStatusSchema = z.enum(['unsupported', 'idle', 'checking', 'current', 'available', 'downloading', 'ready', 'error']);
-export type MachineUpdateStatus = z.infer<typeof MachineUpdateStatusSchema>;
 
 /* What the desktop app on the machine knows of its next version. */
 export const MachineUpdateReportSchema = z.object({
@@ -31,7 +30,6 @@ export type MachineUpdate = z.infer<typeof MachineUpdateSchema>;
 
 // The update changed: a step, the download moving on a whole percent, or the app coming or going.
 export const EndpointUpdateChangedEventSchema = z.object({ update: MachineUpdateSchema });
-export type EndpointUpdateChangedEvent = z.infer<typeof EndpointUpdateChangedEventSchema>;
 
 /*
  * `endpoint.installUpdate`: installing restarts the app, and without the background service that ends
@@ -39,7 +37,6 @@ export type EndpointUpdateChangedEvent = z.infer<typeof EndpointUpdateChangedEve
  * would end; the install itself is a second, explicit ask with `confirm` true.
  */
 export const EndpointInstallUpdatePayloadSchema = z.object({ confirm: z.boolean() });
-export type EndpointInstallUpdatePayload = z.infer<typeof EndpointInstallUpdatePayloadSchema>;
 
 export const EndpointInstallUpdateResultSchema = z.object({
     // True once the app on the machine was asked to install; it downloads first when it has not yet.
@@ -47,4 +44,3 @@ export const EndpointInstallUpdateResultSchema = z.object({
     // What the restart cuts short right now; zero when the daemon runs as the service and outlives the app.
     ending: MachineWorkSchema
 });
-export type EndpointInstallUpdateResult = z.infer<typeof EndpointInstallUpdateResultSchema>;

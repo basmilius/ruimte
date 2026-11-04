@@ -33,11 +33,6 @@ export function parentOf(path: string, sep: string): string | null {
     return cut === 0 ? sep : trimmed.slice(0, cut + 1);
 }
 
-/* A folder inside a directory, whatever the directory ends in. */
-export function joinPath(parent: string, name: string, sep: string): string {
-    return `${withoutTrailing(parent, sep)}${sep}${name}`;
-}
-
 export function lastSegment(path: string, sep: string): string {
     const trimmed = withoutTrailing(path, sep);
     const cut = trimmed.lastIndexOf(sep);

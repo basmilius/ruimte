@@ -70,10 +70,6 @@ export class FrameFanout {
         }
     }
 
-    hasListeners(streamKey: string): boolean {
-        return (this.byStream.get(streamKey)?.size ?? 0) > 0;
-    }
-
     private forget(streamKey: string, clientId: string): void {
         const byClient = this.byStream.get(streamKey);
         if (!byClient) {

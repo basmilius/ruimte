@@ -89,11 +89,6 @@ export function launchViews(document: LaunchesDocument, statuses: Readonly<Recor
     return views;
 }
 
-/* The members a group starts, as launches this document still has. */
-export function membersOf(launch: LaunchConfigEntry, document: LaunchesDocument): LaunchConfigEntry[] {
-    return (launch.launches ?? []).flatMap((id) => document.launches.find((candidate) => candidate.id === id && candidate.kind !== 'group') ?? []);
-}
-
 /* The launch the chip shows: the one this client chose, else the first of the menu. */
 export function chosenLaunch(document: LaunchesDocument, chosenId: string | undefined): LaunchConfigEntry | null {
     return document.launches.find((launch) => launch.id === chosenId) ?? document.launches[0] ?? null;

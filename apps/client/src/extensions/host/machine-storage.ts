@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import { useSyncExternalStore } from 'react';
 import { extensionRequest } from '@/extensions/machine-request';
 import { TransportError, type Transport } from '@/transport';
@@ -31,10 +32,6 @@ function changed(entry: Entry): void {
 // No machine, or one from before the extension API: it keeps what it had, or the initial value, as for a key never written.
 function unreachable(e: unknown): boolean {
     return e instanceof TransportError && (e.code === 'unavailable' || e.code === 'not-connected');
-}
-
-function messageOf(e: unknown): string {
-    return e instanceof Error ? e.message : String(e);
 }
 
 /*

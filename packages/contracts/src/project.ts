@@ -9,7 +9,6 @@ import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema }
 import { NODE_ACCENT_NAMES } from './node-accents.ts';
 
 export const ProjectIdSchema = z.string().min(1);
-export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
 export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file', 'artifact', 'routine', 'design']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
@@ -1204,7 +1203,6 @@ export const ProjectDocumentV2Schema = z.object({
     icon: ProjectIconChoiceSchema.optional(),
     views: z.array(ProjectViewSchema).min(1)
 });
-export type ProjectDocumentV2 = z.infer<typeof ProjectDocumentV2Schema>;
 
 // One project is one canvas. Read, migrated, never written again.
 export const ProjectDocumentV1Schema = z.object({
@@ -1218,7 +1216,6 @@ export const ProjectDocumentV1Schema = z.object({
     edges: z.array(ProjectEdgeSchema),
     layouts: z.array(ProjectLayoutSchema).default([])
 });
-export type ProjectDocumentV1 = z.infer<typeof ProjectDocumentV1Schema>;
 
 export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes', 'devices']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
@@ -1397,7 +1394,6 @@ export const ProjectLocalV1Schema = z.object({
     focusedNodeId: z.string().nullable(),
     panels: ProjectPanelsSchema.optional()
 });
-export type ProjectLocalV1 = z.infer<typeof ProjectLocalV1Schema>;
 
 export const ProjectSummarySchema = z
     .object({
@@ -1520,10 +1516,8 @@ export const ProjectSaveLocalPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     local: ProjectLocalSchema
 });
-export type ProjectSaveLocalPayload = z.infer<typeof ProjectSaveLocalPayloadSchema>;
 
 export const ProjectTargetPayloadSchema = z.object({ projectId: ProjectIdSchema });
-export type ProjectTargetPayload = z.infer<typeof ProjectTargetPayloadSchema>;
 
 // Asked before the confirmation so it can name a number. While `otherClients` is above zero nothing ends.
 export const ProjectClosingResultSchema = z.object({
@@ -1548,7 +1542,6 @@ export const ProjectDeletePayloadSchema = z.object({
     // Also remove the canvas file; a folder project's other files are never touched.
     removeFiles: z.boolean()
 });
-export type ProjectDeletePayload = z.infer<typeof ProjectDeletePayloadSchema>;
 
 // The file changed under the daemon (a git pull, another machine); carries what is on disk now.
 export const ProjectChangedEventSchema = z.object({
@@ -1600,7 +1593,6 @@ export type ProjectSetIdentityPayload = z.infer<typeof ProjectSetIdentityPayload
 export const ProjectSummaryResultSchema = z.object({
     summary: ProjectSummarySchema
 });
-export type ProjectSummaryResult = z.infer<typeof ProjectSummaryResultSchema>;
 
 /* One person's choice of accounts for one agent kind in a project: null `default` leaves new starts to the machine's order. */
 export const ProjectSetAccountsPayloadSchema = z.object({
@@ -1616,4 +1608,3 @@ export type ProjectSetAccountsPayload = z.infer<typeof ProjectSetAccountsPayload
 export const ProjectSetAccountsResultSchema = z.object({
     accounts: ProjectAccountsSchema
 });
-export type ProjectSetAccountsResult = z.infer<typeof ProjectSetAccountsResultSchema>;

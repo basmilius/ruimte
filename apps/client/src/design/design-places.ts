@@ -1,5 +1,5 @@
 import { designFolderOf, designPlaces, isCanvasView, isSharedDesign, resolveStoredPath, type DesignPlace, type ProjectView } from '@ruimte/contracts';
-import { nodesOfView, useViewNodes, type NodesOfView } from '@/project/view-nodes';
+import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
@@ -16,11 +16,6 @@ function sameDesign(before: DesignPlace | null, next: DesignPlace | null): boole
 
 function placeHolding(designs: readonly DesignPlace[], chatId: string): DesignPlace | null {
     return designs.find((design) => design.chats.some((chat) => chat.id === chatId)) ?? null;
-}
-
-/* The design of this id, a view of its own or a node on a canvas; null for anything else. */
-export function useDesignPlace(id: string): DesignPlace | null {
-    return useViewNodes((views, nodesOf) => liveDesignPlaces(views, nodesOf).find((design) => design.id === id) ?? null, sameDesign);
 }
 
 /* The design a chat of this id works on, as its own or a later chat; null for any other chat. */
@@ -42,9 +37,4 @@ export function useDesignFolder(design: Pick<DesignPlace, 'id' | 'path' | 'canva
     const location = designFolderOf(design, shared);
 
     return { location, folder: resolveStoredPath(projectFolder, location), projectFolder };
-}
-
-/* The same, read once outside a render. */
-export function readDesignOfChat(chatId: string): DesignPlace | null {
-    return placeHolding(liveDesignPlaces(useDocument.getState().views, nodesOfView), chatId);
 }

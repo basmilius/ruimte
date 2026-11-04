@@ -188,8 +188,3 @@ export async function endTabDrag(key: string, whole: boolean): Promise<void> {
         ?.tabDrag?.('end', key, { x: 0, y: 0 }, whole)
         .catch(() => undefined);
 }
-
-/* Whether a point in the page's coordinates lies outside its window, where letting go of a tab tears it off. */
-export function outsideViewport(x: number, y: number, size: { innerWidth: number; innerHeight: number } = window): boolean {
-    return x < 0 || y < 0 || x > size.innerWidth || y > size.innerHeight;
-}

@@ -53,15 +53,12 @@ export const SecretSavePayloadSchema = z.object({
     requestId: z.string().min(1),
     value: z.string().min(1).max(SECRET_LIMITS.value)
 });
-export type SecretSavePayload = z.infer<typeof SecretSavePayloadSchema>;
 
 export const SecretDeclinePayloadSchema = z.object({
     requestId: z.string().min(1)
 });
-export type SecretDeclinePayload = z.infer<typeof SecretDeclinePayloadSchema>;
 
 // False when the card was gone already: another client was first, the turn ended or it expired.
 export const SecretAnswerResultSchema = z.object({
     accepted: z.boolean()
 });
-export type SecretAnswerResult = z.infer<typeof SecretAnswerResultSchema>;

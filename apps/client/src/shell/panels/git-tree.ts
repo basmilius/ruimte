@@ -1,4 +1,3 @@
-import type { FileTreeRowDecoration } from '@pierre/trees';
 import { FileTree } from '@adecore/ui';
 import i18next from 'i18next';
 import type { GitFile, GitStatus } from '@ruimte/contracts';
@@ -69,13 +68,6 @@ export function checkOfAll(entries: readonly GitEntry[]): CheckState {
     return checked && unchecked ? 'mixed' : checked ? 'checked' : 'unchecked';
 }
 
-/* What ticking a box does: one that is not wholly checked stages all of it, a checked one unstages
-   all of it. Only the paths that move are named. */
-export function toggleOf(entries: readonly GitEntry[]): { staged: boolean; paths: string[] } {
-    const staged = checkOfAll(entries) !== 'checked';
-    return { staged, paths: movingPaths(entries, staged) };
-}
-
 /* The paths staging (or unstaging) moves; the rest already stand where it puts them. */
 export function movingPaths(entries: readonly GitEntry[], staged: boolean): string[] {
     return entries.filter((entry) => (staged ? entry.worktree !== null : entry.staged !== null)).map((entry) => entry.path);
@@ -124,12 +116,6 @@ export interface DecorationPart {
     kind?: 'count' | 'branch' | 'ahead' | 'behind' | 'needs-you';
     /* What a mark without text is read out as. */
     label?: string;
-}
-
-/* The checkbox a row starts with. Its color is the color of the mark, and the name of the property
-   is what the tree's stylesheet draws the box by (`GitFileList`). */
-export function checkPart(state: CheckState): DecorationPart {
-    return { text: '', color: `var(--git-check-${state})` };
 }
 
 /* A changed file's row after its name: the lines it adds and removes, and its letter when it has one.
@@ -183,10 +169,6 @@ export function repoParts(status: Pick<GitStatus, 'branch' | 'ahead' | 'behind' 
 export function entryParts(entry: GitEntry): DecorationPart[] {
     const file = shownFile(entry);
     return changeParts(file.added, file.deleted, statusOf(entry), true);
-}
-
-export function decorationOfParts(parts: DecorationPart[]): FileTreeRowDecoration {
-    return { text: parts.map((part) => part.text).join(' '), parts };
 }
 
 /* Every entry under a folder of a tree, however deep, which is what a folder's box and menu act on. */

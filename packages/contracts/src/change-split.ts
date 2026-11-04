@@ -7,7 +7,6 @@ export const ChangeLinesSchema = z.object({
     added: z.number().int().nonnegative(),
     deleted: z.number().int().nonnegative()
 });
-export type ChangeLines = z.infer<typeof ChangeLinesSchema>;
 
 // The lines of a change by what kind of file they are in; the four always add up to the change's own total.
 export const ChangeSplitSchema = z.object({

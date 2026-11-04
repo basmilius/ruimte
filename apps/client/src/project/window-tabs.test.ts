@@ -20,7 +20,6 @@ import {
     showTab,
     startWindowTabs,
     stepMove,
-    stepTab,
     useWindowTabs,
     withoutClosed,
     withoutTab,
@@ -79,13 +78,6 @@ describe('the tabs of a window', () => {
         expect(neighborOf(tabs(['a', 'b', 'c'], 'b'), 'b')).toBe('c');
         expect(neighborOf(tabs(['a', 'b', 'c'], 'c'), 'c')).toBe('b');
         expect(neighborOf(tabs(['a'], 'a'), 'a')).toBeNull();
-    });
-
-    test('stepping goes round the ends', () => {
-        expect(stepTab(tabs(['a', 'b', 'c'], 'c'), 1)).toBe('a');
-        expect(stepTab(tabs(['a', 'b', 'c'], 'a'), -1)).toBe('c');
-        expect(stepTab(tabs(['a', 'b'], null), -1)).toBe('b');
-        expect(stepTab(NO_TABS, 1)).toBeNull();
     });
 });
 

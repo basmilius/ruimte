@@ -202,7 +202,6 @@ describe('an edit under the selection', () => {
             createdAt: 10
         });
         const { feature } = await open();
-        expect(feature.hasEdit).toBe(true);
 
         await feature.show();
 

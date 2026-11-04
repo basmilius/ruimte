@@ -103,14 +103,12 @@ export const CommandRoutineSchema = z.looseObject({
     // Relative to the project folder, POSIX; absent is the project folder itself.
     cwd: z.string().optional()
 });
-export type CommandRoutine = z.infer<typeof CommandRoutineSchema>;
 
 export const LaunchRoutineSchema = z.looseObject({
     ...RoutineBaseShape,
     kind: z.literal('launch'),
     launchId: z.string().min(1)
 });
-export type LaunchRoutine = z.infer<typeof LaunchRoutineSchema>;
 
 export const RoutineSchema = z.discriminatedUnion('kind', [AgentRoutineSchema, CommandRoutineSchema, LaunchRoutineSchema]);
 export type Routine = z.infer<typeof RoutineSchema>;
@@ -156,7 +154,6 @@ export function readRoutineEntries(entries: readonly unknown[]): RoutineFileEntr
 
 /* Why a routine waits on a person here: an agent made or changed it, or it came in through git or a hand edit. Absent once approved. */
 export const RoutineHeldSchema = z.enum(['agent', 'outside']);
-export type RoutineHeld = z.infer<typeof RoutineHeldSchema>;
 
 /* The agent chat that last made or changed a routine, as the machine wrote it down. */
 export const RoutineMadeBySchema = z.object({
@@ -234,7 +231,6 @@ export const RoutineEntrySchema = z.object({
 export type RoutineEntry = z.infer<typeof RoutineEntrySchema>;
 
 export const RoutineListPayloadSchema = z.object({ projectId: ProjectIdSchema.optional() });
-export type RoutineListPayload = z.infer<typeof RoutineListPayloadSchema>;
 
 export const RoutineListResultSchema = z.object({
     routines: z.array(RoutineEntrySchema),
@@ -246,7 +242,6 @@ export const RoutineListResultSchema = z.object({
 export type RoutineListResult = z.infer<typeof RoutineListResultSchema>;
 
 export const RoutineTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, routineId: z.string().min(1) });
-export type RoutineTargetPayload = z.infer<typeof RoutineTargetPayloadSchema>;
 
 export const RoutineGetResultSchema = z.object({ routine: RoutineEntrySchema, rev: z.number().int().nonnegative(), timeZone: z.string() });
 export type RoutineGetResult = z.infer<typeof RoutineGetResultSchema>;
@@ -259,16 +254,12 @@ export const RoutineSavePayloadSchema = z.object({
     shared: z.boolean(),
     account: ProviderAccountIdSchema.nullable().optional()
 });
-export type RoutineSavePayload = z.infer<typeof RoutineSavePayloadSchema>;
 
 export const RoutineSaveResultSchema = z.object({ rev: z.number().int().nonnegative(), routineId: z.string().min(1) });
-export type RoutineSaveResult = z.infer<typeof RoutineSaveResultSchema>;
 
 export const RoutineApprovePayloadSchema = RoutineTargetPayloadSchema.extend({ digest: z.string().min(1) });
-export type RoutineApprovePayload = z.infer<typeof RoutineApprovePayloadSchema>;
 
 export const RoutineRemovePayloadSchema = RoutineTargetPayloadSchema.extend({ baseRev: z.number().int().nonnegative() });
-export type RoutineRemovePayload = z.infer<typeof RoutineRemovePayloadSchema>;
 
 /* `held`: nothing started, nobody approved it as it stands. `busy`: nothing started, its previous run still runs or waits. */
 export const RoutineRunNowResultSchema = z.object({
@@ -286,4 +277,3 @@ export type RoutineSkillsResult = z.infer<typeof RoutineSkillsResultSchema>;
 
 // Only to the clients that asked with `routine.watch`; they read the project's routines again.
 export const RoutineChangedEventSchema = z.object({ projectId: ProjectIdSchema });
-export type RoutineChangedEvent = z.infer<typeof RoutineChangedEventSchema>;

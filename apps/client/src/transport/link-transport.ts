@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import {
     EVENT_SCHEMAS,
@@ -17,7 +18,6 @@ import type { LinkProblem } from '@/telemetry/events';
 import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from './piece';
 import { protocolGate } from './protocol';
-import { messageOf } from './signaling';
 import type { PooledTransport } from './pool';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from './transport';
 

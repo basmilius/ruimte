@@ -65,11 +65,6 @@ export class EditorAssistClient {
         return this.asking;
     }
 
-    /* The answer of the last `availability`, or null before there was one. */
-    get lastKnown(): EditorAssistStatusResult | null {
-        return this.known?.status ?? null;
-    }
-
     /* Asks again after the person changed the chosen model or its sign-in. */
     refresh(): Promise<EditorAssistStatusResult> {
         this.known = null;

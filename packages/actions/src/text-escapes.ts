@@ -10,8 +10,3 @@ export function unescapeText(value: string): string {
         return char === 't' ? '\t' : '\\';
     });
 }
-
-/* The other way, for bytes that must arrive untouched: the CLI escapes what `unescapeText` would read. */
-export function escapeText(value: string): string {
-    return value.replaceAll('\\', '\\\\');
-}
