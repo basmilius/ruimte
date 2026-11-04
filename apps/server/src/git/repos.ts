@@ -6,7 +6,7 @@ import type { GitRepo, GitReposResult } from '@ruimte/contracts';
 import { parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { readIdeaName } from '../projects/project-identity.ts';
 import { ignoredPaths } from './ignore.ts';
-import { git, repositoryRoot } from './run.ts';
+import { git, repositoryRoot, rootAsAsked } from './run.ts';
 
 /*
  * How deep the scan looks for a repository beside the project's own. One level covers a folder full of
@@ -139,7 +139,8 @@ async function addSubmodules(folder: string, checkouts: readonly string[], add: 
  * a project that is one corner of a large repository does not inherit that repository's submodules.
  */
 export async function listRepos(folder: string): Promise<GitReposResult> {
-    const root = await repositoryRoot(folder);
+    const found = await repositoryRoot(folder);
+    const root = found === null ? null : await rootAsAsked(folder, found);
     const repos: GitRepo[] = [];
     const known = new Set<string>();
 

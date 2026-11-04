@@ -1,4 +1,7 @@
+import { relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
+import { isBelow } from '@adecore/utils/path';
+import { realOrNull } from '../fs/real-path.ts';
 import { nativePath } from './native-path.ts';
 
 export interface GitResult<Output = string> {
@@ -141,6 +144,24 @@ export async function gitOrThrow(args: string[], cwd: string, env?: Record<strin
 export async function repositoryRoot(cwd: string): Promise<string | null> {
     const top = (await git(['rev-parse', '--show-toplevel'], cwd))?.trim();
     return top ? nativePath(top) : null;
+}
+
+/*
+ * Git names a root with every symlink resolved (`/private/tmp/x` for `/tmp/x` on macOS), while a client lays the
+ * paths of a checkout over the folder as a person opened it. The root is spelled from `cwd` when it is that folder
+ * or one above it; any other root stays as git named it.
+ */
+export async function rootAsAsked(cwd: string, root: string): Promise<string> {
+    const real = await realOrNull(cwd);
+
+    if (real === null || (real !== root && !isBelow(root, real))) {
+        return root;
+    }
+
+    const up = real === root ? 0 : relative(root, real).split(sep).length;
+    const candidate = resolve(cwd, ...Array<string>(up).fill('..'));
+
+    return (await realOrNull(candidate)) === root ? candidate : root;
 }
 
 export async function toplevel(cwd: string): Promise<string> {

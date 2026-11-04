@@ -265,6 +265,13 @@ describe('the checkouts of a tree', () => {
         ]);
     });
 
+    test('a checkout counts its files from its own path, also when git names its root through a symlink', () => {
+        const linked = { path: '/tmp/repo', status: { root: '/private/tmp/repo', files: [file('src/index.ts', 'M')] } };
+
+        expect(checkoutStatusEntries('/tmp/repo', [linked])).toEqual([{ path: 'src/index.ts', status: 'modified' }]);
+        expect(checkoutOfPath([linked], '/tmp/repo/src/index.ts')).toBe(linked);
+    });
+
     test('a path belongs to the innermost checkout it is in', () => {
         expect(checkoutOfPath([outer, inner], '/repo/backend/config/feeds.yaml')).toBe(inner);
         expect(checkoutOfPath([inner, outer], '/repo/backend/config/feeds.yaml')).toBe(inner);

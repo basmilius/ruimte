@@ -145,9 +145,12 @@ interface TreeCheckout {
     status: { root: string | null; files: readonly GitFile[] } | null;
 }
 
-/* Where a checkout's paths count from: the root git named, or the folder it was asked about. */
+/*
+ * Where a checkout's paths count from. A checkout's path is its repository's root, in the spelling of the project
+ * folder, while git names the root with every symlink resolved: under macOS's `/tmp` the two differ.
+ */
 function rootOf(checkout: TreeCheckout): string {
-    return checkout.status?.root ?? checkout.path;
+    return checkout.path;
 }
 
 /* What every checkout says, in the rows of a tree that lists `root`; a file of a nested repository is that repository's. */

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeWatch } from '@adecore/agents/testing';
@@ -93,6 +93,19 @@ describe('GitStatusWatcher', () => {
         expect(events[0]!.status.live).toBe(true);
         expect(events[0]!.status.files.map((file) => file.path).sort()).toEqual(['a.txt', 'b.txt', 'tracked.txt']);
         expect(changed).toEqual([{ cwd: repo, changedPaths: ['a.txt', 'b.txt', 'tracked.txt'].map((path) => join(repo, path)) }]);
+    });
+
+    test.skipIf(process.platform === 'win32')('a checkout watched through a symlink hears its root and changed files as it spelled them', async () => {
+        const link = join(root, 'linked');
+        await symlink(repo, link);
+        await watcher.watch('c1', link);
+        await writeFile(join(repo, 'a.txt'), 'a\n');
+        fake.on(repo).emit('a.txt');
+        await fake.settle();
+
+        expect((await watcher.status(link)).root).toBe(link);
+        expect(events[0]!.status.root).toBe(link);
+        expect(changed).toEqual([{ cwd: link, changedPaths: [join(link, 'a.txt')] }]);
     });
 
     test('a burst past the limit says everything was touched instead of naming each file', async () => {
