@@ -22,6 +22,7 @@ public enum UnixSocket {
         guard bytes.count < MemoryLayout.size(ofValue: address.sun_path) else {
             throw Failure("socket path is too long: \(path)")
         }
+        // In bounds by the guard above, which also leaves room for the NUL that `sockaddr_un()` zeroed.
         withUnsafeMutableBytes(of: &address.sun_path) { buffer in
             for (i, byte) in bytes.enumerated() {
                 buffer[i] = byte
@@ -29,6 +30,7 @@ public enum UnixSocket {
         }
         let length = socklen_t(MemoryLayout<sockaddr_un>.size)
         address.sun_len = UInt8(length)
+        // The socket calls take every address as a `sockaddr` with its length, and the pointer lives only for `body`.
         return withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { body($0, length) }
         }
@@ -97,6 +99,7 @@ public enum UnixSocket {
                 if let deadline, !setTimeout(descriptor, SO_SNDTIMEO, until: deadline) {
                     return false
                 }
+                // `offset` stays below `raw.count`, so the range written stays inside the buffer.
                 let written = write(descriptor, base + offset, raw.count - offset)
                 if written < 0 {
                     if errno == EINTR || (deadline != nil && (errno == EAGAIN || errno == EWOULDBLOCK)) {

@@ -1,9 +1,10 @@
 import ComputerUseCore
 import Darwin
 import Foundation
+import Synchronization
 
 /// Accepts one request per connection: the client writes JSON and half-closes, the server answers and closes.
-final class SocketServer: @unchecked Sendable {
+final class SocketServer: Sendable {
     // Far above any request the daemon sends; the text of a `type` is the largest.
     static let maxRequestBytes = 4 * 1024 * 1024
     // Connections served at once, each on a thread of its own; the next waits in the listen backlog.
@@ -14,7 +15,6 @@ final class SocketServer: @unchecked Sendable {
     private let path: String
     private let handler: @Sendable (Data) async -> Data
     private let slots = DispatchSemaphore(value: SocketServer.maxConnections)
-    private var listener: Int32 = -1
 
     init(path: String, handler: @escaping @Sendable (Data) async -> Data) {
         self.path = path
@@ -48,16 +48,14 @@ final class SocketServer: @unchecked Sendable {
             close(descriptor)
             throw failure
         }
-        listener = descriptor
-
         let thread = Thread { [self] in
-            acceptLoop()
+            acceptLoop(descriptor)
         }
         thread.name = "agent-socket"
         thread.start()
     }
 
-    private func acceptLoop() {
+    private func acceptLoop(_ listener: Int32) {
         while true {
             let client = accept(listener, nil, nil)
             if client < 0 {
@@ -98,16 +96,17 @@ final class SocketServer: @unchecked Sendable {
         let answer = Answer()
         let handler = self.handler
         Task {
-            answer.data = await handler(request)
+            let data = await handler(request)
+            answer.data.withLock { $0 = data }
             answer.ready.signal()
         }
         answer.ready.wait()
-        UnixSocket.writeAll(client, answer.data, until: .now + Self.answerDeadline)
+        UnixSocket.writeAll(client, answer.data.withLock { $0 }, until: .now + Self.answerDeadline)
     }
 }
 
-/// The handler's answer, handed from its task to the connection's thread; `ready` orders the write before the read.
-private final class Answer: @unchecked Sendable {
+/// The handler's answer, handed from its task to the connection's thread once `ready` signals.
+private final class Answer: Sendable {
     let ready = DispatchSemaphore(value: 0)
-    var data = Data()
+    let data = Mutex(Data())
 }
