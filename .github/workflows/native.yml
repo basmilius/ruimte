@@ -34,6 +34,7 @@ jobs:
             rust:
               - '.github/**'
               - 'apps/ios-device-bridge/**'
+              - 'apps/speech-bridge/**'
             RuimtePulsar:
               - '.github/**'
               - 'apps/ios/Packages/RuimtePulsar/**'
@@ -54,7 +55,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        crate: [ios-device-bridge]
+        crate: [ios-device-bridge, speech-bridge]
     defaults:
       run:
         working-directory: apps/${{ matrix.crate }}
@@ -64,6 +65,8 @@ jobs:
         with:
           workspaces: apps/${{ matrix.crate }}
       - run: cargo test --locked
+      # The crates deny an unsafe block without a SAFETY comment, which only clippy checks.
+      - run: cargo clippy --locked --all-targets
 
   # The packages declare swift-tools-version 6.4, which takes Xcode 27; macos-latest still carries 26.
   swift-pulsar:
