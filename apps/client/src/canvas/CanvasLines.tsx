@@ -327,7 +327,8 @@ export function CanvasLineTool({ onDraftChange }: { onDraftChange(line: ProjectC
             <svg className="pointer-events-none absolute inset-0 h-full w-full">
                 <g transform={`translate(${camera.x},${camera.y}) scale(${camera.zoom})`}>{draft && <LinePaint line={draft} />}</g>
             </svg>
-            <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-border bg-surface-raised px-3 py-2 text-xs text-text-muted shadow-float">
+            {/* Above the dock, which floats over the bottom of the same cell, as the prompt stack stands. */}
+            <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 rounded-lg border border-border bg-surface-raised px-3 py-2 text-xs text-text-muted shadow-float">
                 {t('lines.drawHint')}
             </div>
         </div>
