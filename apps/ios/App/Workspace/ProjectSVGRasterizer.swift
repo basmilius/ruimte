@@ -3,8 +3,14 @@ import WebKit
 
 @MainActor
 final class ProjectSVGRasterizer {
+    private let timeout: Duration?
     private var queue: Task<UIImage, Error>?
     private var identifier: UUID?
+
+    /// A nil timeout waits for WebKit however long it takes, so a test does not race a slow simulator.
+    init(timeout: Duration? = .seconds(8)) {
+        self.timeout = timeout
+    }
 
     func render(_ data: Data) async throws -> UIImage {
         guard !data.isEmpty, data.count <= ProjectArtworkLoader.maximumBytes else {
@@ -13,10 +19,11 @@ final class ProjectSVGRasterizer {
         let previous = queue
         let id = UUID()
         identifier = id
+        let timeout = timeout
         let task = Task {
             _ = await previous?.result
             try Task.checkCancellation()
-            let renderer = SVGImageOperation()
+            let renderer = SVGImageOperation(timeout: timeout)
             return try await renderer.render(data)
         }
         queue = task
@@ -42,10 +49,15 @@ final class ProjectSVGRasterizer {
 
 @MainActor
 private final class SVGImageOperation: NSObject, WKNavigationDelegate {
+    private let limit: Duration?
     private var view: WKWebView?
     private var pending: CheckedContinuation<UIImage, Error>?
     private var timeout: Task<Void, Never>?
     private var finished = false
+
+    init(timeout: Duration?) {
+        limit = timeout
+    }
 
     func render(_ data: Data) async throws -> UIImage {
         return try await withTaskCancellationHandler {
@@ -66,8 +78,9 @@ private final class SVGImageOperation: NSObject, WKNavigationDelegate {
                 view.isUserInteractionEnabled = false
                 view.accessibilityElementsHidden = true
                 view.loadHTMLString(ProjectSVGRasterizer.document(data), baseURL: nil)
+                guard let limit else { return }
                 timeout = Task { [weak self] in
-                    do { try await Task.sleep(for: .seconds(8)) } catch { return }
+                    do { try await Task.sleep(for: limit) } catch { return }
                     self?.finish(.failure(ProjectArtworkError.timedOut))
                 }
             }

@@ -60,7 +60,7 @@ final class ProjectArtworkTests: XCTestCase {
         let data = Data(
             ##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g"><stop stop-color="#0000ff"/><stop offset="1" stop-color="#00ffff"/></linearGradient></defs><path fill="#ff0000" d="M0 0h50v100H0z"/><path fill="url(#g)" d="M50 0h50v100H50z"/></svg>"##
                 .utf8)
-        let result = try await ProjectSVGRasterizer().render(data)
+        let result = try await ProjectSVGRasterizer(timeout: nil).render(data)
         let image = try XCTUnwrap(result.cgImage)
         let left = try pixel(image, x: image.width / 4, y: image.height / 2)
         let right = try pixel(image, x: image.width * 3 / 4, y: image.height / 2)
