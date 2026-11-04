@@ -49,7 +49,6 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
             title: areaTitle('general'),
             shortcuts: [
                 { keys: APP_SHORTCUTS.palette, label: say('canvas.palette') },
-                { keys: APP_SHORTCUTS.findInFiles, label: say('canvas.findInFiles') },
                 { keys: CANVAS_SHORTCUTS.voiceControl, label: i18next.t('voice:shortcut') }
             ]
         },

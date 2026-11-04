@@ -793,7 +793,6 @@
         },
         "canvas": {
             "palette": "Command palette",
-            "findInFiles": "Find in files",
             "pan": "Pan canvas",
             "zoomPointer": "Zoom at pointer",
             "zoomIn": "Zoom in",

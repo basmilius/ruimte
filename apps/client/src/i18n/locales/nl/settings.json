@@ -793,7 +793,6 @@
         },
         "canvas": {
             "palette": "Opdrachtenpalet",
-            "findInFiles": "Zoeken in bestanden",
             "pan": "Canvas verschuiven",
             "zoomPointer": "Zoomen bij de muis",
             "zoomIn": "Inzoomen",
