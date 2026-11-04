@@ -138,7 +138,9 @@ async function relayEnd(onData: (data: Buffer) => void): Promise<Shaper & { sock
 /* The description with the one host candidate that goes through the relay, and the address behind it. */
 function throughRelay(sdp: string, port: number): { sdp: string; address: string; port: number } {
     const candidates = sdp.split('\r\n').filter((line) => line.startsWith('a=candidate:'));
-    const host = candidates.map((line) => /^(a=candidate:\S+ \d+ udp \d+ )(\d+\.\d+\.\d+\.\d+) (\d+)( typ host.*)$/i.exec(line)).find((match) => match !== null);
+    const host = candidates
+        .map((line) => /^(a=candidate:\S+ \d+ udp \d+ )(\d+\.\d+\.\d+\.\d+) (\d+)( typ host.*)$/i.exec(line))
+        .find((match) => match !== null);
 
     if (!host) {
         throw new Error('No IPv4 host candidate to send through the relay');
@@ -365,7 +367,9 @@ function sendText(channel: RTCDataChannel, frame: string): void {
 }
 
 async function measure(): Promise<void> {
-    const { values } = parseArgs({ options: { mib: { type: 'string', default: '16' }, repeats: { type: 'string', default: '1' }, link: { type: 'string', default: '' } } });
+    const { values } = parseArgs({
+        options: { mib: { type: 'string', default: '16' }, repeats: { type: 'string', default: '1' }, link: { type: 'string', default: '' } }
+    });
     const bytes = Number(values.mib) * 1024 * 1024;
     const results: Result[] = [];
 
@@ -387,7 +391,9 @@ async function measure(): Promise<void> {
     console.log('|---|---|---:|---:|---:|---:|---:|');
 
     for (const row of results) {
-        console.log(`| ${row.link} | ${row.mode} | ${round(row.idle)} | ${round(row.p50)} | ${round(row.p95)} | ${round(row.max)} | ${row.seconds?.toFixed(1) ?? 'over limit'} |`);
+        console.log(
+            `| ${row.link} | ${row.mode} | ${round(row.idle)} | ${round(row.p50)} | ${round(row.p95)} | ${round(row.max)} | ${row.seconds?.toFixed(1) ?? 'over limit'} |`
+        );
     }
 
     process.exit(0);

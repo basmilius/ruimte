@@ -77,9 +77,17 @@ async function run(): Promise<void> {
         host.webContents.executeJavaScript(`window.distanceTest[${JSON.stringify(method)}](...${JSON.stringify(args)})`);
     const base = `http://public.distance.test:${port}`;
     await call('open', `${base}/first`);
-    await until(() => call<State>('state'), (state) => state.row?.title === 'Distance /first' && !state.row.loading && state.id !== null, 'the first page');
+    await until(
+        () => call<State>('state'),
+        (state) => state.row?.title === 'Distance /first' && !state.row.loading && state.id !== null,
+        'the first page'
+    );
     await call('navigate', `${base}/second`);
-    const start = await until(() => call<State>('state'), (state) => state.row?.title === 'Distance /second' && !state.row.loading, 'the second page');
+    const start = await until(
+        () => call<State>('state'),
+        (state) => state.row?.title === 'Distance /second' && !state.row.loading,
+        'the second page'
+    );
     await call('run', `document.getElementById('field').value = 'typed by hand'; window.scrollTo(0, 900); history.length`);
     const historyLength = await call<number>('run', 'history.length');
     const loadsBefore = { ...loads };
@@ -93,19 +101,35 @@ async function run(): Promise<void> {
         await call('distance', distance);
         const past = distance === 'far' ? 0.15 : 0.3;
         await call('zoom', past);
-        const gone = await until(() => call<State>('state'), (state) => state.far && state.visibility === 'hidden', `the page to go at ${past} on ${distance}`);
+        const gone = await until(
+            () => call<State>('state'),
+            (state) => state.far && state.visibility === 'hidden',
+            `the page to go at ${past} on ${distance}`
+        );
         assert.equal(gone.id, start.id);
         assert.ok(gone.sameHost && gone.connected, 'the guest keeps its host and its parents');
         if (rafHidden === -1) {
             rafHidden = await call<number>('run', FRAMES);
-            pictureBytes = await until(() => call<number>('pictureBytes'), (bytes) => bytes > 0, 'the picture of the page');
+            pictureBytes = await until(
+                () => call<number>('pictureBytes'),
+                (bytes) => bytes > 0,
+                'the picture of the page'
+            );
             // What an agent's shot of a far page gets: it is drawn again, transparent, for the moment it takes.
             shotBytes = await call<number>('shot');
-            const after = await until(() => call<State>('state'), (state) => state.visibility === 'hidden', 'the page to be hidden again after the shot');
+            const after = await until(
+                () => call<State>('state'),
+                (state) => state.visibility === 'hidden',
+                'the page to be hidden again after the shot'
+            );
             assert.ok(after.far);
         }
         await call('zoom', 1);
-        const back = await until(() => call<State>('state'), (state) => !state.far && state.visibility === 'visible', 'the page to come back');
+        const back = await until(
+            () => call<State>('state'),
+            (state) => !state.far && state.visibility === 'visible',
+            'the page to come back'
+        );
         assert.equal(back.id, start.id);
         assert.ok(back.sameHost && back.connected);
     }

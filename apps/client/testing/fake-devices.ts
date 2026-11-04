@@ -59,7 +59,20 @@ export const FAKE_EMULATOR: DeviceInfo = {
         input: true,
         screenshot: true,
         buttons: ['back', 'home', 'appSwitcher', 'lock', 'volumeUp', 'volumeDown', 'power', 'playPause'],
-        tools: ['openUrl', 'launchApp', 'terminateApp', 'appearance', 'permissions', 'capture', 'record', 'clipboard', 'keyboard', 'statusBar', 'battery', 'erase'],
+        tools: [
+            'openUrl',
+            'launchApp',
+            'terminateApp',
+            'appearance',
+            'permissions',
+            'capture',
+            'record',
+            'clipboard',
+            'keyboard',
+            'statusBar',
+            'battery',
+            'erase'
+        ],
         permissions: ['camera', 'photos']
     }
 };
