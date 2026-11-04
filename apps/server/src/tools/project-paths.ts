@@ -4,10 +4,6 @@ import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
 import { realOrNull } from '../fs/real-path.ts';
 
-export function isInside(root: string, path: string): boolean {
-    return isWithin(root, path);
-}
-
 interface InsideRule {
     flag: string;
     /* The code a path that is not there answers with; each flag has one of its own, since that is what a script branches on. */
@@ -46,12 +42,12 @@ async function checkInsideProject(
         throw new ToolRefusal(rule.badCode, `${resolved} is not there; ${rule.flag} is resolved against the project folder unless it is absolute`);
     }
     const realFolder = await realOrNull(folder);
-    if (realFolder !== null && isInside(realFolder, real)) {
+    if (realFolder !== null && isWithin(realFolder, real)) {
         return { resolved, real };
     }
     const paths = await worktreePaths(folder);
     const roots = await Promise.all([...paths, ...also].map(realOrNull));
-    if (!roots.some((root) => root !== null && isInside(root, real))) {
+    if (!roots.some((root) => root !== null && isWithin(root, real))) {
         // The paths as git has them, not the real ones the comparison ran on: those are what a caller can type back.
         throw new ToolRefusal(
             rule.outsideCode,

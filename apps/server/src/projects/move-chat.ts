@@ -2,6 +2,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { ChatError as AgentChatError } from '@adecore/agents/chat';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { entryExists } from '@adecore/utils/fs';
+import { isWithin } from '@adecore/utils/path';
 import {
     DEFAULT_PROJECT_COLOR,
     initialIconOf,
@@ -18,7 +19,6 @@ import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
 import { realOrNull } from '../fs/real-path.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
-import { isInside } from '../tools/project-paths.ts';
 import { ownFileConflicts, ownFileNames } from './move-info.ts';
 import type { MoveJournal } from './move-journal.ts';
 import { movedNote } from './move-note.ts';
@@ -156,7 +156,7 @@ export async function moveChat(payload: ChatMovePayload, deps: MoveChatDeps): Pr
     // Another chat's folder is no project: it would put the chat inside what Chats still owns.
     // By the resolved path as well, as `MachineHome.refuse` does: a link into Chats is Chats.
     const [realFolder, realScratch] = await Promise.all([resolvedPath(folder), resolvedPath(deps.scratchFolder)]);
-    if (isInside(deps.scratchFolder, folder) || isInside(realScratch, realFolder)) {
+    if (isWithin(deps.scratchFolder, folder) || isWithin(realScratch, realFolder)) {
         throw new ChatError('move-failed', 'A chat cannot move into the folder of Chats');
     }
     await deps.refuseFolder(folder);

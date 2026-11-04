@@ -1,4 +1,5 @@
 import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
 import {
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
@@ -12,7 +13,6 @@ import {
 } from '@ruimte/contracts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { field } from './host.ts';
-import { isInside } from './project-paths.ts';
 
 /*
  * A ceiling on the sidebar, not a budget: a project with this many rows is one nobody can read any
@@ -106,7 +106,7 @@ export function viewNamed(content: ProjectContent, id: string, flag: string): Pr
 
 /* A path stays inside the project folder as a stored one, and stays absolute when it points out. */
 export function storedFilePath(folder: string, path: string): string {
-    return isInside(folder, path) ? storedPathOf(folder, path) : path;
+    return isWithin(folder, path) ? storedPathOf(folder, path) : path;
 }
 
 /* What a database view shows, as the daemon resolved it from the flags. */

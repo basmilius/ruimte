@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 import { narrowerMode } from '@adecore/agents/providers';
+import { isWithin } from '@adecore/utils/path';
 import {
     dueTimesBetween,
     nextDue,
@@ -24,7 +25,6 @@ import {
 import { PUBLISHED_INLINE_NOTE } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, RoutineRunEntry } from '../outbox/outbox.ts';
-import { isInside } from '../tools/project-paths.ts';
 import type { RoutineAuthorStore, RoutineRunStore } from './routine-runs.ts';
 import { RoutineError, type RoutinesDocument, type RoutineStore, type StoredRoutine } from './routine-store.ts';
 
@@ -197,7 +197,7 @@ function runBrief(
 ): string {
     const lines = [
         `This is a run of the routine "${routine.title}", which Ruimte started ${kind === 'manual' ? 'by hand' : kind === 'caught-up' ? `late, after this machine woke (it was due ${when})` : `at ${when}`}.`,
-        `When this run has a result to keep, such as a report, deliver it to Output and never as files in the project: write it to a file outside the project folder, such as a Markdown report in a temporary folder, and publish it with \`artifact_publish key ${routine.outputKey} title ${JSON.stringify(routine.title)} file <path>\`. Every run that publishes adds one version of that artifact. A run with nothing to keep publishes nothing.`,
+        `When this run has a result to keep, such as a report, deliver it to Output and never as files in the project: write it to a file outside the project folder, such as a Markdown report in a temporary folder, and publish it with \`artifact_publish key ${routine.outputKey} title ${JSON.stringify(routine.title)} paths [<path>]\`. Every run that publishes adds one version of that artifact. A run with nothing to keep publishes nothing.`,
         PUBLISHED_INLINE_NOTE
     ];
     if (previous !== null) {
@@ -573,7 +573,7 @@ export class Routines {
             }
             if (routine.kind === 'command') {
                 const cwd = resolve(folder, routine.cwd ?? '.');
-                if (isAbsolute(routine.cwd ?? '.') || !isInside(folder, cwd)) {
+                if (isAbsolute(routine.cwd ?? '.') || !isWithin(folder, cwd)) {
                     throw new RoutineError('routines-invalid', 'The folder of this command is outside the project');
                 }
                 return await this.beginCommand(base, routine.title, routine.outputKey, () => this.deps.commands.run(cwd, routine.command, OUTPUT_CAP_BYTES));

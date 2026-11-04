@@ -3,7 +3,7 @@ import type { Stats } from 'node:fs';
 import { lstat, mkdir, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { isInside } from '../tools/project-paths.ts';
+import { isWithin } from '@adecore/utils/path';
 import { retryingRename } from './busy-retry.ts';
 import { deepestEntry } from './create.ts';
 import { renameNoReplace } from './no-replace-rename.ts';
@@ -137,7 +137,7 @@ export async function planRename(
     assertOpenGround(sourceRoot, source, path, 'moved');
     assertOpenGround(targetRoot, target, to, 'moved');
     // `relative` ignores case on Windows, so a case-only change answers '' there.
-    if (relative(source, target) !== '' && isInside(source, target)) {
+    if (relative(source, target) !== '' && isWithin(source, target)) {
         throw new RenameError('into-itself', `${path} cannot be moved into itself`);
     }
     const deviceOf = options.deviceOf ?? deviceOfPlace;

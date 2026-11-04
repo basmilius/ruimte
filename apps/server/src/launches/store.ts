@@ -1,7 +1,7 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { Serializer } from '@adecore/utils/async';
-import { climbsOut } from '@adecore/utils/path';
+import { climbsOut, isWithin } from '@adecore/utils/path';
 import {
     isSecretReference,
     LAUNCH_SECRET_REFERENCE,
@@ -41,7 +41,6 @@ import {
     type JsonDocumentRead
 } from '../projects/project-files.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { isInside } from '../tools/project-paths.ts';
 import { detectLaunches } from './detect.ts';
 
 const LAUNCHES_FILE = 'launches.json';
@@ -669,7 +668,7 @@ export function problemIn(folder: string, worktrees: readonly string[], launches
                 continue;
             }
             const path = isAbsolute(cwd) ? cwd : resolve(folder, cwd);
-            if (!isInside(folder, path) && !worktrees.some((root) => isInside(root, path))) {
+            if (!isWithin(folder, path) && !worktrees.some((root) => isWithin(root, path))) {
                 return `The folder of "${launch.name}" is outside the project: ${path}`;
             }
         }

@@ -2,8 +2,9 @@ import { constants, open, stat, type FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
 import { realOrNull } from '../fs/real-path.ts';
-import { isInside, outsidePath } from '../tools/project-paths.ts';
+import { outsidePath } from '../tools/project-paths.ts';
 import type { ImageFiles } from './visual-images.ts';
 
 /* A file the caller may hand a tool, open, which its user reads from and closes. */
@@ -171,7 +172,7 @@ export class AgentFiles {
                 throw notFile();
             }
 
-            if (!roots.some((root) => isInside(root, real))) {
+            if (!roots.some((root) => isWithin(root, real))) {
                 throw new ToolRefusal(
                     'path-outside',
                     `${await outsidePath(resolved, real)} outside the folders a tool reads from: the project folder, its worktrees, your chat folder and the temp folder`,

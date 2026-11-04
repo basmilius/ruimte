@@ -1,10 +1,10 @@
 import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { isWithin } from '@adecore/utils/path';
 import type { ChatInfo, ProjectView } from '@ruimte/contracts';
 import type { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
-import { isInside } from '../tools/project-paths.ts';
 import { fileTranscript } from './move-chat.ts';
 import { ownFileNames } from './move-info.ts';
 import type { MoveJournal } from './move-journal.ts';
@@ -74,7 +74,7 @@ async function repairOne(deps: MoveRepairDeps, chatsId: string, chatId: string, 
     }
     const info = await loadOrNull(deps, chatId);
     // Anywhere else the record already took the new folder. The own files stay where they are.
-    if (info !== null && isInside(deps.scratchFolder, info.cwd)) {
+    if (info !== null && isWithin(deps.scratchFolder, info.cwd)) {
         await deps.chats.relocate(chatId, target.folder, async () => {
             await fileTranscript(deps.chats, info, target.folder, deps.moveTranscript);
         });

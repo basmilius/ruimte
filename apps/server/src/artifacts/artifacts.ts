@@ -3,6 +3,7 @@ import { lstat, readdir, realpath } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
 import { WatchedSinks } from '@adecore/agents/host';
 import { KeyedSerializer } from '@adecore/utils/async';
+import { isWithin } from '@adecore/utils/path';
 import {
     ARTIFACT_LIMITS,
     PEER_ARTIFACT_PIECE_BYTES,
@@ -31,7 +32,6 @@ import { realOrNull } from '../fs/real-path.ts';
 import { sniffMime } from '../fs/sniff.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { shotFolders } from '../shots.ts';
-import { isInside } from '../tools/project-paths.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';
 import { ArtifactError, isTextMime, SNIFF_HEAD_BYTES } from './artifact-names.ts';
@@ -192,7 +192,7 @@ export class Artifacts {
         const root = resolve(project.folder, payload.path);
         const real = await realOrNull(root);
         const realProject = await realOrNull(project.folder);
-        if (real === null || realProject === null || real === realProject || !isInside(realProject, real)) {
+        if (real === null || realProject === null || real === realProject || !isWithin(realProject, real)) {
             throw new ArtifactError('outside-project', 'Only a folder inside the project can be kept');
         }
         const files = await filesUnder(root, ARTIFACT_LIMITS.filesPerVersion);
@@ -582,7 +582,7 @@ export class Artifacts {
         }
         const real = await realpath(resolved);
         const roots = await Promise.all([folder, ...shotFolders(this.deps.home)].map(realOrNull));
-        if (!roots.some((root) => root !== null && isInside(root, real))) {
+        if (!roots.some((root) => root !== null && isWithin(root, real))) {
             throw new ArtifactError('outside-project', 'Only a picture inside the project folder or one the machine took for a chat is saved');
         }
         const head = new Uint8Array(await Bun.file(real).slice(0, SNIFF_HEAD_BYTES).arrayBuffer());

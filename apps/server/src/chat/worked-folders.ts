@@ -1,8 +1,8 @@
 import { dirname, join, parse, relative, resolve, sep } from 'node:path';
+import { isWithin } from '@adecore/utils/path';
 import { isRecord } from '@adecore/utils/record';
 import type { ChatItem } from '@ruimte/contracts';
 import { toolWrites } from '../provenance/tool-writes.ts';
-import { isInside } from '../tools/project-paths.ts';
 
 interface WorkedFolder {
     path: string;
@@ -95,21 +95,21 @@ export async function workedFolders(items: readonly ChatItem[], options: WorkedF
     const checkouts: string[] = [];
     for (const touched of touchedPaths(items, cwd, home)) {
         const { path } = touched;
-        if (isInside(cwd, path) || isInside(ruimteHome, path)) {
+        if (isWithin(cwd, path) || isWithin(ruimteHome, path)) {
             continue;
         }
         const directory = touched.folder ? path : dirname(path);
-        let root = checkouts.find((checkout) => isInside(checkout, directory)) ?? null;
+        let root = checkouts.find((checkout) => isWithin(checkout, directory)) ?? null;
         if (root === null) {
             const found = await rootOf(directory);
             // A checkout that is home or holds it (a dotfiles repository) says nothing about the folder.
-            root = found !== null && !isInside(found, home) ? found : null;
+            root = found !== null && !isWithin(found, home) ? found : null;
             if (root !== null) {
                 checkouts.push(root);
             }
         }
-        const folder = root ?? (isInside(home, path) ? topUnderHome(home, touched) : directory);
-        if (folder === null || folder === home || folder === parse(folder).root || isInside(ruimteHome, folder)) {
+        const folder = root ?? (isWithin(home, path) ? topUnderHome(home, touched) : directory);
+        if (folder === null || folder === home || folder === parse(folder).root || isWithin(ruimteHome, folder)) {
             continue;
         }
         counts.set(folder, (counts.get(folder) ?? 0) + 1);

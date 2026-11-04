@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { CodedError } from '@adecore/agents';
+import { isWithin } from '@adecore/utils/path';
 import {
     isHiddenChatView,
     type ChatCreatePayload,
@@ -8,7 +9,6 @@ import {
     type ProjectNewInlineChatPayload,
     type ProjectNewInlineChatResult
 } from '@ruimte/contracts';
-import { isInside } from '../tools/project-paths.ts';
 import type { ProjectStore } from './project-store.ts';
 import { newChatId } from './scratch-project.ts';
 
@@ -32,10 +32,10 @@ const INLINE_CHAT_NAME = 'Inline edit';
  */
 async function workingFolderOf(folder: string, path: string, host: InlineChatHost): Promise<string> {
     const file = resolve(folder, path);
-    if (isInside(folder, file)) {
+    if (isWithin(folder, file)) {
         return folder;
     }
-    const worktree = (await host.worktreePaths(folder)).find((candidate) => isInside(candidate, file));
+    const worktree = (await host.worktreePaths(folder)).find((candidate) => isWithin(candidate, file));
     if (worktree === undefined) {
         throw new InlineChatError('inline-path-outside', `${file} is outside ${folder} and the worktrees of its repository`);
     }

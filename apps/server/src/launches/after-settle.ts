@@ -1,13 +1,13 @@
 import { join, relative } from 'node:path';
 import { runningInBackground } from '@adecore/agents/chat';
 import type { AgentEvent } from '@adecore/agents/host';
+import { isWithin } from '@adecore/utils/path';
 import type { ChatItem, ChatTurnItem, LaunchStatus } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { errorText } from '../error-text.ts';
 import { JsonFileStore } from '../json-file-store.ts';
 import type { OutboxEntry, OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
-import { isInside } from '../tools/project-paths.ts';
 import type { LaunchRunner, WorktreeRun } from './runner.ts';
 import type { AfterSettleChoices, LaunchStore, ResolvedLaunch } from './store.ts';
 
@@ -245,6 +245,6 @@ export class AfterSettleLaunches {
             return null;
         }
         const worktrees = await this.deps.worktreesOf(folder);
-        return worktrees.find((path) => isInside(path, cwd)) ?? null;
+        return worktrees.find((path) => isWithin(path, cwd)) ?? null;
     }
 }

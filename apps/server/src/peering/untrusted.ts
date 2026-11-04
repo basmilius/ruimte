@@ -1,9 +1,9 @@
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { isWithin } from '@adecore/utils/path';
 import type { AgentKind } from '@ruimte/contracts';
 import { providerFor } from '../providers/registry.ts';
-import { isInside } from '../tools/project-paths.ts';
 
 interface UntrustedFoldersDeps {
     lineage: Pick<AgentLineageStore, 'peerOf' | 'startedBy' | 'forkedFrom'>;
@@ -60,7 +60,7 @@ export class UntrustedFolders {
             return false;
         }
         const real = realOrSelf(path);
-        return folders.some((folder) => isInside(realOrSelf(folder), real));
+        return folders.some((folder) => isWithin(realOrSelf(folder), real));
     }
 
     /* The question every start and every turn asks of a node. */

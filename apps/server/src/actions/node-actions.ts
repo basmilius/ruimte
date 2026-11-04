@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
 import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
@@ -34,7 +35,7 @@ import { EVERY_KIND_LINE, KIND_FIELDS, REQUIRED_FIELD, kindLine, type KindField 
 import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../tools/nodes.ts';
 import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../tools/own-view.ts';
 import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../tools/placement.ts';
-import { checkCwd, checkPath, isInside } from '../tools/project-paths.ts';
+import { checkCwd, checkPath } from '../tools/project-paths.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { hostService, agentCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 import { machineDevice } from './device-actions.ts';
@@ -365,7 +366,7 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
                 ...(spec.color == null ? {} : { accent: spec.color }),
                 ...(spec.content == null ? {} : { body: spec.content }),
                 ...(url === undefined ? {} : { url }),
-                ...(path === undefined ? {} : { path: isInside(place.folder, path) ? storedPathOf(place.folder, path) : path }),
+                ...(path === undefined ? {} : { path: isWithin(place.folder, path) ? storedPathOf(place.folder, path) : path }),
                 ...(spec.source == null ? {} : { viewId: spec.source }),
                 ...(device === undefined ? {} : { device }),
                 ...(cwd === undefined ? {} : { cwd }),

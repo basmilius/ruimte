@@ -1,9 +1,9 @@
 import { ToolRefusal } from '@adecore/agents/context';
+import { isWithin } from '@adecore/utils/path';
 import { worktreeDiffOutput, type ActionHandlers } from '@ruimte/actions';
 import { designNodeChats, isCanvasView, isChatNode, type ProjectContent, type Worktree } from '@ruimte/contracts';
 import { GitError } from '../git/run.ts';
 import { field, orNote, type CanvasHost, type WorktreeHost } from '../tools/host.ts';
-import { isInside } from '../tools/project-paths.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 // How far up the chain of openers a merge looks for the caller; a chain this deep is refused by `agent_start` long before.
@@ -48,7 +48,7 @@ function nodesIn(content: ProjectContent, worktree: Worktree): string[] {
                 continue;
             }
             const folders = [node.cwd, ...designNodeChats(node).map((chat) => chat.node.cwd)];
-            if (folders.some((cwd) => cwd !== undefined && isInside(worktree.path, cwd))) {
+            if (folders.some((cwd) => cwd !== undefined && isWithin(worktree.path, cwd))) {
                 ids.add(node.id);
             }
         }
