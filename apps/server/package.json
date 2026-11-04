@@ -41,7 +41,6 @@
         "@xterm/addon-unicode11": "^0.9.0",
         "@xterm/headless": "^6.0.0",
         "commander": "^15.0.0",
-        "linkedom": "^0.18.14",
         "reflect-metadata": "0.2.2",
         "serve-sim": "0.1.48",
         "werift": "^0.25.2",
