@@ -75,12 +75,14 @@ struct OwnedXpc(XpcObject);
 
 impl OwnedXpc {
     fn new_dictionary() -> Result<Self> {
+        // SAFETY: with a count of zero libxpc reads neither array, and the new dictionary is ours to release.
         let object = unsafe { xpc_dictionary_create(ptr::null(), ptr::null(), 0) };
         (!object.is_null())
             .then_some(Self(object))
             .context("libxpc could not create a dictionary")
     }
 
+    /// Safety: `object` is null or an XPC object whose one reference the caller hands over.
     unsafe fn from_owned(object: XpcObject) -> Result<Self> {
         (!object.is_null())
             .then_some(Self(object))
@@ -88,7 +90,10 @@ impl OwnedXpc {
     }
 
     /// Takes a reference of its own on an object libxpc only lends to a handler.
+    ///
+    /// Safety: `object` is a live XPC object.
     unsafe fn retain(object: XpcObject) -> Result<Self> {
+        // SAFETY: the caller vouches that `object` is live, and xpc_retain hands back the reference it adds.
         unsafe { Self::from_owned(xpc_retain(object)) }
     }
 
@@ -97,11 +102,12 @@ impl OwnedXpc {
     }
 }
 
-// libxpc objects are reference counted atomically and may be released on any thread.
+// SAFETY: libxpc objects are reference counted atomically and may be released on any thread.
 unsafe impl Send for OwnedXpc {}
 
 impl Drop for OwnedXpc {
     fn drop(&mut self) {
+        // SAFETY: the pointer is non-null by construction, and this is the one release of the reference we own.
         unsafe { xpc_release(self.0) };
     }
 }
@@ -110,6 +116,7 @@ struct OwnedQueue(DispatchQueue);
 
 impl OwnedQueue {
     fn new() -> Result<Self> {
+        // SAFETY: the label is a static C string, and a null attribute asks for a serial queue.
         let queue =
             unsafe { dispatch_queue_create(c"app.ruimte.ios-device-bridge".as_ptr(), ptr::null()) };
         (!queue.is_null())
@@ -124,6 +131,7 @@ impl OwnedQueue {
 
 impl Drop for OwnedQueue {
     fn drop(&mut self) {
+        // SAFETY: the queue is non-null by construction, and this is the one release of the reference we own.
         unsafe { dispatch_release(self.0) };
     }
 }
@@ -188,6 +196,8 @@ pub async fn connect_rsd(udid: Option<&str>) -> Result<NativeRsdSession> {
 impl NativeRemotedTunnel {
     fn open(udid: Option<&str>) -> Result<Self> {
         let queue = OwnedQueue::new()?;
+        // SAFETY: the service name is a static C string, the queue outlives the connection in `Self`, and the
+        // new connection's reference is ours.
         let browse_connection = unsafe {
             OwnedXpc::from_owned(xpc_connection_create_mach_service(
                 REMOTE_PAIRING_SERVICE.as_ptr(),
@@ -197,11 +207,13 @@ impl NativeRemotedTunnel {
         }
         .context("could not connect to remotepairingd")?;
         let endpoint = browse_for_endpoint(browse_connection.as_ptr(), queue.as_ptr(), udid)?;
+        // SAFETY: `endpoint` holds its own reference for the call, and the new connection's reference is ours.
         let device_connection =
             unsafe { OwnedXpc::from_owned(xpc_connection_create_from_endpoint(endpoint.as_ptr())) }
                 .context("remotepairingd returned an invalid device endpoint")?;
 
         let event_handler = RcBlock::new(|_event: XpcObject| {});
+        // SAFETY: the connection is live, and libxpc copies the handler block before this one drops.
         unsafe {
             xpc_connection_set_event_handler(device_connection.as_ptr(), &event_handler);
             xpc_connection_activate(device_connection.as_ptr());
@@ -223,6 +235,8 @@ impl NativeRemotedTunnel {
 impl Drop for NativeRemotedTunnel {
     fn drop(&mut self) {
         if let Ok(body) = OwnedXpc::new_dictionary() {
+            // SAFETY: both objects are ours and live, the key is a static C string, and the dictionary retains
+            // the value.
             unsafe {
                 xpc_dictionary_set_value(
                     body.as_ptr(),
@@ -237,6 +251,7 @@ impl Drop for NativeRemotedTunnel {
                 &body,
             );
         }
+        // SAFETY: both connections are ours and still hold their references; their fields release them after.
         unsafe {
             xpc_connection_cancel(self.device_connection.as_ptr());
             xpc_connection_cancel(self.browse_connection.as_ptr());
@@ -255,21 +270,27 @@ fn browse_for_endpoint(
         .context("invalid device UDID")?;
     let (sender, receiver) = mpsc::sync_channel(1);
     let event_handler = RcBlock::new(move |event: XpcObject| {
+        // SAFETY: libxpc lends the event for the handler's run, and the endpoint inside it is retained before
+        // the handler returns.
         if let Some(endpoint) = unsafe { device_endpoint(event, wanted_udid.as_deref()) }
+            // SAFETY: as above, the endpoint lives as long as the event that holds it.
             && let Ok(endpoint) = unsafe { OwnedXpc::retain(endpoint) }
         {
             let _ = sender.try_send(endpoint);
         }
     });
+    // SAFETY: the caller's connection is live, and libxpc copies the handler block before this one drops.
     unsafe {
         xpc_connection_set_event_handler(connection, &event_handler);
         xpc_connection_activate(connection);
     }
 
     let body = OwnedXpc::new_dictionary()?;
+    // SAFETY: the dictionary is ours and live, and the key is a static C string.
     unsafe { xpc_dictionary_set_bool(body.as_ptr(), c"currentDevicesOnly".as_ptr(), false) };
     let message = request_message("RemotePairing.BrowseRequest", &body)?;
     let reply_handler = RcBlock::new(|_reply: XpcObject| {});
+    // SAFETY: the connection, message and queue are live, and libxpc retains the message and copies the block.
     unsafe {
         xpc_connection_send_message_with_reply(connection, message.as_ptr(), queue, &reply_handler);
     }
@@ -279,26 +300,34 @@ fn browse_for_endpoint(
         .context("remotepairingd reported no matching wireless device")
 }
 
+/// Safety: `event` is null or a live XPC object; the endpoint handed back lives as long as it does.
 unsafe fn device_endpoint(event: XpcObject, wanted_udid: Option<&CStr>) -> Option<XpcObject> {
     if !is_dictionary(event) {
         return None;
     }
-    let value = unsafe { child_dictionary(event, c"value") }?;
-    let found = unsafe { child_dictionary(value, c"deviceFound") }?;
-    let zero = unsafe { child_dictionary(found, c"_0") }?;
-    let info = unsafe { child_dictionary(zero, c"deviceInfo") }?;
+    // SAFETY: `event` is a live dictionary, and each child is borrowed from the one above it.
+    let info = unsafe {
+        let value = child_dictionary(event, c"value")?;
+        let found = child_dictionary(value, c"deviceFound")?;
+        let zero = child_dictionary(found, c"_0")?;
+        child_dictionary(zero, c"deviceInfo")?
+    };
     if let Some(wanted) = wanted_udid {
+        // SAFETY: `info` is a live dictionary, and the string it hands back lives as long as it does.
         let actual = unsafe { xpc_dictionary_get_string(info, c"udid".as_ptr()) };
+        // SAFETY: a non-null string from libxpc is NUL-terminated and outlives the comparison.
         if actual.is_null() || unsafe { CStr::from_ptr(actual) } != wanted {
             return None;
         }
     }
+    // SAFETY: `info` is a live dictionary, and the key is a static C string.
     let endpoint = unsafe { xpc_dictionary_get_value(info, c"endpoint".as_ptr()) };
     (!endpoint.is_null()).then_some(endpoint)
 }
 
 fn ensure_paired(connection: XpcObject, queue: DispatchQueue) -> Result<()> {
     let body = OwnedXpc::new_dictionary()?;
+    // SAFETY: the dictionary is ours and live, and the key is a static C string.
     unsafe { xpc_dictionary_set_bool(body.as_ptr(), c"requireNonInteractive".as_ptr(), false) };
     let reply = send_request(
         connection,
@@ -306,9 +335,11 @@ fn ensure_paired(connection: XpcObject, queue: DispatchQueue) -> Result<()> {
         "RemotePairing.InitiatePairingCommand",
         &body,
     )?;
+    // SAFETY: the reply is ours and live.
     let Some(error) = (unsafe { child_dictionary(reply.as_ptr(), c"error") }) else {
         return Ok(());
     };
+    // SAFETY: `error` is a dictionary borrowed from the reply, which is still alive.
     let code = unsafe { xpc_dictionary_get_int64(error, c"code".as_ptr()) };
 
     if code != ALREADY_PAIRED {
@@ -320,6 +351,7 @@ fn ensure_paired(connection: XpcObject, queue: DispatchQueue) -> Result<()> {
 
 fn create_assertion(connection: XpcObject, queue: DispatchQueue) -> Result<(OwnedXpc, IpAddr)> {
     let body = OwnedXpc::new_dictionary()?;
+    // SAFETY: the dictionary is ours and live, and the key is a static C string.
     unsafe { xpc_dictionary_set_int64(body.as_ptr(), c"flags".as_ptr(), 0) };
     let reply = send_request(
         connection,
@@ -327,20 +359,27 @@ fn create_assertion(connection: XpcObject, queue: DispatchQueue) -> Result<(Owne
         "RemotePairing.CreateAssertionCommand",
         &body,
     )?;
+    // SAFETY: the reply is a live dictionary, ours to the end of this function, so all borrowed from it below
+    // lives as long.
     let response = unsafe { child_dictionary(reply.as_ptr(), c"response") }
         .context("remotepairingd returned no tunnel assertion")?;
+    // SAFETY: `response` is a live dictionary borrowed from the reply.
     let identifier = unsafe { xpc_dictionary_get_value(response, c"assertionIdentifier".as_ptr()) };
+    // SAFETY: `response` and the `info` inside it are live dictionaries borrowed from the reply.
     let address = unsafe { child_dictionary(response, c"info") }
+        // SAFETY: as above.
         .map(|info| unsafe { xpc_dictionary_get_string(info, c"tunnelIPAddress".as_ptr()) })
         .unwrap_or(ptr::null());
     if identifier.is_null() || address.is_null() {
         bail!("remotepairingd returned an incomplete tunnel assertion");
     }
+    // SAFETY: a non-null string from libxpc is NUL-terminated and lives as long as the reply.
     let address = unsafe { CStr::from_ptr(address) }
         .to_str()
         .context("remotepairingd returned a malformed tunnel address")?
         .parse::<Ipv6Addr>()
         .context("remotepairingd returned an invalid tunnel address")?;
+    // SAFETY: `identifier` is non-null and borrowed from the live reply.
     let identifier = unsafe { OwnedXpc::retain(identifier) }?;
     Ok((identifier, IpAddr::V6(address)))
 }
@@ -356,10 +395,12 @@ fn send_request(
     let reply_handler = RcBlock::new(move |reply: XpcObject| {
         // Anything but a dictionary is an XPC error, such as the connection going away.
         let reply = is_dictionary(reply)
+            // SAFETY: libxpc lends the reply for the handler's run, and it is a live dictionary.
             .then(|| unsafe { OwnedXpc::retain(reply) })
             .and_then(Result::ok);
         let _ = sender.try_send(reply);
     });
+    // SAFETY: the connection, message and queue are live, and libxpc retains the message and copies the block.
     unsafe {
         xpc_connection_send_message_with_reply(connection, message.as_ptr(), queue, &reply_handler);
     }
@@ -374,13 +415,17 @@ fn send_request(
 fn is_dictionary(object: XpcObject) -> bool {
     !object.is_null()
         && ptr::eq(
+            // SAFETY: every caller passes a live XPC object, checked for null above.
             unsafe { xpc_get_type(object) },
             &raw const XPC_TYPE_DICTIONARY,
         )
 }
 
 /// The value under `key`, or `None` when it is missing or not a dictionary.
+///
+/// Safety: `dictionary` is a live XPC dictionary; the child handed back lives as long as it does.
 unsafe fn child_dictionary(dictionary: XpcObject, key: &CStr) -> Option<XpcObject> {
+    // SAFETY: the caller vouches for the dictionary, and `key` is NUL-terminated.
     let value = unsafe { xpc_dictionary_get_value(dictionary, key.as_ptr()) };
     is_dictionary(value).then_some(value)
 }
@@ -388,6 +433,8 @@ unsafe fn child_dictionary(dictionary: XpcObject, key: &CStr) -> Option<XpcObjec
 fn request_message(request_type: &str, body: &OwnedXpc) -> Result<OwnedXpc> {
     let request_type = CString::new(request_type).context("invalid XPC request name")?;
     let message = OwnedXpc::new_dictionary()?;
+    // SAFETY: both dictionaries are live, the strings are NUL-terminated and outlive the call, and libxpc copies
+    // the string and retains the body.
     unsafe {
         xpc_dictionary_set_string(
             message.as_ptr(),
@@ -615,6 +662,7 @@ mod tests {
         let parent = OwnedXpc::new_dictionary().unwrap();
         let child = OwnedXpc::new_dictionary().unwrap();
 
+        // SAFETY: both dictionaries are ours and live, and every string is a static C string.
         unsafe {
             xpc_dictionary_set_value(parent.as_ptr(), c"child".as_ptr(), child.as_ptr());
             xpc_dictionary_set_string(parent.as_ptr(), c"text".as_ptr(), c"value".as_ptr());
@@ -622,15 +670,15 @@ mod tests {
 
         assert!(is_dictionary(parent.as_ptr()));
         assert!(!is_dictionary(std::ptr::null_mut()));
-        assert_eq!(
-            unsafe { child_dictionary(parent.as_ptr(), c"child") },
-            Some(child.as_ptr())
-        );
-        assert_eq!(unsafe { child_dictionary(parent.as_ptr(), c"text") }, None);
-        assert_eq!(
-            unsafe { child_dictionary(parent.as_ptr(), c"missing") },
-            None
-        );
+        // SAFETY: `parent` is ours and live for every lookup below.
+        let lookups = unsafe {
+            [
+                child_dictionary(parent.as_ptr(), c"child"),
+                child_dictionary(parent.as_ptr(), c"text"),
+                child_dictionary(parent.as_ptr(), c"missing"),
+            ]
+        };
+        assert_eq!(lookups, [Some(child.as_ptr()), None, None]);
     }
 
     #[test]

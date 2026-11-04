@@ -256,10 +256,12 @@ fn load(path: &CStr) -> TreeResult<()> {
     // SAFETY: dlopen takes a NUL-terminated path, and dlerror's text is only read before the next call.
     let handle = unsafe { dlopen(path.as_ptr(), RTLD_NOW) };
     if handle.is_null() {
+        // SAFETY: as above.
         let reason = unsafe { dlerror() };
         let reason = if reason.is_null() {
             String::from("unknown error")
         } else {
+            // SAFETY: a non-null dlerror text is NUL-terminated and stays put until the next dl call.
             unsafe { CStr::from_ptr(reason) }
                 .to_string_lossy()
                 .into_owned()
@@ -288,6 +290,7 @@ fn developer_dir() -> TreeResult<String> {
 
 fn ns_string(text: &str) -> TreeResult<Retained<AnyObject>> {
     let text = CString::new(text).map_err(|_| TreeError::new("protocol", "text holds a NUL"))?;
+    // SAFETY: `text` is NUL-terminated and outlives the call, which hands back a new string or nil.
     let string: Option<Retained<AnyObject>> =
         unsafe { msg_send![class(c"NSString")?, stringWithUTF8String: text.as_ptr()] };
     string.ok_or_else(|| TreeError::unavailable("NSString could not be made"))
@@ -326,6 +329,7 @@ impl Session {
         let (sender, receiver) = mpsc::sync_channel::<Response>(1);
         let handler = RcBlock::new(move |response: *mut AnyObject| {
             // A reply after the wait gave up finds the channel closed and is released with it.
+            // SAFETY: CoreSimulator lends a valid response or nil for the handler's run.
             let _ = sender.try_send(Response(unsafe { Retained::retain(response) }));
         });
         // SAFETY: the selector was checked when the reader opened, and CoreSimulator copies the block.
@@ -348,6 +352,7 @@ impl Session {
     }
 
     fn empty(&self) -> *mut AnyObject {
+        // SAFETY: `+emptyResponse` was checked when the reader opened and hands back an autoreleased object.
         unsafe { msg_send![self.empty_response, emptyResponse] }
     }
 }
@@ -389,6 +394,7 @@ define_class!(
 impl TokenDelegate {
     fn new(callback: RequestBlock) -> Retained<Self> {
         let this = Self::alloc().set_ivars(DelegateIvars { callback });
+        // SAFETY: NSObject's `-init` on a freshly allocated instance whose ivars are set.
         unsafe { msg_send![super(this), init] }
     }
 }
@@ -489,17 +495,21 @@ impl Reader {
             RcBlock::new(move |request: *mut AnyObject| shared.send(request));
         let delegate = TokenDelegate::new(callback);
 
+        // SAFETY: `+sharedInstance` was checked above.
         let translator: Option<Retained<AnyObject>> =
             unsafe { msg_send![translator_class, sharedInstance] };
         let translator = translator
             .ok_or_else(|| TreeError::unavailable("AXPTranslator has no shared instance"))?;
+        // SAFETY: the three setters were checked above, and the reader keeps the delegate alive.
         unsafe {
             let _: () = msg_send![&*translator, setBridgeTokenDelegate: &*delegate];
             let _: () = msg_send![&*translator, setSupportsDelegateTokens: Bool::YES];
             let _: () = msg_send![&*translator, setAccessibilityEnabled: Bool::YES];
         }
+        // SAFETY: public Foundation API, `+[NSUUID UUID]` hands back a new identifier.
         let uuid: Option<Retained<AnyObject>> = unsafe { msg_send![class(c"NSUUID")?, UUID] };
         let uuid = uuid.ok_or_else(|| TreeError::unavailable("NSUUID made no identifier"))?;
+        // SAFETY: public Foundation API on a live NSUUID.
         let token: Option<Retained<AnyObject>> = unsafe { msg_send![&*uuid, UUIDString] };
         let token = token.ok_or_else(|| TreeError::unavailable("NSUUID gave no string"))?;
 
@@ -517,6 +527,7 @@ impl Reader {
         let started = Instant::now();
         self.session.deadline.set(started + timeout);
         self.session.timed_out.set(false);
+        // SAFETY: `-state` was checked when the reader opened and answers an NSUInteger.
         let state: usize = unsafe { msg_send![&*self.session.device, state] };
         if state != BOOTED {
             return Reply::failed(
@@ -564,6 +575,8 @@ impl Reader {
     }
 
     fn walk_frontmost(&self) -> TreeResult<(Node, bool)> {
+        // The selectors in this walk were checked when the reader opened, or are checked right before the call.
+        // SAFETY: checked selector, with the token the reader keeps.
         let application: Option<Retained<AnyObject>> = unsafe {
             msg_send![
                 &*self.translator,
@@ -574,9 +587,11 @@ impl Reader {
         let application = application.ok_or_else(|| {
             TreeError::new("no-frontmost-app", "the simulator shows no app to read")
         })?;
+        // SAFETY: checked selector, with the token the reader keeps.
         unsafe {
             let _: () = msg_send![&*application, setBridgeDelegateToken: &*self.token];
         }
+        // SAFETY: checked selector on the live application element.
         let root: Option<Retained<AnyObject>> = unsafe {
             msg_send![&*self.translator, macPlatformElementFromTranslation: &*application]
         };
@@ -595,13 +610,22 @@ impl Reader {
         *count += 1;
         self.stamp(element);
 
+        // Every `AXPMacPlatformElement` selector in this function was checked when the reader opened, with the
+        // types declared here.
+        // SAFETY: checked selector.
         let frame: CGRect = unsafe { msg_send![element, accessibilityFrame] };
+        // SAFETY: checked selector.
         let enabled: Bool = unsafe { msg_send![element, isAccessibilityEnabled] };
         let mut node = Node {
+            // SAFETY: checked selector.
             role: self.text(unsafe { msg_send![element, accessibilityRole] }),
+            // SAFETY: checked selector.
             subrole: self.text(unsafe { msg_send![element, accessibilitySubrole] }),
+            // SAFETY: checked selector.
             label: self.text(unsafe { msg_send![element, accessibilityLabel] }),
+            // SAFETY: checked selector.
             value: self.text(unsafe { msg_send![element, accessibilityValue] }),
+            // SAFETY: checked selector.
             identifier: self.text(unsafe { msg_send![element, accessibilityIdentifier] }),
             frame: Frame {
                 x: frame.origin.x,
@@ -615,17 +639,20 @@ impl Reader {
         if depth >= MAX_DEPTH || self.session.timed_out.get() {
             return node;
         }
+        // SAFETY: checked selector.
         let children: Option<Retained<AnyObject>> =
             unsafe { msg_send![element, accessibilityChildren] };
         let Some(children) = children.filter(|children| is_kind(children, self.classes.array))
         else {
             return node;
         };
+        // SAFETY: `children` is an NSArray, checked just above.
         let length: usize = unsafe { msg_send![&*children, count] };
         for index in 0..length {
             if *count >= MAX_ELEMENTS || self.session.timed_out.get() {
                 break;
             }
+            // SAFETY: an NSArray, and `index` is below its count.
             let child: Option<Retained<AnyObject>> =
                 unsafe { msg_send![&*children, objectAtIndex: index] };
             if let Some(child) = child {
@@ -640,12 +667,14 @@ impl Reader {
         if !element.class().responds_to(sel!(translation)) {
             return;
         }
+        // SAFETY: the element answers `translation`, checked just above.
         let translation: Option<Retained<AnyObject>> = unsafe { msg_send![element, translation] };
         if let Some(translation) = translation
             && translation
                 .class()
                 .responds_to(sel!(setBridgeDelegateToken:))
         {
+            // SAFETY: the translation answers the setter, checked just above, and the reader keeps the token.
             unsafe {
                 let _: () = msg_send![&*translation, setBridgeDelegateToken: &*self.token];
             }
@@ -661,8 +690,10 @@ impl Reader {
 
         let string: Option<Retained<AnyObject>> =
             if is_kind(&object, self.classes.attributed_string) {
+                // SAFETY: an NSAttributedString, checked just above.
                 unsafe { msg_send![&*object, string] }
             } else if is_kind(&object, self.classes.number) {
+                // SAFETY: an NSNumber, checked just above.
                 unsafe { msg_send![&*object, stringValue] }
             } else {
                 None
@@ -673,12 +704,14 @@ impl Reader {
 }
 
 fn is_kind(object: &AnyObject, class: &AnyClass) -> bool {
+    // SAFETY: every object answers NSObject's `-isKindOfClass:`.
     let kind: Bool = unsafe { msg_send![object, isKindOfClass: class] };
     kind.as_bool()
 }
 
 /// The text of an `NSString`.
 fn utf8(string: &AnyObject) -> Option<String> {
+    // SAFETY: every caller passes an NSString, which answers `-UTF8String` with a pointer or null.
     let utf8: *const c_char = unsafe { msg_send![string, UTF8String] };
 
     if utf8.is_null() {
@@ -686,6 +719,7 @@ fn utf8(string: &AnyObject) -> Option<String> {
     }
 
     Some(
+        // SAFETY: the text is NUL-terminated and lives as long as `string`, which outlives the copy.
         unsafe { CStr::from_ptr(utf8) }
             .to_string_lossy()
             .into_owned(),
@@ -700,16 +734,20 @@ fn find_device(
 ) -> TreeResult<Retained<AnyObject>> {
     let directory = ns_string(developer_dir)?;
     let mut error: *mut AnyObject = std::ptr::null_mut();
+    // The CoreSimulator selectors in this function were checked when the reader opened.
+    // SAFETY: checked selector, with an error slot that outlives the call.
     let context: Option<Retained<AnyObject>> = unsafe {
         msg_send![context_class, sharedServiceContextForDeveloperDir: &*directory, error: &mut error]
     };
     let context = context.ok_or_else(|| {
         TreeError::unavailable("CoreSimulator has no service context for this Xcode")
     })?;
+    // SAFETY: checked selector, with an error slot that outlives the call.
     let set: Option<Retained<AnyObject>> =
         unsafe { msg_send![&*context, defaultDeviceSetWithError: &mut error] };
     let set =
         set.ok_or_else(|| TreeError::unavailable("CoreSimulator has no default device set"))?;
+    // SAFETY: checked selector.
     let devices: Option<Retained<AnyObject>> = unsafe { msg_send![&*set, devices] };
     let devices =
         devices.ok_or_else(|| TreeError::unavailable("CoreSimulator lists no devices"))?;
@@ -719,17 +757,21 @@ fn find_device(
             "CoreSimulator lists its devices in an unknown shape",
         ));
     }
+    // SAFETY: `devices` is an NSArray, checked just above.
     let length: usize = unsafe { msg_send![&*devices, count] };
     for index in 0..length {
+        // SAFETY: an NSArray, and `index` is below its count.
         let device: Option<Retained<AnyObject>> =
             unsafe { msg_send![&*devices, objectAtIndex: index] };
         let Some(device) = device else {
             continue;
         };
+        // SAFETY: checked selector.
         let identifier: Option<Retained<AnyObject>> = unsafe { msg_send![&*device, UDID] };
         let Some(identifier) = identifier else {
             continue;
         };
+        // SAFETY: `-UDID` answers an NSUUID.
         let string: Option<Retained<AnyObject>> = unsafe { msg_send![&*identifier, UUIDString] };
         let Some(string) = string else {
             continue;
@@ -750,11 +792,13 @@ fn screen_scale(device: &AnyObject) -> Option<f64> {
     if !device.class().responds_to(sel!(deviceType)) {
         return None;
     }
+    // SAFETY: the device answers `deviceType`, checked just above.
     let device_type: Option<Retained<AnyObject>> = unsafe { msg_send![device, deviceType] };
     let device_type = device_type?;
     if !device_type.class().responds_to(sel!(mainScreenScale)) {
         return None;
     }
+    // SAFETY: the type answers `mainScreenScale`, checked just above, as a float.
     let scale: f32 = unsafe { msg_send![&*device_type, mainScreenScale] };
     (scale.is_finite() && scale > 0.0).then_some(f64::from(scale))
 }

@@ -224,7 +224,7 @@ impl ProtocolWriter {
             .context("missing protocol descriptor")?
             .parse::<i32>()
             .context("invalid protocol descriptor")?;
-        // The daemon gives this process sole ownership of the inherited protocol descriptor.
+        // SAFETY: the daemon gives this process sole ownership of the inherited protocol descriptor.
         let file = unsafe { File::from_raw_fd(fd) };
         let mut output = tokio::fs::File::from_std(file);
         output.write_all(&MAGIC).await?;
