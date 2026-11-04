@@ -241,7 +241,10 @@ export default defineConfig(({ command, mode }) => ({
             '@lezer/highlight',
             '@lezer/markdown',
             // One shiki, also when a linked package brings a copy of its own.
-            'shiki'
+            'shiki',
+            // One formatter and one file icon override: a second copy, resolved under other peers for a package that
+            // imports it, never hears the region or the extensions the client sets.
+            '@adecore/ui'
         ]
     },
     worker: {
