@@ -4,31 +4,38 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync, Visitor } from 'oxc-parser';
 
-const HERE = fileURLToPath(new URL('../apps/client/src/', import.meta.url));
-const SOURCES = [...new Glob('**/*.{ts,tsx}').scanSync(HERE)]
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
+
+// The pets are a built-in the client imports, so their client code is held to the client's rules.
+const SOURCE_FOLDERS = ['apps/client/src', 'extensions/pets/client'];
+const SOURCES = SOURCE_FOLDERS.flatMap((folder) => [...new Glob(`${folder}/**/*.{ts,tsx}`).scanSync(ROOT)])
     // The rules below name files with forward slashes, which Windows does not hand back.
     .map((path) => path.replaceAll('\\', '/'))
     .filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'))
     .sort()
-    .map((path) => ({ path, text: readFileSync(join(HERE, path), 'utf8') }));
+    .map((path) => ({ path, text: readFileSync(join(ROOT, path), 'utf8') }));
 
-const KEY_LISTENERS = new Set(['shell/app-shortcuts.ts', 'canvas/canvas-shortcuts.ts', 'drawing/use-drawing-keys.ts']);
+const KEY_LISTENERS = new Set([
+    'apps/client/src/shell/app-shortcuts.ts',
+    'apps/client/src/canvas/canvas-shortcuts.ts',
+    'apps/client/src/drawing/use-drawing-keys.ts'
+]);
 
 // The speech model needs a fixed date format; no person reads it.
-const INTL_OUTSIDE_FORMAT = new Set(['voice/controller.ts']);
+const INTL_OUTSIDE_FORMAT = new Set(['apps/client/src/voice/controller.ts']);
 
 // The places a color is written down as paint rather than read from a token: the syntax palettes, the
 // accents a person and an agent pick from (xterm reads them as literals), and scenes drawn in WebGL or a
 // canvas that no theme reaches, the pets' pixel art among them.
 const COLOR_LITERALS = new Set([
-    'shell/panels/code-themes.ts',
-    'canvas/accents.ts',
-    'ui/EclipseStars.tsx',
-    'ui/galaxy/Galaxy.tsx',
-    'measure/scene.ts',
-    'extensions/pets/sprite-colors.ts',
-    'extensions/pets/catalog.ts',
-    'extensions/pets/sketches.ts'
+    'apps/client/src/shell/panels/code-themes.ts',
+    'apps/client/src/canvas/accents.ts',
+    'apps/client/src/ui/EclipseStars.tsx',
+    'apps/client/src/ui/galaxy/Galaxy.tsx',
+    'apps/client/src/measure/scene.ts',
+    'extensions/pets/client/sprite-colors.ts',
+    'extensions/pets/client/catalog.ts',
+    'extensions/pets/client/sketches.ts'
 ]);
 // A hex color, or a color function given numbers rather than a token, anywhere in a string.
 const COLOR_LITERAL = /(?:^|[\s[(:,'"])#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z])|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(\s*[\d.]/i;
@@ -69,6 +76,6 @@ for (const { path, text } of SOURCES) {
     }
 }
 for (const problem of problems) {
-    console.error(`apps/client/src/${problem}`);
+    console.error(problem);
 }
 process.exitCode = problems.length === 0 ? 0 : 1;

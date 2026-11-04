@@ -34,6 +34,7 @@ jobs:
                       .github/workflows/maps-worker.yml
                       apps/maps-worker
                       packages/pulsar
+                      packages/telemetry
                       bun.lock
 
     deploy:
