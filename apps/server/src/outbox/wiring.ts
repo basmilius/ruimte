@@ -328,7 +328,7 @@ export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
                 }
             }
             prWatches.prune(projectId, ids);
-            void prompts.prune(projectId, ids).catch((e) => failed('Pruning pending prompts failed', e));
+            void prompts.pruneLeftNodes(projectId, ids).catch((e) => failed('Pruning pending prompts failed', e));
             for (const forkId of lineage.forksLeaving(projectId, ids)) {
                 const drop = chats.dropUnspokenFork(forkId);
                 if (deps.onDropped) {

@@ -252,7 +252,7 @@ export class PeerTasks {
         );
         try {
             const first = taskFirstPrompt(payload.prompt, chat);
-            await deps.prompts.put(projectId, nodeId, first.prompt, first.brief);
+            await deps.prompts.put(projectId, nodeId, first.prompt, { brief: first.brief });
             await deps.enqueue(projectId, nodeId, {
                 kind: 'start-agent',
                 payload: {

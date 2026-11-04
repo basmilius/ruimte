@@ -149,7 +149,7 @@ async function boot(): Promise<Daemon> {
         })
     });
     store.index.onPlaces = (id, ids) => {
-        void prompts.prune(id, ids);
+        void prompts.pruneLeftNodes(id, ids);
         void outbox.prune(id, ids);
     };
 

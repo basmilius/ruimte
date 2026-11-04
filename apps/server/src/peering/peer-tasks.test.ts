@@ -74,8 +74,8 @@ function deps(): PeerTasksDeps {
             enqueued.push({ target, work });
         },
         prompts: {
-            put: async (_projectId: string, nodeId: string, prompt: string, brief?: string) =>
-                void prompts.set(nodeId, { prompt, ...(brief === undefined ? {} : { brief }) }),
+            put: async (_projectId: string, nodeId: string, prompt: string, extra?: { brief?: string }) =>
+                void prompts.set(nodeId, { prompt, ...(extra?.brief === undefined ? {} : { brief: extra.brief }) }),
             take: async (nodeId: string) => {
                 const held = prompts.get(nodeId) ?? null;
                 prompts.delete(nodeId);

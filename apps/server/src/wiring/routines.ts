@@ -84,7 +84,7 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
                     openedBy: routineOpener(routine.id),
                     node: { id: chatId, kind: 'chat', title: routine.title, x: 0, y: 0, w: 480, h: 560 }
                 });
-                await stores.prompts.put(projectId, chatId, prompt, brief, routine.picked);
+                await stores.prompts.put(projectId, chatId, prompt, { brief, picked: routine.picked });
                 await outboxLink.enqueue(projectId, chatId, {
                     kind: 'start-agent',
                     payload: {
