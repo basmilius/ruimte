@@ -123,7 +123,7 @@ function PetBeam({
 /*
  * A canvas of its own that repaints on the shared beat, so React renders a pet only when its mood or
  * look changes, and the beat paints only a frame that differs from the one before it. A kid (`small`)
- * is the same paint shown at half the size. While it comes or goes (`beam`) the beam stands in its place.
+ * is the same paint at half the size. While it comes or goes (`beam`) the beam stands in its place.
  */
 export function PetFigure({
     look,
@@ -156,6 +156,8 @@ export function PetFigure({
     const still = usePrefersStill();
     const beaming = beam !== undefined && !still;
     const size = cell ?? (small ? WORLD_CELL / 2 : WORLD_CELL);
+    // Shown at half the size, half the backing pixels keep it as sharp at a quarter of the memory.
+    const backing = small ? PAINT_CELL / 2 : PAINT_CELL;
 
     useEffect(() => {
         const context = ref.current?.getContext('2d') ?? null;
@@ -166,15 +168,15 @@ export function PetFigure({
 
         const colors = accent === undefined ? null : bowColors(accent);
 
-        return onPetTick(petPainter(look, mood, still, (frame) => paintPet(context, look, frame, crowded, colors), walking, pose));
-    }, [look, mood, still, crowded, accent, walking, pose]);
+        return onPetTick(petPainter(look, mood, still, (frame) => paintPet(context, look, frame, crowded, colors, backing), walking, pose));
+    }, [look, mood, still, crowded, accent, walking, pose, backing]);
 
     return (
         <span className="relative block" style={{ width: PAINT_COLUMNS * size, height: PAINT_ROWS * size }}>
             <canvas
                 ref={ref}
-                width={PAINT_SIZE.w}
-                height={PAINT_SIZE.h}
+                width={PAINT_COLUMNS * backing}
+                height={PAINT_ROWS * backing}
                 className="block size-full"
                 style={{ imageRendering: 'pixelated', visibility: beaming ? 'hidden' : undefined }}
                 aria-hidden

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
 import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
-import { drawnFrameKey, paintPet, petPainter, type PetLook } from '@extensions/pets/client/paint';
+import { drawnFrameKey, PAINT_CELL, PAINT_SIZE, paintPet, petPainter, type PetLook } from '@extensions/pets/client/paint';
 import type { PetFrame, PetMood } from '@extensions/pets/client/pet-state';
 import {
     bowColors,
@@ -194,5 +194,29 @@ describe('a pet on a colored node wears a bow in its color', () => {
 
     test('a color that is no hex gives no bow', () => {
         expect(bowColors('var(--accent)')).toBeNull();
+    });
+});
+
+describe('a pet shown at half the size', () => {
+    function rectsPainted(cell: number): number[][] {
+        const rects: number[][] = [];
+        const context = {
+            fillStyle: '',
+            clearRect(x: number, y: number, w: number, h: number) {
+                rects.push([x, y, w, h]);
+            },
+            fillRect(x: number, y: number, w: number, h: number) {
+                rects.push([x, y, w, h]);
+            }
+        } as unknown as CanvasRenderingContext2D;
+        paintPet(context, BUDDY, { pose: 'wait', frame: 0, lift: 0, bubble: true }, false, null, cell);
+        return rects;
+    }
+
+    test('paints the same picture at half the backing pixels', () => {
+        const full = rectsPainted(PAINT_CELL);
+        const half = rectsPainted(PAINT_CELL / 2);
+        expect(half[0]).toEqual([0, 0, PAINT_SIZE.w / 2, PAINT_SIZE.h / 2]);
+        expect(half).toEqual(full.map((rect) => rect.map((value) => value / 2)));
     });
 });

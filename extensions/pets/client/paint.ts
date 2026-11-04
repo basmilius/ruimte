@@ -75,20 +75,28 @@ export function petPainter(
 /*
  * One frame of a pet, with its bubble when it waits on you, over its head or, where a node lies there,
  * beside it, and a bow in its node's color when the node has one. A strip gets no bow: nothing says
- * where its head is. False when a strip's image is not decoded yet.
+ * where its head is. False when a strip's image is not decoded yet. `cell` is the backing pixels a cell
+ * takes, half of `PAINT_CELL` for a pet shown at half the size.
  */
-export function paintPet(context: CanvasRenderingContext2D, look: PetLook, frame: PetFrame, crowded: boolean, bow: BowColors | null = null): boolean {
-    context.clearRect(0, 0, PAINT_SIZE.w, PAINT_SIZE.h);
+export function paintPet(
+    context: CanvasRenderingContext2D,
+    look: PetLook,
+    frame: PetFrame,
+    crowded: boolean,
+    bow: BowColors | null = null,
+    cell: number = PAINT_CELL
+): boolean {
+    context.clearRect(0, 0, PAINT_COLUMNS * cell, PAINT_ROWS * cell);
     const top = GROUND - frame.lift;
     let complete = true;
     if (look.kind === 'drawn') {
-        paintParts(context, look.sprite, look.sprite.poses[frame.pose](frame.frame), { x: 0, y: top }, PAINT_CELL, bow);
+        paintParts(context, look.sprite, look.sprite.poses[frame.pose](frame.frame), { x: 0, y: top }, cell, bow);
     } else {
-        complete = paintSheet(context, look.sprite, frame, top);
+        complete = paintSheet(context, look.sprite, frame, top, cell);
     }
     if (frame.bubble) {
         const at = bubbleCell(frame.lift, crowded);
-        paintCells(context, bubble(at.x, at.y), PAINT_CELL);
+        paintCells(context, bubble(at.x, at.y), cell);
     }
     return complete;
 }
@@ -97,16 +105,16 @@ export function paintPet(context: CanvasRenderingContext2D, look: PetLook, frame
  * A state plays its own strip, or the one the sprite stands in. A stopped agent without a strip of its
  * own tips that one over and fades it; the other states only change the pace.
  */
-function paintSheet(context: CanvasRenderingContext2D, sprite: CustomPetSprite, frame: PetFrame, top: number): boolean {
+function paintSheet(context: CanvasRenderingContext2D, sprite: CustomPetSprite, frame: PetFrame, top: number, cell: number): boolean {
     const played = spriteImage(sprite, frame.pose);
     if (played === null) {
         return false;
     }
     const { image } = played;
     const { frameSize, frames } = played.strip;
-    const size = SHEET_CELLS * PAINT_CELL;
-    const left = SHEET_LEFT * PAINT_CELL;
-    const y = top * PAINT_CELL;
+    const size = SHEET_CELLS * cell;
+    const left = SHEET_LEFT * cell;
+    const y = top * cell;
     const source = (frame.frame % frames) * frameSize;
     context.imageSmoothingEnabled = false;
     if (frame.pose !== 'stopped' || played.pose === 'stopped') {
