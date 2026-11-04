@@ -94,8 +94,9 @@ export function EmptyCanvas() {
     };
 
     return (
-        // The bottom padding keeps the grid clear of the dock, which floats over the same cell.
-        <div className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden px-4 pt-4 pb-20">
+        /* The bottom padding keeps the grid clear of the dock, which floats over the same cell. A flex box, since
+           a grid row grows with what is in it and `max-h-full` would never make the list scroll. */
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden px-4 pt-4 pb-20">
             <ScrollArea className="pointer-events-auto max-h-full w-full max-w-3xl" viewportClassName="flex flex-col gap-5">
                 <ProviderRows onPick={(provider) => void createNodeAction('chat', { provider: provider.kind })} />
                 {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
