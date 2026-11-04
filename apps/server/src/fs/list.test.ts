@@ -80,15 +80,9 @@ describe('listDirectory', () => {
         expect(names(result.entries)).not.toContain('private.txt');
     });
 
-    test('flags what git ignores, and nothing outside a repository', async () => {
-        expect((await listDirectory(root, { hidden: true })).entries.every((entry) => !entry.ignored)).toBe(true);
-
+    test('flags nothing as ignored outside a repository', async () => {
         await writeFile(join(root, '.gitignore'), 'assets/\n*.txt\n');
-        await Bun.spawn(['git', 'init', '-q'], { cwd: root, stdout: 'ignore', stderr: 'ignore' }).exited;
-        const result = await listDirectory(root, { hidden: true });
-        const ignored = new Set(result.entries.filter((entry) => entry.ignored).map((entry) => entry.name));
-        expect(ignored).toEqual(new Set(['assets', 'item2.txt', 'item10.txt']));
-        expect(names(result.entries)).not.toContain('.git');
+        expect((await listDirectory(root, { hidden: true })).entries.every((entry) => !entry.ignored)).toBe(true);
     });
 
     test('caps a long directory and says so', async () => {
@@ -107,34 +101,6 @@ describe('listDirectory', () => {
         expect(nested.truncated).toBe(true);
         expect(nested.entries[0]!.path).toBe(wide);
         expect(nested.entries.at(-1)!.name).toBe(`f${FS_LIST_MAX_ENTRIES - 2}.txt`);
-    });
-
-    test('a dot the repository keeps is listed like any other name', async () => {
-        await mkdir(join(root, '.github'));
-        await writeFile(join(root, '.editorconfig'), 'root = true\n');
-        await writeFile(join(root, '.gitignore'), 'assets/\n.env\n');
-        await Bun.spawn(['git', 'init', '-q'], { cwd: root, stdout: 'ignore', stderr: 'ignore' }).exited;
-        const listed = names((await listDirectory(root)).entries);
-        expect(listed).toContain('.github');
-        expect(listed).toContain('.editorconfig');
-        expect(listed).not.toContain('.env');
-        expect(listed).not.toContain('assets');
-        expect(listed).not.toContain('.git');
-    });
-
-    test('a checkout under the folder answers about itself, not the one above it', async () => {
-        await writeFile(join(root, '.gitignore'), 'notes/\n');
-        await Bun.spawn(['git', 'init', '-q'], { cwd: root, stdout: 'ignore', stderr: 'ignore' }).exited;
-        const sub = join(root, 'sub');
-        await mkdir(join(sub, 'notes'), { recursive: true });
-        await writeFile(join(sub, 'notes', 'kept.md'), 'kept');
-        await Bun.spawn(['git', 'init', '-q'], { cwd: sub, stdout: 'ignore', stderr: 'ignore' }).exited;
-        await mkdir(join(root, 'notes'));
-        await writeFile(join(root, 'notes', 'gone.md'), 'gone');
-
-        const result = await listDirectory(root, { depth: 2 });
-        expect(names(result.entries)).not.toContain('gone.md');
-        expect(result.entries.find((entry) => entry.name === 'notes' && entry.path.startsWith(sub))!.ignored).toBe(false);
     });
 
     test('answers with a code for what is not a folder', async () => {

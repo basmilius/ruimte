@@ -4,11 +4,12 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { ignoredPaths } from './ignore.ts';
 import * as run from './run.ts';
+import { gitIn } from './test-repo.ts';
 
 let root: string;
 
 beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'ruimte-ignore-'));
+    root = await mkdtemp(join(process.env.RUIMTE_INTEGRATION_FIXTURE_ROOT ?? tmpdir(), 'ruimte-ignore-'));
     await mkdir(join(root, 'dist'));
     await writeFile(join(root, 'keep.ts'), '');
     await writeFile(join(root, 'notes.log'), '');
@@ -21,7 +22,7 @@ afterEach(async () => {
 
 async function ignoreLogsAndDist(): Promise<void> {
     await writeFile(join(root, '.gitignore'), '*.log\ndist/\n');
-    await Bun.spawn(['git', 'init', '-q'], { cwd: root, stdout: 'ignore', stderr: 'ignore' }).exited;
+    await gitIn(root, ['init', '--quiet']);
 }
 
 describe('ignoredPaths', () => {
@@ -34,7 +35,7 @@ describe('ignoredPaths', () => {
     });
 
     test('a repository that ignores nothing answers with an empty set, not a failure', async () => {
-        await Bun.spawn(['git', 'init', '-q'], { cwd: root, stdout: 'ignore', stderr: 'ignore' }).exited;
+        await gitIn(root, ['init', '--quiet']);
         expect(await ignoredPaths([join(root, 'keep.ts')], root)).toEqual(new Set());
     });
 

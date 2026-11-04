@@ -4,9 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { parseSync, Visitor, type Expression, type Super } from 'oxc-parser';
 
 /*
- * No test in the default run depends on wall-clock time. oxlint has no rule that catches a `new Date()`
- * without arguments and lets a fake clock's own setup through, and its JS plugins are still alpha, so
- * this walks the syntax itself. An integration test (`*.integration.test.ts`) may read the real clock.
+ * No test in the default run depends on wall-clock time or starts a process. oxlint has no rule that
+ * catches a `new Date()` without arguments and lets a fake clock's own setup through, and its JS plugins
+ * are still alpha, so this walks the syntax itself. An integration test (`*.integration.test.ts`) may
+ * read the real clock and start real processes.
  */
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -77,6 +78,74 @@ export function clockReads(path: string, text: string): ClockRead[] {
         .sort((left, right) => left.line - right.line);
 }
 
+const PROCESS_MODULES = new Set(['child_process', 'node:child_process']);
+
+// What `bun` exports that starts a process: `$` runs a real shell.
+const BUN_STARTERS = new Set(['spawn', 'spawnSync', '$']);
+
+export interface ProcessStart {
+    line: number;
+    what: string;
+}
+
+/* Every place a test file starts a process itself: `Bun.spawn`, Bun's shell or `node:child_process`. */
+export function processStarts(path: string, text: string): ProcessStart[] {
+    const program = parseSync(path, text).program;
+    const found: Array<{ start: number; what: string }> = [];
+    const noteModule = (start: number, source: string): void => {
+        if (PROCESS_MODULES.has(source)) {
+            found.push({ start, what: source });
+        }
+    };
+
+    new Visitor({
+        ImportDeclaration(node) {
+            if (node.importKind === 'type') {
+                return;
+            }
+
+            noteModule(node.start, node.source.value);
+
+            if (node.source.value !== 'bun') {
+                return;
+            }
+
+            for (const specifier of node.specifiers) {
+                if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type' && specifier.imported.type === 'Identifier') {
+                    if (BUN_STARTERS.has(specifier.imported.name)) {
+                        found.push({ start: specifier.start, what: `${specifier.imported.name} from bun` });
+                    }
+                }
+            }
+        },
+        ImportExpression(node) {
+            if (node.source.type === 'Literal' && typeof node.source.value === 'string') {
+                noteModule(node.start, node.source.value);
+            }
+        },
+        CallExpression(node) {
+            const [argument] = node.arguments;
+
+            if (node.callee.type === 'Identifier' && node.callee.name === 'require' && argument?.type === 'Literal' && typeof argument.value === 'string') {
+                noteModule(node.start, argument.value);
+            }
+        },
+        MemberExpression(node) {
+            if (node.computed || node.object.type !== 'Identifier' || node.object.name !== 'Bun' || node.property.type !== 'Identifier') {
+                return;
+            }
+
+            if (node.property.name === 'spawn' || node.property.name === 'spawnSync' || node.property.name === '$') {
+                found.push({ start: node.start, what: `Bun.${node.property.name}` });
+            }
+        }
+    }).visit(program);
+
+    const lineOf = (start: number): number => text.slice(0, start).split('\n').length;
+
+    return found.map(({ start, what }) => ({ line: lineOf(start), what })).sort((left, right) => left.line - right.line);
+}
+
 function testFiles(): string[] {
     const listed = Bun.spawnSync(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', '*.test.ts', '*.test.tsx'], { cwd: ROOT });
     if (listed.exitCode !== 0) {
@@ -92,8 +161,12 @@ function testFiles(): string[] {
 if (import.meta.main) {
     const problems: string[] = [];
     for (const path of testFiles()) {
-        for (const read of clockReads(path, readFileSync(join(ROOT, path), 'utf8'))) {
+        const text = readFileSync(join(ROOT, path), 'utf8');
+        for (const read of clockReads(path, text)) {
             problems.push(`${path}:${read.line}: ${read.what} reads the wall clock; use a fixed epoch or a fake clock`);
+        }
+        for (const started of processStarts(path, text)) {
+            problems.push(`${path}:${started.line}: ${started.what} starts a process; use a fake or move the test to an *.integration.test.ts`);
         }
     }
     for (const problem of problems) {

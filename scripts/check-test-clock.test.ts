@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { clockReads } from './check-test-clock.ts';
+import { clockReads, processStarts } from './check-test-clock.ts';
 
 function whatIn(text: string): string[] {
     return clockReads('example.test.ts', text).map((read) => read.what);
@@ -41,5 +41,43 @@ describe('clockReads', () => {
 
     test('a setup only covers its own arguments', () => {
         expect(whatIn('setSystemTime(new Date(0)); const late = Date.now();')).toEqual(['Date.now']);
+    });
+});
+
+function startsIn(text: string): string[] {
+    return processStarts('example.test.ts', text).map((started) => started.what);
+}
+
+describe('processStarts', () => {
+    test('finds every way a test starts a process itself', () => {
+        const text = [
+            "import { execFileSync } from 'node:child_process';",
+            "import { spawn as start, $ } from 'bun';",
+            "const child = require('child_process');",
+            "const later = await import('node:child_process');",
+            "await Bun.spawn(['git', 'init']).exited;",
+            "Bun.spawnSync(['ls']);",
+            'await Bun.$`ls`;'
+        ].join('\n');
+        expect(processStarts('example.test.ts', text)).toEqual([
+            { line: 1, what: 'node:child_process' },
+            { line: 2, what: 'spawn from bun' },
+            { line: 2, what: '$ from bun' },
+            { line: 3, what: 'child_process' },
+            { line: 4, what: 'node:child_process' },
+            { line: 5, what: 'Bun.spawn' },
+            { line: 6, what: 'Bun.spawnSync' },
+            { line: 7, what: 'Bun.$' }
+        ]);
+    });
+
+    test('a type, a fake and the rest of bun start nothing', () => {
+        const text = [
+            "import type { ChildProcess } from 'node:child_process';",
+            "import { type Subprocess, Glob } from 'bun';",
+            "spyOn(Bun, 'spawn').mockImplementation(fakeSpawn);",
+            "const listed = new Glob('*.ts');"
+        ].join('\n');
+        expect(startsIn(text)).toEqual([]);
     });
 });
