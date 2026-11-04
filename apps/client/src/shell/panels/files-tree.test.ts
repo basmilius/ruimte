@@ -272,6 +272,12 @@ describe('the checkouts of a tree', () => {
         expect(checkoutOfPath([linked], '/tmp/repo/src/index.ts')).toBe(linked);
     });
 
+    test('a folder below its repository counts the files from the root git named', () => {
+        const corner = { path: '/repo/apps/web', status: { root: '/repo', files: [file('apps/web/a.ts', 'M'), file('Makefile', 'M')] } };
+
+        expect(checkoutStatusEntries('/repo/apps/web', [corner])).toEqual([{ path: 'a.ts', status: 'modified' }]);
+    });
+
     test('a path belongs to the innermost checkout it is in', () => {
         expect(checkoutOfPath([outer, inner], '/repo/backend/config/feeds.yaml')).toBe(inner);
         expect(checkoutOfPath([inner, outer], '/repo/backend/config/feeds.yaml')).toBe(inner);
