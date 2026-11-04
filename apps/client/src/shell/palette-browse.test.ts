@@ -9,7 +9,6 @@ import {
     browseStart,
     folderPresence,
     isFullPath,
-    joinPath,
     linkDot,
     linkHint,
     machineLink,
@@ -51,15 +50,6 @@ describe('parentOf', () => {
         expect(parentOf('C:\\', '\\')).toBeNull();
         expect(parentOf('~/', '/')).toBeNull();
         expect(parentOf('', '/')).toBeNull();
-    });
-});
-
-describe('joinPath', () => {
-    test('a folder inside a directory, whatever the directory ends in', () => {
-        expect(joinPath('/a/b/', 'c', '/')).toBe('/a/b/c');
-        expect(joinPath('/a/b', 'c', '/')).toBe('/a/b/c');
-        expect(joinPath('/', 'c', '/')).toBe('/c');
-        expect(joinPath('C:\\a\\', 'b', '\\')).toBe('C:\\a\\b');
     });
 });
 

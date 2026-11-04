@@ -83,13 +83,11 @@ export const LoginStartQuerySchema = z.object({
      */
     link: TokenSchema.optional()
 });
-export type LoginStartQuery = z.infer<typeof LoginStartQuerySchema>;
 
 // The primary App ID grouped with the web Services ID in Apple Developer.
 export const APPLE_NATIVE_CLIENT_ID = 'app.ruimte.mobile';
 
 export const NativeAppleStartPayloadSchema = z.object({ codeChallenge: TokenSchema });
-export type NativeAppleStartPayload = z.infer<typeof NativeAppleStartPayloadSchema>;
 
 export const NativeAppleStartResultSchema = z.object({
     attempt: TokenSchema,
@@ -105,11 +103,9 @@ export const NativeAppleCompletePayloadSchema = z.object({
     // The credential's full name, which Apple hands the app only on the first authorization of an Apple ID.
     displayName: z.string().max(1024).optional()
 });
-export type NativeAppleCompletePayload = z.infer<typeof NativeAppleCompletePayloadSchema>;
 
 // The same PKCE- and device-key-bound exchange as web login, without a browser redirect.
 export const NativeAppleCompleteResultSchema = z.object({ code: TokenSchema });
-export type NativeAppleCompleteResult = z.infer<typeof NativeAppleCompleteResultSchema>;
 
 // `POST /v1/session`: the one-time code from the redirect, with the verifier only the app that started the login holds.
 export const SessionExchangePayloadSchema = z.object({
@@ -217,7 +213,6 @@ export function confirmsAccountDeletion(account: Account, typed: string): boolea
 export const ProvidersResultSchema = z.object({
     providers: z.array(z.string().max(32))
 });
-export type ProvidersResult = z.infer<typeof ProvidersResultSchema>;
 
 /*
  * `GET /v1/models/benchmarks`: the Intelligence Index of Artificial Analysis against its cost per task,
@@ -232,7 +227,6 @@ export const BenchmarkPointSchema = z.object({
     // In USD.
     costPerTask: z.number()
 });
-export type BenchmarkPoint = z.infer<typeof BenchmarkPointSchema>;
 
 export const BenchmarkModelSchema = z.object({
     // The model's slug in Ruimte.
@@ -406,7 +400,6 @@ export type RegisterMachinePayload = z.infer<typeof RegisterMachinePayloadSchema
 export const RegisterMachineResultSchema = z.object({
     machine: MachineSchema
 });
-export type RegisterMachineResult = z.infer<typeof RegisterMachineResultSchema>;
 
 function lifetimeCheck(
     what: string,

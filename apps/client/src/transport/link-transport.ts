@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import {
     EVENT_SCHEMAS,
     REQUEST_SCHEMAS,
@@ -18,7 +19,6 @@ import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from './piece';
 import type { PooledTransport } from './pool';
 import { protocolGate } from './protocol';
-import { messageOf } from './signaling';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { formatBytes } from '@adecore/ui/format';
 import type { ArtifactSummary } from '@ruimte/contracts';
-import { dateGroupOf, defaultFilters, drawnKind, filtersChanged, groupByDate, matchesFilters, projectsOf } from './artifact-list.ts';
+import { dateGroupOf, defaultFilters, drawnKind, filtersChanged, groupByDate, matchesFilters } from './artifact-list.ts';
 
 const NOW = new Date(2026, 9, 25, 12, 0).getTime();
 const DAY = 24 * 60 * 60 * 1000;
@@ -78,13 +77,5 @@ describe('the Output groups', () => {
         const midnight = new Date(2026, 9, 25, 0, 0).getTime();
         expect(dateGroupOf(midnight, NOW)).toBe('today');
         expect(dateGroupOf(midnight - 1, NOW)).toBe('week');
-    });
-
-    test('add up the bytes of each project for the project filter', () => {
-        const projects = projectsOf([summary('a', { bytes: 2048 }), summary('b', { bytes: 2048 }), summary('c', { projectId: 'beacon', bytes: 1 })]);
-        expect(projects.map((entry) => [entry.projectId, formatBytes(entry.bytes)])).toEqual([
-            ['atlas', formatBytes(4096)],
-            ['beacon', formatBytes(1)]
-        ]);
     });
 });

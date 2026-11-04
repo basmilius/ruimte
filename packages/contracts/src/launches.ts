@@ -81,7 +81,6 @@ export const LaunchAfterSettleSchema = z.object({
     launchId: z.string().min(1),
     approved: z.boolean()
 });
-export type LaunchAfterSettle = z.infer<typeof LaunchAfterSettleSchema>;
 
 export const LaunchesDocumentSchema = z.object({
     rev: z.number().int().nonnegative(),
@@ -97,13 +96,11 @@ export type LaunchesDocument = z.infer<typeof LaunchesDocumentSchema>;
 export const LaunchesTargetPayloadSchema = z.object({
     projectId: ProjectIdSchema
 });
-export type LaunchesTargetPayload = z.infer<typeof LaunchesTargetPayloadSchema>;
 
 /* `sources` opts in to the suggestion sources newer than the client that asks; without it the answer holds only the first three. */
 export const LaunchesDetectPayloadSchema = LaunchesTargetPayloadSchema.extend({
     sources: z.array(z.string().min(1)).max(16).optional()
 });
-export type LaunchesDetectPayload = z.infer<typeof LaunchesDetectPayloadSchema>;
 
 export const LaunchesSavePayloadSchema = z.object({
     projectId: ProjectIdSchema,
@@ -112,14 +109,11 @@ export const LaunchesSavePayloadSchema = z.object({
     // The ids an import added in this save. An import approves nothing: the first run asks. An older daemon ignores this and approves as it always did.
     imported: z.array(z.string().min(1)).optional()
 });
-export type LaunchesSavePayload = z.infer<typeof LaunchesSavePayloadSchema>;
 
 export const LaunchesSaveResultSchema = ProjectSaveResultSchema;
-export type LaunchesSaveResult = z.infer<typeof LaunchesSaveResultSchema>;
 
 // `vscode-launch` and `pubspec-yaml` are only ever sent to a request that names them (`LaunchesDetectPayloadSchema`), since a client validates every reply whole.
 export const LaunchSuggestionSourceSchema = z.enum(['run-xml', 'package-json', 'composer-json', 'vscode-launch', 'pubspec-yaml']);
-export type LaunchSuggestionSource = z.infer<typeof LaunchSuggestionSourceSchema>;
 
 /* A launch the daemon found in the project's own files, ready to import. */
 export const LaunchSuggestionSchema = z.object({
@@ -139,14 +133,12 @@ export type LaunchSuggestion = z.infer<typeof LaunchSuggestionSchema>;
 export const LaunchesDetectResultSchema = z.object({
     suggestions: z.array(LaunchSuggestionSchema)
 });
-export type LaunchesDetectResult = z.infer<typeof LaunchesDetectResultSchema>;
 
 /* A person's choice of the task to run after a worktree chat settles; null runs nothing. */
 export const LaunchesAfterSettlePayloadSchema = z.object({
     projectId: ProjectIdSchema,
     launchId: z.string().min(1).nullable()
 });
-export type LaunchesAfterSettlePayload = z.infer<typeof LaunchesAfterSettlePayloadSchema>;
 
 export const LaunchStartPayloadSchema = z.object({
     projectId: ProjectIdSchema,
@@ -156,7 +148,6 @@ export const LaunchStartPayloadSchema = z.object({
     // Stop the launch that holds the port first.
     replace: z.boolean().optional()
 });
-export type LaunchStartPayload = z.infer<typeof LaunchStartPayloadSchema>;
 
 /* What waits on a person's approval before it may run here. */
 export const LaunchHeldSchema = z.object({
@@ -190,7 +181,6 @@ export const LaunchStopPayloadSchema = z.object({
     // SIGKILL at once, which only a person's Force stop asks for.
     force: z.boolean().optional()
 });
-export type LaunchStopPayload = z.infer<typeof LaunchStopPayloadSchema>;
 
 export const LaunchStateSchema = z.enum(['starting', 'running', 'stopping', 'exited']);
 export type LaunchState = z.infer<typeof LaunchStateSchema>;
@@ -221,14 +211,12 @@ export type LaunchStatus = z.infer<typeof LaunchStatusSchema>;
 export const LaunchListResultSchema = z.object({
     launches: z.array(LaunchStatusSchema)
 });
-export type LaunchListResult = z.infer<typeof LaunchListResultSchema>;
 
 // A file changed: a save by another client, a hand edit, a pull, or an approval on this machine.
 export const LaunchesChangedEventSchema = z.object({
     projectId: ProjectIdSchema,
     document: LaunchesDocumentSchema
 });
-export type LaunchesChangedEvent = z.infer<typeof LaunchesChangedEventSchema>;
 
 /*
  * The port of an address, or null when it names none a launch can wait on. An address without a

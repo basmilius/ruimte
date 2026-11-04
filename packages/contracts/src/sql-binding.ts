@@ -18,7 +18,6 @@ export type SqlSnapshotInfo = z.infer<typeof SqlSnapshotInfoSchema>;
 export const LanguageSqlPayloadSchema = z.object({
     projectId: ProjectIdSchema
 });
-export type LanguageSqlPayload = z.infer<typeof LanguageSqlPayloadSchema>;
 
 /* What the person chose for the SQL of the project, and the snapshots the machine holds of its connections. */
 export const LanguageSqlStateSchema = z.object({
@@ -36,7 +35,6 @@ export const LanguageSqlBindPayloadSchema = z.object({
     path: z.string().min(1).optional(),
     binding: SqlBindingSchema.nullable()
 });
-export type LanguageSqlBindPayload = z.infer<typeof LanguageSqlBindPayloadSchema>;
 
 /* Takes the snapshots of one connection again, or of every connection of the project; `schema` narrows it to the snapshots that hold it. */
 export const DatabaseSnapshotRefreshPayloadSchema = z.object({
@@ -44,7 +42,6 @@ export const DatabaseSnapshotRefreshPayloadSchema = z.object({
     connectionId: z.string().min(1).optional(),
     schema: z.string().min(1).optional()
 });
-export type DatabaseSnapshotRefreshPayload = z.infer<typeof DatabaseSnapshotRefreshPayloadSchema>;
 
 // A choice changed, or a snapshot was taken or went: to every client that has the project open.
 export const LanguageSqlChangedEventSchema = LanguageSqlStateSchema.extend({

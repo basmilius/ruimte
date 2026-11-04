@@ -36,10 +36,8 @@ export const ChatSearchResultSchema = z.object({
 export type ChatSearchResult = z.infer<typeof ChatSearchResultSchema>;
 
 export const ChatSearchCancelPayloadSchema = z.object({ searchId: z.string().min(1).max(64) });
-export type ChatSearchCancelPayload = z.infer<typeof ChatSearchCancelPayloadSchema>;
 
 export const ChatExternalPayloadSchema = z.object({ projectId: z.string().min(1) });
-export type ChatExternalPayload = z.infer<typeof ChatExternalPayloadSchema>;
 
 export const ChatExternalSessionSchema = z.object({
     provider: AgentKindSchema,

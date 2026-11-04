@@ -1,8 +1,8 @@
 import { boundsOfElements } from '@adecore/drawing';
-import { EmptyState } from '@adecore/ui';
+import { EmptyState, useContentSize } from '@adecore/ui';
 import type { DrawingElement } from '@ruimte/contracts';
 import { PenTool } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cameraToFit } from '@/canvas/math';
 import { loadDrawingFont } from '@/drawing/fonts';
@@ -26,8 +26,7 @@ export function DrawingNode({ id }: { id: string }) {
     const viewId = useCanvas((s) => s.nodes[id]?.viewId ?? null);
     const mirror = useDrawingMirror(viewId);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const boxRef = useRef<HTMLDivElement>(null);
-    const [size, setSize] = useState({ w: 0, h: 0 });
+    const [boxRef, { width, height }] = useContentSize();
     const [fontReady, setFontReady] = useState(false);
     const paletteKey = usePaletteKey();
     const elements = mirror?.snapshot ?? NO_ELEMENTS;
@@ -44,35 +43,25 @@ export function DrawingNode({ id }: { id: string }) {
         };
     }, []);
 
-    useLayoutEffect(() => {
-        const box = boxRef.current;
-        if (!box) {
-            return;
-        }
-        const observer = new ResizeObserver(([entry]) => setSize({ w: entry!.contentRect.width, h: entry!.contentRect.height }));
-        observer.observe(box);
-        return () => observer.disconnect();
-    }, []);
-
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         const bounds = boundsOfElements(elements);
-        if (!canvas || !ctx || size.w === 0) {
+        if (!canvas || !ctx || width === 0) {
             return;
         }
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.round(size.w * dpr);
-        canvas.height = Math.round(size.h * dpr);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const camera = bounds === null ? null : cameraToFit(bounds, size, PADDING);
+        const camera = bounds === null ? null : cameraToFit(bounds, { w: width, h: height }, PADDING);
         if (camera === null) {
             return;
         }
         applyCamera(ctx, camera, dpr);
         paintElements(ctx, elements, paintOptions());
-    }, [elements, size, paletteKey, fontReady]);
+    }, [elements, width, height, paletteKey, fontReady]);
 
     return (
         <div ref={boxRef} className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>

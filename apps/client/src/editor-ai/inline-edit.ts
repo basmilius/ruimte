@@ -268,13 +268,6 @@ export class InlineEditFeature {
         await session.restore();
     }
 
-    /* Whether this file has an edit that Show Inline Edit would bring back. */
-    get hasEdit(): boolean {
-        return (
-            this.store.getState().session !== null || inlineSessionOf(this.endpointId, this.path) !== null || inlineEditFor(this.endpointId, this.path) !== null
-        );
-    }
-
     /* The row the proposal is drawn in, which the editor makes again whenever it scrolls back into view. */
     private setContainer(container: HTMLElement | null): void {
         this.store.setState({ container });

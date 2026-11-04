@@ -142,7 +142,6 @@ export const DeviceLinkMachineSchema = z.object({
     icon: MachineIconSchema.nullable(),
     publicKey: PublicKeySchema
 });
-export type DeviceLinkMachine = z.infer<typeof DeviceLinkMachineSchema>;
 
 export const DeviceLinkLookupResultSchema = z.object({
     machine: DeviceLinkMachineSchema,

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MachineHome } from './machine-home.ts';
-import { forgetSearchCache, fuzzyScore, listSearchableFiles, rankFiles, searchFiles } from './search.ts';
+import { forgetSearchCache, listSearchableFiles, rankFiles, searchFiles } from './search.ts';
 
 async function git(cwd: string, ...args: string[]): Promise<void> {
     const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'ignore', stderr: 'ignore' });
@@ -23,11 +23,10 @@ async function seed(root: string): Promise<void> {
     await writeFile(join(root, '.hidden', 'x.ts'), '');
 }
 
-describe('fuzzyScore', () => {
+describe('rankFiles', () => {
     test('needs every character in order and ignores case', () => {
-        expect(fuzzyScore('cmp', 'src/chat/Composer.ts')).not.toBeNull();
-        expect(fuzzyScore('pmc', 'src/chat/composer.ts')).toBeNull();
-        expect(fuzzyScore('', 'anything')).toBe(0);
+        expect(rankFiles(['src/chat/Composer.ts'], 'cmp', 1)).toEqual(['src/chat/Composer.ts']);
+        expect(rankFiles(['src/chat/composer.ts'], 'pmc', 1)).toEqual([]);
     });
 
     test('prefers the file name over a directory hit and a prefix over a scattered match', () => {
@@ -36,10 +35,10 @@ describe('fuzzyScore', () => {
 
     test('matches words apart on their own and in any order', () => {
         const path = 'app-alpha/src/greeting.ts';
-        expect(fuzzyScore('alpha greeting', path)).not.toBeNull();
-        expect(fuzzyScore('greeting  alpha', path)).toBe(fuzzyScore('alpha greeting', path));
-        expect(fuzzyScore('alpha farewell', path)).toBeNull();
-        expect(fuzzyScore(' greeting ', path)).toBe(fuzzyScore('greeting', path));
+        expect(rankFiles([path], 'alpha greeting', 1)).toEqual([path]);
+        expect(rankFiles([path], 'greeting  alpha', 1)).toEqual([path]);
+        expect(rankFiles([path], 'alpha farewell', 1)).toEqual([]);
+        expect(rankFiles([path], ' greeting ', 1)).toEqual([path]);
     });
 
     test('still prefers the file name for a word of a query with several', () => {

@@ -32,17 +32,6 @@ function isWordStart(path: string, index: number): boolean {
     return before === '/' || before === '.' || before === '-' || before === '_' || before === ' ';
 }
 
-/*
- * Subsequence match of `query` in `path`, case-insensitive. Null when a query character is
- * missing. Higher is better: a hit at a word start or right after the previous hit counts
- * more, a hit in the file name more than one in a directory, and a shorter path wins ties.
- * Words apart match each on their own and in any order, so `alpha greeting` finds
- * `app-alpha/src/greeting.ts` the way `alpha/greeting` does; the path scores their sum.
- */
-export function fuzzyScore(query: string, path: string): number | null {
-    return scorePath(wordsOf(query), path);
-}
-
 function wordsOf(query: string): string[] {
     return query.toLowerCase().split(/\s+/).filter(Boolean);
 }

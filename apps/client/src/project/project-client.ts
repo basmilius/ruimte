@@ -198,8 +198,6 @@ export class ProjectClient {
     private baseRev = 0;
     private baseShared: string[] = [];
     private locallyDrafted = false;
-    /* Why the last incoming document went to the person instead of being merged in. */
-    private refusal: string | null = null;
     /* Views that left the trash for good but may still be in the file, until a save without them lands. */
     private purging = new Set<string>();
     private readonly nextFrame: ((run: () => void) => () => void) | null;
@@ -274,11 +272,6 @@ export class ProjectClient {
             host.addEventListener('pagehide', onLeave);
             this.unsubscribe.push(() => host.removeEventListener('pagehide', onLeave));
         }
-    }
-
-    /* Why the last conflict was one; the id in it is what a person needs to make sense of the dialog. */
-    get mergeRefusal(): string | null {
-        return this.refusal;
     }
 
     async refreshList(): Promise<ProjectSummary[]> {
@@ -797,11 +790,9 @@ export class ProjectClient {
         }
         const merge = mergeProject(this.base, this.contentOfScreen(), contentOf(document), this.documents.getState().heldNodeIds());
         if (!merge.ok) {
-            this.refusal = merge.reason;
             console.debug(`[project] the canvas could not take in rev ${document.rev}: ${merge.reason}`);
             return false;
         }
-        this.refusal = null;
         this.setBase(document);
         this.sink.setRev(document.rev);
         /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull

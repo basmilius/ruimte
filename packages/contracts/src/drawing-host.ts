@@ -37,12 +37,10 @@ export const DrawingTargetPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     viewId: z.string().min(1)
 });
-export type DrawingTargetPayload = z.infer<typeof DrawingTargetPayloadSchema>;
 
 export const DrawingOpenResultSchema = z.object({
     document: DrawingDocumentSchema
 });
-export type DrawingOpenResult = z.infer<typeof DrawingOpenResultSchema>;
 
 export const DrawingSavePayloadSchema = z.object({
     projectId: ProjectIdSchema,
@@ -51,10 +49,8 @@ export const DrawingSavePayloadSchema = z.object({
     baseRev: z.number().int().nonnegative(),
     content: DrawingContentSchema
 });
-export type DrawingSavePayload = z.infer<typeof DrawingSavePayloadSchema>;
 
 export const DrawingSaveResultSchema = ProjectSaveResultSchema;
-export type DrawingSaveResult = z.infer<typeof DrawingSaveResultSchema>;
 
 // Duplicating a view: the daemon copies the file under the new id at rev 0.
 export const DrawingCopyPayloadSchema = z.object({
@@ -62,7 +58,6 @@ export const DrawingCopyPayloadSchema = z.object({
     from: z.string().min(1),
     to: z.string().min(1)
 });
-export type DrawingCopyPayload = z.infer<typeof DrawingCopyPayloadSchema>;
 
 // The file changed under the daemon (a git pull, another machine); carries what is on disk now.
 export const DrawingChangedEventSchema = z.object({
@@ -70,4 +65,3 @@ export const DrawingChangedEventSchema = z.object({
     viewId: z.string().min(1),
     document: DrawingDocumentSchema
 });
-export type DrawingChangedEvent = z.infer<typeof DrawingChangedEventSchema>;

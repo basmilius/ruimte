@@ -13,7 +13,6 @@ export const SnoozeSchema = z.object({
 export type Snooze = z.infer<typeof SnoozeSchema>;
 
 export const SnoozeListSchema = z.object({ snoozes: z.array(SnoozeSchema).max(1000) });
-export type SnoozeList = z.infer<typeof SnoozeListSchema>;
 
 // The machine finds the project the node is in; `node-not-found` when it is in none.
 export const SnoozeSetPayloadSchema = SnoozeSchema.pick({ nodeId: true, until: true });

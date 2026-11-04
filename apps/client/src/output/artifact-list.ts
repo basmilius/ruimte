@@ -100,17 +100,6 @@ export function groupByDate(artifacts: readonly ArtifactSummary[], now: number):
     return groups;
 }
 
-/* The projects with something in Output, by name, for the project filter. */
-export function projectsOf(artifacts: readonly ArtifactSummary[]): { projectId: string; projectName: string; bytes: number }[] {
-    const byId = new Map<string, { projectId: string; projectName: string; bytes: number }>();
-    for (const artifact of artifacts) {
-        const entry = byId.get(artifact.projectId) ?? { projectId: artifact.projectId, projectName: artifact.projectName, bytes: 0 };
-        entry.bytes += artifact.totalBytes;
-        byId.set(artifact.projectId, entry);
-    }
-    return [...byId.values()].sort((left, right) => left.projectName.localeCompare(right.projectName));
-}
-
 /* The routines that made the latest version of something listed; empty until routines exist. */
 export function routinesOf(artifacts: readonly ArtifactSummary[]): string[] {
     return [...new Set(artifacts.flatMap((artifact) => (artifact.latest.provenance.routineId === undefined ? [] : [artifact.latest.provenance.routineId])))];

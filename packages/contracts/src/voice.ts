@@ -27,7 +27,6 @@ export const VoiceActivityKindSchema = z.enum(['focus', 'rename', 'note', 'termi
 export type VoiceActivityKind = z.infer<typeof VoiceActivityKindSchema>;
 
 export const VoiceActivityStatusSchema = z.enum(['running', 'completed', 'failed']);
-export type VoiceActivityStatus = z.infer<typeof VoiceActivityStatusSchema>;
 
 export const VoiceErrorSchema = z.object({ code: z.string().min(1), message: z.string() });
 export type VoiceError = z.infer<typeof VoiceErrorSchema>;
@@ -36,12 +35,10 @@ export const VoiceKeyStatusSchema = z.object({
     // Whether the machine holds an OpenAI key for Voice; the key itself never leaves the machine.
     present: z.boolean()
 });
-export type VoiceKeyStatus = z.infer<typeof VoiceKeyStatusSchema>;
 
 export const VoiceSetKeyPayloadSchema = z.object({
     key: z.string().trim().min(1).max(VOICE_KEY_MAX_BYTES)
 });
-export type VoiceSetKeyPayload = z.infer<typeof VoiceSetKeyPayloadSchema>;
 
 /* How Voice on this machine talks, the machine's own and the same for every client that starts it. */
 export const VoicePreferencesSchema = z.object({
@@ -55,7 +52,6 @@ export const VoicePreferencesStateSchema = z.object({
     // Null while the machine stores none, so a client may offer its own first choice.
     preferences: VoicePreferencesSchema.nullable()
 });
-export type VoicePreferencesState = z.infer<typeof VoicePreferencesStateSchema>;
 
 /* The project a session works in now; Voice moves between the projects of its machine. */
 export const VoiceProjectSchema = z.object({
@@ -152,7 +148,6 @@ export type VoiceStopPayload = z.infer<typeof VoiceStopPayloadSchema>;
 export const VoiceStopResultSchema = z.object({
     stopped: z.boolean()
 });
-export type VoiceStopResult = z.infer<typeof VoiceStopResultSchema>;
 
 /* The person's answer to an action that asked first, from the phone; the model's goes through its own tool to the same confirmation. */
 export const VoiceConfirmPayloadSchema = z.object({
@@ -167,4 +162,3 @@ export type VoiceConfirmPayload = z.infer<typeof VoiceConfirmPayloadSchema>;
 export const VoiceConfirmResultSchema = z.object({
     accepted: z.boolean()
 });
-export type VoiceConfirmResult = z.infer<typeof VoiceConfirmResultSchema>;

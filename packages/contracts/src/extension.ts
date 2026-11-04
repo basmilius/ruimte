@@ -135,26 +135,20 @@ export const ExtensionInfoSchema = z.object({
 export type ExtensionInfo = z.infer<typeof ExtensionInfoSchema>;
 
 export const ExtensionListResultSchema = z.object({ extensions: z.array(ExtensionInfoSchema) });
-export type ExtensionListResult = z.infer<typeof ExtensionListResultSchema>;
 
 export const ExtensionInstallPayloadSchema = z.object({ pack: z.string().min(1) });
-export type ExtensionInstallPayload = z.infer<typeof ExtensionInstallPayloadSchema>;
 
 export const ExtensionIdPayloadSchema = z.object({ id: ExtensionIdSchema });
-export type ExtensionIdPayload = z.infer<typeof ExtensionIdPayloadSchema>;
 
 export const ExtensionSetEnabledPayloadSchema = z.object({ id: ExtensionIdSchema, enabled: z.boolean() });
-export type ExtensionSetEnabledPayload = z.infer<typeof ExtensionSetEnabledPayloadSchema>;
 
 export const ExtensionCallPayloadSchema = z.object({
     id: ExtensionIdSchema,
     method: z.string().min(1).max(120),
     args: z.array(z.unknown()).max(16)
 });
-export type ExtensionCallPayload = z.infer<typeof ExtensionCallPayloadSchema>;
 
 export const ExtensionCallResultSchema = z.object({ result: z.unknown() });
-export type ExtensionCallResult = z.infer<typeof ExtensionCallResultSchema>;
 
 /* What a client keeps of an extension on the machine, where its `server/` reads the same keys. */
 export const ExtensionStorageGetPayloadSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256) });
@@ -164,7 +158,6 @@ export const ExtensionStorageSetPayloadSchema = z.object({ id: ExtensionIdSchema
 
 /* A key a client, another window or the extension's `server/` wrote, to every client, so a surface that reads it never keeps an older value. */
 export const ExtensionStorageChangedEventSchema = z.object({ id: ExtensionIdSchema, key: z.string().min(1).max(256), value: z.unknown().optional() });
-export type ExtensionStorageChangedEvent = z.infer<typeof ExtensionStorageChangedEventSchema>;
 
 /* A prompt whose answer comes in pieces, as `extension.agentChunk` for this client's own run id. It answers once the run is over. */
 export const ExtensionAgentStreamPayloadSchema = z.object({
@@ -224,7 +217,6 @@ export const ExtensionMessageEventSchema = z.object({
     // `emit(name)` without a payload sends none over JSON.
     payload: z.unknown().optional()
 });
-export type ExtensionMessageEvent = z.infer<typeof ExtensionMessageEventSchema>;
 
 export const ExtensionContextReadPayloadSchema = z.object({
     projectId: z.string().min(1),
@@ -233,29 +225,23 @@ export const ExtensionContextReadPayloadSchema = z.object({
     // Only nodes of this kind, checked before anything is read: `terminals.read` must never read a chat.
     kind: z.string().min(1).optional()
 });
-export type ExtensionContextReadPayload = z.infer<typeof ExtensionContextReadPayloadSchema>;
 
 export const ExtensionContextReadResultSchema = z.object({
     sources: z.array(z.object({ id: z.string(), kind: z.string(), title: z.string(), text: z.string() }))
 });
-export type ExtensionContextReadResult = z.infer<typeof ExtensionContextReadResultSchema>;
 
 /* A chat as `chats.read` in `server/` reads it, also one in a view of its own. */
 export const ExtensionChatReadPayloadSchema = z.object({ chatId: z.string().min(1) });
-export type ExtensionChatReadPayload = z.infer<typeof ExtensionChatReadPayloadSchema>;
 
 export const ExtensionChatReadResultSchema = z.object({ text: z.string() });
-export type ExtensionChatReadResult = z.infer<typeof ExtensionChatReadResultSchema>;
 
 export const ExtensionAgentRunPayloadSchema = z.object({
     prompt: z.string().min(1),
     projectId: z.string().min(1),
     provider: z.string().min(1).optional()
 });
-export type ExtensionAgentRunPayload = z.infer<typeof ExtensionAgentRunPayloadSchema>;
 
 export const ExtensionAgentRunResultSchema = z.object({ text: z.string() });
-export type ExtensionAgentRunResult = z.infer<typeof ExtensionAgentRunResultSchema>;
 
 export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.contextRead': { payload: ExtensionContextReadPayloadSchema, result: ExtensionContextReadResultSchema },

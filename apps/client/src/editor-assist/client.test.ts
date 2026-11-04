@@ -46,7 +46,6 @@ describe('EditorAssistClient', () => {
         new FakeEditorAssistModel(transport, { available: false, reason: 'The selected editor model is unavailable.' });
         let now = 0;
         const client = new EditorAssistClient(transport, () => now);
-        expect(client.lastKnown).toBeNull();
         const [first, second] = await Promise.all([client.availability(), client.availability()]);
         expect(first).toEqual({ available: false, reason: 'The selected editor model is unavailable.' });
         expect(second).toBe(first);

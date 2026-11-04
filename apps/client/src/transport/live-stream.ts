@@ -1,6 +1,6 @@
+import { messageOf } from '@adecore/ui';
 import type { LiveStreamFrame } from '@ruimte/contracts';
 import type { RefObject } from 'react';
-import { messageOf } from './signaling';
 
 /* Waits out `ms`, or gives up at once when whoever is waiting was called off. */
 export function wait(ms: number, signal: AbortSignal): Promise<void> {

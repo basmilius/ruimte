@@ -1,4 +1,3 @@
-import { formatNumber } from '@adecore/ui/format';
 import { designNodeChats, type ProjectFileTabView, type Worktree, type WorktreeRemoveResult, type WorktreeWork } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { isUnderFolder } from '@/state/fs-watch';
@@ -141,31 +140,6 @@ export function removedToast(
     return null;
 }
 
-/* What a badge on a row counts; the row draws its own mark per kind. */
-type WorkBadgeKind = 'operation' | 'changed' | 'untracked' | 'ahead' | 'behind';
-
-interface WorkBadge {
-    kind: WorkBadgeKind;
-    /* What stands beside the mark: the count, or git's own word for an operation that stopped halfway. */
-    text: string;
-}
-
-/*
- * The numbers a row shows, leaving out what is zero. They are marks and figures rather than words,
- * so the branch and the node keep the room they need to tell two worktrees apart; `workBadgesLabel`
- * is the sentence behind them.
- */
-export function workBadges(work: WorktreeWork): WorkBadge[] {
-    const behind = work.behind ?? 0;
-    return [
-        ...(work.operation !== undefined ? [{ kind: 'operation' as const, text: work.operation }] : []),
-        ...(work.changed > 0 ? [{ kind: 'changed' as const, text: formatNumber(work.changed) }] : []),
-        ...(work.untracked > 0 ? [{ kind: 'untracked' as const, text: formatNumber(work.untracked) }] : []),
-        ...(work.ahead > 0 ? [{ kind: 'ahead' as const, text: formatNumber(work.ahead) }] : []),
-        ...(behind > 0 ? [{ kind: 'behind' as const, text: formatNumber(behind) }] : [])
-    ];
-}
-
 /* What the marks say in words, for the tooltip and the accessible name of the badges together. */
 export function workBadgesLabel(worktree: Worktree, work: WorktreeWork): string {
     const behind = work.behind ?? 0;
@@ -243,12 +217,6 @@ export function worktreeBase(worktree: Worktree): string | undefined {
 export function worktreeDiffTab(worktree: Worktree): { path: string; view: ProjectFileTabView } {
     const base = worktreeBase(worktree);
     return { path: worktree.path, view: { kind: 'diff', cwd: worktree.path, scope: 'base', staged: false, ...(base === undefined ? {} : { base }) } };
-}
-
-/* "from main": where a worktree came from. How far that branch moved on since is a badge of its own. */
-export function originLabel(worktree: Worktree): string | null {
-    const branch = worktree.from?.branch;
-    return branch === undefined ? null : i18next.t('panels:worktree.origin.from', { branch });
 }
 
 /*

@@ -9,7 +9,6 @@ export const ArchiveFormatSchema = z.enum(['zip', 'tar', 'tar-gzip', 'gzip']);
 export type ArchiveFormat = z.infer<typeof ArchiveFormatSchema>;
 
 export const ArchiveEntryKindSchema = z.enum(['file', 'directory', 'symlink']);
-export type ArchiveEntryKind = z.infer<typeof ArchiveEntryKindSchema>;
 
 export const ArchiveEntrySchema = z.object({
     // Relative, separated by `/`, without a trailing one; never absolute and never with a `..`.
@@ -29,7 +28,6 @@ export type ArchiveEntry = z.infer<typeof ArchiveEntrySchema>;
 export const ArchiveListPayloadSchema = z.object({
     path: z.string().min(1)
 });
-export type ArchiveListPayload = z.infer<typeof ArchiveListPayloadSchema>;
 
 export const ArchiveListResultSchema = z.object({
     format: ArchiveFormatSchema,
@@ -55,7 +53,6 @@ export const ArchiveExtractPayloadSchema = z.object({
     to: z.string().min(1),
     projectId: ProjectIdSchema.optional()
 });
-export type ArchiveExtractPayload = z.infer<typeof ArchiveExtractPayloadSchema>;
 
 // At most this many skipped entries are named; `skippedTotal` counts them all.
 export const ARCHIVE_SKIPPED_MAX = 100;

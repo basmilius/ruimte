@@ -20,7 +20,6 @@ export const DatabaseConnectionConfigSchema = z.discriminatedUnion('engine', [
     z.looseObject({ engine: z.literal('sqlite'), path: z.string().min(1) }),
     z.looseObject({ engine: z.literal('mysql') })
 ]);
-export type DatabaseConnectionConfig = z.infer<typeof DatabaseConnectionConfigSchema>;
 
 /* A connection as a file holds it. Never with a password: that lives in the desktop app's secret store. */
 export const DatabaseConnectionEntrySchema = z.looseObject({
@@ -67,7 +66,6 @@ export type DatabaseConnections = z.infer<typeof DatabaseConnectionsSchema>;
 export const DatabaseConnectionsPayloadSchema = z.object({
     projectId: ProjectIdSchema
 });
-export type DatabaseConnectionsPayload = z.infer<typeof DatabaseConnectionsPayloadSchema>;
 
 /* The whole list, against the rev it was read at. A password in a config is dropped, never written. */
 export const DatabaseConnectionsSavePayloadSchema = z.object({
@@ -94,7 +92,6 @@ export type DatabaseAgentAccess = z.infer<typeof DatabaseAgentAccessSchema>;
 export const DatabaseAgentAccessMapSchema = z.object({
     access: z.record(z.string(), DatabaseAgentAccessSchema)
 });
-export type DatabaseAgentAccessMap = z.infer<typeof DatabaseAgentAccessMapSchema>;
 
 /* `write` only from a client that presented the local secret. */
 export const DatabaseAgentAccessSetPayloadSchema = z.object({
@@ -102,7 +99,6 @@ export const DatabaseAgentAccessSetPayloadSchema = z.object({
     connectionId: z.string().min(1),
     access: DatabaseAgentAccessSchema
 });
-export type DatabaseAgentAccessSetPayload = z.infer<typeof DatabaseAgentAccessSetPayloadSchema>;
 
 export const DatabaseAgentAccessChangedEventSchema = DatabaseAgentAccessMapSchema.extend({
     projectId: ProjectIdSchema
@@ -118,7 +114,6 @@ export const DatabasePasswordsPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     passwords: z.record(z.string().min(1), z.string())
 });
-export type DatabasePasswordsPayload = z.infer<typeof DatabasePasswordsPayloadSchema>;
 
 /* An entry of a connections file as it stands: a connection this release reads, or one it keeps untouched. */
 export type DatabaseFileEntry = { connection: DatabaseConnectionEntry } | { raw: unknown };

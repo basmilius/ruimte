@@ -122,19 +122,6 @@ export function keptTabs(tabs: WindowTabs, kept: readonly string[]): WindowTabs 
     return refused.length === 0 ? tabs : settled({ ...tabs, keys: tabs.keys.filter((key) => !refused.includes(key)) });
 }
 
-/* The tab `step` places from the one in front, round the ends; the first or the last when none is. */
-export function stepTab(tabs: WindowTabs, step: 1 | -1): string | null {
-    const count = tabs.keys.length;
-    if (count === 0) {
-        return null;
-    }
-    const index = tabs.active === null ? -1 : tabs.keys.indexOf(tabs.active);
-    if (index === -1) {
-        return tabs.keys[step === 1 ? 0 : count - 1]!;
-    }
-    return tabs.keys[(index + step + count) % count]!;
-}
-
 /*
  * Where a window keeps its tabs: its own address, which a reload keeps, and the shell's session,
  * which hands them back in the address of the window it opens again at the next start.

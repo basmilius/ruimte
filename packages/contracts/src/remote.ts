@@ -17,18 +17,14 @@ export const RemoteLinkSchema = z.object({
 export type RemoteLink = z.infer<typeof RemoteLinkSchema>;
 
 export const RemoteListPayloadSchema = z.object({ projectId: z.string().min(1).max(256) });
-export type RemoteListPayload = z.infer<typeof RemoteListPayloadSchema>;
 
 export const RemoteListResultSchema = z.object({ links: z.array(RemoteLinkSchema).max(100) });
-export type RemoteListResult = z.infer<typeof RemoteListResultSchema>;
 
 // Linking a machine that is linked already replaces its link. A project that is not here answers `project-not-found`.
 export const RemoteLinkPayloadSchema = RemoteLinkSchema.extend({ projectId: z.string().min(1).max(256) });
-export type RemoteLinkPayload = z.infer<typeof RemoteLinkPayloadSchema>;
 
 // Refused with `machine-in-use` while a node of the project still runs on that machine.
 export const RemoteUnlinkPayloadSchema = RemoteLinkPayloadSchema.pick({ projectId: true, machineId: true });
-export type RemoteUnlinkPayload = z.infer<typeof RemoteUnlinkPayloadSchema>;
 
 /*
  * The statement the address book signed for this machine to work in `machineId`, handed over by the page
@@ -40,7 +36,6 @@ export const RemoteConnectPayloadSchema = z.object({
     // The broker that machine announces itself to, as the address book lists it; absent is the broker this machine uses itself.
     brokerUrl: BrokerUrlSchema.nullable().optional()
 });
-export type RemoteConnectPayload = z.infer<typeof RemoteConnectPayloadSchema>;
 
 /*
  * Where the link to another machine stands, to every client, on each change and once for every machine

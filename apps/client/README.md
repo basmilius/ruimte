@@ -61,7 +61,7 @@ Open acceptance and limits are in [NEXT.md](../../docs/NEXT.md#15-language-serve
 
 ## Icons
 
-Icons are Lucide through the `Icon` component of `@adecore/ui`, which sets the pixel box and stroke. Brand marks for the agent CLIs come from simple-icons (`src/chat/host.ts`).
+Icons are Lucide through the `Icon` component of `@adecore/ui`, which sets the pixel box and stroke. Brand marks for the agent CLIs come from `@adecore/agents-react/providers`.
 
 ## Crash reports
 

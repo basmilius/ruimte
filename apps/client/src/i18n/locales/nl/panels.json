@@ -1127,9 +1127,6 @@
             "title": "{{what}} mergen",
             "titleInto": "{{what}} mergen in {{into}}"
         },
-        "origin": {
-            "from": "van {{branch}}"
-        },
         "remove": {
             "anyway": "Toch verwijderen",
             "clean": "Er gaat niets verloren. Geen niet-gecommitte of nieuwe bestanden, en geen commits die {{target}} mist.",

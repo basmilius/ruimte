@@ -8,7 +8,6 @@ import {
     checkOf,
     checkOfAll,
     checkOfItems,
-    checkPart,
     compareGitRows,
     entriesOf,
     entriesUnder,
@@ -28,7 +27,6 @@ import {
     statusOf,
     SYNTHETIC_PREFIX,
     toggleItems,
-    toggleOf,
     type GitGroup,
     type GitTreeNode
 } from './git-tree.ts';
@@ -81,7 +79,6 @@ describe('the groups of the list', () => {
         expect(entryParts(entry!).map((part) => part.text)).toEqual(['+7', '-0', 'M']);
         const [binary] = entriesOf([file('b.png', 'unstaged', 'M', 0, 0)]);
         expect(entryParts(binary!).map((part) => part.text)).toEqual(['M']);
-        expect(checkPart('mixed')).toEqual({ text: '', color: 'var(--git-check-mixed)' });
     });
 
     test('a porcelain letter carries the color the app gives that news', () => {
@@ -112,15 +109,21 @@ describe('a box over more than one file', () => {
     });
 
     test('ticking one that is not wholly checked stages what is not staged yet', () => {
-        expect(toggleOf(entriesUnder(entries, 'src'))).toEqual({ staged: true, paths: ['src/deep/b.ts'] });
+        const items = entriesUnder(entries, 'src').map((entry) => ({ cwd: '/repo', entry }));
+
+        expect(toggleItems(items)).toEqual({ staged: true, work: [{ cwd: '/repo', paths: ['src/deep/b.ts'] }] });
     });
 
     test('ticking a checked one unstages all of it', () => {
-        expect(toggleOf(entriesUnder(entries, 'srcx'))).toEqual({ staged: false, paths: ['srcx/c.ts'] });
+        const items = entriesUnder(entries, 'srcx').map((entry) => ({ cwd: '/repo', entry }));
+
+        expect(toggleItems(items)).toEqual({ staged: false, work: [{ cwd: '/repo', paths: ['srcx/c.ts'] }] });
     });
 
     test('a file staged and changed again is staged whole', () => {
-        expect(toggleOf(entriesOf([file('a.ts', 'staged'), file('a.ts', 'unstaged')]))).toEqual({ staged: true, paths: ['a.ts'] });
+        const items = entriesOf([file('a.ts', 'staged'), file('a.ts', 'unstaged')]).map((entry) => ({ cwd: '/repo', entry }));
+
+        expect(toggleItems(items)).toEqual({ staged: true, work: [{ cwd: '/repo', paths: ['a.ts'] }] });
     });
 });
 

@@ -26,7 +26,6 @@ export const ReachSeveritySchema = z.enum(['ok', 'relayed', 'limited', 'unreacha
 export type ReachSeverity = z.infer<typeof ReachSeveritySchema>;
 
 export const ReachProbeOutcomeSchema = z.enum(['ok', 'refused', 'unreachable']);
-export type ReachProbeOutcome = z.infer<typeof ReachProbeOutcomeSchema>;
 
 export const ReachProbeSchema = z.object({
     kind: z.enum(['stun', 'turn']),
@@ -68,8 +67,6 @@ export type ReachCheck = z.infer<typeof ReachCheckSchema>;
 
 /* `endpoint.reach`: the last check, or a fresh one with `check`. A machine whose network changed since checks again anyway. */
 export const EndpointReachPayloadSchema = z.object({ check: z.boolean().optional() });
-export type EndpointReachPayload = z.infer<typeof EndpointReachPayloadSchema>;
 
 // Null while no check has run, such as on a machine with nothing to check yet.
 export const EndpointReachResultSchema = z.object({ reach: ReachCheckSchema.nullable() });
-export type EndpointReachResult = z.infer<typeof EndpointReachResultSchema>;

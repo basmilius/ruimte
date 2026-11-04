@@ -173,18 +173,6 @@ export function fieldActors(schema: z.ZodType): readonly ActionActorKind[] | nul
     return Array.isArray(actors) ? (actors as ActionActorKind[]) : null;
 }
 
-/* What a field says about itself, looked up under the wrappers that make it optional or nullable. */
-export function fieldDescription(schema: z.ZodType): string | undefined {
-    let current: z.ZodType | undefined = schema;
-    while (current !== undefined) {
-        if (current.description !== undefined) {
-            return current.description;
-        }
-        current = 'unwrap' in current && typeof current.unwrap === 'function' ? (current.unwrap() as z.ZodType) : undefined;
-    }
-    return undefined;
-}
-
 export const ARRANGE_LAYOUTS = ['grid', 'row', 'column'] as const;
 
 /*

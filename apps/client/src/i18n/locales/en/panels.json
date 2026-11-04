@@ -1127,9 +1127,6 @@
             "title": "Merge {{what}}",
             "titleInto": "Merge {{what}} into {{into}}"
         },
-        "origin": {
-            "from": "from {{branch}}"
-        },
         "remove": {
             "anyway": "Remove anyway",
             "clean": "Nothing is lost. No uncommitted files, new files or commits that {{target}} lacks.",

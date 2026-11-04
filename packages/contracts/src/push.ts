@@ -14,7 +14,6 @@ export const PushProjectPreferenceSchema = z.object({
     projectId: z.string().min(1).max(256),
     notify: z.array(PushNotifyKindSchema).max(8)
 });
-export type PushProjectPreference = z.infer<typeof PushProjectPreferenceSchema>;
 
 /* A newer app may name a kind this machine does not know; it is dropped instead of refusing the whole subscription. */
 const PushNotifyWordsSchema = z
@@ -48,7 +47,6 @@ export const PushPreferencesResultSchema = z.object({
     notify: z.array(PushNotifyKindSchema),
     projects: z.array(PushProjectPreferenceSchema)
 });
-export type PushPreferencesResult = z.infer<typeof PushPreferencesResultSchema>;
 
 export const PushAttentionEntrySchema = z.object({
     nodeId: z.string().min(1).max(256),
