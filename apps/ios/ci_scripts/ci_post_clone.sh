@@ -7,9 +7,11 @@ if ! command -v xcodegen >/dev/null 2>&1; then
     brew install xcodegen
 fi
 # A build of a release tag carries that release's version, so the app and the desktop name one version.
+# Apple takes only up to three numbers, so a beta builds as the version it leads to, told apart by its build number.
 case "${CI_TAG:-}" in
     v[0-9]*)
-        sed -i '' "s/^\(    MARKETING_VERSION:\).*/\1 ${CI_TAG#v}/" apps/ios/project.yml
+        version="${CI_TAG#v}"
+        sed -i '' "s/^\(    MARKETING_VERSION:\).*/\1 ${version%%-*}/" apps/ios/project.yml
         ;;
 esac
 # Set in the spec rather than with agvtool, which takes a test target's GENERATE_INFOPLIST_FILE = YES for a plist path.

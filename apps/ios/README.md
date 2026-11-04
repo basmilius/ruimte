@@ -160,7 +160,7 @@ A Live Activity is one overview per machine, counting working agents and those t
 
 The app is an Xcode Cloud product built from the committed project and `Ruimte.xcodeproj/xcshareddata/xcodecloud/manifest.json`. Workflows are edited through the App Store Connect API.
 
-- `Release` starts on every `v*` tag and archives for TestFlight and the App Store. `ci_scripts/ci_post_clone.sh` sets `MARKETING_VERSION` from the tag and `CURRENT_PROJECT_VERSION` from `CI_BUILD_NUMBER`, generates the project and installs the Metal component. Both versions live in the spec because `agvtool` fails on a test target with `GENERATE_INFOPLIST_FILE = YES`.
+- `Release` starts on every `v*` tag and archives for TestFlight and the App Store. `ci_scripts/ci_post_clone.sh` sets `MARKETING_VERSION` from the tag, a beta's without its suffix (`v0.30.0-beta.7` builds as `0.30.0`), and `CURRENT_PROJECT_VERSION` from `CI_BUILD_NUMBER`, generates the project and installs the Metal component. Both versions live in the spec because `agvtool` fails on a test target with `GENERATE_INFOPLIST_FILE = YES`.
 - `Check` builds and tests on an iPhone simulator on main and on pull requests touching `apps/ios`, `packages/contracts` or `packages/pulsar`.
 
 Onboarding refuses a project whose Swift packages live in repositories the team cannot grant access to. The product was made from a generated project without packages, then the real project was generated again; repeat that if it ever has to be made anew.
