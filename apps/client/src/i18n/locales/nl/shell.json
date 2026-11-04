@@ -897,6 +897,7 @@
             "views": "Weergaven",
             "projects": "Projecten",
             "actions": "Acties",
+            "extensions": "Uit extensies",
             "settings": "Instellingen",
             "folders": "Mappen",
             "machines": "Machines"
@@ -1381,6 +1382,7 @@
         "failed": "Deze extensie kon niet worden getoond",
         "surfaceFailed": "{{name}} kon niet worden getoond",
         "storageFailed": "{{name}} kon niet bewaren wat het bijhoudt",
+        "newView": "Nieuwe {{name}}-weergave",
         "nodeNeeds": "Hiervoor is een extensie nodig",
         "removeNodes": {
             "title_one": "{{count}} node verwijderen?",

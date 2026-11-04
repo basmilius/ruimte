@@ -709,7 +709,14 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 component: surfaceOf(extension, view) as ComponentType<{ params: unknown }>,
                 open: () => open()
             });
-            add('commands', { id: `extension:${id}/view/${view.id}`, title: `New ${view.title}`, run: open });
+            add('commands', {
+                id: `extension:${id}/view/${view.id}`,
+                // Read when the palette builds its rows, which it does again after a language change.
+                get title() {
+                    return i18next.t('shell:extensions.newView', { name: view.title });
+                },
+                run: open
+            });
 
             return { open };
         },

@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { useChats } from '@adecore/agents-react/state';
 import type { ExtensionManifest, ProjectSummary } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { act, createElement, type ComponentType } from 'react';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { nodeInfoOf } from '@/extensions/slots';
+import { chooseLanguage } from '@/i18n';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
@@ -15,6 +17,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { folderWatches } from '@/state/fs-watch';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport';
@@ -556,6 +559,27 @@ describe('the client API', () => {
             expect(mounted.host.querySelector('svg')?.getAttribute('class')).toContain('lucide-gauge');
         } finally {
             useDocument.setState({ views: [] });
+        }
+    });
+
+    test('names the command that opens a view of the extension in the language a person reads', async () => {
+        const { api } = loaded();
+
+        api.defineView({ id: 'board', title: 'Board', component: async () => ({ default: () => null }) });
+
+        const command = useContributions.getState().commands.find((entry) => entry.id === 'extension:acme.probe/view/board');
+
+        const language = useSettings.getState().language;
+
+        try {
+            expect(command?.title).toBe('New Board');
+
+            await chooseLanguage('nl');
+
+            expect(command?.title).toBe('Nieuwe Board-weergave');
+        } finally {
+            useSettings.getState().update({ language });
+            await i18next.changeLanguage('en');
         }
     });
 

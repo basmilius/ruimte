@@ -897,6 +897,7 @@
             "views": "Views",
             "projects": "Projects",
             "actions": "Actions",
+            "extensions": "From extensions",
             "settings": "Settings",
             "folders": "Folders",
             "machines": "Machines"
@@ -1381,6 +1382,7 @@
         "failed": "This extension could not be shown",
         "surfaceFailed": "{{name}} could not be shown",
         "storageFailed": "{{name}} could not keep what it stores",
+        "newView": "New {{name}}",
         "nodeNeeds": "This needs an extension",
         "removeNodes": {
             "title_one": "Remove {{count}} node?",

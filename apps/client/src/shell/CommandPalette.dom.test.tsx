@@ -45,6 +45,14 @@ function labels(): string[] {
     return rows().map((row) => row.textContent ?? '');
 }
 
+function groupLabels(): string[] {
+    return [...document.querySelectorAll('[role="group"]')].map((group) => {
+        const id = group.getAttribute('aria-labelledby');
+
+        return (id === null ? null : document.getElementById(id)?.textContent) ?? '';
+    });
+}
+
 async function openPalette(open: () => void, ready: () => boolean): Promise<void> {
     page = mount();
     await page.renderApp();
@@ -80,6 +88,30 @@ describe('the command palette with an extension', () => {
             expect(ran).toEqual(['zzzqqq']);
         } finally {
             remove();
+        }
+    });
+
+    test('puts what a source finds under a label of its own, apart from the actions', async () => {
+        const removes = [
+            contribute('paletteSources', {
+                id: 'poc/issues',
+                title: 'POC',
+                search: async () => [{ id: 'issue', title: 'An issue', run: () => undefined }]
+            }),
+            contribute('commands', { id: 'extension:poc/command', title: 'Command wwyy', run: () => undefined })
+        ];
+
+        try {
+            await openPalette(
+                () => useUi.getState().setPaletteOpen(true),
+                () => rows().length > 0
+            );
+            await type('wwyy');
+            await until(() => labels().some((label) => label.includes('An issue')) && labels().some((label) => label.includes('Command wwyy')));
+
+            expect(groupLabels()).toEqual(['From extensions', 'Actions']);
+        } finally {
+            removes.forEach((remove) => remove());
         }
     });
 

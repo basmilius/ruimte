@@ -152,7 +152,8 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         // Found by the extension's own reasoning, so the palette's match on words never hides it.
         keywords: query,
         icon: <Icon icon={Blocks} size={14} />,
-        section: 'actions',
+        // A section of their own: under Actions they would stand apart from the commands, as a second group of that name.
+        section: 'extensions',
         run: () => {
             close();
             hit.run();
