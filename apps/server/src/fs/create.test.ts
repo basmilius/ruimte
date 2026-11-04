@@ -137,6 +137,11 @@ describe('fs.create', () => {
         expect(await codeOf(createEntry({ path: join(project, 'a\0b'), kind: 'file' }, boundary()))).toBe('bad-path');
     });
 
+    test('refuses a name longer than the file system stores', async () => {
+        expect(await codeOf(createEntry({ path: join(project, 'x'.repeat(300)), kind: 'file' }, boundary()))).toBe('bad-path');
+        expect(await codeOf(createEntry({ path: join(project, 'x'.repeat(300), 'a.ts'), kind: 'file' }, boundary()))).toBe('bad-path');
+    });
+
     test('refuses a text past the limit', async () => {
         const text = 'x'.repeat(FS_READ_MAX_TEXT_BYTES + 1);
 

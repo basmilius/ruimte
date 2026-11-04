@@ -36,9 +36,27 @@ function posix() {
         }
 
         const errno = read.i32(symbols[errnoName]!() as Pointer, 0);
-        const codes: Record<number, string> = { 1: 'EPERM', 2: 'ENOENT', 13: 'EACCES', 17: 'EEXIST', 20: 'ENOTDIR', 22: 'EINVAL', 28: 'ENOSPC', 30: 'EROFS' };
+        const codes: Record<number, string> = {
+            1: 'EPERM',
+            2: 'ENOENT',
+            13: 'EACCES',
+            17: 'EEXIST',
+            20: 'ENOTDIR',
+            21: 'EISDIR',
+            22: 'EINVAL',
+            28: 'ENOSPC',
+            30: 'EROFS'
+        };
 
-        throw failure(codes[errno] ?? (errno === (darwin ? 62 : 40) ? 'ELOOP' : 'EIO'), path);
+        if (errno === (darwin ? 62 : 40)) {
+            throw failure('ELOOP', path);
+        }
+
+        if (errno === (darwin ? 63 : 36)) {
+            throw failure('ENAMETOOLONG', path);
+        }
+
+        throw failure(codes[errno] ?? 'EIO', path);
     };
 
     return {
