@@ -94,11 +94,10 @@ export function EmptyCanvas() {
     };
 
     return (
-        /* The bottom padding keeps the grid clear of the dock, which floats over the same cell. A flex box, since
-           a grid row grows with what is in it and `max-h-full` would never make the list scroll. */
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden px-4 pt-4 pb-20">
-            {/* The rows keep their height and the list scrolls; a flex column would otherwise shrink the hint at its end to nothing. */}
-            <ScrollArea className="pointer-events-auto max-h-full w-full max-w-3xl" viewportClassName="flex flex-col gap-5 *:shrink-0">
+        /* The bottom padding keeps the list clear of the dock, which floats over the same cell. The list shrinks and
+           scrolls while the hint under it keeps its line, so a small cell still says how to reach the rest. */
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-5 overflow-hidden px-4 pt-4 pb-20">
+            <ScrollArea className="pointer-events-auto min-h-0 w-full max-w-3xl" viewportClassName="flex flex-col gap-5 *:shrink-0">
                 <ProviderRows onPick={(provider) => void createNodeAction('chat', { provider: provider.kind })} />
                 {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
                     <section key={key} className="flex flex-col gap-2">
@@ -128,10 +127,10 @@ export function EmptyCanvas() {
                     </section>
                 ))}
                 <SlotRow place="emptyCanvas" context={{}} words wrap={(row) => <div className="flex flex-wrap justify-center gap-2">{row}</div>} />
-                <p className="text-center text-xs text-text-muted">
-                    <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
-                </p>
             </ScrollArea>
+            <p className="pointer-events-auto shrink-0 text-center text-xs text-text-muted">
+                <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> }} />
+            </p>
         </div>
     );
 }
