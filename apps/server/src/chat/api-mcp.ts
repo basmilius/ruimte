@@ -1,6 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
-import { open } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatMcpServer } from '@adecore/agents/chat';
 import { isNotFound } from '@adecore/utils/errors';
@@ -65,30 +64,7 @@ function parseApiMcpConfig(bytes: Buffer, bytesRead: number): Record<string, Api
     return Object.fromEntries(Object.entries(parsed.data.mcpServers).filter(([, server]) => server.enabled !== false));
 }
 
-export async function readApiMcpConfig(home: string, signal?: AbortSignal): Promise<Record<string, ApiMcpServer>> {
-    signal?.throwIfAborted();
-    let handle;
-    try {
-        handle = await open(join(home, CONFIG_FILE), 'r');
-    } catch (error) {
-        const failure = openFailure(error);
-        if (failure === null) {
-            return {};
-        }
-        throw failure;
-    }
-    try {
-        checkConfigFile(await handle.stat());
-        const bytes = Buffer.alloc(MAX_CONFIG_BYTES + 1);
-        const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
-        signal?.throwIfAborted();
-        return parseApiMcpConfig(bytes, bytesRead);
-    } finally {
-        await handle.close();
-    }
-}
-
-/* The same file, read where a backend is made, which cannot wait; it is small enough to read at once. */
+/* Read where a backend is made, which cannot wait; the file is small enough to read at once. */
 export function readApiMcpConfigSync(home: string): Record<string, ApiMcpServer> {
     let fd;
     try {
@@ -287,61 +263,4 @@ export async function connectApiMcp(
                 await client.close();
             })())
     };
-}
-
-export class ApiMcpPool {
-    private readonly connections = new Map<string, { fingerprint: string; ready: Promise<ApiMcpConnection> }>();
-    private closed = false;
-    private readonly connect: ConnectApiMcp;
-
-    constructor(connect: ConnectApiMcp = connectApiMcp) {
-        this.connect = connect;
-    }
-
-    async get(name: string, config: ApiMcpServer, cwd: string, env: Record<string, string>, signal: AbortSignal): Promise<ApiMcpConnection> {
-        signal.throwIfAborted();
-        if (this.closed) {
-            throw new Error('This chat has closed its MCP connections.');
-        }
-        const fingerprint = JSON.stringify(config);
-        let entry = this.connections.get(name);
-        if (entry && entry.fingerprint !== fingerprint) {
-            this.connections.delete(name);
-            await (await entry.ready).close();
-            entry = undefined;
-        }
-        if (!entry) {
-            const ready = this.connect(config, cwd, env, signal);
-            entry = { fingerprint, ready };
-            this.connections.set(name, entry);
-            const current = entry;
-            void ready.catch(() => {
-                if (this.connections.get(name) === current) {
-                    this.connections.delete(name);
-                }
-            });
-        }
-        const connection = await entry.ready;
-        if (this.closed || signal.aborted) {
-            await this.invalidate(name, connection);
-            signal.throwIfAborted();
-            throw new Error('This chat has closed its MCP connections.');
-        }
-        return connection;
-    }
-
-    async invalidate(name: string, connection: ApiMcpConnection): Promise<void> {
-        const entry = this.connections.get(name);
-        if (entry && (await entry.ready.catch(() => null)) === connection && this.connections.get(name) === entry) {
-            this.connections.delete(name);
-        }
-        await connection.close().catch(() => undefined);
-    }
-
-    async close(): Promise<void> {
-        this.closed = true;
-        const entries = [...this.connections.values()];
-        this.connections.clear();
-        await Promise.allSettled(entries.map(async (entry) => (await entry.ready).close()));
-    }
 }

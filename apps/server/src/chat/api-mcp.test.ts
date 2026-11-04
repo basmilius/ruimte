@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Server, WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server';
-import { connectApiMcp, EXTERNAL_MCP_LIMITS, RUIMTE_MCP_LIMITS, type ApiMcpServer } from './api-mcp.ts';
+import { connectApiMcp, expandMcpEnvironment, EXTERNAL_MCP_LIMITS, readApiMcpConfigSync, RUIMTE_MCP_LIMITS, type ApiMcpServer } from './api-mcp.ts';
 
 const SERVER: ApiMcpServer = { type: 'http', url: 'http://127.0.0.1:4210/mcp', headers: {} };
 const PICTURE = Buffer.alloc(800 * 1024, 7).toString('base64');
@@ -74,6 +77,30 @@ describe('connectApiMcp', () => {
             expect(request.signal.aborted).toBe(true);
         } finally {
             await connection.close();
+        }
+    });
+});
+
+describe('api-mcp.json', () => {
+    test('loads only enabled servers and expands explicitly named account variables', async () => {
+        const home = await mkdtemp(join(tmpdir(), 'ruimte-api-mcp-config-'));
+
+        try {
+            await writeFile(
+                join(home, 'api-mcp.json'),
+                JSON.stringify({
+                    mcpServers: { enabled: { command: 'server', env: { TOKEN: '${TEST_TOKEN}' } }, disabled: { command: 'disabled', enabled: false } }
+                })
+            );
+
+            expect(Object.keys(readApiMcpConfigSync(home))).toEqual(['enabled']);
+            expect(expandMcpEnvironment({ TOKEN: '${TEST_TOKEN}', STATIC: 'literal' }, { TEST_TOKEN: 'secret' })).toEqual({
+                TOKEN: 'secret',
+                STATIC: 'literal'
+            });
+            expect(() => expandMcpEnvironment({ TOKEN: '${MISSING_TOKEN}' }, {})).toThrow('MISSING_TOKEN');
+        } finally {
+            await rm(home, { recursive: true, force: true });
         }
     });
 });
