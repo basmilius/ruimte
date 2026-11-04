@@ -13,7 +13,7 @@ import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf, isPathBelow } from '@/shell/panels/files-tree';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { htmlPreviewDocument } from '@/shell/panels/html-preview';
-import { trackPageReady, usePreviewFind, type FindablePage, type FoundInPage } from '@/shell/panels/use-preview-find';
+import { isPageReady, trackPageReady, usePreviewFind, type FindablePage, type FoundInPage } from '@/shell/panels/use-preview-find';
 import { useSourceToggle } from '@/shell/panels/use-source-toggle';
 import { useEndpoints } from '@/state/endpoints';
 import { CellViewContext } from '@/state/workspace-stores';
@@ -157,8 +157,15 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
         }
         const folder = dirnameOf(path);
         return transport.on('fs.changed', (payload) => {
+            const element = page.current;
+
+            // A page that is not ready yet is still loading, and so loads the changed file anyway.
+            if (element === null || !isPageReady(element)) {
+                return;
+            }
+
             if (payload.paths.some((changed) => changed === folder || isPathBelow(folder, changed))) {
-                page.current?.reload();
+                element.reload();
             }
         });
     }, [transport, nativePreview, path]);

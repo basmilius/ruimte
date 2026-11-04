@@ -27,14 +27,18 @@ const NOTHING = { total: 0, current: null };
 
 const readyPages = new WeakSet<FindablePage>();
 
-/* Electron's find throws until the guest is attached and `dom-ready` fired, which a Cmd+F right after opening beats. */
+/* Electron's find and reload throw until the guest is attached and `dom-ready` fired, which a Cmd+F or a file change right after opening beats. */
 export function trackPageReady(element: FindablePage): void {
     element.addEventListener('dom-ready', () => readyPages.add(element), { once: true });
 }
 
+export function isPageReady(element: FindablePage): boolean {
+    return readyPages.has(element);
+}
+
 function readyPage(page: RefObject<FindablePage | null>): FindablePage | null {
     const element = page.current;
-    return element !== null && readyPages.has(element) ? element : null;
+    return element !== null && isPageReady(element) ? element : null;
 }
 
 /*
