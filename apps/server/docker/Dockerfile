@@ -37,7 +37,6 @@ COPY packages/service/src ./packages/service/src
 COPY packages/telemetry/src ./packages/telemetry/src
 COPY packages/voice/src ./packages/voice/src
 COPY apps/server/src ./apps/server/src
-COPY apps/server/bin ./apps/server/bin
 COPY apps/server/docker/entrypoint.sh /usr/local/bin/ruimte-entrypoint
 RUN chmod +x /usr/local/bin/ruimte-entrypoint
 
