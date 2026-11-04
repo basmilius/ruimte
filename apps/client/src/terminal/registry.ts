@@ -11,6 +11,8 @@ import { currentEndpointId, endpointKey } from '@/state/keys';
 const live = new Map<string, Terminal>();
 const lastScreens = new Map<string, string[]>();
 const nodeOf = new WeakMap<Terminal, string>();
+/* Live terminals whose node left the document; the node leaves before React unmounts it, so its unmount must not keep a screen. */
+const forgotten = new WeakSet<Terminal>();
 
 function screenLines(term: Terminal): string[] {
     const buffer = term.buffer.active;
@@ -32,7 +34,10 @@ export function registerTerminal(endpointId: string, nodeId: string, term: Termi
         if (live.get(key) === term) {
             live.delete(key);
         }
-        lastScreens.set(key, screenLines(term));
+
+        if (!forgotten.has(term)) {
+            lastScreens.set(key, screenLines(term));
+        }
     };
 }
 
@@ -52,7 +57,14 @@ export function screenOf(endpointId: string, nodeId: string): string[] | null {
 }
 
 export function forgetScreen(endpointId: string, nodeId: string): void {
-    lastScreens.delete(endpointKey(endpointId, nodeId));
+    const key = endpointKey(endpointId, nodeId);
+    const term = live.get(key);
+
+    if (term !== undefined) {
+        forgotten.add(term);
+    }
+
+    lastScreens.delete(key);
 }
 
 interface TerminalTestHooks {
