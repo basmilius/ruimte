@@ -12,36 +12,11 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
+  # The Rust and Swift checks, each only when its paths changed; a release runs them all on its tag.
+  native:
+    uses: ./.github/workflows/native.yml
     permissions:
       contents: read
-    outputs:
-      rust: ${{ steps.paths.outputs.rust }}
-      swift_pulsar: ${{ steps.paths.outputs.RuimtePulsar }}
-      swift_transport: ${{ steps.paths.outputs.RuimteTransport }}
-      computer_use: ${{ steps.paths.outputs.computer_use }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
-        id: paths
-        with:
-          # Git detection also works for fork PRs without pull-requests permission in callers.
-          token: ''
-          filters: |
-            rust:
-              - '.github/**'
-              - 'apps/ios-device-bridge/**'
-            RuimtePulsar:
-              - '.github/**'
-              - 'apps/ios/Packages/RuimtePulsar/**'
-            RuimteTransport:
-              - '.github/**'
-              - 'apps/ios/Packages/RuimtePulsar/**'
-              - 'apps/ios/Packages/RuimteTransport/**'
-            computer_use:
-              - '.github/**'
-              - 'apps/computer-use/**'
 
   verify:
     runs-on: ubuntu-latest
@@ -136,66 +111,10 @@ jobs:
       - uses: ./.github/actions/install
       - run: bun run test:package
 
-  rust:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.rust == 'true' }}
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        crate: [ios-device-bridge]
-    defaults:
-      run:
-        working-directory: apps/${{ matrix.crate }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
-        with:
-          workspaces: apps/${{ matrix.crate }}
-      - run: cargo test --locked
-
-  # The packages declare swift-tools-version 6.4, which takes Xcode 27; macos-latest still carries 26.
-  swift-pulsar:
-    name: swift (RuimtePulsar)
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.swift_pulsar == 'true' }}
-    runs-on: xcode-27
-    defaults:
-      run:
-        working-directory: apps/ios/Packages/RuimtePulsar
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: swift test
-
-  swift-transport:
-    name: swift (RuimteTransport)
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.swift_transport == 'true' }}
-    runs-on: xcode-27
-    defaults:
-      run:
-        working-directory: apps/ios/Packages/RuimteTransport
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: swift test
-
-  # The same runner as the iOS packages, for the tests. `packaged` compiles the helper for release on
-  # macos-latest, the runner the release itself builds on.
-  computer-use:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.computer_use == 'true' }}
-    runs-on: xcode-27
-    defaults:
-      run:
-        working-directory: apps/computer-use
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: swift build
-      - run: swift test
-
   checks:
     name: CI checks
     if: ${{ always() }}
-    needs: [changes, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux, rust, swift-pulsar, swift-transport, computer-use]
+    needs: [native, verify, build, unit, windows, dom, integration, packaged, integration-linux, packaged-linux]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results

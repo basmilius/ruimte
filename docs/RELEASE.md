@@ -8,7 +8,7 @@ The release rules are in the root `CLAUDE.md` ("Releasing"). This file is the re
 
 Tag with `git tag -a v<version> -F <notes-file> --cleanup=verbatim`. Without that flag git strips every `##` line as a comment; a lightweight tag has no notes at all. The `draft` job copies the notes from the tag.
 
-The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the release unless it passed, so tag only after CI is green; nothing is tested again. `publish` publishes the draft once every build passes: as a prerelease for a tag with a `-`, otherwise as Latest. It never tries the built daemon.
+The `gate` job reads the `ci.yml` run of the tagged commit on main and stops the release unless it passed, so tag only after CI is green. Only the native checks (`native.yml`: Rust, Swift, computer use) run again on the tag, all of them, since that CI run skipped those whose paths did not change. `publish` publishes the draft once they and every build pass: as a prerelease for a tag with a `-`, otherwise as Latest. It never tries the built daemon.
 
 - The app shows the notes in About and the update toast. Empty notes read "No notes for this version." until filled in.
 - A draft's tag already appears in `releases.atom`.

@@ -291,10 +291,19 @@ jobs:
           token: ${{ env.OBSERVATORY_UPLOAD_TOKEN }}
           version: ruimte@${{ env.RUIMTE_VERSION }}
 
+  # The tagged commit's CI run skips a native check whose paths did not change, so the release runs every one of them.
+  native:
+    needs: gate
+    uses: ./.github/workflows/native.yml
+    with:
+      full: true
+    permissions:
+      contents: read
+
   publish:
-    needs: [mac, linux, windows]
+    needs: [native, mac, linux, windows]
     # A skipped Windows build (WINDOWS_RELEASE off) holds nothing up; a failed one keeps the draft a draft.
-    if: ${{ !cancelled() && needs.mac.result == 'success' && needs.linux.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') }}
+    if: ${{ !cancelled() && needs.native.result == 'success' && needs.mac.result == 'success' && needs.linux.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
