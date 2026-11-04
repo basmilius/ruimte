@@ -1,5 +1,5 @@
 import type { BackendLaunch } from '@adecore/agents/chat';
-import type { AgentKind } from '@ruimte/contracts';
+import { cliMcpHeaders, type CliMcpServer } from '@adecore/agents/providers';
 
 /*
  * How an agent Ruimte starts reaches the daemon's MCP server: one HTTP server named `ruimte` on the
@@ -25,68 +25,14 @@ export const TERMINAL_TOKEN_VARIABLE = 'RUIMTE_HOOK_TOKEN';
 // Where a backend that runs inside the daemon (Apple, the API providers, an ACP agent's session request, a Claude chat's launch) finds the server.
 export const MCP_URL_VARIABLE = 'RUIMTE_MCP_URL';
 
-export interface McpEndpoint {
-    readonly url: string;
-    readonly tokenVariable: string;
-}
-
 /* The MCP endpoint of the daemon whose context URL this is, over the same loopback port. */
 export function mcpUrlOf(contextUrl: string): string {
     return new URL(MCP_PATH, contextUrl).href;
 }
 
-function bearerHeader(endpoint: McpEndpoint): Record<string, string> {
-    return { Authorization: `Bearer \${${endpoint.tokenVariable}}` };
-}
-
-/*
- * A terminal's line. Claude Code expands `${VAR}` in a config's headers, also under `--strict-mcp-config` (measured
- * on 2.1.316). The `=` form matters, since the flag is variadic and would swallow the argument after it.
- */
-function claudeMcpArgs(endpoint: McpEndpoint): string[] {
-    const config = { mcpServers: { [MCP_SERVER]: { type: 'http', url: endpoint.url, headers: bearerHeader(endpoint) } } };
-
-    return [`--mcp-config=${JSON.stringify(config)}`];
-}
-
-/*
- * Codex reads the token from the variable it names, and `approve` runs every tool without an elicitation, the way
- * Claude Code's allow rule does: the daemon checks each call itself (measured on Codex 0.164). A JSON string is a
- * valid TOML basic string.
- */
-export function codexMcpArgs(endpoint: McpEndpoint): string[] {
-    const server = `mcp_servers.${MCP_SERVER}`;
-
-    return [
-        '-c',
-        `${server}.url=${JSON.stringify(endpoint.url)}`,
-        '-c',
-        `${server}.bearer_token_env_var=${JSON.stringify(endpoint.tokenVariable)}`,
-        '-c',
-        `${server}.default_tools_approval_mode="approve"`
-    ];
-}
-
-// Copilot expands `${VAR}` in headers but refuses it in a URL, so the URL is literal (measured on Copilot CLI 1.0.104).
-export function copilotMcpArgs(endpoint: McpEndpoint): string[] {
-    const config = { mcpServers: { [MCP_SERVER]: { type: 'http', url: endpoint.url, headers: bearerHeader(endpoint), tools: ['*'] } } };
-
-    return [`--additional-mcp-config=${JSON.stringify(config)}`];
-}
-
-// Every tool of the server runs without a prompt, in every mode: the daemon enforces each call (mode ceiling, depth, cwd).
-export const CLAUDE_ALLOW_MCP = `mcp__${MCP_SERVER}`;
-export const COPILOT_ALLOW_MCP = `--allow-tool=${MCP_SERVER}`;
-
-const MCP_ARGS: Partial<Record<AgentKind, (endpoint: McpEndpoint) => string[]>> = {
-    claude: claudeMcpArgs,
-    codex: codexMcpArgs,
-    copilot: copilotMcpArgs
-};
-
-/* What a CLI of this kind takes on its line to load the server; a CLI without a flag for it gets nothing. */
-export function mcpArgs(kind: AgentKind, endpoint: McpEndpoint): string[] {
-    return MCP_ARGS[kind]?.(endpoint) ?? [];
+/* Ruimte's server as a CLI takes it on its line, with the token in the variable named. */
+export function ruimteCliMcp(contextUrl: string, tokenVariable: string): CliMcpServer {
+    return { name: MCP_SERVER, url: mcpUrlOf(contextUrl), tokenVariable };
 }
 
 /*
@@ -103,7 +49,7 @@ export function withRuimteMcp(launch: BackendLaunch, token: 'inline' | 'variable
         return launch;
     }
 
-    const headers = token === 'inline' ? { Authorization: `Bearer ${value}` } : bearerHeader({ url, tokenVariable: CHAT_TOKEN_VARIABLE });
+    const headers = token === 'inline' ? { Authorization: `Bearer ${value}` } : cliMcpHeaders(CHAT_TOKEN_VARIABLE);
     const server = { name: MCP_SERVER, url, headers, allowTools: true };
 
     return { ...launch, mcpServers: [...(launch.mcpServers ?? []), server] };

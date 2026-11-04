@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { narrowerMode, launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers';
+import { narrowerMode, launchEnv, storedAccount, type AccountLaunches, type CliMcpServer } from '@adecore/agents/providers';
 import { SingleFlight } from '@adecore/utils/async';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
@@ -15,7 +15,7 @@ import { contextHint, toolsNote } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import { offersKind } from '../providers/kinds.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
-import { TERMINAL_TOKEN_VARIABLE, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
+import { TERMINAL_TOKEN_VARIABLE, ruimteCliMcp } from '../providers/ruimte-mcp.ts';
 import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { Session } from './session.ts';
@@ -873,11 +873,11 @@ export class SessionManager {
     }
 
     /* Ruimte's MCP server for an agent this manager launches, which needs the hook token the session carries as its bearer. */
-    private mcpEndpoint(): McpEndpoint | undefined {
+    private mcpEndpoint(): CliMcpServer | undefined {
         if (this.contextUrl === null || this.hookUrl === null) {
             return undefined;
         }
-        return { url: mcpUrlOf(this.contextUrl), tokenVariable: TERMINAL_TOKEN_VARIABLE };
+        return ruimteCliMcp(this.contextUrl, TERMINAL_TOKEN_VARIABLE);
     }
 
     private spawn(options: {

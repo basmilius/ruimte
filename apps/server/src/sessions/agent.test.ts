@@ -3,13 +3,12 @@ import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { AgentLaunch } from '@ruimte/contracts';
 import { toolsNote } from '../context/context-note.ts';
-import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude-provider.ts';
 import { terminalCommand } from '../providers/launch.ts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
 import { START_LINE_ENV } from './session.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
-const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
+const ALLOW = `'--allowedTools=mcp__ruimte'`;
 
 let harness: Harness;
 // The transcript of the agent the hooks below report; the daemon resumes only what is still on disk.

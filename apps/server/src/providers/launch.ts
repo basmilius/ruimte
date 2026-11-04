@@ -1,8 +1,7 @@
-import { ANTIGRAVITY_CLI } from '@adecore/agents/providers';
+import { ANTIGRAVITY_CLI, cliMcpAllowArgs, cliMcpArgs, type CliMcpServer } from '@adecore/agents/providers';
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
-import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { providerFor } from './registry.ts';
-import { COPILOT_ALLOW_MCP, mcpArgs, type McpEndpoint } from './ruimte-mcp.ts';
+import { MCP_SERVER } from './ruimte-mcp.ts';
 
 /*
  * The flags each CLI takes for Ruimte's runtime modes, verified against the installed CLIs. A CLI or mode
@@ -109,22 +108,12 @@ export async function probeCodexNoDaemon(
     }
 }
 
-// The flag that lets Ruimte's MCP tools run without a prompt, for the CLIs that take one on the line.
-const ALLOW_CONTEXT: Partial<Record<AgentKind, string>> = {
-    claude: CLAUDE_ALLOW_CONTEXT,
-    copilot: COPILOT_ALLOW_MCP
-};
-
 /*
  * What a CLI gets on every line, fresh or resumed, whatever the mode: Ruimte's MCP server, which no CLI keeps from
  * one start to the next, and leave to use it. A `-c` stays a bare word; every value is quoted.
  */
-function alwaysFlags(kind: AgentKind, mcp: McpEndpoint | undefined): string[] {
-    const allow = ALLOW_CONTEXT[kind];
-    const flags = (mcp === undefined ? [] : mcpArgs(kind, mcp)).map((arg) => (arg === '-c' ? arg : quote(arg)));
-    if (allow !== undefined) {
-        flags.push(quote(allow));
-    }
+function alwaysFlags(kind: AgentKind, mcp: CliMcpServer | undefined): string[] {
+    const flags = [...(mcp === undefined ? [] : cliMcpArgs(kind, mcp)), ...cliMcpAllowArgs(kind, MCP_SERVER)].map((arg) => (arg === '-c' ? arg : quote(arg)));
     if (kind === 'codex' && codexNoDaemon) {
         flags.push('--no-daemon');
     }
@@ -157,7 +146,7 @@ export function noteOnLine(kind: AgentKind, launch: AgentLaunch | null | undefin
  * that gap with `DEFAULT_RUNTIME_MODE`, because a resume of a CLI nobody chose a mode for would
  * otherwise be handed full access.
  */
-function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined, mcp: McpEndpoint | undefined): string[] {
+function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined, mcp: CliMcpServer | undefined): string[] {
     const flags = [...alwaysFlags(launch.kind, mcp), ...(runtimeMode === undefined ? [] : (RUNTIME_FLAGS[launch.kind]?.[runtimeMode] ?? []))];
     const modelFlag = MODEL_FLAG[launch.kind];
     if (launch.model && modelFlag) {
@@ -170,7 +159,7 @@ function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined, 
  * Put the first prompt on the launch command because CLIs expose no reliable ready-for-input signal.
  * Building the line in the daemon also keeps flags out of the wire protocol.
  */
-export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?: string, mcp?: McpEndpoint): string {
+export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?: string, mcp?: CliMcpServer): string {
     const provider = providerFor(launch.kind);
     if (!provider.capabilities.terminal) {
         throw new Error(`${provider.name} is only available as a chat.`);
@@ -197,12 +186,12 @@ export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?
  * then told the same thing twice; Codex takes its sandbox and its approval policy from the line
  * alone, so without this a `full-access` node would come back sandboxed.
  */
-export function resumeCommand(launch: AgentLaunch, agentSessionId: string, mcp?: McpEndpoint): string {
+export function resumeCommand(launch: AgentLaunch, agentSessionId: string, mcp?: CliMcpServer): string {
     return resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode, mcp));
 }
 
 /* The line a CLI starts fresh with, whatever the launch it was recorded with asked to resume. */
-export function freshCommand(launch: AgentLaunch, note?: string, mcp?: McpEndpoint): string {
+export function freshCommand(launch: AgentLaunch, note?: string, mcp?: CliMcpServer): string {
     return terminalCommand({ ...launch, resume: undefined }, undefined, note, mcp);
 }
 
@@ -210,6 +199,6 @@ export function freshCommand(launch: AgentLaunch, note?: string, mcp?: McpEndpoi
  * A resume the daemon has no evidence for, in one line. The CLI exits non-zero when the session it
  * was handed is not there, so the shell then starts a fresh one itself.
  */
-export function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string, mcp?: McpEndpoint): string {
+export function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string, mcp?: CliMcpServer): string {
     return `${resumeCommand(launch, agentSessionId, mcp)} || ${freshCommand(launch, note, mcp)}`;
 }

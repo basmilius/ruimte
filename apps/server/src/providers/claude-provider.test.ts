@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CLAUDE_ALLOW_CONTEXT, claudeProvider } from './claude-provider.ts';
+import { claudeProvider } from './claude-provider.ts';
 import { terminalCommand } from './launch.ts';
 
 test("a chat and a terminal let Ruimte's MCP tools through without a prompt", async () => {
@@ -32,7 +32,6 @@ test("a chat and a terminal let Ruimte's MCP tools through without a prompt", as
     expect(command).toContain('--allowedTools=mcp__ruimte__*');
     expect(command.join(' ')).toContain('"Authorization":"Bearer ${RUIMTE_CONTEXT_TOKEN}"');
     expect(command.join(' ')).not.toContain('secret-token');
-    expect(CLAUDE_ALLOW_CONTEXT).toBe('--allowedTools=mcp__ruimte');
     expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' })).toBe("claude '--allowedTools=mcp__ruimte' --permission-mode default");
     await backend.dispose();
 });

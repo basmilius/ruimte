@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
+import type { CliMcpServer } from '@adecore/agents/providers';
 import { freshCommand, probeCodexNoDaemon, resumeCommand, noteOnLine, resumeOrFreshCommand, terminalCommand } from './launch.ts';
-import { COPILOT_ALLOW_MCP, type McpEndpoint } from './ruimte-mcp.ts';
 
 // How the launch line quotes the flag that lets Ruimte's MCP tools through.
-const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
-const COPILOT_ALLOW = `'${COPILOT_ALLOW_MCP}'`;
-const MCP: McpEndpoint = { url: 'http://127.0.0.1:4210/mcp', tokenVariable: 'RUIMTE_HOOK_TOKEN' };
+const ALLOW = `'--allowedTools=mcp__ruimte'`;
+const COPILOT_ALLOW = `'--allow-tool=ruimte'`;
+const MCP: CliMcpServer = { name: 'ruimte', url: 'http://127.0.0.1:4210/mcp', tokenVariable: 'RUIMTE_HOOK_TOKEN' };
 
 /* What a POSIX shell hands the CLI for one quoted word of a line. */
 function unquoted(word: string): string {

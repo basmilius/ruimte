@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
 import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
-import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
+import { cliMcpArgs, storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
     AgentKind,
     ChatAttachment,
@@ -42,7 +42,7 @@ import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
-import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, codexMcpArgs, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
+import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, mcpUrlOf, ruimteCliMcp } from '../providers/ruimte-mcp.ts';
 import { TurnUsage } from '../stats/turn-usage.ts';
 import { countChatStarted } from '../stats/usage-stats.ts';
 import { AgentImages } from './agent-images.ts';
@@ -141,9 +141,9 @@ function mcpCommands(options: ChatManagerOptions): Pick<ChatCoreOptions, 'codexC
     if (options.contextUrl === undefined) {
         return {};
     }
-    const endpoint: McpEndpoint = { url: mcpUrlOf(options.contextUrl), tokenVariable: CHAT_TOKEN_VARIABLE };
+    const server = ruimteCliMcp(options.contextUrl, CHAT_TOKEN_VARIABLE);
 
-    return { codexCommand: [...(options.codexCommand ?? codexProvider.command), ...codexMcpArgs(endpoint)] };
+    return { codexCommand: [...(options.codexCommand ?? codexProvider.command), ...cliMcpArgs('codex', server)] };
 }
 
 export const BRIEF_TITLE = 'Instructions from Ruimte';

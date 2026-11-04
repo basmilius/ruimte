@@ -1,5 +1,6 @@
 import type { AcpClientInfo } from '@adecore/agents/chat';
 import {
+    cliMcpAllowArgs,
     createAntigravityProvider as createSharedAntigravityProvider,
     createCopilotProvider as createSharedCopilotProvider,
     createGrokProvider as createSharedGrokProvider,
@@ -10,7 +11,7 @@ import {
 } from '@adecore/agents/providers';
 import { parseAcpServerRelease } from './acp-server.ts';
 import antigravityRelease from './antigravity-acp-release.json' with { type: 'json' };
-import { COPILOT_ALLOW_MCP, withRuimteMcp } from './ruimte-mcp.ts';
+import { MCP_SERVER, withRuimteMcp } from './ruimte-mcp.ts';
 
 // How the daemon names itself to every ACP agent it starts.
 export const RUIMTE_ACP_CLIENT: AcpClientInfo = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };
@@ -31,10 +32,14 @@ export const grokProvider: ChatProvider = createGrokProvider();
 
 /*
  * A chat's Copilot loads Ruimte's MCP server from its session request. Its permission requests name no server, so
- * `COPILOT_ALLOW_MCP` on its line is what runs the server's tools without asking (measured on Copilot CLI 1.0.104).
+ * the allow flag on its line is what runs the server's tools without asking (measured on Copilot CLI 1.0.104).
  */
 export function createCopilotProvider(catalogStore?: AcpCatalogStore, usageLog?: string): ChatProvider {
-    return createSharedCopilotProvider({ ...ruimteChats(catalogStore), args: [COPILOT_ALLOW_MCP], ...(usageLog === undefined ? {} : { usageLog }) });
+    return createSharedCopilotProvider({
+        ...ruimteChats(catalogStore),
+        args: cliMcpAllowArgs('copilot', MCP_SERVER),
+        ...(usageLog === undefined ? {} : { usageLog })
+    });
 }
 
 export const copilotProvider: ChatProvider = createCopilotProvider();
