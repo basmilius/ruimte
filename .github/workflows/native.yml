@@ -22,7 +22,6 @@ jobs:
       swift_pulsar: ${{ steps.paths.outputs.RuimtePulsar }}
       swift_transport: ${{ steps.paths.outputs.RuimteTransport }}
       computer_use: ${{ steps.paths.outputs.computer_use }}
-      ios: ${{ steps.paths.outputs.ios }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
@@ -45,9 +44,6 @@ jobs:
             computer_use:
               - '.github/**'
               - 'apps/computer-use/**'
-            ios:
-              - '.github/workflows/native.yml'
-              - 'apps/ios/**'
 
   rust:
     needs: changes
@@ -107,29 +103,14 @@ jobs:
       - run: swift build
       - run: swift test
 
-  # The app's unit tests on a simulator, unsigned, only for a change under apps/ios. A release leaves the
-  # app to Xcode Cloud, which builds it from the same tag, so the full run skips this.
-  ios:
-    name: ios (RuimteTests)
-    needs: changes
-    if: ${{ !cancelled() && !inputs.full && needs.changes.outputs.ios == 'true' }}
-    runs-on: xcode-27
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # SwiftTerm's shaders need it; an image that has it already answers with an error.
-      - run: xcodebuild -downloadComponent MetalToolchain || xcrun -f metal
-      - name: Test
-        run: |
-          simulator=$(xcrun simctl list devices available -j | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | startswith("iPhone"))][0].udid')
-          xcodebuild test -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
-            -destination "platform=iOS Simulator,id=$simulator" -derivedDataPath "$RUNNER_TEMP/ruimte-ios" \
-            -only-testing:RuimteTests CODE_SIGNING_ALLOWED=NO
+  # The app itself is tested by Xcode Cloud's Check workflow on every push to main (apps/ios/README.md),
+  # so it has no job here.
 
   # One result for a caller to wait on: a skipped check passes only when this run left it to the paths.
   native:
     name: Native checks
     if: ${{ always() }}
-    needs: [changes, rust, swift-pulsar, swift-transport, computer-use, ios]
+    needs: [changes, rust, swift-pulsar, swift-transport, computer-use]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
@@ -139,7 +120,7 @@ jobs:
           CHECKS: ${{ toJSON(needs) }}
         run: |
           if [ "$FULL" = true ]; then
-            jq -e 'del(.changes, .ios) | all(.[]; .result == "success")' <<< "$CHECKS"
+            jq -e 'del(.changes) | all(.[]; .result == "success")' <<< "$CHECKS"
           else
             jq -e 'all(.[]; . == "success" or . == "skipped")' <<< "$RESULTS"
           fi
