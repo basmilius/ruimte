@@ -103,6 +103,15 @@ describe('the client extensions of the shell', () => {
         expect(await store.list()).toEqual([]);
     });
 
+    test('remove only an id an extension can have, never a path out of its folder', async () => {
+        const store = extensions();
+        writeFileSync(join(root, 'keep.json'), '{}');
+
+        // `acme/..` names the root itself, so a regression empties only this test's folder.
+        expect(() => store.remove('acme/..')).toThrow();
+        expect(existsSync(join(root, 'keep.json'))).toBe(true);
+    });
+
     test('link a dev folder that is off as off from the first word to the windows', async () => {
         const seen: Promise<boolean[]>[] = [];
         const store: ClientExtensions = extensions(() => void seen.push(store.list().then((entries) => entries.map((entry) => entry.enabled))));

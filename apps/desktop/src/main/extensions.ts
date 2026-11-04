@@ -3,15 +3,18 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { Serializer } from '@adecore/utils/async';
+import { writeAtomic } from '@adecore/utils/fs';
 import {
     EXTENSION_API_VERSION,
     EXTENSION_ICON_PATH,
+    ExtensionIdSchema,
     ExtensionManifestSchema,
     ExtensionPackSchema,
     isSafePackPath,
     type ExtensionManifest
 } from '@ruimte/contracts';
-import { EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
+import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH, extensionFrameCsp } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
 
@@ -19,18 +22,6 @@ const IndexSchema = z.array(z.object({ id: z.string(), hash: z.string(), enabled
 type IndexEntry = z.infer<typeof IndexSchema>[number];
 
 const LOAD_MARK = /~\d+$/;
-
-const MIME: Readonly<Record<string, string>> = {
-    '.js': 'text/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.html': 'text/html; charset=utf-8',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.webp': 'image/webp',
-    '.svg': 'image/svg+xml',
-    '.woff2': 'font/woff2',
-    '.wasm': 'application/wasm'
-};
 
 function hostsOf(manifest: ExtensionManifest): string[] {
     return Object.keys(manifest.permissions ?? {}).flatMap((permission) =>
@@ -46,7 +37,7 @@ function hostsOf(manifest: ExtensionManifest): string[] {
 export class ClientExtensions {
     private readonly root: string;
     private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest; enabled: boolean }>();
-    private changes: Promise<unknown> = Promise.resolve();
+    private readonly changes = new Serializer();
     private temporaryCounter = 0;
     // Every window shares these installations, also one in machine mode `none` or on another machine, so each hears of a change.
     private readonly onChanged: () => void;
@@ -84,11 +75,7 @@ export class ClientExtensions {
      * beside them: two windows that change one extension at once land in the order they asked.
      */
     private serial<T>(work: () => Promise<T>): Promise<T> {
-        const next = this.changes.then(work, work);
-
-        this.changes = next.catch(() => undefined);
-
-        return next;
+        return this.changes.run(work);
     }
 
     /*
@@ -112,16 +99,7 @@ export class ClientExtensions {
     /* Inside `serial` only. */
     private async writeIndex(entries: IndexEntry[]): Promise<void> {
         await mkdir(this.root, { recursive: true });
-
-        const temporary = join(this.root, `index.json.${process.pid}-${this.temporaryCounter++}.tmp`);
-
-        try {
-            await writeFile(temporary, JSON.stringify(entries));
-            await rename(temporary, join(this.root, 'index.json'));
-        } catch (e) {
-            await rm(temporary, { force: true });
-            throw e;
-        }
+        await writeAtomic(join(this.root, 'index.json'), JSON.stringify(entries));
     }
 
     private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
@@ -223,6 +201,9 @@ export class ClientExtensions {
      * so a write that fails leaves every window's list as it was.
      */
     remove(id: string): Promise<void> {
+        // The id names a folder under `root` that goes as a whole, so only an id an extension can have gets that far.
+        ExtensionIdSchema.parse(id);
+
         return this.change(async (touched) => {
             await this.writeIndex((await this.index()).filter((entry) => entry.id !== id));
             this.links.delete(id);
@@ -332,7 +313,7 @@ export class ClientExtensions {
 
             const extension = extname(path);
             const headers: Record<string, string> = {
-                'content-type': MIME[extension] ?? 'application/octet-stream',
+                'content-type': EXTENSION_FILE_TYPES[extension.slice(1)] ?? 'application/octet-stream',
                 'x-content-type-options': 'nosniff',
                 'cache-control': 'no-cache',
                 'access-control-allow-origin': '*'
