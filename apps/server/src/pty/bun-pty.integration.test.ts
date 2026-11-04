@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SessionManager } from '../sessions/manager.ts';
 import { Recorder, testPath, testShell, waitFor } from '../sessions/test-helpers.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { BunPtyAdapter } from './bun-pty.ts';
 
 /*
@@ -18,7 +19,7 @@ let recorder: Recorder;
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-pty-'));
     // No login flag and a minimal environment, so the user's profile cannot leak into the screen.
-    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home, PS1: '$ ' } });
+    manager = new SessionManager({ ...OPEN_BOUNDS, adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home, PS1: '$ ' } });
     recorder = new Recorder();
     manager.subscribe('c1', recorder.sink());
 });

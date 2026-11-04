@@ -105,11 +105,11 @@ interface ChatManagerOptions extends ChatCoreOptions {
     endChildren?: (chatId: string) => Promise<unknown>;
     plans?: ChatPlans;
     // The widest mode this chat may run in, whatever its record or its node says; null for no limit.
-    modeCeiling?: (chatId: string) => RuntimeMode | null;
+    modeCeiling: (chatId: string) => RuntimeMode | null;
     // Whether another machine gave this chat its task, which then never runs on the configuration the files it sent carry.
     peerChat?: (chatId: string) => boolean;
     // Refuses a directory this chat may not start in, asked every time a chat is loaded.
-    checkCwd?: (chatId: string, cwd: string) => Promise<void>;
+    checkCwd: (chatId: string, cwd: string) => Promise<void>;
     // Whether the client holds the project the chat is in; a UI block reads and links only for one that does.
     holdsProject?: (chatId: string, clientId: string) => Promise<boolean>;
     // The account a new chat in a project takes, or null where its project says nothing about the CLI.
@@ -350,9 +350,9 @@ export class ChatManager extends ChatCore {
         this.inlineChat = options.inlineChat ?? (() => false);
         this.design = options.design ?? (() => null);
         this.turnEnded = options.turnEnded ?? (() => undefined);
-        this.modeCeiling = options.modeCeiling ?? (() => null);
+        this.modeCeiling = options.modeCeiling;
         this.peerChat = options.peerChat ?? (() => false);
-        this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
+        this.checkCwd = options.checkCwd;
         this.holdsProject = options.holdsProject ?? (() => Promise.resolve(true));
         this.projectAccount = options.projectAccount ?? (() => null);
         this.ended = options.endedAt ?? (() => null);

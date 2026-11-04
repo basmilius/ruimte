@@ -10,6 +10,7 @@ import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { releasedProject } from '../tasks/test-daemon.ts';
 import { untilChecked } from '../until-test-helpers.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork } from './outbox.ts';
 
@@ -76,6 +77,7 @@ async function boot(spawn?: SpawnChatProcess): Promise<Daemon> {
     // Declared before the chats, which ask it to owe a resume while they load.
     const box: { worker: OutboxWorker<OutboxWork> | null } = { worker: null };
     const chats = new ChatManager({
+        ...OPEN_BOUNDS,
         providers,
         store: new ChatStore(home, { attachments: attachments }),
         attachments,

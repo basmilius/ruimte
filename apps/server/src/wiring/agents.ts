@@ -32,11 +32,11 @@ import { personShell } from '../pty/pty.ts';
 import { restartConnectPeers } from '../remote/connect-peer.ts';
 import { routineReport } from '../routines/routine-report.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
-import { SessionError, SessionManager } from '../sessions/manager.ts';
+import { SessionManager } from '../sessions/manager.ts';
 import { ModeApprovals, personModeOf } from '../sessions/mode-approvals.ts';
 import { prepareShellIntegration, type ShellEnvironment } from '../sessions/shell-integration.ts';
 import { SnapshotStore, scheduleSnapshots, type SnapshotSchedule } from '../sessions/snapshot-store.ts';
-import { startCwdGuard } from '../tools/project-paths.ts';
+import { agentBounds } from './agent-bounds.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { DatabasesBundle } from './databases.ts';
@@ -161,7 +161,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         limits: () => later.usage().limits.snapshot(),
         now: () => Date.now()
     });
-    const startCwd = startCwdGuard({
+    const bounds = agentBounds({
+        commandApprovals,
+        ceilingOf: (nodeId) => lineage.ceilingOf(nodeId),
         madeByAgent: (nodeId) => lineage.madeBy(nodeId) !== null,
         folderOf,
         worktreePaths: (folder) => later.git().checkouts.paths(folder)
@@ -193,26 +195,13 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         standalone: (sessionId) => index().locate(sessionId)?.canvasId === null,
         computerUse: () => computer.usable,
         reachOpenProjects: () => identity.reachOpenProjects,
-        // A node no project places yet has no folder to approve against, so its command waits for the save that adds it.
-        commands: {
-            approved: (sessionId, command) => {
-                const folder = folderOf(sessionId);
-                return folder !== null && commandApprovals.has(folder, sessionId, command);
-            },
-            approve: async (sessionId, command) => {
-                const folder = folderOf(sessionId);
-                if (folder === null) {
-                    throw new SessionError('session-not-found', `No project this machine knows places ${sessionId}`);
-                }
-                await commandApprovals.approve(folder, sessionId, command);
-            }
-        },
-        modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
+        commands: bounds.commands,
+        modeCeiling: bounds.modeCeiling,
         personMode: (sessionId) => {
             const folder = folderOf(sessionId);
             return personModeOf(folder === null ? null : modeApprovals.modeOf(folder, sessionId), chats.composerPreferences.terminalMode());
         },
-        checkCwd: startCwd,
+        checkCwd: bounds.checkCwd,
         claudeTitles,
         codexTitles: new CodexTitleReader(),
         accounts: providers.accounts,
@@ -302,9 +291,9 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             const folder = index().locate(chatId)?.folder;
             return folder !== undefined && hasDatabaseConnections(folder);
         },
-        modeCeiling: (chatId) => lineage.ceilingOf(chatId),
+        modeCeiling: bounds.modeCeiling,
         peerChat: (chatId) => untrusted.node(chatId),
-        checkCwd: startCwd,
+        checkCwd: bounds.checkCwd,
         holdsProject: async (chatId, clientId) => {
             const place = index().locate(chatId);
             return place !== null && (await later.projects().store.heldFolders(clientId)).includes(place.folder);
@@ -364,7 +353,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
         untrusted,
         oneShot,
         proposals,
-        startCwd,
+        startCwd: bounds.checkCwd,
         targetForToken,
         messagesFor
     };

@@ -7,6 +7,7 @@ import { AttachmentStore } from '@adecore/agents/chat';
 import { killQuietly, processAlive } from '../process-test-helpers.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
@@ -28,6 +29,7 @@ let recorder: ChatRecorder;
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-chat-integration-'));
     manager = new ChatManager({
+        ...OPEN_BOUNDS,
         providers,
         attachments: new AttachmentStore(home),
         command: FAKE_CLAUDE,

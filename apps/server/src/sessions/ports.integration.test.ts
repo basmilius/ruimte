@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DarwinListenerProbe } from '../processes/listeners.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
 import { SessionPorts } from './ports.ts';
 import { waitFor, waitForAsync } from './test-helpers.ts';
@@ -32,7 +33,7 @@ if (mode === 'child' || mode === 'replacement') {
 }
 `
         );
-        const manager = new SessionManager({ adapter: new BunPtyAdapter(), env: process.env });
+        const manager = new SessionManager({ ...OPEN_BOUNDS, adapter: new BunPtyAdapter(), env: process.env });
         const sampler = new DarwinSampler(home);
         let now = 0;
         const ports = new SessionPorts({

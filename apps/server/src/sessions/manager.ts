@@ -136,15 +136,15 @@ export interface SessionManagerOptions {
     codexTitles?: { forThread(threadId: string, index?: string): Promise<string | null> };
     // Lets a test shorten the wait before a session without a name looks again.
     titleRetryMs?: number;
-    // Which commands a person on this machine let a shell type. Without it every command is typed.
-    commands?: CommandGate;
+    // Which commands a person on this machine let a shell type; a test about something else passes `OPEN_BOUNDS`.
+    commands: CommandGate;
     // The widest mode the agent of this node may start in, whatever the node says; null for no limit.
-    modeCeiling?: (sessionId: string) => RuntimeMode | null;
+    modeCeiling: (sessionId: string) => RuntimeMode | null;
     // The widest mode a person gave a node no agent opened, which an edit of the project file cannot
     // widen; null for no limit. Asked only where `modeCeiling` has none.
     personMode?: (sessionId: string) => RuntimeMode | null;
     // Refuses a directory this node may not start in, asked right before every spawn.
-    checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
+    checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     // The accounts a launch may name; without them only a CLI's default account starts.
     accounts?: AccountLaunches;
     // The account a first launch takes, given the one it named: the project's choice, else the top account of the CLI. Throws to refuse it.
@@ -158,7 +158,7 @@ export interface SessionManagerOptions {
     personShell?: () => string;
 }
 
-interface CommandGate {
+export interface CommandGate {
     approved(sessionId: string, command: string): boolean;
     /* Writes down that a person let this node type this command. */
     approve(sessionId: string, command: string): Promise<void>;
@@ -216,7 +216,7 @@ export class SessionManager {
     private readonly standalone: (sessionId: string) => boolean;
     private readonly computerUse: () => boolean;
     private readonly reachOpenProjects: () => boolean;
-    private readonly commands: CommandGate | null;
+    private readonly commands: CommandGate;
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
     private readonly personMode: (sessionId: string) => RuntimeMode | null;
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
@@ -252,10 +252,10 @@ export class SessionManager {
         this.claudeTitles = options.claudeTitles ?? null;
         this.codexTitles = options.codexTitles ?? null;
         this.titleRetryMs = options.titleRetryMs ?? TITLE_RETRY_MS;
-        this.commands = options.commands ?? null;
-        this.modeCeiling = options.modeCeiling ?? (() => null);
+        this.commands = options.commands;
+        this.modeCeiling = options.modeCeiling;
         this.personMode = options.personMode ?? (() => null);
-        this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
+        this.checkCwd = options.checkCwd;
         this.accounts = options.accounts ?? null;
         this.openingAccount = options.openingAccount ?? ((_sessionId, _kind, named) => named);
         this.prepareAgent = options.prepareAgent ?? (() => Promise.resolve());
@@ -343,10 +343,7 @@ export class SessionManager {
             restoredScreen = (await this.snapshots?.read(options.sessionId)) ?? undefined;
         }
 
-        const held =
-            options.command && options.forClient === undefined && this.commands?.approved(options.sessionId, options.command) === false
-                ? options.command
-                : null;
+        const held = options.command && options.forClient === undefined && !this.commands.approved(options.sessionId, options.command) ? options.command : null;
         const startLine = held === null ? (options.command ?? (await this.startLine(options.sessionId, launch, restoredAgent !== undefined))) : undefined;
         const command = startLine === undefined ? undefined : this.handingBack(startLine);
         const session = this.spawn({
@@ -452,7 +449,7 @@ export class SessionManager {
         }
         session.heldCommand = null;
         try {
-            await this.commands?.approve(sessionId, command);
+            await this.commands.approve(sessionId, command);
         } catch (e) {
             session.heldCommand = command;
             throw e;

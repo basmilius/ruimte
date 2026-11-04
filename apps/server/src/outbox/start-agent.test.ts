@@ -16,6 +16,7 @@ import type { AgentStart, CanvasHost } from '../tools/host.ts';
 import { startCwdGuard } from '../tools/project-paths.ts';
 import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
@@ -111,6 +112,7 @@ async function boot(): Promise<Daemon> {
     });
     const modeCeiling = (id: string) => lineage.ceilingOf(id);
     const sessions = new SessionManager({
+        ...OPEN_BOUNDS,
         personShell: () => 'bash',
         adapter,
         env: { HOME: home, PATH: process.env.PATH },
@@ -120,6 +122,7 @@ async function boot(): Promise<Daemon> {
     });
     const attachments = new AttachmentStore(home);
     const chats = new ChatManager({
+        ...OPEN_BOUNDS,
         providers,
         store: new ChatStore(home, { attachments: attachments }),
         attachments,

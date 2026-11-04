@@ -54,6 +54,7 @@ import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { agentVisuals } from '../visuals/agent-host.ts';
 import { chatAccess } from '../wiring/canvas-host.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import type { TaskWiring } from './wiring.ts';
 
 const detect = async () => ({ installed: true, version: '0.0.0' });
@@ -204,6 +205,7 @@ export async function bootTestDaemon({
     const claude = inProcess(claudeCli);
     const codex = inProcess(codexCli);
     const sessions = new SessionManager({
+        ...OPEN_BOUNDS,
         personShell: () => 'bash',
         adapter: ptyAdapter ?? adapter,
         env,
@@ -236,6 +238,7 @@ export async function bootTestDaemon({
         cwdOf: (nodeId) => chats.get(nodeId)?.info.cwd ?? sessions.get(nodeId)?.cwd ?? null
     });
     const chats = new ChatManager({
+        ...OPEN_BOUNDS,
         providers,
         projectAccount,
         store: new ChatStore(home, { attachments, isSidecar: isPlanFileName }),

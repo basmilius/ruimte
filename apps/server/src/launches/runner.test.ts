@@ -10,6 +10,7 @@ import { CommandApprovals } from '../sessions/command-approvals.ts';
 import { SessionManager } from '../sessions/manager.ts';
 import { TEST_GIT_BASH } from '../sessions/test-helpers.ts';
 import { checkCwd } from '../tools/project-paths.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { launchSessionIdOf, LaunchRunner, PROBE_INTERVAL_MS, STOP_GRACE_MS } from './runner.ts';
 import { managerSessions } from './sessions.ts';
 import type { LaunchStore } from './store.ts';
@@ -70,7 +71,7 @@ beforeEach(async () => {
     fake = new FakeWatch();
     store = launchStoreFor(folder, approvals, fake);
     adapter = new FakePtyAdapter();
-    manager = new SessionManager({ adapter, env: { PATH: '/usr/bin:/bin', HOME: root, SHELL: '/bin/zsh' }, findGitBash: () => TEST_GIT_BASH });
+    manager = new SessionManager({ ...OPEN_BOUNDS, adapter, env: { PATH: '/usr/bin:/bin', HOME: root, SHELL: '/bin/zsh' }, findGitBash: () => TEST_GIT_BASH });
     timers = new ManualTimers();
     listening = new Set();
     runner = new LaunchRunner({

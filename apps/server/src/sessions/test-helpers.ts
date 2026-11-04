@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { AgentInfo } from '@ruimte/contracts';
 import { AgentStore } from '../agents/agent-store.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager, type SessionEvent, type SessionManagerOptions, type SessionSink } from './manager.ts';
 import { SnapshotStore } from './snapshot-store.ts';
 
@@ -123,6 +124,7 @@ export async function makeHarness(extra: Partial<SessionManagerOptions> = {}, ov
     const snapshots = new SnapshotStore(home);
     const agents = new TrackedAgentStore(home);
     const manager = new SessionManager({
+        ...OPEN_BOUNDS,
         adapter,
         snapshots,
         agents,

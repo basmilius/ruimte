@@ -20,6 +20,7 @@ import { toolsNote } from '../context/context-note.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
@@ -635,6 +636,7 @@ describe('forking a Codex chat', () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-fork-codex-'));
         const attachments = new AttachmentStore(home);
         manager = new ChatManager({
+            ...OPEN_BOUNDS,
             providers: new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) }),
             store: new ChatStore(home, { attachments: attachments }),
             attachments,

@@ -6,6 +6,7 @@ import { AttachmentStore, ChatStore, COMPACT_ABOVE_BYTES, ChatThread } from '@ad
 import { fakeClaude, inProcess, type InProcessCli } from '@adecore/agents/testing';
 import type { ChatAttachResult, ChatEvent, Task } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
@@ -20,6 +21,7 @@ const providers = new ProviderRegistry({ detect: async () => ({ installed: true,
 /* One run of the daemon's chats over the same home, with every event it numbered. */
 function boot(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
     const manager = new ChatManager({
+        ...OPEN_BOUNDS,
         providers,
         store: new ChatStore(home, { attachments: attachments }),
         attachments,

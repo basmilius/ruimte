@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { holdsForeground } from '../processes/foreground.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
 import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
 import { prepareShellIntegration } from './shell-integration.ts';
@@ -26,6 +27,7 @@ for (const custom of [false, true]) {
             await writeFile(join(startup, '.zshenv'), zshenv);
             await writeFile(join(startup, '.zshrc'), zshrc);
             const manager = new SessionManager({
+                ...OPEN_BOUNDS,
                 adapter: new BunPtyAdapter(),
                 shellEnvironment: await prepareShellIntegration(join(home, 'ruimte')),
                 env: { HOME: home, PATH: '/usr/bin:/bin', SHELL: '/bin/zsh', ...(custom ? { ZDOTDIR: startup } : {}) }
@@ -131,6 +133,7 @@ test.skipIf(process.platform === 'win32')(
         const home = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-bash-cwd-')));
         await writeFile(join(home, '.bashrc'), 'PROMPT_COMMAND="$PROMPT_COMMAND;printf PERSON_HOOK"\nPS1="person> "\n');
         const manager = new SessionManager({
+            ...OPEN_BOUNDS,
             adapter: new BunPtyAdapter(),
             shellEnvironment: await prepareShellIntegration(join(home, 'ruimte'), 'win32'),
             env: { HOME: home, PATH: '/usr/bin:/bin', BASH_SILENCE_DEPRECATION_WARNING: '1' }

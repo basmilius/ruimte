@@ -6,6 +6,7 @@ import { gitBash } from '../pty/pty.ts';
 import { childCounter } from '../service/work.ts';
 import { SessionManager } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { identityOf, processRates, type ProcessSampler, type RawProcess } from './sampler.ts';
 
 function bunArgs(script: string): string[] {
@@ -89,7 +90,7 @@ describe.skipIf(process.platform !== 'win32')('a Git Bash session on a ConPTY', 
     test('an idle shell has no child, and what an MSYS program runs stays in its tree', async () => {
         const { WindowsSampler } = await import('./windows.ts');
         const sampler = new WindowsSampler(homedir());
-        const manager = new SessionManager({ adapter: new BunPtyAdapter(), env: process.env as Record<string, string> });
+        const manager = new SessionManager({ ...OPEN_BOUNDS, adapter: new BunPtyAdapter(), env: process.env as Record<string, string> });
         await manager.create({ sessionId: 'tree', cols: 80, rows: 24, shell: gitBash()!, args: [], cwd: homedir() });
         try {
             const root = manager.live('tree')!.pid;

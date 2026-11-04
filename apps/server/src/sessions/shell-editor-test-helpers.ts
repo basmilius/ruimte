@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { holdsForeground } from '../processes/foreground.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import type { PtyProcess } from '../pty/pty.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
 import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
 import { prepareShellIntegration } from './shell-integration.ts';
@@ -17,6 +18,7 @@ export async function realShell(rc: (home: string) => string = () => "PS1='edito
     let pty: PtyProcess;
     let editorAddress = '';
     const manager = new SessionManager({
+        ...OPEN_BOUNDS,
         adapter: {
             spawn(options) {
                 editorAddress = options.env.RUIMTE_EDITOR_SOCKET!;

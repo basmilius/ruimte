@@ -9,6 +9,7 @@ import { generatedImageAttachment, type ChatInfo, type ChatItem, type ChatSubage
 import type { ContextSource } from '@ruimte/contracts';
 import { CONTEXT_LEAD, chatNote, chatPrompt, contextPrompt, toolsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { retire } from './chat-manager.fixture.test.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
@@ -34,7 +35,7 @@ const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 1
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
 function makeManager(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
-    return new ChatManager({ providers, store, attachments, spawn: codex.spawn, env: { PATH: process.env.PATH, HOME: home }, ...extra });
+    return new ChatManager({ ...OPEN_BOUNDS, providers, store, attachments, spawn: codex.spawn, env: { PATH: process.env.PATH, HOME: home }, ...extra });
 }
 
 beforeEach(async () => {

@@ -6,6 +6,7 @@ import { AttachmentStore } from '@adecore/agents/chat';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import type { ChatItem, ContextSource } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, RecordingStore } from './chat-test-helpers.ts';
 
@@ -26,6 +27,7 @@ export async function makeChatFixture() {
     const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
     function makeManager(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
         return new ChatManager({
+            ...OPEN_BOUNDS,
             providers,
             store,
             attachments,

@@ -12,6 +12,7 @@ import { connectionOpener, socketChannel, type ConnectionServices, type OpenConn
 import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
 import { testPath, testShell, waitFor } from './test-helpers.ts';
 
@@ -425,7 +426,7 @@ const noSource = { subscribe: () => () => undefined, detachAll: () => undefined 
 
 beforeAll(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-stream-'));
-    manager = new SessionManager({ adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home } });
+    manager = new SessionManager({ ...OPEN_BOUNDS, adapter: new BunPtyAdapter(), env: { PATH: testPath, HOME: home } });
     const dispatcher = new Dispatcher();
     registerSessionHandlers(dispatcher, manager);
     const services: ConnectionServices = {

@@ -6,6 +6,7 @@ import { clientDirectory, withBrowserFixture } from '../../../client/testing/bro
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { OPEN_BOUNDS } from '../wiring/test-bounds.ts';
 import { SessionManager } from './manager.ts';
 import { realShell } from './shell-editor-test-helpers.ts';
 import { prepareShellIntegration } from './shell-integration.ts';
@@ -192,6 +193,7 @@ for (const mode of [
                         manager.killAll();
                         await waitFor(() => manager.list().every((session) => session.exited), 'old shell exiting');
                         const restored = new SessionManager({
+                            ...OPEN_BOUNDS,
                             adapter: new BunPtyAdapter(),
                             snapshots: store,
                             shellEnvironment: await prepareShellIntegration(join(shell.home, 'ruimte')),
