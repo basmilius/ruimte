@@ -11,7 +11,9 @@ import './src/extensions/built-in';
 import { connectFormat } from './src/format/source';
 import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 import { defaultCanvases, focusedCanvas } from './src/state/canvas';
+import { defaultDiagrams } from './src/state/diagram';
 import { useDocument } from './src/state/document';
+import { defaultDrawings } from './src/state/drawing';
 import { useEndpoints } from './src/state/endpoints';
 import { useToasts } from './src/state/toasts';
 
@@ -73,7 +75,9 @@ const sharedStores: { getState(): object; setState(state: object, replace: true)
 const firstStates = sharedStores.map((store) => store.getState());
 
 afterEach(() => {
-    defaultCanvases.focus(null);
-    defaultCanvases.keep([]);
+    for (const editors of [defaultCanvases, defaultDrawings, defaultDiagrams]) {
+        editors.focus(null);
+        editors.keep([]);
+    }
     sharedStores.forEach((store, index) => store.setState(firstStates[index]!, true));
 });
