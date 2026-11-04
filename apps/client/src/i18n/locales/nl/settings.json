@@ -70,6 +70,10 @@
         "projectGlow": {
             "label": "Gloed in projectkleur",
             "description": "Kleurt de bovenkant van de zijbalk, of de werkbalk, in de kleur van het project."
+        },
+        "scrollBounce": {
+            "label": "Verend scrollen",
+            "description": "Lijsten en tekst veren terug als je voorbij het einde scrolt."
         }
     },
     "general": {

@@ -163,6 +163,7 @@ export function AppearancePane() {
                     }
                 />
                 <SettingSwitchRow id="appearance.projectGlow" setting="projectGlow" />
+                <SettingSwitchRow id="appearance.scrollBounce" setting="scrollBounce" />
             </SettingsSection>
             <FontSection />
         </>

@@ -18,6 +18,8 @@ test('project glow defaults to on while preserving an explicit opt-out', () => {
     expect(settingsFrom({}).projectGlow).toBe(true);
     expect(settingsFrom({ projectGlow: false }).projectGlow).toBe(false);
     expect(settingsFrom({ projectGlow: true }).projectGlow).toBe(true);
+    expect(settingsFrom({}).scrollBounce).toBe(true);
+    expect(settingsFrom({ scrollBounce: false }).scrollBounce).toBe(false);
 });
 
 test("a fresh client keeps the theme's own grays and a gone preset falls back to them", () => {

@@ -166,6 +166,8 @@ export interface Settings {
     palette: PalettePreset;
     /* The glow at the top of the sidebar, and of the toolbar while the sidebar is closed, in the color of the project. */
     projectGlow: boolean;
+    /* A scroller bounces at its end, as macOS does, with a trackpad or mouse. */
+    scrollBounce: boolean;
     interfaceFont: InterfaceFontId;
     font: MonoFontId;
     /* Terminal font size in px; every terminal refits when it changes. */
@@ -317,6 +319,7 @@ const DEFAULT_SETTINGS: Settings = {
     accent: 'blue',
     palette: 'default',
     projectGlow: true,
+    scrollBounce: true,
     interfaceFont: 'system',
     font: 'system',
     fontSize: 13,
@@ -458,6 +461,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
         palette: palettePresetFrom(stored.palette),
         projectGlow: stored.projectGlow !== false,
+        scrollBounce: stored.scrollBounce !== false,
         // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
         agentsShowViews: stored.agentsShowViews === true,
         // On unless a person turned it off, so a client that stored nothing yet draws maps.
@@ -586,6 +590,7 @@ function apply(settings: Settings): void {
         return;
     }
     document.documentElement.dataset.panelLayout = settings.panelLayout;
+    document.documentElement.toggleAttribute('data-scroll-bounce', settings.scrollBounce);
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     root.setProperty('--code-font-size', `${settings.codeFontSize}px`);

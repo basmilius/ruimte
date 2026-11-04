@@ -70,6 +70,10 @@
         "projectGlow": {
             "label": "Glow in project color",
             "description": "Tints the top of the sidebar, or the toolbar, in the project's color."
+        },
+        "scrollBounce": {
+            "label": "Scroll bounce",
+            "description": "Lists and text spring back when you scroll past the end."
         }
     },
     "general": {

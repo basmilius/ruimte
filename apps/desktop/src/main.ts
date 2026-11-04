@@ -375,6 +375,8 @@ function createWindow(
             // The bridge, the local secret included, stays in the top frame: a visual's page runs in a frame of this page.
             nodeIntegrationInSubFrames: false,
             webviewTag: true,
+            // Electron leaves the elastic bounce of macOS off unless a window asks; a scroller then bounces at its end.
+            scrollBounce: true,
             // `app.getLocale()` is the bundle's language, `en-US` even on a Dutch Mac; these follow the
             // Region setting and the language order of System Settings.
             additionalArguments: [
@@ -840,6 +842,11 @@ async function runSmokeWindow(): Promise<void> {
         titleBarHeight: TITLEBAR_HEIGHT,
         scaleFactorOf: (shown) => screen.getDisplayMatching(shown.getBounds()).scaleFactor
     });
+}
+
+// Chromium bounces a scroller at its end only on macOS by default; Windows and Linux get the same through this feature.
+if (process.platform !== 'darwin') {
+    app.commandLine.appendSwitch('enable-features', 'ElasticOverscroll');
 }
 
 if (!app.requestSingleInstanceLock()) {
