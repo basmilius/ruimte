@@ -1,6 +1,6 @@
-/* The beat every pet on the page moves to, about five and a half frames a second, which pixel art needs no
-   more than. Three steps of a `Spinner`, so a beat lands in a frame a spinner draws anyway. */
-export const PET_TICK_MS = 180;
+/* The beat every pet on the page moves to, about six frames a second, which pixel art needs no more than.
+   The pets keep this pace rather than the spinners', so their beat is a clock of its own. */
+export const PET_TICK_MS = 160;
 
 type TickListener = (tick: number) => void;
 
@@ -8,7 +8,7 @@ const listeners = new Set<TickListener>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 let tick = 0;
 
-/* The next beat on the document's clock, the grid the spinners step on, so a late timer does not drift off it.
+/* The next beat on a grid of the document's clock, so a late timer does not drift and every pet keeps one phase.
    `performance.now()` and `document.timeline` share their origin. */
 function schedule(): void {
     timer = setTimeout(beat, PET_TICK_MS - (performance.now() % PET_TICK_MS));
