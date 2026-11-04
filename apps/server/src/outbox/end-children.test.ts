@@ -5,7 +5,6 @@ import { ManualClock } from '@adecore/agents/testing';
 import type { ChatItem, ProjectContent } from '@ruimte/contracts';
 import { voiceActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
-import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ENDED_REASON, wireEndChildren } from './end-children.ts';
@@ -398,7 +397,7 @@ describe('stopping one task from the list of the chat that gave it', () => {
 
         const child = daemon.chats.get(chat)!;
         expect([child.running, child.info.activeTurnId]).toEqual([false, null]);
-        expect(notesOf(daemon, chat)).toContain(STOPPED_TASK_REASON);
+        expect(notesOf(daemon, chat)).toContain('a person stopped it');
         expect(daemon.lineage.endedAt(chat)).not.toBeNull();
         expect(daemon.tasks.ofParent('chat-lead').map((candidate) => [candidate.childId, candidate.status, candidate.wake])).toEqual([
             [chat, 'cancelled', 'none'],
