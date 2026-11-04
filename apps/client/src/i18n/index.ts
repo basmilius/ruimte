@@ -113,6 +113,12 @@ export async function chooseLanguage(choice: string): Promise<void> {
     redrawForRegion();
 }
 
+/* What another window chose, once this one read the settings again: the words and every format follow it here too. */
+export async function followLanguageAndRegion(): Promise<void> {
+    await applyLanguage();
+    redrawForRegion();
+}
+
 export function chooseRegion(choice: string): void {
     useSettings.getState().update({ formatRegion: choice });
     redrawForRegion();

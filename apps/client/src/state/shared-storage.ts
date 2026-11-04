@@ -1,10 +1,22 @@
 import { CHAT_PREFERENCES_KEY, reloadChatPreferences } from '@adecore/agents-react/chat';
 import { reloadUsagePreferences, USAGE_PREFERENCES_KEY } from '@adecore/agents-react/state';
 import { useContributions } from '@/extensions/registry';
+import { followLanguageAndRegion } from '@/i18n';
 import { ENDPOINTS_STORAGE_KEY, useEndpoints } from '@/state/endpoints';
 import { followOtherWindows, type StorageTarget } from '@/state/other-windows';
 import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';
 import { THEME_STORAGE_KEY, useTheme } from '@/state/theme';
+
+/* A language or a region picked in another window redraws this one too; reading the setting alone would not. */
+function reloadSettings(): void {
+    const before = useSettings.getState();
+    useSettings.getState().reload();
+    const after = useSettings.getState();
+
+    if (before.language !== after.language || before.formatRegion !== after.formatRegion) {
+        void followLanguageAndRegion();
+    }
+}
 
 /*
  * The keys a person means for the whole app: the machines this client knows (with the keys it
@@ -15,7 +27,7 @@ import { THEME_STORAGE_KEY, useTheme } from '@/state/theme';
 export function startSharedStorage(target?: StorageTarget | null): () => void {
     const stops = [
         followOtherWindows(ENDPOINTS_STORAGE_KEY, () => useEndpoints.getState().reload(), target),
-        followOtherWindows(SETTINGS_STORAGE_KEY, () => useSettings.getState().reload(), target),
+        followOtherWindows(SETTINGS_STORAGE_KEY, reloadSettings, target),
         followOtherWindows(THEME_STORAGE_KEY, () => useTheme.getState().reload(), target),
         followOtherWindows(CHAT_PREFERENCES_KEY, reloadChatPreferences, target),
         followOtherWindows(USAGE_PREFERENCES_KEY, reloadUsagePreferences, target),

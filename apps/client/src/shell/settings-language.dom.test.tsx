@@ -3,7 +3,8 @@ import i18next from 'i18next';
 import { act } from 'react';
 import { forgetMemoizedWords } from '@/compiler-runtime';
 import { chooseLanguage } from '@/i18n';
-import { useSettings } from '@/state/settings';
+import { SETTINGS_STORAGE_KEY, useSettings } from '@/state/settings';
+import { startSharedStorage } from '@/state/shared-storage';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -66,6 +67,29 @@ describe('Settings navigation and language', () => {
         expect(document.querySelector('[data-settings-row="general.language"]')?.textContent).not.toContain('Language');
         expect(dialogText()).toContain('Taal en regio');
         expect(dialogText()).not.toContain('Could not show this settings page');
+    });
+
+    test('follows a language another window picked', async () => {
+        const listeners = new Set<(event: StorageEvent) => void>();
+        const otherWindows = {
+            addEventListener: (_type: string, listener: (event: StorageEvent) => void) => void listeners.add(listener),
+            removeEventListener: (_type: string, listener: (event: StorageEvent) => void) => void listeners.delete(listener)
+        };
+        const stop = startSharedStorage(otherWindows as unknown as Window);
+        await act(async () => useUi.getState().setSettings({ open: true, section: 'general' }));
+        await until(() => dialogText().includes('Keyboard'));
+
+        try {
+            await act(async () => {
+                const stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as Record<string, unknown>;
+                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...stored, language: 'nl' }));
+                listeners.forEach((listener) => listener({ key: SETTINGS_STORAGE_KEY } as StorageEvent));
+            });
+            await until(() => dialogText().includes('Toetsenbord'));
+            expect(dialogText()).not.toContain('Appearance');
+        } finally {
+            stop();
+        }
     });
 
     test('a shortcut search opens the category and highlights the real keyboard row', async () => {
