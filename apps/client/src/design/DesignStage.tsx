@@ -115,12 +115,27 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
     const frameBox = useRef<HTMLDivElement>(null);
     const located = useRef<((elements: DesignElement[]) => void) | null>(null);
     const assets = useRef<{ opened: string; read: (path: string) => Promise<Blob | null> } | null>(null);
+    const known = useRef<{ folder: string; pages: Set<string> } | null>(null);
 
     const files = entries === null ? null : designFiles(entries);
     const found = entries !== null;
 
     // The folder may not be there yet, so the project's watch is the one that sees the chat make it.
     useFolderWatch(endpointId, watched);
+
+    // A page that came since the last listing is the one the chat just made, unless a person still has work queued on the page in front.
+    const onListed = useEffectEvent((found: FsEntry[] | null): void => {
+        const pages = found === null ? [] : pagesByChange(found);
+        const before = known.current?.folder === folder ? known.current.pages : null;
+        const arrived = before === null ? undefined : pages.find((file) => !before.has(file));
+        const unsent = comments.length > 0 || Object.keys(edits).length > 0 || Object.entries(values).some(([name, value]) => tweaks?.[name]?.value !== value);
+
+        known.current = { folder, pages: new Set(pages) };
+
+        if (arrived !== undefined && pinned === undefined && !unsent) {
+            showPage(designId, arrived);
+        }
+    });
 
     useEffect(() => {
         let current = true;
@@ -129,6 +144,7 @@ export function DesignStage({ designId, chatId, folder, watched, pinned }: Stage
             if (current) {
                 setEntries(found);
                 setListed(true);
+                onListed(found);
             }
         });
 
