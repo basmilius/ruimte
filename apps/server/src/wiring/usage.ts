@@ -1,7 +1,7 @@
+import { copilotUsageDirectory } from '@adecore/agents/providers';
 import { limitAccountsOf, usageAccountsOf, usageRootsOf, UsageMonitor, UsageService, type LimitAccounts } from '@adecore/agents/usage';
 import type { ServerConfig } from '../config.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import { copilotUsageDirectory } from '../providers/acp-providers.ts';
 import { claudeApiUsageRoots } from '../providers/anthropic-claude-api-provider.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { readGrokPlan } from '../usage/grok-plan.ts';

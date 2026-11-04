@@ -1,18 +1,15 @@
 import type { CliDetection, ChatProvider } from '@adecore/agents/providers';
-import { ProviderRegistry as AgentProviderRegistry, detectCli } from '@adecore/agents/providers';
-import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
-import { acpCatalogStore } from './acp-catalog-store.ts';
 import {
     ANTIGRAVITY_CLI,
     antigravityOneShotArgs,
-    copilotProvider,
     copilotUsageDirectory,
-    createAntigravityProvider,
-    createCopilotProvider,
-    createGrokProvider,
-    grokProvider
-} from './acp-providers.ts';
-import type { AcpServerLaunch } from './acp-server.ts';
+    ProviderRegistry as AgentProviderRegistry,
+    detectCli,
+    type AcpServerLaunch
+} from '@adecore/agents/providers';
+import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { acpCatalogStore } from './acp-catalog-store.ts';
+import { copilotProvider, createAntigravityProvider, createCopilotProvider, createGrokProvider, grokProvider } from './acp-providers.ts';
 import { anthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
 import { claudeProvider } from './claude-provider.ts';
 import { codexProvider } from './codex-provider.ts';

@@ -1,5 +1,5 @@
+import { ANTIGRAVITY_CLI } from '@adecore/agents/providers';
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
-import { ANTIGRAVITY_CLI } from './acp-providers.ts';
 import { CLAUDE_ALLOW_CONTEXT } from './claude-provider.ts';
 import { providerFor } from './registry.ts';
 import { COPILOT_ALLOW_MCP, mcpArgs, type McpEndpoint } from './ruimte-mcp.ts';
