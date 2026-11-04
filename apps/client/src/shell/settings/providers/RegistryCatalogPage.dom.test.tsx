@@ -4,9 +4,9 @@ import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection'
 import { RegistryCatalogPage } from '@/shell/settings/providers/RegistryCatalogPage';
 import { useCliVersions, useRegistryCatalog } from '@/shell/settings/providers/use-provider-installs';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { FakeMachine, connectFakeMachine } from '../../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
+import { FakeMachine, connectFakeMachine } from '../../../../testing/fake-machine';
 
 const GOOSE: RegistryAgent = {
     id: 'goose',

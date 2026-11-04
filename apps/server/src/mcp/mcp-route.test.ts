@@ -8,9 +8,9 @@ import { ContextRefusal } from '../context/context-store.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import type { CanvasHost } from '../tools/host.ts';
 import { defineTool, defineToolkit } from '../tools/tool.ts';
-import { callTool, handleMcpRequest, visibleTools } from './mcp-route.ts';
 import { buildCatalog, type ToolContext } from './catalog.ts';
 import { AgentFiles, readOpened } from './files.ts';
+import { callTool, handleMcpRequest, visibleTools } from './mcp-route.ts';
 
 const PLACE = { projectId: 'p1', folder: '/nowhere/repo', canvasId: 'main' };
 

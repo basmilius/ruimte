@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import type { FsReadBinary } from '@ruimte/contracts';
-import { sourceKey, type FileSource } from '@/shell/panels/file-source';
 import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
+import type { FsReadBinary } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
+import { sourceKey, type FileSource } from '@/shell/panels/file-source';
 
 // The 3D engine and its loaders are most of a megabyte, so they wait for the first model or for the prefetcher.
 const ModelFile = lazyNamed(() => import('@/shell/panels/ModelFile'), 'ModelFile');

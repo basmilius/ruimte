@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import i18next from 'i18next';
-import type { GitFile, GitRepo, GitRepoKind, GitStatus } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
+import type { GitFile, GitRepo, GitRepoKind, GitStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { basenameOf, isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 import { GIT_PANEL_PACE_MS, paced, type Pace } from '@/shell/panels/pace';
 import { watchGit } from '@/state/git-watch';

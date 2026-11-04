@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import { normalize } from 'node:path';
-import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type LanguageServerOptions, type SharedDocument } from './server.ts';
-import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
-import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 import {
     TextMirror,
     type Diagnostic,
@@ -12,6 +9,9 @@ import {
     type ShowDocumentParams,
     type ShowMessageRequestParams
 } from '@adecore/lsp';
+import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
+import { INITIALIZE_TIMEOUT_MS, LanguageServer, STABLE_AFTER_MS, type LanguageServerHooks, type LanguageServerOptions, type SharedDocument } from './server.ts';
+import { fakeSpawner, ManualClock, settle, type FakeSpawner } from './test-fakes.ts';
 
 const runtime = { command: '/ruimte', args: [], env: { BUN_BE_BUN: '1' } };
 

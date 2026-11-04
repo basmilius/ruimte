@@ -1,9 +1,9 @@
-import type { ProjectViewKind, RuntimeMode } from '@ruimte/contracts';
 import { RUNTIME_MODES } from '@adecore/agents-react/chat';
+import { useChatRow } from '@adecore/agents-react/state';
+import type { ProjectViewKind, RuntimeMode } from '@ruimte/contracts';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { isLooseView, type CellView } from '@/shell/cell-view';
-import { useChatRow } from '@adecore/agents-react/state';
 import { isFileTab } from '@/state/files';
 import { useHasPlans } from '@/state/plans';
 import { useSessionPortControl } from '@/terminal/session-port-controls';

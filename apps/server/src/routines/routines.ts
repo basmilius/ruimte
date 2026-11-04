@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
+import { narrowerMode } from '@adecore/agents/providers';
 import {
     dueTimesBetween,
     nextDue,
@@ -20,11 +21,10 @@ import {
     type RoutineSkip,
     type RuntimeMode
 } from '@ruimte/contracts';
-import { narrowerMode } from '@adecore/agents/providers';
-import { isInside } from '../tools/project-paths.ts';
 import { PUBLISHED_INLINE_NOTE } from '../context/context-note.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, RoutineRunEntry } from '../outbox/outbox.ts';
+import { isInside } from '../tools/project-paths.ts';
 import type { RoutineAuthorStore, RoutineRunStore } from './routine-runs.ts';
 import { RoutineError, type RoutinesDocument, type RoutineStore, type StoredRoutine } from './routine-store.ts';
 

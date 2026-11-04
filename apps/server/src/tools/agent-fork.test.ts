@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatTurnItem, ProjectCanvasView, ProjectContent, ProjectNode, RuntimeMode } from '@ruimte/contracts';
-import { ManualClock } from '@adecore/agents/testing';
 import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { ManualClock } from '@adecore/agents/testing';
+import type { ChatTurnItem, ProjectCanvasView, ProjectContent, ProjectNode, RuntimeMode } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER } from './depth.ts';

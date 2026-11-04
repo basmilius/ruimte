@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { focusedCanvas } from '@/state/canvas';
 import { chatInfoOf } from '../../testing/chat-info';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 const CLAUDE = {
     kind: 'claude',

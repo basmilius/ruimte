@@ -1,8 +1,15 @@
-import { useState } from 'react';
-import { BatteryCharging } from 'lucide-react';
-import { Trans, useTranslation } from 'react-i18next';
-import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
 import { rememberChatPreferences, useChatPreferences, RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@adecore/agents-react/chat';
+import { Button, FormError, Switch, Select, type SelectItem, messageOf } from '@adecore/ui';
+import { formatPercent } from '@adecore/ui/format';
+import { SettingsRow } from '@adecore/ui/settings';
+import { CLOSED_LID_BATTERY_FLOOR, type RuntimeMode } from '@ruimte/contracts';
+import { BatteryCharging } from 'lucide-react';
+import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
+import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import {
     setClosedLidRule,
     setKeepAwake,
@@ -12,13 +19,6 @@ import {
     useKeepAwakeChoice,
     useMachineKeepsAwake
 } from '@/state/keep-awake';
-import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
-import { ComputerSections } from '@/shell/settings/panes/ComputerSections';
-import { SettingsRow } from '@adecore/ui/settings';
-import { Button, FormError, Switch, Select, type SelectItem, messageOf } from '@adecore/ui';
-import { formatPercent } from '@adecore/ui/format';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
 import { useUi } from '@/state/ui';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the

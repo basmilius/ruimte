@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import { protocolCases } from '../apps/client/testing/performance/protocol-cases';
 import { measurePairs } from '../apps/client/testing/performance/paired';
+import { protocolCases } from '../apps/client/testing/performance/protocol-cases';
 
 const baselineRoot = process.argv[2];
 

@@ -1,12 +1,12 @@
 import { mkdir, rmdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { claudeProjectSlug, findClaudeSession } from '@adecore/agents/chat';
+import { errorText } from '../error-text.ts';
 import { isDirectory } from '../fs/browse.ts';
 import { renameNoReplace } from '../fs/no-replace-rename.ts';
 import { isPathSegment } from '../fs/path-segment.ts';
-import { errorText } from '../error-text.ts';
-import { ChatError } from './errors.ts';
 import { realOrSelf } from '../fs/real-path.ts';
+import { ChatError } from './errors.ts';
 
 interface MovedTranscript {
     /* Puts back what moved, last first; a second call does nothing. */

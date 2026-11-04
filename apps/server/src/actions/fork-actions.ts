@@ -1,5 +1,5 @@
-import type { ActionHandlers } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
+import type { ActionHandlers } from '@ruimte/actions';
 import { depthForOpening } from '../tools/depth.ts';
 import { modeForOpening } from '../tools/mode.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';

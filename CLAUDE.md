@@ -96,6 +96,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas. Each area
 ## Conventions
 
 - TypeScript in the Bun workspaces, Swift in `apps/ios`. 4 spaces, LF; `.editorconfig` is the rule.
+- Imports form one block in the order `bun`, `node:`, packages, `@/`, then relative paths with `../` before `./`. `bun run format` sorts them (`sortImports` in `.oxfmtrc.json`) and `format:check` fails on drift. A side-effect import keeps its place, so put one that must run first at the top.
 - American English in code, comments, commits and UI text. No em dashes or en dashes anywhere.
 - Always curly braces, also for one-line early returns. No one-letter names except `i`, `e`, `x`, `y`.
 - Named top-level functions are function declarations (`export function`). Functions from factories or wrappers stay `const`, mutable callback slots variables. Arrow functions for callbacks and inside functions; class methods are never arrow properties.

@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import {
     isCanvasView,
     isChatHostView,
@@ -10,12 +9,13 @@ import {
     type SplitLayout,
     designNodeChats
 } from '@ruimte/contracts';
+import { create } from 'zustand';
+import type { SelectionOffer } from '@/chat/selection-to-chat';
 import { useChatDrawers } from '@/extensions/drawn-chats';
 import type { NodesOfView } from '@/project/view-nodes';
 import { useSidebarSource } from '@/shell/sidebar-source';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from '@/state/document';
-import type { SelectionOffer } from '@/chat/selection-to-chat';
 
 export interface ChooserChat {
     readonly id: string;

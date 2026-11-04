@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import i18next from 'i18next';
 import type { IceServer } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import type { LinkEvents, LinkOpener } from './link-transport';
 import { LAN_HEAD_START_MS, LanSkips, lanDoorUrls, raceSignaling, routedLink, type RaceClock } from './route-race';
 import type { Signal, SignalingEvents, SignalingOpener } from './signaling';

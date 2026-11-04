@@ -1,9 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Icon, Kbd } from '@adecore/ui';
 import { Blocks, ChevronRight, Maximize, MessageSquare, Scan, StickyNote, Terminal } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Icon, Kbd } from '@adecore/ui';
+import type { ReactNode } from 'react';
 import { EASE } from '../../film/playback.ts';
 
 /* A place an extension adds to: dashed while another one has the turn, lit with its name while it has it. */

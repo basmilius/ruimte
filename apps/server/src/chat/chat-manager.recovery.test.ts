@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
-import { FakeCheckpoints } from './chat-test-helpers.ts';
 import { makeChatFixture, retire } from './chat-manager.fixture.test.ts';
+import { FakeCheckpoints } from './chat-test-helpers.ts';
 
 type ChatFixture = Awaited<ReturnType<typeof makeChatFixture>>;
 let home: ChatFixture['home'];

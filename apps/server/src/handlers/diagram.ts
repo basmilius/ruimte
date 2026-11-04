@@ -1,6 +1,6 @@
-import { renderDiagram } from '../render/scenes.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
+import { renderDiagram } from '../render/scenes.ts';
 import { viewFileHandlers } from './view-files.ts';
 
 export function registerDiagramHandlers(dispatcher: Dispatcher, store: DiagramStore): void {

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { ISearchOptions } from '@xterm/addon-search';
-import type { Terminal } from '@xterm/xterm';
+import { compileFind } from '@adecore/editor-react/models';
 import type { TerminalViewHandle } from '@adecore/terminal';
 import { prefetcher } from '@adecore/ui';
-import { compileFind } from '@adecore/editor-react/models';
+import type { ISearchOptions } from '@xterm/addon-search';
+import type { Terminal } from '@xterm/xterm';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FindState } from '@/find/use-find';
 import { findResultOf, searchOptionsOf, terminalFindColors, type TerminalFindResult } from './terminal-find';
 

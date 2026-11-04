@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { FakeMachine } from '../../testing/fake-machine';
-import { clickOn, openSubmenu, until } from '../../testing/dom';
 import { menuItem, openCanvasPage, openContextMenu, type CanvasPage } from '../../testing/canvas-page';
+import { clickOn, openSubmenu, until } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const SHELL: ProjectNode = { id: 'shell', kind: 'terminal', title: 'Shell', x: 0, y: 0, w: 560, h: 360 };
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [SHELL], texts: [], edges: [], layouts: [] };

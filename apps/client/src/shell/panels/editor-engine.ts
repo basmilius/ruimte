@@ -1,9 +1,9 @@
-import SearchWorker from './search.worker.ts?worker';
 import type { EditorEngine } from '@adecore/editor';
-import { isApplePlatform } from '@/desktop/bridge';
 import { codeHighlighter } from '@/code-highlighter';
-import { shellShortcuts } from '@/terminal/keymap';
+import { isApplePlatform } from '@/desktop/bridge';
 import { RUIMTE_EDITOR_KEYMAP } from '@/shell/editor-keymap';
+import { shellShortcuts } from '@/terminal/keymap';
+import SearchWorker from './search.worker.ts?worker';
 
 let loading: Promise<EditorEngine> | null = null;
 let loaded: EditorEngine | null = null;

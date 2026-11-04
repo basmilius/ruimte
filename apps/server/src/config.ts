@@ -1,8 +1,8 @@
 import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
 import { RUIMTE_SESSION_VARIABLES } from '@adecore/agents/host';
+import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
 import { MCP_URL_VARIABLE } from './providers/ruimte-mcp.ts';
 
 const COMMANDS = ['serve', 'login', 'logout', 'status', 'extension', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;

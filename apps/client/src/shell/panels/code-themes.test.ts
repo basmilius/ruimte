@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { fileURLToPath } from 'node:url';
 import { createHighlighter } from 'shiki';
 import { CODE_PALETTES, CODE_THEMES, type CodeRole } from './code-themes';
-import { fileURLToPath } from 'node:url';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 

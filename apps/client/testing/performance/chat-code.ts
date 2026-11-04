@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import { realpathSync } from 'node:fs';
+import { join } from 'node:path';
 import { median } from './bench';
 
 const client = join(import.meta.dir, '../..');

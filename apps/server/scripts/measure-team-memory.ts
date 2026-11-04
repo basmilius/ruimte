@@ -1,9 +1,9 @@
+import { heapStats } from 'bun:jsc';
 import { rm } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
-import { heapStats } from 'bun:jsc';
-import type { ProjectContent } from '@ruimte/contracts';
 import { ChatStore } from '@adecore/agents/chat';
 import { ManualClock } from '@adecore/agents/testing';
+import type { ProjectContent } from '@ruimte/contracts';
 import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../src/tasks/test-daemon.ts';
 
 /*

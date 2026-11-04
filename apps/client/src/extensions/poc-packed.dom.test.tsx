@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ComponentType } from 'react';
 import type { ExtensionManifest } from '@ruimte/contracts';
+import type { ComponentType } from 'react';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
 import { useContributions } from '@/extensions/registry';
 import { mount, until } from '../../testing/dom';

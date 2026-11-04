@@ -2,9 +2,9 @@ import { afterEach, beforeEach, expect, jest, test } from 'bun:test';
 import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { processAlive } from '../process-test-helpers.ts';
 import { streamWithTimeout } from './run.ts';
 import { expectProcessTerminated, killFromPidFile } from './test-process.ts';
-import { processAlive } from '../process-test-helpers.ts';
 
 let root: string;
 let pidFile: string;

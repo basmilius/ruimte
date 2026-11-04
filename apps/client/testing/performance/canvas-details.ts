@@ -1,7 +1,7 @@
 import type { ProjectCanvasLine } from '@ruimte/contracts';
-import type { CanvasNode } from '../../src/state/canvas-model';
 import type { gapFrames } from '../../src/canvas/element-frames';
 import type { mappedNodes } from '../../src/canvas/minimap-geometry';
+import type { CanvasNode } from '../../src/state/canvas-model';
 
 interface CanvasDetailsApi {
     gapFrames: typeof gapFrames;

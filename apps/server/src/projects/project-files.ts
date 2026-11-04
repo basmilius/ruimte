@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { fileExists, isNotFound, settled, writeAtomic, type DirectoryWatcher, type Serializer, type Settled, type WatchSeams } from '@adecore/agents';
 import {
     DIAGRAM_VERSION,
     DRAWING_VERSION,
@@ -28,7 +29,6 @@ import {
     type SharedFileRead,
     mapDesignChats
 } from '@ruimte/contracts';
-import { fileExists, isNotFound, settled, writeAtomic, type DirectoryWatcher, type Serializer, type Settled, type WatchSeams } from '@adecore/agents';
 import { errorText } from '../error-text.ts';
 import { retryingRename } from '../fs/busy-retry.ts';
 import { climbsOut } from '../fs/path-segment.ts';

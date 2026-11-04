@@ -1,6 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Button, Field, Icon, Input, Pill, SectionLabel, Switch } from '@adecore/ui';
+import { MasterDetail, MasterItem, SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import {
     Bot,
     Brain,
@@ -25,8 +26,7 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
-import { Button, Field, Icon, Input, Pill, SectionLabel, Switch } from '@adecore/ui';
-import { MasterDetail, MasterItem, SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import type { ReactNode } from 'react';
 import { Scaled } from '../../film/Stage.tsx';
 
 const WIDTH = 1040;

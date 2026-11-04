@@ -1,6 +1,6 @@
+import { DiagramContentSchema, DiagramDocumentSchema } from '@adecore/diagram/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
-import { DiagramContentSchema, DiagramDocumentSchema } from '@adecore/diagram/protocol';
 
 export {
     DiagramShapeSchema,

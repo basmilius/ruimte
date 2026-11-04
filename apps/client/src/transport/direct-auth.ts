@@ -1,6 +1,3 @@
-import i18next from 'i18next';
-import { toBase64Url } from '@ruimte/pulsar';
-import { verifySignature } from '@ruimte/pulsar/verify-web';
 import {
     clientChannelMessage,
     daemonChannelMessage,
@@ -9,6 +6,9 @@ import {
     type DirectChallengeFrame,
     type DirectProofFrame
 } from '@ruimte/contracts';
+import { toBase64Url } from '@ruimte/pulsar';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
+import i18next from 'i18next';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { localSecretOf } from '@/endpoint/credentials';
 import { endpointById } from '@/state/endpoints';

@@ -2,18 +2,18 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { chmod, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join, posix } from 'node:path';
-import { z } from 'zod';
-import type { AgentKind, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
 import { runProcess, SingleFlight, writeAtomic, type ProcessResult } from '@adecore/agents';
 import { createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
+import type { AgentKind, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
+import { z } from 'zod';
+import { downloadFile, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { errorText } from '../error-text.ts';
 import { extractEntries, extractZipFile, readArchive } from '../language/archive.ts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
-import { throwOnFailure } from './cli-versions.ts';
 import { RUIMTE_ACP_CLIENT, agentDefaultCatalog, agentModel, loadingRuimteMcp } from './acp-providers.ts';
 import type { AcpRegistry, RegistryDistribution, RegistryEntry } from './acp-registry.ts';
-import { downloadFile, type FileDownload } from '../artifacts/artifact-fs.ts';
 import { downloadChecked } from './acp-server.ts';
+import { throwOnFailure } from './cli-versions.ts';
 
 const InstalledSchema = z.object({
     id: z.string(),

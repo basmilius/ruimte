@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ClaudeApiSettings, NanoGptSettings, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { useUi } from '@/state/ui';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
+import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
 import { FakeMachine } from '../../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
 import { emptyCanvas } from '../../../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import type { DesignPlace, ProviderInfo } from '@ruimte/contracts';
 import { readChatPreferences } from '@adecore/agents-react/chat';
+import type { DesignPlace, ProviderInfo } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { canvasOfNode, nextId, type AddNodeOptions } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 

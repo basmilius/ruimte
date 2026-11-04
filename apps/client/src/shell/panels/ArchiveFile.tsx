@@ -1,23 +1,3 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import i18next from 'i18next';
-import type { FileTreeVisibleRow } from '@pierre/trees';
-import { FileArchive, FileWarning, MousePointerClick, PackageOpen } from 'lucide-react';
-import { absoluteOf, type ArchiveEntry, type ArchiveFormat, type ArchiveListResult, type FsReadBinary } from '@ruimte/contracts';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import { saveBlob } from '@/download';
-import { ArchiveEntryItems, ArchiveEntryPreview, type ArchiveVersion } from '@/shell/panels/ArchiveEntryPreview';
-import { archiveTotals, archiveTreePaths, entryPathOf, extractFolderName, freeFolderName, isFolderName, isFolderRow } from '@/shell/panels/archive-tree';
-import { FILE_FOOTER } from '@/shell/panels/classes';
-import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
-import { basenameOf, dirnameOf } from '@/shell/panels/files-tree';
-import { TreeSplit } from '@/shell/panels/TreeSplit';
-import { useProject } from '@/state/project';
-import { useToasts } from '@/state/toasts';
-import { readResource } from '@/transport/byte-transfer';
-import { useTransport } from '@/transport/context';
-import { readPiece } from '@/transport/piece';
-import type { Transport } from '@/transport/transport';
 import {
     Button,
     ContextMenu,
@@ -33,6 +13,26 @@ import {
     messageOf
 } from '@adecore/ui';
 import { formatBytes, formatNumber } from '@adecore/ui/format';
+import type { FileTreeVisibleRow } from '@pierre/trees';
+import { absoluteOf, type ArchiveEntry, type ArchiveFormat, type ArchiveListResult, type FsReadBinary } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { FileArchive, FileWarning, MousePointerClick, PackageOpen } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ignoreRefusal, perform } from '@/actions/client-actions';
+import { saveBlob } from '@/download';
+import { archiveTotals, archiveTreePaths, entryPathOf, extractFolderName, freeFolderName, isFolderName, isFolderRow } from '@/shell/panels/archive-tree';
+import { ArchiveEntryItems, ArchiveEntryPreview, type ArchiveVersion } from '@/shell/panels/ArchiveEntryPreview';
+import { FILE_FOOTER } from '@/shell/panels/classes';
+import { basenameOf, dirnameOf } from '@/shell/panels/files-tree';
+import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
+import { TreeSplit } from '@/shell/panels/TreeSplit';
+import { useProject } from '@/state/project';
+import { useToasts } from '@/state/toasts';
+import { readResource } from '@/transport/byte-transfer';
+import { useTransport } from '@/transport/context';
+import { readPiece } from '@/transport/piece';
+import type { Transport } from '@/transport/transport';
 
 const { rowPathOf } = FileTree;
 

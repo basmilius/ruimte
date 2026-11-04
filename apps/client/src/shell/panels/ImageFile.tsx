@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ImageOff, Maximize, Scan } from 'lucide-react';
-import type { FsReadBinary } from '@ruimte/contracts';
-import { FILE_FOOTER } from '@/shell/panels/classes';
-import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
-import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { machineResourceOf, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
-import { RevealButton } from '@/shell/panels/RevealButton';
-import { useMachineUrl } from '@/transport/machine-url';
 import { ButtonGroup, EmptyState, ScrollArea } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
+import type { FsReadBinary } from '@ruimte/contracts';
+import { ImageOff, Maximize, Scan } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FILE_FOOTER } from '@/shell/panels/classes';
+import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
+import { machineResourceOf, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
+import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { RevealButton } from '@/shell/panels/RevealButton';
+import { useMachineUrl } from '@/transport/machine-url';
 
 type Zoom = 'fit' | 'full';
 

@@ -1,5 +1,5 @@
-import type { LucideIcon } from 'lucide-react';
 import { IconButton } from '@adecore/ui';
+import type { LucideIcon } from 'lucide-react';
 
 export function PaletteSearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; label: string; active: boolean; onClick: () => void }) {
     return (

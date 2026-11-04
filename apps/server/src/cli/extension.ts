@@ -6,14 +6,14 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import * as prompts from '@clack/prompts';
 import { Command } from 'commander';
-import { bunRuntime } from '../language/runtime.ts';
-import { buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
-import { logTail } from '../extensions/log-tail.ts';
-import { isLeftOut, sourceSignature } from '../extensions/source-signature.ts';
-import { scaffoldFiles, scaffoldFolder, scaffoldProblem, type ScaffoldAnswers } from '../extensions/scaffold.ts';
-import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import testRuntime from '../extensions/generated/test-runtime.js' with { type: 'text' };
+import { logTail } from '../extensions/log-tail.ts';
+import { buildExtension, packExtension, readManifest } from '../extensions/pack.ts';
+import { scaffoldFiles, scaffoldFolder, scaffoldProblem, type ScaffoldAnswers } from '../extensions/scaffold.ts';
+import { isLeftOut, sourceSignature } from '../extensions/source-signature.ts';
+import { DOM_PRELOAD, hasDomTests, missingDom, reactWarning } from '../extensions/test-setup.ts';
+import { bunRuntime } from '../language/runtime.ts';
 import { commandIo, homeSecret, startFirst, type LocalDaemonOptions } from './local-daemon.ts';
 
 const STORE_REPOSITORY = 'ruimte-app/extensions';

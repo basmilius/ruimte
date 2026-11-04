@@ -2,14 +2,6 @@ import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
-import { serveDevExtensionFiles } from './main/dev-extension-files';
-import { ClientExtensions } from './main/extensions';
-import { installBrowserRoutes } from './browser-routes';
-import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
-import { moveLegacyStorage } from './legacy-storage';
-import { MACHINE_ARGUMENT } from './machine-argument';
-import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride } from './machine-mode';
 import {
     createGestureGate,
     createPageKeys,
@@ -22,20 +14,27 @@ import {
 } from '@adecore/shell';
 import type { ThemeState } from '@adecore/shell/bridge';
 import { type AgentActivity, type KeepAwakeRequest } from '@ruimte/desktop-bridge';
+import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { isWindowKey, isWindowState, isWindowView, tabStripOf, totalActivity, windowPointOf, windowUrl } from './app-windows';
-import { createTabDrag } from './tab-drag';
+import { installBrowserRoutes } from './browser-routes';
+import { askDaemonWork, handVoiceKey } from './daemon-proof';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from './guest-menu';
-import { askDaemonWork, handVoiceKey } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
+import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
+import { moveLegacyStorage } from './legacy-storage';
+import { MACHINE_ARGUMENT } from './machine-argument';
+import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride } from './machine-mode';
+import { serveDevExtensionFiles } from './main/dev-extension-files';
 import { installDialogs } from './main/dialogs';
 import { electron } from './main/electron';
+import { ClientExtensions } from './main/extensions';
 import { createAppIpc } from './main/ipc';
 import { installLogin } from './main/login';
 import { installMachineMode } from './main/machine-mode';
 import { installMenu } from './main/menu';
-import { installSecrets } from './main/secrets';
 import { installQuickLook } from './main/quick-look';
+import { installSecrets } from './main/secrets';
 import { createMachine } from './main/service';
 import { installSpeech } from './main/speech';
 import { startTelemetry } from './main/telemetry';
@@ -45,6 +44,7 @@ import { createReleaseNotes } from './release-notes';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
+import { createTabDrag } from './tab-drag';
 import { appSubframeNavigation, BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from './web-guards';
 
 const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerMonitor, powerSaveBlocker, protocol, screen, session, shell, webContents } = electron;

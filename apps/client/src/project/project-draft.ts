@@ -1,6 +1,6 @@
 import { ProjectDocumentSchema, type ProjectDocument } from '@ruimte/contracts';
-import { z } from 'zod';
 import i18next from 'i18next';
+import { z } from 'zod';
 import { endpointKey } from '@/state/keys';
 import type { LastProjectStorage } from './last-project';
 

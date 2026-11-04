@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { CircleAlert, Eraser, Folder, Package, Trash2 } from 'lucide-react';
-import type { ArtifactCleanupProposal, ArtifactStorageResult } from '@ruimte/contracts';
 import { Button, ErrorBoundary, SegmentBar } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
+import type { ArtifactCleanupProposal, ArtifactStorageResult } from '@ruimte/contracts';
+import { CircleAlert, Eraser, Folder, Package, Trash2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
 import { holdArtifacts, useArtifacts } from '@/output/artifacts';
 import { OutputProjectGlyph } from '@/output/look';

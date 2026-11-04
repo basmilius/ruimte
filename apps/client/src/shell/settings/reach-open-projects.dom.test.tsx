@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { EndpointInfo, ProjectCanvasView } from '@ruimte/contracts';
+import { act } from 'react';
 import { startEndpointWatch } from '@/endpoint/watch';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { startServerInfo } from '@/transport/server-info';
-import { FakeMachine } from '../../../testing/fake-machine';
-import { clickOn, until } from '../../../testing/dom';
 import { openCanvasPage, type CanvasPage } from '../../../testing/canvas-page';
+import { clickOn, until } from '../../../testing/dom';
+import { FakeMachine } from '../../../testing/fake-machine';
 
 const MACHINE = 'fake-machine';
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };

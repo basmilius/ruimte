@@ -1,10 +1,10 @@
+import { Button, Dialog } from '@adecore/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState, type DaemonCrash } from '@/desktop/bridge';
 import { machineCrashToast } from '@/shell/machine-crash';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
 import { useToasts } from '@/state/toasts';
-import { Button, Dialog } from '@adecore/ui';
 
 /*
  * Asked after an update when the background service still runs the older build, because a restart

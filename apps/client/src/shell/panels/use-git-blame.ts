@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import type { EditorLanguage } from '@/language/ruimte-editor-language';
-import { useGitSignal } from '@/state/git-watch';
+import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
+import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useFiles } from '@/state/files';
+import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { useGitRoot } from '@/shell/panels/use-git-root';
-import { isPathBelow, relativeTo } from '@/shell/panels/files-tree';
 
 /*
  * Tells the rows above declarations who wrote the file, which git answers for the text on disk. It is

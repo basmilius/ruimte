@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
-import { EMPTY_FIND_QUERY, type FindQuery } from '@adecore/editor-react/models';
-import { hitRow, indexRows, placeOfHit, searchChat } from './search';
 import { deriveTimelineRows } from '@adecore/agents-react/chat';
+import { EMPTY_FIND_QUERY, type FindQuery } from '@adecore/editor-react/models';
+import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
+import { hitRow, indexRows, placeOfHit, searchChat } from './search';
 
 function tool(id: string, input: unknown, output: string, extra: Partial<ChatToolItem> = {}): ChatToolItem {
     return {

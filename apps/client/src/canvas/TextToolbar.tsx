@@ -1,12 +1,12 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Italic, Palette, Strikethrough, Underline } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@adecore/ui';
 import type { DrawingFont } from '@ruimte/contracts';
+import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Italic, Palette, Strikethrough, Underline } from 'lucide-react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
 import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
-import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@adecore/ui';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 

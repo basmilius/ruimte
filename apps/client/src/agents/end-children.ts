@@ -1,6 +1,6 @@
+import type { Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { Worktree } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
 
 export interface PendingEnd {

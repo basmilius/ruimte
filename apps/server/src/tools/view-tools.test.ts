@@ -13,10 +13,8 @@ import {
     PROJECT_ICON_NAMES,
     type ProjectCanvasView
 } from '@ruimte/contracts';
-import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
 import { peerCanvasId } from '../peering/links.ts';
-import { DIAGRAM_EXAMPLE, viewToolkit } from './view-tools.ts';
-import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './views.ts';
+import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
 import {
     canvasFixture,
     knobs,
@@ -43,6 +41,8 @@ import {
     deleteWhy,
     viewOnDisk
 } from './canvas-test-fixture.ts';
+import { DIAGRAM_EXAMPLE, viewToolkit } from './view-tools.ts';
+import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './views.ts';
 
 canvasFixture();
 

@@ -1,16 +1,16 @@
+import { ImageThumb } from '@adecore/agents-react/chat/ui';
+import { Button, Icon } from '@adecore/ui';
+import { isImageMime, type FsReadResult } from '@ruimte/contracts';
+import { CornerUpRight, ImageOff, PackagePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CornerUpRight, ImageOff, PackagePlus } from 'lucide-react';
 import { useOutputChat } from '@/output/chat-scope';
 import { saveToOutput, useOutputProject } from '@/output/save';
-import { isImageMime, type FsReadResult } from '@ruimte/contracts';
-import { ImageThumb } from '@adecore/agents-react/chat/ui';
 import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
 import { useEndpointId } from '@/state/keys';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Button, Icon } from '@adecore/ui';
 
 const PLACES = {
     tool: { box: 'mb-1 ml-8', image: 'max-h-48 max-w-full object-contain' },

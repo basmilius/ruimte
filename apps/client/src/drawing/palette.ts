@@ -1,5 +1,5 @@
-import { DRAWING_COLORS, type DrawingColor, type DrawingFont } from '@ruimte/contracts';
 import { DEFAULT_FONT_STACKS } from '@adecore/drawing';
+import { DRAWING_COLORS, type DrawingColor, type DrawingFont } from '@ruimte/contracts';
 
 export type DrawingPalette = Record<DrawingColor, string>;
 

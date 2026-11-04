@@ -8,14 +8,14 @@ import { DrawingStore } from '../projects/drawing-store.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { commandsSet } from '../sessions/command-approvals.ts';
 import { modesSet } from '../sessions/mode-approvals.ts';
-import type { AgentStores, AgentsBundle } from './agents.ts';
+import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
+import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { TemplatesBundle } from './templates.ts';
-import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 
 /* The projects of this machine and the drawing and diagram files beside them. */
 export interface ProjectsBundle {

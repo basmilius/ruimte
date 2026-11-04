@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import type { ProcessAlert, ProcessGroup, ProcessPoint } from '@ruimte/contracts';
 import { formatDuration, formatBytes as bytesOf, formatPercent as percentOf } from '@adecore/ui/format';
+import type { ProcessAlert, ProcessGroup, ProcessPoint } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 /* A number that could not be read is shown as a dash, never as zero. */
 const UNREADABLE = '-';

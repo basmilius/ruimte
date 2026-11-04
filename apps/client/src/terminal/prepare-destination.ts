@@ -4,9 +4,9 @@ import { nodesOfView, type NodesOfView } from '@/project/view-nodes';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointById, useEndpoints } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSessions } from '@/state/sessions';
-import { endpointKey } from '@/state/keys';
 import { useWindow, windowWorkspace } from '@/state/window';
 import { focusTerminal } from './registry';
 

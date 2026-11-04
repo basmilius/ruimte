@@ -1,3 +1,5 @@
+import { Button, Checkbox, PromptDialog } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type MachineStopPreview } from '@/desktop/bridge';
@@ -7,8 +9,6 @@ import { stopRunningLines } from '@/shell/settings/background-service';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { Button, Checkbox, PromptDialog } from '@adecore/ui';
-import { SettingsRow } from '@adecore/ui/settings';
 
 /*
  * The way back to an app that only connects. It stops the machine this app runs, keeps what it holds

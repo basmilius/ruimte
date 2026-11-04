@@ -1,17 +1,17 @@
+import { ProviderLogo } from '@adecore/agents-react/providers';
+import type { Editor } from '@adecore/editor';
+import { Button, ButtonGroup, IconButton } from '@adecore/ui';
+import clsx from 'clsx';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import { useStore } from 'zustand';
-import { ArrowDown, ArrowUp } from 'lucide-react';
-import { Button, ButtonGroup, IconButton } from '@adecore/ui';
-import { ProviderLogo } from '@adecore/agents-react/providers';
-import type { Editor } from '@adecore/editor';
-import { focusChat } from '@/plan/plan-actions';
-import { colorOfChat } from './agent-runs';
-import { commentRowId, type AgentReview, type ReviewItem } from './agent-review';
-import { useChatIdentity, useProviderName } from './use-chat-identity';
 import { hasProviderLogo } from '@/agents/provider-logo';
+import { focusChat } from '@/plan/plan-actions';
+import { commentRowId, type AgentReview, type ReviewItem } from './agent-review';
+import { colorOfChat } from './agent-runs';
+import { useChatIdentity, useProviderName } from './use-chat-identity';
 
 /* The gutter's width keeps a row's words in line with the code beside it. */
 const INDENT = { paddingLeft: 'var(--se-gutter-width)' };

@@ -16,12 +16,12 @@ import { fileSource, type FileSource } from '@/shell/panels/file-source';
 import { HtmlFile } from '@/shell/panels/HtmlFile';
 import { ImageFile } from '@/shell/panels/ImageFile';
 import { MarkdownFile } from '@/shell/panels/MarkdownFile';
+import { MediaFile } from '@/shell/panels/MediaFile';
 import { ModelPreview } from '@/shell/panels/ModelPreview';
-import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
 import { PatchFileSlot } from '@/shell/panels/patch-file-lazy';
 import { PdfPreview } from '@/shell/panels/PdfPreview';
 import { TableFile } from '@/shell/panels/TableFile';
-import { MediaFile } from '@/shell/panels/MediaFile';
+import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
 
 interface FileRendererProps {
     /* Absolute on the daemon's machine. */

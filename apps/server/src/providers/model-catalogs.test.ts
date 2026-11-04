@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ModelCatalogData } from '@ruimte/contracts';
 import { ModelCatalog } from '@adecore/agents/providers';
+import type { ModelCatalogData } from '@ruimte/contracts';
 import type { ModelCatalogsV2Result } from '@ruimte/pulsar';
-import { ModelCatalogFeed } from './model-catalogs.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { ModelCatalogFeed } from './model-catalogs.ts';
 
 const MINUTE = 60 * 1000;
 

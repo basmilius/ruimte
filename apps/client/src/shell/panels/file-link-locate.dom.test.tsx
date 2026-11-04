@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { useFileChoice } from './file-links';
+import { act } from 'react';
 import { useFiles } from '@/state/files';
 import { chatInfoOf } from '../../../testing/chat-info';
+import { clickOn, layOutChat, mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
-import { clickOn, layOutChat, mount, until, type Mounted } from '../../../testing/dom';
+import { useFileChoice } from './file-links';
 
 const CLAUDE = {
     kind: 'claude',

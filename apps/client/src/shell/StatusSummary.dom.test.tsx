@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { ChatRequestSummary, ProjectCanvasView, ProjectView } from '@ruimte/contracts';
 import { useChats } from '@adecore/agents-react/state';
+import type { ChatRequestSummary, ProjectCanvasView, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { useDocument } from '@/state/document';
 import { endpointKey, splitKey } from '@/state/keys';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 const MAIN: ProjectCanvasView = {
     kind: 'canvas',

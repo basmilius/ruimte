@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { useUi } from '@/state/ui';
+import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

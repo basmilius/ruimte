@@ -1,6 +1,5 @@
 import type { Connection } from '@adecore/database';
-import i18next from 'i18next';
-import { create, type StoreApi, type UseBoundStore } from 'zustand';
+import { messageOf } from '@adecore/ui';
 import {
     isAbsolutePath,
     storedPathOf,
@@ -9,7 +8,8 @@ import {
     type DatabaseConnection,
     type DatabaseConnectionsChangedEvent
 } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import {
     bindPasswords,
     boundPasswordOf,

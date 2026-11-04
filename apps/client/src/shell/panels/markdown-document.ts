@@ -1,6 +1,6 @@
-import { parseDocument } from 'yaml';
-import type { CSSProperties } from 'react';
 import { absoluteOf, isAbsolutePath } from '@ruimte/contracts';
+import type { CSSProperties } from 'react';
+import { parseDocument } from 'yaml';
 
 interface MarkdownDocument {
     body: string;

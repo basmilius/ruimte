@@ -1,15 +1,15 @@
+import { Icon, IconButton, Menu, messageOf } from '@adecore/ui';
+import type { ComputerControlAction } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { Pause, Play, Square, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { ComputerControlAction } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
 import { indicatorLook, useNodeComputerSession } from '@/computer/indicator';
 import { localEndpointLabel, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
-import { Icon, IconButton, Menu, messageOf } from '@adecore/ui';
 
 const ACTION_ICONS: Record<ComputerControlAction, LucideIcon> = {
     pause: Pause,

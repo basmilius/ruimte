@@ -1,7 +1,7 @@
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import { RequestError, type ClientConnection, type Dispatcher } from '../dispatcher.ts';
-import { requirePeerLinks } from '../peering/peer-access.ts';
 import type { PeerLinks } from '../peering/links.ts';
+import { requirePeerLinks } from '../peering/peer-access.ts';
 
 /*
  * The Output another machine may read here, for a copy a person there asked for: only the project its

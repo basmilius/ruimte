@@ -1,11 +1,11 @@
+import { layoutOf } from '@adecore/diagram';
+import { EmptyState, Icon } from '@adecore/ui';
 import { Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { layoutOf } from '@adecore/diagram';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { useDiagramMirror } from '@/diagram/mirror';
 import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
-import { EmptyState, Icon } from '@adecore/ui';
 
 /* World units of air around a mirrored diagram, so nothing touches the frame. */
 const PADDING = 24;

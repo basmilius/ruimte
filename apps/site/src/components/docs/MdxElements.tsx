@@ -1,5 +1,5 @@
-import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import Link from 'next/link';
+import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { CodeBlock } from '@/components/docs/CodeBlock';
 import { slugOf, textOf } from '@/lib/docs/slug';
 

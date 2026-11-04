@@ -1,9 +1,9 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ChatStore, type BackendEvent } from '@adecore/agents/chat';
 import type { ChatCheckpointDiff, ChatEvent, ChatInfo, ChatItem, ChatTurnItem } from '@ruimte/contracts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { ChatStore, type BackendEvent } from '@adecore/agents/chat';
 
 type Check = () => boolean;
 

@@ -1,6 +1,6 @@
 import { ApiToolCallSchema, type RuntimeMode } from '@ruimte/contracts';
-import { executeApiTool, type ApiToolCall, type ApiToolContext } from './api-tools.ts';
 import { executeApiCommand } from './api-command-tool.ts';
+import { executeApiTool, type ApiToolCall, type ApiToolContext } from './api-tools.ts';
 
 const string = { type: 'string' };
 function tool(name: string, description: string, properties: Record<string, unknown>, required = Object.keys(properties)) {

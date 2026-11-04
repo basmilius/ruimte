@@ -1,3 +1,6 @@
+import { isInFloatingLayer, ContextMenu } from '@adecore/ui';
+import type { ProjectCanvasLine } from '@ruimte/contracts';
+import type { NodeSide } from '@ruimte/contracts';
 import {
     useEffect,
     useLayoutEffect,
@@ -9,52 +12,49 @@ import {
     type RefObject
 } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { ProjectCanvasLine } from '@ruimte/contracts';
-import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
-import { gridTakesPath } from '@/shell/view-drag';
-import { finderPaths } from '@/canvas/finder-drop';
-import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
-import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
-import type { NodeSide } from '@ruimte/contracts';
-import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
+import { createTextAction } from '@/actions/client-actions';
 import { alignmentGuides, gapGuides, type AlignmentGuide, type GapGuide } from '@/canvas/alignment-guides';
 import { AlignmentGuides } from '@/canvas/AlignmentGuides';
-import { editableGaps, gapOffsets, type EditableGap } from '@/canvas/editable-gaps';
-import { GapHandles } from '@/canvas/GapHandles';
-import { gapFrames } from '@/canvas/element-frames';
-import { lineBounds } from '@/canvas/line-geometry';
-import { isGapModifierDown, subscribeGapModifier } from '@/canvas/gap-modifier';
-import { registerGestureCancellation } from '@/canvas/gesture-cancel';
-import { resizedRect } from '@/canvas/resize';
-import { canLink } from '@/canvas/edge-lines';
-import { resizedText } from '@/canvas/text-resize';
-import { framePressHandsKeyboard } from '@/canvas/frame-press';
-import { stackingOrder } from '@/canvas/stacking';
-import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
+import { CanvasLineLayer, CanvasLineTool, CanvasLineToolbar } from '@/canvas/CanvasLines';
+import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { farNodeKey } from '@/canvas/culling';
+import { DerivedCards } from '@/canvas/DerivedCards';
+import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
+import { canLink } from '@/canvas/edge-lines';
+import { EdgeLayer } from '@/canvas/EdgeLayer';
+import { editableGaps, gapOffsets, type EditableGap } from '@/canvas/editable-gaps';
+import { gapFrames } from '@/canvas/element-frames';
+import { EmptyCanvas } from '@/canvas/EmptyCanvas';
+import { finderPaths } from '@/canvas/finder-drop';
+import { framePressHandsKeyboard } from '@/canvas/frame-press';
+import { isGapModifierDown, subscribeGapModifier } from '@/canvas/gap-modifier';
+import { GapHandles } from '@/canvas/GapHandles';
+import { registerGestureCancellation } from '@/canvas/gesture-cancel';
+import { GroupHover } from '@/canvas/GroupHover';
+import { lineBounds } from '@/canvas/line-geometry';
+import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas/math';
+import { Minimap } from '@/canvas/Minimap';
+import { cardHolds, derivedCardOf, derivedOwnerOf } from '@/canvas/node-body';
+import { NodeFrame } from '@/canvas/NodeFrame';
 import { notePointer } from '@/canvas/pointer';
+import { PortHints } from '@/canvas/PortHints';
+import { resizedRect } from '@/canvas/resize';
+import { ResizeHandles } from '@/canvas/ResizeHandles';
+import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
+import { stackingOrder } from '@/canvas/stacking';
+import { resizedText } from '@/canvas/text-resize';
+import { TextElementView } from '@/canvas/TextElementView';
+import { TextToolbar } from '@/canvas/TextToolbar';
+import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { CanvasLayers } from '@/extensions/ContributedSlots';
+import { SelectionBar } from '@/extensions/SlotSurfaces';
+import { showFileOnCanvas } from '@/project/views';
+import { CellOverlay } from '@/shell/CellOverlay';
+import { gridTakesPath } from '@/shell/view-drag';
 import { carriedByGroups, isNodeActive, maximizedNodeOf, useCanvas, useCanvasCamera, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { defaultNodeSize } from '@/state/node-size';
-import { createTextAction } from '@/actions/client-actions';
-import { showFileOnCanvas } from '@/project/views';
-import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
-import { EmptyCanvas } from '@/canvas/EmptyCanvas';
-import { EdgeLayer } from '@/canvas/EdgeLayer';
-import { GroupHover } from '@/canvas/GroupHover';
-import { PortHints } from '@/canvas/PortHints';
-import { ResizeHandles } from '@/canvas/ResizeHandles';
-import { NodeFrame } from '@/canvas/NodeFrame';
-import { SelectionBar } from '@/extensions/SlotSurfaces';
-import { CanvasLayers } from '@/extensions/ContributedSlots';
-import { DerivedCards } from '@/canvas/DerivedCards';
-import { cardHolds, derivedCardOf, derivedOwnerOf } from '@/canvas/node-body';
-import { TextElementView } from '@/canvas/TextElementView';
-import { TextToolbar } from '@/canvas/TextToolbar';
-import { CanvasLineLayer, CanvasLineTool, CanvasLineToolbar } from '@/canvas/CanvasLines';
-import { Minimap } from '@/canvas/Minimap';
-import { CellOverlay } from '@/shell/CellOverlay';
-import { isInFloatingLayer, ContextMenu } from '@adecore/ui';
 
 type Gesture =
     | { kind: 'pan'; last: Point }

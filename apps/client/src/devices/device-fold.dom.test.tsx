@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { DeviceInfo, ProjectView } from '@ruimte/contracts';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { answerDevices, FAKE_EMULATOR, FAKE_SIMULATOR, referenceOf, type FakeDevices } from '../../testing/fake-devices';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { answerDevices, FAKE_EMULATOR, FAKE_SIMULATOR, referenceOf, type FakeDevices } from '../../testing/fake-devices';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 let machine: FakeMachine;
 let devices: FakeDevices;

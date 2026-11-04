@@ -1,3 +1,4 @@
+import { CodedError } from '@adecore/agents';
 import { COARSE_POINTS, FINE_POINTS } from '@ruimte/contracts';
 import type {
     AgentInfo,
@@ -13,6 +14,8 @@ import type {
     ProcessesSubscribePayload,
     ProcessesSubscribeResult
 } from '@ruimte/contracts';
+import { ClientSinks } from '../client-sinks.ts';
+import { errorText } from '../error-text.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import {
     identityOf,
@@ -27,9 +30,6 @@ import {
 } from './sampler.ts';
 import { StuckJudge, type ObservedGroup, type ObservedProcess, type Observation, type StuckThresholds } from './stuck.ts';
 import { diskOf, groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
-import { errorText } from '../error-text.ts';
-import { CodedError } from '@adecore/agents';
-import { ClientSinks } from '../client-sinks.ts';
 
 const FINE_INTERVAL_MS = 2000;
 export const COARSE_INTERVAL_MS = 5 * 60_000;

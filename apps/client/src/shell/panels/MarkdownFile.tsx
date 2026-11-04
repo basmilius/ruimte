@@ -1,16 +1,16 @@
+import { FileLinkContext } from '@adecore/agents-react/chat/ui';
+import type { FsReadText } from '@ruimte/contracts';
+import { Eye } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye } from 'lucide-react';
-import type { FsReadText } from '@ruimte/contracts';
-import { FileLinkContext } from '@adecore/agents-react/chat/ui';
 import { FindBar } from '@/find/FindBar';
 import { FindMarks } from '@/find/FindMarks';
 import { useDomFind } from '@/find/use-dom-find';
 import { useFind } from '@/find/use-find';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileMarkdown } from '@/shell/panels/FileMarkdown';
-import { FileScroll } from '@/shell/panels/FileScroll';
 import { dirnameOf } from '@/shell/panels/files-tree';
+import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { useSourceToggle } from '@/shell/panels/use-source-toggle';
 

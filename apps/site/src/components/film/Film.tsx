@@ -1,14 +1,14 @@
 'use client';
 
-import { useRef } from 'react';
 import { Frame, GitBranch, Globe, PanelsTopLeft, PenTool, StickyNote, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useRef } from 'react';
 import { AppWindow, Rail, Sidebar, type SidebarRow, TopRow } from '../app/chrome.tsx';
 import { CanvasChapter } from './CanvasChapter.tsx';
 import { DelegateChapter } from './DelegateChapter.tsx';
 import { GridChapter } from './GridChapter.tsx';
-import { CANVAS_STEPS, CHILDREN, chatStatus, childStatus, DELEGATE_STEPS, GRID_STEPS, leadStatus } from './script.ts';
 import { EASE, PlaybackContext, useFilm, usePlayback, useStagePlayback } from './playback.ts';
+import { CANVAS_STEPS, CHILDREN, chatStatus, childStatus, DELEGATE_STEPS, GRID_STEPS, leadStatus } from './script.ts';
 import { Scaled } from './Stage.tsx';
 
 const CHAPTERS = [CANVAS_STEPS, GRID_STEPS, DELEGATE_STEPS] as const;

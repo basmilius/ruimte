@@ -1,8 +1,8 @@
 import { beforeEach, expect, test } from 'bun:test';
-import type { Task } from '@ruimte/contracts';
 import { TaskCoordinator, TaskStore } from '@adecore/agents/coordination';
-import { terminalTasks, type TerminalTasks } from './terminal-tasks.ts';
+import type { Task } from '@ruimte/contracts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { terminalTasks, type TerminalTasks } from './terminal-tasks.ts';
 
 let home: string;
 let tasks: TaskStore;

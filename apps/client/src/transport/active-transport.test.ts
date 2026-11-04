@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { EventMap, EventType, LiveFrameHeader, RequestMap, RequestType } from '@ruimte/contracts';
+import { endpoint } from '../../testing/fake-link';
 import type { Endpoint } from '../state/endpoints';
 import { ActiveTransport } from './active-transport';
 import { TransportPool, type PooledTransport } from './pool';
 import { TransportError, type ConnectionState, type TransportStatus } from './transport';
-import { endpoint } from '../../testing/fake-link';
 
 interface Pending {
     type: RequestType;

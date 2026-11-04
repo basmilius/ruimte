@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { ROLES_SHAPE } from './agent-tools.ts';
+import { canvasFixture, projectId, held, started, tasks, TOKENS, invoke, nodeOnDisk } from './canvas-test-fixture.ts';
 import { nextLine, taskToolkit } from './task-tools.ts';
 import { MAX_TASK_PROMPT_LENGTH, taskBrief, taskFirstPrompt } from './tasks.ts';
-import { canvasFixture, projectId, held, started, tasks, TOKENS, invoke, nodeOnDisk } from './canvas-test-fixture.ts';
 
 canvasFixture();
 

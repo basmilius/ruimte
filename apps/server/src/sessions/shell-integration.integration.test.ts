@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test';
 import { spawn } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { prepareShellIntegration } from './shell-integration.ts';
-import { SessionManager } from './manager.ts';
-import { BunPtyAdapter } from '../pty/bun-pty.ts';
-import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
+import { join } from 'node:path';
 import { holdsForeground } from '../processes/foreground.ts';
+import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { SessionManager } from './manager.ts';
+import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
+import { prepareShellIntegration } from './shell-integration.ts';
 import { waitFor, waitForAsync } from './test-helpers.ts';
 
 for (const custom of [false, true]) {

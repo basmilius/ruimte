@@ -1,10 +1,10 @@
+import { QueryConsole, runScopeOf, type QueryConsoleEditorProps } from '@adecore/database';
+import type { Editor } from '@adecore/editor';
+import { Button, Icon, Menu, Select } from '@adecore/ui';
+import { storedPathOf } from '@ruimte/contracts';
+import { ChevronDown, Database } from 'lucide-react';
 import { useEffect, useEffectEvent, useImperativeHandle, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Database } from 'lucide-react';
-import type { Editor } from '@adecore/editor';
-import { QueryConsole, runScopeOf, type QueryConsoleEditorProps } from '@adecore/database';
-import { storedPathOf } from '@ruimte/contracts';
-import { Button, Icon, Menu, Select } from '@adecore/ui';
 import { asViewConnections, connectionName, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
 import { setConsoleSchema, switchConsoleConnection } from '@/database/console-file';
 import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';

@@ -1,11 +1,11 @@
 import { basename } from 'node:path';
-import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
+import { z } from 'zod';
 import { AGENT_IMAGE_BYTES, AGENT_MODEL_BYTES, AGENT_MODEL_TYPES, agentAttachmentBytes, agentAttachmentType } from '../chat/attachment-type.ts';
 import type { AgentFiles } from '../mcp/files.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineToolkit } from './tool.ts';
 import { field } from './host.ts';
+import { defineToolkit } from './tool.ts';
 
 const MIB = 1024 * 1024;
 

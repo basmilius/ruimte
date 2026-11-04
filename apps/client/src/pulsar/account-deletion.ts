@@ -1,6 +1,6 @@
 import i18next from 'i18next';
-import { hasLocalMachine } from '@/state/local-machine';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf } from '@/state/server';
 import { deletePulsarAccount, usePulsarAccount } from './account';
 import { confirmAccount } from './confirmation';

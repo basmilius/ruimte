@@ -1,7 +1,7 @@
 import type { BrowserDriveAction, BrowserDriveResult, BrowserPageState } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import type { DriveOutcome } from './drive.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import type { DriveOutcome } from './drive.ts';
 
 /* What one ask may take before the agent hears that nobody answered; a load has its own, shorter, wait in the client. */
 const ASK_TIMEOUT_MS = 15_000;

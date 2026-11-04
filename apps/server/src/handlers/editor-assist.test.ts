@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { EditorAssistGenerateResult, ServerFrame } from '@ruimte/contracts';
-import type { EditorAssistRequest } from '../editor-assist/model.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import type { EditorAssistRequest } from '../editor-assist/model.ts';
 import { registerEditorAssistHandlers } from './editor-assist.ts';
 
 function harness() {

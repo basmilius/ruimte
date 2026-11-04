@@ -1,7 +1,7 @@
 import { createAppScheme, type AppScheme } from '@adecore/shell';
-import type { ClientExtensions } from './main/extensions';
 import { DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME, VISUAL_HOST_PAGE } from '@ruimte/contracts';
 import { cspString, EXTENSION_FILES_PATH, VISUAL_HOST_HEADERS, VISUAL_HOST_PATH } from '@ruimte/csp';
+import type { ClientExtensions } from './main/extensions';
 
 export const STORAGE_MOVE_PATH = '/__ruimte-storage';
 

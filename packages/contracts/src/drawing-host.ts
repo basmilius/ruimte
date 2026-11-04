@@ -1,6 +1,6 @@
+import { DrawingContentSchema, DrawingDocumentSchema } from '@adecore/drawing/protocol';
 import { z } from 'zod';
 import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
-import { DrawingContentSchema, DrawingDocumentSchema } from '@adecore/drawing/protocol';
 
 export {
     DrawingColorSchema,

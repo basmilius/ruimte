@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
+import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import {
     DATABASES_VERSION,
     DatabasesPrivateFileSchema,
@@ -15,9 +16,9 @@ import {
     type DatabasesPrivateFile,
     type DatabasesSharedFile
 } from '@ruimte/contracts';
-import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { ClientSinks } from '../client-sinks.ts';
 import { climbsOut } from '../fs/path-segment.ts';
+import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import {
     PRIVATE_DIR,
     PROJECT_DIR,
@@ -32,7 +33,6 @@ import {
     closeLoaded,
     type JsonDocumentRead
 } from '../projects/project-files.ts';
-import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import type { ProjectWriteIO } from '../projects/project-write.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 

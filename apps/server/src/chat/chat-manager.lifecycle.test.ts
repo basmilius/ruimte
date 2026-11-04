@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, setSystemTime, test } from 'bun:test';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatCheckpointDiff } from '@ruimte/contracts';
-import { ChatRecorder, FakeCheckpoints } from './chat-test-helpers.ts';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
+import type { ChatCheckpointDiff } from '@ruimte/contracts';
 import { makeChatFixture, retire } from './chat-manager.fixture.test.ts';
+import { ChatRecorder, FakeCheckpoints } from './chat-test-helpers.ts';
 
 type ChatFixture = Awaited<ReturnType<typeof makeChatFixture>>;
 let home: ChatFixture['home'];

@@ -1,6 +1,6 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { flagOf, isCanvasView, withFlags, type ProjectContent } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
 import { viewLines } from '../tools/views.ts';
 import type { ServerActionContext } from './context.ts';
 

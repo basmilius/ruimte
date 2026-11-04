@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { Icon, IconButton, Input, Keys, formatShortcut } from '@adecore/ui';
+import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { Search, X } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { keyboardGroups } from '@/shell/settings/keyboard-groups';
-import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
-import { Icon, IconButton, Input, Keys, formatShortcut } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { filterShortcuts, shortcutGroupOf, shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { useUi } from '@/state/ui';

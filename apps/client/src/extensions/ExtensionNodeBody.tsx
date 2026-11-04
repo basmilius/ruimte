@@ -1,7 +1,7 @@
-import { createElement } from 'react';
-import { CircleQuestionMark } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Icon } from '@adecore/ui';
+import { CircleQuestionMark } from 'lucide-react';
+import { createElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { extensionKeyOf, useContributions } from '@/extensions/registry';
 import { useCanvas } from '@/state/canvas';
 

@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { chatWaitAsk, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
-import type { CanvasNode } from '@/state/canvas';
 import type { ChatStatuses } from '@adecore/agents-react/state';
+import { chatWaitAsk, terminalWaitAsk, type AgentInfo, type AgentKind, type AgentStatus, type WaitAsk } from '@ruimte/contracts';
+import { create } from 'zustand';
+import type { CanvasNode } from '@/state/canvas';
 import { dropEndpoint, endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
 
 export interface SessionState {

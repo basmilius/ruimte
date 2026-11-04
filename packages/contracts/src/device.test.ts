@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
 import { DeviceInfoSchema, DeviceTargetPayloadSchema, deviceButtons, devicePermissions, deviceTools, type DeviceInfo } from './device.ts';
+import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
 import { liveStreamContentType, liveStreamFormatOf } from './live-stream.ts';
 
 const target = { platform: 'ios', backendId: 'simctl', deviceId: 'phone-1' } as const;

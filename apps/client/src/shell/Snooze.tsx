@@ -1,8 +1,8 @@
+import { Icon, IconButton, Menu, Tooltip, ContextMenu } from '@adecore/ui';
+import { formatClock, formatMoment, formatWeekdayClock } from '@adecore/ui/format';
+import { AlarmClock, AlarmClockOff } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlarmClock, AlarmClockOff } from 'lucide-react';
-import { formatClock, formatMoment, formatWeekdayClock } from '@adecore/ui/format';
-import { Icon, IconButton, Menu, Tooltip, ContextMenu } from '@adecore/ui';
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
 
 /* The moment a choice lands on, beside its name: a clock today, a weekday for tomorrow. */

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { groupFrame, NodeKindSchema, ProjectCanvasViewSchema, ProjectNodeSchema, ProjectTextSchema, type ProjectCanvasView } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
-import { forgetCameraHistories } from '@/state/camera-history';
 import type { CanvasPatch } from '@/project/merge';
+import { forgetCameraHistories } from '@/state/camera-history';
 import {
     carriedByGroups,
     createCanvasStore,

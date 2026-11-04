@@ -1,16 +1,16 @@
-import { createElement, useState, type ComponentType } from 'react';
+import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
 import clsx from 'clsx';
+import { createElement, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePanelGap } from '@/shell/panel-layout';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from '@/shell/panels';
+import { SlotRow } from '@/extensions/SlotSurfaces';
+import { usePanelGap } from '@/shell/panel-layout';
 import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
+import { closesFromRail, usePanelEntries, type CorePanel, type PanelEntry } from '@/shell/panels';
+import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
-import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { SlotRow } from '@/extensions/SlotSurfaces';
-import { clampColumnSize, CloseButton, ErrorBoundary, SlidingColumn, lazyNamed, PanelHeader, SectionLabel, Separator, LazyBoundary } from '@adecore/ui';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useShownPanel, useUi } from '@/state/ui';
 

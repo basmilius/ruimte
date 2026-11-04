@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { LiveStreamFrame } from '@ruimte/contracts';
+import { concatBytes } from './device-test-helpers.ts';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperMessage } from './helper-protocol.ts';
 import { DeviceHelperFailure, DeviceHelperSource, HELPER_CALL_TIMEOUT_MS, type DeviceHelperProcess } from './helper-source.ts';
-import { concatBytes } from './device-test-helpers.ts';
 
 class FakeHelperProcess implements DeviceHelperProcess {
     readonly writes: Uint8Array[] = [];

@@ -1,7 +1,7 @@
 'use client';
 
-import { FilePlus, FileText, FolderPlus, MoreHorizontal, Search } from 'lucide-react';
 import { Input } from '@adecore/ui';
+import { FilePlus, FileText, FolderPlus, MoreHorizontal, Search } from 'lucide-react';
 import { IconButton } from '../../app/primitives.tsx';
 import { Stage } from '../../film/Stage.tsx';
 import { CodeView, F, K, S } from './CodeView.tsx';

@@ -1,5 +1,5 @@
-import type { Transport } from '@/transport/transport';
 import { markPeerLapsed } from '@/project/peer-lapse';
+import type { Transport } from '@/transport/transport';
 
 type Requester = Pick<Transport, 'request'>;
 type PeerLinker = (machineId: string, self: Requester) => Promise<void>;

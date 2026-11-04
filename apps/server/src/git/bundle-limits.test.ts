@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { BundleStore, bundleIdFor } from './bundles.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { BundleStore, bundleIdFor } from './bundles.ts';
 
 let home: string;
 

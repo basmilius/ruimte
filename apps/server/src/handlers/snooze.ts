@@ -1,5 +1,5 @@
-import type { SnoozeStore } from '../push/snoozes.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import type { SnoozeStore } from '../push/snoozes.ts';
 
 /* `locate` is the project index's; a snooze is kept against the project its node is in. */
 export function registerSnoozeHandlers(dispatcher: Dispatcher, snoozes: SnoozeStore, locate: (nodeId: string) => { projectId: string } | null): void {

@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { beforeEach, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import i18next from 'i18next';
 import {
     agentsEndedWith,

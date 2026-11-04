@@ -1,18 +1,13 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { type ProjectCanvasView } from '@ruimte/contracts';
 import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
-import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
-import { AGENT_KINDS } from './agents.ts';
-import { MAX_LINKS } from './links.ts';
-import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
-import { MAX_ROLES, ROLES_SHAPE } from './agent-tools.ts';
-import { MAX_TITLE_LENGTH, NEW_NODE, type CanvasHost } from './host.ts';
-import { projectReach } from './reach.ts';
+import type { ActionOutput, ActionResult } from '@ruimte/actions';
+import { type ProjectCanvasView } from '@ruimte/contracts';
 import { serverActionCall, voiceActionCall, type VoiceCaller } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
-import type { ActionOutput, ActionResult } from '@ruimte/actions';
+import { MAX_ROLES, ROLES_SHAPE } from './agent-tools.ts';
+import { AGENT_KINDS } from './agents.ts';
 import {
     canvasFixture,
     knobs,
@@ -39,6 +34,11 @@ import {
     viewOnDisk,
     reloadLineage
 } from './canvas-test-fixture.ts';
+import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
+import { MAX_TITLE_LENGTH, NEW_NODE, type CanvasHost } from './host.ts';
+import { MAX_LINKS } from './links.ts';
+import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
+import { projectReach } from './reach.ts';
 
 canvasFixture();
 

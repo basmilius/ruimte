@@ -1,9 +1,10 @@
+import { offerDraft } from '@adecore/agents-react/chat';
+import { planToMarkdown } from '@adecore/plan';
+import { copyText, messageOf } from '@adecore/ui';
+import { isCanvasView, isChatHostView, type Plan, type PlanStepState } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { isCanvasView, isChatHostView, type Plan, type PlanStepState } from '@ruimte/contracts';
-import { planToMarkdown } from '@adecore/plan';
 import { focusNodeAction, perform } from '@/actions/client-actions';
-import { offerDraft } from '@adecore/agents-react/chat';
 import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
 import { viewIdsIn } from '@/shell/split';
@@ -11,7 +12,6 @@ import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { copyText, messageOf } from '@adecore/ui';
 
 interface PlanViewPrefs {
     filter: PlanFilter;

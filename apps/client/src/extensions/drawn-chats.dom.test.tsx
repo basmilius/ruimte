@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import { act } from 'react';
 import { useInstalledExtensions } from '@/extensions/loader';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { act } from 'react';
-import { mount, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

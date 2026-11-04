@@ -1,7 +1,7 @@
-import { useSyncExternalStore } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Input, Select, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import { useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
 import { settingKey, subscribeStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
 import { useInstalledExtensions } from '@/extensions/loader';
 import { useContributions, type SettingField } from '@/extensions/registry';

@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import type { SessionEvent } from '../sessions/manager.ts';
 import { FINE_POINTS } from '@ruimte/contracts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import { COARSE_INTERVAL_MS, ProcessMonitor } from './monitor.ts';
-import { STUCK_THRESHOLDS } from './stuck.ts';
 import { type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
+import { STUCK_THRESHOLDS } from './stuck.ts';
 
 const MACHINE: RawSample['machine'] = { cores: 4, cpuBusy: 0, cpuTotal: 0, memoryUsed: 1000, memoryTotal: 4000, diskFree: null, diskTotal: null };
 

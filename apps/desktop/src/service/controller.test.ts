@@ -2,13 +2,13 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createServiceController, type ServiceControllerDeps } from './controller';
-import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import { launchAgentPlist, type ServiceManager } from '@adecore/service';
-import { daemonServiceSpec } from '@ruimte/service/host';
+import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
-import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
+import { daemonServiceSpec } from '@ruimte/service/host';
 import type { ShellProblem } from '../telemetry';
+import { createServiceController, type ServiceControllerDeps } from './controller';
+import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
 

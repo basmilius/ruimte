@@ -1,8 +1,27 @@
+import type { Subprocess } from 'bun';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir, type } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import type { Subprocess } from 'bun';
+import {
+    BYTES_CHUNK_MAX,
+    parseServerFrame,
+    type AuthSessionsResult,
+    type BytesReadResult,
+    type EndpointChangedEvent,
+    type EndpointInfo,
+    type FsBrowseResult,
+    type FsListResult,
+    type GitStatus,
+    type ProjectListResult,
+    type ProjectOpenResult,
+    type ProjectSaveResult,
+    type ProjectSummaryEvent,
+    type ProjectView,
+    type ServerHelloResult,
+    type SessionAttachResult,
+    type SessionInfo
+} from '@ruimte/contracts';
 import {
     ACCESS_STATEMENT_LIFETIME_MS,
     BrokerPeer,
@@ -23,25 +42,6 @@ import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
-import {
-    BYTES_CHUNK_MAX,
-    parseServerFrame,
-    type AuthSessionsResult,
-    type BytesReadResult,
-    type EndpointChangedEvent,
-    type EndpointInfo,
-    type FsBrowseResult,
-    type FsListResult,
-    type GitStatus,
-    type ProjectListResult,
-    type ProjectOpenResult,
-    type ProjectSaveResult,
-    type ProjectSummaryEvent,
-    type ProjectView,
-    type ServerHelloResult,
-    type SessionAttachResult,
-    type SessionInfo
-} from '@ruimte/contracts';
 
 /*
  * Opt-in wire tests for the disposable daemon container on port 4320. The development container on

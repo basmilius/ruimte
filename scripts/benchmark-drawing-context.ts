@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import type { DrawingElement } from '../packages/contracts/src/drawing-host';
 import { measurePairs, type PerformanceCase } from '../apps/client/testing/performance/paired';
+import type { DrawingElement } from '../packages/contracts/src/drawing-host';
 
 const baselineRoot = process.argv[2];
 

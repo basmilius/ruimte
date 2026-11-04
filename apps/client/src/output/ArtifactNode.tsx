@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { ChevronDown, CircleAlert, Maximize2, Package, WifiOff } from 'lucide-react';
-import type { ArtifactGetResult } from '@ruimte/contracts';
 import { Button, ErrorBoundary, Icon, IconButton, Menu, Pill } from '@adecore/ui';
 import { formatDayClock } from '@adecore/ui/format';
+import type { ArtifactGetResult } from '@ruimte/contracts';
+import { ChevronDown, CircleAlert, Maximize2, Package, WifiOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NodeHeaderControls, NodePlate } from '@/nodes/node-chrome';
 import { VersionBody } from '@/output/ArtifactView';
 import { openArtifact } from '@/output/open';

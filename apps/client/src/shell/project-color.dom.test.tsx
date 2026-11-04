@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const RED = '#e7000b';
 const previousGlow = useSettings.getState().projectGlow;

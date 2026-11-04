@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { CliVersion, RegistryAgent, UsageLimitsSnapshot } from '@ruimte/contracts';
+import type { CanvasHost, NodeAccount } from './host.ts';
 import { providerToolkit } from './provider-tools.ts';
 import { toolAnswer, toolCall } from './tool-test-helpers.ts';
-import type { CanvasHost, NodeAccount } from './host.ts';
 
 const AGENTS: RegistryAgent[] = [
     {

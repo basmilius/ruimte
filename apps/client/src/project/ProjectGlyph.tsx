@@ -1,15 +1,15 @@
-import clsx from 'clsx';
 import { DisplayImage } from '@adecore/agents-react/images';
-import { useEffect, useState } from 'react';
+import { Icon } from '@adecore/ui';
 import type { ProjectIcon } from '@ruimte/contracts';
+import clsx from 'clsx';
 import { MessagesSquare } from 'lucide-react';
-import { projectIconGlyphOf } from '@/project/project-icons';
+import { useEffect, useState } from 'react';
 import { projectIconAppearance } from '@/project/icon-appearance';
+import { projectIconGlyphOf } from '@/project/project-icons';
 import { useEndpoints } from '@/state/endpoints';
 import { useTheme } from '@/state/theme';
-import { useMachineUrl } from '@/transport/machine-url';
-import { Icon } from '@adecore/ui';
 import { transportFor } from '@/transport';
+import { useMachineUrl } from '@/transport/machine-url';
 
 interface ProjectGlyphProps {
     projectId: string;

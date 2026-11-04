@@ -1,9 +1,5 @@
-import i18next from 'i18next';
-import { createStore, type StoreApi } from 'zustand';
-import { storedPathOf, type AgentKind } from '@ruimte/contracts';
-import { fileUriToPath } from '@adecore/lsp';
-import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { knownAccounts, providerAccountsOf, providersOf } from '@adecore/agents-react/state';
+import type { EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { highlightLayers, shikiLanguageOf } from '@adecore/editor-react';
 import {
     codeLabelOf,
@@ -16,17 +12,21 @@ import {
     type InlineProblem,
     type LineSpan
 } from '@adecore/editor-react/models';
+import { fileUriToPath } from '@adecore/lsp';
+import { storedPathOf, type AgentKind } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { createStore, type StoreApi } from 'zustand';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { HostLanguage as EditorLanguage } from '@/language/host-language';
 import { isShortcut } from '@/language/shortcut-keys';
+import { editorAgentOn, inlineEditAccountOn } from '@/state/ai-settings';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { editorAgentOn, inlineEditAccountOn } from '@/state/ai-settings';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { inlineEditDeps } from './inline-edit-deps';
-import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { sweepInlineEdits } from './inline-edit-prune';
+import { inlineEditFor, onInlineEditsChange } from './inline-edit-record';
 import { InlineEditSession, inlineSessionOf, type InlineEditDeps } from './inline-edit-session';
 
 const PLAIN_IDS = new Set(['plaintext', 'text']);

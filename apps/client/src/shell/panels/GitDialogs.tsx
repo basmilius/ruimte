@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Button, FormError, Icon, Input, Menu, Dialog, ScrollArea } from '@adecore/ui';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
-import { Button, FormError, Icon, Input, Menu, Dialog, ScrollArea } from '@adecore/ui';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface Choice {
     value: string;

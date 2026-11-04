@@ -1,8 +1,3 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
-import { useTranslation } from 'react-i18next';
-import { AtSign, Folder, FolderInput, FolderOpen, FolderPlus, TriangleAlert, type LucideIcon } from 'lucide-react';
-import type { ChatMoveInfoResult, ChatMoveRefusal, ProjectSummary } from '@ruimte/contracts';
-import { ActionRefusal } from '@ruimte/actions';
 import {
     Button,
     ChoiceCards,
@@ -20,9 +15,13 @@ import {
     messageOf
 } from '@adecore/ui';
 import { formatMoment } from '@adecore/ui/format';
+import { ActionRefusal } from '@ruimte/actions';
+import type { ChatMoveInfoResult, ChatMoveRefusal, ProjectSummary } from '@ruimte/contracts';
+import { AtSign, Folder, FolderInput, FolderOpen, FolderPlus, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
 import { desktop } from '@/desktop/bridge';
-import { moveCandidatesOf } from '@/project/move-targets';
 import {
     baseName,
     defaultOwnFiles,
@@ -35,6 +34,7 @@ import {
     type FolderChoice,
     type MoveForm
 } from '@/project/move-chat-form';
+import { moveCandidatesOf } from '@/project/move-targets';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useViewNodes } from '@/project/view-nodes';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';

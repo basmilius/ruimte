@@ -2,9 +2,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { emptyCanvasView, ProjectViewSchema, type ExtensionManifest, type ProjectView } from '@ruimte/contracts';
 import { clientApiFor } from '@/extensions/host/client-api';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const MAIN = emptyCanvasView('main', 'Main');
 

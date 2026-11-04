@@ -1,4 +1,3 @@
-import { machineBridge } from '../../testing/machine-bridge';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import type { DesktopBridge } from '@/desktop/bridge';
@@ -6,6 +5,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useWindow } from '@/state/window';
 import type { Workspace } from '@/transport/connections';
+import { machineBridge } from '../../testing/machine-bridge';
 import {
     dragsWindow,
     keptTabs,

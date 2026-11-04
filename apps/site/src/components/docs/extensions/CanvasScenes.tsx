@@ -1,10 +1,10 @@
 'use client';
 
-import { CircleCheck, Hash, Sparkles, X } from 'lucide-react';
 import { Icon, Surface } from '@adecore/ui';
+import { CircleCheck, Hash, Sparkles, X } from 'lucide-react';
+import { TerminalBody } from '../../app/bodies.tsx';
 import { CanvasNode } from '../../app/canvas.tsx';
 import { AssistantText } from '../../app/chat.tsx';
-import { TerminalBody } from '../../app/bodies.tsx';
 import { WindowBar } from '../../app/chrome.tsx';
 import { Button, IconButton } from '../../app/primitives.tsx';
 import { Scaled } from '../../film/Stage.tsx';

@@ -1,5 +1,5 @@
-import { ActionRefusal } from '@ruimte/actions';
 import { copyText } from '@adecore/ui';
+import { ActionRefusal } from '@ruimte/actions';
 
 function noClipboard(): ActionRefusal {
     return new ActionRefusal('no-clipboard', 'This window has no clipboard to copy to.');

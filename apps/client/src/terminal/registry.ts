@@ -1,5 +1,5 @@
-import type { Terminal } from '@xterm/xterm';
 import { webglTerminals } from '@adecore/terminal';
+import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { currentEndpointId, endpointKey } from '@/state/keys';

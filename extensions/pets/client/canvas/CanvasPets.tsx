@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
 import { ErrorBoundary, LazyBoundary, lazyNamed } from '@adecore/ui';
-import { useLinger } from '@extensions/pets/client/teleport';
 import { usePetSettings } from '@extensions/pets/client/pet-settings';
+import { useLinger } from '@extensions/pets/client/teleport';
+import { useTranslation } from 'react-i18next';
 
 const PetLayer = lazyNamed(() => import('@extensions/pets/client/canvas/PetLayer'), 'PetLayer');
 const PetRoam = lazyNamed(() => import('@extensions/pets/client/canvas/PetRoam'), 'PetRoam');

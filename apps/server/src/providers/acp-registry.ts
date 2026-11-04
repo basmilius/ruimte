@@ -1,8 +1,8 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { z } from 'zod';
-import { AgentKindSchema, KNOWN_AGENT_KINDS, type AgentKind } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '@adecore/agents';
+import { AgentKindSchema, KNOWN_AGENT_KINDS, type AgentKind } from '@ruimte/contracts';
+import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 import { offersKind } from './kinds.ts';
 

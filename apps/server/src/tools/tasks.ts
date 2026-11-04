@@ -1,6 +1,6 @@
-import { designNodeChats, isCanvasView, isChatNode, isDesignView, viewChats, type ProjectContent, type Task } from '@ruimte/contracts';
-import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
+import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
+import { designNodeChats, isCanvasView, isChatNode, isDesignView, viewChats, type ProjectContent, type Task } from '@ruimte/contracts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import { field } from './host.ts';
 

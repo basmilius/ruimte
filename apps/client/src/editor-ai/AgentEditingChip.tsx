@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@adecore/ui';
+import { useTranslation } from 'react-i18next';
 import { chooserChats } from '@/chat/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';
 import { useSidebarSource } from '@/shell/sidebar-source';

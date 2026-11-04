@@ -1,10 +1,10 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema, diagramProblemIn, isDiagramView } from '@ruimte/contracts';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
+import { DiagramError } from '../projects/diagram-store.ts';
 import { orNote } from '../tools/host.ts';
 import { viewLines } from '../tools/views.ts';
-import { DiagramError } from '../projects/diagram-store.ts';
 import type { ServerActionContext } from './context.ts';
 import { parseJson, pathOf, problemsRefusal } from './json-input.ts';
 

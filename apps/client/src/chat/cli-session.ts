@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { TerminalViewHandle } from '@adecore/terminal';
 import { copyText, messageOf } from '@adecore/ui';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { typeWhenReady } from '@/chat/provider-command';
 import { useEndpoints } from '@/state/endpoints';
 import { bindTerminalKeys } from '@/terminal/xterm';

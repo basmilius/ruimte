@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
 import { createChart } from '@adecore/charts';
 import { ScrollArea, useContentSize } from '@adecore/ui';
+import { useTranslation } from 'react-i18next';
 import type { Axis, ChartModel, ModelMark } from './chart';
+import { clearOnEscape } from './clear-on-escape';
 import { barGroups, formatMetric, metricValue, shortModelName, VIEW_METRICS, type BarMetric, type PointInteraction } from './comparison';
 import { LabLogo } from './LabLogo';
-import { clearOnEscape } from './clear-on-escape';
 
 interface ModelsBarChartProps extends PointInteraction {
     models: readonly ChartModel[];

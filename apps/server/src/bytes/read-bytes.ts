@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
-import { BUNDLE_MAX_BYTES, type BytesReadHeader, type BytesReadPayload, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
+import { BUNDLE_MAX_BYTES, type BytesReadHeader, type BytesReadPayload, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
 
 type BytesErrorCode = 'not-found' | 'bad-offset' | 'bundle-too-large';
 

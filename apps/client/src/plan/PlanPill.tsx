@@ -1,15 +1,15 @@
+import { useChatRow } from '@adecore/agents-react/state';
+import { activeStepIds } from '@adecore/plan';
+import { Icon, Pill, Tooltip } from '@adecore/ui';
 import clsx from 'clsx';
 import { CheckCheck, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { activeStepIds } from '@adecore/plan';
 import { openPlanFromPill } from '@/plan/plan-panel-watch';
 import { hasFailedStep, planCounter } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { useChatRow } from '@adecore/agents-react/state';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useChatPlans, usePlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { Icon, Pill, Tooltip } from '@adecore/ui';
 
 /*
  * "6/11" in a chat's header, only while the chat has a plan. A red dot for a failed step, an

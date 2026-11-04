@@ -1,10 +1,10 @@
+import { notePageAsk } from '@extensions/pets/client/page-asks';
+import { PET_SETTINGS_STORAGE_KEY, usePetSettings } from '@extensions/pets/client/pet-settings';
+import { petSpritesChanged, PET_SPRITES_STORAGE_KEY } from '@extensions/pets/client/sprites-key';
 import { PawPrint } from 'lucide-react';
 import { onPageAsk } from '@/browser/page-asks';
-import manifest from '../manifest.json';
 import { defineBuiltIn, defineCanvasLayer, defineSettingsPage, defineSharedStorage, defineViewAccessory } from '@/extensions/internal';
-import { PET_SETTINGS_STORAGE_KEY, usePetSettings } from '@extensions/pets/client/pet-settings';
-import { notePageAsk } from '@extensions/pets/client/page-asks';
-import { petSpritesChanged, PET_SPRITES_STORAGE_KEY } from '@extensions/pets/client/sprites-key';
+import manifest from '../manifest.json';
 
 function row(id: string): { id: string; label: string; description: string } {
     return { id: `pets.${id}`, label: `pets:pets.${id}.label`, description: `pets:pets.${id}.description` };

@@ -1,5 +1,5 @@
-import { renderDiagram, renderDrawing } from '../../server/src/render/scenes.ts';
 import type { DiagramDocument, DrawingDocument } from '@ruimte/contracts';
+import { renderDiagram, renderDrawing } from '../../server/src/render/scenes.ts';
 
 (globalThis as typeof globalThis & { ruimteRenderDocument: (kind: string, json: string) => string }).ruimteRenderDocument = (kind, json) => {
     if (kind === 'drawing') {

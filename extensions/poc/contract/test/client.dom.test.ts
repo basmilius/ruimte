@@ -3,8 +3,8 @@ import * as client from '@ruimte/extension/client';
 import { createTestHost, createTestServer, type TestNode } from '@ruimte/extension/testing';
 import * as ui from '@ruimte/extension/ui';
 import { createElement, use, useState } from 'react';
-import type { ContractServer } from '../server';
 import { clientContract, NAME, SEED, type WorldSeed } from '../contract/client';
+import type { ContractServer } from '../server';
 
 /* The pieces of the seed, then what the run does after them. */
 async function* streamOf(pieces: string[], end: WorldSeed['streamEnd'], signal: AbortSignal): AsyncGenerator<string> {

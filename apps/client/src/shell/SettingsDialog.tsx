@@ -1,9 +1,11 @@
+import { formatShortcut, lazyNamed } from '@adecore/ui';
+import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui/settings';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform } from '@/desktop/bridge';
+import { useContributions, type SettingsSectionContribution } from '@/extensions/registry';
 import { AccountTab } from '@/shell/settings/AccountTab';
 import { findSettings } from '@/shell/settings/find-settings';
-import { useContributions, type SettingsSectionContribution } from '@/extensions/registry';
 import {
     ABOUT_SECTION,
     ACCOUNT_SECTION,
@@ -15,8 +17,6 @@ import {
 } from '@/shell/settings/sections';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi, type CoreSettingsSectionId, type SettingsSectionId } from '@/state/ui';
-import { SettingsDialog as Dialog, type SettingsSectionEntry } from '@adecore/ui/settings';
-import { formatShortcut, lazyNamed } from '@adecore/ui';
 
 // Each pane is a chunk of its own, loaded when it is opened; the search index in `search.ts` never imports one.
 const PANES: Record<CoreSettingsSectionId, ComponentType> = {

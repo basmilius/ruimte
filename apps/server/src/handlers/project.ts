@@ -1,9 +1,9 @@
 import type { Dispatcher } from '../dispatcher.ts';
-import type { ProjectStore } from '../projects/project-store.ts';
-import { countProjectOpened, countViewShown } from '../stats/usage-stats.ts';
 import { newInlineChat, removeInlineChat, showInlineChat, type InlineChatHost } from '../projects/inline-chat.ts';
-import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
+import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
+import { countProjectOpened, countViewShown } from '../stats/usage-stats.ts';
 
 export function registerProjectHandlers(
     dispatcher: Dispatcher,

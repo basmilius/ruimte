@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileTree, useFileTree, messageOf } from '@adecore/ui';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { absoluteOf, basenameOf, buildTreeInput, LOADING_NAME, type EntryCache } from '@/shell/panels/files-tree';
 import type { Transport } from '@/transport';
 

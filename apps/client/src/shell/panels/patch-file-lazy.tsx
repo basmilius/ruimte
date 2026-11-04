@@ -1,5 +1,5 @@
-import type { FsReadText } from '@ruimte/contracts';
 import { lazyNamed, LazyBoundary } from '@adecore/ui';
+import type { FsReadText } from '@ruimte/contracts';
 import { CodeFile } from '@/shell/panels/CodeFile';
 
 const LazyPatchFile = lazyNamed(() => import('@/shell/panels/PatchFile'), 'PatchFile');

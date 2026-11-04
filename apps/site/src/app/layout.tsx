@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import type { ReactNode } from 'react';
 import { Geist, JetBrains_Mono, Kalam } from 'next/font/google';
+import type { ReactNode } from 'react';
 import { MotionProvider } from '@/components/MotionPreferences.tsx';
 import './globals.css';
 

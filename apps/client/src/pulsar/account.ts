@@ -1,5 +1,4 @@
-import i18next from 'i18next';
-import { create } from 'zustand';
+import { messageOf } from '@adecore/ui';
 import { clipText } from '@ruimte/contracts';
 import {
     APP_REDIRECT_LOOPBACK_PATH,
@@ -11,7 +10,8 @@ import {
     type IdentityLinkCompletePayload,
     type ProviderId
 } from '@ruimte/pulsar';
-import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
+import { create } from 'zustand';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { useUi } from '@/state/ui';
 import { offeredProviders } from './account-name';

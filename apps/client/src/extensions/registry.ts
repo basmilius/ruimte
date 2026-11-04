@@ -1,6 +1,6 @@
-import type { ComponentType } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import type { ExtensionManifest, ExtensionSlotName, ExtensionTheme } from '@ruimte/contracts';
+import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { create } from 'zustand';
 
 export type PanelGroup = 'project' | 'connected' | 'made' | 'extensions';

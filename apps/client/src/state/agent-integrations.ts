@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { messageOf } from '@adecore/ui';
 import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
+import { useState } from 'react';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf, useServers } from '@/state/server';

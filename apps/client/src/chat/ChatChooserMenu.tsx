@@ -1,12 +1,12 @@
-import { Fragment, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
+import { AgentIcon } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { ContextMenu, Kbd } from '@adecore/ui';
+import { Plus } from 'lucide-react';
+import { Fragment, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { availableAgents, separatesGroups } from '@/agents/creation';
 import { useChatChooser, useChooserSections, type ChooserChat } from '@/chat/chat-chooser';
 import { linkedChatsOfNode, sendToChat, startLinkedChatOrTell, type SelectionOffer } from '@/chat/selection-to-chat';
-import { AgentIcon } from '@adecore/agents-react/providers';
 import { useDetectProviders } from '@/transport/provider-detection';
 
 function ChatRows({

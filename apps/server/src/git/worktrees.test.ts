@@ -5,10 +5,10 @@ import { fileExists } from '@adecore/agents';
 import type { Worktree } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { checkpointIndexFile, Checkpoints } from './checkpoints.ts';
+import * as runner from './run.ts';
 import { forgetBase } from './status.ts';
 import { gitIn, initRepo, repoSnapshots, type RepoSnapshots, NO_WORKTREE_AGENTS } from './test-repo.ts';
 import { countStatus, Worktrees } from './worktrees.ts';
-import * as runner from './run.ts';
 
 let snapshots: RepoSnapshots;
 let madeLexer: Worktree;

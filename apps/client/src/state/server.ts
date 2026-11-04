@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import type {
     AgentIntegrationsSummary,
     EndpointNameSource,
@@ -10,6 +9,7 @@ import type {
     TerminalShell
 } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
+import { create } from 'zustand';
 import { useEndpointId } from '@/state/keys';
 
 export interface ServerInfo {

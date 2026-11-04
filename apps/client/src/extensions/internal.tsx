@@ -1,9 +1,7 @@
-import { lazy, type ComponentType } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import type { ExtensionManifest } from '@ruimte/contracts';
+import type { LucideIcon } from 'lucide-react';
+import { lazy, type ComponentType } from 'react';
 import { z } from 'zod';
-import { extensionsInSafeMode } from '@/extensions/safe-mode';
-import { storedJson } from '@/state/stored-json';
 import {
     contribute,
     type BuiltInThemeContribution,
@@ -15,6 +13,8 @@ import {
     type ViewAccessoryContribution,
     type ViewAccessoryProps
 } from '@/extensions/registry';
+import { extensionsInSafeMode } from '@/extensions/safe-mode';
+import { storedJson } from '@/state/stored-json';
 
 /*
  * What only a built-in may call. A built-in runs in the app's own process and may read its stores; the

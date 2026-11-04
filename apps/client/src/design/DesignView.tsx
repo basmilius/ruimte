@@ -1,8 +1,8 @@
+import { ColumnResizeHandle, EmptyState, ErrorBoundary, useColumnResize, useMeasuredWidth } from '@adecore/ui';
+import type { ProjectDesignView } from '@ruimte/contracts';
+import { SwatchBook } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SwatchBook } from 'lucide-react';
-import type { ProjectDesignView } from '@ruimte/contracts';
-import { ColumnResizeHandle, EmptyState, ErrorBoundary, useColumnResize, useMeasuredWidth } from '@adecore/ui';
 import { activeDesignChat, placeOfView, useDesignChat } from '@/design/design-chat';
 import { useDesignFolder } from '@/design/design-places';
 import { DesignStage } from '@/design/DesignStage';

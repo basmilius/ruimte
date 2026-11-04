@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { FakeLanguageTransport } from '@/language/fake-daemon';
 import { useSettings } from '@/state/settings';
 import { TransportError } from '@/transport/transport';
-import { FakeEditorAssistModel } from './fake-model';
 import { EditorAssistClient } from './client';
+import { FakeEditorAssistModel } from './fake-model';
 
 async function settle(): Promise<void> {
     for (let turn = 0; turn < 20; turn++) {

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { ProjectView } from '@ruimte/contracts';
 import { useChats } from '@adecore/agents-react/state';
+import type { ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 const CHAT: ProjectView = { kind: 'chat', id: 'written', name: 'Vinyl notes', node: {} };
 

@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { PushHandleSchema } from '@ruimte/pulsar';
+import { z } from 'zod';
 
 /*
  * What a device wants to hear of: an agent that needs a person (its approvals as well, while `approvals` is on),

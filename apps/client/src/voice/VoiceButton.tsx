@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { IconButton } from '@adecore/ui';
 import { Mic } from 'lucide-react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { IconButton } from '@adecore/ui';
 import { useUi } from '@/state/ui';
 import { refreshVoiceCredential, useVoice, useVoicePanelOpen } from '@/voice/state';
 

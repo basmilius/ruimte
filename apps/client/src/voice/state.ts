@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { VoiceActionKind } from '@ruimte/voice';
+import { create } from 'zustand';
 import { silentBands } from '@/audio/waveform';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { useShownPanel, useUi } from '@/state/ui';

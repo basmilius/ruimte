@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { ClaudeApiSettings, ClaudeApiStatus, NanoGptSettings, NanoGptStatus } from '@ruimte/contracts';
 import { useProvidersStore } from '@adecore/agents-react/state';
 import { Button, Input, Segmented, Switch, messageOf } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
+import type { ClaudeApiSettings, ClaudeApiStatus, NanoGptSettings, NanoGptStatus } from '@ruimte/contracts';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CountField } from '@/shell/settings/providers/CountField';
 import { listProvidersAgain } from '@/shell/settings/providers/use-provider-installs';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseDeclarations, slotsOf } from './reference.ts';
 import { referenceModules } from './reference-source.ts';
+import { parseDeclarations, slotsOf } from './reference.ts';
 
 describe('the reference', () => {
     test('matches the types of @ruimte/extension; run `bun run --cwd apps/site reference` after changing them', () => {

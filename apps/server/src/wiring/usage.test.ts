@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { ProviderAccountsService, ProviderRegistry } from '@adecore/agents/providers';
 import { UsageService, usageRootsOf, type LimitAccounts } from '@adecore/agents/usage';
 import { grokProvider } from '../providers/acp-providers.ts';
-import { withoutNanoGptUntilKeyed } from './usage.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { withoutNanoGptUntilKeyed } from './usage.ts';
 
 let root: string;
 

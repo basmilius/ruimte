@@ -1,13 +1,13 @@
-import { DIAGRAM_LIMITS, DRAWING_COLORS, DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema } from '@ruimte/contracts';
+import { ToolRefusal } from '@adecore/agents/context';
 import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@adecore/diagram';
 import { DRAWING_EDIT_LIMITS, DrawingElementPatchSchema, NewDrawingElementSchema } from '@adecore/drawing';
+import { DIAGRAM_LIMITS, DRAWING_COLORS, DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { oneWrite } from './batch.ts';
+import { field, titleField } from './host.ts';
 import { fieldLines, typeOf } from './schema-lines.ts';
 import { defineTool, defineToolkit, PROJECT_INPUT, REVISION_INPUT } from './tool.ts';
-import { field, titleField } from './host.ts';
 import { VIEW_KINDS } from './views.ts';
 
 // A canvas with more nodes than this would bury the one line that says the view is gone.

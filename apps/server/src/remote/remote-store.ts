@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import { RemoteLinkSchema, isCanvasView, type ProjectContent, type ProjectNode, type ProjectView, type RemoteLink } from '@ruimte/contracts';
 import { RecordDirectory } from '@adecore/agents';
+import { RemoteLinkSchema, isCanvasView, type ProjectContent, type ProjectNode, type ProjectView, type RemoteLink } from '@ruimte/contracts';
 import { z } from 'zod';
 
 /*

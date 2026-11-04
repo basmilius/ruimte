@@ -1,6 +1,6 @@
+import { DrawingFontSchema } from '@adecore/drawing/protocol';
 import { z } from 'zod';
 import { DrawingAlignSchema, DrawingColorSchema } from './drawing-host.ts';
-import { DrawingFontSchema } from '@adecore/drawing/protocol';
 
 export const RenderBoundsSchema = z.object({ x: z.number(), y: z.number(), w: z.number().nonnegative(), h: z.number().nonnegative() });
 export type RenderBounds = z.infer<typeof RenderBoundsSchema>;

@@ -1,11 +1,11 @@
+import { CliMark } from '@adecore/agents-react/providers';
+import { Button, Dialog, FormError, ScrollArea, Skeleton } from '@adecore/ui';
+import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AgentIntegration, AgentIntegrationFile, AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
-import { CliMark } from '@adecore/agents-react/providers';
 import { useLocalTilde } from '@/format/home-path';
 import { INTEGRATION_NAMES, pendingReview, providersToKeep, setAgentIntegration, useAgentIntegrations, useIntegrationChoice } from '@/state/agent-integrations';
 import { useUi } from '@/state/ui';
-import { Button, Dialog, FormError, ScrollArea, Skeleton } from '@adecore/ui';
 
 const OUTCOME_KEYS = {
     written: 'written',

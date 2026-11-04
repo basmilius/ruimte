@@ -1,16 +1,16 @@
-import { Trans, useTranslation } from 'react-i18next';
-import { useEffect, useRef, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@adecore/drawing';
-import { isSpaceDown } from '@/canvas/space-pan';
+import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
+import type { DrawingElement } from '@ruimte/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { groundPlacement, toWorld } from '@/canvas/math';
+import { isSpaceDown } from '@/canvas/space-pan';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
+import { isApplePlatform } from '@/desktop/bridge';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
-import { nearestHandle } from './handle-hit';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
-import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { loadDrawingFont } from '@/drawing/fonts';
 import {
     DRAG_THRESHOLD,
@@ -27,15 +27,15 @@ import {
 } from '@/drawing/gestures';
 import { fitTextBox } from '@/drawing/measure';
 import { applyCamera, clearPathCache, paintElements, paintOptions } from '@/drawing/paint';
+import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';
 import { useViewportSize } from '@/drawing/use-viewport-size';
-import { useDocument } from '@/state/document';
 import { nextId } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { usePaletteKey } from '@/state/theme';
-import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@adecore/ui';
-import { isApplePlatform } from '@/desktop/bridge';
+import { nearestHandle } from './handle-hit';
 
 /*
  * The dock's menus portal out to <body>, where React still routes their events through the surface.

@@ -1,19 +1,19 @@
-import { dropClientLocalOf } from '@/project/client-local';
-import { browserStorage } from '@/state/stored-json';
-import { useBrowser } from '@/browser/registry';
-import { forgetCachedList } from '@/project/list';
 import { useChats, useProviderAccountsStore, useProvidersStore, useUsageStore } from '@adecore/agents-react/state';
+import { useBrowser } from '@/browser/registry';
+import { dropClientLocalOf } from '@/project/client-local';
+import { forgetCachedList } from '@/project/list';
+import { useEndpoints } from '@/state/endpoints';
 import { isOfEndpoint } from '@/state/keys';
 import { useLastSeen } from '@/state/last-seen';
-import { useSnoozes } from '@/state/snooze';
-import { useEndpoints } from '@/state/endpoints';
+import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { useSnoozes } from '@/state/snooze';
+import { browserStorage } from '@/state/stored-json';
+import { windowWorkspace } from '@/state/window';
 import { pool } from '@/transport';
 import { dropMachine, leaveWorkspace, showStart } from '@/transport/connections';
-import { windowWorkspace } from '@/state/window';
-import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { forgetTicket } from './credentials';
 
 /* Forgetting the machine the open project is on takes the window back to the start screen first, so nothing is left on a daemon nothing talks to. */

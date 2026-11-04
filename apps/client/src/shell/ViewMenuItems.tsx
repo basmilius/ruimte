@@ -1,5 +1,7 @@
-import { SlotMenuItems } from '@/extensions/SlotSurfaces';
-import { useTranslation } from 'react-i18next';
+import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
+import { useChatRow, useProviders } from '@adecore/agents-react/state';
+import { Icon, Kbd, KEY_SHORTCUTS, Menu, Tooltip } from '@adecore/ui';
+import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatView, type ProjectView } from '@ruimte/contracts';
 import {
     ArrowRightToLine,
     Copy,
@@ -19,11 +21,7 @@ import {
     Users,
     X
 } from 'lucide-react';
-import { canShareView, chatIsWorking, isCanvasView, isChatHostView, isEmptyChatView, type ProjectView } from '@ruimte/contracts';
-import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
-import { BookmarkSubmenu } from '@adecore/agents-react/chat/ui';
-import { ForkMenuItem } from '@/chat/ForkMenuItem';
-import { useOffersFork } from '@/chat/use-offers-fork';
+import { useTranslation } from 'react-i18next';
 import {
     closeCellAction,
     closeCellsRightOfAction,
@@ -33,23 +31,25 @@ import {
     showViewOnCanvasAction,
     splitAction
 } from '@/actions/client-actions';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { ForkMenuItem } from '@/chat/ForkMenuItem';
+import { useOffersFork } from '@/chat/use-offers-fork';
+import { useDatabaseViewShareRefusal } from '@/database/view-sharing';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { FlagSubmenu } from '@/project/FlagSubmenu';
 import { MoveChatItems } from '@/project/MoveChatItems';
 import { askDeleteView, askViewSettings, openSessionInKind, setViewShared } from '@/project/views';
-import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, isTabHost, maximizedCell, type CellAt } from '@/shell/split';
-import { useChatRow, useProviders } from '@adecore/agents-react/state';
+import { sessionHandoffs, viewOffers } from '@/shell/view-offers';
 import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
 import { useNodeProposals } from '@/state/proposals';
-import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
+import { useSessionRow } from '@/state/sessions';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Icon, Kbd, KEY_SHORTCUTS, Menu, Tooltip } from '@adecore/ui';
 
 interface ViewMenuItemsProps {
     viewId: string;

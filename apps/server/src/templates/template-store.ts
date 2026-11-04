@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { CodedError, Serializer, SYSTEM_WATCH, settled, writeAtomic, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import {
     BUILT_IN_LIVE_TEMPLATE_KEYS,
     BUILT_IN_POSTFIX_TEMPLATE_KEYS,
@@ -23,7 +24,6 @@ import {
     type TemplateSavePayload,
     type TemplateSaveResult
 } from '@ruimte/contracts';
-import { CodedError, Serializer, SYSTEM_WATCH, settled, writeAtomic, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import { ClientSinks } from '../client-sinks.ts';
 import {
     PROJECT_DIR,

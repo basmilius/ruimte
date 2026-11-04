@@ -1,4 +1,3 @@
-import type { StoreApi } from 'zustand';
 import {
     isCanvasView,
     isDiagramView,
@@ -12,11 +11,12 @@ import {
     type SplitLayout,
     type StandaloneNode
 } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
 import { cellAt, collapseTabHosts, focusedViewId, isTabHost, locateView, viewIdsIn, type ShownView } from '@/shell/split';
 import type { CanvasState } from '@/state/canvas';
 import type { DiagramState } from '@/state/diagram';
-import type { DrawingState } from '@/state/drawing';
 import type { DocumentState } from '@/state/document';
+import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 
 /*

@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { BrowserContextMenu } from '@/browser/BrowserContextMenu';
 import { createGuestCanvasInput } from '@/browser/guest-canvas-input';
-import { isDesktop } from '@/desktop/bridge';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
-import { browserRegistry, useBrowser } from '@/browser/registry';
-import { nodesOverBrowsers } from '@/canvas/stacking';
-import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
 import { oncePerFrame } from '@/browser/once-per-frame';
+import { pageClipPath, type PageHole } from '@/browser/page-clip';
 import { belowSinceOf, pageFar, wakeAt } from '@/browser/page-distance';
 import { pageSnapshots, usePageSnapshots } from '@/browser/page-snapshots';
+import { browserRegistry, useBrowser } from '@/browser/registry';
 import { RENDER_DISTANCE_ZOOM, rendersAtZoom } from '@/canvas/render-distance';
-import { pageClipPath, type PageHole } from '@/browser/page-clip';
+import { isSpaceDown, subscribeSpacePan } from '@/canvas/space-pan';
+import { nodesOverBrowsers } from '@/canvas/stacking';
+import { isDesktop } from '@/desktop/bridge';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
 import { shownViewIdsIn } from '@/shell/split';
 import { defaultCanvases, GROUP_HEADER_PX, isNodeActive, liveCanvas, maximizedNodeOf, subscribeCanvases, type CanvasState } from '@/state/canvas';
-import { splitKey } from '@/state/keys';
 import { useDocument } from '@/state/document';
+import { splitKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 
 // The browser toolbar sits under the frame's header, both above the page.

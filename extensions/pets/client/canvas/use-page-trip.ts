@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { deviceMatches } from '@ruimte/contracts';
-import { useNodeInViewport } from '@/canvas/culling';
-import { operatedOf, useDeviceOperated } from '@/devices/operated';
-import { useDevices } from '@/devices/state';
-import { readNodeHost } from '@/nodes/node-host';
-import { lineRoutes } from '@/canvas/line-routes';
 import { nextVisit, tripPagesOf, type PageVisit } from '@extensions/pets/client/canvas/page-trip';
 import { petPlace } from '@extensions/pets/client/canvas/placement';
 import { lastPageAsk, subscribePageAsks } from '@extensions/pets/client/page-asks';
 import { PET_HEIGHT, PET_WIDTH, WORLD_CELL } from '@extensions/pets/client/pet-state';
+import { deviceMatches } from '@ruimte/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { useNodeInViewport } from '@/canvas/culling';
+import { lineRoutes } from '@/canvas/line-routes';
+import { operatedOf, useDeviceOperated } from '@/devices/operated';
+import { useDevices } from '@/devices/state';
+import { readNodeHost } from '@/nodes/node-host';
 import { useCanvas, useCanvasStore, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { endpointKey, endpointOfNode, useEndpointId } from '@/state/keys';
 

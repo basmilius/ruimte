@@ -1,6 +1,6 @@
-import i18next from 'i18next';
 import { DirectSignalPayloadSchema, type DirectSignalPayload } from '@ruimte/contracts';
 import type { IceServer, SignalAccess } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import type { ClientKey } from '@/endpoint/client-key';
 
 export type Signal = DirectSignalPayload['envelope']['signal'];

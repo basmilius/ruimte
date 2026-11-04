@@ -1,15 +1,15 @@
-import { useTranslation } from 'react-i18next';
-import { CircleCheck } from 'lucide-react';
-import type { RoutineEntry } from '@ruimte/contracts';
+import { useChats } from '@adecore/agents-react/state';
 import { Button, FormError, Icon, ScrollArea, SectionLabel } from '@adecore/ui';
+import type { RoutineEntry } from '@ruimte/contracts';
+import { CircleCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { OutputProjectGlyph } from '@/output/look';
 import { awaitingApproval, runsWaiting } from '@/routines/agenda';
-import { showRoutine } from '@/routines/stage';
-import { scheduleWords, weekdayClock } from '@/routines/words';
 import { useRoutineApproval } from '@/routines/routine-approval';
 import { useRoutineWhat } from '@/routines/routine-what';
+import { showRoutine } from '@/routines/stage';
+import { scheduleWords, weekdayClock } from '@/routines/words';
 import { endpointKey } from '@/state/keys';
-import { useChats } from '@adecore/agents-react/state';
 
 /*
  * The right column of the week, only while something waits on this machine, in any project: routines for

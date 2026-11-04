@@ -1,8 +1,8 @@
+import { formatNumber } from '@adecore/ui/format';
+import type { DeviceInfo, DevicePower } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { BatteryCharging, BatteryFull, BatteryLow, BatteryMedium, BatteryWarning, type LucideIcon } from 'lucide-react';
 import { create } from 'zustand';
-import type { DeviceInfo, DevicePower } from '@ruimte/contracts';
-import { formatNumber } from '@adecore/ui/format';
 
 /* Below this, off power, a phone is about to stop a test run. */
 const LOW_BATTERY_PERCENT = 20;

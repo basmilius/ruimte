@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ConnectionManager } from '@adecore/database';
+import { Button, CloseButton, Dialog, Field, FormError, Icon, Select, Switch } from '@adecore/ui';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
 import { Database, KeyRound, TriangleAlert } from 'lucide-react';
-import { Button, CloseButton, Dialog, Field, FormError, Icon, Select, Switch } from '@adecore/ui';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     asViewConnections,
     databaseConnections,

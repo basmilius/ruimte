@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { ArrowLeftRight, Check } from 'lucide-react';
 import { bothLines, sideLines, type MergeBlock, type MergeSide } from '@adecore/merge';
 import { Button, EmptyState, Icon, ScrollArea } from '@adecore/ui';
+import { ArrowLeftRight, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface SideProps {
     readonly label: string;

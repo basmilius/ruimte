@@ -1,6 +1,6 @@
-import type { Plugin } from 'vite';
 import { VISUAL_HOST_PAGE } from '@ruimte/contracts';
 import { VISUAL_HOST_HEADERS, VISUAL_HOST_PATH } from '@ruimte/csp';
+import type { Plugin } from 'vite';
 
 /*
  * The sandbox host page of a visual: answered by the dev server under its own policy, and written into

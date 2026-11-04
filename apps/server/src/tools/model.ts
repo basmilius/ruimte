@@ -1,6 +1,6 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
 import { providerFor } from '../providers/registry.ts';
 
 export const modelFlag = z.string().trim().min(1, 'model needs a model id').optional();

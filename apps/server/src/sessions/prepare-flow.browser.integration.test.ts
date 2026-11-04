@@ -2,12 +2,12 @@ import { expect, test } from 'bun:test';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { withBrowserFixture, clientDirectory } from '../../../client/testing/browser-fixture.ts';
-import { realShell } from './shell-editor-test-helpers.ts';
-import { waitForAsync } from './test-helpers.ts';
-import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
-import { hasPrepareSource } from './prepare-source.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerTerminalPrepareHandlers } from '../handlers/terminal-prepare.ts';
+import { hasPrepareSource } from './prepare-source.ts';
+import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
+import { realShell } from './shell-editor-test-helpers.ts';
+import { waitForAsync } from './test-helpers.ts';
 
 for (const change of ['none', 'busy', 'input', 'refused', 'lost-ack', 'lost-ack-nl'] as const) {
     test(`real Markdown → workspace host → person action → remote owner → ZLE revalidates ${change}`, async () => {

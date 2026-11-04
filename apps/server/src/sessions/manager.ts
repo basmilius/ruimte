@@ -3,24 +3,24 @@ import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { CodedError, SingleFlight } from '@adecore/agents';
+import { narrowerMode, launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, RuntimeMode, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { codexIndexIn } from '../agents/codex-title.ts';
 import { borrowedHook, modeOfHook, normalizeHook, requestOfHook, settleWaiting } from '../agents/hooks.ts';
-import { isTerminalReply } from './terminal-replies.ts';
+import { ClientSinks } from '../client-sinks.ts';
+import { contextHint, toolsNote } from '../context/context-note.ts';
+import { errorText } from '../error-text.ts';
 import { offersKind } from '../providers/kinds.ts';
 import { DEFAULT_RUNTIME_MODE, freshCommand, launchedMode, quote, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
-import { narrowerMode, launchEnv, storedAccount, type AccountLaunches } from '@adecore/agents/providers';
-import { contextHint, toolsNote } from '../context/context-note.ts';
+import { TERMINAL_TOKEN_VARIABLE, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
 import { defaultShell, defaultShellArgs, gitBash, shellName, type PtyAdapter } from '../pty/pty.ts';
+import { countUsage } from '../stats/usage-stats.ts';
 import { Session } from './session.ts';
 import type { ShellEnvironment } from './shell-integration.ts';
 import type { SessionSnapshot, SnapshotStore } from './snapshot-store.ts';
-import { errorText } from '../error-text.ts';
-import { CodedError, SingleFlight } from '@adecore/agents';
-import { ClientSinks } from '../client-sinks.ts';
-import { countUsage } from '../stats/usage-stats.ts';
-import { TERMINAL_TOKEN_VARIABLE, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
+import { isTerminalReply } from './terminal-replies.ts';
 
 type SessionErrorCode =
     | 'session-exists'

@@ -1,16 +1,16 @@
+import type { Subprocess } from 'bun';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Subprocess } from 'bun';
 import { peerStatementMessage, type PeerStatement } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
+import { freePort } from '../free-port-test-helpers.ts';
 import { TEST_STATEMENT_KEY_VARIABLE } from '../pulsar/statement.ts';
+import { waitForAsync } from '../sessions/test-helpers.ts';
 import type { PeerLink } from './peer-connection.ts';
 import { PeerKey } from './peer-key.ts';
 import { brokerDialer } from './remote-connections.ts';
-import { freePort } from '../free-port-test-helpers.ts';
-import { waitForAsync } from '../sessions/test-helpers.ts';
 import { startBroker } from './test-helpers.ts';
 
 /*

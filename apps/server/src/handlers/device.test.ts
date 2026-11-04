@@ -3,10 +3,10 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import { DeviceError, type DeviceManager } from '../devices/manager.ts';
-import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { DeviceControl } from '../devices/control.ts';
 import { SIMULATOR } from '../devices/device-test-helpers.ts';
+import { DeviceError, type DeviceManager } from '../devices/manager.ts';
+import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { registerDeviceControlHandlers, registerDeviceHandlers } from './device.ts';
 
 function request(type: string, payload: unknown = {}): string {

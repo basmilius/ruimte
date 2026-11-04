@@ -1,8 +1,8 @@
 import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { holdsForeground } from '../processes/foreground.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import type { PtyProcess } from '../pty/pty.ts';
-import { holdsForeground } from '../processes/foreground.ts';
 import { SessionManager } from './manager.ts';
 import { PrepareTerminal, shellSyntax } from './prepare-terminal.ts';
 import { prepareShellIntegration } from './shell-integration.ts';

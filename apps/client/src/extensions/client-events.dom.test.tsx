@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
-import { act } from 'react';
 import { useChats } from '@adecore/agents-react/state';
 import type { ProjectCanvasView } from '@ruimte/contracts';
+import { act } from 'react';
 import { onClientEvent } from '@/extensions/client-events';
 import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
-import { FakeMachine } from '../../testing/fake-machine';
 import { openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
+import { FakeMachine } from '../../testing/fake-machine';
 import { idleChatInfo } from '../../testing/project-fixtures';
 
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };

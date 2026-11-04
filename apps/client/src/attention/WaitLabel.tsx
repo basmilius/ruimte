@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { Hand, Hourglass, MessageCircleQuestion } from 'lucide-react';
 import { Icon, Pill, Tooltip, useNow } from '@adecore/ui';
 import { formatAgo, formatDuration, formatElapsedShort, formatNumber, useFormatLocale } from '@adecore/ui/format';
+import { Hand, Hourglass, MessageCircleQuestion } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { WaitDetails } from '@/state/waiting';
 
 const LONG_WAIT_MS = 10 * 60_000;

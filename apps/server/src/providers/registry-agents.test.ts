@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { AgentKind } from '@ruimte/contracts';
 import type { ChatProvider } from '@adecore/agents/providers';
+import type { AgentKind } from '@ruimte/contracts';
 import { isMachineStatePath } from '../fs/machine-home.ts';
 import { sha256, tarGz, zip } from '../language/test-archives.ts';
-import { AcpRegistry } from './acp-registry.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { AcpRegistry } from './acp-registry.ts';
 import { RegistryAgents, npmBin, packageName, relativeCommand, type InstallRun } from './registry-agents.ts';
 
 const ZIP = zip([{ path: 'bin/agent', text: '#!/bin/sh\n', mode: 0o644 }]);

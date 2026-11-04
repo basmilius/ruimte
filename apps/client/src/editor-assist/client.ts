@@ -1,7 +1,7 @@
 import type { EditorAssistGenerateResult, EditorAssistPurpose, EditorAssistStatusResult } from '@ruimte/contracts';
+import { useSettings } from '@/state/settings';
 import { machineAnswers } from '@/transport/features';
 import { TransportError, type Transport } from '@/transport/transport';
-import { useSettings } from '@/state/settings';
 
 export interface EditorAssistRequest {
     readonly purpose: EditorAssistPurpose;

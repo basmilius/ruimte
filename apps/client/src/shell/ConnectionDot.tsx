@@ -1,14 +1,14 @@
+import { Tooltip } from '@adecore/ui';
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip } from '@adecore/ui';
-import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from '@/shell/connection-info';
-import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
-import { pingNow, useLatency } from '@/transport/ping';
 import { isSlowLine, useConnectionDotShown } from '@/shell/connection-dot';
+import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from '@/shell/connection-info';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import type { ConnectionState, TransportStatus } from '@/transport';
+import { pingNow, useLatency } from '@/transport/ping';
+import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
 
 const COLOR: Record<TransportStatus, string> = {
     open: 'bg-status-idle',

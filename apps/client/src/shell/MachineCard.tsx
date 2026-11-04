@@ -1,3 +1,4 @@
+import { useNow } from '@adecore/ui';
 import type { ReactNode } from 'react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { describeLastSeen } from '@/shell/connection-info';
@@ -7,7 +8,6 @@ import { StatusCard } from '@/shell/StatusCard';
 import { useMachineEntry } from '@/shell/use-machine-entry';
 import { useLastSeenAt } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
-import { useNow } from '@adecore/ui';
 
 const MINUTE_MS = 60_000;
 

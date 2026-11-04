@@ -1,5 +1,5 @@
-import type { ErrorInfo } from 'react';
 import { ErrorBoundary } from '@adecore/ui';
+import type { ErrorInfo } from 'react';
 import { desktop } from '@/desktop/bridge';
 import { IS_STATION } from '@/station';
 import type { ConnectionProblem } from './events';

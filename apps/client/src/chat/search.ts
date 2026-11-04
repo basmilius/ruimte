@@ -1,9 +1,9 @@
-import type { ChatItem } from '@ruimte/contracts';
-import { compileFind, matchesIn, MATCH_LIMIT, type FindQuery } from '@adecore/editor-react/models';
 import type { CommandName } from '@adecore/agents-react';
 import { handbackReportOf, lookRunOf, sentMessageOf, toolSummary, stripAnsi } from '@adecore/agents-react/chat';
 import type { TimelineRow } from '@adecore/agents-react/chat';
 import type { ChatFindField } from '@adecore/agents-react/chat/ui';
+import { compileFind, matchesIn, MATCH_LIMIT, type FindQuery } from '@adecore/editor-react/models';
+import type { ChatItem } from '@ruimte/contracts';
 import { RUIMTE_COMMAND_LOOKS, RUIMTE_TOOL_LOOKS } from '@/chat/ruimte-command-look';
 
 /*

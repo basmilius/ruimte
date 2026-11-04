@@ -3,13 +3,13 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AttachmentStore } from '@adecore/agents/chat';
+import { killQuietly, processAlive } from '../process-test-helpers.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
-import { AttachmentStore } from '@adecore/agents/chat';
-import { ChatManager } from './chat-manager.ts';
-import { killQuietly, processAlive } from '../process-test-helpers.ts';
-import { ChatRecorder } from './chat-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
+import { ChatManager } from './chat-manager.ts';
+import { ChatRecorder } from './chat-test-helpers.ts';
 
 /*
  * The fakes run as real child processes here, since the in-process tests cannot show that frames

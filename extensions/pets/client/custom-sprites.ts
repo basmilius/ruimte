@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { z } from 'zod';
 import { PET_POSES, type PetPose } from '@extensions/pets/client/pixel';
 import { onPetSpritesChanged, PET_SPRITES_STORAGE_KEY } from '@extensions/pets/client/sprites-key';
+import { z } from 'zod';
+import { create } from 'zustand';
 import { storedJson } from '@/state/stored-json';
 
 /*

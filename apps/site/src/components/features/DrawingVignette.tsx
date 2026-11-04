@@ -1,9 +1,9 @@
 'use client';
 
 import { CanvasEdge, CanvasNode } from '../app/canvas.tsx';
+import { AssistantText } from '../app/chat.tsx';
 import { Sketch } from '../app/drawing.tsx';
 import type { Rect } from '../app/edge-route.ts';
-import { AssistantText } from '../app/chat.tsx';
 import { Reveal } from '../app/primitives.tsx';
 import { useTimeline } from '../film/playback.ts';
 import { Stage } from '../film/Stage.tsx';

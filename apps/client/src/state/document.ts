@@ -1,5 +1,3 @@
-import { useContext } from 'react';
-import { createStore, type StoreApi } from 'zustand';
 import {
     isCanvasView,
     isDesignView,
@@ -20,12 +18,13 @@ import {
     type StandaloneNode,
     type DesignChat
 } from '@ruimte/contracts';
-import type { LooseStrip } from '@/shell/legacy-files-cell';
+import { useContext } from 'react';
+import { createStore, type StoreApi } from 'zustand';
 import type { CanvasPatch } from '@/project/merge';
+import type { LooseStrip } from '@/shell/legacy-files-cell';
 import type { CellAt, ShownView, SplitDirection, SplitZone } from '@/shell/split';
 import { defaultCanvases } from '@/state/canvas';
 import { defaultDiagrams } from '@/state/diagram';
-import { defaultDrawings } from '@/state/drawing';
 import { createDocumentContentSlice } from '@/state/document-content-slice';
 import { createDocumentGridSlice } from '@/state/document-grid-slice';
 import { cellViewOf, createDocumentKit, type DocumentPeers, type StandaloneRequest, type TrashedView, type ViewNotice } from '@/state/document-model';
@@ -33,6 +32,7 @@ import { createDocumentNodesSlice } from '@/state/document-nodes-slice';
 import { createDocumentNoticeSlice } from '@/state/document-notice-slice';
 import { createDocumentTabsSlice } from '@/state/document-tabs-slice';
 import { createDocumentViewsSlice } from '@/state/document-views-slice';
+import { defaultDrawings } from '@/state/drawing';
 import { CellViewContext, storeHook } from '@/state/workspace-stores';
 
 export { canStandInCell, cellViewOf, type DocumentPeers, type StandaloneRequest, type TrashedView, type ViewNotice } from '@/state/document-model';

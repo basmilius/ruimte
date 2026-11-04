@@ -1,12 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Icon, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
+import type { DevServer } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { Globe } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DevServer } from '@ruimte/contracts';
 import { DEV_SERVER_PROBE_PORTS, devServerTiles, type DevServerTile } from '@/browser/dev-servers';
 import { openPage } from '@/browser/open-page';
 import { useOptionalConnection } from '@/transport/context';
-import { Icon, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
 
 /* How often the machine is asked again, so a server started after this node was opened shows up. */
 const REFRESH_MS = 5_000;

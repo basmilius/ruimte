@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { FadingWords } from '@adecore/agents-react/chat/ui';
+import { Button, EmptyState, FormError, Icon, IconButton, ScrollArea, useNow } from '@adecore/ui';
+import { formatClockDuration } from '@adecore/ui/format';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import {
     Check,
     ChevronRight,
@@ -17,14 +18,13 @@ import {
     Trash2,
     type LucideIcon
 } from 'lucide-react';
-import { FadingWords } from '@adecore/agents-react/chat/ui';
-import { formatClockDuration } from '@adecore/ui/format';
-import { Button, EmptyState, FormError, Icon, IconButton, ScrollArea, useNow } from '@adecore/ui';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
-import { VoiceWaveform } from '@/voice/VoiceWaveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
 import { voiceTimeline, type VoiceTimelineEntry } from '@/voice/timeline';
+import { VoiceWaveform } from '@/voice/VoiceWaveform';
 
 const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     focus: LayoutGrid,

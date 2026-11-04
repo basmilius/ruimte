@@ -8,8 +8,8 @@ import { afterAll, afterEach } from 'bun:test';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { unmountAll } from './test-dom.ts';
-import { agentsUiModule, chartsModule, uiModule } from './test-react.ts';
 import { client, createTestHost } from './test-hosts.ts';
+import { agentsUiModule, chartsModule, uiModule } from './test-react.ts';
 import { createTestServer, currentServer, refusal, removeTestFolders } from './test-server.ts';
 
 type Server = typeof PublicServer;

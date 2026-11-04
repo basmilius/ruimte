@@ -1,7 +1,7 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { MAX_PROMPT_LENGTH, pendingRequestsOf, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import { isChatNode, type ChatItem, type ProjectContent } from '@ruimte/contracts';
 import { matchName, resolveNames, type VoiceNameMatch } from '@ruimte/voice';
-import { ToolRefusal } from '@adecore/agents/context';
 import { type CanvasHost } from '../tools/host.ts';
 import { agentReading } from '../voice/agent-reading.ts';
 import { chatExcerpt } from '../voice/chat-excerpt.ts';

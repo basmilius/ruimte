@@ -1,12 +1,12 @@
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { killQuietly, processAlive } from '../process-test-helpers.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
-import { PMSET, watchdogCommand, type PowerState } from './closed-lid.ts';
 import { spawnWatchdog, streamPower } from './closed-lid-system.ts';
+import { PMSET, watchdogCommand, type PowerState } from './closed-lid.ts';
 
 /*
  * What no fake can prove: that the watchdog notices a daemon that is gone without polling, and that it

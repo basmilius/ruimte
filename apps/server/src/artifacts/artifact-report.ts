@@ -1,5 +1,5 @@
-import type { Artifacts } from './artifacts.ts';
 import { ArtifactError } from './artifact-names.ts';
+import type { Artifacts } from './artifacts.ts';
 
 /*
  * What `read` of an artifact node gives an agent: the version the node shows, its text when its first

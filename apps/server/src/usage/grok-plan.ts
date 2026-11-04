@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { UsageWindow } from '@ruimte/contracts';
 import { isNotFound } from '@adecore/agents';
 import { fraction, type ProbeEnv, type ProbeResult } from '@adecore/agents/usage';
+import type { UsageWindow } from '@ruimte/contracts';
 import { isRecord } from '../is-record.ts';
 
 /* The billing view Grok's own `/usage` reads, on the proxy its CLI talks to. Undocumented, so any other shape is a failed read. */

@@ -1,5 +1,5 @@
-import type { Dispatcher } from '../dispatcher.ts';
 import type { ChatItem } from '@ruimte/contracts';
+import type { Dispatcher } from '../dispatcher.ts';
 import type { ProjectIndex } from '../projects/project-index.ts';
 import { hasPrepareSource } from '../sessions/prepare-source.ts';
 import type { PrepareTerminal, PrepareTerminalHost } from '../sessions/prepare-terminal.ts';

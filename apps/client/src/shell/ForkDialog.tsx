@@ -1,9 +1,3 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { GitFork } from 'lucide-react';
-import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult, type ProviderInfo } from '@ruimte/contracts';
-import { perform } from '@/actions/client-actions';
-import { AccountDot, accountsOfKind, canContinueOn, topAccountEntry } from '@adecore/agents-react/providers';
 import {
     EMPTY_DRAFT,
     writeDraft,
@@ -22,20 +16,26 @@ import {
     readChatPreferences,
     selectionFor
 } from '@adecore/agents-react/chat';
+import { ModelPicker } from '@adecore/agents-react/chat/ui';
+import { AccountDot, accountsOfKind, canContinueOn, topAccountEntry } from '@adecore/agents-react/providers';
+import { useProviders, useChatRow, knownAccounts, providerAccountsOf } from '@adecore/agents-react/state';
+import { Switch, Button, ErrorBoundary, FieldHint, FormError, Icon, Input, Select, Dialog, messageOf } from '@adecore/ui';
+import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult, type ProviderInfo } from '@ruimte/contracts';
+import { GitFork } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { perform } from '@/actions/client-actions';
 import { useOtherMachines } from '@/canvas/use-other-machines';
 import { forkOriginIn } from '@/chat/fork-origin';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { useViewNodes } from '@/project/view-nodes';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointById } from '@/state/endpoints';
-import { useProject } from '@/state/project';
-import { ModelPicker } from '@adecore/agents-react/chat/ui';
-import { useProviders, useChatRow, knownAccounts, providerAccountsOf } from '@adecore/agents-react/state';
-import { Switch, Button, ErrorBoundary, FieldHint, FormError, Icon, Input, Select, Dialog, messageOf } from '@adecore/ui';
-import { useViewNodes } from '@/project/view-nodes';
 import { useEndpointId } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useWorkspace } from '@/transport/connections';
 import { useTransport } from '@/transport/context';

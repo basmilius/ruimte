@@ -1,9 +1,9 @@
-import * as React from 'react';
-import * as jsxRuntime from 'react/jsx-runtime';
-import * as reactDom from 'react-dom';
 import * as agentsUi from '@adecore/agents-react/chat/ui';
 import * as charts from '@adecore/charts';
 import * as ui from '@adecore/ui';
+import * as React from 'react';
+import * as reactDom from 'react-dom';
+import * as jsxRuntime from 'react/jsx-runtime';
 import { consoleFor } from '@/extensions/dev-log';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
-import { installBrowserRoutes } from '../src/browser-routes';
 import { answerAppRequest, createDesktopAppScheme } from '../src/app-scheme';
+import { installBrowserRoutes } from '../src/browser-routes';
 
 /*
  * One real <webview> in the production parking layer, zoomed past the render distance and back again

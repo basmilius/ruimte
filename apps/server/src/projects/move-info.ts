@@ -1,11 +1,11 @@
 import { readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { entryExists } from '@adecore/agents';
-import { isInside } from '../tools/project-paths.ts';
 import type { ChatItem, ChatMoveInfoPayload, ChatMoveInfoResult, ChatMoveRefusal, ChatMoveTarget } from '@ruimte/contracts';
-import { IGNORED_OWN_NAMES } from './own-files.ts';
 import { workedFolders } from '../chat/worked-folders.ts';
 import { referencedIds } from '../context/references.ts';
+import { isInside } from '../tools/project-paths.ts';
+import { IGNORED_OWN_NAMES } from './own-files.ts';
 
 const MAX_FOLDERS = 5;
 const MAX_NAMES = 5;

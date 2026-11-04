@@ -1,15 +1,15 @@
-import { useStore } from 'zustand';
-import { useTranslation } from 'react-i18next';
+import { AgentIcon } from '@adecore/agents-react/providers';
 import { EditorRenderingProvider, LanguagePopups, type HoverView } from '@adecore/editor-react';
 import { Button, ContextMenu, Icon, Kbd, Tooltip } from '@adecore/ui';
 import { Bot, Cpu, MessageSquarePlus, Sparkles } from 'lucide-react';
-import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
+import { useTranslation } from 'react-i18next';
+import { useStore } from 'zustand';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';
 import { useAskAgents } from './ask-agents';
 import type { EditorLanguage } from './ruimte-editor-language';
-import { AgentIcon } from '@adecore/agents-react/providers';
 
 function HoverActions({ language, view }: { language: EditorLanguage; view: HoverView }) {
     const { t } = useTranslation('panels');

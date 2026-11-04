@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { AgentKindSchema, ProviderAccountIdSchema } from '@adecore/agent-contracts';
+import { z } from 'zod';
 
 const CHAT_SEARCH_MAX_HITS = 500;
 

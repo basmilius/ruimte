@@ -10,13 +10,13 @@ import {
     USAGE_MAX_STARTUP_MS
 } from '@ruimte/pulsar';
 import { z } from 'zod';
-import { MachineUpdateSchema } from './machine-update.ts';
-import { NodeKindSchema, ProjectIconChoiceSchema } from './project.ts';
-import { NODE_SIZE_MAX, NODE_SIZE_MIN } from './node-defaults.ts';
-import { LanDoorSchema } from './lan-door.ts';
-import { ProtocolVersionSchema } from './protocol.ts';
-import { KeepAwakeModeSchema } from './keep-awake.ts';
 import { AgentIntegrationsSummarySchema } from './agent-integrations.ts';
+import { KeepAwakeModeSchema } from './keep-awake.ts';
+import { LanDoorSchema } from './lan-door.ts';
+import { MachineUpdateSchema } from './machine-update.ts';
+import { NODE_SIZE_MAX, NODE_SIZE_MIN } from './node-defaults.ts';
+import { NodeKindSchema, ProjectIconChoiceSchema } from './project.ts';
+import { ProtocolVersionSchema } from './protocol.ts';
 
 export const TerminalShellSchema = z.enum(['powershell', 'git-bash', 'cmd', 'wsl']);
 export type TerminalShell = z.infer<typeof TerminalShellSchema>;

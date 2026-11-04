@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { DeviceInfo, DeviceUnavailable } from '@ruimte/contracts';
+import i18next from 'i18next';
 
 const REASONS: Record<string, string> = {
     unauthorized: 'panels:devices.state.unauthorized',

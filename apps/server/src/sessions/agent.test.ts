@@ -1,6 +1,6 @@
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { AgentLaunch } from '@ruimte/contracts';
 import { toolsNote } from '../context/context-note.ts';
 import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude-provider.ts';

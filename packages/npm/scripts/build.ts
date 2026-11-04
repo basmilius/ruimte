@@ -1,5 +1,5 @@
-import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { EXTENSION_DIR, extensionManifest, launcherManifest, platformManifest } from '../src/manifest';

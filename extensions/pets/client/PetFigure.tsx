@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react';
 import { BEAM_MS, BEAM_SPREAD, beamPixels, beamStyleOf, type BeamCell, type BeamStyle } from '@extensions/pets/client/beam';
 import { usePrefersStill } from '@extensions/pets/client/figure-support';
 import { PAINT_CELL, PAINT_SIZE, paintPet, petPainter, type PetLook } from '@extensions/pets/client/paint';
+import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import { petFrame, WORLD_CELL, type PetMood } from '@extensions/pets/client/pet-state';
 import { bowColors, PAINT_COLUMNS, PAINT_ROWS, type BowColors, type PetPose } from '@extensions/pets/client/pixel';
 import { BEAM_LIGHT } from '@extensions/pets/client/sprite-colors';
 import { onPetTick } from '@extensions/pets/client/ticker';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
+import { useEffect, useRef } from 'react';
 
 /* The paint a beam draws on, with room around the figure for the pixels that fly in from the sides. */
 const BEAM_SIZE = { w: (PAINT_COLUMNS + BEAM_SPREAD.x * 2) * PAINT_CELL, h: (PAINT_ROWS + BEAM_SPREAD.y * 2) * PAINT_CELL } as const;

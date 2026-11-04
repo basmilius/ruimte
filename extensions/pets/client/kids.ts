@@ -1,6 +1,6 @@
-import { isChatNode, type ChatItem, type ChatSubagentItem } from '@ruimte/contracts';
 import type { ChatsById } from '@adecore/agents-react/state';
 import { PET_HEIGHT, PET_PAINT_WIDTH, PET_WIDTH, type PetMood } from '@extensions/pets/client/pet-state';
+import { isChatNode, type ChatItem, type ChatSubagentItem } from '@ruimte/contracts';
 import { memoByIdentity } from '@/state/identity-memo';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import type { StatusOf } from '@/state/sessions';

@@ -1,27 +1,27 @@
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import clsx from 'clsx';
+import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
-import { BrowserSplash } from '@/browser/BrowserSplash';
 import { BrowserPlate } from '@/browser/BrowserPlate';
+import { BrowserSplash } from '@/browser/BrowserSplash';
+import { BrowserStream } from '@/browser/BrowserStream';
 import { ERROR_ICON } from '@/browser/error-icons';
-import { usePageFar } from '@/browser/page-snapshots';
 import { classifyLoadError } from '@/browser/load-error';
 import { drivePage, openPage } from '@/browser/open-page';
 import { browserRouteAvailable } from '@/browser/owner-route';
+import { usePageFar } from '@/browser/page-snapshots';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
-import { BrowserStream } from '@/browser/BrowserStream';
 import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamScale, useBrowserStreamQuality } from '@/browser/stream-quality';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
-import { endpointKey, useEndpointId } from '@/state/keys';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
-import { useNodeHost } from '@/nodes/node-host';
-import { useLocalDaemonId, usePage } from '@/nodes/use-page';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS } from '@adecore/ui';
+import { useNodeHost } from '@/nodes/node-host';
+import { useLocalDaemonId, usePage } from '@/nodes/use-page';
+import { endpointKey, useEndpointId } from '@/state/keys';
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {

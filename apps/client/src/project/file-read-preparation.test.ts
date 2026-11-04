@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { createStore } from 'zustand';
 import type { ProjectView, SplitLayout } from '@ruimte/contracts';
+import { createStore } from 'zustand';
 import type { Tab } from '@/state/files';
 import { startFileReadPreparation } from './file-read-preparation';
 

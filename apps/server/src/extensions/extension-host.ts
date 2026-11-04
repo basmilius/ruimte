@@ -3,16 +3,16 @@ import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isNotFound } from '@adecore/agents';
+import { ToolRefusal } from '@adecore/agents/context';
 import { EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
+import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
-// @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
-import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
-import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { clientFilesOf } from './client-files.ts';
+// @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
+import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
 import {
     actionRefusal,
     askRefusal,

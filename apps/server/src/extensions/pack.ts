@@ -1,3 +1,4 @@
+import type { BunPlugin } from 'bun';
 import { createHash, randomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -13,7 +14,6 @@ import {
     type ExtensionManifest,
     type ExtensionPack
 } from '@ruimte/contracts';
-import type { BunPlugin } from 'bun';
 
 export const BUILD_FOLDER = 'dist';
 // A build on its way, and the one it replaced, which neither a watcher nor the source signature counts as a save.

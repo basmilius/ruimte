@@ -1,8 +1,8 @@
-import type { NextConfig } from 'next';
 import { realpathSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import createMDX from '@next/mdx';
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
+import type { NextConfig } from 'next';
 
 const repository = join(import.meta.dirname, '../..');
 const adecore = realpathSync(join(import.meta.dirname, 'node_modules/@adecore/ui'));

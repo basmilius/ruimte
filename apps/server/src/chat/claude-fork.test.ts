@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { cutTranscript, forkClaudeTranscript } from './claude-fork.ts';
 import { claudeProjectSlug } from '@adecore/agents/chat';
-import { ChatError } from './errors.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { cutTranscript, forkClaudeTranscript } from './claude-fork.ts';
+import { ChatError } from './errors.ts';
 
 const SESSION = 'ef133c61-7c0d-4182-9b8f-40f5214adbdf';
 const FORK = '04d373e9-dd60-4612-9381-7bb0827ac6a5';

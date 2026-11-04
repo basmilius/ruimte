@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { type DiagramDocument } from './diagram-host.ts';
-import { ProjectDocumentSchema, isDiagramView, isOpenableView, isSessionView } from './project.ts';
 import { REQUEST_SCHEMAS } from './index.ts';
+import { ProjectDocumentSchema, isDiagramView, isOpenableView, isSessionView } from './project.ts';
 
 const example: DiagramDocument = {
     version: 1,

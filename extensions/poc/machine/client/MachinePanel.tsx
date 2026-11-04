@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { useServer, type Result } from '@ruimte/extension/client';
+import { useState } from 'react';
 import type { MachineServer } from '../server/index';
 import { LISTS } from './index';
 import './machine.css';

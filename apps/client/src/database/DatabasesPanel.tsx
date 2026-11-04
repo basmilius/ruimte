@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { CircleAlert, Container, Database, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
 import { connectionFromContainer, containerTitle, DatabaseExplorer, useDatabaseClient } from '@adecore/database';
 import type { DockerContainer } from '@adecore/database/protocol';
-import type { DatabaseConnection } from '@ruimte/contracts';
 import { Button, ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, SectionLabel } from '@adecore/ui';
+import type { DatabaseConnection } from '@ruimte/contracts';
+import { CircleAlert, Container, Database, KeyRound, Plus, Settings2, SquareTerminal } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     asViewConnections,
     connectionName,
@@ -16,16 +16,16 @@ import {
     useWithheldPasswords,
     type ConnectionsStatus
 } from '@/database/connections';
-import { containersFor } from '@/database/docker';
-import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { openNewConsole } from '@/database/console-file';
 import { useConsoleFolders } from '@/database/console-folders';
+import { containersFor } from '@/database/docker';
+import { startDatabaseDrag } from '@/database/drag';
+import { RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { useDatabasePanel } from '@/database/state';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { useProject } from '@/state/project';
-import { startDatabaseDrag } from '@/database/drag';
 import { setDragging } from '@/shell/view-drag';
+import { useProject } from '@/state/project';
 
 /*
  * The connections of the project, with their schemas, tables and columns, and the consoles of each. A table

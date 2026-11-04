@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { Trash } from 'lucide-react';
-import { Trans, useTranslation } from 'react-i18next';
-import { brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
-import type { AuthSession, PeerLink, ReachCheck, RuntimeMode, TerminalShell } from '@ruimte/contracts';
 import { RUNTIME_MODES, runtimeModeLabel } from '@adecore/agents-react/chat';
 import { messageOf, Segmented, Select, Skeleton, Switch, Button, IconButton, Tooltip, FormError, Input, useNow } from '@adecore/ui';
 import { formatNumericDate, formatAgo } from '@adecore/ui/format';
 import { ConfirmDialog, SettingsRow } from '@adecore/ui/settings';
+import type { AuthSession, PeerLink, ReachCheck, RuntimeMode, TerminalShell } from '@ruimte/contracts';
+import { brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
+import { Trash } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
 import { desktop, openInSystemBrowser } from '@/desktop/bridge';
 import { forgetEndpoint } from '@/endpoint';

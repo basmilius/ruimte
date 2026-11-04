@@ -3,8 +3,8 @@ import { chmodSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { CustomLanguageServerInput } from '@ruimte/contracts';
-import { CustomLanguageServers, customProfile, resolveCommandOnPath, UnsavedRemoval } from './custom.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { CustomLanguageServers, customProfile, resolveCommandOnPath, UnsavedRemoval } from './custom.ts';
 
 let root = '';
 let path = '';

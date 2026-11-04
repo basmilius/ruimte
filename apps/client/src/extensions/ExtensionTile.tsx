@@ -1,6 +1,6 @@
+import { Icon } from '@adecore/ui';
 import clsx from 'clsx';
 import { Package, type LucideIcon } from 'lucide-react';
-import { Icon } from '@adecore/ui';
 import { inkOn } from '@/extensions/ink';
 
 /*

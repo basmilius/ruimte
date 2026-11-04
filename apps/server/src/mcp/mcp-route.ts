@@ -1,11 +1,11 @@
 import { ToolRefusal } from '@adecore/agents/context';
 import { Server, WebStandardStreamableHTTPServerTransport, type CallToolResult } from '@modelcontextprotocol/server';
 import { bearerCaller } from '../agents/bearer.ts';
-import { callerKind } from '../tools/tasks.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { errorText } from '../error-text.ts';
 import { ProjectError } from '../projects/project-error.ts';
 import { MCP_MAX_IMAGE_BYTES } from '../providers/ruimte-mcp.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import { callerKind } from '../tools/tasks.ts';
 import { VERSION } from '../version.ts';
 import { catalog, type Tool, type ToolContext } from './catalog.ts';
 import { AgentFiles } from './files.ts';

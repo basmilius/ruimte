@@ -22,8 +22,8 @@ import {
     Type,
     Undo2
 } from 'lucide-react';
-import { Sketch } from '../../app/drawing.tsx';
 import { FLOAT } from '../../app/chrome.tsx';
+import { Sketch } from '../../app/drawing.tsx';
 import { IconButton, Separator } from '../../app/primitives.tsx';
 import { useTimeline } from '../../film/playback.ts';
 import { Stage } from '../../film/Stage.tsx';

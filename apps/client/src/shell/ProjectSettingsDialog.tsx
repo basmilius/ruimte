@@ -1,18 +1,18 @@
-import { useRef, useState } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import { FolderSearch, ImageUp } from 'lucide-react';
+import { Button, ColorSwatch, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel, Tooltip } from '@adecore/ui';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { DEFAULT_PROJECT_COLOR, type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { FolderSearch, ImageUp } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
-import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { ProjectAccountsSection } from '@/shell/ProjectAccountsSection';
 import { submitOnEnter } from '@/shell/submit-on-enter';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { Button, ColorSwatch, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel, Tooltip } from '@adecore/ui';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
 const MAX_BYTES = 256 * 1024;

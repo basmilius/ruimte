@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FS_WRITE_PIECE_BYTES, type ServerFrame } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
-import { readServedFile } from '../fs/read.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { FolderWatcher } from '../fs/watch.ts';
+import { FS_WRITE_PIECE_BYTES, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
+import { MachineHome } from '../fs/machine-home.ts';
+import { readServedFile } from '../fs/read.ts';
+import { FolderWatcher } from '../fs/watch.ts';
 import { registerBytesHandlers } from './bytes.ts';
 import { registerFsHandlers } from './fs.ts';
+import { askOnce } from './test-helpers.ts';
 
 const GIF = new TextEncoder().encode('GIF89a and then some');
 

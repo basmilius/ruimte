@@ -9,8 +9,8 @@ import { DeviceControl } from '../devices/control.ts';
 import { ReadingBackend, RecordingBackend, SIMULATOR, pngOf } from '../devices/device-test-helpers.ts';
 import { DeviceManager } from '../devices/manager.ts';
 import { deviceToolkit } from './device-tools.ts';
-import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import type { CanvasHost } from './host.ts';
+import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 const PHONE: ProjectNode = {
     id: 'phone-1',

@@ -3,20 +3,20 @@ import type { Dispatcher } from '../dispatcher.ts';
 import { browseDirectories } from '../fs/browse.ts';
 import { createEntry, planCreate } from '../fs/create.ts';
 import { planDelete } from '../fs/delete.ts';
+import { grepFiles } from '../fs/grep.ts';
 import { listDirectory } from '../fs/list.ts';
 import { locateFile } from '../fs/locate.ts';
-import { cachedRepos } from '../git/repo-cache.ts';
-import type { FileMove, LanguageHost } from '../language/host.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import { readFile } from '../fs/read.ts';
 import { planRename } from '../fs/rename.ts';
 import { revealInFileManager } from '../fs/reveal.ts';
-import { grepFiles } from '../fs/grep.ts';
 import { listSearchableFiles, searchFiles } from '../fs/search.ts';
-import type { FolderWatcher } from '../fs/watch.ts';
 import { TextUploads } from '../fs/text-uploads.ts';
+import type { FolderWatcher } from '../fs/watch.ts';
 import { refuseOutside } from '../fs/within.ts';
 import { narrowTo, writeTextFile, type WriteBoundary } from '../fs/write.ts';
+import { cachedRepos } from '../git/repo-cache.ts';
+import type { FileMove, LanguageHost } from '../language/host.ts';
 
 /* How the host writes and makes the files a server's edit touches, inside the boundary of the client that asked. */
 function editsOf(boundary: WriteBoundary): Omit<FileMove, 'move'> {

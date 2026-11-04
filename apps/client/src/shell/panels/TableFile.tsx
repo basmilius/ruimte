@@ -1,12 +1,12 @@
+import { EmptyState, ErrorBoundary, lazyNamed, LazyBoundary, Menu, ScrollArea } from '@adecore/ui';
+import type { FsReadText } from '@ruimte/contracts';
+import { PanelTop, Sheet, Table } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PanelTop, Sheet, Table } from 'lucide-react';
-import type { FsReadText } from '@ruimte/contracts';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { DELIMITERS, delimiterOf, type Delimiter } from '@/shell/panels/delimited';
 import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useSourceToggle } from '@/shell/panels/use-source-toggle';
-import { EmptyState, ErrorBoundary, lazyNamed, LazyBoundary, Menu, ScrollArea } from '@adecore/ui';
 
 // The grid comes with the database views, which most workspaces never open, so it waits for the first table.
 const TableGrid = lazyNamed(() => import('@/shell/panels/TableGrid'), 'TableGrid');

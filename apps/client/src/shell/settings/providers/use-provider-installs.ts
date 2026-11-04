@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import type { AgentKind, CliVersion, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
 import { useProvidersStore } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
+import type { AgentKind, CliVersion, RegistryAgent, RegistryCatalog } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { useMachineAnswers } from '@/transport/features';

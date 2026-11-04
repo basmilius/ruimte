@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
+import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import type { AgentInfo, AgentStatus, ProjectCanvasView, ProjectNode, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { startPageHolds } from '@/browser/page-hold';
 import { canvasOfNode } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
-import { chatInfoOf } from '../../../apps/client/testing/chat-info';
-import { FakeMachine } from '../../../apps/client/testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../../apps/client/testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../../apps/client/testing/dom';
 import { openCanvasPage, type CanvasPage } from '../../../apps/client/testing/canvas-page';
+import { chatInfoOf } from '../../../apps/client/testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../../apps/client/testing/dom';
+import { FakeMachine } from '../../../apps/client/testing/fake-machine';
 import { claudeProvider } from '../../../apps/client/testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../../apps/client/testing/fake-workspace';
 
 const SHELL: ProjectView = { kind: 'terminal', id: 'shell-view', name: 'Tests', node: {} };
 

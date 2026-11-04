@@ -1,7 +1,7 @@
-import type { StoreApi } from 'zustand';
 import type { ProjectViewLocal } from '@ruimte/contracts';
-import { cameraOfView } from '@/canvas/math';
+import type { StoreApi } from 'zustand';
 import type { CameraFields, CameraSlice } from '@/canvas/camera-slice';
+import { cameraOfView } from '@/canvas/math';
 
 /* What an editor of a file of its own (a project, a drawing, a diagram) knows about its save. */
 export interface SavedFileFields<Document> {

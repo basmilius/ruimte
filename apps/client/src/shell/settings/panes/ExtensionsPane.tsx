@@ -1,16 +1,15 @@
+import { Button, EmptyState, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
+import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
+import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import { FileUp, HardDrive, Store, type LucideIcon } from 'lucide-react';
 import { createElement, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileUp, HardDrive, Store, type LucideIcon } from 'lucide-react';
-import { Button, EmptyState, Icon, Pill, SectionLabel, Switch } from '@adecore/ui';
-import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
-import { MasterDetail, MasterItem, SettingsRow } from '@adecore/ui/settings';
 import { desktop } from '@/desktop/bridge';
-import { IS_STATION } from '@/station';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
-import { SchemaSettings } from '@/extensions/SchemaSettings';
-import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { readDisabled } from '@/extensions/internal';
+import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
+import { SchemaSettings } from '@/extensions/SchemaSettings';
 import {
     installFromStore,
     installPack,
@@ -27,6 +26,7 @@ import {
 } from '@/extensions/store';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useToasts } from '@/state/toasts';
+import { IS_STATION } from '@/station';
 
 const BROWSE = 'browse';
 const DISK = 'disk';

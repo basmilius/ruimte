@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import {
     AlarmClock,
     ArrowUp,
@@ -16,6 +15,7 @@ import {
     Terminal,
     type LucideIcon
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { StatusDot, type AgentStatus, ClaudeMark } from './canvas.tsx';
 import { Button, IconButton, Typed } from './primitives.tsx';
 

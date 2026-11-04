@@ -1,11 +1,11 @@
+import type { BunPlugin } from 'bun';
 import { existsSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { BunPlugin } from 'bun';
-import { withViteGlobs } from './vite-glob-transform';
+import { COMPILER_RUNTIME, compiledByReactCompiler, MAY_HOLD_REACT, REACT_COMPILED, REACT_COMPILED_PACKAGES } from '../react-compiler';
 import type { Compiled } from '../react-compiler-babel';
 import { CompilerCache } from '../react-compiler-cache';
 import { CompilerPool } from '../react-compiler-pool';
-import { COMPILER_RUNTIME, compiledByReactCompiler, MAY_HOLD_REACT, REACT_COMPILED, REACT_COMPILED_PACKAGES } from '../react-compiler';
+import { withViteGlobs } from './vite-glob-transform';
 
 /*
  * The React Compiler over the client and ADE CORE's React sources the way Vite hands it them

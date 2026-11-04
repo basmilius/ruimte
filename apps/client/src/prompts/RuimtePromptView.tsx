@@ -1,9 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button, Input, ScrollArea } from '@adecore/ui';
 import type { PromptViewProps } from '@adecore/agents-react/prompts';
 import { ApprovalActions, PromptPrimary, PromptCard } from '@adecore/agents-react/prompts';
+import { Button, Input, ScrollArea } from '@adecore/ui';
 import type { ProjectProposal, SecretRequest } from '@ruimte/contracts';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isRuimteApp } from '@/computer/ruimte-app';
 import { computerButtons, SECRET_ANSWER_FIELD, SECRET_DECLINE, type RuimtePrompt } from '@/prompts/ruimte-prompts';
 import { useUi } from '@/state/ui';

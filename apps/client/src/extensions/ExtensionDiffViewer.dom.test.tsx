@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { contribute } from '@/extensions/registry';
 import { useFiles } from '@/state/files';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 const CWD = '/work/atlas';
 const FILE = `${CWD}/src/board.poc`;

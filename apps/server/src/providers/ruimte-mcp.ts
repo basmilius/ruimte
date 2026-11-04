@@ -1,5 +1,5 @@
-import type { AgentKind } from '@ruimte/contracts';
 import type { BackendLaunch } from '@adecore/agents/chat';
+import type { AgentKind } from '@ruimte/contracts';
 
 /*
  * How an agent Ruimte starts reaches the daemon's MCP server: one HTTP server named `ruimte` on the

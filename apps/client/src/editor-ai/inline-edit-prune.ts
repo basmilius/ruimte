@@ -1,6 +1,6 @@
+import type { LastProjectStorage } from '@/project/last-project';
 import { isConnectionError } from '@/transport/transport';
 import { expiredInlineEdits, forgetInlineEdit } from './inline-edit-record';
-import type { LastProjectStorage } from '@/project/last-project';
 
 interface PruneDeps {
     now(): number;

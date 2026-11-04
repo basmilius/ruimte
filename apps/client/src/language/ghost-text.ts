@@ -1,18 +1,18 @@
+import type { EditorPosition } from '@adecore/editor';
+import { shikiLanguageOf } from '@adecore/editor-react';
+import { endOfInsertion } from '@adecore/editor-react/models';
+import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { EditorPosition } from '@adecore/editor';
-import { endOfInsertion } from '@adecore/editor-react/models';
-import { messageOf } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { cleanGhost, firstWord } from '@/editor-assist/ghost-model';
 import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
+import { cleanGhost, firstWord } from '@/editor-assist/ghost-model';
 import { ghostPrompt } from '@/editor-assist/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
 import { GhostHint } from './GhostHint';
-import { shikiLanguageOf } from '@adecore/editor-react';
+import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
 import { isShortcut } from './shortcut-keys';
 
 const TOAST_ID = 'language-ghost';

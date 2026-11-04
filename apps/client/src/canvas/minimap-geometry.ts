@@ -1,5 +1,5 @@
-import { unionOf, type Camera, type Point, type Rect } from '@/canvas/math';
 import type { Viewport } from '@/canvas/camera-slice';
+import { unionOf, type Camera, type Point, type Rect } from '@/canvas/math';
 import type { DerivedFrame } from '@/canvas/node-body';
 import type { CanvasNode } from '@/state/canvas-model';
 

@@ -4,10 +4,6 @@ import { join } from 'node:path';
 import { CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, NODE_ACCENT_NAMES, NODE_SIZE, type ProjectCanvasView, type ProjectEdge } from '@ruimte/contracts';
 import { SIMULATOR } from '../devices/device-test-helpers.ts';
 import { rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
-import { nodeToolkit } from './node-tools.ts';
-import { MAX_CANVAS_NODES } from './nodes.ts';
-import { PLACEMENT_GAP } from './placement.ts';
-import { MAX_TITLE_LENGTH, NEW_NODE } from './host.ts';
 import {
     canvasFixture,
     knobs,
@@ -32,6 +28,10 @@ import {
     seed,
     box
 } from './canvas-test-fixture.ts';
+import { MAX_TITLE_LENGTH, NEW_NODE } from './host.ts';
+import { nodeToolkit } from './node-tools.ts';
+import { MAX_CANVAS_NODES } from './nodes.ts';
+import { PLACEMENT_GAP } from './placement.ts';
 
 canvasFixture();
 

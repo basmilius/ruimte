@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { AgentKind } from '@ruimte/contracts';
-import type { AcpCatalogStore } from '@adecore/agents/providers';
 import { isNotFound, writeAtomicSync } from '@adecore/agents';
+import type { AcpCatalogStore } from '@adecore/agents/providers';
+import type { AgentKind } from '@ruimte/contracts';
 
 /* Where the models and commands an ACP agent reported are kept, in the machine's own state and never handed to a client. */
 export function acpCatalogPath(home: string, kind: AgentKind): string {

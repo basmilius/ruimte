@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronDown, Database } from 'lucide-react';
-import { storedPathOf, type DatabaseConnection, type SqlBinding } from '@ruimte/contracts';
 import { Button, Icon, Menu } from '@adecore/ui';
 import { formatMoment } from '@adecore/ui/format';
+import { storedPathOf, type DatabaseConnection, type SqlBinding } from '@ruimte/contracts';
+import { ChevronDown, Database } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { databaseClientFor } from '@/database/client';
 import { asViewConnections, connectionName, ensureDatabaseConnections, useDatabaseConnectionList } from '@/database/connections';
-import { useDatabasePanel } from '@/database/state';
 import {
     choiceOf,
     ensureSqlBindings,
@@ -17,6 +16,7 @@ import {
     useSqlBindings,
     type SqlFileChoice
 } from '@/database/sql-bindings';
+import { useDatabasePanel } from '@/database/state';
 import { endpointKey } from '@/state/keys';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useConnection } from '@/transport/context';

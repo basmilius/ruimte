@@ -1,12 +1,12 @@
+import { ButtonGroup } from '@adecore/ui';
+import { Code, type LucideIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Code, type LucideIcon } from 'lucide-react';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useFiles } from '@/state/files';
 import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
-import { ButtonGroup } from '@adecore/ui';
 
 interface RenderedLabels {
     label: string;

@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { useEvent, useLocale, useStorage } from '@ruimte/extension/client';
+import { useState } from 'react';
 
 export default function WorkspacePanel({ params }: { params: { from: string } | undefined }) {
     const { t, language, format } = useLocale();

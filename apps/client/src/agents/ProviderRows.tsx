@@ -1,13 +1,13 @@
-import { ChevronRight, Bot, LoaderCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { pickerGroupsOf, type ProviderInfo } from '@ruimte/contracts';
-import { AgentIcon, modelName } from '@adecore/agents-react/providers';
 import { startingSelection, useChatPreferences } from '@adecore/agents-react/chat';
+import { AgentIcon, modelName } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { Icon, SectionLabel } from '@adecore/ui';
-import { availableAgents } from './creation';
+import { pickerGroupsOf, type ProviderInfo } from '@ruimte/contracts';
+import { ChevronRight, Bot, LoaderCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useUi } from '@/state/ui';
 import { useDetectProviders } from '@/transport/provider-detection';
+import { availableAgents } from './creation';
 
 export function ProviderRows({ onPick }: { onPick(provider: ProviderInfo): void }) {
     const { t } = useTranslation('agents');

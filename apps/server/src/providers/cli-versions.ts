@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import type { AgentKind, CliInstallMethod, CliVersion, ProviderInfo } from '@ruimte/contracts';
 import { runProcess, type ProcessResult } from '@adecore/agents';
+import type { AgentKind, CliInstallMethod, CliVersion, ProviderInfo } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 
 /* How a CLI's executable came to the machine, read from where it really is. */

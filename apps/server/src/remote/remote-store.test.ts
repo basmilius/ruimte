@@ -2,8 +2,8 @@ import { beforeEach, expect, test } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
-import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from './remote-store.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from './remote-store.ts';
 
 const newHome = tempHomes('ruimte-remote-');
 let home: string;

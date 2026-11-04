@@ -1,14 +1,14 @@
 import { join, resolve, sep } from 'node:path';
-import type { GitStatus } from '@ruimte/contracts';
 import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import type { GitStatus } from '@ruimte/contracts';
+import { ClientSinks } from '../client-sinks.ts';
+import { isUnder } from '../fs/path-segment.ts';
+import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ignoredPaths } from './ignore.ts';
 import { nativePath } from './native-path.ts';
 import { git, repositoryRoot } from './run.ts';
 import { noRepository, readStatusAt, trackedFiles } from './status.ts';
-import { ClientSinks } from '../client-sinks.ts';
-import { isUnder } from '../fs/path-segment.ts';
-import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 
 // A save, a formatter and a checkout all touch the repository in a burst; one status per burst is enough.
 const SETTLE_MS = 300;

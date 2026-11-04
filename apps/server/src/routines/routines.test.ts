@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { zonedTime, type AgentRoutine, type ChatInfo, type Routine } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import { zonedTime, type AgentRoutine, type ChatInfo, type Routine } from '@ruimte/contracts';
 import { OutboxStore, type RoutineRunEntry } from '../outbox/outbox.ts';
 import { CommandApprovals } from '../sessions/command-approvals.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { RoutineAuthorStore, RoutineRunStore } from './routine-runs.ts';
 import { RoutineStore } from './routine-store.ts';
 import { digestOf, Routines, runMessage, type AgentRunStart, type CommandResult, type RunMessage } from './routines.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const ZONE = 'Europe/Amsterdam';
 const PROJECT = 'p1';

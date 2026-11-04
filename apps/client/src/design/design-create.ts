@@ -1,9 +1,9 @@
 import { designPlaces, type ProviderInfo } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
 import { agentNodeOptions, type AgentSession } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { freeDesignFolder } from '@/design/design-folder';
 import { designFoldersOnDisk } from '@/design/design-read';
-import type { StoreApi } from 'zustand';
 import type { CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, useEndpointId } from '@/state/keys';

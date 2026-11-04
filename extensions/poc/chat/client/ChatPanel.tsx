@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
 import { agents, database, useChat, useMachine, useNodes, useSetting, useTheme } from '@ruimte/extension/client';
+import { useRef, useState } from 'react';
 
 export default function ChatPanel() {
     const greeting = useSetting<string>('greeting');

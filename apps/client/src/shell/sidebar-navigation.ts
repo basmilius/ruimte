@@ -7,7 +7,6 @@ import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { sidebarProjectKey, useSidebarProjects } from './sidebar-projects';
-
 import { sidebarNavigator } from './sidebar-target';
 export type { SidebarTarget } from './sidebar-target';
 

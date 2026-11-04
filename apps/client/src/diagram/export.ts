@@ -1,6 +1,6 @@
-import type { StoreApi } from 'zustand';
 import { toSvg } from '@adecore/diagram';
 import { absoluteOf } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
 import { readCanvasBackground, readFontStacks, readPalette, readPaper } from '@/drawing/palette';
 import type { DiagramState } from '@/state/diagram';
 import { useProject } from '@/state/project';

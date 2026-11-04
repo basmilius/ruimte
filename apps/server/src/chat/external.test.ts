@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProjectView } from '@ruimte/contracts';
 import type { SessionFs } from '@adecore/agents/chat';
 import { claudeProjectSlug } from '@adecore/agents/chat';
+import type { ProjectView } from '@ruimte/contracts';
 import { ExternalChatSessions, ownSessionSources, resumesOfViews, type ExternalChatSessionsDeps } from './external.ts';
 
 const folder = '/work/app';

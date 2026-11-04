@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Canvas } from '@/components/docs/guide/Canvas.tsx';
 import { ChatApproval } from '@/components/docs/guide/ChatApproval.tsx';
 import { GuideIndex } from '@/components/docs/guide/GuideIndex.tsx';

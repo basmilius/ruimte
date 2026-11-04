@@ -1,7 +1,7 @@
 import type { GitIdentity, GitIdentityMiss, GitIdentityResult } from '@ruimte/contracts';
+import { realOrSelf } from '../fs/real-path.ts';
 import { nativePath } from './native-path.ts';
 import { READ_ONLY_GIT, runGit } from './run.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 
 // The same cap the contract holds the lists to.
 const MAX_LISTED = 50;

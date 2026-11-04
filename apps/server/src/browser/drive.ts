@@ -1,7 +1,7 @@
 import type { BrowserDriveAction, BrowserInfo, BrowserPageState } from '@ruimte/contracts';
+import { writeShot } from '../shots.ts';
 import type { BrowserManager } from './manager.ts';
 import type { BrowserPages } from './pages.ts';
-import { writeShot } from '../shots.ts';
 
 export interface DriveOutcome {
     /* Where the page stands afterwards, null when whoever holds it answered without a state. */

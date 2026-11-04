@@ -1,13 +1,13 @@
-import type { ActionHandlers } from '@ruimte/actions';
 import { CodedError } from '@adecore/agents';
-import { canvasContextSources, isHiddenCanvasView, type ContextSource } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
+import type { ActionHandlers } from '@ruimte/actions';
+import { canvasContextSources, isHiddenCanvasView, type ContextSource } from '@ruimte/contracts';
+import { ContextRefusal } from '../context/context-store.ts';
+import { readInForm, readReference } from '../context/read-forms.ts';
 import { resolveReference, type Reference } from '../context/references.ts';
 import { arrangedCanvas, canvasHolding, isChatView, notOnView, viewRequired } from '../tools/chat-view.ts';
 import { snoozedAt, type ContextHost } from '../tools/host.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';
-import { ContextRefusal } from '../context/context-store.ts';
-import { readInForm, readReference } from '../context/read-forms.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function contextOf(context: ServerActionContext): ContextHost {

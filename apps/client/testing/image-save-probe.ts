@@ -1,12 +1,12 @@
+import type { RequestType } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import type { RequestType } from '@ruimte/contracts';
-import { ImageSaveHost } from '@/chat/ImageSaveHost';
 import { imageSaveDialog, requestImageSave } from '@/chat/image-save';
-import type { Transport } from '@/transport';
+import { ImageSaveHost } from '@/chat/ImageSaveHost';
 import { initI18n } from '@/i18n';
+import type { Transport } from '@/transport';
 
 async function waitFor(condition: () => boolean, phase: string): Promise<void> {
     const started = performance.now();

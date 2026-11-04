@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { idsInViews, isAgentKind, type ProjectCanvasView, type ProjectContent, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
-import { refuseMissingNodes } from './own-view.ts';
+import { idsInViews, isAgentKind, type ProjectCanvasView, type ProjectContent, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { field, orNote } from './host.ts';
+import { refuseMissingNodes } from './own-view.ts';
 
 // A ceiling, not a budget: it is there to stop an agent in a loop long before a canvas stops drawing.
 export const MAX_CANVAS_NODES = 500;

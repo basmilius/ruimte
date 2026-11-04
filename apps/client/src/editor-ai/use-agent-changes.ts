@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { Editor } from '@adecore/editor';
 import { offerDraft } from '@adecore/agents-react/chat';
 import { useProviders } from '@adecore/agents-react/state';
+import type { Editor } from '@adecore/editor';
 import { createHolder } from '@adecore/editor-react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { chooserChats } from '@/chat/chat-chooser';
 import { focusChat } from '@/plan/plan-actions';
 import { useGitRoot } from '@/shell/panels/use-git-root';
 import { useSidebarSource } from '@/shell/sidebar-source';
-import { useEndpointId } from '@/state/keys';
 import { useGitSignal } from '@/state/git-watch';
+import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';

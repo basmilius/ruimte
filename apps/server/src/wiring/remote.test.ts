@@ -3,12 +3,12 @@ import { mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthStore } from '../auth/auth-store.ts';
+import type { EndpointIdentity } from '../endpoint-id.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { PeerKey } from '../remote/peer-key.ts';
 import { PendingAdmissions } from '../remote/pending-admissions.ts';
-import { wireRemote } from './remote.ts';
-import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { MachineBundle } from './machine.ts';
+import { wireRemote } from './remote.ts';
 
 let home: string;
 let auth: AuthStore;

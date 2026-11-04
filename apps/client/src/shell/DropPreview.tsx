@@ -1,7 +1,7 @@
+import { DropPreview as SharedDropPreview } from '@adecore/ui';
+import clsx from 'clsx';
 import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import clsx from 'clsx';
-import { DropPreview as SharedDropPreview } from '@adecore/ui';
 import { dropPreview, subscribeDropPreview } from '@/shell/drop-preview';
 
 /*

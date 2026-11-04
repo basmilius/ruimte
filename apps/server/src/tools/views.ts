@@ -1,3 +1,4 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import {
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
@@ -9,10 +10,9 @@ import {
     type ProjectView,
     type ProjectViewKind
 } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { isInside } from './project-paths.ts';
 import { field } from './host.ts';
+import { isInside } from './project-paths.ts';
 
 /*
  * A ceiling on the sidebar, not a budget: a project with this many rows is one nobody can read any

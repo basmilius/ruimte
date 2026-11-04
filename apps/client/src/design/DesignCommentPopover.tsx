@@ -1,7 +1,7 @@
+import { Button, Icon, TextArea } from '@adecore/ui';
+import { ListPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ListPlus } from 'lucide-react';
-import { Button, Icon, TextArea } from '@adecore/ui';
 import type { DesignElement } from '@/design/design-protocol';
 
 const WIDTH = 300;

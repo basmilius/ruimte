@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import type {
     CommandLook,
     CommandLookCall,
@@ -11,6 +10,7 @@ import type {
 } from '@adecore/agents-react';
 import { unescapeText } from '@ruimte/actions/text-escapes';
 import type { ContextVerb } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { useSidebarSource, type SidebarSource } from '@/shell/sidebar-source';
 import { memoByIdentity } from '@/state/identity-memo';
 import { currentEndpointId } from '@/state/keys';

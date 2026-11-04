@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
+import { isNotFound, writeAtomic } from '@adecore/agents';
 import {
     KeepAwakeModeSchema,
     ProjectIconChoiceSchema,
@@ -21,10 +22,9 @@ import {
 import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
-import { isNotFound, writeAtomic } from '@adecore/agents';
-import type { SessionSink } from './sessions/manager.ts';
-import { ClientSinks } from './client-sinks.ts';
 import { Binding } from './binding.ts';
+import { ClientSinks } from './client-sinks.ts';
+import type { SessionSink } from './sessions/manager.ts';
 
 /*
  * The version stays at 1 on purpose as fields are added: zod strips what it does not know, so an older

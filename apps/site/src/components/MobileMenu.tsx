@@ -1,11 +1,11 @@
 'use client';
 
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import Link from 'next/link';
+import { IconButton } from '@adecore/ui';
 import clsx from 'clsx';
 import { Menu, X } from 'lucide-react';
-import { IconButton } from '@adecore/ui';
+import Link from 'next/link';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { SidebarPages } from '@/components/docs/Sidebar';
 import { type NavigationSection, SECTIONS } from '@/lib/docs/navigation';
 import { STATION_URL } from '@/lib/release.ts';

@@ -1,8 +1,8 @@
-import type { FileTreeRowDecoration } from '@pierre/trees';
 import { FileTree } from '@adecore/ui';
-import i18next from 'i18next';
-import type { GitFile, GitStatus } from '@ruimte/contracts';
 import { formatNumber } from '@adecore/ui/format';
+import type { FileTreeRowDecoration } from '@pierre/trees';
+import type { GitFile, GitStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { compareRows, isPathBelow, relativeTo, treeGitStatus, type SortRow } from '@/shell/panels/files-tree';
 import type { FileTab } from '@/state/files';
 

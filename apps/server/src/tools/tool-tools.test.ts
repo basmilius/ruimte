@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import type { CanvasHost } from './host.ts';
+import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 interface AgentTool {
     id: string;

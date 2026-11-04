@@ -1,5 +1,6 @@
-import { useTranslation } from 'react-i18next';
+import { Icon } from '@adecore/ui';
 import { Camera } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ERROR_ICON } from '@/browser/error-icons';
 import { Favicon } from '@/browser/Favicon';
 import { classifyLoadError } from '@/browser/load-error';
@@ -7,7 +8,6 @@ import { usePageSnapshots } from '@/browser/page-snapshots';
 import { prettyUrl } from '@/browser/pretty-url';
 import { useBrowserRow } from '@/browser/registry';
 import { endpointKey, useEndpointId } from '@/state/keys';
-import { Icon } from '@adecore/ui';
 
 /*
  * What a page past the render distance shows in its node while it keeps running out of sight: the last

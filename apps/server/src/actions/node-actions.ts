@@ -1,4 +1,5 @@
 import { basename } from 'node:path';
+import { ToolRefusal } from '@adecore/agents/context';
 import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
@@ -24,9 +25,10 @@ import {
     type ProjectNode,
     type ProjectView
 } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
 import { ArtifactError } from '../artifacts/artifact-names.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
 import { isChatView } from '../tools/chat-view.ts';
+import { NEW_NODE, canvasNamed, field, orNote, referencedBy, snoozedAt, type AgentCall } from '../tools/host.ts';
 import { ownEnd } from '../tools/links.ts';
 import { EVERY_KIND_LINE, KIND_FIELDS, REQUIRED_FIELD, kindLine, type KindField } from '../tools/node-kinds.ts';
 import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../tools/nodes.ts';
@@ -34,8 +36,6 @@ import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../tools/own-view.
 import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../tools/placement.ts';
 import { checkCwd, checkPath, isInside } from '../tools/project-paths.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';
-import { NEW_NODE, canvasNamed, field, orNote, referencedBy, snoozedAt, type AgentCall } from '../tools/host.ts';
-import type { IndexedPlace } from '../projects/project-index.ts';
 import { hostService, agentCallOf, type ServerActionCall, type ServerActionContext } from './context.ts';
 import { machineDevice } from './device-actions.ts';
 import { entryOf, routinesOf } from './routine-actions.ts';

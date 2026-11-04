@@ -1,5 +1,5 @@
-import { chatHostOf, isCanvasView, isHiddenChatView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
+import { chatHostOf, isCanvasView, isHiddenChatView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { canvasNamed } from './host.ts';
 
 /*

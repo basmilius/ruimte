@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { generateKeyPairSync, verify } from 'node:crypto';
 import {
     PEER_STATEMENT_LIFETIME_MS,

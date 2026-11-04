@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { FakeWatch } from '@adecore/agents/testing';
 import {
     PROJECT_VERSION,
     ProjectOpenResultSchema,
@@ -11,7 +12,6 @@ import {
     type ProjectContent,
     type ProjectView
 } from '@ruimte/contracts';
-import { FakeWatch } from '@adecore/agents/testing';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';

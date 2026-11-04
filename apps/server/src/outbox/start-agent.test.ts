@@ -1,23 +1,23 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, rm, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
-import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
-import { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { startCwdGuard } from '../tools/project-paths.ts';
-import type { AgentStart, CanvasHost } from '../tools/host.ts';
-import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
-import { ChatManager } from '../chat/chat-manager.ts';
+import { AgentLineageStore, OutboxWorker, type OutboxClock } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli } from '@adecore/agents/testing';
+import { NODE_SIZE, type ChatItem, type ProjectContent } from '@ruimte/contracts';
+import { PendingPromptStore } from '../agents/pending-prompts.ts';
+import { ChatManager } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
+import { releasedProject } from '../tasks/test-daemon.ts';
+import type { AgentStart, CanvasHost } from '../tools/host.ts';
+import { startCwdGuard } from '../tools/project-paths.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { untilChecked } from '../until-test-helpers.ts';
 import { refusingHandlers } from './outbox-test-helpers.ts';
 import { OutboxStore, type OutboxWork, type StartAgentEntry } from './outbox.ts';
-import { releasedProject } from '../tasks/test-daemon.ts';
 import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
 
 /* Nothing here fails, so no retry is ever timed; the clock only has to say one moment. */

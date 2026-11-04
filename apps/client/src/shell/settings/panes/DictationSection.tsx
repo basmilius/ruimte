@@ -1,10 +1,10 @@
+import { Switch, Button, ErrorBoundary, FormError, messageOf } from '@adecore/ui';
+import { formatBytes, formatNumber } from '@adecore/ui/format';
+import { SettingsRow } from '@adecore/ui/settings';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
 import { cancelDictation, observeSpeech, useDictation } from '@/dictation/controller';
-import { SettingsRow } from '@adecore/ui/settings';
-import { Switch, Button, ErrorBoundary, FormError, messageOf } from '@adecore/ui';
-import { formatBytes, formatNumber } from '@adecore/ui/format';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 export function DictationSection() {

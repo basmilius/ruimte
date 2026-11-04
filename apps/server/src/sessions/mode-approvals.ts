@@ -1,7 +1,7 @@
 import { join } from 'node:path';
+import { RecordDirectory } from '@adecore/agents';
 import { RuntimeModeSchema, type AgentKind, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { RecordDirectory } from '@adecore/agents';
 import { launchedMode } from '../providers/launch.ts';
 import { approvalHash, terminalsOf } from './command-approvals.ts';
 

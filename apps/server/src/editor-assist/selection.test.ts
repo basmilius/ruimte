@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { ProviderRegistry } from '../providers/registry.ts';
 import prices from '@adecore/agents/usage/prices-snapshot.json' with { type: 'json' };
 import { cheapestEditorModel } from '@ruimte/contracts';
+import { ProviderRegistry } from '../providers/registry.ts';
 import { selectAssistAgent, type AssistProviders } from './selection.ts';
 
 function providers(...installed: string[]): AssistProviders {

@@ -1,7 +1,7 @@
-import { isCanvasView } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
-import { checkCwd } from './project-paths.ts';
+import { isCanvasView } from '@ruimte/contracts';
 import { field, type CanvasHost } from './host.ts';
+import { checkCwd } from './project-paths.ts';
 
 interface RemoteTarget {
     machineId: string;

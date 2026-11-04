@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react';
 import type { Editor, EditorPosition } from '@adecore/editor';
+import { useSyncExternalStore } from 'react';
 
 const START: EditorPosition = { line: 0, character: 0 };
 

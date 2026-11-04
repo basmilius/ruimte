@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { DrawingDocumentSchema, type DrawingElement } from './drawing-host.ts';
-import { ProjectDocumentSchema } from './project.ts';
-import { duplicateIdIn } from './project-migrate.ts';
 import { REQUEST_SCHEMAS } from './index.ts';
+import { duplicateIdIn } from './project-migrate.ts';
+import { ProjectDocumentSchema } from './project.ts';
 
 const rect: DrawingElement = { kind: 'rect', id: 'el-1', x: 0, y: 0, w: 160, h: 96, stroke: 'ink', strokeWidth: 2, seed: 7 };
 

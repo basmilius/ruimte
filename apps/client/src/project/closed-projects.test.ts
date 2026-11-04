@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
-import { fakeStorage } from './fixtures';
 import { forgetClosedProject, rememberClosedProject, withClientClosedProject } from './closed-projects';
+import { fakeStorage } from './fixtures';
 
 const summary: ProjectSummary = {
     projectId: 'project',

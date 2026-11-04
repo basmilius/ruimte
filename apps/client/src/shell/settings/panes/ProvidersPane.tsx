@@ -1,16 +1,16 @@
-import { useTranslation } from 'react-i18next';
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { ProvidersPane as Pane } from '@adecore/agents-react/providers';
 import { useProvidersStore } from '@adecore/agents-react/state';
+import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { AcpServerSection, AcpServerStepBody } from '@/shell/settings/providers/AcpServerSection';
-import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
-import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection';
 import { ClaudeApiSection, NanoGptSection } from '@/shell/settings/providers/ApiKeySection';
+import { CliVersionSection } from '@/shell/settings/providers/CliVersionSection';
 import { RegistryCatalogPage } from '@/shell/settings/providers/RegistryCatalogPage';
+import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
 import { useCliVersions, useRegistryCatalog } from '@/shell/settings/providers/use-provider-installs';
-import { useMachineAnswers } from '@/transport/features';
 import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
+import { useMachineAnswers } from '@/transport/features';
 import { useDetectProviders } from '@/transport/provider-detection';
 
 /* The registry is read only once a person opens the page to add a provider. */

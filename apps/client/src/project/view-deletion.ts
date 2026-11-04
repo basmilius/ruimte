@@ -1,9 +1,9 @@
+import { useChats } from '@adecore/agents-react/state';
 import { isFileView, resolveStoredPath, sessionNodesOfView, type ProjectNode, type ProjectView, nodeChats } from '@ruimte/contracts';
 import { agentsEndedBy } from '@/agents/end-children';
 import { callerName } from '@/project/show-view';
-import { nodeWorking } from '@/state/agent-work';
-import { useChats } from '@adecore/agents-react/state';
 import { nodeRefsOf, nodeRefsOfView, nodesOfView } from '@/project/view-nodes';
+import { nodeWorking } from '@/state/agent-work';
 import { currentEndpointId } from '@/state/keys';
 import { endpointOfNodeId } from '@/state/node-endpoint';
 import { useProject } from '@/state/project';

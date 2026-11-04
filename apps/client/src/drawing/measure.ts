@@ -1,5 +1,5 @@
-import type { DrawingFont } from '@ruimte/contracts';
 import { LINE_HEIGHT, NOTE_PADDING, fontOf, linesOf, type MeasureLine, type WrittenElement } from '@adecore/drawing';
+import type { DrawingFont } from '@ruimte/contracts';
 import { readFontStacks } from '@/drawing/palette';
 
 export function fontOfElement(element: WrittenElement, fonts: Record<DrawingFont, string>): string {

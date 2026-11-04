@@ -1,8 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { LucideIcon } from 'lucide-react';
-import { CircleCheck, CircleDashed, CircleX, ExternalLink, Eye, EyeOff, GitPullRequest, MessagesSquare, RefreshCw } from 'lucide-react';
-import type { ChangeSplit, GitPrCheck, GitPrThread, GitPullRequest as PullRequest } from '@ruimte/contracts';
+import { AgentIcon } from '@adecore/agents-react/providers';
 import {
     Button,
     ButtonGroup,
@@ -20,9 +16,16 @@ import {
     Tooltip,
     messageOf
 } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import type { ChangeSplit, GitPrCheck, GitPrThread, GitPullRequest as PullRequest } from '@ruimte/contracts';
+import type { LucideIcon } from 'lucide-react';
+import { CircleCheck, CircleDashed, CircleX, ExternalLink, Eye, EyeOff, GitPullRequest, MessagesSquare, RefreshCw } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChooserSections } from '@/chat/chat-chooser';
 import { sendToChat } from '@/chat/selection-to-chat';
 import { openInSystemBrowser } from '@/desktop/bridge';
+import { splitRows } from '@/shell/change-size';
 import { groupChecks, mergeStateKey, threadBlock, visibleThreads } from '@/shell/pr-view';
 import { stopPrWatch } from '@/shell/pr-watch-actions';
 import { endpointKey, isOfEndpoint, useEndpointId } from '@/state/keys';
@@ -31,9 +34,6 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { useMachineAnswers } from '@/transport/features';
-import { AgentIcon } from '@adecore/agents-react/providers';
-import { formatNumber } from '@adecore/ui/format';
-import { splitRows } from '@/shell/change-size';
 
 /*
  * A pull request read-only: its checks, how it stands to merge and its review threads. A thread can be

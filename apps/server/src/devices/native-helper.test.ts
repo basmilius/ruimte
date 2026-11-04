@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { concatBytes } from './device-test-helpers.ts';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage } from './helper-protocol.ts';
 import { runDeviceHelper, type DeviceNativeAddon } from './native-helper.ts';
-import { concatBytes } from './device-test-helpers.ts';
 
 describe('runDeviceHelper', () => {
     test('streams MJPEG frames and translates protocol input into native HID calls', async () => {

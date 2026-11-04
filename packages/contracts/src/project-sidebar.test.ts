@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { projectSidebarViews, ProjectSidebarResultSchema, ProjectSidebarViewSchema } from './project-sidebar';
 import { isOpenableView, isUnlistedView, type ProjectView } from './project';
+import { projectSidebarViews, ProjectSidebarResultSchema, ProjectSidebarViewSchema } from './project-sidebar';
 
 test('the sidebar projection keeps navigation and session identity but excludes canvas content', () => {
     const views: ProjectView[] = [

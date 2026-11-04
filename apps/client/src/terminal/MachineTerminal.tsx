@@ -1,6 +1,6 @@
-import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { TerminalView, type TerminalViewProps, type TerminalLinkBounds, type TerminalViewHandle } from '@adecore/terminal';
 import { Tooltip } from '@adecore/ui';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { openFileLink } from '@/shell/panels/file-links';

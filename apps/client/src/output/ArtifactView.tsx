@@ -1,6 +1,31 @@
-import { useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
+import { AgentModelLabel } from '@adecore/agents-react/providers';
+import { useChats } from '@adecore/agents-react/state';
+import { patchOf } from '@adecore/merge';
+import {
+    Button,
+    EmptyState,
+    ErrorBoundary,
+    Icon,
+    IconButton,
+    LazyBoundary,
+    Menu,
+    Pill,
+    Popover,
+    ScrollArea,
+    SectionLabel,
+    Tooltip,
+    lazyNamed,
+    messageOf
+} from '@adecore/ui';
+import { formatBytes, formatDayClock } from '@adecore/ui/format';
+import {
+    BYTES_READ_MAX_BYTES,
+    type Artifact,
+    type ArtifactFile,
+    type ArtifactGetResult,
+    type ArtifactProvenance,
+    type ArtifactVersion
+} from '@ruimte/contracts';
 import {
     ArrowRight,
     ChevronDown,
@@ -19,47 +44,22 @@ import {
     WifiOff,
     type LucideIcon
 } from 'lucide-react';
-import { patchOf } from '@adecore/merge';
-import { AgentModelLabel } from '@adecore/agents-react/providers';
-import { useChats } from '@adecore/agents-react/state';
-import {
-    BYTES_READ_MAX_BYTES,
-    type Artifact,
-    type ArtifactFile,
-    type ArtifactGetResult,
-    type ArtifactProvenance,
-    type ArtifactVersion
-} from '@ruimte/contracts';
-import {
-    Button,
-    EmptyState,
-    ErrorBoundary,
-    Icon,
-    IconButton,
-    LazyBoundary,
-    Menu,
-    Pill,
-    Popover,
-    ScrollArea,
-    SectionLabel,
-    Tooltip,
-    lazyNamed,
-    messageOf
-} from '@adecore/ui';
-import type { CopyToProjectRequest } from '@/output/CopyToProjectDialog';
+import { useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { pinArtifact, useCanRemove, useCopyToThisMachine, usePinCanvases } from '@/output/artifact-actions';
-import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
-import { formatBytes, formatDayClock } from '@adecore/ui/format';
-import { comparable } from '@/output/artifact-list';
 import { canDownload, downloadArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
+import { comparable } from '@/output/artifact-list';
 import { ArtifactFileBody } from '@/output/ArtifactFileBody';
+import type { CopyToProjectRequest } from '@/output/CopyToProjectDialog';
 import { fileViewOf, firstShownFile } from '@/output/file-view';
 import { showChat, useChatName } from '@/output/kinds';
 import { selectArtifactVersion, useArtifactSelection } from '@/output/open';
+import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
 import { useArtifact } from '@/output/use-artifact';
 import { showRoutine } from '@/routines/stage';
-import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
+import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { artifactTabKey } from '@/state/files';
 import { endpointKey, useEndpointId } from '@/state/keys';

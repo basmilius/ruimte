@@ -3,9 +3,9 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import type { CanvasHost } from '../tools/host.ts';
-import { ProjectStore } from '../projects/project-store.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { failTasksOfClosedProject } from './closed-project.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 

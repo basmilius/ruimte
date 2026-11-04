@@ -1,6 +1,5 @@
-import { join } from 'node:path';
 import type { Server } from 'bun';
-import { errorText } from '../error-text.ts';
+import { join } from 'node:path';
 import {
     MACHINE_HEALTH_PATH,
     MACHINE_NOTIFY_PATH,
@@ -24,21 +23,22 @@ import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, pr
 import { handleLocalProofRequest } from '../auth/local-proof.ts';
 import { MachineAccountError, signForAccount, signLinkRequest } from '../auth/registration.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../backpressure.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from '../chat/attachment-route.ts';
 import { socketChannel } from '../connection.ts';
 import { hookContext } from '../context/context-note.ts';
-import type { ExtensionHost } from '../extensions/extension-host.ts';
 import type { ClientAccess } from '../dispatcher.ts';
+import { errorText } from '../error-text.ts';
+import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from '../fs/file-route.ts';
 import { PAIRING_REMOVED } from '../handlers/auth.ts';
 import { answerRoute, type Route } from '../http-routes.ts';
 import { handleMcpRequest, MCP_PATH, MCP_REQUEST_TIMEOUT_S } from '../mcp/mcp-route.ts';
 import { handleProjectRequest, PROJECTS_PATH } from '../projects/icon-route.ts';
-import { handleMachineNotify } from '../push/notify-route.ts';
 import { noteOnLine } from '../providers/launch.ts';
+import { handleMachineNotify } from '../push/notify-route.ts';
 import { shotFolders } from '../shots.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from '../streams/http-stream.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { BUILD, VERSION } from '../version.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
@@ -47,9 +47,9 @@ import type { DevicesBundle } from './devices.ts';
 import type { MachineBundle } from './machine.ts';
 import type { NetworkBundle } from './network.ts';
 import type { PowerBundle } from './power.ts';
+import type { ProcessesBundle } from './processes.ts';
 import type { ProjectsBundle } from './projects.ts';
 import type { DaemonRuntime } from './runtime.ts';
-import type { ProcessesBundle } from './processes.ts';
 import type { VoiceBundle } from './voice.ts';
 
 // What `ruimte login` has the machine sign; local secret only, like the work.

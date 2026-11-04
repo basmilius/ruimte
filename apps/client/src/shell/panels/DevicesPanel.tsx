@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ContextMenu, ScrollArea } from '@adecore/ui';
+import type { DeviceInfo, DeviceReference } from '@ruimte/contracts';
 import clsx from 'clsx';
 import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
 import {
     ArrowLeft,
     ChevronRight,
@@ -15,12 +15,14 @@ import {
     RefreshCw,
     Smartphone
 } from 'lucide-react';
-import type { DeviceInfo, DeviceReference } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
 import { AndroidMark } from '@/devices/AndroidMark';
 import { controlDevice } from '@/devices/control';
-import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
 import { deviceStateText, unavailableNotes } from '@/devices/device-text';
+import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
+import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
 import { PanelHeaderActions, PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
 import { canvasInReach } from '@/state/canvas-target';
 import { useDocument } from '@/state/document';
@@ -29,8 +31,6 @@ import { useEndpointId } from '@/state/keys';
 import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
-import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { ButtonGroup, Icon, IconButton, ListRow, PanelEmpty, Menu, ContextMenu, ScrollArea } from '@adecore/ui';
 import { SignInMark } from '@/ui/SignInMark';
 
 function referenceOf({ platform, kind, name, runtime }: DeviceInfo): DeviceReference {

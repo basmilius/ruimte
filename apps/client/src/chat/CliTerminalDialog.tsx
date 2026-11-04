@@ -1,8 +1,8 @@
-import { Fragment, useState, type ReactNode } from 'react';
-import { RotateCw } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { CliMark } from '@adecore/agents-react/providers';
 import { Button, CloseButton, Dialog, Icon } from '@adecore/ui';
+import { RotateCw } from 'lucide-react';
+import { Fragment, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CliSession } from '@/chat/cli-session';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { useSettings } from '@/state/settings';

@@ -8,8 +8,8 @@ import { serviceDefinition as definitionFor, type ServiceManager } from '@adecor
 import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import type { BackgroundServiceState, MachineMode, MachineStopPreview, ServiceSupport } from '@ruimte/desktop-bridge';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceLogFile } from '@ruimte/service/host';
-import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '../daemon-proof';
 import { openDaemonLog, type DaemonLog } from '../daemon-log';
+import { askDaemonWork, proveDaemon, stopDaemonGently, type DaemonPort } from '../daemon-proof';
 import { askLoginShellPath, fileLoginPathCache, loadLoginPath } from '../login-path';
 import { removeOwnDefinition, secretFor, tildeHome } from '../machine-mode';
 import { createServiceController, type ServiceController } from '../service/controller';

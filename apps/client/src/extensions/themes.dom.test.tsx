@@ -1,7 +1,4 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
-import { useSettings } from '@/state/settings';
-import { mount } from '../../testing/dom';
 import { defineTheme } from '@/extensions/internal';
 import { contribute, type BuiltInThemeContribution } from '@/extensions/registry';
 import {
@@ -12,6 +9,9 @@ import {
     refreshExtensionTheme,
     type ThemeChoice
 } from '@/extensions/themes';
+import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
+import { useSettings } from '@/state/settings';
+import { mount } from '../../testing/dom';
 
 const CHOICE: ThemeChoice = {
     key: 'acme.midnight/themes/midnight.json',

@@ -1,15 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
-import { ArrowUp, FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
-import type { GitCapabilitiesResult } from '@ruimte/contracts';
 import { Button, Checkbox, Icon, IconButton, Menu, ScrollArea, SplitButton, TextArea, Tooltip, KEY_SHORTCUTS, matchesShortcut, messageOf } from '@adecore/ui';
+import type { GitCapabilitiesResult } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { ArrowUp, FolderGit2, LoaderCircle, Sparkles } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cancelGitRunAction, perform } from '@/actions/client-actions';
+import { isApplePlatform } from '@/desktop/bridge';
 import { amendTarget, commitTargets, nextActionId, splitMessage, type CommitCandidate } from '@/shell/panels/git-actions';
-import { CommitSuggestion } from './commit-suggestion';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
-import { isApplePlatform } from '@/desktop/bridge';
+import { CommitSuggestion } from './commit-suggestion';
 
 interface CommitBoxProps {
     /* Where the message being typed is kept: the project and not a repository, since one message

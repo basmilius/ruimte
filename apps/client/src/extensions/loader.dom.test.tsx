@@ -2,9 +2,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'b
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { ComponentType } from 'react';
 import type { ExtensionInfo, ExtensionManifest } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import type { ComponentType } from 'react';
 import { followDevLinks, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
 import { startExtensions } from '@/extensions/watch';

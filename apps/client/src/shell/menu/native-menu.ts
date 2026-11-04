@@ -1,13 +1,17 @@
+import { useProvidersStore } from '@adecore/agents-react/state';
 import i18next from 'i18next';
 import { useEffect } from 'react';
+import { usePromptStacks } from '@/canvas/prompt-stack';
 import { desktop } from '@/desktop/bridge';
+import { subscribeFocusedLanguages } from '@/language/focused-language';
 import { useLaunches } from '@/launches/state';
 import { useNewChat } from '@/project/new-chat';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
+import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
+import { subscribeCameraHistories } from '@/state/camera-history';
 import { subscribeCanvases } from '@/state/canvas';
-import { useProvidersStore } from '@adecore/agents-react/state';
 import { subscribeChatThreads } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { usePrRepos } from '@/state/pr-repos';
@@ -16,13 +20,9 @@ import { useProposals } from '@/state/proposals';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
+import { useSnoozes } from '@/state/snooze';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
-import { usePromptStacks } from '@/canvas/prompt-stack';
-import { useSnoozes } from '@/state/snooze';
-import { subscribeCameraHistories } from '@/state/camera-history';
-import { subscribeFocusedEditors } from '@/shell/panels/focused-editor';
-import { subscribeFocusedLanguages } from '@/language/focused-language';
 
 /* A chat streams word by word and a camera moves every frame; the menu only needs where things settled. */
 const SETTLE_MS = 100;

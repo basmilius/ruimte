@@ -1,5 +1,4 @@
-import { useExtensionReferables } from '@/extensions/chat-references';
-import { useChatDrawers } from '@/extensions/drawn-chats';
+import { REFERENCE_ICONS, type Referable, type ReferableKind, type Referables } from '@adecore/agents-react/chat';
 import {
     isCanvasView,
     isDividerView,
@@ -11,8 +10,9 @@ import {
     type ProjectText,
     type ProjectView
 } from '@ruimte/contracts';
-import { REFERENCE_ICONS, type Referable, type ReferableKind, type Referables } from '@adecore/agents-react/chat';
 import { useReachedProjects, useReachedReferables } from '@/chat/reached-referables';
+import { useExtensionReferables } from '@/extensions/chat-references';
+import { useChatDrawers } from '@/extensions/drawn-chats';
 import { openProject } from '@/project/open';
 import { useViewNodes, type NodesOfView } from '@/project/view-nodes';
 import { revealNode, showView } from '@/project/views';

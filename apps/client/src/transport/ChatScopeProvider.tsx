@@ -1,5 +1,5 @@
-import type { ReactElement, ReactNode } from 'react';
 import { ChatScopeContext } from '@adecore/agents-react';
+import type { ReactElement, ReactNode } from 'react';
 import { useEndpointId } from '@/state/keys';
 import { chatScopeOf } from '@/transport/chat-scope';
 

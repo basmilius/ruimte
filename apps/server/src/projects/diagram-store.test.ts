@@ -3,14 +3,14 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
-import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
-import { ProjectStore } from './project-store.ts';
-import { serializeDiagram } from './project-files.ts';
 import { projectLinks } from './project-file-test-helpers.ts';
+import { serializeDiagram } from './project-files.ts';
+import { ProjectStore } from './project-store.ts';
 
 let root: string;
 let home: string;

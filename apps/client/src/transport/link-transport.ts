@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import {
     EVENT_SCHEMAS,
     REQUEST_SCHEMAS,
@@ -13,12 +12,13 @@ import {
     type RequestMap,
     type RequestType
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { LinkProblem } from '@/telemetry/events';
 import type { LinkOutcome, ReconnectReason } from '@/telemetry/metrics';
 import type { BytesPiece } from './piece';
+import type { PooledTransport } from './pool';
 import { protocolGate } from './protocol';
 import { messageOf } from './signaling';
-import type { PooledTransport } from './pool';
 import { TransportError, type ConnectionState, type LiveFrameHandler, type SignalRoute, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;

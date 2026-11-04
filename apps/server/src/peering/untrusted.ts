@@ -2,8 +2,8 @@ import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import type { AgentKind } from '@ruimte/contracts';
-import { isInside } from '../tools/project-paths.ts';
 import { providerFor } from '../providers/registry.ts';
+import { isInside } from '../tools/project-paths.ts';
 
 interface UntrustedFoldersDeps {
     lineage: Pick<AgentLineageStore, 'peerOf' | 'startedBy' | 'forkedFrom'>;

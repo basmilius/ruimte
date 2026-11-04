@@ -2,19 +2,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AuthStore } from '../auth/auth-store.ts';
-import { admitClient } from '../auth/test-admit.ts';
-import { Handshake } from '../auth/handshake.ts';
-import { generateKeyPair, signMessage } from '../auth/keys.ts';
-import { HIGH_WATER_MARK } from '../backpressure.ts';
-import { connectionOpener } from '../connection.ts';
-import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
-import { authenticateChannel } from './channel-auth.ts';
-import { AUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
-import { DirectClient, type DirectCredential } from './direct-client.ts';
-import { DirectPeers } from './peers.ts';
-import { LanDoor } from './lan-door.ts';
-import { SignalGate } from './signal-gate.ts';
 import {
     lanDoorMessage,
     lanDoorUrl,
@@ -24,9 +11,22 @@ import {
     type PeerStatement,
     type SignalEnvelope
 } from '@ruimte/pulsar';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { AuthStore } from '../auth/auth-store.ts';
+import { Handshake } from '../auth/handshake.ts';
+import { generateKeyPair, signMessage } from '../auth/keys.ts';
+import { admitClient } from '../auth/test-admit.ts';
+import { HIGH_WATER_MARK } from '../backpressure.ts';
+import { connectionOpener } from '../connection.ts';
+import { Dispatcher, type ClientAccess } from '../dispatcher.ts';
+import { authenticateChannel } from './channel-auth.ts';
+import { AUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
+import { DirectClient, type DirectCredential } from './direct-client.ts';
+import { LanDoor } from './lan-door.ts';
+import { DirectPeers } from './peers.ts';
+import { SignalGate } from './signal-gate.ts';
 import { StatementGate } from './statement.ts';
 import { servicesWith, signedSignal } from './test-helpers.ts';
-import { verifySignature } from '@ruimte/pulsar/verify-node';
 
 /*
  * Both ends of a direct connection in one process, over real ICE, DTLS and SCTP on loopback: the

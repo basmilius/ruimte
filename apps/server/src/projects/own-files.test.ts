@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { renameNoReplace } from '../fs/no-replace-rename.ts';
-import { copyWithoutReplacing, moveOwnFiles, ownFolderOf, type OwnFilesIO } from './own-files.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { copyWithoutReplacing, moveOwnFiles, ownFolderOf, type OwnFilesIO } from './own-files.ts';
 
 let root: string;
 let from: string;

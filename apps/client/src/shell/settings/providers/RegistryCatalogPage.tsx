@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { PackagePlus, RefreshCw, Search } from 'lucide-react';
-import { registryAgentMatches, type AgentKind, type RegistryAgent } from '@ruimte/contracts';
 import { CliMark } from '@adecore/agents-react/providers';
 import { Button, EmptyState, Icon, IconButton, Input, Skeleton, Spinner } from '@adecore/ui';
 import { formatMoment } from '@adecore/ui/format';
 import { DetailHeader, SettingsRow } from '@adecore/ui/settings';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { registryAgentMatches, type AgentKind, type RegistryAgent } from '@ruimte/contracts';
+import { PackagePlus, RefreshCw, Search } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { RegistryCatalogState } from '@/shell/settings/providers/use-provider-installs';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 function AgentControl({ agent, registry, onOpen }: { agent: RegistryAgent; registry: RegistryCatalogState; onOpen(kind: AgentKind): void }) {
     const { t } = useTranslation('settings');

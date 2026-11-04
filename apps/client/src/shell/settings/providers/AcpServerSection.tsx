@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
-import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
 import { Button, Spinner } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
+import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import type { AcpServer } from '@/shell/settings/providers/use-acp-server';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 function useServerWords(acp: AcpServer, server: AgentServerStatus) {
     const { t } = useTranslation('settings');

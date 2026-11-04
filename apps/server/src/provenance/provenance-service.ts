@@ -13,10 +13,10 @@ import {
     type ProvenanceReviewState,
     type ProvenanceRun
 } from '@ruimte/contracts';
-import { isInside } from '../tools/project-paths.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { filesBetweenCommits, linesAtHead, linesInTree, MAX_TEXT_BYTES, repositoryOf } from './file-versions.ts';
 import { hashLines, sameLines } from './line-hash.ts';
 import { ProvenanceStore } from './provenance-store.ts';

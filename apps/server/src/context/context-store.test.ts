@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { compileUi } from '@adecore/intelligent-ui';
 import type { ChatItem, ChatWorkflowAgent, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
-import type { CanvasHost } from '../tools/host.ts';
+import { ArtifactError } from '../artifacts/artifact-names.ts';
+import { artifactReport } from '../artifacts/artifact-report.ts';
+import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import { catalog } from '../mcp/catalog.ts';
 import { callTool } from '../mcp/mcp-route.ts';
-import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import type { ChatUsageInfo } from './chat-usage.ts';
-import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
-import { artifactReport } from '../artifacts/artifact-report.ts';
-import { ArtifactError } from '../artifacts/artifact-names.ts';
+import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 interface ToolAnswer {
     refused: boolean;

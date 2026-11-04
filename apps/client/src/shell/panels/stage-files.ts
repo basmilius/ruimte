@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
 import { perform } from '@/actions/client-actions';
 import { useToasts } from '@/state/toasts';
 

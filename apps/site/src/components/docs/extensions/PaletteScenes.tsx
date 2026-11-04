@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { Blocks, Search } from 'lucide-react';
 import { Icon, Kbd } from '@adecore/ui';
+import { Blocks, Search } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Scaled } from '../../film/Stage.tsx';
 import { SceneFrame } from './parts.tsx';
 

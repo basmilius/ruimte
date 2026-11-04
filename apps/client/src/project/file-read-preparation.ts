@@ -1,7 +1,7 @@
 import { isFileView, resolveStoredPath, type ProjectView, type SplitLayout } from '@ruimte/contracts';
 import { shownViewIdsIn } from '@/shell/split';
-import { endpointKey } from '@/state/keys';
 import type { Tab } from '@/state/files';
+import { endpointKey } from '@/state/keys';
 import { dirnameOf } from './file-path';
 
 const NO_TABS: readonly Tab[] = [];

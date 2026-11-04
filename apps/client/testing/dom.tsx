@@ -1,16 +1,16 @@
 import { expect } from 'bun:test';
-import { act, type ReactNode } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import i18next from 'i18next';
 import { ChatHostProvider } from '@adecore/agents-react';
 import { UIProvider } from '@adecore/ui';
+import i18next from 'i18next';
+import { act, type ReactNode } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { App } from '@/App';
 import { CHAT_HOST, configureChat } from '@/chat/host';
 import { startFileReadPreparation } from '@/project/file-read-preparation';
-import { defaultProjectStore } from '@/state/project';
 import { defaultDocumentStore } from '@/state/document';
-import { folderWatches } from '@/state/fs-watch';
 import { useFiles } from '@/state/files';
+import { folderWatches } from '@/state/fs-watch';
+import { defaultProjectStore } from '@/state/project';
 import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
 import { closedAfterTest, currentTest, waitTurn } from './test-scope';
 

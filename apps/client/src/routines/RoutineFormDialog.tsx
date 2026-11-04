@@ -1,6 +1,6 @@
+import { Dialog, ScrollArea } from '@adecore/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, ScrollArea } from '@adecore/ui';
 import { closeRoutineForm, useRoutineForm } from '@/routines/form-state';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutineForm } from '@/routines/RoutineForm';

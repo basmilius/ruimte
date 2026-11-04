@@ -1,6 +1,6 @@
-import { renderDrawing } from '../render/scenes.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
+import { renderDrawing } from '../render/scenes.ts';
 import { viewFileHandlers } from './view-files.ts';
 
 export function registerDrawingHandlers(dispatcher: Dispatcher, store: DrawingStore): void {

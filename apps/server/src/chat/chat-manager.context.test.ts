@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ContextSource } from '@ruimte/contracts';
-import { chatPrompt, toolsNote } from '../context/context-note.ts';
-import { showNotices, NoticeNotes, unshownNotes, NoticeStore, type Notice } from '@adecore/agents/coordination';
-import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
 import { VisualStore } from '@adecore/agents/chat';
-import { referenceNote, type Reference } from '../context/references.ts';
+import { showNotices, NoticeNotes, unshownNotes, NoticeStore, type Notice } from '@adecore/agents/coordination';
+import type { ContextSource } from '@ruimte/contracts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import { chatPrompt, toolsNote } from '../context/context-note.ts';
+import { deliverNotice, MESSAGE_WORDS } from '../context/notices.ts';
+import { referenceNote, type Reference } from '../context/references.ts';
+import { makeChatFixture, retire, LINKED } from './chat-manager.fixture.test.ts';
 import { BRIEF_TITLE } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
-import { makeChatFixture, retire, LINKED } from './chat-manager.fixture.test.ts';
 
 type ChatFixture = Awaited<ReturnType<typeof makeChatFixture>>;
 let home: ChatFixture['home'];

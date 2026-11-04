@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { RuntimeModeSchema, isCanvasView, type PeerLink, type ProjectContent, type RuntimeMode } from '@ruimte/contracts';
 import { RecordDirectory } from '@adecore/agents';
+import { RuntimeModeSchema, isCanvasView, type PeerLink, type ProjectContent, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';

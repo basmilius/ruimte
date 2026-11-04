@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { NoticeStore, type Notice } from '@adecore/agents/coordination';
 import type { AgentInfo } from '@ruimte/contracts';
-import { deliverNotice, messageLabel, messageText, NO_REPLY_NOTICE, noticeNote, renderNotice, type NoticeTargets } from './notices.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { deliverNotice, messageLabel, messageText, NO_REPLY_NOTICE, noticeNote, renderNotice, type NoticeTargets } from './notices.ts';
 
 let home: string;
 let clock: number;

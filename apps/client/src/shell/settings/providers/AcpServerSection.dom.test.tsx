@@ -3,9 +3,9 @@ import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
 import { AcpServerSection, AcpServerStepBody } from '@/shell/settings/providers/AcpServerSection';
 import { useAcpServer } from '@/shell/settings/providers/use-acp-server';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { FakeMachine, connectFakeMachine } from '../../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { buttonWithText } from '../../../../testing/dom-helpers';
+import { FakeMachine, connectFakeMachine } from '../../../../testing/fake-machine';
 
 const ANTIGRAVITY = { kind: 'antigravity', name: 'Antigravity', installed: false, version: null } as unknown as ProviderInfo;
 const MISSING: AgentServerStatus = { provider: 'antigravity', state: 'missing', version: '1.4.1', installed: null };

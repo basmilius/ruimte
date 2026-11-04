@@ -36,8 +36,8 @@ import { DrawingStore } from '../projects/drawing-store.ts';
 import { documentOnDisk, projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import type { AgentStart, CanvasHost } from './host.ts';
+import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 /* What a test turns between the fakes and the machine, reset before every test. */
 export interface Knobs {

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { REQUEST_SCHEMAS, type RequestType, type VoicePreferences } from '@ruimte/contracts';
+import { act } from 'react';
 import { useSettings } from '@/state/settings';
 import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
+import { installDesktop, removeDesktop } from '../../../../testing/dom-helpers';
 import { connectFakeMachine, FakeMachine } from '../../../../testing/fake-machine';
 import { machineBridge } from '../../../../testing/machine-bridge';
-import { installDesktop, removeDesktop } from '../../../../testing/dom-helpers';
 import { VoicePane } from './VoicePane';
 
 let page: Mounted;

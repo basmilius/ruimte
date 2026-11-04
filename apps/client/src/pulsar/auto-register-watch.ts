@@ -1,11 +1,11 @@
+import { messageOf } from '@adecore/ui';
 import i18next from 'i18next';
 import { create } from 'zustand';
 import { useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { pool, transportFor } from '@/transport';
-import { messageOf } from '@adecore/ui';
-import { accountRefusalText } from './account-refusal';
 import { usePulsarAccount, withAccessToken } from './account';
+import { accountRefusalText } from './account-refusal';
 import { AutoRegistrar, announcedRecordOf } from './auto-register';
 import { refreshAccountMachines, usePulsarMachines } from './machines';
 

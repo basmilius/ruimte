@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ModelPicker } from '@adecore/agents-react/chat/ui';
 import { useProviders } from '@adecore/agents-react/state';
 import { Dialog, Field, FormError, Input } from '@adecore/ui';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { submitOnEnter } from '@/shell/submit-on-enter';
 import type { WorktreeStart } from '@/shell/use-worktree-start';
 

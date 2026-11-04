@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
-import { act } from 'react';
 import { PROTOCOL_VERSION, REQUEST_SCHEMAS } from '@ruimte/contracts';
+import { act } from 'react';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';

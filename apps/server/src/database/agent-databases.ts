@@ -1,17 +1,17 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
 import { relative } from 'node:path';
-import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
-import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
 import { CodedError } from '@adecore/agents';
 import { field } from '@adecore/agents/context';
+import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
+import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
 import { climbsOut } from '../fs/path-segment.ts';
+import { realOrSelf } from '../fs/real-path.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import type { DatabaseAccessStore } from './agent-access.ts';
 import type { DatabasePasswords } from './agent-passwords.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';
-import { realOrSelf } from '../fs/real-path.ts';
 
 /* How long one tool may keep its session; past it the call is cancelled and its session closed. */
 export const AGENT_DATABASE_LIMIT_MS = 120_000;

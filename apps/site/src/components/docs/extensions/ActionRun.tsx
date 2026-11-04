@@ -1,9 +1,9 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
 import { Spinner } from '@adecore/ui';
-import { CanvasEdge, CanvasNode } from '../../app/canvas.tsx';
+import { Sparkles } from 'lucide-react';
 import { TerminalBody } from '../../app/bodies.tsx';
+import { CanvasEdge, CanvasNode } from '../../app/canvas.tsx';
 import { WindowBar } from '../../app/chrome.tsx';
 import { Button } from '../../app/primitives.tsx';
 import { useTimeline } from '../../film/playback.ts';

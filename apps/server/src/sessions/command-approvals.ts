@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { RecordDirectory } from '@adecore/agents';
 import { isCanvasView, type ProjectView, type StandaloneNode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { RecordDirectory } from '@adecore/agents';
 
 const ApprovalSchema = z.object({
     hash: z.string().min(1),

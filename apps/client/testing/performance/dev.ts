@@ -1,7 +1,7 @@
+import { realpathSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { realpathSync } from 'node:fs';
 import { createServer, type Plugin } from 'vite';
 import { measureDialogs } from './bench';
 

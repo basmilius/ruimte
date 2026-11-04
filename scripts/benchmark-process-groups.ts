@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import * as after from '../apps/server/src/processes/tree.ts';
 import { measurePairs } from '../apps/client/testing/performance/paired';
+import * as after from '../apps/server/src/processes/tree.ts';
 import { processGroupCases } from './process-group-performance-cases';
 
 const baselineRoot = process.argv[2];

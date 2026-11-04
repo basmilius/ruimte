@@ -3,8 +3,8 @@ import { act } from 'react';
 import { ProviderCommandDialog } from '@/chat/ProviderCommandDialog';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
-import { FakeMachine, connectFakeMachine } from '../../testing/fake-machine';
 import { mount, until, type Mounted } from '../../testing/dom';
+import { FakeMachine, connectFakeMachine } from '../../testing/fake-machine';
 
 let machine: FakeMachine;
 let release: () => void;

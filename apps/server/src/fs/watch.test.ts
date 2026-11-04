@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { join, resolve } from 'node:path';
-import type { FsChangedEvent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { FsChangedEvent } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { FolderWatcher, MAX_CHANGED_PATHS } from './watch.ts';
 

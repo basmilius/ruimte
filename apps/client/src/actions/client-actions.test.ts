@@ -1,6 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ActionRefusal, ActionRegistry, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import type { ProjectCanvasView, ProjectDocument, ProjectSummary } from '@ruimte/contracts';
+import { visibleRect } from '@/canvas/math';
+import { liesWithin } from '@/canvas/place-node';
+import { viewIdsIn } from '@/shell/split';
+import { defaultCanvases } from '@/state/canvas';
+import { defaultDiagrams } from '@/state/diagram';
+import { useDocument } from '@/state/document';
+import { defaultDrawings } from '@/state/drawing';
+import { useFiles } from '@/state/files';
+import { useProject } from '@/state/project';
+import { fakeProvider } from '../../testing/fake-provider';
+import { emptyCanvas } from '../../testing/project-fixtures';
+import { completed, confirmed, expectQuestion, expectUndoable } from './action-support';
 import {
     clientActions,
     createClientActionRegistry,
@@ -12,18 +24,6 @@ import {
     toggleFlagAction,
     VOICE_ACTION_CALL
 } from './client-actions';
-import { visibleRect } from '@/canvas/math';
-import { liesWithin } from '@/canvas/place-node';
-import { viewIdsIn } from '@/shell/split';
-import { defaultCanvases } from '@/state/canvas';
-import { defaultDiagrams } from '@/state/diagram';
-import { useDocument } from '@/state/document';
-import { defaultDrawings } from '@/state/drawing';
-import { useFiles } from '@/state/files';
-import { useProject } from '@/state/project';
-import { fakeProvider } from '../../testing/fake-provider';
-import { completed, confirmed, expectQuestion, expectUndoable } from './action-support';
-import { emptyCanvas } from '../../testing/project-fixtures';
 
 const PROJECT: ProjectSummary = {
     projectId: 'atlas',

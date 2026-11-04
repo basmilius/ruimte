@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
-import { Bot, Pause, Rocket, SquareTerminal, type LucideIcon } from 'lucide-react';
-import type { RoutineEntry, RoutineKind } from '@ruimte/contracts';
 import { EmptyState, Icon, Popover, ScrollArea, Switch } from '@adecore/ui';
 import { formatClock, formatDateTime } from '@adecore/ui/format';
+import type { RoutineEntry, RoutineKind } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { Bot, Pause, Rocket, SquareTerminal, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OutputProjectGlyph } from '@/output/look';
 import { blocksOf, cellItems, LEGEND, NOON_MS, pausedBand, skippedWhilePaused, type AgendaBlock, type AgendaWeek, type CellItem } from '@/routines/agenda';
 import { LookIcon } from '@/routines/look';

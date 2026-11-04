@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { Button, ChoiceCards, FormError, ScrollArea, Spinner, type Choice, messageOf } from '@adecore/ui';
 import { MonitorSmartphone, Server } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
 import { isShellFailure } from '@/desktop/shell-failure';
@@ -8,7 +9,6 @@ import { WELCOME_SKY } from '@/onboarding/welcome-sky';
 import { useSettings } from '@/state/settings';
 import { BrandSymbol } from '@/ui/Brand';
 import { Eclipse } from '@/ui/Eclipse';
-import { Button, ChoiceCards, FormError, ScrollArea, Spinner, type Choice, messageOf } from '@adecore/ui';
 
 type FirstChoice = 'local' | 'none';
 

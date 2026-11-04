@@ -1,15 +1,15 @@
-import { settleLanguage as settle } from './settle.test';
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { HoverInfo } from '@adecore/editor-react';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport/transport';
-import { EditorLanguage } from './ruimte-editor-language';
 import { innermostFunction } from './explain';
 import { FakeLanguageTransport } from './fake-daemon';
-import type { HoverInfo } from '@adecore/editor-react';
+import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
+import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });

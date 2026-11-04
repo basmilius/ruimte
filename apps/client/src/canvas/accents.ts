@@ -1,7 +1,7 @@
-import i18next from 'i18next';
-import type { CSSProperties } from 'react';
 import { tintStyle } from '@adecore/ui';
 import { NODE_ACCENT_NAMES, type NodeAccent, type NotePaper } from '@ruimte/contracts';
+import i18next from 'i18next';
+import type { CSSProperties } from 'react';
 
 export type AccentId = NodeAccent;
 

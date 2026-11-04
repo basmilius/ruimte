@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatItem, ProviderInfo } from '@ruimte/contracts';
 import { chatInfoOf } from '../../testing/chat-info';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 // A CLI a newer machine offers and this client has no word, mark or color for.
 const FUTURE = {

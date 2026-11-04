@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { projectSwitch } from '@/project/open';
 import type { SwitchRun, SwitchTarget } from '@/project/project-switch';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { buttonWithText } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { buttonWithText } from '../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const MACHINE = 'fake-machine';
 

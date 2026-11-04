@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import type { ProjectIconChoice, ProjectSummary } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { ensureMachine } from '@/endpoint/reach';
 import { useProjectList } from '@/state/project-list';
 import { transportFor, type Transport } from '@/transport';

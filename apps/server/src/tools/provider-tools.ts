@@ -1,8 +1,8 @@
-import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
+import { z } from 'zod';
 import { jsonLines, runAction } from './action-tool.ts';
-import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 import { field, orNote } from './host.ts';
+import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 
 const PERSON_INSTALLS =
     "person\tInstalling, updating and removing stay a person's, in Settings, Providers: no tool downloads or runs an installer. Name what you would install or update and why, and ask the person";

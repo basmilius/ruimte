@@ -1,3 +1,6 @@
+import { ToolRefusal, field, lengthOf, orNote } from '@adecore/agents/context';
+import type { AgentLineageStore, Notice, ChatRequests, TaskVerbs } from '@adecore/agents/coordination';
+import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import {
     isCanvasView,
     isHiddenCanvasView,
@@ -35,36 +38,33 @@ import {
     type WorktreeMergePayload,
     type WorktreeMergeResult
 } from '@ruimte/contracts';
-import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
+import type { StartClaims } from '../actions/start-claims.ts';
+import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
+import type { Artifacts } from '../artifacts/artifacts.ts';
 import type { DriveOutcome, ShotOutcome } from '../browser/drive.ts';
+import type { AgentForkInput, ForkOpener } from '../chat/fork.ts';
 import type { ComputerUse } from '../computer/computer-use.ts';
-import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
-import type { SecretAsk, SecretOutcome } from '../secrets/secret-requests.ts';
-import type { DeviceDriver } from '../devices/agent-driver.ts';
-import type { DatabaseAgentHost } from '../database/agent-databases.ts';
-import { referencesDirectly, type Reference } from '../context/references.ts';
-import type { AgentLanguage } from '../language/agent-language.ts';
-import type { AgentLineageStore, Notice, ChatRequests, TaskVerbs } from '@adecore/agents/coordination';
 import type { ContextReading } from '../context/context-store.ts';
 import type { NoticeDelivery } from '../context/notices.ts';
-import type { PlanStore } from '../plans/plan-store.ts';
-import type { IndexedPlace } from '../projects/project-index.ts';
-import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
-import type { AgentForkInput, ForkOpener } from '../chat/fork.ts';
-import type { StartClaims } from '../actions/start-claims.ts';
-import type { VisualPreview } from '../visuals/renderer.ts';
+import { referencesDirectly, type Reference } from '../context/references.ts';
+import type { DatabaseAgentHost } from '../database/agent-databases.ts';
+import type { DeviceDriver } from '../devices/agent-driver.ts';
+import type { EndpointIdentity } from '../endpoint-id.ts';
+import type { AgentLanguage } from '../language/agent-language.ts';
 import type { StartRemoteAgentPayload } from '../outbox/outbox.ts';
-import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts';
+import type { UntrustedFolders } from '../peering/untrusted.ts';
+import type { PlanStore } from '../plans/plan-store.ts';
 import type { DiagramStore } from '../projects/diagram-store.ts';
 import type { DrawingStore } from '../projects/drawing-store.ts';
-import type { ReachHost } from './reach.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
+import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
+import type { ProjectMutation, ProjectStore } from '../projects/project-store.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
+import type { SecretAsk, SecretOutcome } from '../secrets/secret-requests.ts';
 import type { TemplateStore } from '../templates/template-store.ts';
-import type { EndpointIdentity } from '../endpoint-id.ts';
-import type { UntrustedFolders } from '../peering/untrusted.ts';
-import type { Artifacts } from '../artifacts/artifacts.ts';
-import { ToolRefusal, field, lengthOf, orNote } from '@adecore/agents/context';
+import type { VisualPreview } from '../visuals/renderer.ts';
+import type { ReachHost } from './reach.ts';
 
 // The tools and actions reach the one sanitizer through the module they already import.
 export { DRY_RUN_PREVIEW, field, lengthOf, orNote, requiredField } from '@adecore/agents/context';

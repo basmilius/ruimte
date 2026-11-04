@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { join, resolve } from 'node:path';
 import type { ChatItem, LaunchStatus } from '@ruimte/contracts';
 import type { OutboxEntry, OutboxWork, RunAfterSettleEntry } from '../outbox/outbox.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { AfterSettleLaunches, AfterSettleStore, type AfterSettleDeps } from './after-settle.ts';
 import type { ResolvedLaunch } from './store.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const WORKTREE = resolve('/worktrees/repo-fix');
 

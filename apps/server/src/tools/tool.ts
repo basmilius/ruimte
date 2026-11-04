@@ -10,8 +10,8 @@ import { z } from 'zod';
 import type { AgentFiles } from '../mcp/files.ts';
 import type { ArtifactUploads } from '../mcp/uploads.ts';
 import { countToolCall } from '../stats/usage-stats.ts';
-import { reachedPlace } from './reach.ts';
 import type { AgentCall } from './host.ts';
+import { reachedPlace } from './reach.ts';
 
 /* Who sees a tool: every caller, only an AI chat, only while computer use is on, only in a project with a database connection. */
 export type Audience = 'everyone' | 'chat' | 'computer' | 'database';

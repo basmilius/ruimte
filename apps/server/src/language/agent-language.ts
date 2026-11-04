@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { storedPathOf, type LanguageMethod } from '@ruimte/contracts';
-import { fileUriToPath, type Diagnostic, type Range } from '@adecore/lsp';
 import { ToolRefusal } from '@adecore/agents/context';
+import { fileUriToPath, type Diagnostic, type Range } from '@adecore/lsp';
+import { storedPathOf, type LanguageMethod } from '@ruimte/contracts';
 import type { SqlAnalysis, SqlChoice } from '../database/sql-analysis.ts';
 import { languageOf } from '../fs/read.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';

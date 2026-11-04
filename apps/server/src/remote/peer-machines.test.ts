@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { PeerMachines } from './peer-machines.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { PeerMachines } from './peer-machines.ts';
 
 const newHome = tempHomes('ruimte-peer-machines-');
 let home: string;

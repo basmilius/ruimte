@@ -1,5 +1,5 @@
-import type { RawSample } from '../apps/server/src/processes/sampler.ts';
 import type { PerformanceCase } from '../apps/client/testing/performance/paired';
+import type { RawSample } from '../apps/server/src/processes/sampler.ts';
 
 type ProcessApi = Pick<typeof import('../apps/server/src/processes/tree.ts'), 'ownFamilyOf' | 'indexTree' | 'groupsFor'>;
 

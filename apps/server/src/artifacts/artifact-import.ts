@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { KeyedSerializer } from '@adecore/agents';
 import {
     PEER_ARTIFACT_PIECE_BYTES,
     type ArtifactFile,
@@ -8,7 +9,6 @@ import {
     type ArtifactVersion,
     type PeerArtifactReadResult
 } from '@ruimte/contracts';
-import { KeyedSerializer } from '@adecore/agents';
 import type { PeerLink } from '../remote/peer-connection.ts';
 import { ArtifactError } from './artifact-names.ts';
 import type { ArtifactStore } from './artifact-store.ts';

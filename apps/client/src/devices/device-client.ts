@@ -1,4 +1,5 @@
-import i18next from 'i18next';
+import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
+import { messageOf } from '@adecore/ui';
 import type {
     DeviceAction,
     DeviceCaptureResult,
@@ -10,14 +11,13 @@ import type {
     LiveFrameHeader,
     LiveStreamFrame
 } from '@ruimte/contracts';
-import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
 import { powerKey, useDevicePowers } from '@/devices/device-power';
+import { eventStreamFields, LatestFrames } from '@/devices/latest-frames';
 import { useDevices } from '@/devices/state';
 import { machineAnswers } from '@/transport/features';
-import { eventStreamFields, LatestFrames } from '@/devices/latest-frames';
 import { HandlerTable } from '@/transport/handler-table';
 import { decodeBase64 } from '@/transport/piece';
-import { MountedRegistry, type MountedEntry } from '@adecore/agents-react';
 import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface MountedDevice extends MountedEntry {

@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
+import { PromptDialog } from '@adecore/ui';
 import { Eraser } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { eraseDevice } from '@/devices/control';
 import { useDevices } from '@/devices/state';
 import { deviceClientFor } from '@/transport/connections';
-import { PromptDialog } from '@adecore/ui';
 
 /* The question before a simulator or an emulator loses its apps, their data and its settings. */
 export function EraseDeviceDialog() {

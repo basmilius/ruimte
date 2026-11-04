@@ -1,7 +1,7 @@
 import type { ProjectCanvasLine } from '@ruimte/contracts';
+import { snapLine } from '@/canvas/line-geometry';
 import type { CanvasState } from '@/state/canvas';
 import { nextId, remember, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
-import { snapLine } from '@/canvas/line-geometry';
 
 export type CanvasLineStyle = Pick<ProjectCanvasLine, 'stroke' | 'strokeWidth' | 'strokeStyle' | 'arrowStart' | 'arrowEnd'>;
 export const DEFAULT_LINE_STYLE: CanvasLineStyle = { stroke: 'ink', strokeWidth: 2, strokeStyle: 'solid' };

@@ -1,21 +1,21 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Activity, Bot, ImageUp, MapPin, PawPrint, Pencil, Shapes, Trash2 } from 'lucide-react';
+import { useProviders } from '@adecore/agents-react/state';
 import { Button, Icon, IconButton, Select, Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
-import { useProviders } from '@adecore/agents-react/state';
 import { BEAM_SETTINGS } from '@extensions/pets/client/beam';
-import { SHEET_LIMITS, stripsOf, usePetSprites, type CustomPetSprite } from '@extensions/pets/client/custom-sprites';
 import { EXTRA_FIGURES, packFigures } from '@extensions/pets/client/catalog';
-import type { DrawnSprite } from '@extensions/pets/client/pixel';
+import { SHEET_LIMITS, stripsOf, usePetSprites, type CustomPetSprite } from '@extensions/pets/client/custom-sprites';
+import { usePetSettings, type PetsPlace } from '@extensions/pets/client/pet-settings';
 import { CUSTOM_PET_PREFIX, FIGURE_PET_PREFIX, PET_SETS, petChoiceKey, petChoiceOfKey, petSetsWith, type PetChoice } from '@extensions/pets/client/pet-state';
-import { lookOf, usePetPool } from '@extensions/pets/client/use-pet-look';
+import type { DrawnSprite } from '@extensions/pets/client/pixel';
 import { PetFigureDialog, type PetFigureEdit } from '@extensions/pets/client/settings/PetFigureDialog';
 import { PetsPreview } from '@extensions/pets/client/settings/PetsPreview';
-import { FigureTile, SubagentsTile, TeleportTile, VisitorTile } from '@extensions/pets/client/settings/PetTiles';
-import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { PetSwitchRow } from '@extensions/pets/client/settings/PetSwitchRow';
-import { usePetSettings, type PetsPlace } from '@extensions/pets/client/pet-settings';
+import { FigureTile, SubagentsTile, TeleportTile, VisitorTile } from '@extensions/pets/client/settings/PetTiles';
+import { lookOf, usePetPool } from '@extensions/pets/client/use-pet-look';
+import { Activity, Bot, ImageUp, MapPin, PawPrint, Pencil, Shapes, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 const PETS_PLACES: readonly PetsPlace[] = ['nodes', 'screen'];
 

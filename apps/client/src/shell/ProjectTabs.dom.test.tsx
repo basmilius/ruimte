@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { projectSidebarViews, type ProjectSummary } from '@ruimte/contracts';
+import { act } from 'react';
 import type { DesktopBridge } from '@/desktop/bridge';
 import { startWindowTabs, useWindowTabs } from '@/project/window-tabs';
 import { useSettings } from '@/state/settings';
 import { useSnoozes } from '@/state/snooze';
 import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { menuItem, removeDesktop } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { menuItem, removeDesktop } from '../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const SHOWN = 'fake-machine:project-atlas';
 const BEHIND = 'fake-machine:project-borealis';

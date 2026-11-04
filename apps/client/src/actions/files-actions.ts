@@ -1,12 +1,12 @@
-import type { FileLocation } from '@ruimte/contracts';
 import { ActionRefusal, FILE_READ_MAX_LINES, type ActionActorKind, type ActionHandlers } from '@ruimte/actions';
+import type { FileLocation } from '@ruimte/contracts';
 import { copyTextOrRefuse } from '@/actions/clipboard';
 import { refusing, type Requester } from '@/actions/refusal';
 import { desktop } from '@/desktop/bridge';
 import { canCopyFilesOn } from '@/shell/panels/file-copy';
 import { absoluteOf, basenameOf, isAbsolutePath, isPathBelow, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
-import { useFiles } from '@/state/files';
 import { forgetDeleted, moveFile } from '@/state/file-moves';
+import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';

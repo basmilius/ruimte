@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { PROJECT_VERSION, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, ProjectSharedFileSchema, type ProjectCanvasView } from './project.ts';
 import { duplicateIdIn, migrateLocal, migrateSharedFile, newerVersionIn, withoutCrossViewEdges } from './project-migrate.ts';
 import { migratedFile } from './project-test-helpers.ts';
+import { PROJECT_VERSION, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, ProjectSharedFileSchema, type ProjectCanvasView } from './project.ts';
 
 /* A copy of `.ruimte/project.json` of this repository, the way version 1 wrote it. */
 const V1_FILE = {

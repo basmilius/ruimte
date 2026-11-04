@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { Info, TriangleAlert } from 'lucide-react';
 import { Banner, Pill } from '@adecore/ui';
+import { Info, TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 type Status = 'running' | 'needs-you' | 'idle' | 'error' | 'exited' | 'delegating';
 

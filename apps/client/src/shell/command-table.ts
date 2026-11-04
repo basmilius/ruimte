@@ -1,3 +1,5 @@
+import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
+import { matchesShortcut, type KeyLike, type Shortcut } from '@adecore/ui';
 import {
     Activity,
     AppWindow,
@@ -104,8 +106,6 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
-import { matchesShortcut, type KeyLike, type Shortcut } from '@adecore/ui';
-import { SEND_AND_NEW_SHORTCUT } from '@adecore/agents-react/chat';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, NODE_NAVIGATION_SHORTCUTS } from '@/canvas/shortcuts';
 import { LANGUAGE_COMMAND_IDS, LANGUAGE_COMMANDS, type LanguageCommandId } from '@/language/command-table';
 import { EDITOR_COMMAND_IDS, EDITOR_COMMANDS, type EditorCommandGroup, type EditorCommandId } from '@/shell/editor-commands';

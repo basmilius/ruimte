@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { ChatState } from '@adecore/agents-react/state';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
+import type { ChatStatuses } from '@adecore/agents-react/state';
 import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
 import { EXTRA_FIGURES, PET_PACKS, packFigures } from '@extensions/pets/client/catalog';
-import { DRAWN_CYCLE, JUMP_ROWS, PET_POSES, type DrawnSprite } from '@extensions/pets/client/pixel';
 import { agentPetChoice, builtInSprite, petChoiceFor, petFrame, petOf, petPoolOf, petSetsWith, type PetChoice } from '@extensions/pets/client/pet-state';
+import { DRAWN_CYCLE, JUMP_ROWS, PET_POSES, type DrawnSprite } from '@extensions/pets/client/pixel';
+import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { SessionsByKey, SessionState, StatusOf } from '@/state/sessions';
 import type { Snoozes } from '@/state/snooze';
-import type { ChatStatuses } from '@adecore/agents-react/state';
 import { chatInfoOf } from '../../../apps/client/testing/chat-info';
 
 function agent(status: AgentStatus, kind = 'claude'): AgentInfo {

@@ -1,8 +1,8 @@
+import { Button, Dialog, Field, FormError, Icon, Input, messageOf } from '@adecore/ui';
+import type { Artifact, ArtifactVersion } from '@ruimte/contracts';
+import { TriangleAlert } from 'lucide-react';
 import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TriangleAlert } from 'lucide-react';
-import type { Artifact, ArtifactVersion } from '@ruimte/contracts';
-import { Button, Dialog, Field, FormError, Icon, Input, messageOf } from '@adecore/ui';
 import { validImageFileName } from '@/chat/image-save';
 import { suggestedCopyName } from '@/output/artifact-list';
 import { ProjectFolderPicker } from '@/shell/panels/ProjectFolderPicker';

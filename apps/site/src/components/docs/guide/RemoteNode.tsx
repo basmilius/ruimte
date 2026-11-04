@@ -1,7 +1,7 @@
 'use client';
 
-import { Server } from 'lucide-react';
 import { Pill } from '@adecore/ui';
+import { Server } from 'lucide-react';
 import { TerminalBody } from '../../app/bodies.tsx';
 import { CanvasEdge, CanvasNode } from '../../app/canvas.tsx';
 import { AssistantText, ToolRow, UserBubble } from '../../app/chat.tsx';

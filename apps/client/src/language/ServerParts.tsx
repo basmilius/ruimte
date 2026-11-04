@@ -1,8 +1,8 @@
+import { Button, ButtonGroup, Dialog, IconButton, ScrollArea, Select } from '@adecore/ui';
+import { LANGUAGE_TRACE_VALUES, type LanguageLogLine, type LanguageServerStatus, type LanguageTraceValue } from '@ruimte/contracts';
+import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
-import { LANGUAGE_TRACE_VALUES, type LanguageLogLine, type LanguageServerStatus, type LanguageTraceValue } from '@ruimte/contracts';
-import { Button, ButtonGroup, Dialog, IconButton, ScrollArea, Select } from '@adecore/ui';
 import { report, useStatuses } from './server-status';
 import type { LanguageStatusTracker } from './status';
 import { actionsOf, kindOf, logLineText, nameOf, type ServerTone } from './status-view';

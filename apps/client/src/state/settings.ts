@@ -1,6 +1,5 @@
-import { bundledThemesInfo } from 'shiki/themes';
-import { create } from 'zustand';
-import { z } from 'zod';
+import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
+import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import {
     EditorAssistAgentSchema,
     type EditorAssistAgent,
@@ -13,11 +12,13 @@ import {
 } from '@ruimte/contracts';
 import type { UpdateTrack } from '@ruimte/desktop-bridge';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
+import { bundledThemesInfo } from 'shiki/themes';
+import { z } from 'zod';
+import { create } from 'zustand';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { renderDistanceFrom, type RenderDistance } from '@/canvas/render-distance';
-import { FORMAT_LANGUAGE, formatRegionFrom } from '@adecore/ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
-import type { EditorFoldOutline, EditorSmartKeys } from '@adecore/editor';
+import { CODE_THEMES } from '@/shell/panels/code-themes';
 import {
     agentChangesModeFrom,
     DEFAULT_AGENT_CHANGES_MODE,
@@ -30,11 +31,10 @@ import {
     type InlineEditAgent
 } from '@/state/ai-settings';
 import { type CodeFolding, codeFoldingFrom, DEFAULT_CODE_FOLDING } from '@/state/code-folding';
-import { CODE_THEMES } from '@/shell/panels/code-themes';
-import { storedJson, switchesFrom } from '@/state/stored-json';
-import { applyPalette } from '@/state/palette';
 import { useExtensionTheme } from '@/state/extension-theme';
+import { applyPalette } from '@/state/palette';
 import { palettePresetFrom, presetTokens, type PalettePreset } from '@/state/palette-presets';
+import { storedJson, switchesFrom } from '@/state/stored-json';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
 

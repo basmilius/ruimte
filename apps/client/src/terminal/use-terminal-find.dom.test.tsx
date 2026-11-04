@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act, useEffect } from 'react';
-import type { ISearchOptions } from '@xterm/addon-search';
-import type { TerminalViewHandle } from '@adecore/terminal';
 import { EMPTY_FIND_QUERY, type FindQuery } from '@adecore/editor-react/models';
+import type { TerminalViewHandle } from '@adecore/terminal';
+import type { ISearchOptions } from '@xterm/addon-search';
+import { act, useEffect } from 'react';
 import { FindBar } from '@/find/FindBar';
 import type { FindState } from '@/find/use-find';
 import { mount, until, type Mounted } from '../../testing/dom';

@@ -1,3 +1,5 @@
+import { CodedError } from '@adecore/agents';
+import { ToolRefusal } from '@adecore/agents/context';
 import { ACTION_DEFINITIONS, type ActionDomain, type ActionName } from '@ruimte/actions';
 import type {
     ProjectSummary,
@@ -14,16 +16,14 @@ import type {
     VoiceStatusEvent
 } from '@ruimte/contracts';
 import { contextChunks, daemonVoiceTools, liveSessionBody, VoiceCompletionDelivery, VoiceToolLoop, type LiveEvent } from '@ruimte/voice';
-import { CodedError } from '@adecore/agents';
-import { ToolRefusal } from '@adecore/agents/context';
-import { type CanvasHost } from '../tools/host.ts';
 import { voiceActionCall, type ServerActionContext, type VoiceCaller, type VoiceOpenProject } from '../actions/context.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import { type CanvasHost } from '../tools/host.ts';
 import { voicePolicy } from './action-policy.ts';
 import type { VoiceClock } from './clock.ts';
 import { LiveError, type OpenAiLive } from './openai-live.ts';
-import { openProjects } from './project-reading.ts';
 import { voicePreferencesFor } from './preferences-store.ts';
+import { openProjects } from './project-reading.ts';
 import { phonePrompts } from './prompts.ts';
 import { sessionContext, timeContext } from './session-context.ts';
 import type { LiveSideband } from './sideband.ts';

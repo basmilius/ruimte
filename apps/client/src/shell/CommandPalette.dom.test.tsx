@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
 import { contribute } from '@/extensions/registry';
+import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useDocument } from '@/state/document';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 let page: Mounted;
 let workspace: FakeWorkspace | null = null;

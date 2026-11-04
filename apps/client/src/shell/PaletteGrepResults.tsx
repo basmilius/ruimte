@@ -1,8 +1,8 @@
-import clsx from 'clsx';
-import type { FsGrepMatch } from '@ruimte/contracts';
-import { firstContextLine } from '@/shell/palette-grep';
 import { CommandPalette, FileIcon } from '@adecore/ui';
+import type { FsGrepMatch } from '@ruimte/contracts';
+import clsx from 'clsx';
 import type { PaletteRow } from '@/shell/palette-entries';
+import { firstContextLine } from '@/shell/palette-grep';
 
 export interface GrepRow extends PaletteRow {
     match: FsGrepMatch;

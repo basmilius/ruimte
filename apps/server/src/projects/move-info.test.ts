@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatItem } from '@ruimte/contracts';
-import { chatMoveInfo, type MoveInfoDeps } from './move-info.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { chatMoveInfo, type MoveInfoDeps } from './move-info.ts';
 
 let root: string;
 

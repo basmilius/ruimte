@@ -1,13 +1,13 @@
-import { create } from 'zustand';
-import i18next from 'i18next';
 import type { SpeechState } from '@ruimte/desktop-bridge';
+import i18next from 'i18next';
+import { create } from 'zustand';
 import { claimMicrophone } from '@/audio/ownership';
 import { desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
 import { machineUsage } from '@/transport';
+import type { DictationEngine, DictationSession } from './engine';
 import { dictationFailureText } from './failure';
 import { helperEngine } from './helper';
-import type { DictationEngine, DictationSession } from './engine';
 
 const SPEECH_LOCALES: Record<string, string> = {
     ar: 'ar-AR',

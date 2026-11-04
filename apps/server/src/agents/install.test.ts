@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { chmod, lstat, mkdir, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { HOOK_EVENTS } from './hooks.ts';
 import { HOOK_MARKER, HookFileRefused, NAMED_HOOK, hookCommand, installHooks, installInFolder, mergeHooks } from './install.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const other = { type: 'command', command: 'echo other' };
 

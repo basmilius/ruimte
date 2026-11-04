@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { host, useProject, useServer, useServerEvent, type Result } from '@ruimte/extension/client';
+import { useState } from 'react';
 import type { PocServer } from '../server/index';
 
 export default function ServerPanel() {

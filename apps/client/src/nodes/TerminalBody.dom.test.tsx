@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { canvasOfNode } from '@/state/canvas';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { windowWorkspace } from '@/state/window';
+import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 
 const SHELL: ProjectNode = { id: 'shell', kind: 'terminal', title: 'Shell', x: 0, y: 0, w: 560, h: 360 };
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [SHELL], texts: [], edges: [], layouts: [] };

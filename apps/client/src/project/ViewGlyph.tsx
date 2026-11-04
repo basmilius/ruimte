@@ -1,3 +1,7 @@
+import { AgentIcon } from '@adecore/agents-react/providers';
+import { useChats } from '@adecore/agents-react/state';
+import { FileIcon, Icon } from '@adecore/ui';
+import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 import clsx from 'clsx';
 import {
     CircleQuestionMark,
@@ -16,16 +20,12 @@ import {
     Workflow,
     type LucideIcon
 } from 'lucide-react';
-import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 import { Favicon } from '@/browser/Favicon';
-import { projectIconGlyphOf } from '@/project/project-icons';
-import { FileIcon, Icon } from '@adecore/ui';
-import { AgentIcon } from '@adecore/agents-react/providers';
-import { useChats } from '@adecore/agents-react/state';
 import { extensionKeyOf, useContributions } from '@/extensions/registry';
+import { projectIconGlyphOf } from '@/project/project-icons';
 import { useDocument } from '@/state/document';
-import { nodeProvider } from '@/state/sessions';
 import { useEndpointId } from '@/state/keys';
+import { nodeProvider } from '@/state/sessions';
 
 /* The default mark for a view, when nobody picked an icon. */
 const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {

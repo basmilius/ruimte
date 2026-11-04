@@ -1,4 +1,3 @@
-import { LANGUAGE_ERROR_CODES, resolveStoredPath, storedPathOf, type LanguageMethod, type LanguageProviders } from '@ruimte/contracts';
 import {
     ErrorCodes,
     fileUriToPath,
@@ -54,6 +53,7 @@ import {
     type WorkspaceSymbolResult
 } from '@adecore/lsp';
 import { messageOf } from '@adecore/ui';
+import { LANGUAGE_ERROR_CODES, resolveStoredPath, storedPathOf, type LanguageMethod, type LanguageProviders } from '@ruimte/contracts';
 import { machineAnswers } from '@/transport/features';
 import { TransportError, type Transport } from '@/transport/transport';
 

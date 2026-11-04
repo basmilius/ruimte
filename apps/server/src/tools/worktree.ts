@@ -1,7 +1,7 @@
-import type { Worktree } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
-import { type AgentCall, type WorktreeWant } from './host.ts';
+import type { Worktree } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
+import { type AgentCall, type WorktreeWant } from './host.ts';
 
 export const WORKTREE_LINES: readonly string[] = [
     "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",

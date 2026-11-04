@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { ContextMenu } from '@adecore/ui';
+import { act } from 'react';
 import { useActionRuns } from '@/extensions/action-runs';
 import { contribute, type SlotEntry } from '@/extensions/registry';
-import { act } from 'react';
-import { ContextMenu } from '@adecore/ui';
 import { useSlotOutlines } from '@/extensions/slot-outlines';
 import { NodeHeaderSlot, SelectionBar, SlotMenuItems, SlotRow } from '@/extensions/SlotSurfaces';
 import { focusedCanvas } from '@/state/canvas';

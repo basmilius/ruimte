@@ -1,7 +1,7 @@
+import { ErrorBoundary, CloseButton, Dialog } from '@adecore/ui';
+import type { ModelBenchmarksResult } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
-import type { ModelBenchmarksResult } from '@ruimte/pulsar';
-import { ErrorBoundary, CloseButton, Dialog } from '@adecore/ui';
 import { publicAddressBook } from '@/pulsar/account';
 import { ModelsBenchmarks } from '@/shell/models/ModelsBenchmarks';
 import { useUi } from '@/state/ui';

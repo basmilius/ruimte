@@ -1,5 +1,29 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { CodedError, fileExists, type WatchSeams } from '@adecore/agents';
+import {
+    ErrorCodes,
+    LspError,
+    fileUriToPath,
+    pathToFileUri,
+    planWorkspaceOperations,
+    StaleResultError,
+    TextMirror,
+    watchesFile,
+    type ApplyWorkspaceEditParams,
+    type ApplyWorkspaceEditResult,
+    type Diagnostic,
+    type CreatedFile,
+    type DeletedFile,
+    type MessageActionItem,
+    type RenamedFile,
+    type ShowDocumentParams,
+    type ShowDocumentResult,
+    type ShowMessageRequestParams,
+    type WorkspaceEdit,
+    type WorkspaceEditPlan,
+    type WorkspaceEditSource
+} from '@adecore/lsp';
 import {
     LANGUAGE_ERROR_CODES,
     LANGUAGE_METHODS,
@@ -34,42 +58,18 @@ import type {
     LanguageTraceValue,
     LanguageWillSavePayload
 } from '@ruimte/contracts';
-import { CodedError, fileExists, type WatchSeams } from '@adecore/agents';
-import {
-    ErrorCodes,
-    LspError,
-    fileUriToPath,
-    pathToFileUri,
-    planWorkspaceOperations,
-    StaleResultError,
-    TextMirror,
-    watchesFile,
-    type ApplyWorkspaceEditParams,
-    type ApplyWorkspaceEditResult,
-    type Diagnostic,
-    type CreatedFile,
-    type DeletedFile,
-    type MessageActionItem,
-    type RenamedFile,
-    type ShowDocumentParams,
-    type ShowDocumentResult,
-    type ShowMessageRequestParams,
-    type WorkspaceEdit,
-    type WorkspaceEditPlan,
-    type WorkspaceEditSource
-} from '@adecore/lsp';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { isDirectory } from '../fs/browse.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { pinnedItem, tagHierarchy } from './hierarchy.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers, customProfile, UnsavedRemoval } from './custom.ts';
 import { ProjectFileWatcher, type FileChange, type StatPath } from './file-watch.ts';
+import { pinnedItem, tagHierarchy } from './hierarchy.ts';
 import { LanguageInstaller, type CheckoutRevision } from './installer.ts';
 import { findManifests } from './manifests.ts';
-import { nativeStorageOf, nativeStubsOf, type Download, type NativePolicy } from './native.ts';
 import { MERGED_METHODS, mergeAnswers, mergeProviders } from './merge.ts';
+import { nativeStorageOf, nativeStubsOf, type Download, type NativePolicy } from './native.ts';
 import {
     activates,
     additionKindsForLanguage,

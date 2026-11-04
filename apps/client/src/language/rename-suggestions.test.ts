@@ -1,14 +1,14 @@
-import { settleLanguage as settle } from './settle.test';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FakeEditorAssistModel } from '@/editor-assist/fake-model';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport, readOnlyFiles } from './fake-daemon';
 import { eventOf } from './key-events';
+import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
+import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';

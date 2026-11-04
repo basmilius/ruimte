@@ -1,3 +1,4 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import {
     AGENT_IMAGE_BYTES,
@@ -7,7 +8,6 @@ import {
     agentAttachmentBytes,
     agentAttachmentType
 } from '../chat/attachment-type.ts';
-import { ToolRefusal } from '@adecore/agents/context';
 import { imageType } from '../mcp/visual-images.ts';
 import { hostService, requireChatCaller, type ServerActionContext } from './context.ts';
 

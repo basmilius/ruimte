@@ -1,14 +1,14 @@
-import { useState, type RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
-import type { AgentKind } from '@ruimte/contracts';
-import { AccountDot } from '@adecore/agents-react/providers';
 import { useAccountChoice, type AccountChoice } from '@adecore/agents-react/chat';
 import { ModelPicker } from '@adecore/agents-react/chat/ui';
+import { AccountDot } from '@adecore/agents-react/providers';
 import { useProviders } from '@adecore/agents-react/state';
 import { Button, Icon, Menu } from '@adecore/ui';
-import { editorAgentOn } from '@/state/ai-settings';
+import type { AgentKind } from '@ruimte/contracts';
+import { ChevronDown } from 'lucide-react';
+import { useState, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { availableAgents } from '@/agents/creation';
+import { editorAgentOn } from '@/state/ai-settings';
 
 interface InlineAgent {
     readonly provider: AgentKind;

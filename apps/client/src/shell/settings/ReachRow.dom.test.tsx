@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { act } from 'react';
 import { REQUEST_SCHEMAS, type EndpointInfo, type ReachCheck, type RequestType } from '@ruimte/contracts';
-import { endpointById, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { act } from 'react';
 import { ReachRow } from '@/shell/settings/MachineSettings';
+import { endpointById, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
 import { adoptEndpointInfo } from '@/transport/server-info';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
-import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { everything, installDesktop, removeDesktop } from '../../../testing/dom-helpers';
+import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 
 const NOW = Date.UTC(2026, 9, 1);
 const MINUTE_MS = 60_000;

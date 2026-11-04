@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { ChatSubagentItem, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { browserSheetReader, usePetSprites } from '@extensions/pets/client/custom-sprites';
-import { canvasOfNode } from '@/state/canvas';
 import { usePetSettings } from '@extensions/pets/client/pet-settings';
+import type { ChatSubagentItem, ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
+import { canvasOfNode } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { openCanvasPage, type CanvasPage } from '../../../../apps/client/testing/canvas-page';
 import { chatInfoOf } from '../../../../apps/client/testing/chat-info';
-import { FakeMachine } from '../../../../apps/client/testing/fake-machine';
 import { clickOn, until } from '../../../../apps/client/testing/dom';
 import { buttonWithText, everything, typeInto } from '../../../../apps/client/testing/dom-helpers';
-import { openCanvasPage, type CanvasPage } from '../../../../apps/client/testing/canvas-page';
+import { FakeMachine } from '../../../../apps/client/testing/fake-machine';
 import { claudeProvider, fakeProvider } from '../../../../apps/client/testing/fake-provider';
 
 const WRITER: ProjectNode = { id: 'writer', kind: 'chat', title: 'Writer', x: 2000, y: 1000, w: 480, h: 520 };

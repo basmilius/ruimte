@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
-import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
+import { Button, Tooltip } from '@adecore/ui';
 import { formatDayWithYear, useFormatLocale } from '@adecore/ui/format';
 import { SettingsRow, TopIcon } from '@adecore/ui/settings';
-import { Button, Tooltip } from '@adecore/ui';
+import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
+import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 interface ComputerAppGrantsProps {

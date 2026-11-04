@@ -1,7 +1,7 @@
 'use client';
 
-import { ChevronDown, GitBranch, GitCompare, MoreHorizontal, Sparkles } from 'lucide-react';
 import { SectionLabel } from '@adecore/ui';
+import { ChevronDown, GitBranch, GitCompare, MoreHorizontal, Sparkles } from 'lucide-react';
 import { Button, IconButton } from '../../app/primitives.tsx';
 import { Stage } from '../../film/Stage.tsx';
 import { GuideWindow, SidePanel, TreeRow } from './parts.tsx';

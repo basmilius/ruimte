@@ -1,6 +1,6 @@
+import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, WorkspaceRailSeparator } from '@adecore/ui';
 import { useRoutineList } from '@/routines/routine-list';
 import { RoutinesButton } from '@/routines/RoutinesButton';
 import { useToolbarPanels, type PanelGroup } from '@/shell/panels';

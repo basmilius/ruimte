@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ArtifactGetResult, type ArtifactVersion } from '@ruimte/contracts';
+import { act } from 'react';
 import type { SaveFileStreamBridge } from '@/desktop/bridge';
 import { useFiles } from '@/state/files';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();

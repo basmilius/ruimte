@@ -1,8 +1,8 @@
-import { useConnection } from '@/transport/status';
-import { useLatency } from '@/transport/ping';
-import { SLOW_PING_MS } from '@/transport/ping-monitor';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import type { ConnectionState } from '@/transport';
+import { useLatency } from '@/transport/ping';
+import { SLOW_PING_MS } from '@/transport/ping-monitor';
+import { useConnection } from '@/transport/status';
 
 export function isSlowLine(connection: ConnectionState, latency: number | null): boolean {
     return connection.status === 'open' && latency !== null && latency > SLOW_PING_MS;

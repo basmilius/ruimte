@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { Package } from 'lucide-react';
-import type { ProjectArtifactView } from '@ruimte/contracts';
 import { EmptyState } from '@adecore/ui';
+import type { ProjectArtifactView } from '@ruimte/contracts';
+import { Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ArtifactView } from '@/output/ArtifactView';
 import { useDocument } from '@/state/document';
 

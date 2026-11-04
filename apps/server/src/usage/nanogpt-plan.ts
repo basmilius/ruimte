@@ -1,5 +1,5 @@
-import type { UsageWindow } from '@ruimte/contracts';
 import { fraction, type ProbeResult } from '@adecore/agents/usage';
+import type { UsageWindow } from '@ruimte/contracts';
 import { isRecord } from '../is-record.ts';
 
 const DAY_MS = 24 * 60 * 60_000;

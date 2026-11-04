@@ -1,6 +1,6 @@
-import type { ComponentProps } from 'react';
-import clsx from 'clsx';
 import { ScrollArea, TextMenu } from '@adecore/ui';
+import clsx from 'clsx';
+import type { ComponentProps } from 'react';
 
 /*
  * The scrolling body of a file renderer. The canvas app turns selection off on `body`, so a file has

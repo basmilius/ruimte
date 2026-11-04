@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
-import { executeApiCommand } from './api-command-tool.ts';
 import { killQuietly, processAlive } from '../process-test-helpers.ts';
+import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { executeApiCommand } from './api-command-tool.ts';
 
 let cwd: string;
 const newHome = tempHomes('ruimte-api-command-');

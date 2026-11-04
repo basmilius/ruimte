@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import type { Subprocess } from 'bun';
+import { join } from 'node:path';
 import type { ProjectContent } from '@ruimte/contracts';
 import { freePort } from '../free-port-test-helpers.ts';
 import { waitForAsync } from '../sessions/test-helpers.ts';

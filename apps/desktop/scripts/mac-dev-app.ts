@@ -1,6 +1,6 @@
+import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 const BUNDLE_ID = 'app.ruimte.desktop.dev';
 const BUNDLE_NAME = 'Ruimte Dev';

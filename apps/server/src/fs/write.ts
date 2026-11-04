@@ -1,12 +1,12 @@
 import { constants } from 'node:fs';
 import { lstat, open, realpath, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
-import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import { CodedError, KeyedSerializer } from '@adecore/agents';
-import { isInside } from '../tools/project-paths.ts';
-import { realOrNull } from './real-path.ts';
+import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import { isRuimteState } from '../projects/project-files.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { ReadError, UTF8_BOM, inspect } from './read.ts';
+import { realOrNull } from './real-path.ts';
 
 type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'ruimte-state' | 'not-writable';
 

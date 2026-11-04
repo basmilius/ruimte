@@ -1,6 +1,6 @@
 import { nodesOfView } from '@/project/view-nodes';
-import { useDocument } from '@/state/document';
 import type { CanvasNode } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
 
 /*

@@ -1,9 +1,9 @@
-import type { AgentKind } from '@ruimte/contracts';
 import { petFigure } from '@extensions/pets/client/catalog';
 import { usePetSprites, type CustomPetSprite } from '@extensions/pets/client/custom-sprites';
 import type { PetLook } from '@extensions/pets/client/paint';
-import { agentPetChoice, builtInSprite, petPoolOf, type PetChoice } from '@extensions/pets/client/pet-state';
 import { usePetSettings } from '@extensions/pets/client/pet-settings';
+import { agentPetChoice, builtInSprite, petPoolOf, type PetChoice } from '@extensions/pets/client/pet-state';
+import type { AgentKind } from '@ruimte/contracts';
 
 /*
  * The look a set gives an agent's node: a built-in figure from its pack, the one figure given to its CLI,

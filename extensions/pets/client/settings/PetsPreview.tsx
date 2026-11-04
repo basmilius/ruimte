@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { usePetSprites } from '@extensions/pets/client/custom-sprites';
 import { usePrefersStill } from '@extensions/pets/client/figure-support';
 import { KID_HEIGHT, KID_SPACING } from '@extensions/pets/client/kids';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
+import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import { PET_HEIGHT, PET_PAINT_WIDTH, petChoiceOfKey, WORLD_CELL, type PetMood } from '@extensions/pets/client/pet-state';
+import { PetFigure } from '@extensions/pets/client/PetFigure';
 import type { PetPose } from '@extensions/pets/client/pixel';
 import { lookOf, usePetPool } from '@extensions/pets/client/use-pet-look';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /* The moods the preview runs through, a few seconds each. First the one reduced motion holds, so its one frame shows the bubble. */
 const MOODS: readonly PetMood[] = ['waiting', 'working', 'idle', 'stopped'];

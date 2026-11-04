@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
+import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
 import type { FsReadBinary } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
 import { useEndpointId } from '@/state/keys';
 import { useMachineAnswers } from '@/transport/features';
-import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
 
 const ArchiveFile = lazyNamed(() => import('@/shell/panels/ArchiveFile'), 'ArchiveFile');
 

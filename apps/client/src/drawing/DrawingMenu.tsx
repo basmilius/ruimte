@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { Icon, Kbd, ContextMenu } from '@adecore/ui';
 import {
     ArrowDownToLine,
     ArrowUpToLine,
@@ -15,11 +15,11 @@ import {
     Undo2,
     ZoomIn
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawing, cutSelection, deleteSelection, duplicateSelection, pasteInto, reorderSelection, toggleLockSelection } from '@/drawing/drawing-actions';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawing, useDrawingStore } from '@/state/drawing';
-import { Icon, Kbd, ContextMenu } from '@adecore/ui';
 
 /* Every item here is a key `use-drawing-keys.ts` binds; the menu shows them to a person who never learned the keys. */
 export function DrawingMenuPopup() {

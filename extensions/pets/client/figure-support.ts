@@ -1,6 +1,6 @@
-import { useSyncExternalStore } from 'react';
-import type { TFunction } from 'i18next';
 import type { PetMood } from '@extensions/pets/client/pet-state';
+import type { TFunction } from 'i18next';
+import { useSyncExternalStore } from 'react';
 import type { CanvasNode } from '@/state/canvas';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';

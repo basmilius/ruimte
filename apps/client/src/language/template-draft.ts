@@ -1,5 +1,5 @@
-import type { LiveTemplate, PostfixTemplate, TemplateScope } from '@ruimte/contracts';
 import { checkTemplate, type LiveTemplateDraft, type TemplateLanguage, type TemplatePlace } from '@adecore/editor-react';
+import type { LiveTemplate, PostfixTemplate, TemplateScope } from '@ruimte/contracts';
 import { isFamily, isPlace, type TemplateInput } from './templates';
 
 /* A template as the dialog edits it. The kind of an existing template never changes. */

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { act } from 'react';
 import type { FsEntry, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { useDesignChat } from '@/design/design-chat';
 import { DESIGN_METHODS } from '@/design/design-protocol';
 import { useDocument } from '@/state/document';

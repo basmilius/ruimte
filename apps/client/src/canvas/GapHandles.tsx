@@ -1,9 +1,9 @@
-import type { PointerEvent } from 'react';
-import { useTranslation } from 'react-i18next';
 import { formatNumber } from '@adecore/ui/format';
 import clsx from 'clsx';
-import { useCanvasCamera } from '@/state/canvas';
+import type { PointerEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { EditableGap, GapNode } from '@/canvas/editable-gaps';
+import { useCanvasCamera } from '@/state/canvas';
 
 export function GapHandles({
     gaps,

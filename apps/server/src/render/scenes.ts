@@ -1,14 +1,3 @@
-import type {
-    DiagramDocument,
-    DrawingColor,
-    DrawingDocument,
-    DrawingElement,
-    RenderColor,
-    RenderElement,
-    RenderPath,
-    RenderSceneResult,
-    RenderText
-} from '@ruimte/contracts';
 import {
     DEFAULT_EDGE_TONE,
     DEFAULT_GROUP_TONE,
@@ -24,6 +13,17 @@ import {
     textLinesOf
 } from '@adecore/diagram';
 import { LINE_HEIGHT, approximateMeasure, centerOf, fontOf, linesOf, pathsOfElement, rotatePoint, unionOf, writingFrameOf } from '@adecore/drawing';
+import type {
+    DiagramDocument,
+    DrawingColor,
+    DrawingDocument,
+    DrawingElement,
+    RenderColor,
+    RenderElement,
+    RenderPath,
+    RenderSceneResult,
+    RenderText
+} from '@ruimte/contracts';
 
 function color(tone: DrawingColor, palette: RenderColor['palette'] = 'ink'): RenderColor {
     return { tone, palette };

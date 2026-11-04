@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import type { SqlAnalysis } from '../database/sql-analysis.ts';
+import { EditorAssistModel } from '../editor-assist/model.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 import type { SharedWatch } from '../fs/shared-watch.ts';
 import { LanguageHost } from '../language/host.ts';
 import { NativePolicy, phpLanguageServerCheckout, sqlLanguageServerCheckout } from '../language/native.ts';
-import { EditorAssistModel } from '../editor-assist/model.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { provenanceChat } from '../provenance/chat-facts.ts';
 import { ProvenanceService } from '../provenance/provenance-service.ts';

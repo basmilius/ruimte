@@ -1,4 +1,8 @@
 import { stat } from 'node:fs/promises';
+import { ToolRefusal } from '@adecore/agents/context';
+import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
+import { narrowerMode } from '@adecore/agents/providers';
+import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import {
     BUNDLE_MAX_BYTES,
     PEER_MAX_OPEN_TASKS,
@@ -16,14 +20,7 @@ import {
     type RuntimeMode,
     type Task
 } from '@ruimte/contracts';
-import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
-import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
-import { narrowerMode } from '@adecore/agents/providers';
-import { ToolRefusal } from '@adecore/agents/context';
 import type { PendingPromptStore } from '../agents/pending-prompts.ts';
-import { MAX_AGENT_DEPTH } from '../tools/depth.ts';
-import { checkCwd } from '../tools/project-paths.ts';
-import { taskFirstPrompt } from '../tools/tasks.ts';
 import { RequestError } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
 import { BundleStore, fetchBundle, makeBundle } from '../git/bundles.ts';
@@ -32,10 +29,13 @@ import { git } from '../git/run.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import { KeyedQueue } from '../keyed-queue.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
-import type { ProjectStore } from '../projects/project-store.ts';
 import { peerTarget } from '../remote/connect-peer.ts';
+import { MAX_AGENT_DEPTH } from '../tools/depth.ts';
+import { checkCwd } from '../tools/project-paths.ts';
+import { taskFirstPrompt } from '../tools/tasks.ts';
 import { peerCanvasId, type PeerLinks } from './links.ts';
 import { idTakenOutside, nodeOf, sameCanvas, stripHidden } from './peer-canvas.ts';
 

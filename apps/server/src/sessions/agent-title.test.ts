@@ -1,8 +1,8 @@
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { appendFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import type { AgentInfo } from '@ruimte/contracts';
 import { ClaudeTitleReader } from '@adecore/agents/chat';
+import type { AgentInfo } from '@ruimte/contracts';
 import { CodexTitleReader } from '../agents/codex-title.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 

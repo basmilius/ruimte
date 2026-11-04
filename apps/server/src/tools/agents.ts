@@ -1,15 +1,15 @@
-import { type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
-import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
-import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
-import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
-import { BUILT_IN_KINDS } from '../providers/kinds.ts';
-import { offeredAgentKinds, providerFor } from '../providers/registry.ts';
-import { MAX_LINKS } from './links.ts';
 import { narrowerMode } from '@adecore/agents/providers';
+import { MAX_PROMPT_LENGTH } from '@ruimte/actions';
+import { type AgentKind, type ProjectCanvasView, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
+import { z } from 'zod';
+import { BUILT_IN_KINDS } from '../providers/kinds.ts';
+import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
+import { offeredAgentKinds, providerFor } from '../providers/registry.ts';
+import { field, orNote, type CanvasHost, type AgentCall } from './host.ts';
+import { MAX_LINKS } from './links.ts';
 import type { placeInGroup, Rect } from './placement.ts';
 import { readPromptFile } from './project-paths.ts';
-import { field, orNote, type CanvasHost, type AgentCall } from './host.ts';
 
 export const AGENT_KINDS = BUILT_IN_KINDS;
 

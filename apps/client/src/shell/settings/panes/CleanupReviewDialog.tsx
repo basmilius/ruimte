@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Trash2 } from 'lucide-react';
-import type { ArtifactCleanupProposal } from '@ruimte/contracts';
 import { Checkbox, PromptDialog, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatDayClock } from '@adecore/ui/format';
+import type { ArtifactCleanupProposal } from '@ruimte/contracts';
+import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
 

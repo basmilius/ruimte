@@ -1,6 +1,6 @@
-import { z } from 'zod';
 import type { ProbeResult } from '@adecore/agents/usage';
 import { DEFAULT_NANOGPT_SETTINGS, NanoGptSettingsSchema, type NanoGptSettings } from '@ruimte/contracts';
+import { z } from 'zod';
 import { readNanoGptUsage } from '../usage/nanogpt-plan.ts';
 import { KeyedApiService, type ApiFetch, type CatalogContent } from './keyed-api-service.ts';
 import { nanoGptVendorOf } from './nanogpt-vendor.ts';

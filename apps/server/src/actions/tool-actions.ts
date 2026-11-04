@@ -1,5 +1,5 @@
-import type { ActionHandlers } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
+import type { ActionHandlers } from '@ruimte/actions';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function toolsOf(context: ServerActionContext) {

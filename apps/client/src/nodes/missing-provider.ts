@@ -1,5 +1,5 @@
-import type { AgentKind } from '@ruimte/contracts';
 import type { ProvidersRow } from '@adecore/agents-react/state';
+import type { AgentKind } from '@ruimte/contracts';
 
 interface MissingProvider {
     name: string;

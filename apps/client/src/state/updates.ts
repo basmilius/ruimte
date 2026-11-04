@@ -1,11 +1,11 @@
-import i18next from 'i18next';
 import { formatPercent } from '@adecore/ui/format';
+import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
+import i18next from 'i18next';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
-import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
 import { startMachineUpdate } from '@/state/machine-update';
-import { browserStorage } from '@/state/stored-json';
 import { openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
+import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 
 interface UpdatesStore extends UpdateState {

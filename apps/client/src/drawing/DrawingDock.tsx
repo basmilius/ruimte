@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next';
-import { Circle, Diamond, Eraser, Hand, Lock, LockOpen, Minus, MousePointer2, MoveUpRight, Palette, Pencil, Square, StickyNote, Type } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
+import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Separator, Tooltip, DockShell, ZoomControls } from '@adecore/ui';
 import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
+import { Circle, Diamond, Eraser, Hand, Lock, LockOpen, Minus, MousePointer2, MoveUpRight, Palette, Pencil, Square, StickyNote, Type } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { fitAction } from '@/actions/client-actions';
 import { DockExportHistory } from '@/drawing/DockExportHistory';
 import { copyDrawing, exportDrawing, styleSelection, unlockEverything } from '@/drawing/drawing-actions';
-import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
-import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Separator, Tooltip, DockShell, ZoomControls } from '@adecore/ui';
-import { useSettings } from '@/state/settings';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
+import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
+import { useSettings } from '@/state/settings';
 
 interface ToolRow {
     tool: DrawingTool;

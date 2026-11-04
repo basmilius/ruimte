@@ -1,5 +1,5 @@
-import { createElement, Suspense } from 'react';
 import { ErrorBoundary } from '@adecore/ui';
+import { createElement, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useContributions, type CanvasLayerContribution, type ViewAccessoryContribution, type ViewAccessoryProps } from '@/extensions/registry';
 

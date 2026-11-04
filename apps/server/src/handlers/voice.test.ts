@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
-import type { CanvasHost } from '../tools/host.ts';
 import { connectionOpener, type ClientChannel, type ConnectionServices } from '../connection.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
+import type { CanvasHost } from '../tools/host.ts';
 import { VoiceKeyStore } from '../voice/key-store.ts';
 import { VoicePreferencesStore } from '../voice/preferences-store.ts';
 import { wireVoice } from '../wiring/voice.ts';
 import { registerVoiceHandlers, type VoiceHandlerDeps } from './voice.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const KEY = 'sk-test-voice-0123456789abcdef';
 const OWNER: ClientAccess = { reachability: 'loopback', sessionId: null };

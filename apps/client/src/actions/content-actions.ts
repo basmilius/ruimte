@@ -1,3 +1,4 @@
+import { messageOf } from '@adecore/ui';
 import { ActionRefusal, type ActionCall, type ActionHandlers, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import {
     DiagramContentSchema,
@@ -12,20 +13,19 @@ import {
     type DrawingElement,
     type ProjectView
 } from '@ruimte/contracts';
-import type { StoreApi } from 'zustand';
 import { z } from 'zod';
-import { messageOf } from '@adecore/ui';
-import { clipboardOrRefuse, copyTextOrRefuse } from '@/actions/clipboard';
+import type { StoreApi } from 'zustand';
 import { isOnScreen, unknownCanvas } from '@/actions/action-reach';
+import { clipboardOrRefuse, copyTextOrRefuse } from '@/actions/clipboard';
 import { asksFirst } from '@/actions/developer-actions';
+import { plural } from '@/actions/words';
 import { lineElement, noteElement, shapeElement, textElement } from '@/drawing/gestures';
 import { fitTextBox } from '@/drawing/measure';
+import { nodesOfView } from '@/project/view-nodes';
 import { liveCanvas, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
-import { nodesOfView } from '@/project/view-nodes';
 import type { DocumentState } from '@/state/document';
 import { defaultDrawings, DUPLICATE_OFFSET, isWritten, newSeed, withStyle, type DrawingState, type DrawingStyle } from '@/state/drawing';
-import { plural } from '@/actions/words';
 
 type Call = ActionCall<void> & { confirmed: boolean };
 

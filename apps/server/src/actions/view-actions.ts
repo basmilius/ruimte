@@ -1,3 +1,4 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { ActionRefusal, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
     flagOf,
@@ -16,10 +17,9 @@ import {
     type NodeTitleSource,
     type ProjectView
 } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
+import { orNote } from '../tools/host.ts';
 import { checkUrl, newId } from '../tools/nodes.ts';
 import { checkPath } from '../tools/project-paths.ts';
-import { orNote } from '../tools/host.ts';
 import {
     ID_PREFIX,
     MAX_PROJECT_VIEWS,

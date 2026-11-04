@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired } from './paired-write.ts';
 import { PROJECT_WRITE_IO, type ProjectWriteIO } from './project-write.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root: string;
 let intent: string;

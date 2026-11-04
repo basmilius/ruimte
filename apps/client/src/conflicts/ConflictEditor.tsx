@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useOverlayScrollbars } from '@adecore/ui';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
-import { useOverlayScrollbars } from '@adecore/ui';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ConflictFile } from '@/conflicts/conflict-model';
 import { applyBlock, blockAt, conflictEditing, revealBlock, setSpans, spansField, spansOf, type ConflictDraft } from '@/conflicts/editor';
 

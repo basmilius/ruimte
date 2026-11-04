@@ -1,8 +1,9 @@
-import { browserRouteAvailable } from '@/browser/owner-route';
 import { ActionRefusal, type ActionInput, type ActionOutput } from '@ruimte/actions';
 import { isCanvasView, isUnknownNode, isUnknownView, type AgentKind, type ProjectNode, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import { listed } from '@/actions/words';
 import type { AgentSession, AgentTarget } from '@/agents/nodes';
+import { browserRouteAvailable } from '@/browser/owner-route';
 import { toWorld } from '@/canvas/math';
 import type { ViewDeletionFacts } from '@/project/view-deletion';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
@@ -11,7 +12,6 @@ import { liveCanvas, type CanvasState } from '@/state/canvas';
 import { useDocument, type DocumentState } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { listed } from '@/actions/words';
 
 /* What the canvas, view and layout actions share: finding what they act on, and refusing what they cannot. */
 

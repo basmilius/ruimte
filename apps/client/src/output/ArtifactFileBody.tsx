@@ -1,18 +1,18 @@
+import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
+import { EmptyState, ScrollArea } from '@adecore/ui';
+import { injectVisualBootstrap, type ArtifactFile } from '@ruimte/contracts';
+import { CircleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert } from 'lucide-react';
-import { VisualPageFrame } from '@adecore/agents-react/chat/ui';
-import { injectVisualBootstrap, type ArtifactFile } from '@ruimte/contracts';
-import { EmptyState, ScrollArea } from '@adecore/ui';
 import { readArtifactFile, useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
 import { artifactBinaryRead, artifactSource, fileViewOf, languageOfName } from '@/output/file-view';
 import { CodeText } from '@/shell/panels/CodeFile';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { ImageFile } from '@/shell/panels/ImageFile';
+import { MediaFile } from '@/shell/panels/MediaFile';
 import { ModelPreview } from '@/shell/panels/ModelPreview';
 import { PdfPreview } from '@/shell/panels/PdfPreview';
-import { MediaFile } from '@/shell/panels/MediaFile';
 
 interface ArtifactFileProps {
     endpointId: string;

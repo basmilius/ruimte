@@ -4,8 +4,8 @@ import { visualRow, visualRows } from '../actions/visual-actions.ts';
 import { prepareVisualPage, type ImageFiles } from '../mcp/visual-images.ts';
 import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineToolkit, type ToolCall } from './tool.ts';
 import { field, requiredField } from './host.ts';
+import { defineToolkit, type ToolCall } from './tool.ts';
 
 /* A model that is not told so describes the page in its reply as well, which the person then reads twice. */
 export const SHOWN_LINE =

@@ -1,7 +1,7 @@
 import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
+import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import type { LucideIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
-import { extensionAgentStatus, type ExtensionAgentStatus, type ProjectNode, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useContributions, type SlotEntry, type SlotName } from '@/extensions/registry';
 import { canvasOfNode, focusedCanvas, useCanvas, type CanvasState } from '@/state/canvas';

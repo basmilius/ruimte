@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { DatabaseConnection, SqlSnapshotInfo } from '@ruimte/contracts';
 import type { CheckInfo, ColumnInfo, SchemaInfo, ServerInfo, StatementResult, TableInfo, TableStructure, TriggerInfo } from '@adecore/database/protocol';
+import type { DatabaseConnection, SqlSnapshotInfo } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import { openConfig } from './agent-databases.ts';
 import { inOwnedSession, type DatabaseCalls, type SessionCall } from './owned-session.ts';

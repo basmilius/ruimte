@@ -1,8 +1,8 @@
-import { X } from 'lucide-react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import { IconButton, ScrollArea, Select } from '@adecore/ui';
 import { formatDecimal, formatRounded } from '@adecore/ui/format';
+import clsx from 'clsx';
+import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ChartModel, ModelMark } from './chart';
 import { formatMetric, metricChange, metricValue, METRICS, PRICE_METRICS, shortModelName, type ModelPoint } from './comparison';
 import { LabLogo } from './LabLogo';

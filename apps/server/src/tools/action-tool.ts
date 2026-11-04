@@ -1,12 +1,12 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
 import { serverActionCall } from '../actions/context.ts';
 import { PROJECT_WRITES } from '../actions/revision.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { defineTool, REVISION_INPUT, type Tool, type ToolSpec } from './tool.ts';
 import { canvasLines, placeOf, type AgentCall } from './host.ts';
+import { defineTool, REVISION_INPUT, type Tool, type ToolSpec } from './tool.ts';
 
 /* What the daemon's registry answers when a handler failed outright rather than refused. */
 const FAILURES: ReadonlySet<string> = new Set(['action-failed', 'invalid-output']);

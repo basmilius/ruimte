@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
 import { createChart } from '@adecore/charts';
 import { useContentSize } from '@adecore/ui';
 import { formatDecimal } from '@adecore/ui/format';
+import { useTranslation } from 'react-i18next';
 import { costAxis, type ChartModel, type CostScale, type ModelMark } from './chart';
 import { clearOnEscape } from './clear-on-escape';
 import {

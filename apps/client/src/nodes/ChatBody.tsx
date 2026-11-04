@@ -1,10 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import type { AgentKind, ModelSelection } from '@ruimte/contracts';
-import { perform } from '@/actions/client-actions';
 import type { ChatSendExtras } from '@adecore/agents-react/chat';
-import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
 import {
     defaultProvider,
     readChatPreferences,
@@ -14,24 +8,30 @@ import {
     composerWrites,
     useSubagentTrail
 } from '@adecore/agents-react/chat';
+import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
+import { providersOf, useChats, useChatRow } from '@adecore/agents-react/state';
+import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
+import type { AgentKind, ModelSelection } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { perform } from '@/actions/client-actions';
+import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { peekOpeningMode, settleOpeningMode } from '@/chat/opening-mode';
 import { deriveNodeTitle } from '@/chat/title';
-import { Composer, SubagentTimeline, Timeline } from '@adecore/agents-react/chat/ui';
-import { useProject } from '@/state/project';
-import { endpointKey, useEndpointId } from '@/state/keys';
-import { chatClientFor } from '@/transport/connections';
-import { useTransportStatus } from '@/transport/status';
-import { MissingProviderNote } from '@/nodes/MissingProviderNote';
-import { OutputChatContext } from '@/output/chat-scope';
-import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
-import { useMountCount } from '@/measure/mounts';
-import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ErrorBoundary, LazyBoundary, messageOf } from '@adecore/ui';
-import { bringPromptToFront } from '@/canvas/prompt-stack';
-import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { ViewAccessories } from '@/extensions/ContributedSlots';
 import { nodeInfoOf } from '@/extensions/slots';
 import { SlotRow } from '@/extensions/SlotSurfaces';
+import { useMountCount } from '@/measure/mounts';
+import { MissingProviderNote } from '@/nodes/MissingProviderNote';
+import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
+import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
+import { OutputChatContext } from '@/output/chat-scope';
+import { PROMPTS_IN_NODES } from '@/prompts/placement';
+import { endpointKey, useEndpointId } from '@/state/keys';
+import { useProject } from '@/state/project';
+import { chatClientFor } from '@/transport/connections';
+import { useTransportStatus } from '@/transport/status';
 
 /*
  * The body of a chat, the same on a canvas inside a frame and filling a view of its own. In a view what a built-in

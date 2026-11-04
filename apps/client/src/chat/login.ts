@@ -1,5 +1,5 @@
-import type { AgentKind } from '@ruimte/contracts';
 import { providerAccountsOf } from '@adecore/agents-react/state';
+import type { AgentKind } from '@ruimte/contracts';
 import { useUi } from '@/state/ui';
 
 /*

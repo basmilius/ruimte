@@ -1,13 +1,13 @@
-import { isCanvasView, type ChatInfo, type ChatItem, type ChatSummarizeResult, type ProjectContent, type ProjectEdge } from '@ruimte/contracts';
 import { readableAssistantText } from '@adecore/agents/chat';
 import type { OutboxOutcome } from '@adecore/agents/coordination';
-import { newId } from '../tools/nodes.ts';
-import type { ProjectHost } from '../tools/host.ts';
+import { isCanvasView, type ChatInfo, type ChatItem, type ChatSummarizeResult, type ProjectContent, type ProjectEdge } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import type { DeliverSummaryEntry, OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
+import type { ProjectHost } from '../tools/host.ts';
+import { newId } from '../tools/nodes.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { ChatError } from './errors.ts';
 

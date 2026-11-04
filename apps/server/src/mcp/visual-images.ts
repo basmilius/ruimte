@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { open, stat } from 'node:fs/promises';
-import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { field, ToolRefusal } from '@adecore/agents/context';
+import { VISUAL_LIMITS } from '@ruimte/contracts';
 
 /*
  * A visual's page may name a local image by its absolute path, and the MCP tool puts that image in the

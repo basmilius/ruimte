@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
 import { SharedWatch } from '../fs/shared-watch.ts';
 import { FolderWatcher, MAX_CHANGED_PATHS } from '../fs/watch.ts';
+import * as runner from './run.ts';
 import { GitStatusWatcher } from './status-watcher.ts';
 import { forgetBase, readStatus } from './status.ts';
-import * as runner from './run.ts';
 import { initRepo } from './test-repo.ts';
 
 let root: string;

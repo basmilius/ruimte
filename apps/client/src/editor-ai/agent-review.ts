@@ -1,9 +1,9 @@
-import { createStore, type StoreApi } from 'zustand';
-import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
 import type { Editor } from '@adecore/editor';
 import { highlightLayers, LineActionHost, ReviewGroup, RowHost, type HostedAction, type HostedRow, type ReviewMember } from '@adecore/editor-react';
 import { replaceAllLines, replacedWords, type LineReplacement } from '@adecore/editor-react/models';
 import { splitLines } from '@adecore/merge';
+import type { ProvenanceReviewState, ProvenanceRun } from '@ruimte/contracts';
+import { createStore, type StoreApi } from 'zustand';
 import { lineRangeLabel, selectionBlock } from '@/chat/selection-to-chat';
 import type { AgentChanges, DrawFrame } from './agent-changes';
 import { registerAgentReview } from './agent-review-registry';

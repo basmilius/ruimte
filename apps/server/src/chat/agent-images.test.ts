@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { ACTION_DEFINITIONS } from '@ruimte/actions';
 import { ManualClock } from '@adecore/agents/testing';
-import type { ProjectStore } from '../projects/project-store.ts';
+import { ACTION_DEFINITIONS } from '@ruimte/actions';
 import { AgentFiles } from '../mcp/files.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
 import { refusalCode, toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 import { AGENT_ATTACHMENT_LIMIT } from './agent-images.ts';

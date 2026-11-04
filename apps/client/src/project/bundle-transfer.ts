@@ -1,7 +1,7 @@
 import { BYTES_CHUNK_MAX, type GitBundlePayload, type GitFetchBundleResult } from '@ruimte/contracts';
+import { base64Of } from '@/base64';
 import { readPiece } from '@/transport/piece';
 import type { Transport } from '@/transport/transport';
-import { base64Of } from '@/base64';
 
 /* What a bundle moves over: a machine to read it from and a machine to write it to. */
 export type BundleSource = Pick<Transport, 'request' | 'readBytes'>;

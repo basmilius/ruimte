@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { ChatApprovalItem, ChatQuestionItem, ChatSubagentItem, ProjectView } from '@ruimte/contracts';
 import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
+import type { ChatApprovalItem, ChatQuestionItem, ChatSubagentItem, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const CHILD: ChatSubagentItem = {
     id: 'agent-reviewer',

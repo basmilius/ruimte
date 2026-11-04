@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import type { ChatInfo } from '@adecore/agent-contracts';
+import { z } from 'zod';
 import { ProjectSummarySchema } from './project.ts';
 import { isAbsolutePath } from './stored-path.ts';
 

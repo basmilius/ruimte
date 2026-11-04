@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { AddressBookClient, accessRequestMessage, type AccessRequestPayload } from '@ruimte/pulsar';
-import { createClientKeyLoader, type KeyStore } from '@/endpoint/client-key';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
+import { createClientKeyLoader, type KeyStore } from '@/endpoint/client-key';
 import { requestSignalAccess } from './statements';
 
 function memoryStore(): KeyStore {

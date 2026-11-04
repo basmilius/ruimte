@@ -12,8 +12,8 @@ import { SelfUpdater, buildFileOf, readBuildFile } from '../service/self-update.
 import { childCounter, workOf } from '../service/work.ts';
 import { SessionPorts } from '../sessions/ports.ts';
 import { BUILD } from '../version.ts';
-import type { AgentsBundle } from './agents.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
+import type { AgentsBundle } from './agents.ts';
 import type { LaunchesBundle } from './launches.ts';
 
 /* The processes behind sessions and chats, and the build that waits for them to be idle. */

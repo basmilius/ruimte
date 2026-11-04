@@ -1,5 +1,5 @@
-import type { RoutineSchedule } from './routine.ts';
 import { cronClocks, cronMatchesDay, parseCron } from './routine-cron.ts';
+import type { RoutineSchedule } from './routine.ts';
 
 /* Shared by the daemon, which owes a routine its times, and a client, which draws them in a week. */
 

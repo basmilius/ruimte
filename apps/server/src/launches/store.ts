@@ -1,4 +1,5 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
 import {
     isSecretReference,
     LAUNCH_SECRET_REFERENCE,
@@ -16,11 +17,9 @@ import {
     type LaunchesPrivateFile,
     type LaunchesSharedFile
 } from '@ruimte/contracts';
-import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
-import { isInside } from '../tools/project-paths.ts';
-import { cachedRepos } from '../git/repo-cache.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
+import { cachedRepos } from '../git/repo-cache.ts';
 import {
     PRIVATE_DIR,
     PROJECT_DIR,
@@ -40,6 +39,7 @@ import {
     type JsonDocumentRead
 } from '../projects/project-files.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { detectLaunches } from './detect.ts';
 
 const LAUNCHES_FILE = 'launches.json';

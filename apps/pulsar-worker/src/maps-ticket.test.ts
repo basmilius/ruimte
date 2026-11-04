@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { MAPS_TICKET_LIFETIME_MS, MapsTicketSchema, mapsTicketSubject, verifyMapsTicket, type MapsTicket } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { issueMapsTicket } from './maps-ticket.ts';

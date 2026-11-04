@@ -8,19 +8,19 @@ import {
     type MachineUpdateReport,
     type MachineWork
 } from '@ruimte/contracts';
-import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
-import { isOwner } from '../auth/access.ts';
-import { signForAccount } from '../auth/registration.ts';
 import { peerAccessRequestMessage } from '@ruimte/pulsar';
-import type { PeerKey } from '../remote/peer-key.ts';
+import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
+import { isOwner } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
+import { signForAccount } from '../auth/registration.ts';
+import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import type { EndpointIdentity, IdentityFlags } from '../endpoint-id.ts';
 import { checkWorktreeRoot } from '../git/worktree-root.ts';
-import type { BrokerDescription } from '../pulsar/broker-switch.ts';
-import type { InstallVerdict } from '../power/machine-update.ts';
-import { INTEGRATION_KINDS, IntegrationsFixed, isIntegrationKind } from '../agents/integrations.ts';
 import { DEFAULT_ADMIN_PROMPT } from '../power/closed-lid.ts';
+import type { InstallVerdict } from '../power/machine-update.ts';
 import { gitBash } from '../pty/pty.ts';
+import type { BrokerDescription } from '../pulsar/broker-switch.ts';
+import type { PeerKey } from '../remote/peer-key.ts';
 import { countClient, countUsage, recordStartup, recordTiming } from '../stats/usage-stats.ts';
 
 interface EndpointHost {

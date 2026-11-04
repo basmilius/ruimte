@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectView } from '@ruimte/contracts';
-
 import { nodesOfView } from '@/project/view-nodes';
 import { callerName, showViewNotice } from './show-view';
 

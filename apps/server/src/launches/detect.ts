@@ -1,10 +1,10 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
-import type { LaunchConfig, LaunchConfigEnv, LaunchConfigKind, LaunchSuggestion } from '@ruimte/contracts';
 import { fileExists } from '@adecore/agents';
-import { isInside } from '../tools/project-paths.ts';
+import type { LaunchConfig, LaunchConfigEnv, LaunchConfigKind, LaunchSuggestion } from '@ruimte/contracts';
 import { isRecord } from '../is-record.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { readVscodeLaunch } from './vscode.ts';
 
 /*

@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
+import { Tooltip, useNow } from '@adecore/ui';
+import { MasterItem } from '@adecore/ui/settings';
 import clsx from 'clsx';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { describeConnection, describeLastSeen, describePing, describeRoute, reachabilityLabel } from '@/shell/connection-info';
-import { MasterItem } from '@adecore/ui/settings';
-import { Tooltip, useNow } from '@adecore/ui';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';

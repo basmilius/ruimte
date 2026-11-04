@@ -1,7 +1,7 @@
 'use client';
 
-import { AppWindow as PageIcon, Bot, CalendarClock, FileText, HardDrive, Hash, Image, type LucideIcon, Search, User } from 'lucide-react';
 import { Input, SectionLabel } from '@adecore/ui';
+import { AppWindow as PageIcon, Bot, CalendarClock, FileText, HardDrive, Hash, Image, type LucideIcon, Search, User } from 'lucide-react';
 import { IconButton } from '../../app/primitives.tsx';
 import { Stage } from '../../film/Stage.tsx';
 import { GuideWindow, SidePanel } from './parts.tsx';

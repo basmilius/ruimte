@@ -1,9 +1,9 @@
+import { definitionRunsProgram, type ServiceManager } from '@adecore/service';
 import { isIdle, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
 import type { DaemonCrash, DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
-import { definitionRunsProgram, type ServiceManager } from '@adecore/service';
+import type { ShellProblem } from '../telemetry';
 import { serviceOwnership } from './ownership';
 import type { KeepRunningSetting } from './settings';
-import type { ShellProblem } from '../telemetry';
 
 export interface ServiceControllerDeps {
     support: ServiceSupport;

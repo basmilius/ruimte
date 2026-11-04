@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import { workflowAgentRef, type ChatItem, type ChatWorkflow, type ProjectCanvasView, type ProjectNode } from '@ruimte/contracts';
 import { useSubagentView } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
+import { workflowAgentRef, type ChatItem, type ChatWorkflow, type ProjectCanvasView, type ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { derivedCardId } from '@/canvas/node-body';
 import { forgetWorkflowBeside } from '@/chat/workflow/workflow-beside-state';
 import { focusedCanvas } from '@/state/canvas';
 import { chatInfoOf } from '../../../testing/chat-info';
 import { clickOn, layOutChat, mount, until, type Mounted } from '../../../testing/dom';
 import { FakeMachine } from '../../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
 import { claudeProvider } from '../../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../../testing/fake-workspace';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
 

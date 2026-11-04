@@ -1,3 +1,4 @@
+import { Button, Dialog, ScrollArea } from '@adecore/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DraftBar } from '@/shell/panels/DraftBar';
@@ -5,7 +6,6 @@ import { closeWithoutSaving, dismissClose as close, retryClose, useUnsavedClose 
 import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
-import { Button, Dialog, ScrollArea } from '@adecore/ui';
 
 export function UnsavedCloseDialog() {
     const { t } = useTranslation('panels');

@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import { ModelCatalogsResultSchema } from '@ruimte/pulsar';
-import { BUNDLED_CATALOGS, catalogsFor, readCatalogs } from './catalog.ts';
 import { ROUTE_SCHEMAS, routesOf } from './catalog-schemas.ts';
 import { seedRefusalOf, seedStatementsOf } from './catalog-seed.ts';
+import { BUNDLED_CATALOGS, catalogsFor, readCatalogs } from './catalog.ts';
 import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 const CATALOG = {

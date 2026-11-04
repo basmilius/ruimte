@@ -1,14 +1,14 @@
+import type { InlineProblem } from '@adecore/editor-react/models';
+import { FileIcon, Icon, Tooltip } from '@adecore/ui';
+import { CircleX, Info, Sparkles, TriangleAlert } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleX, Info, Sparkles, TriangleAlert } from 'lucide-react';
-import { FileIcon, Icon, Tooltip } from '@adecore/ui';
 import { lineRangeLabel } from '@/chat/selection-to-chat';
-import type { InlineProblem } from '@adecore/editor-react/models';
 import type { EditorLanguage as RuimteEditorLanguage } from '@/language/ruimte-editor-language';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { InlineAgentPicker } from './InlineAgentPicker';
 import type { InlineEditFeature, InlinePrompt } from './inline-edit';
 import { problemChips, problemDetail, problemLabel } from './inline-edit-layout';
+import { InlineAgentPicker } from './InlineAgentPicker';
 
 type EditorLanguage = Pick<RuimteEditorLanguage, 'editor' | 'inlineEdit'>;
 

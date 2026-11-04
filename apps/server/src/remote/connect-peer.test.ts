@@ -4,9 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OutboxWorker, type OutboxHandlers } from '@adecore/agents/coordination';
 import { ManualClock } from '@adecore/agents/testing';
-import { OutboxStore, type ConnectPeerEntry, type OutboxWork } from '../outbox/outbox.ts';
 import { refusingHandlers } from '../outbox/outbox-test-helpers.ts';
-import { RemoteLinkError } from './remote-connections.ts';
+import { OutboxStore, type ConnectPeerEntry, type OutboxWork } from '../outbox/outbox.ts';
 import {
     ConnectPeer,
     PEERS_PROJECT,
@@ -17,6 +16,7 @@ import {
     peerTarget,
     restartConnectPeers
 } from './connect-peer.ts';
+import { RemoteLinkError } from './remote-connections.ts';
 
 const MACHINE = 'machine-b';
 

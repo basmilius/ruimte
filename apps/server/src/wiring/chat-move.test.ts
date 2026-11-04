@@ -3,16 +3,16 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { newScratchChat } from '../projects/scratch-project.ts';
-import { ProjectStore } from '../projects/project-store.ts';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
-import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { registerChatHandlers } from '../handlers/chat.ts';
-import { ProviderRegistry } from '../providers/registry.ts';
-import { ProjectProposals } from '../projects/project-proposals.ts';
 import { moveChat } from '../projects/move-chat.ts';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectProposals } from '../projects/project-proposals.ts';
+import { ProjectStore } from '../projects/project-store.ts';
+import { newScratchChat } from '../projects/scratch-project.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
+import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { chatMoveDeps, chatMoveHandlers, type ChatMoveWiring } from './chat-move.ts';
 
 describe('what the machine says about moving a chat', () => {

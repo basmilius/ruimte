@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { MAX_READ_BYTES } from '../artifacts/artifacts.ts';
 import { stageArtifact } from '../mcp/uploads.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineToolkit } from './tool.ts';
 import { field, orNote, requiredField } from './host.ts';
+import { defineToolkit } from './tool.ts';
 
 function versionLine(artifact: Artifact, version: ArtifactVersion): string {
     return `artifact\t${artifact.artifactId}\t${version.versionId}\t${version.number}\t${artifact.kind}\t${field(artifact.title)}\t${version.files.length}\t${version.bytes}`;

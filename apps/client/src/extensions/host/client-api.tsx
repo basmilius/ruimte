@@ -1,20 +1,6 @@
-import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
-import i18next from 'i18next';
-import { icons, Package, type LucideIcon } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { IS_STATION } from '@/station';
-import { create } from 'zustand';
-import { databaseConnections } from '@/database/connections';
-import { desktop } from '@/desktop/bridge';
-import { assertShortcut } from '@/extensions/action-shortcuts';
-import { addFileIcons } from '@/extensions/file-icons';
-import { settingKey, useExtensionStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
-import { useMachineStorage } from '@/extensions/host/machine-storage';
-import { extensionRequest } from '@/extensions/machine-request';
-import { useTheme as useUiTheme } from '@/state/theme';
-import * as format from '@adecore/ui/format';
-import { ErrorBoundary } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
+import { ErrorBoundary } from '@adecore/ui';
+import * as format from '@adecore/ui/format';
 import {
     extensionActionCall,
     extensionAgentStatus,
@@ -35,12 +21,25 @@ import {
     type NodeAccent,
     type RequestMap
 } from '@ruimte/contracts';
-import type * as PublicClient from '../../../../../packages/extension/client';
-import { revealNode } from '@/project/views';
-import { ExtensionGlyph } from '@/extensions/ExtensionTile';
+import i18next from 'i18next';
+import { icons, Package, type LucideIcon } from 'lucide-react';
+import { createContext, createElement, lazy, Suspense, use, useContext, useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from 'react';
+import { useTranslation } from 'react-i18next';
+import { create } from 'zustand';
+import { databaseConnections } from '@/database/connections';
+import { desktop } from '@/desktop/bridge';
 import { runAction, trackRun, useActionRuns } from '@/extensions/action-runs';
+import { assertShortcut } from '@/extensions/action-shortcuts';
+import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
 import { sendDevLog } from '@/extensions/dev-log';
 import { DevReport } from '@/extensions/DevReport';
+import { ExtensionGlyph } from '@/extensions/ExtensionTile';
+import { addFileIcons } from '@/extensions/file-icons';
+import { settingKey, useExtensionStorage, writeExtensionStorage } from '@/extensions/host/extension-storage';
+import { ExtensionChat } from '@/extensions/host/ExtensionChat';
+import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
+import { useMachineStorage } from '@/extensions/host/machine-storage';
+import { extensionRequest } from '@/extensions/machine-request';
 import {
     contribute,
     useContributions,
@@ -51,22 +50,23 @@ import {
     type SlotName
 } from '@/extensions/registry';
 import { baseContext, nodeInfoIn, useNodeSources, type NodeInfo } from '@/extensions/slots';
-import { onClientEvent, type ClientEvents } from '@/extensions/client-events';
-import { ExtensionChat } from '@/extensions/host/ExtensionChat';
-import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
+import { revealNode } from '@/project/views';
 import { openFileLink } from '@/shell/panels/file-links';
-import { currentEndpointId } from '@/state/keys';
 import { canvasOfNode, focusedCanvas, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { folderWatches, isUnderFolder } from '@/state/fs-watch';
+import { currentEndpointId } from '@/state/keys';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { nodeStatus, nodeWaitAsk, useSessions } from '@/state/sessions';
+import { useTheme as useUiTheme } from '@/state/theme';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
+import { IS_STATION } from '@/station';
+import { machineTransport, TransportError, type Transport } from '@/transport';
 import { useFocusedMachine } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
-import { machineTransport, TransportError, type Transport } from '@/transport';
+import type * as PublicClient from '../../../../../packages/extension/client';
 
 export interface LoadedExtension {
     manifest: ExtensionManifest;

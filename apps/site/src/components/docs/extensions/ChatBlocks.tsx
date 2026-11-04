@@ -1,8 +1,8 @@
 'use client';
 
+import { Icon } from '@adecore/ui';
 import { SquareSlash } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Icon } from '@adecore/ui';
 import { AssistantText, Composer, UserBubble } from '../../app/chat.tsx';
 import { EASE, useTimeline } from '../../film/playback.ts';
 import { Stage } from '../../film/Stage.tsx';

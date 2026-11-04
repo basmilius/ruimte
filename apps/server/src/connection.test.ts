@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { decodeLiveFrame, type EventMap, type LiveFrame, type ServerFrame } from '@ruimte/contracts';
-import type { LiveSink } from './client-sinks.ts';
 import { HIGH_WATER_MARK } from './backpressure.ts';
+import type { LiveSink } from './client-sinks.ts';
 import { connectionOpener, type ClientChannel, type ConnectionServices } from './connection.ts';
 import { Dispatcher } from './dispatcher.ts';
 import type { SessionEvent, SessionSink } from './sessions/manager.ts';

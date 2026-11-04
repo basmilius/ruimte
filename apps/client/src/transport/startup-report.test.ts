@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import type { RequestMap, RequestType } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { FakeLink } from '../../testing/fake-link';
 import type { WatchablePool } from './pool-watch';
 import { startStartupReport } from './startup-report';
-import { FakeLink } from '../../testing/fake-link';
 
 class Link extends FakeLink {
     readonly asked: Array<{ type: string; payload: unknown }> = [];

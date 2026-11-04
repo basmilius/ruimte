@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import {
     BinaryFrameAssembler,
     BYTES_REPLY_MAX_BYTES,
@@ -21,6 +20,7 @@ import {
     type DirectProofFrame
 } from '@ruimte/contracts';
 import { randomToken } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import { mergeIceServers, relayedFromStats } from './ice';
 import type { Link, LinkOpener } from './link-transport';
 import { protocolRefusal } from './protocol';

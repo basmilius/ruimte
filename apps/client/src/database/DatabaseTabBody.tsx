@@ -1,9 +1,9 @@
-import { useEffect, useEffectEvent, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronRight, Database, Unplug } from 'lucide-react';
 import { StructureView, TableDesigner, TableView, useDatabaseClient, type Connection } from '@adecore/database';
 import type { TableKind } from '@adecore/database/protocol';
 import { Button, EmptyState, Icon } from '@adecore/ui';
+import { ChevronRight, Database, Unplug } from 'lucide-react';
+import { useEffect, useEffectEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { asViewConnections, ensureDatabaseConnections, useDatabaseConnectionList, useDatabaseConnections, useWithheldPasswords } from '@/database/connections';
 import { DatabaseTabProvider, RuimteDatabaseProvider } from '@/database/RuimteDatabaseProvider';
 import { useFiles, type DatabaseTab } from '@/state/files';

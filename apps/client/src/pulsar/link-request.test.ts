@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { forgetLink, linkRequestOf, linkStep, rememberLink, rememberedLink, typedCode } from './link-request';
 import { memoryStorage } from '../../testing/memory-storage';
+import { forgetLink, linkRequestOf, linkStep, rememberLink, rememberedLink, typedCode } from './link-request';
 
 describe('the /link address', () => {
     test('carries the code as the terminal printed it, or none', () => {

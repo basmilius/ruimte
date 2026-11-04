@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { CodedError } from '@adecore/agents';
 import {
     isHiddenChatView,
     type ChatCreatePayload,
@@ -7,7 +8,6 @@ import {
     type ProjectNewInlineChatPayload,
     type ProjectNewInlineChatResult
 } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
 import { isInside } from '../tools/project-paths.ts';
 import type { ProjectStore } from './project-store.ts';
 import { newChatId } from './scratch-project.ts';

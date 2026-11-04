@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { visibleRect } from '@/canvas/math';
 import { minimapScale, minimapWorld, rectOnMap } from '@/canvas/minimap-geometry';
 import { canvasOfNode } from '@/state/canvas';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { FakeMachine } from '../../testing/fake-machine';
-import { clickOn, until } from '../../testing/dom';
 import { openCanvasPage, type CanvasPage } from '../../testing/canvas-page';
+import { clickOn, until } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const PLAN: ProjectNode = { id: 'plan', kind: 'note', title: 'Plan', body: 'Ship it', x: 0, y: 0, w: 400, h: 320 };
 const FAR: ProjectNode = { id: 'far', kind: 'note', title: 'Far away', body: 'Out of sight', x: 2000, y: 1000, w: 400, h: 320 };

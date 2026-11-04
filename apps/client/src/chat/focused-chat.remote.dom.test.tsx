@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { ProjectCanvasView, ProjectNode, ProviderInfo } from '@ruimte/contracts';
 import { useSubagentView } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
+import type { ProjectCanvasView, ProjectNode, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { runPaletteCommand } from '@/shell/menu/actions';
 import { focusedCanvas } from '@/state/canvas';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { chatInfoOf } from '../../testing/chat-info';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 
 const REMOTE = 'machine-b';
 // The chat runs on the other machine, so every command that means it has to reach that one.

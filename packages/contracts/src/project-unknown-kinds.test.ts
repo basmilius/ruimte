@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { duplicateIdIn, withoutCrossViewEdges } from './project-migrate.ts';
+import { migratedFile } from './project-test-helpers.ts';
+import { withDuplicatedView, withRenamedView, withViewIcon } from './project-views.ts';
 import {
     edgeRole,
     isExtensionView,
@@ -10,9 +13,6 @@ import {
     storedViewsOf,
     type ProjectCanvasView
 } from './project.ts';
-import { duplicateIdIn, withoutCrossViewEdges } from './project-migrate.ts';
-import { migratedFile } from './project-test-helpers.ts';
-import { withDuplicatedView, withRenamedView, withViewIcon } from './project-views.ts';
 
 /* A file as a newer Ruimte writes it: a view and a canvas node of kinds this version never heard of. */
 const NEWER_FILE = {

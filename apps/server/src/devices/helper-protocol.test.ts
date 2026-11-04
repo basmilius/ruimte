@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperMessage } from './helper-protocol.ts';
 import { concatBytes } from './device-test-helpers.ts';
+import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperMessage } from './helper-protocol.ts';
 
 describe('device helper protocol', () => {
     test('decodes split ready and frame messages without base64', () => {

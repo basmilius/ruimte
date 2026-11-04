@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { LanguageChoices } from './choices.ts';
 import { alternativesOf, kindForLanguage } from './profiles.ts';
 import { makeAlternatives } from './test-fakes.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let path = '';
 let folder = '';

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { blankQuoted, createScrubber } from './scrub.ts';
 import { telemetryRelease } from './dsn.ts';
+import { blankQuoted, createScrubber } from './scrub.ts';
 
 const LOCAL_SECRET = 'q7Zr2Lw9Xk4Pv8Nm3Bt6Hs1Jd5Fg0Ac_YeUoTiR-xQ';
 

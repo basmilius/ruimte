@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '@adecore/agents/testing';
+import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, releasedProject, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
 

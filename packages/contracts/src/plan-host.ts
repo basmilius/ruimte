@@ -1,6 +1,6 @@
+import { PlanIdSchema, PlanSchema, PlanPersonOpSchema } from '@adecore/plan/protocol';
 import { z } from 'zod';
 import { ChatIdSchema } from './chat.ts';
-import { PlanIdSchema, PlanSchema, PlanPersonOpSchema } from '@adecore/plan/protocol';
 
 export {
     PLAN_LIMITS,

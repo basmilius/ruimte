@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'bun:test';
 import type { ComponentType } from 'react';
+import { runAction } from '@/extensions/action-runs';
 import type { LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { HostDialogs, HostOverlays } from '@/extensions/host/host-dialogs';
-import { runAction } from '@/extensions/action-runs';
 import { useContributions } from '@/extensions/registry';
 import { baseContext } from '@/extensions/slots';
 import { useToasts } from '@/state/toasts';

@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
-import { MachineCard } from '@/shell/MachineCard';
-import { useMachineEntry } from '@/shell/use-machine-entry';
-import { nameOf } from '@/shell/settings/machine-list';
-import { pool } from '@/transport';
-import type { RemoteNodeState } from '@/canvas/remote-node-state';
 import { Button } from '@adecore/ui';
+import { useTranslation } from 'react-i18next';
+import type { RemoteNodeState } from '@/canvas/remote-node-state';
+import { MachineCard } from '@/shell/MachineCard';
+import { nameOf } from '@/shell/settings/machine-list';
+import { useMachineEntry } from '@/shell/use-machine-entry';
+import { pool } from '@/transport';
 
 /*
  * The body of a node whose machine is not there: which machine, when it last answered, and what

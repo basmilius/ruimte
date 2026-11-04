@@ -1,6 +1,6 @@
-import type { WriteCases, WriteDomain } from './case.ts';
 import { cases as agents } from './agents.cases.ts';
 import { cases as canvas } from './canvas.cases.ts';
+import type { WriteCases, WriteDomain } from './case.ts';
 import { cases as communicate } from './communicate.cases.ts';
 import { cases as content } from './content.cases.ts';
 import { cases as developer } from './developer.cases.ts';

@@ -1,16 +1,16 @@
+import { nodeChats, resolveStoredPath, type Worktree } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { nodeChats, resolveStoredPath, type Worktree } from '@ruimte/contracts';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
+import { nodesOfView } from '@/project/view-nodes';
 import { closeAfterSaving } from '@/shell/panels/unsaved-close';
 import { worktreeSessionsOf, worktreesLeftBy } from '@/shell/panels/worktree-rows';
-import { nodesOfView } from '@/project/view-nodes';
+import type { CanvasState } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointOfNode } from '@/state/keys';
-import { transportFor } from '@/transport';
 import { useProject } from '@/state/project';
-import type { CanvasState } from '@/state/canvas';
+import { transportFor } from '@/transport';
 import type { Transport } from '@/transport/transport';
 
 /*

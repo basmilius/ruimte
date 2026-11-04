@@ -1,7 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ExternalLink, Lock, RotateCw } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { IconButton } from './primitives.tsx';
 
 /** `TerminalBody.tsx` with the xterm theme: 8px in from the left, 13px mono on the terminal ground. */

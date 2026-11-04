@@ -1,5 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createHolder } from '@adecore/editor-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { draftFiles } from '@/language/project-files';
 import { acquireProjectLanguage, type ProjectLanguage } from '@/language/ruimte-project-language';
 import { useProject } from '@/state/project';

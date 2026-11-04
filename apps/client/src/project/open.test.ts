@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { useEndpoints } from '../state/endpoints';
 import { useWindow } from '../state/window';
 import type { OpenRequest } from '../transport/connections';
-import { bootWindow, switchRun, type SwitchDeps, type SwitchPlan, type Whereabouts } from './open';
 import { fakeStorage, lanEndpoint } from './fixtures';
+import { bootWindow, switchRun, type SwitchDeps, type SwitchPlan, type Whereabouts } from './open';
 
 function stored(value: unknown): Map<string, string> {
     return new Map([['ruimte.lastProject', JSON.stringify(value)]]);

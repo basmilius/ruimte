@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { Skeleton } from '@adecore/ui';
 import { Tabs } from '@base-ui/react/tabs';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePulsarAccount } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
@@ -9,7 +10,6 @@ import { mergeMachines } from '@/shell/settings/machine-list';
 import { ACCOUNT_SECTION } from '@/shell/settings/sections';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';
-import { Skeleton } from '@adecore/ui';
 
 /* Who this client is signed in as, and how many machines it knows; it opens the Account pane. */
 export function AccountTab() {

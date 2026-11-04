@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
+import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import type { ProviderAccountsService } from '@adecore/agents/providers';
 import { ManualClock, testAccounts } from '@adecore/agents/testing';
+import type { LimitsUpdate } from '@adecore/agents/usage';
+import type { ChatInfo, ChatTurnItem, ProjectCanvasView, ProjectContent } from '@ruimte/contracts';
 import { setProjectAccounts } from '../projects/project-accounts.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
-import type { ProviderAccountsService } from '@adecore/agents/providers';
-import type { LimitsUpdate } from '@adecore/agents/usage';
 import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
 import { turnsOf } from './chat-test-helpers.ts';
 import { sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 

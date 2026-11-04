@@ -1,11 +1,11 @@
+import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DiffFile } from '@/shell/panels/DiffFile';
-import { FileBody } from '@/shell/panels/FileBody';
 import { fixedSlot, FileToolbarSlotProvider, useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
-import { keptTabs, shownAfter } from '@/shell/panels/kept-tabs';
-import { ErrorBoundary, lazyNamed, LazyBoundary } from '@adecore/ui';
+import { FileBody } from '@/shell/panels/FileBody';
 import { basenameOf } from '@/shell/panels/files-tree';
+import { keptTabs, shownAfter } from '@/shell/panels/kept-tabs';
 import { isArtifactTab, isDatabaseTab, useFiles, type Tab } from '@/state/files';
 
 const DatabaseTabBody = lazyNamed(() => import('@/database/DatabaseTabBody'), 'DatabaseTabBody');

@@ -1,8 +1,8 @@
-import type { ActionCall } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
-import { callerKind } from '../tools/tasks.ts';
-import { type CanvasHost, type ProjectHost, type AgentCall } from '../tools/host.ts';
+import type { ActionCall } from '@ruimte/actions';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import { type CanvasHost, type ProjectHost, type AgentCall } from '../tools/host.ts';
+import { callerKind } from '../tools/tasks.ts';
 import type { VoiceFollowHost } from '../voice/voice-follower.ts';
 
 export interface ServerActionContext {

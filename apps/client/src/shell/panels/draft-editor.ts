@@ -1,6 +1,6 @@
 import type { Editor, EditorEngine, EditorOptions } from '@adecore/editor';
-import { endpointKey } from '@/state/keys';
 import { blankLineEdits } from '@/shell/panels/blank-lines';
+import { endpointKey } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { type DiskText, type TextDrafts, useTextDrafts } from '@/state/text-drafts';
 

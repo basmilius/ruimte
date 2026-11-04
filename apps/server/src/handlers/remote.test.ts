@@ -7,12 +7,12 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { peerStatementMessage } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { PeerMachines } from '../remote/peer-machines.ts';
 import { PendingAdmissions } from '../remote/pending-admissions.ts';
 import { registerRemoteHandlers } from './remote.ts';
+import { askOnce } from './test-helpers.ts';
 
 let root: string;
 let store: ProjectStore;

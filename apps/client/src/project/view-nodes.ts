@@ -1,4 +1,3 @@
-import { useRef, useSyncExternalStore } from 'react';
 import {
     isCanvasView,
     isDesignView,
@@ -10,8 +9,9 @@ import {
     type ProjectNode,
     type ProjectView
 } from '@ruimte/contracts';
-import { defaultCanvases, liveCanvas, subscribeCanvases, type CanvasNode } from '@/state/canvas';
+import { useRef, useSyncExternalStore } from 'react';
 import { shallow } from 'zustand/shallow';
+import { defaultCanvases, liveCanvas, subscribeCanvases, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import type { StatusOf } from '@/state/sessions';
 

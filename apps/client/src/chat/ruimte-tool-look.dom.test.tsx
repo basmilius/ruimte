@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem, ProjectCanvasView } from '@ruimte/contracts';
-import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { clickOn, layOutChat, mount, openToolCall, until, type Mounted } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const CLAUDE = claudeProvider({ chat: true, terminal: true, hooks: true, diffs: 'before-after', slashCommands: true });
 

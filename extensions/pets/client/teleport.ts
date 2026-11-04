@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { BEAM_MS } from '@extensions/pets/client/beam';
+import { useEffect, useState } from 'react';
 
 export interface Teleport<T> {
     /* What to draw: what is there, or for the length of its way out, what was there last. */

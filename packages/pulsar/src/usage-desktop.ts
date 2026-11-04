@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { USAGE_DAY_DESCRIPTION, USAGE_MAX_COUNT, USAGE_MAX_DAYS_PER_BATCH, usageCohortProblem } from './usage.ts';
 import { USAGE_REPORT_MAX_COUNTERS } from './usage-report.ts';
+import { USAGE_DAY_DESCRIPTION, USAGE_MAX_COUNT, USAGE_MAX_DAYS_PER_BATCH, usageCohortProblem } from './usage.ts';
 
 /*
  * The usage report the desktop app sends Observatory's Desktop app: the same description of a day as a

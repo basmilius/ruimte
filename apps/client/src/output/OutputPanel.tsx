@@ -1,5 +1,21 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import {
+    Button,
+    ButtonGroup,
+    ContextMenu,
+    ErrorBoundary,
+    Icon,
+    IconButton,
+    Input,
+    LazyBoundary,
+    lazyNamed,
+    Menu,
+    PanelEmpty,
+    ScrollArea,
+    SectionLabel,
+    useNow
+} from '@adecore/ui';
+import { formatBytes, formatMoment } from '@adecore/ui/format';
+import type { ArtifactSummary, RemoteLink } from '@ruimte/contracts';
 import {
     Bot,
     CalendarClock,
@@ -18,29 +34,10 @@ import {
     User,
     type LucideIcon
 } from 'lucide-react';
-import type { ArtifactSummary, RemoteLink } from '@ruimte/contracts';
-import {
-    Button,
-    ButtonGroup,
-    ContextMenu,
-    ErrorBoundary,
-    Icon,
-    IconButton,
-    Input,
-    LazyBoundary,
-    lazyNamed,
-    Menu,
-    PanelEmpty,
-    ScrollArea,
-    SectionLabel,
-    useNow
-} from '@adecore/ui';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { pinArtifact, useCanRemove, useCopyToThisMachine, usePinCanvases } from '@/output/artifact-actions';
 import { addArtifactToSidebar, startArtifactDrag } from '@/output/artifact-drag';
-import { setDragging } from '@/shell/view-drag';
-import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
-import type { CopyToProjectRequest } from '@/output/CopyToProjectDialog';
-import { formatBytes, formatMoment } from '@adecore/ui/format';
 import {
     ALL,
     DATES,
@@ -56,12 +53,15 @@ import {
     type OutputFilters
 } from '@/output/artifact-list';
 import { useArtifactList } from '@/output/artifacts';
+import type { CopyToProjectRequest } from '@/output/CopyToProjectDialog';
 import { useLinkedMachines } from '@/output/linked-machines';
-import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { KindTile, OutputProjectGlyph } from '@/output/look';
 import { openArtifact, useOutputRequest } from '@/output/open';
+import { RemoveArtifactDialog, type RemoveArtifactRequest } from '@/output/RemoveArtifactDialog';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { setDragging } from '@/shell/view-drag';
+import { useEndpointIdOfMachine, useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';

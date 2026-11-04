@@ -1,11 +1,11 @@
+import { Button, FormError, Switch } from '@adecore/ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { Hand } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GrantRows, SetupLine } from '@/computer/ComputerSetupRows';
 import { canSwitch, showsGrants } from '@/computer/setup';
 import type { ComputerMachine } from '@/computer/use-computer-machine';
 import { TaskNote, TaskPane } from '@/onboarding/TaskPane';
-import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
-import { Button, FormError, Switch } from '@adecore/ui';
 
 interface ComputerTaskProps {
     machine: string;

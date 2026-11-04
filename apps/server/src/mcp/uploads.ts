@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { basename } from 'node:path';
-import { ARTIFACT_LIMITS } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
+import { ARTIFACT_LIMITS } from '@ruimte/contracts';
 import type { Artifacts } from '../artifacts/artifacts.ts';
 import { readOpened, type AgentFiles, type OpenedFile } from './files.ts';
 

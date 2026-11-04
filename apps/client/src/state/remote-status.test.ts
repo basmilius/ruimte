@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import i18next from 'i18next';
 import type { RemoteStatusEvent, Task } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { waitingMachinesOf } from '@/canvas/remote-wait';
 import { isUnstarted, isUntaken, useRemoteStatus } from './remote-status';
 

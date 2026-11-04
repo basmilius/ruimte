@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import reference from '@/generated/reference.json';
 import { CodeBlock } from '@/components/docs/CodeBlock';
 import { InlineDoc } from '@/components/docs/InlineDoc';
 import { Heading3 } from '@/components/docs/MdxElements';
+import reference from '@/generated/reference.json';
 import type { ReferenceModule } from '@/lib/docs/reference';
 
 const MODULES = reference as ReferenceModule[];

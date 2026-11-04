@@ -1,8 +1,11 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
-import type { ProjectView } from '@ruimte/contracts';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams, Serializer } from '@adecore/agents';
+import type { ProjectView } from '@ruimte/contracts';
+import { ClientSinks } from '../client-sinks.ts';
+import { errorText } from '../error-text.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { ProjectError } from './project-error.ts';
 import {
     tooNewMessage,
     viewFilePathIn,
@@ -13,10 +16,7 @@ import {
     type JsonDocumentRead,
     type JsonDocumentReadOptions
 } from './project-files.ts';
-import { ProjectError } from './project-error.ts';
 import type { ProjectPlace, ProjectStore, ProjectViewFiles } from './project-store.ts';
-import { ClientSinks } from '../client-sinks.ts';
-import { errorText } from '../error-text.ts';
 
 interface OpenFile {
     rev: number;

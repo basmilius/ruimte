@@ -19,8 +19,8 @@ import type { StoreApi } from 'zustand';
 import { projectAgents } from '@/actions/inspection-actions';
 import { listedProjects } from '@/actions/project-actions';
 import { activeDesignChat, placeOfView, shownChatOfNode, useDesignChat } from '@/design/design-chat';
-import { sightOf, visibleNodes } from '@/state/attention';
 import { nodesOfView } from '@/project/view-nodes';
+import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, type DocumentState } from '@/state/document';
 

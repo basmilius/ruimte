@@ -1,5 +1,5 @@
-import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import type { DiagramDocument, DrawingDocument } from '@ruimte/contracts';
 import { renderDiagram, renderDrawing } from '../../server/src/render/scenes.ts';

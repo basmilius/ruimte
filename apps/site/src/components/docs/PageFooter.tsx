@@ -1,9 +1,9 @@
 'use client';
 
+import { Icon } from '@adecore/ui';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { Icon } from '@adecore/ui';
 import { neighborsOf } from '@/lib/docs/navigation';
 
 /* A title wraps within its half rather than push the other link off a phone's screen. */

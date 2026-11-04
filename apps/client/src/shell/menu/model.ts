@@ -1,15 +1,9 @@
-import i18next from 'i18next';
+import { formatShortcut, type Shortcut } from '@adecore/ui';
 import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
-import type { SplitDirection } from '@/shell/split';
-import { viewShortcut } from '@/canvas/shortcuts';
-import { BROWSER_KEEPS } from '@/shell/shortcuts';
-import type { ViewOffers } from '@/shell/view-offers';
+import i18next from 'i18next';
 import { separatesGroups } from '@/agents/creation';
-import type { KeepAwakeMode } from '@/state/settings';
-import type { PanelKind } from '@/state/ui';
-import { formatShortcut, type Shortcut } from '@adecore/ui';
-import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
+import { viewShortcut } from '@/canvas/shortcuts';
 import {
     COMMAND_IDS,
     COMMANDS,
@@ -20,6 +14,12 @@ import {
     type MenuContainer,
     type MenuPlace
 } from '@/shell/command-table';
+import { AFTER_SETTLE_PREFIX, CHAT_MOVE_PREFIX, GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, PR_SHOW_IN_PREFIX } from '@/shell/menu/ids';
+import { BROWSER_KEEPS } from '@/shell/shortcuts';
+import type { SplitDirection } from '@/shell/split';
+import type { ViewOffers } from '@/shell/view-offers';
+import type { KeepAwakeMode } from '@/state/settings';
+import type { PanelKind } from '@/state/ui';
 
 export type MenuHost = 'desktop' | 'station';
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { TAIL_INPUT, defineTool, defineToolkit } from './tool.ts';
 import { field, orNote, requiredField } from './host.ts';
+import { TAIL_INPUT, defineTool, defineToolkit } from './tool.ts';
 
 const HELD_LINE =
     'held\tIt waits for a person to approve it from the launch chip in the toolbar, and starts nothing until then; tell them what you set up and why';

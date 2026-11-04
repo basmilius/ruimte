@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
+import { EmptyState } from '@adecore/ui';
 import { FileQuestion } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
 import { basenameOf, resolveStoredPath } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';
-import { EmptyState } from '@adecore/ui';
 
 /*
  * The file a node or a view points at. Both hold a path and nothing else, so both resolve it

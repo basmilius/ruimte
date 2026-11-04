@@ -1,13 +1,13 @@
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
-import type { ChatInfo } from '@ruimte/contracts';
-import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
 import { fileExists, isNotFound } from '@adecore/agents';
 import { ChatUiRefusal } from '@adecore/agents/chat';
-import { checkCwd, isInside } from '../tools/project-paths.ts';
+import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
+import type { ChatInfo } from '@ruimte/contracts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
 import { git, toplevel } from '../git/run.ts';
+import { checkCwd, isInside } from '../tools/project-paths.ts';
 import { UiSourceAccessSchema, type UiSourceAccess } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 

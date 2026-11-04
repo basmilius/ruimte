@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import type { LoadedExtension } from '@/extensions/host/client-api';
 import { assertShortcut, matchesExtensionShortcut } from '@/extensions/action-shortcuts';
+import { wantsLoading } from '@/extensions/activation';
+import type { LoadedExtension } from '@/extensions/host/client-api';
 import { useInstalledExtensions } from '@/extensions/loader';
 import { useContributions } from '@/extensions/registry';
-import { wantsLoading } from '@/extensions/activation';
 import { useToasts } from '@/state/toasts';
 import { loadPoc } from '../../testing/poc';
 

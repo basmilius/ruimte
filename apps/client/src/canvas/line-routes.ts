@@ -1,7 +1,7 @@
-import type { CanvasNode, Edge, TextElement } from '@/state/canvas';
 import { edgeLines, fixedSides, textRect, type EdgeLine } from '@/canvas/edge-lines';
 import { routeEdge, selfRoute, type EdgeRoute, type Obstacle } from '@/canvas/edge-route';
 import type { Rect } from '@/canvas/math';
+import type { CanvasNode, Edge, TextElement } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
 
 export interface LineRoutes {

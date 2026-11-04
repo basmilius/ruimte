@@ -1,13 +1,13 @@
-import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
-import type { AgentLineageStore } from '@adecore/agents/coordination';
-import type { PendingPromptStore } from '../agents/pending-prompts.ts';
-import type { AgentStart, AgentStartHost, NodeAccount } from '../tools/host.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
-import type { SessionManager } from '../sessions/manager.ts';
-import { errorText } from '../error-text.ts';
 import type { ComposerPreference } from '@adecore/agents/chat';
+import type { AgentLineageStore } from '@adecore/agents/coordination';
 import { narrowerMode } from '@adecore/agents/providers';
+import type { AgentInfo, AgentKind, AgentLaunch, ChatCreatePayload, ChatInfo, RuntimeMode } from '@ruimte/contracts';
+import type { PendingPromptStore } from '../agents/pending-prompts.ts';
+import type { ChatManager } from '../chat/chat-manager.ts';
+import { errorText } from '../error-text.ts';
 import { DEFAULT_RUNTIME_MODE, launchedMode } from '../providers/launch.ts';
+import type { SessionManager } from '../sessions/manager.ts';
+import type { AgentStart, AgentStartHost, NodeAccount } from '../tools/host.ts';
 import type { OutboxStore, OutboxWork, StartAgentEntry } from './outbox.ts';
 
 interface NodeModeDeps {

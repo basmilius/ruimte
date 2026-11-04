@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { join, relative, resolve, sep } from 'node:path';
 import type { DatabaseConnection, ProjectContent } from '@ruimte/contracts';
-import type { SessionEvent } from '../sessions/manager.ts';
 import type { FileChange } from '../language/file-watch.ts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import type { SchemaSnapshots, SnapshotFacts } from './schema-snapshots.ts';
 import { boundTargets, choiceFor, consoleConnectionOf, consoleFolderOf, SqlAnalysis, sqlSettingsOf } from './sql-analysis.ts';
 

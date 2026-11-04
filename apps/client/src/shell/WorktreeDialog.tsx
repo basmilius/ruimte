@@ -1,11 +1,11 @@
-import { useTranslation } from 'react-i18next';
+import { PromptDialog } from '@adecore/ui';
 import { GitBranch } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { perform } from '@/actions/client-actions';
+import { branchFromTitle } from '@/shell/new-worktree-chat';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { PromptDialog } from '@adecore/ui';
-import { branchFromTitle } from '@/shell/new-worktree-chat';
 
 /* Binds a group to a git worktree of the project's repository; every node made inside it starts there. */
 export function WorktreeDialog() {

@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
+import { useTranslation } from 'react-i18next';
 
 export function WaitingCount({ count }: { count: number }) {
     const { t } = useTranslation('shell');

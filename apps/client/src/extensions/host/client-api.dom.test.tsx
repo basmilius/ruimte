@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act, createElement, type ComponentType } from 'react';
 import { useChats } from '@adecore/agents-react/state';
 import type { ExtensionManifest, ProjectSummary } from '@ruimte/contracts';
+import { act, createElement, type ComponentType } from 'react';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
 import { forgetExtension, registerExtension } from '@/extensions/host/runtime';
@@ -11,15 +11,15 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { defaultCanvases, focusedCanvas } from '@/state/canvas';
 import type { CanvasNode } from '@/state/canvas-model';
 import { useDocument } from '@/state/document';
-import { folderWatches } from '@/state/fs-watch';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { folderWatches } from '@/state/fs-watch';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport';
-import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
+import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { idleChatInfo } from '../../../testing/project-fixtures';
 
 const PROJECT: ProjectSummary = {

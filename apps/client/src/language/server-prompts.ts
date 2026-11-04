@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { resolveStoredPath } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
 import { useToasts } from '@/state/toasts';
 import { machineAnswers } from '@/transport/features';

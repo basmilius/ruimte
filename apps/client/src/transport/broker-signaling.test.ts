@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
+import { FakeSocket, newKey, verifies } from '../../testing/fake-socket';
 import { BrokerSockets, brokerSignaling } from './broker-signaling';
 import type { Signal, SignalingEvents } from './signaling';
-import { FakeSocket, newKey, verifies } from '../../testing/fake-socket';
 
 const BROKER_URL = 'wss://broker.example.com';
 const NONCE = 'n'.repeat(32);

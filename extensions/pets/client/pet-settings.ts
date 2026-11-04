@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { z } from 'zod';
 import { BEAM_SETTINGS, type BeamSetting } from '@extensions/pets/client/beam';
+import { z } from 'zod';
+import { create } from 'zustand';
 import { SETTINGS_STORAGE_KEY } from '@/state/settings';
 import { storedJson } from '@/state/stored-json';
 

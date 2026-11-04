@@ -1,9 +1,9 @@
+import { Button, Checkbox, CloseButton, FormError, Icon, IconButton, MiddleTruncate, messageOf, ScrollArea } from '@adecore/ui';
+import type { FsEntry, FsListResult } from '@ruimte/contracts';
+import { CornerLeftUp, File, Folder } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CornerLeftUp, File, Folder } from 'lucide-react';
-import type { FsEntry, FsListResult } from '@ruimte/contracts';
 import { transportFor } from '@/transport';
-import { Button, Checkbox, CloseButton, FormError, Icon, IconButton, MiddleTruncate, messageOf, ScrollArea } from '@adecore/ui';
 
 /*
  * Files of the machine a device runs on, one folder at a time, so a person on another machine picks a

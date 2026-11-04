@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ArtifactSummary } from '@ruimte/contracts';
 import { formatBytes } from '@adecore/ui/format';
+import type { ArtifactSummary } from '@ruimte/contracts';
 import { dateGroupOf, defaultFilters, drawnKind, filtersChanged, groupByDate, matchesFilters, projectsOf } from './artifact-list.ts';
 
 const NOW = new Date(2026, 9, 25, 12, 0).getTime();

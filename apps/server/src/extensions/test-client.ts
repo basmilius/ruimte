@@ -1,3 +1,4 @@
+import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/contracts/extension-actions';
 /*
  * `@ruimte/extension/client` under `ruimte extension test`, over one test host: each `define*` is recorded, a call answers
  * what the host holds or what the test scripted, and a hook reads the host as React draws. Held to the public types, so a
@@ -5,11 +6,10 @@
  */
 import { lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
-import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/contracts/extension-actions';
 import type * as PublicClient from '../../../../packages/extension/client';
 import { callHandler, MissingHandler } from './server-api.ts';
-import { formatModule, nodeContextOf, react } from './test-react.ts';
 import { NEW_NODE, Refused, wire, type Entry, type TestHost } from './test-host.ts';
+import { formatModule, nodeContextOf, react } from './test-react.ts';
 
 type Result<Value> = PublicClient.Result<Value>;
 type NodeRef = PublicClient.NodeRef;

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { type CanvasHost } from './host.ts';
-import { projectReach, reachedPlace } from './reach.ts';
+import type { ActionResult } from '@ruimte/actions';
 import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
-import type { ActionResult } from '@ruimte/actions';
 import { canvasFixture, root, store, projectId, pointAt, host, invoke } from './canvas-test-fixture.ts';
+import { type CanvasHost } from './host.ts';
+import { projectReach, reachedPlace } from './reach.ts';
 
 canvasFixture();
 

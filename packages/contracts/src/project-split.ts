@@ -1,6 +1,5 @@
 import { DEFAULT_TITLES } from './node-defaults.ts';
 import { liveFlags } from './project-flags.ts';
-import { isAbsolutePath } from './stored-path.ts';
 import {
     EMPTY_PRIVATE_FILE,
     mapDesignChats,
@@ -21,6 +20,7 @@ import {
     type ProjectSharedFile,
     type ProjectView
 } from './project.ts';
+import { isAbsolutePath } from './stored-path.ts';
 
 /*
  * One list of view ids decides which views go in the shared file, and a view goes in whole: half a

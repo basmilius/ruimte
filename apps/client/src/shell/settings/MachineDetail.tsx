@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { messageOf, Button, Icon, FormError, Segmented } from '@adecore/ui';
+import { ConfirmDialog, DetailHeader, SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
 import { CloudUpload, Plug } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { messageOf, Button, Icon, FormError, Segmented } from '@adecore/ui';
-import { ConfirmDialog, DetailHeader, SettingsRow, useSettingsTarget } from '@adecore/ui/settings';
 import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, leaveAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
+import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
+import { useMachineIcon } from '@/shell/settings/machine-icon';
+import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import {
     BrokerRow,
@@ -23,11 +26,8 @@ import {
 } from '@/shell/settings/MachineSettings';
 import { MachineStorage } from '@/shell/settings/MachineStorage';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { useMachineIcon } from '@/shell/settings/machine-icon';
-import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps, type MachineDialogModel } from '@/shell/settings/machine-actions';
-import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
-import { useServers } from '@/state/server';
 import type { Endpoint } from '@/state/endpoints';
+import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 

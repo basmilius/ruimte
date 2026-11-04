@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { AgentServerStatus, ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 import { FakeMachine } from '../../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 
 const ANTIGRAVITY: ProviderInfo = {
     kind: 'antigravity',

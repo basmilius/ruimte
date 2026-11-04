@@ -1,12 +1,12 @@
+import { Glob } from 'bun';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
-import { Glob } from 'bun';
-import { parseSync, Visitor } from 'oxc-parser';
 import type { ProjectCanvasView, ProjectView } from '@ruimte/contracts';
+import { parseSync, Visitor } from 'oxc-parser';
 import { nodeRefsOfView, nodesOfView, projectNodes } from '@/project/view-nodes';
-import { useDocument } from '@/state/document';
 import { defaultCanvases } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 
 /*
  * The files that read the nodes of a view from the document itself: the one reader, the file layer

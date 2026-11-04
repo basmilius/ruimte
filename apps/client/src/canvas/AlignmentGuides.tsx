@@ -1,7 +1,7 @@
+import { formatNumber } from '@adecore/ui/format';
 import clsx from 'clsx';
 import type { AlignmentGuide, GapGuide } from '@/canvas/alignment-guides';
 import { useCanvasCamera } from '@/state/canvas';
-import { formatNumber } from '@adecore/ui/format';
 
 const TICK = 4;
 

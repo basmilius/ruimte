@@ -1,11 +1,11 @@
-import { settleLanguage as settle } from './settle.test';
 import { describe, expect, test } from 'bun:test';
+import { ManualTimers } from '@adecore/editor-react/testing';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { CompletionItem } from '@adecore/lsp';
-import { EditorLanguage } from './ruimte-editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
+import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
-import { ManualTimers } from '@adecore/editor-react/testing';
+import { settleLanguage as settle } from './settle.test';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });

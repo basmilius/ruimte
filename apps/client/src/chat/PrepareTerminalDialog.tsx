@@ -1,9 +1,9 @@
+import { Button, Dialog, messageOf } from '@adecore/ui';
+import { ActionRefusal } from '@ruimte/actions';
+import type { TerminalPreparePreview } from '@ruimte/contracts';
+import type { TFunction } from 'i18next';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
-import { ActionRefusal } from '@ruimte/actions';
-import { Button, Dialog, messageOf } from '@adecore/ui';
-import type { TerminalPreparePreview } from '@ruimte/contracts';
 import { perform } from '@/actions/client-actions';
 import { useToasts } from '@/state/toasts';
 import type { PrepareDestination } from '@/terminal/prepare-destination';

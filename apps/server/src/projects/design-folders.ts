@@ -1,7 +1,7 @@
 import { lstat, mkdir, readdir, readFile, rename, rm, rmdir } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
-import { designFolderOf, designPlaces, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
 import { writeAtomic } from '@adecore/agents';
+import { designFolderOf, designPlaces, isSharedDesign, type DesignPlace, type ProjectView } from '@ruimte/contracts';
 import { isRecord } from '../is-record.ts';
 
 /*

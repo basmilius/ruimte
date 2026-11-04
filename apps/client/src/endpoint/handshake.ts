@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { AuthTicketResultSchema } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { rememberLocalSecret, rememberTicket } from './credentials';

@@ -1,13 +1,13 @@
-import { type ReactNode } from 'react';
 import { DatabaseProvider, type DatabaseAction, type DatabaseNotice } from '@adecore/database';
+import { type ReactNode } from 'react';
 import { databaseClientFor } from '@/database/client';
 import { databaseFiles, databaseStorage } from '@/database/environment';
 import { actOnDatabase } from '@/database/open';
 import { desktop } from '@/desktop/bridge';
 import { endpointKey } from '@/state/keys';
+import { useProject } from '@/state/project';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
-import { useProject } from '@/state/project';
 import { useConnection } from '@/transport/context';
 
 /* The news of a database view, such as an export that finished, among the app's other toasts. */

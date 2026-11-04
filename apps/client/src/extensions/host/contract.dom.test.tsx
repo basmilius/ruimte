@@ -1,8 +1,8 @@
 import { afterEach } from 'bun:test';
-import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import * as ui from '@adecore/ui';
 import { REQUEST_SCHEMAS, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
@@ -16,9 +16,9 @@ import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { TransportError } from '@/transport';
 import { clientContract, NAME, SEED, type ContractScreen, type SeedNode } from '../../../../../extensions/poc/contract/contract/client';
+import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { emptyCanvas } from '../../../testing/project-fixtures';
-import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
 
 const ID = 'poc.contract';
 const mounts: Mounted[] = [];

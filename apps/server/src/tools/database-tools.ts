@@ -1,14 +1,14 @@
-import { DATABASE_QUERY_MAX_ROWS, DATABASE_QUERY_ROWS } from '@ruimte/actions';
-import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { Cell, StatementResult } from '@adecore/database/protocol';
+import { DATABASE_QUERY_MAX_ROWS, DATABASE_QUERY_ROWS } from '@ruimte/actions';
+import { VISUAL_LIMITS } from '@ruimte/contracts';
 import { z } from 'zod';
 import { visualRow } from '../actions/visual-actions.ts';
 import { binarySize } from '../database/table-visual.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
+import { field, orNote } from './host.ts';
 import { defineToolkit } from './tool.ts';
 import { SHOWN_LINE } from './visual-tools.ts';
-import { field, orNote } from './host.ts';
 
 const ESCAPES: Readonly<Record<string, string>> = { '\\': '\\\\', '\t': '\\t', '\n': '\\n', '\r': '\\r' };
 

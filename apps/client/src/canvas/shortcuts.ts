@@ -1,7 +1,7 @@
-import type { SplitDirection } from '@/shell/split';
-import type { NodeKind } from '@/state/canvas';
 import { shortcut, type Shortcut } from '@adecore/ui';
 import { requiredShortcut } from '@/shell/editor-keymap';
+import type { SplitDirection } from '@/shell/split';
+import type { NodeKind } from '@/state/canvas';
 
 /*
  * The keys of the workspace, in a module of their own so a menu, the palette, the Keyboard pane and the

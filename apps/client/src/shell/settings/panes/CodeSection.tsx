@@ -1,8 +1,8 @@
+import { ScrollArea, Select } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { highlightCode } from '@/shell/panels/highlight';
-import { SettingsRow } from '@adecore/ui/settings';
-import { ScrollArea, Select } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { codeThemesOf, useSettings } from '@/state/settings';
 

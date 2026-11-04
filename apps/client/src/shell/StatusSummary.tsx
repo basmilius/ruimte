@@ -1,21 +1,21 @@
+import { useChats } from '@adecore/agents-react/state';
+import { Button, Icon, IconButton, Separator, Tooltip } from '@adecore/ui';
+import { CircleCheck, ListChecks } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleCheck, ListChecks } from 'lucide-react';
+import { openAttentionQueue } from '@/attention/queue';
+import { WaitLabel } from '@/attention/WaitLabel';
+import { StatusDot } from '@/canvas/NodeFrame';
+import { shownChatOfNode } from '@/design/design-chat';
 import { useProjectNodes, type ProjectNodeRef } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { groupAttention, useAttention } from '@/state/attention';
-import { shownChatOfNode } from '@/design/design-chat';
 import { useCanvasStore } from '@/state/canvas';
-import { useChats } from '@adecore/agents-react/state';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { oldestWaitingFirst, useWaitingSince, waitDetailsOf } from '@/state/waiting';
-import { WaitLabel } from '@/attention/WaitLabel';
-import { openAttentionQueue } from '@/attention/queue';
 import { waitAskLine } from './wait-ask';
-import { StatusDot } from '@/canvas/NodeFrame';
-import { Button, Icon, IconButton, Separator, Tooltip } from '@adecore/ui';
 
 /* A count that walks through the nodes behind it, across views, one per click. */
 function Walker({ label, detail, count, ids, children }: { label: string; detail?: ReactNode; count: number; ids: string[]; children: ReactNode }) {

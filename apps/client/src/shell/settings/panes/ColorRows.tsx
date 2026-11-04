@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
 import { ColorWheelPicker } from '@adecore/ui';
+import { useTranslation } from 'react-i18next';
 import { NODE_ACCENTS, accentColor, accentLabel, type AccentId } from '@/canvas/accents';
-import { previewColors, useSettings } from '@/state/settings';
 import { PALETTE_NEUTRALS, presetSwatch, type PalettePreset } from '@/state/palette-presets';
+import { previewColors, useSettings } from '@/state/settings';
 import { TAILWIND_COLORS } from '@/state/tailwind-palettes';
 
 /* The tint of the grounds, panels and text: the colors round the outside in Tailwind's order, which is the

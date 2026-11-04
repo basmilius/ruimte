@@ -1,6 +1,6 @@
 import { chatsProjects, menuProjects, openableRows } from '@/project/list';
-import type { ProjectRow } from '@/state/project-list';
 import type { Endpoint } from '@/state/endpoints';
+import type { ProjectRow } from '@/state/project-list';
 
 /* The menu owns membership; background snapshots only supply the contents of those projects. Chats
    leads, whichever project is open: all open projects keep it one press away, and Needs you counts its chats. */

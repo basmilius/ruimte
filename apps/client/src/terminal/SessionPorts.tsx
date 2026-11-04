@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon, Pill, ScrollArea, Tooltip } from '@adecore/ui';
-import { CircleHelp, Unplug } from 'lucide-react';
 import type { SessionPort, SessionPortsResult } from '@ruimte/contracts';
+import { CircleHelp, Unplug } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { readNodeHost } from '@/nodes/node-host';
@@ -11,9 +11,9 @@ import { useToasts } from '@/state/toasts';
 import { windowWorkspace } from '@/state/window';
 import { machineTransport } from '@/transport';
 import { terminalLinkTarget } from './links';
-import { SessionPortWatch } from './session-ports';
 import { openVerifiedSessionPort } from './open-session-port';
 import { publishSessionPortControls, useSessionPortControl } from './session-port-controls';
+import { SessionPortWatch } from './session-ports';
 
 export function SessionPortMonitor({ id, endpointId }: { id: string; endpointId: string }) {
     const { t } = useTranslation('canvas');

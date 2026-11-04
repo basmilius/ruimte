@@ -1,3 +1,4 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import {
     chatNameOf,
@@ -10,9 +11,8 @@ import {
     type ChatQuestionItem,
     type ProjectView
 } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
-import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { field, orNote, type ChatRequestHost } from '../tools/host.ts';
+import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 /* One row per request an agent waits on, which is what a refusal of `agent_answer` offers instead. */

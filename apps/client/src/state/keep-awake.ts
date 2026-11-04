@@ -1,9 +1,9 @@
-import i18next from 'i18next';
+import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
 import { perform } from '@/actions/client-actions';
 import { canKeepAwake, desktop, type DesktopBridge, type KeepAwakeRequest } from '@/desktop/bridge';
 import { agentsWorking } from '@/state/agent-work';
-import { useChats, type ChatStatuses } from '@adecore/agents-react/state';
 import { subscribeChatStatuses } from '@/state/chats';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { hasLocalMachine } from '@/state/local-machine';

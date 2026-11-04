@@ -1,11 +1,11 @@
 import { afterEach, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProviderInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { mount, until, type Mounted } from '../../../../testing/dom';
 import { FakeMachine } from '../../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../../../testing/dom';
 
 const CLAUDE: ProviderInfo = {
     kind: 'claude',

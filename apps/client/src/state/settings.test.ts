@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { bundledThemesInfo } from 'shiki/themes';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
+import { bundledThemesInfo } from 'shiki/themes';
 import { DEFAULT_CODE_FOLDING } from './code-folding';
 import {
     codeLineHeight,

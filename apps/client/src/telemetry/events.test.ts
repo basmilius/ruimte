@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createDailyDedupe, createScrubber } from '@ruimte/telemetry';
-import { CLIENT_TAGS, connectionEvent, storageDedupeStore } from './events';
 import { memoryStorage } from '../../testing/memory-storage';
+import { CLIENT_TAGS, connectionEvent, storageDedupeStore } from './events';
 
 describe('connectionEvent', () => {
     test('a drop names the link, the kind of machine and the close code, and groups by them', () => {

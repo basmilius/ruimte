@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import type { DeviceInput } from '@ruimte/contracts';
-import { besideDaemon, serveSimFile } from './serve-sim.ts';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperCall, type DeviceHelperMessage } from './helper-protocol.ts';
+import { besideDaemon, serveSimFile } from './serve-sim.ts';
 
 interface NativeHidHandle {
     touch(type: 'begin' | 'move' | 'end', x: number, y: number, width: number, height: number, edge: number): Promise<void>;

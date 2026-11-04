@@ -1,5 +1,4 @@
-import type { ActionOutput } from '@ruimte/actions';
-import { PLAN_LIMITS, PlanChecksSchema, PlanKindSchema, PlanStepStateSchema, type PlanItem } from '@ruimte/contracts';
+import { ToolRefusal } from '@adecore/agents/context';
 import {
     PlanDraftMetaSchema,
     PlanDraftSectionSchema,
@@ -11,12 +10,13 @@ import {
     progressText,
     renderPlanText
 } from '@adecore/plan';
+import type { ActionOutput } from '@ruimte/actions';
+import { PLAN_LIMITS, PlanChecksSchema, PlanKindSchema, PlanStepStateSchema, type PlanItem } from '@ruimte/contracts';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
 import { defineActionTool, runAction } from './action-tool.ts';
+import { field } from './host.ts';
 import { fieldLines } from './schema-lines.ts';
 import { defineTool, defineToolkit, type GuideTopic } from './tool.ts';
-import { field } from './host.ts';
 
 /* Agents repeat ids to people, who only know a plan and its steps by their titles. */
 const IDS_LINE = 'ids\tIds are for your tool calls. When you talk to the person, name the plan and its steps by their title, never by id';

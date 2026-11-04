@@ -1,8 +1,8 @@
-import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
+import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { TAIL_INPUT, defineToolkit } from './tool.ts';
 import { field, orNote, requiredField } from './host.ts';
+import { TAIL_INPUT, defineToolkit } from './tool.ts';
 
 function branchInput(tool: string) {
     return requiredField(`${tool} needs branch, the branch of a worktree; worktree_list lists them`);

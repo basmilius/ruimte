@@ -1,27 +1,4 @@
-import { useRef, useState } from 'react';
-import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
-import { usePanelGap } from '@/shell/panel-layout';
-import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
-import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@adecore/plan';
-import { forkOriginIn } from '@/chat/fork-origin';
-import { useViewNodes } from '@/project/view-nodes';
-import { hasOverlayControls } from '@/desktop/bridge';
-import { ActiveStepButton } from '@/plan/ActiveStepButton';
-import {
-    collapseAll,
-    copyPlanMarkdown,
-    expandAll,
-    focusChat,
-    planViewKey,
-    sendResultsToChat,
-    unlockPlanStepsAction,
-    usePlanViewPrefs
-} from '@/plan/plan-actions';
-import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
-import { PlanList } from '@/plan/PlanList';
-import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import {
     clampColumnSize,
     ErrorBoundary,
@@ -35,6 +12,29 @@ import {
     PanelHeader,
     SectionLabel
 } from '@adecore/ui';
+import type { Plan } from '@ruimte/contracts';
+import clsx from 'clsx';
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { forkOriginIn } from '@/chat/fork-origin';
+import { hasOverlayControls } from '@/desktop/bridge';
+import { ActiveStepButton } from '@/plan/ActiveStepButton';
+import {
+    collapseAll,
+    copyPlanMarkdown,
+    expandAll,
+    focusChat,
+    planViewKey,
+    sendResultsToChat,
+    unlockPlanStepsAction,
+    usePlanViewPrefs
+} from '@/plan/plan-actions';
+import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
+import { resultsText, type PlanFilter } from '@/plan/plan-view';
+import { PlanList } from '@/plan/PlanList';
+import { useViewNodes } from '@/project/view-nodes';
+import { usePanelGap } from '@/shell/panel-layout';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';

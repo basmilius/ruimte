@@ -1,5 +1,20 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { niceScale } from '@adecore/agents-react/usage';
+import {
+    messageOf,
+    ScrollArea,
+    Segmented,
+    Button,
+    Icon,
+    IconButton,
+    ListRow,
+    Menu,
+    Tooltip,
+    PanelEmpty,
+    PromptDialog,
+    SectionLabel,
+    ContextMenu
+} from '@adecore/ui';
+import type { ProcessAlert, ProcessGroup, ProcessGroupKind, ProcessRow, ProcessSignal, ProcessSort } from '@ruimte/contracts';
 import clsx from 'clsx';
 import {
     Activity,
@@ -17,7 +32,9 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
-import type { ProcessAlert, ProcessGroup, ProcessGroupKind, ProcessRow, ProcessSignal, ProcessSort } from '@ruimte/contracts';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ignoreRefusal, perform } from '@/actions/client-actions';
 import {
     actionLabel,
     alertActions,
@@ -31,31 +48,14 @@ import {
     groupTitle,
     type AlertAction
 } from '@/processes/format';
-import { ignoreRefusal, perform } from '@/actions/client-actions';
-import {
-    messageOf,
-    ScrollArea,
-    Segmented,
-    Button,
-    Icon,
-    IconButton,
-    ListRow,
-    Menu,
-    Tooltip,
-    PanelEmpty,
-    PromptDialog,
-    SectionLabel,
-    ContextMenu
-} from '@adecore/ui';
 import { useProjectNodes } from '@/project/view-nodes';
 import { revealNode } from '@/project/views';
 import { PanelHeaderActions, PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';
-import { niceScale } from '@adecore/agents-react/usage';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
-import { useProjectList } from '@/state/project-list';
 import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/processes';
+import { useProjectList } from '@/state/project-list';
 import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';

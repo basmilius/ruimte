@@ -1,5 +1,8 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { ProjectCanvasView } from '@ruimte/contracts';
+import { closeWithoutSaving, dismissClose, useUnsavedClose } from '@/shell/panels/unsaved-close';
+import { cellAt, cellViewIds, viewIdsIn } from '@/shell/split';
+import { useDocument } from './document.ts';
 import {
     bindConsole,
     closeTab,
@@ -21,11 +24,8 @@ import {
     type Tab,
     type TabPool
 } from './files.ts';
-import { cellAt, cellViewIds, viewIdsIn } from '@/shell/split';
 import { currentEndpointId, endpointKey } from './keys.ts';
 import { textDrafts, useTextDrafts } from './text-drafts.ts';
-import { useDocument } from './document.ts';
-import { closeWithoutSaving, dismissClose, useUnsavedClose } from '@/shell/panels/unsaved-close';
 
 function tab(path: string, pinned = false): FileTab {
     return { key: path, path, pinned };

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { concatBytes } from './device-test-helpers.ts';
 import {
     controlMessages,
     encodeGetClipboard,
@@ -11,7 +12,6 @@ import {
     ScrcpyProtocolError,
     ScrcpyVideoReader
 } from './scrcpy-protocol.ts';
-import { concatBytes } from './device-test-helpers.ts';
 
 const codecH264 = new Uint8Array([0x68, 0x32, 0x36, 0x34]);
 

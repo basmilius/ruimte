@@ -2,8 +2,8 @@ import { constants, open, stat, type FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
-import { isInside, outsidePath } from '../tools/project-paths.ts';
 import { realOrNull } from '../fs/real-path.ts';
+import { isInside, outsidePath } from '../tools/project-paths.ts';
 import type { ImageFiles } from './visual-images.ts';
 
 /* A file the caller may hand a tool, open, which its user reads from and closes. */

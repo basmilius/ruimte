@@ -1,12 +1,12 @@
-import i18next from 'i18next';
+import type { ProjectFiles, StagedFile } from '@adecore/editor-react';
 import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
+import { basenameOf } from '@/shell/panels/files-tree';
 import { draftPathsUnder, forgetDeleted, moveFile } from '@/state/file-moves';
 import { endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
 import { isUnsavedDraft, textDrafts, useTextDrafts, type TextDrafts } from '@/state/text-drafts';
 import { useToasts } from '@/state/toasts';
 import type { Transport } from '@/transport/transport';
-import type { ProjectFiles, StagedFile } from '@adecore/editor-react';
-import { basenameOf } from '@/shell/panels/files-tree';
 
 /* How many files a toast names before it says how many more there are. */
 const NAMED_FILES = 3;

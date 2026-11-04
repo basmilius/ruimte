@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { PersonalTemplates, TemplateListResult } from '@ruimte/contracts';
+import { act } from 'react';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { TransportError } from '@/transport/transport';
+import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
+import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
 import { FakeMachine } from '../../../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../../../testing/fake-workspace';
-import { buttonWithText, everything, typeInto } from '../../../../testing/dom-helpers';
-import { clickOn, mount, until, type Mounted } from '../../../../testing/dom';
 
 const EMPTY: PersonalTemplates = { revision: 1, live: [], postfix: [], disabled: [], settings: {} };
 

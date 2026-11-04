@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode, ProjectSummary, ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { SIDEBAR_ORDER_STORAGE_KEY, SIDEBAR_SEPARATORS_STORAGE_KEY, useSidebarProjects } from '@/shell/sidebar-projects';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { menuItem } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { menuItem } from '../../testing/dom-helpers';
-import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
 
 const BOREALIS: ProjectSummary = {
     projectId: 'project-borealis',

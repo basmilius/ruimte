@@ -1,11 +1,11 @@
 import { desktop } from '@/desktop/bridge';
 import { followDevLinks, syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';
-import { IS_STATION } from '@/station';
 import { useEndpoints } from '@/state/endpoints';
 import { isThisMachine } from '@/state/local-machine';
-import { watchPool } from '@/transport/pool-watch';
+import { IS_STATION } from '@/station';
 import type { Transport } from '@/transport';
+import { watchPool } from '@/transport/pool-watch';
 
 /* What this computer has installed, and what the machine on it has linked for development. */
 export function startExtensions(): () => void {

@@ -1,6 +1,4 @@
 import { join } from 'node:path';
-import { z } from 'zod';
-import { ModelOptionDescriptorSchema } from '@ruimte/contracts';
 import { runProcess } from '@adecore/agents';
 import type { AcpClientInfo, AcpModeMap } from '@adecore/agents/chat';
 import {
@@ -16,8 +14,10 @@ import {
 import antigravityModels from '@adecore/agents/providers/antigravity-models.json' with { type: 'json' };
 import copilotModels from '@adecore/agents/providers/copilot-models.json' with { type: 'json' };
 import grokModels from '@adecore/agents/providers/grok-models.json' with { type: 'json' };
-import antigravityRelease from './antigravity-acp-release.json' with { type: 'json' };
+import { ModelOptionDescriptorSchema } from '@ruimte/contracts';
+import { z } from 'zod';
 import { parseAcpServerRelease, type AcpServerLaunch } from './acp-server.ts';
+import antigravityRelease from './antigravity-acp-release.json' with { type: 'json' };
 import { COPILOT_ALLOW_MCP, withRuimteMcp } from './ruimte-mcp.ts';
 
 // How the daemon names itself to every ACP agent it starts.

@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Button, Dialog, Field, IconPicker, Input, SectionLabel } from '@adecore/ui';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { ProjectIconChoice, ProjectView } from '@ruimte/contracts';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { renameViewAction, setViewIconAction } from '@/actions/client-actions';
-import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
+import { ViewGlyph } from '@/project/ViewGlyph';
 import { viewGlyphOf } from '@/shell/cell-view';
 import { submitOnEnter } from '@/shell/submit-on-enter';
-import { Button, Dialog, Field, IconPicker, Input, SectionLabel } from '@adecore/ui';
 
 /*
  * What one view is called and what it wears, the two together the way a project holds them. The mark

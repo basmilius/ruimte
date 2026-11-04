@@ -6,8 +6,8 @@ import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult
 import { climbsOut } from '../fs/path-segment.ts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
-import { collectSinglePatch, collectTreePatches } from './tree-patches.ts';
 import { git, runGit, runGitBytes, toplevel, verifyRev, GitError } from './run.ts';
+import { collectSinglePatch, collectTreePatches } from './tree-patches.ts';
 
 interface DiffCaps {
     files: number;

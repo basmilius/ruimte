@@ -1,3 +1,6 @@
+import { CodedError } from '@adecore/agents';
+import { readableAssistantText } from '@adecore/agents/chat';
+import { renderPlanText } from '@adecore/plan';
 import type {
     ChatApprovalDecision,
     ChatItem,
@@ -13,18 +16,15 @@ import type {
     ProjectCanvasView
 } from '@ruimte/contracts';
 import { workflowAgentRef } from '@ruimte/contracts';
-import { renderPlanText } from '@adecore/plan';
-import { contextChangeNote } from './context-note.ts';
-import { CodedError } from '@adecore/agents';
-import { readRefusal } from './read-refusal.ts';
-import type { Reference } from './references.ts';
 import type { PageReading } from '../browser/drive.ts';
+import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
-import { readableAssistantText } from '@adecore/agents/chat';
-import { chatReadUsage, chatUsageLine, type ChatReadUsage, type ChatUsageInfo } from './chat-usage.ts';
+import { contextChangeNote } from './context-note.ts';
+import { readRefusal } from './read-refusal.ts';
+import type { Reference } from './references.ts';
 
 export const CONTEXT_PATH = '/context';
 

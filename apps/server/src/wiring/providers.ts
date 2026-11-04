@@ -1,24 +1,24 @@
-import type { AgentKind } from '@ruimte/contracts';
 import { ProviderAccountsService } from '@adecore/agents/providers';
+import type { AgentKind } from '@ruimte/contracts';
 import { AgentIntegrations } from '../agents/integrations.ts';
+import type { ServerConfig } from '../config.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import type { AgentServers } from '../handlers/agent-servers.ts';
 import { RUIMTE_ACCOUNTS_HOST } from '../providers/accounts-host.ts';
 import { ANTIGRAVITY_ACP_RELEASE } from '../providers/acp-providers.ts';
 import { AcpRegistry } from '../providers/acp-registry.ts';
 import { AcpServerInstall } from '../providers/acp-server.ts';
+import { anthropicClaudeApiService } from '../providers/anthropic-claude-api-provider.ts';
+import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import { CliVersions, type OwnInstall } from '../providers/cli-versions.ts';
-import { RegistryAgents } from '../providers/registry-agents.ts';
-import type { AgentServers } from '../handlers/agent-servers.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
 import { terminalExecutable } from '../providers/launch.ts';
 import { ModelCatalogFeed } from '../providers/model-catalogs.ts';
-import { ProviderFeed } from '../providers/provider-feed.ts';
-import { ProviderRegistry } from '../providers/registry.ts';
-import type { ServerConfig } from '../config.ts';
 import { nanoGptService } from '../providers/nanogpt-provider.ts';
-import { anthropicClaudeApiService } from '../providers/anthropic-claude-api-provider.ts';
-import type { AnthropicClaudeApiService } from '../providers/anthropic-claude-api-service.ts';
 import type { NanoGptService } from '../providers/nanogpt-service.ts';
+import { ProviderFeed } from '../providers/provider-feed.ts';
+import { RegistryAgents } from '../providers/registry-agents.ts';
+import { ProviderRegistry } from '../providers/registry.ts';
 
 /* The agent CLIs of this machine, their accounts and what a person allowed in their settings. */
 export interface ProvidersBundle {

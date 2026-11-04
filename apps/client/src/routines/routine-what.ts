@@ -1,6 +1,6 @@
-import type { RoutineEntry } from '@ruimte/contracts';
 import { runtimeModeLabel } from '@adecore/agents-react/chat';
 import { useProviders } from '@adecore/agents-react/state';
+import type { RoutineEntry } from '@ruimte/contracts';
 
 /* What a routine runs, in one line: the agent, its model and mode, the command, or the launch. A row of the week leaves the mode out. */
 export function useRoutineWhat(entry: RoutineEntry, withMode = true): string {

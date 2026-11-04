@@ -1,5 +1,5 @@
-import type { BenchmarkLab, BenchmarkMeasurement, BenchmarkModel } from '@ruimte/pulsar';
 import { niceScale } from '@adecore/agents-react/usage';
+import type { BenchmarkLab, BenchmarkMeasurement, BenchmarkModel } from '@ruimte/pulsar';
 
 export type CostScale = 'log' | 'linear';
 

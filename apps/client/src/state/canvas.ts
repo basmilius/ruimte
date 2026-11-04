@@ -1,21 +1,20 @@
-import { createStore, useStore, type StoreApi } from 'zustand';
 import type { ProjectCanvasLine, ProjectCanvasView, ProjectLayout, ProjectViewLocal, NodeAccent, NodeKind, NodeTitleSource } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
-import { textRect } from '@/canvas/edge-lines';
-import { isMeasured, unionOf, type Point, type Rect } from '@/canvas/math';
-import type { NodeDirection } from '@/canvas/node-navigation';
-import type { DerivedFrame } from '@/canvas/node-body';
-import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas/camera-slice';
+import { createStore, useStore, type StoreApi } from 'zustand';
 import type { ArrangeRefusal } from '@/canvas/arrange-group';
+import { createCameraSlice, onlyCameraMoved, type CameraSlice } from '@/canvas/camera-slice';
+import { textRect } from '@/canvas/edge-lines';
+import { lineBounds } from '@/canvas/line-geometry';
+import { isMeasured, unionOf, type Point, type Rect } from '@/canvas/math';
+import type { DerivedFrame } from '@/canvas/node-body';
+import type { NodeDirection } from '@/canvas/node-navigation';
 import type { CanvasPatch } from '@/project/merge';
-import { editorBindings } from '@/state/editor-bindings';
-import { createEditorRegistry } from '@/state/editors';
-import type { EditorHook } from '@/state/workspace-stores';
 import { withCameraHistory } from '@/state/canvas-camera-history';
 import { createCanvasContentSlice } from '@/state/canvas-content-slice';
 import { createCanvasEdgesSlice } from '@/state/canvas-edges-slice';
 import { createCanvasGestureSlice } from '@/state/canvas-gesture-slice';
 import { createCanvasLayoutsSlice } from '@/state/canvas-layouts-slice';
+import { createCanvasLinesSlice } from '@/state/canvas-lines-slice';
 import {
     boundsOfElement,
     maximizedNodeOf,
@@ -33,8 +32,9 @@ import { createCanvasNavigationSlice } from '@/state/canvas-navigation-slice';
 import { createCanvasNodesSlice } from '@/state/canvas-nodes-slice';
 import { createCanvasSelectionSlice } from '@/state/canvas-selection-slice';
 import { createCanvasTextsSlice } from '@/state/canvas-texts-slice';
-import { createCanvasLinesSlice } from '@/state/canvas-lines-slice';
-import { lineBounds } from '@/canvas/line-geometry';
+import { editorBindings } from '@/state/editor-bindings';
+import { createEditorRegistry } from '@/state/editors';
+import type { EditorHook } from '@/state/workspace-stores';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 export type { CameraRequest, Viewport } from '@/canvas/camera-slice';

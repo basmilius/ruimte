@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { MAX_RESULT_LENGTH } from '../tools/tasks.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, type TestDaemon } from '../tasks/test-daemon.ts';
+import { MAX_RESULT_LENGTH } from '../tools/tasks.ts';
 import type { PeerLink } from './peer-connection.ts';
 import { leadContent } from './test-helpers.ts';
 

@@ -1,20 +1,20 @@
-import { Fragment, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Blocks, FileText, Frame, Globe, Heading, Minus, PenTool, SwatchBook, Workflow, Terminal, type LucideIcon } from 'lucide-react';
-import type { ProviderInfo } from '@ruimte/contracts';
-import { ProviderRows } from '@/agents/ProviderRows';
-import { AgentSubmenu } from '@/agents/AgentMenus';
-import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
-import { createViewAction } from '@/actions/client-actions';
-import { useContributions } from '@/extensions/registry';
-import { newSubheaderView } from '@/project/views';
-import { shownFolderOf, useProject } from '@/state/project';
 import { Tile, Icon, Menu, Kbd, SectionLabel, type Shortcut } from '@adecore/ui';
 import { labelCollator } from '@adecore/ui/format';
-import { useUi } from '@/state/ui';
-import { useEndpointId } from '@/state/keys';
-import { useMachineAnswers } from '@/transport/features';
+import type { ProviderInfo } from '@ruimte/contracts';
+import { Blocks, FileText, Frame, Globe, Heading, Minus, PenTool, SwatchBook, Workflow, Terminal, type LucideIcon } from 'lucide-react';
+import { Fragment, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { createViewAction } from '@/actions/client-actions';
+import { AgentSubmenu } from '@/agents/AgentMenus';
+import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
+import { ProviderRows } from '@/agents/ProviderRows';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { useContributions } from '@/extensions/registry';
+import { newSubheaderView } from '@/project/views';
+import { useEndpointId } from '@/state/keys';
+import { shownFolderOf, useProject } from '@/state/project';
+import { useUi } from '@/state/ui';
+import { useMachineAnswers } from '@/transport/features';
 
 /* A row of one of the two lists below, with the label it is put in order by. */
 interface NewViewEntry {

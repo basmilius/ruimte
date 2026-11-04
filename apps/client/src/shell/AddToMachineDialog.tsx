@@ -1,9 +1,11 @@
+import { Button, Checkbox, Dialog, ErrorBoundary, FieldHint, FormError, Input, Meter, ScrollArea, Segmented, Select, Skeleton, messageOf } from '@adecore/ui';
+import { formatBytes } from '@adecore/ui/format';
+import type { GitIgnoredFilesResult } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { GitIgnoredFilesResult } from '@ruimte/contracts';
-import { ensureMachine } from '@/endpoint/reach';
-import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useOtherMachines } from '@/canvas/use-other-machines';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { ensureMachine } from '@/endpoint/reach';
 import {
     copyCandidates,
     copyIgnoredFiles,
@@ -15,9 +17,9 @@ import {
     type RemoteProtocol
 } from '@/project/add-to-machine';
 import { RemoteFolderPicker } from '@/shell/RemoteFolderPicker';
-import { firstIdentity } from '@/shell/use-remote-checkouts';
 import { iconOfEntry } from '@/shell/settings/machine-icon';
 import { nameOf } from '@/shell/settings/machine-list';
+import { firstIdentity } from '@/shell/use-remote-checkouts';
 import { endpointById } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useUi, type AddToMachineRequest } from '@/state/ui';
@@ -25,8 +27,6 @@ import { pool, transportFor } from '@/transport';
 import { useWorkspace } from '@/transport/connections';
 import { machineAnswers } from '@/transport/features';
 import type { Transport } from '@/transport/transport';
-import { formatBytes } from '@adecore/ui/format';
-import { Button, Checkbox, Dialog, ErrorBoundary, FieldHint, FormError, Input, Meter, ScrollArea, Segmented, Select, Skeleton, messageOf } from '@adecore/ui';
 
 const PROTOCOLS: readonly RemoteProtocol[] = ['ssh', 'https'];
 

@@ -1,8 +1,8 @@
 import { refusalBody, ToolRefusal } from '@adecore/agents/context';
 import { ProjectError } from '../projects/project-error.ts';
+import type { CanvasHost, LaunchReading } from './host.ts';
 import { runTool, type ToolCaller } from './tool.ts';
 import { TOOLKITS } from './toolkits.ts';
-import type { CanvasHost, LaunchReading } from './host.ts';
 
 export interface ToolAnswer {
     refused: boolean;

@@ -1,6 +1,6 @@
+import { cancellableTimeout } from '@adecore/agents';
 import { clipText } from '@ruimte/contracts';
 import type { ApiToolResult } from './api-tools.ts';
-import { cancellableTimeout } from '@adecore/agents';
 
 interface ApiCommandProcess {
     stdout: ReadableStream<Uint8Array>;

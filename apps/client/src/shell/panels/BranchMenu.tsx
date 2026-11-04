@@ -1,13 +1,13 @@
+import { copyText, cameThroughPortal, Button, Icon, IconButton, Input, Menu, Tooltip, ContextMenu } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import type { GitRef, Worktree } from '@ruimte/contracts';
+import { ChevronDown, Copy, Eye, Folders, GitBranch, GitFork, GitMerge, Plus, Search } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Copy, Eye, Folders, GitBranch, GitFork, GitMerge, Plus, Search } from 'lucide-react';
-import type { GitRef, Worktree } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { WorktreeRows, type WorktreeActions } from '@/shell/panels/WorktreeMenu';
 import type { GitTarget } from '@/state/git-target';
 import type { WorktreeNode } from '@/state/worktrees';
-import { copyText, cameThroughPortal, Button, Icon, IconButton, Input, Menu, Tooltip, ContextMenu } from '@adecore/ui';
-import { formatNumber } from '@adecore/ui/format';
 
 // The keys the menu itself owns while the field has focus; every other key is the field's.
 const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);

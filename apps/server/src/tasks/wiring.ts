@@ -1,6 +1,6 @@
-import type { Task } from '@ruimte/contracts';
 import type { TaskCoordinator, TaskCoordinatorDeps, TaskStore, WaitingObserver, OutboxHandlers } from '@adecore/agents/coordination';
 import { wireTasks as wireTaskCore, type TaskVerbs } from '@adecore/agents/coordination';
+import type { Task } from '@ruimte/contracts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
 import { parkedNote } from './parked-note.ts';

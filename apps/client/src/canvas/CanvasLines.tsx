@@ -1,8 +1,8 @@
+import { ColorSwatch, ContextMenu, Icon, IconButton, Menu, Surface, Tooltip } from '@adecore/ui';
+import type { ProjectCanvasLine } from '@ruimte/contracts';
+import { Copy, FlipHorizontal2, SlidersHorizontal, Trash } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, FlipHorizontal2, SlidersHorizontal, Trash } from 'lucide-react';
-import type { ProjectCanvasLine } from '@ruimte/contracts';
-import { ColorSwatch, ContextMenu, Icon, IconButton, Menu, Surface, Tooltip } from '@adecore/ui';
 import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { constrainedLineEnd, LINE_GRID, lineArrow, lineBounds, lineDash } from '@/canvas/line-geometry';
 import { snapPoint, toWorld, type Point } from '@/canvas/math';

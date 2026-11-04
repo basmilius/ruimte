@@ -1,7 +1,7 @@
-import i18next from 'i18next';
 import { localTimeZone } from '@adecore/ui/format';
 import type { RequestMap, RequestType } from '@ruimte/contracts';
 import type { LiveEvent } from '@ruimte/voice';
+import i18next from 'i18next';
 import { desktop, type OpenAiLivePreferences } from '@/desktop/bridge';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';

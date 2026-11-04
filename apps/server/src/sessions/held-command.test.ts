@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { FakeWatch } from '@adecore/agents/testing';
 import { emptyCanvasView, type ProjectContent, type ProjectView, type ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
-import { FakeWatch } from '@adecore/agents/testing';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore, type ProjectLinks } from '../projects/project-store.ts';
 import { CommandApprovals, commandsSet } from './command-approvals.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
 
 const FOLDER = '/work/repo';
 

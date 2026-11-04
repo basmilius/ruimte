@@ -1,12 +1,12 @@
 import { ExtensionThemeSchema, extensionThemeCssProblem, type ExtensionTheme } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { z } from 'zod';
-import { storedJson } from '@/state/stored-json';
 import { useContributions } from '@/extensions/registry';
 import { useExtensionTheme } from '@/state/extension-theme';
-import { IS_STATION } from '@/station';
 import { previewColors } from '@/state/settings';
+import { storedJson } from '@/state/stored-json';
 import { useTheme } from '@/state/theme';
+import { IS_STATION } from '@/station';
 
 const STORAGE_KEY = 'ruimte.extensionTheme';
 const TOKENS_ID = 'ruimte-extension-theme';

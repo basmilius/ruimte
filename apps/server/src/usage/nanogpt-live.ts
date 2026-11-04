@@ -1,5 +1,5 @@
-import type { UsageWindow } from '@ruimte/contracts';
 import type { ProbeResult } from '@adecore/agents/usage';
+import type { UsageWindow } from '@ruimte/contracts';
 
 /* Between two questions to the API, so a chat that calls it every few seconds is not a poll of its own. */
 const MIN_GAP_MS = 2000;

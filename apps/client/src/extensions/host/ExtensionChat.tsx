@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { lazyNamed } from '@adecore/ui';
+import { useState } from 'react';
 
 // The workspace draws chats, and an extension may draw on the start screen too, so the body comes only once one is asked for.
 const ChatBody = lazyNamed(() => import('@/nodes/ChatBody'), 'ChatBody');

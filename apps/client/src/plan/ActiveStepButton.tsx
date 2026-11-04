@@ -1,14 +1,14 @@
-import { useRef } from 'react';
-import { CirclePause } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useChatRow } from '@adecore/agents-react/state';
+import { IconButton } from '@adecore/ui';
 import type { Plan } from '@ruimte/contracts';
+import { CirclePause } from 'lucide-react';
+import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useHeld } from '@/plan/hold';
 import { revealPlanStep } from '@/plan/plan-actions';
 import { usePlanAgent } from '@/plan/plan-agent';
 import { activeSteps, activeStepsLabel, nextActiveTarget, sameActiveSteps } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
-import { useChatRow } from '@adecore/agents-react/state';
-import { IconButton } from '@adecore/ui';
 
 // Long enough to bridge an agent closing one step before it opens the next, short enough that a stop still shows soon.
 const ACTIVE_HOLD_MS = 1500;

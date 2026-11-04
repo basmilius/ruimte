@@ -1,11 +1,8 @@
-import { chatInfoOf } from '../../testing/chat-info';
-import { machineBridge } from '../../testing/machine-bridge';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import { useChats, type ChatState } from '@adecore/agents-react/state';
-import { useSessions, type SessionState } from '@/state/sessions';
-import { useSettings } from '@/state/settings';
+import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { DesktopBridge, KeepAwakeRequest } from '@/desktop/bridge';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import {
     closedLidOf,
     keepAwakeAvailable,
@@ -16,8 +13,11 @@ import {
     startKeepAwake,
     type KeepAwakeSettings
 } from '@/state/keep-awake';
-import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
+import { useSessions, type SessionState } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
+import { chatInfoOf } from '../../testing/chat-info';
+import { machineBridge } from '../../testing/machine-bridge';
 
 function agent(status: AgentStatus, live = true): AgentInfo {
     return {

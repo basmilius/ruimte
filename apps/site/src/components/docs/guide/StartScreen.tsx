@@ -1,10 +1,10 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { FolderOpen, Laptop, MessageSquarePlus, Monitor, MonitorSmartphone, Server, type LucideIcon } from 'lucide-react';
 import { SectionLabel, Tile } from '@adecore/ui';
-import { AppIcon } from '../../AppIcon.tsx';
+import { FolderOpen, Laptop, MessageSquarePlus, Monitor, MonitorSmartphone, Server, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { ProjectGlyph, TrafficLights } from '../../app/primitives.tsx';
+import { AppIcon } from '../../AppIcon.tsx';
 import { Stage } from '../../film/Stage.tsx';
 import { Shortcut } from '../Shortcut.tsx';
 

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
-import type { ProjectCanvasView, ProjectNode, RemoteLink } from '@ruimte/contracts';
 import { readDraft } from '@adecore/agents-react/chat';
 import { useChats } from '@adecore/agents-react/state';
+import type { ProjectCanvasView, ProjectNode, RemoteLink } from '@ruimte/contracts';
+import { act } from 'react';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
-import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { gitIdentity, idleChatInfo, projectSummary } from '../../testing/project-fixtures';
 
 const REMOTE = 'machine-b';

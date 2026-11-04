@@ -1,7 +1,7 @@
 import { join, relative, resolve, sep } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { isInside } from '../tools/project-paths.ts';
 import { DEVICE_CAPTURES_FOLDER } from '../shots.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { realOrSelf } from './real-path.ts';
 
 export class MachineHomeError extends CodedError<'machine-state'> {}

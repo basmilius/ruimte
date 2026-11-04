@@ -1,10 +1,10 @@
-import { useState, useSyncExternalStore } from 'react';
-import { Search, RotateCcw, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { SeriesLegend } from '@adecore/charts';
 import { IconButton, Input, ScrollArea, Switch } from '@adecore/ui';
 import { formatNumber } from '@adecore/ui/format';
 import type { BenchmarkLab } from '@ruimte/pulsar';
+import { Search, RotateCcw, X } from 'lucide-react';
+import { useState, useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ChartModel, ModelMark } from './chart';
 import { shortModelName, type Metric } from './comparison';
 import { LabLogo } from './LabLogo';

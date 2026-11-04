@@ -3,6 +3,9 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { AgentLineageStore } from '@adecore/agents/coordination';
+import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
 import {
     NODE_SIZE,
     designNodeChats,
@@ -13,17 +16,14 @@ import {
     type ProjectCanvasView,
     type ProjectContent
 } from '@ruimte/contracts';
-import { AgentLineageStore } from '@adecore/agents/coordination';
-import { ManualClock, inProcess, fakeCodex, fakeCodexForks } from '@adecore/agents/testing';
+import { toolsNote } from '../context/context-note.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import { AttachmentStore, ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
-import { ChatManager } from './chat-manager.ts';
-import { toolsNote } from '../context/context-note.ts';
-import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
-import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
 import { retire } from './chat-manager.fixture.test.ts';
+import { ChatManager } from './chat-manager.ts';
+import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
+import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 
 /* A canvas kept in memory, read and rewritten through the two calls the project store gives a fork. */

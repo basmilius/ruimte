@@ -1,13 +1,13 @@
+import type { TimelineFind, TimelineFindOptions } from '@adecore/agents-react';
+import type { FindReveal } from '@adecore/agents-react/chat/ui';
+import { compileFind, stepIndex } from '@adecore/editor-react/models';
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useContextNames } from '@/chat/ruimte-command-look';
 import { hitKey, hitRow, indexRows, NOTHING, placeOfHit, searchChat, type ChatHit } from '@/chat/search';
 import { useDesignHidesToolCalls } from '@/design/design-tool-calls';
-import type { FindReveal } from '@adecore/agents-react/chat/ui';
-import type { TimelineFind, TimelineFindOptions } from '@adecore/agents-react';
 import { findRanges } from '@/find/dom-text';
 import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
-import { compileFind, stepIndex } from '@adecore/editor-react/models';
 import { useFind, type FindState } from '@/find/use-find';
 import { useEndpointId } from '@/state/keys';
 

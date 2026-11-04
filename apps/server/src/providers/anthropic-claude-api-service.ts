@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import {
     ClaudeApiSettingsSchema,
     DEFAULT_CLAUDE_API_SETTINGS,
@@ -7,6 +6,7 @@ import {
     type ClaudeApiStatus,
     type ModelInfo
 } from '@ruimte/contracts';
+import { z } from 'zod';
 import { KeyedApiService, type ApiFetch, type CatalogContent } from './keyed-api-service.ts';
 
 // Deliberately not configurable: a key is sent to Anthropic and nowhere else, and a redirect is an error.

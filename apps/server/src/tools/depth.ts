@@ -1,5 +1,5 @@
-import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
+import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import { type AgentCall } from './host.ts';
 
 // Teams stop at depth 1 to prevent exponential fan-out; single helpers may reach depth 2.

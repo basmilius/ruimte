@@ -4,6 +4,7 @@ import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
 import { ModelCatalog, ProviderAccountsService, ProviderRegistry, createAcpProvider, type ChatProvider } from '@adecore/agents/providers';
 import { fakeAcpWith, inProcess, type FakeAcpOptions } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import {
     AGENT_DEFAULT_MODEL,
     ANTIGRAVITY_MODES,
@@ -24,7 +25,6 @@ import {
 } from './acp-providers.ts';
 import type { AcpServerLaunch } from './acp-server.ts';
 import { ProviderRegistry as RuimteProviderRegistry } from './registry.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const newHome = tempHomes('ruimte-acp-providers-');
 

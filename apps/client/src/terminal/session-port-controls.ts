@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { SessionPort, SessionPortsResult } from '@ruimte/contracts';
+import { create } from 'zustand';
 import { endpointKey, useEndpointId } from '@/state/keys';
 
 interface SessionPortControls {

@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { NODE_SIZE } from '@ruimte/contracts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
-import { readOrCreateEndpointIdentity as readIdentity } from './endpoint-id.ts';
 import { LENT_NOTHING, lendNothing } from './endpoint-id-test-helpers.ts';
+import { readOrCreateEndpointIdentity as readIdentity } from './endpoint-id.ts';
 
 let home: string;
 

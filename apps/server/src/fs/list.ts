@@ -1,7 +1,7 @@
 import { lstat, readdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { FS_LIST_MAX_ENTRIES, type FsEntry, type FsEntryKind, type FsListResult } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
+import { FS_LIST_MAX_ENTRIES, type FsEntry, type FsEntryKind, type FsListResult } from '@ruimte/contracts';
 import { ignoredPaths } from '../git/ignore.ts';
 import { firstInOrder } from './ordered.ts';
 import { classifyEntry, isBuildOutput } from './visibility.ts';

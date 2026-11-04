@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { EmptySchema } from '@adecore/agent-contracts';
+import { z } from 'zod';
 
 /* What a person's Ruimte promises an extension. It moves only when an extension built for the old one stops working. */
 export const EXTENSION_API_VERSION = 1;

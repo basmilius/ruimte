@@ -1,6 +1,6 @@
-import i18next from 'i18next';
-import type { CronProblem, RoutineEntry, RoutineRun, RoutineSchedule } from '@ruimte/contracts';
 import { formatClock, formatDateTime, formatDay, formatDuration, formatElapsedShort } from '@adecore/ui/format';
+import type { CronProblem, RoutineEntry, RoutineRun, RoutineSchedule } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { awaitsApproval, type AgendaBlock, type CellItem } from '@/routines/agenda';
 
 /* A time of a schedule, `HH:MM` on the machine's clock, written the way the region writes a clock. */

@@ -1,11 +1,11 @@
-import { useTranslation } from 'react-i18next';
-import { FileQuestion } from 'lucide-react';
+import { EmptyState } from '@adecore/ui';
+import { formatBytes } from '@adecore/ui/format';
 import type { FsReadBinary, FsReadTooLarge } from '@ruimte/contracts';
+import { FileQuestion } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { TEXT_MAX_BYTES } from '@/shell/panels/large-text';
 import { RevealButton } from '@/shell/panels/RevealButton';
-import { EmptyState } from '@adecore/ui';
-import { formatBytes } from '@adecore/ui/format';
 
 /* What is left when there is nothing to draw: what the file is, how large, and the way to open it. */
 export function UnsupportedFile({ path, name, read }: { path: string; name: string; read: FsReadBinary | FsReadTooLarge }) {

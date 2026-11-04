@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import {
     rememberReadingWidth,
     rememberSendKey,
@@ -10,13 +9,14 @@ import {
     readingWidthHint,
     readingWidthLabel
 } from '@adecore/agents-react/chat';
-import { isApplePlatform } from '@/desktop/bridge';
-import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
-import { SettingsRow } from '@adecore/ui/settings';
 import { Select, Switch } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { useTranslation } from 'react-i18next';
+import { isApplePlatform } from '@/desktop/bridge';
+import { saveMachineSetting } from '@/shell/settings/machine-setting';
+import { MachineSwitchSection } from '@/shell/settings/MachineSwitchSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { SettingSwitchRow } from '@/shell/settings/SettingSwitchRow';
-import { saveMachineSetting } from '@/shell/settings/machine-setting';
 import { useEndpoints } from '@/state/endpoints';
 import { useSettings } from '@/state/settings';
 

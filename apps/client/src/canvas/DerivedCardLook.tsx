@@ -1,7 +1,7 @@
-import clsx from 'clsx';
-import type { CSSProperties, ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
 import { Icon } from '@adecore/ui';
+import clsx from 'clsx';
+import { ChevronRight } from 'lucide-react';
+import type { CSSProperties, ReactNode } from 'react';
 import { accentShades } from '@/canvas/accents';
 import { FRAME } from '@/canvas/derived-card-look';
 

@@ -1,3 +1,5 @@
+import { CodedError } from '@adecore/agents';
+import { chatHandlers, type AgentHandler } from '@adecore/agents/host';
 import type {
     ChatContinueOnPayload,
     ChatContinueOnResult,
@@ -13,13 +15,11 @@ import type {
     ChatMoveResult,
     ChatSummarizeResult
 } from '@ruimte/contracts';
-import { CodedError } from '@adecore/agents';
-import { chatHandlers, type AgentHandler } from '@adecore/agents/host';
-import type { Dispatcher } from '../dispatcher.ts';
-import { ChatError } from '../chat/errors.ts';
-import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import { ChatError } from '../chat/errors.ts';
+import type { Dispatcher } from '../dispatcher.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import { refuseBoundNode, type MachineOfNode } from '../remote/bound-nodes.ts';
 import { registerAgentHandlers } from './agent.ts';
 import type { BeforeKill } from './session.ts';
 

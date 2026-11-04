@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
+import { Serializer } from '@adecore/agents';
 import {
     ARTIFACT_LIMITS,
     ArtifactRequestIdSchema,
@@ -15,7 +16,6 @@ import {
     type ArtifactVersion,
     type ArtifactVersionRef
 } from '@ruimte/contracts';
-import { Serializer } from '@adecore/agents';
 import { z } from 'zod';
 import { isDiskFull, NODE_ARTIFACT_FS, type ArtifactFs } from './artifact-fs.ts';
 import { ArtifactError, checkFileName, checkKey, kindOf, mimeOf, SNIFF_HEAD_BYTES } from './artifact-names.ts';

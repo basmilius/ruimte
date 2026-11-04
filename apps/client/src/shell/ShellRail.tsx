@@ -1,11 +1,11 @@
-import { useTranslation } from 'react-i18next';
-import { ArrowDownToLine, ChartNoAxesColumn, Search, Settings } from 'lucide-react';
 import { UsageLimitsCard } from '@adecore/agents-react/usage';
 import { IconButton, WorkspaceRail, WorkspaceRailSeparator, WorkspaceRailSpacer } from '@adecore/ui';
+import { ArrowDownToLine, ChartNoAxesColumn, Search, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { LaunchChip } from '@/launches/LaunchChip';
-import { ConnectionDot } from '@/shell/ConnectionDot';
 import { useConnectionDotShown } from '@/shell/connection-dot';
+import { ConnectionDot } from '@/shell/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
 import { useToolbarPanels } from '@/shell/panels';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';

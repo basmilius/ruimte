@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
-import { act } from 'react';
 import { zonedTime, type ArtifactGetResult, type ProjectCanvasView, type ProjectNode, type RoutineEntry, type RoutineRun } from '@ruimte/contracts';
+import { act } from 'react';
 import { setRunsHidden } from '@/routines/runs-hidden';
 import { showRoutine, useRoutinesStage } from '@/routines/stage';
 import { liveCanvas } from '@/state/canvas';

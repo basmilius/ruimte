@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { SectionLabel } from '@adecore/ui';
+import Link from 'next/link';
 import { SECTIONS } from '@/lib/docs/navigation';
 
 /* Every page of the guide by its sidebar group, so the docs homepage lists what the sidebar lists. */

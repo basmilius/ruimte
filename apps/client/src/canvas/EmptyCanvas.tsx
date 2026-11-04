@@ -1,6 +1,9 @@
-import { SlotRow } from '@/extensions/SlotSurfaces';
-import { type ReactNode } from 'react';
+import { AgentIcon } from '@adecore/agents-react/providers';
+import { useProviders } from '@adecore/agents-react/state';
+import { Icon, Kbd, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
+import type { Shortcut } from '@adecore/ui';
 import { LayoutTemplate, Type } from 'lucide-react';
+import { type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { centerWorld } from '@/actions/action-reach';
 import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
@@ -8,17 +11,14 @@ import { ProviderRows } from '@/agents/ProviderRows';
 import { emptyCanvasSections, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { NODE_KIND_ICONS } from '@/canvas/node-icons';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
-import { DesignTile } from '@/design/DesignAddItem';
 import { useDesignOffered } from '@/design/design-create';
+import { DesignTile } from '@/design/DesignAddItem';
+import { SlotRow } from '@/extensions/SlotSurfaces';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useProviders } from '@adecore/agents-react/state';
 import { useUi } from '@/state/ui';
-import { Icon, Kbd, ScrollArea, SectionLabel, Tile } from '@adecore/ui';
-import type { Shortcut } from '@adecore/ui';
-import { AgentIcon } from '@adecore/agents-react/providers';
 
 interface TileLook {
     icon: ReactNode;

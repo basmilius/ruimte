@@ -1,6 +1,6 @@
+import type { ProjectSummary } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { withClientClosedProject } from '@/project/closed-projects';
-import type { ProjectSummary } from '@ruimte/contracts';
 
 /*
  * One project of one daemon. A project id is minted by the daemon that owns it, so the same id on

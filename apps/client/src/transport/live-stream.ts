@@ -1,5 +1,5 @@
-import type { RefObject } from 'react';
 import type { LiveStreamFrame } from '@ruimte/contracts';
+import type { RefObject } from 'react';
 import { messageOf } from './signaling';
 
 /* Waits out `ms`, or gives up at once when whoever is waiting was called off. */

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { Package } from 'lucide-react';
 import { EXTENSION_SLOT_NAMES, type ExtensionSlotName } from '@ruimte/contracts';
-import type * as PublicClient from '../../../../packages/extension/client';
+import { Package } from 'lucide-react';
 import { contribute, useContributions, type PanelContribution } from '@/extensions/registry';
+import type * as PublicClient from '../../../../packages/extension/client';
 
 function panel(label: string): PanelContribution {
     return {

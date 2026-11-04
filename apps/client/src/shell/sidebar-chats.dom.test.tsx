@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { projectSidebarViews, type ProjectSummary, type ProjectView } from '@ruimte/contracts';
 import { SIDEBAR_ORDER_STORAGE_KEY, useSidebarProjects } from '@/shell/sidebar-projects';
 import { useSettings } from '@/state/settings';
+import { mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, until, type Mounted } from '../../testing/dom';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const CHATS: ProjectSummary = {

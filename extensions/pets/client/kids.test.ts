@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import type { ChatState, ChatsById } from '@adecore/agents-react/state';
 import { kidMoodsOf, MAX_PET_KIDS, petKidMoods, petKidsOf } from '@extensions/pets/client/kids';
+import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import { endpointKey, endpointOfNode } from '@/state/keys';
 import { chatInfoOf } from '../../../apps/client/testing/chat-info';

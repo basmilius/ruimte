@@ -1,28 +1,3 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ClipboardCopy, ClipboardPaste, Copy, Download, Frame, ImagePlus, LoaderCircle, PackagePlus, Square, Video } from 'lucide-react';
-import {
-    devicePermissions,
-    deviceTools,
-    type DeviceAction,
-    type DeviceColorFilter,
-    type DeviceInfo,
-    type DevicePermission,
-    type DeviceSettings,
-    type DeviceTextSize,
-    type DeviceToggleSetting,
-    type DeviceTool
-} from '@ruimte/contracts';
-import type { DeviceActionBody } from '@/devices/control';
-import { copyScreenshot, placeScreenshotOnCanvas, saveScreenshot, startRecording, stopRecording } from '@/devices/device-capture';
-import { isInstallable, isMedia } from '@/devices/device-files';
-import { MachineFilePicker } from '@/devices/MachineFilePicker';
-import { recordingKey, useDevices, useRecordingEnded, useRecordingSince } from '@/devices/state';
-import { useEndpointId } from '@/state/keys';
-import { useProject } from '@/state/project';
-import { deviceClientFor } from '@/transport/connections';
-import { useMachineAnswers } from '@/transport/features';
-import { formatClockDuration } from '@adecore/ui/format';
 import {
     ScrollArea,
     Segmented,
@@ -41,6 +16,31 @@ import {
     useNow,
     messageOf
 } from '@adecore/ui';
+import { formatClockDuration } from '@adecore/ui/format';
+import {
+    devicePermissions,
+    deviceTools,
+    type DeviceAction,
+    type DeviceColorFilter,
+    type DeviceInfo,
+    type DevicePermission,
+    type DeviceSettings,
+    type DeviceTextSize,
+    type DeviceToggleSetting,
+    type DeviceTool
+} from '@ruimte/contracts';
+import { ClipboardCopy, ClipboardPaste, Copy, Download, Frame, ImagePlus, LoaderCircle, PackagePlus, Square, Video } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { DeviceActionBody } from '@/devices/control';
+import { copyScreenshot, placeScreenshotOnCanvas, saveScreenshot, startRecording, stopRecording } from '@/devices/device-capture';
+import { isInstallable, isMedia } from '@/devices/device-files';
+import { MachineFilePicker } from '@/devices/MachineFilePicker';
+import { recordingKey, useDevices, useRecordingEnded, useRecordingSince } from '@/devices/state';
+import { useEndpointId } from '@/state/keys';
+import { useProject } from '@/state/project';
+import { deviceClientFor } from '@/transport/connections';
+import { useMachineAnswers } from '@/transport/features';
 
 /* Answers whether the device took the change. */
 type Act = (body: DeviceActionBody) => Promise<boolean>;

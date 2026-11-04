@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
 import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
 import { drawnFrameKey, paintPet, petPainter, type PetLook } from '@extensions/pets/client/paint';
 import type { PetFrame, PetMood } from '@extensions/pets/client/pet-state';
 import {

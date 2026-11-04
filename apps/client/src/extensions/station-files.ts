@@ -1,5 +1,5 @@
-import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { ExtensionInfo } from '@ruimte/contracts';
+import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { extensionRequest } from '@/extensions/machine-request';
 import type { Transport } from '@/transport';

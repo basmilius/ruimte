@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { NODE_ACCENT_NAMES, ProjectCanvasViewSchema, type ProjectCanvasLine, type ProjectCanvasView } from '@ruimte/contracts';
-import { createCanvasStore } from './canvas';
-import { mergeProject } from '@/project/merge';
 import { constrainedLineEnd, lineDash } from '@/canvas/line-geometry';
+import { mergeProject } from '@/project/merge';
+import { createCanvasStore } from './canvas';
 
 const VIEW: ProjectCanvasView = { id: 'main', kind: 'canvas', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 const LINE: Omit<ProjectCanvasLine, 'id'> = { x: 12, y: 20, endX: 212, endY: 120, stroke: 'red', strokeWidth: 2, strokeStyle: 'dashed', arrowEnd: true };

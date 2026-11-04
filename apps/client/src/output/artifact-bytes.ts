@@ -1,13 +1,13 @@
+import { formatBytes } from '@adecore/ui/format';
+import { BYTES_READ_MAX_BYTES, type ArtifactFile } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { useEffect, useState } from 'react';
-import { BYTES_READ_MAX_BYTES, type ArtifactFile } from '@ruimte/contracts';
 import { desktop, type SaveFileStreamBridge } from '@/desktop/bridge';
 import { saveBlob } from '@/download';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
 import { readResource, streamResource } from '@/transport/byte-transfer';
 import { readPiece } from '@/transport/piece';
-import { formatBytes } from '@adecore/ui/format';
 
 export interface ArtifactFileRef {
     artifactId: string;

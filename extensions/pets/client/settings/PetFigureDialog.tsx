@@ -1,6 +1,3 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ImageUp, PawPrint, Trash2 } from 'lucide-react';
 import { Button, FormError, Icon, IconButton, PromptDialog, ScrollArea } from '@adecore/ui';
 import {
     browserSheetReader,
@@ -18,9 +15,12 @@ import {
     type SheetProblem
 } from '@extensions/pets/client/custom-sprites';
 import type { PetLook } from '@extensions/pets/client/paint';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
 import { PET_HEIGHT, PET_PAINT_WIDTH, type PetMood } from '@extensions/pets/client/pet-state';
+import { PetFigure } from '@extensions/pets/client/PetFigure';
 import { PET_POSES, type PetPose } from '@extensions/pets/client/pixel';
+import { ImageUp, PawPrint, Trash2 } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /*
  * One opening of the dialog, for a new figure or one added before. It stays after a close, so the dialog

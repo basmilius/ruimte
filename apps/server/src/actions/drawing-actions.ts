@@ -1,11 +1,11 @@
+import { randomBytes, randomInt } from 'node:crypto';
+import { ToolRefusal } from '@adecore/agents/context';
+import { DrawingEditSchema, type DrawingEditMint } from '@adecore/drawing';
 import type { ActionHandlers } from '@ruimte/actions';
 import { isCanvasView, isDrawingView, type ProjectContent, type ProjectDrawingView } from '@ruimte/contracts';
-import { DrawingEditSchema, type DrawingEditMint } from '@adecore/drawing';
-import { randomBytes, randomInt } from 'node:crypto';
 import type { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
-import { field, orNote, type CanvasHost } from '../tools/host.ts';
 import { DrawingError } from '../projects/drawing-store.ts';
+import { field, orNote, type CanvasHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { MAX_PROBLEMS, parseJson, pathOf, problemsRefusal } from './json-input.ts';
 

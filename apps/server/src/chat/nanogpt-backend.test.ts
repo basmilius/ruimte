@@ -2,11 +2,11 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { RuntimeMode } from '@ruimte/contracts';
 import type { BackendEvent, BackendLaunch, TurnInput } from '@adecore/agents/chat';
-import { BackendEventLog, usageLines } from './chat-test-helpers.ts';
+import type { RuntimeMode } from '@ruimte/contracts';
 import { NANOGPT_URL, NanoGptService } from '../providers/nanogpt-service.ts';
 import type { ToolRounds } from './api-chat.ts';
+import { BackendEventLog, usageLines } from './chat-test-helpers.ts';
 import { NanoGptBackend } from './nanogpt-backend.ts';
 import type { executeNanoTool } from './nanogpt-tools.ts';
 

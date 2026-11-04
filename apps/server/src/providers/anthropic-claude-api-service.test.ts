@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ModelCatalogDataSchema } from '@ruimte/contracts';
-import claudeManifest from '@adecore/agents/providers/claude-models.json' with { type: 'json' };
 import { ModelCatalog } from '@adecore/agents/providers';
+import claudeManifest from '@adecore/agents/providers/claude-models.json' with { type: 'json' };
+import { ModelCatalogDataSchema } from '@ruimte/contracts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { ANTHROPIC_URL, ANTHROPIC_VERSION, AnthropicClaudeApiService, anthropicHttpError, defaultModelOf } from './anthropic-claude-api-service.ts';
 import type { ApiFetch } from './keyed-api-service.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const home = tempHomes('ruimte-claude-api-');
 beforeEach(() => setSystemTime(new Date('2026-10-24T12:00:00Z')));

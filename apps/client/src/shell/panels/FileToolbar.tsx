@@ -1,15 +1,15 @@
+import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu } from '@adecore/ui';
+import { MoreHorizontal, type LucideIcon } from 'lucide-react';
+import { useContext, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { fileInfoOf } from '@/extensions/file-info';
 import { SlotRow } from '@/extensions/SlotSurfaces';
-import { useContext, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { createPortal } from 'react-dom';
-import { MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { FileMenuRowsContext, useFileActions, type FileActions } from '@/shell/panels/file-actions';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
-import { FileMenuRowsContext, useFileActions, type FileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
-import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu } from '@adecore/ui';
 
 /*
  * The bar above every file renderer, one for all of them so a control keeps its place when the file

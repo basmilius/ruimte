@@ -1,5 +1,5 @@
-import { chatInfoOf } from '../../testing/chat-info';
 import { describe, expect, test } from 'bun:test';
+import type { ChatState } from '@adecore/agents-react/state';
 import { projectSidebarViews, type AgentInfo, type AgentStatus } from '@ruimte/contracts';
 import {
     groupAttention,
@@ -13,9 +13,9 @@ import {
     visibleNodes,
     type AttentionPass
 } from '@/state/attention';
-import type { ChatState } from '@adecore/agents-react/state';
 import type { SessionState, StatusOf } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
+import { chatInfoOf } from '../../testing/chat-info';
 
 function pass(input: Partial<AttentionPass>): AttentionPass {
     return {

@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileExists } from '@adecore/agents';
-import type { DatabaseConnection } from '@ruimte/contracts';
 import { FakeWatch } from '@adecore/agents/testing';
-import type { SessionEvent } from '../sessions/manager.ts';
+import type { DatabaseConnection } from '@ruimte/contracts';
 import { PROJECT_WRITE_IO, type ProjectWriteIO } from '../projects/project-write.ts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import { DatabaseConnectionStore } from './connection-store.ts';
 
 let root: string;

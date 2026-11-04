@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
-import { FlagOff, Flag } from 'lucide-react';
+import { Icon, Menu, ScrollArea } from '@adecore/ui';
 import { flagOf } from '@ruimte/contracts';
+import { FlagOff, Flag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { flagAction } from '@/actions/client-actions';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { useDocument } from '@/state/document';
-import { Icon, Menu, ScrollArea } from '@adecore/ui';
 
 function ColorItem({ ids, entry, picked }: { ids: readonly string[]; entry: (typeof NODE_ACCENTS)[number]; picked: boolean }) {
     return (

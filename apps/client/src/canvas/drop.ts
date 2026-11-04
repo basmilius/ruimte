@@ -1,6 +1,6 @@
+import { carriesMentions, droppedMentions } from '@adecore/agents-react/chat';
 import type { Reachability } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
-import { carriesMentions, droppedMentions } from '@adecore/agents-react/chat';
 
 /*
  * What a drag inside the app carries for the canvas: the same list the mention type holds, with the

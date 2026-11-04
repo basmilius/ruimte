@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { EditorView } from '@codemirror/view';
 import type { ChatInfo } from '@ruimte/contracts';
+import { act } from 'react';
+import { isApplePlatform } from '@/desktop/bridge';
 import { useDocument } from '@/state/document';
 import { chatInfoOf } from '../../testing/chat-info';
-import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { isApplePlatform } from '@/desktop/bridge';
 import { clickOn, mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 import { claudeProvider } from '../../testing/fake-provider';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const CLAUDE = claudeProvider({
     chat: true,

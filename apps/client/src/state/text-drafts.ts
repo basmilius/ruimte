@@ -1,6 +1,6 @@
+import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
 import { collapseBlankLines } from '@/shell/panels/blank-lines';
 import { readLargeText } from '@/shell/panels/large-text';
 import { endpointKey } from '@/state/keys';

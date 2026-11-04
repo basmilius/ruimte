@@ -1,18 +1,18 @@
-import { useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
 import { ErrorBoundary, Icon } from '@adecore/ui';
 import type { ArtifactFile } from '@ruimte/contracts';
+import { ChevronDown } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useArtifactText, type ArtifactFileRef } from '@/output/artifact-bytes';
-import { ArtifactPage } from '@/output/ArtifactFileBody';
 import { useOpenArtifact } from '@/output/artifact-opener';
+import { ArtifactPage } from '@/output/ArtifactFileBody';
 import { artifactBinaryRead, artifactSource, languageOfName } from '@/output/file-view';
-import type { Saved } from '@/output/SavedCard';
 import type { SavedPreviewOf } from '@/output/saved-preview';
+import type { Saved } from '@/output/SavedCard';
 import { CodeText } from '@/shell/panels/CodeFile';
 import { FileActionsContext } from '@/shell/panels/file-actions';
-import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { FileToolbarSlotProvider, fixedSlot } from '@/shell/panels/file-toolbar-slot';
+import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { PdfPreview } from '@/shell/panels/PdfPreview';
 import { useMachineUrl } from '@/transport/machine-url';
 

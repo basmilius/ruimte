@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { FS_READ_MAX_TEXT_BYTES, FS_WRITE_MAX_BYTES, FS_WRITE_PIECE_BYTES, type FsWriteResult } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { base64Of } from '@/base64';
 import { machineAnswers } from '@/transport/features';
 import { TransportError, type Transport } from '@/transport/transport';

@@ -1,7 +1,7 @@
 import type { Endpoint } from '@/state/endpoints';
 import { HandlerTable } from './handler-table';
-import type { ConnectionState, Transport, TransportStatus } from './transport';
 import type { SocketAddress } from './link-transport';
+import type { ConnectionState, Transport, TransportStatus } from './transport';
 
 /* How long a socket nobody holds stays up, so a switch there and back costs no round trip. */
 const IDLE_CLOSE_MS = 30_000;

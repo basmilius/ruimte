@@ -1,7 +1,7 @@
+import { type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { shallow } from 'zustand/shallow';
-import { type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
 import { useViewNodes } from '@/project/view-nodes';
 import { worktreeOfPath } from '@/shell/panels/worktree-rows';
 import { membersOf, useCanvas } from '@/state/canvas';

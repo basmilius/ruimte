@@ -1,6 +1,6 @@
+import { CloseButton, Dialog, PromptDialog, ScrollArea, Select } from '@adecore/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseButton, Dialog, PromptDialog, ScrollArea, Select } from '@adecore/ui';
 import { removeOverlay, useHostDialog, useOverlays, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 
 function ChoiceBody({ choices, value, onChange }: { choices: readonly string[]; value: string; onChange: (value: string) => void }) {

@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { FileText, Hash, Terminal } from 'lucide-react';
 import { motion } from 'motion/react';
+import type { ReactNode } from 'react';
 import { TerminalBody } from '../../app/bodies.tsx';
 import { StatusDot } from '../../app/canvas.tsx';
 import { AssistantText, UserBubble } from '../../app/chat.tsx';

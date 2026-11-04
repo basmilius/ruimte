@@ -1,12 +1,12 @@
 import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionInput } from '@ruimte/actions';
 import { ROUTINE_LIMITS, RoutineSchema, type Routine, type RoutineEntry, type RoutineKind } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
+import { providerFor } from '../providers/registry.ts';
 import { nameOf, requireInstalled } from '../tools/agents.ts';
+import { field, orNote, type RoutineAgentHost } from '../tools/host.ts';
 import { selectionForOpening } from '../tools/model.ts';
 import { isInside } from '../tools/project-paths.ts';
-import { field, orNote, type RoutineAgentHost } from '../tools/host.ts';
-import { providerFor } from '../providers/registry.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 import { launchHostOf, named } from './launch-actions.ts';
 import { freeSlug, slugOf } from './slug.ts';

@@ -1,14 +1,14 @@
-import i18next from 'i18next';
-import { createStore, type StoreApi } from 'zustand';
 import type { EditorRange } from '@adecore/editor';
 import { shikiLanguageOf, type HoverView } from '@adecore/editor-react';
 import { isEmptyRange } from '@adecore/editor-react/models';
 import { messageOf } from '@adecore/ui';
+import i18next from 'i18next';
+import { createStore, type StoreApi } from 'zustand';
+import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
+import { functionSourceAt, isFunctionSignature } from '@/editor-assist/explain-model';
+import { explainPrompt } from '@/editor-assist/prompts';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
-import { functionSourceAt, isFunctionSignature } from '@/editor-assist/explain-model';
-import { editorAssistClientFor, type EditorAssistClient } from '@/editor-assist/client';
-import { explainPrompt } from '@/editor-assist/prompts';
 import { promptFileName, type HostLanguage as EditorLanguage } from './host-language';
 
 const TOAST_ID = 'language-explain';

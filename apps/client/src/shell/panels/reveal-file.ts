@@ -1,7 +1,7 @@
-import i18next from 'i18next';
 import { messageOf } from '@adecore/ui';
-import type { Transport } from '@/transport';
+import i18next from 'i18next';
 import { useToasts } from '@/state/toasts';
+import type { Transport } from '@/transport';
 
 export function revealFile(transport: Transport, path: string): void {
     void transport.request('fs.reveal', { path }).catch((error: unknown) => {

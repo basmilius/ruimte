@@ -1,7 +1,7 @@
-import { type ComponentProps } from 'react';
-import { useTranslation } from 'react-i18next';
 import { DisplayImage, Markdown, useFileLinkCwd } from '@adecore/agents-react/chat/ui';
 import { ScrollArea } from '@adecore/ui';
+import { type ComponentProps } from 'react';
+import { useTranslation } from 'react-i18next';
 import { parseMarkdownDocument, markdownImagePath, markdownImageStyle } from '@/shell/panels/markdown-document';
 import { FILE_HTML_PLUGINS } from '@/shell/panels/markdown-html';
 import { useFileRead } from '@/shell/panels/use-file-read';

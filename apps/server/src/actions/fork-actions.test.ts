@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
-import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
-import type { CanvasHost } from '../tools/host.ts';
 import type { AgentForkInput, ForkOpener } from '../chat/fork.ts';
+import type { CanvasHost } from '../tools/host.ts';
+import { toolAnswer, toolCall } from '../tools/tool-test-helpers.ts';
 
 test('agent_fork sends its branch to the owned fork host under the caller ceiling without asking for a person token', async () => {
     const received: { input: AgentForkInput; opener: ForkOpener }[] = [];

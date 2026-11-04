@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { chmod, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { browseDirectories, resolveBrowsePath } from './browse.ts';
 import { revealCommand } from './reveal.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root: string;
 

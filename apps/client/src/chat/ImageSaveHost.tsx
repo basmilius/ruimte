@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { useStore } from 'zustand';
 import { useTranslation } from 'react-i18next';
+import { useStore } from 'zustand';
 import { GeneratedImageSaveDialog } from '@/chat/GeneratedImageSaveDialog';
 import { imageSaveDialog, ImageSaveSession } from '@/chat/image-save';
 import { ProjectFolderPicker } from '@/shell/panels/ProjectFolderPicker';

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { act } from 'react';
 import { usePeerLapse } from '@/project/peer-lapse';
 import { swapPeerLinker } from '@/project/peer-linker';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { connectFakeMachine, FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 // The row of the machine is keyed on one id and the machine calls itself another, as this computer's own row does.
 const ROW = 'row-of-the-mac';

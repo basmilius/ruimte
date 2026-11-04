@@ -2,6 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
+import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
+import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
 import type {
     AgentKind,
     ChatAttachment,
@@ -24,10 +27,7 @@ import type {
     Task
 } from '@ruimte/contracts';
 import { HOST_TASK_ORIGIN } from '@ruimte/contracts';
-import { ChatCore, type ChatCoreOptions, type CodexProcessSpec, claudeProjectSlug, limitedTurn } from '@adecore/agents/chat';
-import type { ChatReferences, ChatSession, PromptNotes, ResumeWords, ChatRecord, ChatRecordExtras } from '@adecore/agents/chat';
-import { storedAccount, narrowerMode, type AccountUnusable } from '@adecore/agents/providers';
-import { attachedReferences, type Reference } from '../context/references.ts';
+import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import {
     chatNote,
     chatPrompt,
@@ -37,19 +37,19 @@ import {
     type ChatPromptOptions,
     VISUAL_RESUME_NOTE
 } from '../context/context-note.ts';
+import { attachedReferences, type Reference } from '../context/references.ts';
 import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { RUIMTE_CODEX_CLIENT } from '../providers/codex-provider.ts';
-import { continueOnWake, continuedInForkNote } from './continue-on.ts';
-import { AgentImages } from './agent-images.ts';
-import { ChatError } from './errors.ts';
-import { RUIMTE_UI_FENCE } from './ui-fence.ts';
-import { InlineEditNotes } from './inline-edit.ts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
-import { TurnUsage } from '../stats/turn-usage.ts';
-import { countChatStarted } from '../stats/usage-stats.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
 import { CHAT_TOKEN_VARIABLE, MCP_URL_VARIABLE, codexMcpArgs, mcpUrlOf, type McpEndpoint } from '../providers/ruimte-mcp.ts';
+import { TurnUsage } from '../stats/turn-usage.ts';
+import { countChatStarted } from '../stats/usage-stats.ts';
+import { AgentImages } from './agent-images.ts';
+import { continueOnWake, continuedInForkNote } from './continue-on.ts';
+import { ChatError } from './errors.ts';
+import { InlineEditNotes } from './inline-edit.ts';
+import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
 

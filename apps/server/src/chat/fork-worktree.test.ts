@@ -2,15 +2,15 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from 'bun:te
 import { existsSync } from 'node:fs';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
+import { ManualClock } from '@adecore/agents/testing';
 import type { ChatInfo, ChatTurnItem, ProjectCanvasView } from '@ruimte/contracts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from '../git/test-repo.ts';
 import { Worktrees } from '../git/worktrees.ts';
-import { ManualClock } from '@adecore/agents/testing';
+import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ChatStore, claudeProjectSlug } from '@adecore/agents/chat';
-import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { turnsOf } from './chat-test-helpers.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
 

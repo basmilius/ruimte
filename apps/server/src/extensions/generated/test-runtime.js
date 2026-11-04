@@ -208,176 +208,6 @@ async function render(target, options = {}) {
 import { existsSync } from "fs";
 import { join as join5, resolve as resolve2 } from "path";
 
-// packages/contracts/src/extension-permissions.ts
-var EXTENSION_ACTIONS = {
-  "launch.list": "launches.read",
-  "launch.read": "launches.read",
-  "launch.start": "launches.run",
-  "launch.restart": "launches.run",
-  "launch.stop": "launches.run",
-  "routine.list": "routines.read",
-  "routine.run": "routines.run",
-  "routine.pause": "routines.run",
-  "routine.resume": "routines.run",
-  "artifact.list": "artifacts.read",
-  "artifact.read": "artifacts.read",
-  "artifact.publish": "artifacts.write",
-  "browser.inspect": "browser.control",
-  "browser.navigate": "browser.control",
-  "browser.back": "browser.control",
-  "browser.forward": "browser.control",
-  "browser.reload": "browser.control",
-  "browser.screenshot": "browser.control",
-  "device.list": "devices.control",
-  "device.inspect": "devices.control",
-  "device.screenshot": "devices.control",
-  "device.tap": "devices.control",
-  "device.launch": "devices.control"
-};
-function extensionActionPermission(action) {
-  return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
-}
-
-// packages/contracts/src/extension-client.ts
-var EXTENSION_SLOT_NAMES = [
-  "selectionBar",
-  "nodeHeader",
-  "nodeMenu",
-  "canvasMenu",
-  "lineMenu",
-  "viewToolbar",
-  "viewMenu",
-  "panelHeader",
-  "commandPalette",
-  "projectMenu",
-  "sidebarFooter",
-  "editorStatusBar",
-  "sidebarRow",
-  "tabMenu",
-  "emptyCanvas",
-  "startScreen",
-  "projectBanner",
-  "threadHeader",
-  "emptyThread",
-  "toolActions",
-  "fileRowBadge",
-  "fileBreadcrumb",
-  "terminalMenu",
-  "browserMenu",
-  "textMenu",
-  "noteToolbar",
-  "routineMenu",
-  "composer",
-  "messageActions",
-  "fileMenu",
-  "editorToolbar",
-  "editorMenu",
-  "diffToolbar",
-  "terminalToolbar",
-  "browserToolbar"
-];
-function isExtensionSlotName(name) {
-  return EXTENSION_SLOT_NAMES.includes(name);
-}
-var MACHINE_AREAS = {
-  launch: "launches",
-  routine: "routines",
-  artifact: "artifacts",
-  browser: "browser",
-  device: "devices"
-};
-function extensionActionCall(action) {
-  const dot = action.indexOf(".");
-  return `${MACHINE_AREAS[action.slice(0, dot)] ?? action.slice(0, dot)}${action.slice(dot)}`;
-}
-var EXTENSION_CLIENT_PERMISSIONS = {
-  "files.readText": "files.read",
-  "files.write": "files.write",
-  "files.list": "files.read",
-  "files.watch": "files.read",
-  "git.status": "git.read",
-  "git.diff": "git.read",
-  "git.log": "git.read",
-  "terminals.read": "terminals.read",
-  "terminals.open": "canvas.write",
-  "database.connections": "database.read",
-  "database.query": "database.read",
-  "chats.list": "chats.read",
-  "chats.read": "chats.read",
-  "chats.send": "chats.send",
-  "views.createCanvas": "views.write",
-  "views.rename": "views.write",
-  "context.read": "context.read",
-  "agents.run": "agents.run",
-  "agents.stream": "agents.run",
-  "agents.start": "agents.start",
-  "canvas.createNote": "canvas.write",
-  "canvas.createFile": "canvas.write",
-  "canvas.createBrowser": "canvas.write",
-  "canvas.createNode": "canvas.write",
-  "canvas.update": "canvas.write",
-  "canvas.writeNote": "canvas.write",
-  "canvas.arrange": "canvas.write",
-  "canvas.remove": "canvas.write",
-  "canvas.group": "canvas.write",
-  "canvas.link": "canvas.write",
-  "canvas.unlink": "canvas.write",
-  useAgents: "agents.status",
-  useUsageLimits: "usage.read",
-  Chat: "agents.start",
-  ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
-};
-function extensionCallPermission(call) {
-  return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? EXTENSION_CLIENT_PERMISSIONS[call] ?? null : null;
-}
-function missingPermissionMessage(extension, permission) {
-  return `${extension} did not ask for the permission ${permission} in its manifest`;
-}
-function lazyComponentProblem(surface, what) {
-  const { component } = surface;
-  if (surface.frame !== undefined || typeof component === "function" && component.length === 0 && !/^(class|function [A-Z])/.test(String(component))) {
-    return null;
-  }
-  return `${what}: component must be a lazy import, such as () => import('./Panel')`;
-}
-function shortcutProblem(shortcut) {
-  const parts = shortcut.toLowerCase().split("+");
-  return parts.some((part) => part === "mod" || part === "alt") ? null : `${shortcut} has no modifier: a shortcut needs mod or alt`;
-}
-var WINDOWS_ABSOLUTE = /^([A-Za-z]:[\\/]|[\\/]{2})/;
-function splitPath(path, separator) {
-  const drive = /^([A-Za-z]:)[\\/]/.exec(path)?.[1];
-  const root = drive !== undefined ? `${drive}${separator}` : /^[\\/]{2}/.test(path) ? `${separator}${separator}` : /^[\\/]/.test(path) ? separator : "";
-  return {
-    root,
-    parts: path.slice(drive === undefined ? 0 : 2).split(/[\\/]/).filter((part) => part !== "" && part !== ".")
-  };
-}
-function joinedPath({ root, parts }, separator) {
-  return `${root}${parts.join(separator)}`;
-}
-function extensionProjectPath(folder, path) {
-  const windows = WINDOWS_ABSOLUTE.test(folder);
-  const separator = windows ? "\\" : "/";
-  const absolute = path.startsWith("/") || path.startsWith("\\") || WINDOWS_ABSOLUTE.test(path);
-  const inFolder = splitPath(folder, separator);
-  const named = absolute ? splitPath(path, separator) : { root: inFolder.root, parts: [...inFolder.parts, ...splitPath(path, separator).parts] };
-  const root = joinedPath(inFolder, separator);
-  const joined = joinedPath(named, separator);
-  const same = (text) => windows ? text.toLowerCase() : text;
-  const within = same(root.endsWith(separator) ? root : `${root}${separator}`);
-  if (named.parts.includes("..") || same(joined) !== same(root) && !same(joined).startsWith(within)) {
-    return null;
-  }
-  return joined;
-}
-
-// packages/contracts/src/extension-context.ts
-function contextSelection(of) {
-  const named = new Set(of.nodeIds ?? []);
-  return (nodeId, viewId) => viewId === of.viewId || named.has(nodeId);
-}
-
 // node_modules/.bun/zod@4.6.7/node_modules/zod/v4/core/util.js
 function getEnumValues(entries) {
   const numericValues = Object.values(entries).filter((v) => typeof v === "number");
@@ -6187,6 +6017,176 @@ function parseExtensionActionInput(name, input) {
     return { ok: false, message: `${name} takes another input: ${parsed.error.issues[0]?.message ?? "invalid"}` };
   }
   return { ok: true, input: parsed.data };
+}
+
+// packages/contracts/src/extension-permissions.ts
+var EXTENSION_ACTIONS = {
+  "launch.list": "launches.read",
+  "launch.read": "launches.read",
+  "launch.start": "launches.run",
+  "launch.restart": "launches.run",
+  "launch.stop": "launches.run",
+  "routine.list": "routines.read",
+  "routine.run": "routines.run",
+  "routine.pause": "routines.run",
+  "routine.resume": "routines.run",
+  "artifact.list": "artifacts.read",
+  "artifact.read": "artifacts.read",
+  "artifact.publish": "artifacts.write",
+  "browser.inspect": "browser.control",
+  "browser.navigate": "browser.control",
+  "browser.back": "browser.control",
+  "browser.forward": "browser.control",
+  "browser.reload": "browser.control",
+  "browser.screenshot": "browser.control",
+  "device.list": "devices.control",
+  "device.inspect": "devices.control",
+  "device.screenshot": "devices.control",
+  "device.tap": "devices.control",
+  "device.launch": "devices.control"
+};
+function extensionActionPermission(action) {
+  return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
+}
+
+// packages/contracts/src/extension-client.ts
+var EXTENSION_SLOT_NAMES = [
+  "selectionBar",
+  "nodeHeader",
+  "nodeMenu",
+  "canvasMenu",
+  "lineMenu",
+  "viewToolbar",
+  "viewMenu",
+  "panelHeader",
+  "commandPalette",
+  "projectMenu",
+  "sidebarFooter",
+  "editorStatusBar",
+  "sidebarRow",
+  "tabMenu",
+  "emptyCanvas",
+  "startScreen",
+  "projectBanner",
+  "threadHeader",
+  "emptyThread",
+  "toolActions",
+  "fileRowBadge",
+  "fileBreadcrumb",
+  "terminalMenu",
+  "browserMenu",
+  "textMenu",
+  "noteToolbar",
+  "routineMenu",
+  "composer",
+  "messageActions",
+  "fileMenu",
+  "editorToolbar",
+  "editorMenu",
+  "diffToolbar",
+  "terminalToolbar",
+  "browserToolbar"
+];
+function isExtensionSlotName(name) {
+  return EXTENSION_SLOT_NAMES.includes(name);
+}
+var MACHINE_AREAS = {
+  launch: "launches",
+  routine: "routines",
+  artifact: "artifacts",
+  browser: "browser",
+  device: "devices"
+};
+function extensionActionCall(action) {
+  const dot = action.indexOf(".");
+  return `${MACHINE_AREAS[action.slice(0, dot)] ?? action.slice(0, dot)}${action.slice(dot)}`;
+}
+var EXTENSION_CLIENT_PERMISSIONS = {
+  "files.readText": "files.read",
+  "files.write": "files.write",
+  "files.list": "files.read",
+  "files.watch": "files.read",
+  "git.status": "git.read",
+  "git.diff": "git.read",
+  "git.log": "git.read",
+  "terminals.read": "terminals.read",
+  "terminals.open": "canvas.write",
+  "database.connections": "database.read",
+  "database.query": "database.read",
+  "chats.list": "chats.read",
+  "chats.read": "chats.read",
+  "chats.send": "chats.send",
+  "views.createCanvas": "views.write",
+  "views.rename": "views.write",
+  "context.read": "context.read",
+  "agents.run": "agents.run",
+  "agents.stream": "agents.run",
+  "agents.start": "agents.start",
+  "canvas.createNote": "canvas.write",
+  "canvas.createFile": "canvas.write",
+  "canvas.createBrowser": "canvas.write",
+  "canvas.createNode": "canvas.write",
+  "canvas.update": "canvas.write",
+  "canvas.writeNote": "canvas.write",
+  "canvas.arrange": "canvas.write",
+  "canvas.remove": "canvas.write",
+  "canvas.group": "canvas.write",
+  "canvas.link": "canvas.write",
+  "canvas.unlink": "canvas.write",
+  useAgents: "agents.status",
+  useUsageLimits: "usage.read",
+  Chat: "agents.start",
+  ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
+};
+function extensionCallPermission(call) {
+  return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? EXTENSION_CLIENT_PERMISSIONS[call] ?? null : null;
+}
+function missingPermissionMessage(extension, permission) {
+  return `${extension} did not ask for the permission ${permission} in its manifest`;
+}
+function lazyComponentProblem(surface, what) {
+  const { component } = surface;
+  if (surface.frame !== undefined || typeof component === "function" && component.length === 0 && !/^(class|function [A-Z])/.test(String(component))) {
+    return null;
+  }
+  return `${what}: component must be a lazy import, such as () => import('./Panel')`;
+}
+function shortcutProblem(shortcut) {
+  const parts = shortcut.toLowerCase().split("+");
+  return parts.some((part) => part === "mod" || part === "alt") ? null : `${shortcut} has no modifier: a shortcut needs mod or alt`;
+}
+var WINDOWS_ABSOLUTE = /^([A-Za-z]:[\\/]|[\\/]{2})/;
+function splitPath(path, separator) {
+  const drive = /^([A-Za-z]:)[\\/]/.exec(path)?.[1];
+  const root = drive !== undefined ? `${drive}${separator}` : /^[\\/]{2}/.test(path) ? `${separator}${separator}` : /^[\\/]/.test(path) ? separator : "";
+  return {
+    root,
+    parts: path.slice(drive === undefined ? 0 : 2).split(/[\\/]/).filter((part) => part !== "" && part !== ".")
+  };
+}
+function joinedPath({ root, parts }, separator) {
+  return `${root}${parts.join(separator)}`;
+}
+function extensionProjectPath(folder, path) {
+  const windows = WINDOWS_ABSOLUTE.test(folder);
+  const separator = windows ? "\\" : "/";
+  const absolute = path.startsWith("/") || path.startsWith("\\") || WINDOWS_ABSOLUTE.test(path);
+  const inFolder = splitPath(folder, separator);
+  const named = absolute ? splitPath(path, separator) : { root: inFolder.root, parts: [...inFolder.parts, ...splitPath(path, separator).parts] };
+  const root = joinedPath(inFolder, separator);
+  const joined = joinedPath(named, separator);
+  const same = (text) => windows ? text.toLowerCase() : text;
+  const within = same(root.endsWith(separator) ? root : `${root}${separator}`);
+  if (named.parts.includes("..") || same(joined) !== same(root) && !same(joined).startsWith(within)) {
+    return null;
+  }
+  return joined;
+}
+
+// packages/contracts/src/extension-context.ts
+function contextSelection(of) {
+  const named = new Set(of.nodeIds ?? []);
+  return (nodeId, viewId) => viewId === of.viewId || named.has(nodeId);
 }
 
 // packages/contracts/src/extension-results.ts

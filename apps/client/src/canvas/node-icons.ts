@@ -1,3 +1,4 @@
+import type { CanvasNodeKind } from '@ruimte/contracts';
 import {
     CalendarClock,
     CircleQuestionMark,
@@ -14,7 +15,6 @@ import {
     Workflow,
     type LucideIcon
 } from 'lucide-react';
-import type { CanvasNodeKind } from '@ruimte/contracts';
 
 /* The mark of every kind a node on a canvas can be, the same in the sidebar and in settings. */
 export const NODE_KIND_ICONS: Record<CanvasNodeKind, LucideIcon> = {

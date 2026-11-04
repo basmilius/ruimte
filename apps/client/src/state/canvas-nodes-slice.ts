@@ -2,7 +2,6 @@ import { DEFAULT_TITLES, emptyCanvasGroupIds, groupFrame, isUnknownNode, nodeCol
 import { arrangeGroupMembers } from '@/canvas/arrange-group';
 import { snapToGrid } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
-import { defaultNodeSize } from '@/state/node-size';
 import {
     COLLAPSED_NODE_PX,
     contains,
@@ -15,6 +14,7 @@ import {
     type CanvasNode,
     type CanvasSet
 } from '@/state/canvas-model';
+import { defaultNodeSize } from '@/state/node-size';
 
 /* Adding, changing, grouping and removing the nodes of the canvas. */
 export function createCanvasNodesSlice(

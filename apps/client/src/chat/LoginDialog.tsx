@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { Check } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { ProviderAccountStatus } from '@ruimte/contracts';
 import { useProviderAccountsStore, useProvidersStore } from '@adecore/agents-react/state';
 import { Icon } from '@adecore/ui';
+import type { ProviderAccountStatus } from '@ruimte/contracts';
+import { Check } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCliSession } from '@/chat/cli-session';
 import { CliTerminalDialog, CliTerminalFrame } from '@/chat/CliTerminalDialog';
 import { loginLanded } from '@/chat/login-landing';

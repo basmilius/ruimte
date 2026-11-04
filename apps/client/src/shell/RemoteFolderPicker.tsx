@@ -1,9 +1,9 @@
+import { Button, FormError, Icon, Input, messageOf, ScrollArea } from '@adecore/ui';
+import type { FsBrowseResult } from '@ruimte/contracts';
+import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, CornerLeftUp, Folder, FolderCheck } from 'lucide-react';
-import type { FsBrowseResult } from '@ruimte/contracts';
 import { transportFor } from '@/transport';
-import { Button, FormError, Icon, Input, messageOf, ScrollArea } from '@adecore/ui';
 
 /*
  * The folders of another machine, one level at a time, for the checkout that is none of its projects

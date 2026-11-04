@@ -1,5 +1,5 @@
-import { chatHostOf, type ProjectNode, type ProjectView, designNodeChats } from '@ruimte/contracts';
 import type { ForkShape } from '@adecore/agents-react/chat';
+import { chatHostOf, type ProjectNode, type ProjectView, designNodeChats } from '@ruimte/contracts';
 import type { NodesOfView } from '@/project/view-nodes';
 
 /* Where a chat stands in the project: a node on a canvas or a view of its own, under the name it goes by. */

@@ -1,5 +1,6 @@
-import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { homedir } from 'node:os';
 import type { ChatProvider } from '@adecore/agents/providers';
+import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { sendEvent, type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
@@ -7,7 +8,6 @@ import type { ExtensionHost } from '../extensions/extension-host.ts';
 import { asExtensionRefusal, ExtensionRefusal } from '../extensions/refusal.ts';
 import { oneShotProvider, oneShotRun, runOneShot } from '../git/one-shot.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
-import { homedir } from 'node:os';
 
 const AGENT_RUN_TIMEOUT_MS = 180_000;
 const STDERR_TAIL_CHARS = 2_000;

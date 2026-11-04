@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ChatItem, ProjectCanvasView } from '@ruimte/contracts';
 import { AgentLineageStore } from '@adecore/agents/coordination';
+import type { ChatItem, ProjectCanvasView } from '@ruimte/contracts';
 import { ProjectIndex } from '../projects/project-index.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { ContextRefusal, ContextStore } from './context-store.ts';
 import { openedChildSource } from './opened-child.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 /* Two parents side by side, each with a child, and a grandchild the first child opened; no line anywhere. */
 const canvas: ProjectCanvasView = {

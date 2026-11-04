@@ -1,6 +1,6 @@
-import type { RoutinePicked } from '@ruimte/contracts';
 import type { Referables } from '@adecore/agents-react/chat';
 import { promptPicks, type PromptDraft } from '@adecore/agents-react/chat/ui';
+import type { RoutinePicked } from '@ruimte/contracts';
 
 /* The routine's prompt as the editor holds it, with what was picked in it before. */
 export function promptDraftOf(text: string, picked: RoutinePicked | undefined): PromptDraft {

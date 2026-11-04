@@ -4,9 +4,9 @@ import type { LaunchConfigKind, LaunchHeld, LaunchStartResult, LaunchState, Laun
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { LaunchError, type LaunchStore, type ResolvedLaunch } from './store.ts';
 import { countUsage } from '../stats/usage-stats.ts';
 import { realTimers } from '../timers.ts';
+import { LaunchError, type LaunchStore, type ResolvedLaunch } from './store.ts';
 
 // How long a stop waits after the interrupt before it sends SIGTERM.
 export const STOP_GRACE_MS = 5_000;

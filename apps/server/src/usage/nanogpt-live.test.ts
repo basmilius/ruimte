@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { UsageWindow } from '@ruimte/contracts';
 import type { ProbeResult } from '@adecore/agents/usage';
+import type { UsageWindow } from '@ruimte/contracts';
 import { followPlan } from './nanogpt-live.ts';
 
 function reading(used: number): ProbeResult {

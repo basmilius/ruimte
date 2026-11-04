@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 
 let home: string;
 

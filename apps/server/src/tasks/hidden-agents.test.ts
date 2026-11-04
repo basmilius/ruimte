@@ -3,10 +3,10 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import { MAX_OPENED_PER_CALLER } from '../tools/depth.ts';
-import { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
+import { ProjectStore } from '../projects/project-store.ts';
+import { MAX_OPENED_PER_CALLER } from '../tools/depth.ts';
+import { bootTestDaemon, invokeTool, type TestDaemon } from './test-daemon.ts';
 
 let root: string;
 let home: string;

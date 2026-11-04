@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { FileTree as SharedFileTree } from '@adecore/ui';
 import { FileTree } from '@pierre/trees';
 import type { FsEntry, GitFile } from '@ruimte/contracts';
-import { FileTree as SharedFileTree } from '@adecore/ui';
 import {
     LOADING_NAME,
     ancestorDirsOf,

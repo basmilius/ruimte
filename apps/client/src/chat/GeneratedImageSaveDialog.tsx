@@ -1,6 +1,6 @@
+import { Button, Dialog, Field, FormError, Input } from '@adecore/ui';
 import { useRef, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, Field, FormError, Input } from '@adecore/ui';
 
 /*
  * Where a generated image lands in the project. Only what it shows: the host owns the folders,

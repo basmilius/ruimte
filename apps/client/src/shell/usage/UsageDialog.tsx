@@ -1,20 +1,20 @@
-import clsx from 'clsx';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import { LoaderCircle, TriangleAlert, Unplug } from 'lucide-react';
 import { ChatScopeContext } from '@adecore/agents-react';
 import { useUsageStore } from '@adecore/agents-react/state';
 import { UsageDialog as Frame, UsagePage } from '@adecore/agents-react/usage';
+import { ErrorBoundary, Icon, Select } from '@adecore/ui';
+import clsx from 'clsx';
+import i18next from 'i18next';
+import { LoaderCircle, TriangleAlert, Unplug } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { usageEndpointFor } from '@/shell/usage/picker';
 import { useEndpoints } from '@/state/endpoints';
-import { listedEndpoints } from '@/state/local-machine';
 import { useEndpointId } from '@/state/keys';
+import { listedEndpoints } from '@/state/local-machine';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { chatScopeOf } from '@/transport/chat-scope';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
-import { usageEndpointFor } from '@/shell/usage/picker';
-import { ErrorBoundary, Icon, Select } from '@adecore/ui';
 
 /*
  * A machine that is not answering says so, rather than leaving the page on a skeleton that never

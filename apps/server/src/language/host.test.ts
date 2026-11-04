@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
-import { pathToFileUri } from '@adecore/lsp';
-import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
 import { CodedError } from '@adecore/agents';
 import { FakeWatch } from '@adecore/agents/testing';
+import { pathToFileUri } from '@adecore/lsp';
+import { LANGUAGE_ERROR_CODES, type LanguageServerKind } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { LanguageChoices } from './choices.ts';
 import { CustomLanguageServers } from './custom.ts';
 import { LanguageHost } from './host.ts';
 import { NativePolicy, nativeProgramFile, type Download } from './native.ts';
 import { KIND_PROFILES, type CatalogKind, type ProjectSqlSettings } from './profiles.ts';
-import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { tarGz } from './test-archives.ts';
+import { FULL_CAPABILITIES, fakeSpawner, makeAlternatives, ManualClock, settle, type FakeProcess, type FakeSpawner } from './test-fakes.ts';
 import { LANGUAGE_KIND_PACKAGES, pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root = '';
 

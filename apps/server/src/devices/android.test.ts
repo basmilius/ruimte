@@ -1,10 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { DeviceAction } from '@ruimte/contracts';
-import { FakeRecorder } from './device-test-helpers.ts';
-import type { DeviceSource } from './manager.ts';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { DeviceAction } from '@ruimte/contracts';
 import {
     AndroidBackend,
     batteryOf,
@@ -16,6 +14,8 @@ import {
     type AvdInfo,
     type EmulatorProcess
 } from './android.ts';
+import { FakeRecorder } from './device-test-helpers.ts';
+import type { DeviceSource } from './manager.ts';
 
 const SDK = { adb: '/sdk/platform-tools/adb', emulator: '/sdk/emulator/emulator', avdHome: '/home/.android/avd' };
 const PIXEL: AvdInfo = { name: 'Pixel_9_Pro_API_35', displayName: 'Pixel 9 Pro API 35', apiLevel: '35' };

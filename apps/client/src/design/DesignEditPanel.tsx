@@ -1,6 +1,6 @@
+import { Button, Field, Input, ScrollArea } from '@adecore/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Field, Input, ScrollArea } from '@adecore/ui';
 import type { DesignElement } from '@/design/design-protocol';
 
 /* The properties the panel offers, with the key the page reports its computed value under. */

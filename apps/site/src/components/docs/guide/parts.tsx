@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { ChevronDown, ChevronRight, FileText, Folder, Hash, type LucideIcon, X } from 'lucide-react';
 import { FileIcon, PanelHeader, SectionLabel } from '@adecore/ui';
+import { ChevronDown, ChevronRight, FileText, Folder, Hash, type LucideIcon, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { AppWindow, Rail, type RailPanel, Sidebar, type SidebarRow, TopRow } from '../../app/chrome.tsx';
 import { IconButton, Separator } from '../../app/primitives.tsx';
 

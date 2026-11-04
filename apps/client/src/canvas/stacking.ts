@@ -1,6 +1,6 @@
-import { intersects, type Rect } from '@/canvas/math';
-import type { PageHole } from '@/browser/page-clip';
 import type { CanvasNodeKind } from '@ruimte/contracts';
+import type { PageHole } from '@/browser/page-clip';
+import { intersects, type Rect } from '@/canvas/math';
 
 /* What stacking needs of a node: where it stands and whether it is a group. */
 export interface StackedNode extends Rect {

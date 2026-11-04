@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectSummary } from '@ruimte/contracts';
+import { act } from 'react';
 import type { BackgroundServiceState } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
-import { protocolRefusal } from '@/transport/protocol';
 import { dropMachine, enterWorkspace, showStart } from '@/transport/connections';
-import { FakeMachine, connectFakeMachine } from '../../testing/fake-machine';
-import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
+import { protocolRefusal } from '@/transport/protocol';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { installDesktop, removeDesktop } from '../../testing/dom-helpers';
+import { FakeMachine, connectFakeMachine } from '../../testing/fake-machine';
 
 const PROJECT: ProjectSummary = {
     projectId: 'project-atlas',

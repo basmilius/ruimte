@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { REQUEST_SCHEMAS, type ProjectView, type RequestType } from '@ruimte/contracts';
-import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { answerDevices, FAKE_EMULATOR, FAKE_PHONE, referenceOf, type FakeDevices } from '../../testing/fake-devices';
 import { button, buttonWithText } from '../../testing/device-dom';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { answerDevices, FAKE_EMULATOR, FAKE_PHONE, referenceOf, type FakeDevices } from '../../testing/fake-devices';
+import { FakeMachine } from '../../testing/fake-machine';
+import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 
 const PHONE: ProjectView = { kind: 'device', id: 'phone', name: FAKE_PHONE.name, device: referenceOf(FAKE_PHONE) };
 const EMULATOR: ProjectView = { kind: 'device', id: 'pixel', name: FAKE_EMULATOR.name, device: referenceOf(FAKE_EMULATOR) };

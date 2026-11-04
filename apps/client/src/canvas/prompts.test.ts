@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { CHAT_REQUEST_LIMITS, type AgentInfo, type ChatInfo, type ChatItem, type ComputerApproval, type SecretRequest } from '@ruimte/contracts';
-import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
 import type { ChatsById } from '@adecore/agents-react/state';
+import { PROMPT_SAMPLES } from '@adecore/agents-react/testing';
+import { CHAT_REQUEST_LIMITS, type AgentInfo, type ChatInfo, type ChatItem, type ComputerApproval, type SecretRequest } from '@ruimte/contracts';
+import { isRuimtePrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
-import { isRuimtePrompt, waitingPrompt } from '@/prompts/ruimte-prompts';
 import { canvasPrompts, samePrompts, stackFront, standingRequestsOf, type CanvasPrompt, type CanvasPromptsInput } from './prompts';
 
 const ENDPOINT = 'local';

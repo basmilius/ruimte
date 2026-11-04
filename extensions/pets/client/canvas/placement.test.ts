@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { ChatState } from '@adecore/agents-react/state';
+import type { ChatStatuses } from '@adecore/agents-react/state';
+import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
+import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
 import {
     coversOtherNode,
     PET_HIT_HEIGHT,
@@ -11,14 +13,12 @@ import {
     petNodeKey,
     petPlace
 } from '@extensions/pets/client/canvas/placement';
-import { CLAUDE_BUDDY, CODEX_BUDDY } from '@extensions/pets/client/buddies';
-import { FOX_SPRITE, FROG_SPRITE } from '@extensions/pets/client/animals';
-import { BUBBLE_BESIDE, BUBBLE_ROWS, BUBBLE_SIZE, JUMP_ROWS, PAINT_COLUMNS, PAINT_ROWS } from '@extensions/pets/client/pixel';
 import { bubbleCell, PET_HEIGHT, petFrame, petOf } from '@extensions/pets/client/pet-state';
+import { BUBBLE_BESIDE, BUBBLE_ROWS, BUBBLE_SIZE, JUMP_ROWS, PAINT_COLUMNS, PAINT_ROWS } from '@extensions/pets/client/pixel';
+import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import type { SessionsByKey, SessionState } from '@/state/sessions';
 import type { Snoozes } from '@/state/snooze';
-import type { ChatStatuses } from '@adecore/agents-react/state';
 import { chatInfoOf } from '../../../../apps/client/testing/chat-info';
 
 function agent(status: AgentStatus, kind = 'claude'): AgentInfo {

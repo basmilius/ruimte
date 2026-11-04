@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { initRepo } from '../git/test-repo.ts';
 import type { ProposalAnswer, ProposalAsk } from '../projects/project-proposals.ts';
-import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 import type { CanvasHost } from './host.ts';
+import { toolAnswer, toolCall } from './tool-test-helpers.ts';
 
 let asks: ProposalAsk[];
 let answer: ProposalAnswer;

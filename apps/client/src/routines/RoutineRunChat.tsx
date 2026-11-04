@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { perform } from '@/actions/client-actions';
 import type { ChatSendExtras } from '@adecore/agents-react/chat';
 import { Composer, Timeline } from '@adecore/agents-react/chat/ui';
 import { useChatRow } from '@adecore/agents-react/state';
 import { LazyBoundary, messageOf } from '@adecore/ui';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { perform } from '@/actions/client-actions';
 import { ConnectionNotice, NodeNotice } from '@/nodes/NodeNotice';
 import { OutputChatContext } from '@/output/chat-scope';
 import { useEndpointId } from '@/state/keys';

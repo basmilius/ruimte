@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineToolkit } from './tool.ts';
 import { field, requiredField } from './host.ts';
+import { defineToolkit } from './tool.ts';
 
 const ID_TEXT = 'As agent_start or agent_team answered it';
 

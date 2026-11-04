@@ -1,6 +1,6 @@
 import type { RequestMap, RequestType } from '@ruimte/contracts';
-import { machineAnswers } from '@/transport/features';
 import { TransportError, type Transport } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 /*
  * A request of the extension API, which no machine of 0.18.0 answers. It goes only to a machine that names it, so an

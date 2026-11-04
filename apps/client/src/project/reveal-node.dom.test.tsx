@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { useDesignChat } from '@/design/design-chat';
 import { revealNode } from '@/project/views';
 import { focusedCanvas } from '@/state/canvas';

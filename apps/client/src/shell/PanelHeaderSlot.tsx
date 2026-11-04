@@ -1,6 +1,6 @@
+import { Separator } from '@adecore/ui';
 import { Children, createContext, Fragment, isValidElement, useContext, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Separator } from '@adecore/ui';
 
 interface PanelHeaderHosts {
     leading: HTMLElement | null;

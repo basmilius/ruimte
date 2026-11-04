@@ -1,6 +1,6 @@
+import type { DeviceAgentStep, DeviceControlMode, DeviceInfo, DeviceOperated, DevicePlatform } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import type { DeviceAgentStep, DeviceControlMode, DeviceInfo, DeviceOperated, DevicePlatform } from '@ruimte/contracts';
 import { pool } from '@/transport';
 import { watchPool, type WatchablePool } from '@/transport/pool-watch';
 

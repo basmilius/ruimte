@@ -1,4 +1,3 @@
-import i18next from 'i18next';
 import {
     LanDoorMachineFrameSchema,
     lanDoorMessage,
@@ -8,6 +7,7 @@ import {
     type LanDoorMachineFrame,
     type SignalAccess
 } from '@ruimte/pulsar';
+import i18next from 'i18next';
 import type { ClientKey } from '@/endpoint/client-key';
 import { closeQuietly, messageOf, withAccess, type SignalingOpener } from './signaling';
 

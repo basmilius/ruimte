@@ -1,15 +1,15 @@
-import { SlotMenuItems } from '@/extensions/SlotSurfaces';
-import { memo, useEffect, useRef } from 'react';
+import { copyText, Icon, ContextMenu, Kbd } from '@adecore/ui';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 import { Copy, Pencil, Trash } from 'lucide-react';
+import { memo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { deleteNodesAction } from '@/actions/client-actions';
 import { accentColor } from '@/canvas/accents';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { FONT_STACK } from '@/canvas/text-font';
 import { loadDrawingFont } from '@/drawing/fonts';
+import { SlotMenuItems } from '@/extensions/SlotSurfaces';
 import { useCanvas, useCanvasCamera, useCanvasStore } from '@/state/canvas';
-import { copyText, Icon, ContextMenu, Kbd } from '@adecore/ui';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const { t } = useTranslation('canvas');

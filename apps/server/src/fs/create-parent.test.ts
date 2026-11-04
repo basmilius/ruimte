@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 import { closeSync, constants, fstatSync, renameSync, symlinkSync, writeFileSync } from 'node:fs';
 import { mkdir, readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { withCreateParent } from './create-parent.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { withCreateParent } from './create-parent.ts';
 
 const newHome = tempHomes('ruimte-create-parent-');
 

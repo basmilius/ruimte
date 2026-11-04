@@ -1,9 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { ButtonGroup, EmptyState, messageOf, ScrollArea } from '@adecore/ui';
+import { formatBytes, formatNumber } from '@adecore/ui/format';
+import type { ByteResource, FsReadBinary } from '@ruimte/contracts';
 import { FileText, Maximize, Scan } from 'lucide-react';
 import { getDocument, GlobalWorkerOptions, TextLayer, version, type PDFDocumentProxy, type PDFPageProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import type { ByteResource, FsReadBinary } from '@ruimte/contracts';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FILE_FOOTER } from '@/shell/panels/classes';
+import { machineResourceOf, revealablePath, sourceKey, useEndpointIdOf, wireResourceOf, type FileSource } from '@/shell/panels/file-source';
+import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
+import { RevealButton } from '@/shell/panels/RevealButton';
 import { useEndpoints } from '@/state/endpoints';
 import { machineTransport } from '@/transport';
 import { readResource } from '@/transport/byte-transfer';
@@ -11,13 +18,6 @@ import { bytesWorkerReady } from '@/transport/bytes-worker-host';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
 import { readPiece } from '@/transport/piece';
-import { FILE_FOOTER } from '@/shell/panels/classes';
-import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
-import { machineResourceOf, revealablePath, sourceKey, useEndpointIdOf, wireResourceOf, type FileSource } from '@/shell/panels/file-source';
-import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
-import { RevealButton } from '@/shell/panels/RevealButton';
-import { ButtonGroup, EmptyState, messageOf, ScrollArea } from '@adecore/ui';
-import { formatBytes, formatNumber } from '@adecore/ui/format';
 
 // From this page's own origin, so the worker stays inside `worker-src 'self'`.
 GlobalWorkerOptions.workerSrc = workerUrl;

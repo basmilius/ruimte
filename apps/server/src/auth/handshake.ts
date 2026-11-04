@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { clientChannelMessage, daemonChannelMessage, type AuthChallengeResult, type AuthTicketPayload, type AuthTicketResult } from '@ruimte/contracts';
-import type { AuthStore } from './auth-store.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
+import type { AuthStore } from './auth-store.ts';
 
 // Long enough for two round trips over a slow link, short enough that a challenge is not worth catching.
 export const CHALLENGE_TTL_MS = 60 * 1000;

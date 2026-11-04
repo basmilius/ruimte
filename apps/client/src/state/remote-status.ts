@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { RemoteStatusEvent } from '@ruimte/contracts';
+import { create } from 'zustand';
 import { watchPool } from '@/transport/pool-watch';
 
 interface RemoteStatusStore {

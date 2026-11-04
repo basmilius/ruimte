@@ -1,8 +1,8 @@
+import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectSummary, ProjectViewKind, Task } from '@ruimte/contracts';
 import i18next from 'i18next';
-import type { SidebarTarget } from './sidebar-target';
 import type { AgentWork } from '@/state/agent-work';
 import { compareWaits, type WaitDetails } from '@/state/waiting';
-import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectSummary, ProjectViewKind, Task } from '@ruimte/contracts';
+import type { SidebarTarget } from './sidebar-target';
 
 export interface SidebarNode {
     id: string;

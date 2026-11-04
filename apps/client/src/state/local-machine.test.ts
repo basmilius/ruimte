@@ -1,6 +1,6 @@
-import { machineBridge } from '../../testing/machine-bridge';
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge } from '@/desktop/bridge';
+import { machineBridge } from '../../testing/machine-bridge';
 import { hasLocalMachine, isRealMachine, listedEndpoints, startScreenMachine } from './local-machine';
 
 const rows = [{ id: 'local' }, { id: 'studio' }, { id: 'attic' }];

@@ -1,7 +1,7 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
 import { isApplePlatform, KeyCap, shortcut, shortcutParts } from '@adecore/ui';
+import { useSyncExternalStore } from 'react';
 
 function subscribe(): () => void {
     return () => undefined;

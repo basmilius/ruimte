@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ActionRefusal } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
+import { ActionRefusal } from '@ruimte/actions';
 import { codeOf } from '../fs/test-boundary.ts';
-import { StartClaims, startInputHash, type StartClaim } from './start-claims.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { StartClaims, startInputHash, type StartClaim } from './start-claims.ts';
 
 let home: string;
 let clock: number;

@@ -1,8 +1,8 @@
-import { intersects } from '@/canvas/math';
 import { lineBounds } from '@/canvas/line-geometry';
-import { mergeSelection } from '@/state/selection';
+import { intersects } from '@/canvas/math';
 import type { CanvasState } from '@/state/canvas';
 import { maximizedNodeOf, type CanvasGet, type CanvasSet } from '@/state/canvas-model';
+import { mergeSelection } from '@/state/selection';
 
 /* What is selected, which node has the keyboard and which one fills the canvas. */
 export function createCanvasSelectionSlice(

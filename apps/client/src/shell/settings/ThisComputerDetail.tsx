@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Laptop } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Button, Icon } from '@adecore/ui';
 import { DetailHeader, SettingsRow } from '@adecore/ui/settings';
-import { SetUpMachineDialog } from '@/shell/settings/SetUpMachineDialog';
+import { Laptop } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { SetUpMachineDialog } from '@/shell/settings/SetUpMachineDialog';
 
 /*
  * What a desktop app without a machine of its own offers for this computer. It never starts one by

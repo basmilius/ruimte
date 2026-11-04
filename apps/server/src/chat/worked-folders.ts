@@ -1,8 +1,8 @@
 import { dirname, join, parse, relative, resolve, sep } from 'node:path';
 import type { ChatItem } from '@ruimte/contracts';
-import { isInside } from '../tools/project-paths.ts';
 import { isRecord } from '../is-record.ts';
 import { toolWrites } from '../provenance/tool-writes.ts';
+import { isInside } from '../tools/project-paths.ts';
 
 interface WorkedFolder {
     path: string;

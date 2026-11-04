@@ -1,6 +1,6 @@
+import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
-import { WorktreeSchema } from '@adecore/agent-contracts/worktree';
 import { BYTES_CHUNK_MAX } from './bytes.ts';
 import { ChangeSplitSchema } from './change-split.ts';
 

@@ -1,6 +1,6 @@
 import type { AgentKind, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
-import { create } from 'zustand';
 import { z } from 'zod';
+import { create } from 'zustand';
 import type { TemplateDraft } from '@/language/template-draft';
 import type { TemplatesTracker } from '@/language/templates';
 import { isScratchProject, useProject } from '@/state/project';

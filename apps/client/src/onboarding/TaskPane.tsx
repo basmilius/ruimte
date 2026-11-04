@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
+import { CloseButton, Icon, ScrollArea } from '@adecore/ui';
 import clsx from 'clsx';
 import { Info, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseButton, Icon, ScrollArea } from '@adecore/ui';
 
 interface TaskPaneProps {
     icon: LucideIcon;

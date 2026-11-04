@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { ProjectProposal } from '@ruimte/contracts';
+import { create } from 'zustand';
 
 const NONE: readonly ProjectProposal[] = [];
 

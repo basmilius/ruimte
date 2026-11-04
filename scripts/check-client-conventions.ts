@@ -1,7 +1,7 @@
+import { Glob } from 'bun';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Glob } from 'bun';
 import { parseSync, Visitor } from 'oxc-parser';
 
 const HERE = fileURLToPath(new URL('../apps/client/src/', import.meta.url));

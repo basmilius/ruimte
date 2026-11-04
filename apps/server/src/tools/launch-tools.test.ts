@@ -3,9 +3,9 @@ import { LAUNCH_SECRET_REFERENCE, type LaunchConfig, type LaunchConfigEntry, typ
 import { agentLaunches } from '../launches/agent-host.ts';
 import type { LaunchStartOptions } from '../launches/runner.ts';
 import type { ResolvedLaunch } from '../launches/store.ts';
+import type { CanvasHost, LaunchHost, LaunchReading } from './host.ts';
 import { launchToolkit } from './launch-tools.ts';
 import { launchReading as reading, toolAnswer, toolCall } from './tool-test-helpers.ts';
-import type { CanvasHost, LaunchHost, LaunchReading } from './host.ts';
 
 function status(launchId: string, overrides: Partial<LaunchStatus> = {}): LaunchStatus {
     return {

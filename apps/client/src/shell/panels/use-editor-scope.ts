@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { Editor, EditorBlock } from '@adecore/editor';
+import { useEffect, useState } from 'react';
 
 const NOTHING: readonly EditorBlock[] = [];
 

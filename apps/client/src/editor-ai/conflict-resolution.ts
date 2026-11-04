@@ -1,8 +1,8 @@
-import { createStore, type StoreApi } from 'zustand';
-import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
 import type { Editor, EditorContentChange, EditorTrackedRange } from '@adecore/editor';
 import { highlightLayers, RowHost, type HostedRow } from '@adecore/editor-react';
 import { planConflict, replaceAllLines, replaceLines, type ConflictStretch } from '@adecore/editor-react/models';
+import type { AgentKind, ProvenanceReadResult, ProvenanceRun } from '@ruimte/contracts';
+import { createStore, type StoreApi } from 'zustand';
 import type { DiskText } from '@/state/text-drafts';
 import { useConflictInfo } from './conflict-info';
 

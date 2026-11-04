@@ -1,13 +1,13 @@
+import { messageOf } from '@adecore/ui';
+import { AddressBookRequestError, type Machine } from '@ruimte/pulsar';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { AddressBookRequestError, type Machine } from '@ruimte/pulsar';
-import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
+import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
 import { serverInfoOf, useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { messageOf } from '@adecore/ui';
-import { accountRefusalText } from './account-refusal';
 import { usePulsarAccount, withAccessToken } from './account';
+import { accountRefusalText } from './account-refusal';
 
 interface MachinesState {
     // Null until the account list has been asked for once.

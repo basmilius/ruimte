@@ -1,13 +1,13 @@
 import type { AgentLineageStore } from '@adecore/agents/coordination';
 import type { ChatInfo, ProjectView } from '@ruimte/contracts';
-import { isInside } from '../tools/project-paths.ts';
 import type { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { fileTranscript } from './move-chat.ts';
-import type { MoveJournal } from './move-journal.ts';
 import { ownFileNames } from './move-info.ts';
+import type { MoveJournal } from './move-journal.ts';
 import { movedNote } from './move-note.ts';
 import type { MutationApply } from './project-store.ts';
 

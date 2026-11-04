@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import type { ServerFrame } from '@ruimte/contracts';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { ServerFrame } from '@ruimte/contracts';
 import { computerSetup, FakeHelper } from '../computer/computer-test-helpers.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { registerComputerHandlers } from './computer.ts';

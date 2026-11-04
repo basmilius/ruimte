@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
+import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
+import type { AgentLineageStore } from '@adecore/agents/coordination';
+import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions } from '@adecore/agents/providers';
 import {
     chatHostOf,
     clipText,
@@ -29,21 +32,18 @@ import {
     type ProjectView,
     type Worktree
 } from '@ruimte/contracts';
-import { forkThreadOnce, ChatError as AgentChatError } from '@adecore/agents/chat';
-import type { AgentLineageStore } from '@adecore/agents/coordination';
-import { narrowerMode, AccountError, storedAccount, codexServiceTier, codexThreadOptions } from '@adecore/agents/providers';
 import type { HiddenAgent, HiddenAgentStore } from '../agents/hidden-agents.ts';
-import { agentNode, nameOf } from '../tools/agents.ts';
-import { MAX_CANVAS_NODES, newId } from '../tools/nodes.ts';
-import { placeFree } from '../tools/placement.ts';
-import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../tools/host.ts';
-import { branchSlug } from '../tools/worktree.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
 import { freeBranch, type Worktrees } from '../git/worktrees.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
+import { agentNode, nameOf } from '../tools/agents.ts';
+import type { CanvasHost, MachineHost, ProjectHost, WorktreeWant } from '../tools/host.ts';
+import { MAX_CANVAS_NODES, newId } from '../tools/nodes.ts';
+import { placeFree } from '../tools/placement.ts';
+import { branchSlug } from '../tools/worktree.ts';
 import type { ChatManager } from './chat-manager.ts';
 import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts';
 import { ChatError } from './errors.ts';

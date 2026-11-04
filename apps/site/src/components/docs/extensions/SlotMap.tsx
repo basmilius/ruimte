@@ -1,9 +1,9 @@
 'use client';
 
-import { FileText, Hash, Sparkles, StickyNote, Terminal } from 'lucide-react';
 import { Icon } from '@adecore/ui';
-import { CanvasNode } from '../../app/canvas.tsx';
+import { FileText, Hash, Sparkles, StickyNote, Terminal } from 'lucide-react';
 import { TerminalBody } from '../../app/bodies.tsx';
+import { CanvasNode } from '../../app/canvas.tsx';
 import { AppWindow, Dock, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
 import { Button, IconButton } from '../../app/primitives.tsx';
 import { usePlayback, useTimeline } from '../../film/playback.ts';

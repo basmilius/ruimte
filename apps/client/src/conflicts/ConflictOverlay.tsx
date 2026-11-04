@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { bothLines, sideLines, wandLines, type MergeSide } from '@adecore/merge';
+import { Button, ButtonGroup, CloseButton, ContextMenu, Dialog, EmptyState, FormError, Icon, IconButton, ScrollArea, messageOf } from '@adecore/ui';
+import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/contracts';
 import clsx from 'clsx';
 import { Ban, Check, ChevronDown, ChevronUp, FileWarning, LoaderCircle, Sparkles, Wand2 } from 'lucide-react';
-import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/contracts';
-import { bothLines, sideLines, wandLines, type MergeSide } from '@adecore/merge';
-import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
-import { ConflictSides } from '@/conflicts/ConflictSides';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { cancelGitRunAction, perform } from '@/actions/client-actions';
 import {
     answerInto,
     conflictIndexes,
@@ -18,16 +18,16 @@ import {
     type ConflictCache,
     type ConflictFile
 } from '@/conflicts/conflict-model';
+import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
+import { ConflictSides } from '@/conflicts/ConflictSides';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { DiffRowMenuItems } from '@/shell/panels/DiffRowMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { cancelGitRunAction, perform } from '@/actions/client-actions';
 import { nextActionId } from '@/shell/panels/git-actions';
 import { useGitStatus } from '@/state/git-watch';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button, ButtonGroup, CloseButton, ContextMenu, Dialog, EmptyState, FormError, Icon, IconButton, ScrollArea, messageOf } from '@adecore/ui';
 
 type Reading = { cwd: string; answer: GitConflictsResult } | { cwd: string; failure: string };
 

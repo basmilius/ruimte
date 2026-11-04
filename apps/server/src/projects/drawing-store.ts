@@ -1,3 +1,5 @@
+import { CodedError, type WatchSeams } from '@adecore/agents';
+import { applyDrawingEdit, type DrawingEdit, type DrawingEditMint, type DrawingEditProblem } from '@adecore/drawing';
 import {
     DRAWING_VERSION,
     EMPTY_DRAWING,
@@ -7,8 +9,6 @@ import {
     type DrawingDocument,
     type DrawingElement
 } from '@ruimte/contracts';
-import { applyDrawingEdit, type DrawingEdit, type DrawingEditMint, type DrawingEditProblem } from '@adecore/drawing';
-import { CodedError, type WatchSeams } from '@adecore/agents';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { ElementChanges } from './element-changes.ts';
 import { drawingsDirOf, privateDrawingsDirOf, readDrawing, tooNewMessage, writeDrawing } from './project-files.ts';

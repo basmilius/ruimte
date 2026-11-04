@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { endpointIdIn, useEndpoints } from '@/state/endpoints';
-import { machineIn, type Connection } from './connections';
 import { ConnectionProvider } from './ConnectionProvider';
+import { machineIn, type Connection } from './connections';
 import { useOptionalConnection } from './context';
 
 /*

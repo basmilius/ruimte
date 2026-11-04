@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
-import { connectApiMcp, type ApiMcpConnection, type ApiMcpServer } from './api-mcp.ts';
-import { ApiStdioTransport } from './api-mcp-stdio.ts';
 import { killQuietly, processAlive } from '../process-test-helpers.ts';
+import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
+import { ApiStdioTransport } from './api-mcp-stdio.ts';
+import { connectApiMcp, type ApiMcpConnection, type ApiMcpServer } from './api-mcp.ts';
 
 const NEVER_ABORTED = new AbortController().signal;
 

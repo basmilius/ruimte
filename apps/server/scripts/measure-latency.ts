@@ -1,20 +1,20 @@
+import type { Subprocess } from 'bun';
 import { rm } from 'node:fs/promises';
 import { cpus, release, tmpdir, totalmem } from 'node:os';
 import { parseArgs } from 'node:util';
-import type { Subprocess } from 'bun';
-import { PROTOCOL_VERSION, type ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '@adecore/agents/testing';
+import { PROTOCOL_VERSION, type ProjectContent } from '@ruimte/contracts';
 import { AuthStore } from '../src/auth/auth-store.ts';
 import { Handshake } from '../src/auth/handshake.ts';
 import { generateKeyPair, signMessage } from '../src/auth/keys.ts';
 import { SOCKET_BACKPRESSURE_LIMIT } from '../src/backpressure.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type ConnectionServices, type SocketChannel } from '../src/connection.ts';
 import type { ClientAccess } from '../src/dispatcher.ts';
+import { BunPtyAdapter } from '../src/pty/bun-pty.ts';
 import { authenticateChannel } from '../src/pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from '../src/pulsar/data-channel.ts';
 import { DirectClient } from '../src/pulsar/direct-client.ts';
 import { DirectPeers } from '../src/pulsar/peers.ts';
-import { BunPtyAdapter } from '../src/pty/bun-pty.ts';
 import { bootTestDaemon, releasedProject } from '../src/tasks/test-daemon.ts';
 import { renderReport, type Channel, type ChannelRun, type Environment, type PhaseData, type Run } from './latency-report.ts';
 

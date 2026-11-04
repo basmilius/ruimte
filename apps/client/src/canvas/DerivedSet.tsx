@@ -3,8 +3,8 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { QUIET_EDGE_LINE } from '@/canvas/accents';
 import { routeEdge, type Obstacle } from '@/canvas/edge-route';
 import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
-import type { CardResize } from '@/canvas/resize-handles';
 import { cardHolds, derivedCardId } from '@/canvas/node-body';
+import type { CardResize } from '@/canvas/resize-handles';
 import { useCanvas, useCanvasCamera, type CanvasState } from '@/state/canvas';
 
 export interface DerivedCard {

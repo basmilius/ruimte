@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { Button, Dialog, FileIcon } from '@adecore/ui';
+import { useTranslation } from 'react-i18next';
 import { openLocatedFile, useFileChoice } from '@/shell/panels/file-links';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { useProject } from '@/state/project';

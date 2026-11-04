@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { canvasFixture, knobs, root, store, projectId, notified, elsewhere, withDesignNode, host, invoke, madeId } from './canvas-test-fixture.ts';
 import { type CanvasHost } from './host.ts';
 import { projectReach } from './reach.ts';
-import { canvasFixture, knobs, root, store, projectId, notified, elsewhere, withDesignNode, host, invoke, madeId } from './canvas-test-fixture.ts';
 
 canvasFixture();
 

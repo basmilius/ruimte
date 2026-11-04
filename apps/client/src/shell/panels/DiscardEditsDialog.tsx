@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+import { PromptDialog } from '@adecore/ui';
 import { isDatabaseView } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { useDocument } from '@/state/document';
 import { isDatabaseTab, useFiles } from '@/state/files';
-import { PromptDialog } from '@adecore/ui';
 
 /* A table with edits nobody submitted asks before its tab closes, since closing throws the edits away. */
 export function DiscardEditsDialog() {

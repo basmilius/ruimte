@@ -1,5 +1,5 @@
-import { createStore, type StoreApi } from 'zustand';
 import type { ProjectDocument, ProjectIconChoice, ProjectSummary } from '@ruimte/contracts';
+import { createStore, type StoreApi } from 'zustand';
 import { savedFileSetters } from '@/state/editors';
 import { storeHook } from '@/state/workspace-stores';
 

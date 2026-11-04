@@ -1,11 +1,11 @@
+import { Select } from '@adecore/ui';
+import { SettingsRow } from '@adecore/ui/settings';
+import { VOICE_LANGUAGES } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { VOICE_LANGUAGES } from '@ruimte/contracts';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/audio/microphone';
-import { useSettings } from '@/state/settings';
-import { SettingsRow } from '@adecore/ui/settings';
-import { Select } from '@adecore/ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { useSettings } from '@/state/settings';
 
 export function VoiceInputSection() {
     const { t } = useTranslation('settings');

@@ -1,10 +1,10 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers } from '@ruimte/actions';
 import { clipText, isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
+import { MAX_TITLE_LENGTH, field, orNote } from '../tools/host.ts';
 import { ownViewOf, refuseOwnView } from '../tools/own-view.ts';
 import { readPromptFile, readResultFile } from '../tools/project-paths.ts';
 import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, requireChatParent, taskLine } from '../tools/tasks.ts';
-import { MAX_TITLE_LENGTH, field, orNote } from '../tools/host.ts';
 import type { ServerActionContext } from './context.ts';
 
 const NEEDS_RESULT = 'result needs what came of the task, in quotes';

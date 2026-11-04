@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { CanvasNode } from '@/state/canvas-model';
 import type { CanvasState } from '@/state/canvas';
+import type { CanvasNode } from '@/state/canvas-model';
 import { gapFrames } from './element-frames';
 
 describe('canvas gap frames', () => {

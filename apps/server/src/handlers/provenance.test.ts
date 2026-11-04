@@ -5,10 +5,10 @@ import { join } from 'node:path';
 import type { AgentEvent } from '@adecore/agents/host';
 import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { ProvenanceService } from '../provenance/provenance-service.ts';
 import { registerProvenanceHandlers } from './provenance.ts';
+import { askOnce } from './test-helpers.ts';
 
 let root: string;
 let home: string;

@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react';
 import type { CustomLanguageServer, CustomLanguageServerInput, LanguageCustomCheckResult } from '@ruimte/contracts';
+import { useSyncExternalStore } from 'react';
 import type { Transport } from '@/transport/transport';
 import { SnapshotTracker, upsert } from './snapshot-tracker';
 

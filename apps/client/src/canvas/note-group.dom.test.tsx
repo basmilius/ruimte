@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
+import { act } from 'react';
 import { liveCanvas } from '@/state/canvas';
 import { useNotePreviews } from '@/state/note-previews';
-import { FakeMachine } from '../../testing/fake-machine';
-import { clickOn, openSubmenu, until } from '../../testing/dom';
 import { menuItem, openCanvasPage, openContextMenu, type CanvasPage } from '../../testing/canvas-page';
+import { clickOn, openSubmenu, until } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const TEAM: ProjectNode = { id: 'team', kind: 'group', title: 'Team', x: 0, y: 0, w: 800, h: 600 };
 const PLAN: ProjectNode = { id: 'plan', kind: 'note', title: 'Plan', body: '# Plan\n\nShip it', x: 1000, y: 0, w: 400, h: 320 };

@@ -1,7 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { CircleX, GitBranch, TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 const ITEM = 'flex h-5 items-center gap-1 rounded-sm px-1';
 

@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatTurnItem } from '@ruimte/contracts';
 import { ManualClock, claudeStoppingOnResume, type FakeCli } from '@adecore/agents/testing';
+import type { ChatTurnItem } from '@ruimte/contracts';
 import { BundleStore } from '../git/bundles.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate, NO_WORKTREE_AGENTS } from '../git/test-repo.ts';

@@ -12,22 +12,22 @@ import type {
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
+import { ProjectDocumentSchema } from '@ruimte/contracts';
+import type { StoreApi } from 'zustand';
 import { focusedCanvas, type CanvasState } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
 import type { WorkspaceStores } from '../state/workspace-stores';
-import { ProjectDocumentSchema } from '@ruimte/contracts';
-import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { PanelsPort } from './panels-port';
-import { rekeyLastProject } from './last-project';
-import { setViewShared } from './views';
-import { ProjectClient, type ProjectSink } from './project-client';
-import { sessionNodesOf } from './project-sessions';
 import { withClientClosedProject } from './closed-projects';
 import { fakeStorage } from './fixtures';
+import { rekeyLastProject } from './last-project';
+import { PanelsPort } from './panels-port';
+import { ProjectClient, type ProjectSink } from './project-client';
+import { sessionNodesOf } from './project-sessions';
+import { setViewShared } from './views';
 
 type Call = { type: RequestType; payload: unknown };
 

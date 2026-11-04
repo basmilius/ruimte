@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PenTool } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements } from '@adecore/drawing';
+import { EmptyState } from '@adecore/ui';
+import type { DrawingElement } from '@ruimte/contracts';
+import { PenTool } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cameraToFit } from '@/canvas/math';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useDrawingMirror } from '@/drawing/mirror';
@@ -10,7 +11,6 @@ import { applyCamera, paintElements, paintOptions } from '@/drawing/paint';
 import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { usePaletteKey } from '@/state/theme';
-import { EmptyState } from '@adecore/ui';
 
 /* World units of air around a mirrored drawing, so nothing touches the frame. */
 const PADDING = 24;

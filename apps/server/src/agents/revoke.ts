@@ -1,9 +1,9 @@
 import { readFile, rm } from 'node:fs/promises';
-import type { AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { isNotFound } from '@adecore/agents';
+import type { AgentIntegrationReport, AgentKind } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
-import { isRecord } from '../is-record.ts';
 import { realOrSelf } from '../fs/real-path.ts';
+import { isRecord } from '../is-record.ts';
 import {
     CODEX_RULES,
     HOOK_FILE_RETRIES,

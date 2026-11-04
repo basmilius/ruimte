@@ -1,9 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { CircleCheck, Clock, Folders, Hand, Inbox, type LucideIcon, MessageSquarePlus, Search, Server } from 'lucide-react';
-import { AppIcon } from '../../AppIcon.tsx';
+import type { ReactNode } from 'react';
 import { ClaudeMark, StatusDot } from '../../app/canvas.tsx';
+import { AppIcon } from '../../AppIcon.tsx';
 import { Stage } from '../../film/Stage.tsx';
 
 /* `Navigation/PhoneHome.swift`: the five tabs and their Lucide icons. */

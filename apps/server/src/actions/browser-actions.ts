@@ -1,3 +1,4 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     canvasContextSources,
@@ -9,12 +10,11 @@ import {
     type ProjectCanvasView,
     type ProjectNode
 } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
-import { arrangedCanvas, isChatView, notOnView, viewRequired } from '../tools/chat-view.ts';
 import type { DriveOutcome } from '../browser/drive.ts';
+import { arrangedCanvas, isChatView, notOnView, viewRequired } from '../tools/chat-view.ts';
+import { field, orNote, referencedBy, type BrowserDriveHost, type CanvasHost } from '../tools/host.ts';
 import { checkUrl } from '../tools/nodes.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';
-import { field, orNote, referencedBy, type BrowserDriveHost, type CanvasHost } from '../tools/host.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 /* Where a page is now when somebody holds it, else the address stored on its node. Reading it wakes nobody. */

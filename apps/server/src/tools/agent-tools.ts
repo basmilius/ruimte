@@ -1,14 +1,14 @@
-import { MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH } from '@ruimte/actions';
-import { modeField } from '@adecore/agents/providers';
-import { z } from 'zod';
 import { ToolRefusal } from '@adecore/agents/context';
+import { modeField } from '@adecore/agents/providers';
+import { MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH } from '@ruimte/actions';
+import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { AGENT_KINDS, agentKindField, chatKinds } from './agents.ts';
+import { MAX_TITLE_LENGTH, field, lengthOf, titleField } from './host.ts';
 import { effortFlag, modelFlag, modelLines } from './model.ts';
 import { idList } from './nodes.ts';
 import { nextLine } from './task-tools.ts';
 import { defineToolkit, PROJECT_INPUT, VIEW_INPUT, type GuideTopic } from './tool.ts';
-import { MAX_TITLE_LENGTH, field, lengthOf, titleField } from './host.ts';
 
 /* As many as one caller may have open at once, so a single team can fill that allowance and no more. */
 export const MAX_ROLES = MAX_OPENED_PER_CALLER;

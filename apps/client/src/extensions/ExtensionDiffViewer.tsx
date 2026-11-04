@@ -1,6 +1,6 @@
+import { Button, ScrollArea } from '@adecore/ui';
 import { createElement, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ScrollArea } from '@adecore/ui';
 import { perform } from '@/actions/client-actions';
 import { fileInfoOf } from '@/extensions/file-info';
 import { useContributions } from '@/extensions/registry';

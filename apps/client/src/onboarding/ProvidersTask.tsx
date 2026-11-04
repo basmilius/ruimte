@@ -1,15 +1,15 @@
-import { useState, type ReactNode } from 'react';
-import { LogIn, RefreshCw, Sparkles } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { accountStatusLine, ACCOUNT_TONE_CLASSES, CliMark } from '@adecore/agents-react/providers';
 import { useProviderAccountsStore, useProviders, useProvidersStore } from '@adecore/agents-react/state';
-import { joinNames, type CliRow } from '@/onboarding/tasks';
+import { Button, Icon, Pill } from '@adecore/ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
+import { LogIn, RefreshCw, Sparkles } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RowTile, TaskNote, TaskPane } from '@/onboarding/TaskPane';
+import { joinNames, type CliRow } from '@/onboarding/tasks';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
-import { Button, Icon, Pill } from '@adecore/ui';
 
 interface ProvidersTaskProps {
     machine: string;

@@ -1,6 +1,5 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
 import {
     ChartNoAxesColumn,
     ChevronDown,
@@ -26,6 +25,7 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AppIcon } from '../AppIcon.tsx';
 import { EASE } from '../film/playback.ts';
 import { type AgentStatus, ClaudeMark, StatusDot } from './canvas.tsx';

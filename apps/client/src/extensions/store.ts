@@ -1,6 +1,6 @@
+import { ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
 import { EXTENSION_STORE_PUBLIC_KEY, extensionStoreMessage, ExtensionStoreIndexSchema, type ExtensionStoreEntry } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
-import { ExtensionManifestSchema, ExtensionPackSchema, type ExtensionManifest } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { syncExtensions } from '@/extensions/loader';
 import { extensionRequest } from '@/extensions/machine-request';

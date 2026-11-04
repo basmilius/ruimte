@@ -1,8 +1,6 @@
-import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import type { CliDetection, ChatProvider } from '@adecore/agents/providers';
 import { ProviderRegistry as AgentProviderRegistry, detectCli } from '@adecore/agents/providers';
-import { claudeProvider } from './claude-provider.ts';
-import { codexProvider } from './codex-provider.ts';
+import { pickerGroupsOf, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { acpCatalogStore } from './acp-catalog-store.ts';
 import {
     ANTIGRAVITY_CLI,
@@ -15,9 +13,11 @@ import {
     grokProvider
 } from './acp-providers.ts';
 import type { AcpServerLaunch } from './acp-server.ts';
+import { anthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
+import { claudeProvider } from './claude-provider.ts';
+import { codexProvider } from './codex-provider.ts';
 import { BUILT_IN_KINDS, offersKind } from './kinds.ts';
 import { nanoGptProvider } from './nanogpt-provider.ts';
-import { anthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
 
 // The providers the daemon ships with, in the order of `BUILT_IN_KINDS`. A new one is one more value there, here and in `builtInProviders`.
 const BUILT_IN_PROVIDERS: ChatProvider[] = [

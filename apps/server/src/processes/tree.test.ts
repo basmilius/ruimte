@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { groupsFor, indexTree, machineDisk, ownFamilyOf, ruimteTotals } from './tree.ts';
 import { identityOf, type ProcessRate, type RawProcess, type RawSample } from './sampler.ts';
+import { groupsFor, indexTree, machineDisk, ownFamilyOf, ruimteTotals } from './tree.ts';
 
 function proc(pid: number, ppid: number, name: string, path: string | null = null, overrides: Partial<RawProcess> = {}): RawProcess {
     return {

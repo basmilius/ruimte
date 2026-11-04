@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Switch } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { usePetSettings, type PetSettings } from '@extensions/pets/client/pet-settings';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type BooleanSetting = { [Key in keyof PetSettings]: PetSettings[Key] extends boolean ? Key : never }[keyof PetSettings];
 

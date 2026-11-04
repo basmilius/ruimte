@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import { AgentDatabases } from '../database/agent-databases.ts';
 import { DatabaseAccessStore } from '../database/agent-access.ts';
+import { AgentDatabases } from '../database/agent-databases.ts';
 import { DatabasePasswords } from '../database/agent-passwords.ts';
 import { DatabaseConnectionStore } from '../database/connection-store.ts';
 import { DatabaseService } from '../database/database-service.ts';

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { closeTab, pinTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
 import type { ProjectView } from '@ruimte/contracts';
+import { closeTab, pinTab, type DatabaseTab, type Tab, type TabState } from '@/state/files';
 import { applyDatabaseAction, databaseTabId, databaseTabKey, databaseViewFor, reopenAction, type DatabaseTabAction } from './tabs.ts';
 
 const ORDERS = { connectionId: 'shop', schema: 'shop', table: 'orders' };

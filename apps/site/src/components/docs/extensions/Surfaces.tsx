@@ -1,9 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { ListRow, PanelHeader, Switch } from '@adecore/ui';
 import { Gauge, Hash, ListChecks, StickyNote, Ticket, X, type LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
-import { ListRow, PanelHeader, Switch } from '@adecore/ui';
+import type { ReactNode } from 'react';
 import { CanvasNode } from '../../app/canvas.tsx';
 import { AppWindow, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
 import { Button, IconButton } from '../../app/primitives.tsx';

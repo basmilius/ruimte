@@ -1,15 +1,15 @@
 import { EXTENSION_ICON_PATH, type ExtensionInfo } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
-import { machineExtensions } from '@/extensions/station-files';
-import { extensionsInSafeMode } from '@/extensions/safe-mode';
-import { IS_STATION } from '@/station';
-import { useEndpoints } from '@/state/endpoints';
-import { machineTransport } from '@/transport';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
-import { refreshExtensionTheme } from '@/extensions/themes';
-import { useInstalledExtensions } from '@/extensions/installed';
 import type { LoadedExtension } from '@/extensions/host/client-api';
+import { useInstalledExtensions } from '@/extensions/installed';
+import { extensionsInSafeMode } from '@/extensions/safe-mode';
+import { machineExtensions } from '@/extensions/station-files';
+import { refreshExtensionTheme } from '@/extensions/themes';
+import { useEndpoints } from '@/state/endpoints';
+import { IS_STATION } from '@/station';
+import { machineTransport } from '@/transport';
 
 export { useInstalledExtensions, type ExtensionsState } from '@/extensions/installed';
 

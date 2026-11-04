@@ -1,6 +1,6 @@
-import { isAbsolutePath } from '@ruimte/contracts';
-import type { ActionHandlers } from '@ruimte/actions';
 import { ToolRefusal } from '@adecore/agents/context';
+import type { ActionHandlers } from '@ruimte/actions';
+import { isAbsolutePath } from '@ruimte/contracts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 export const projectProposalActions: ActionHandlers<ServerActionContext> = {

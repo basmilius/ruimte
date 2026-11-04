@@ -1,13 +1,13 @@
+import { FileLocationSchema, type FileLocation } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { create } from 'zustand';
-import { useToasts } from '@/state/toasts';
-import { FileLocationSchema, type FileLocation } from '@ruimte/contracts';
-import { currentEndpointId } from '@/state/keys';
-import { useProject } from '@/state/project';
-import { machineTransport } from '@/transport';
-import { machineAnswers } from '@/transport/features';
 import { ignoreRefusal, perform } from '@/actions/client-actions';
 import { absoluteOf, basenameOf, isAbsolutePath } from '@/shell/panels/files-tree';
+import { currentEndpointId } from '@/state/keys';
+import { useProject } from '@/state/project';
+import { useToasts } from '@/state/toasts';
+import { machineTransport } from '@/transport';
+import { machineAnswers } from '@/transport/features';
 
 export interface FileRef extends FileLocation {
     directory: boolean;

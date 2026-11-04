@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import * as fs from 'node:fs/promises';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createReleaseNotes, releasesFrom } from './release-notes';

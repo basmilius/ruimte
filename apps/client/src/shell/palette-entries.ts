@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { matchScore, type CommandPaletteInputProps, type CommandPaletteVirtualItemProps } from '@adecore/ui';
+import type { ReactNode } from 'react';
 import type { Command } from '@/shell/commands';
 
 export interface Entry extends Command {

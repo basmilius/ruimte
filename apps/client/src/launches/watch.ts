@@ -1,10 +1,10 @@
-import i18next from 'i18next';
 import { formatDuration } from '@adecore/ui/format';
 import type { LaunchStatus } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { projectOnScreen, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { useLaunches } from '@/launches/state';
-import { defaultProjectStore } from '@/state/project';
 import { endpointKey } from '@/state/keys';
+import { defaultProjectStore } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { watchPool } from '@/transport/pool-watch';

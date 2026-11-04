@@ -15,9 +15,8 @@ import type {
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
 import { realTimers, type Timers } from '../timers.ts';
-import { HelperFailure, helperDirectory, messageOf, type ComputerHelper } from './helper.ts';
+import { APPROVAL_WAIT_MS, ComputerApprovals, MAX_HOLD_MS, type AppRef, type CallerInfo } from './approvals.ts';
 import {
     ActionResultSchema,
     AppsResultSchema,
@@ -37,6 +36,7 @@ import {
     type StateResult,
     type WaitResult
 } from './helper-protocol.ts';
+import { HelperFailure, helperDirectory, messageOf, type ComputerHelper } from './helper.ts';
 import { overlayWords, presenceWords } from './overlay-words.ts';
 import { ComputerPresence, type LineOutcome, type PresenceShow } from './presence.ts';
 import { writeHelperFile, type ComputerUseStore } from './store.ts';

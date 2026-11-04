@@ -1,7 +1,7 @@
+import { PromptDialog } from '@adecore/ui';
 import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
 import { isShellFailure } from '@/desktop/shell-failure';
-import { PromptDialog } from '@adecore/ui';
 
 interface SetUpMachineDialogProps {
     open: boolean;

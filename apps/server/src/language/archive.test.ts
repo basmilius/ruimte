@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { extractEntries, extractZipFile, readArchive } from './archive.ts';
 import { tarGz, zip, type FixtureFile } from './test-archives.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let folder = '';
 

@@ -1,4 +1,3 @@
-import type { AgentKind } from '@ruimte/contracts';
 import type { ChatStatuses } from '@adecore/agents-react/state';
 import { PET_PACKS, packFigures, petFigure, providerFigure, type PetPackId } from '@extensions/pets/client/catalog';
 import {
@@ -12,6 +11,7 @@ import {
     type DrawnSprite,
     type PetPose
 } from '@extensions/pets/client/pixel';
+import type { AgentKind } from '@ruimte/contracts';
 import { nodeWorking } from '@/state/agent-work';
 import { groupAttention } from '@/state/attention';
 import { endpointKey, endpointOfNode } from '@/state/keys';

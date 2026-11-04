@@ -1,10 +1,10 @@
-import { useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { FileDiff, FileText } from 'lucide-react';
-import type { FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@adecore/editor';
 import { usePatchDecorations } from '@adecore/editor-react';
 import { ButtonGroup, ErrorBoundary, Pill, Tooltip } from '@adecore/ui';
+import type { FsReadText } from '@ruimte/contracts';
+import { FileDiff, FileText } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { CommitFileTree } from '@/shell/panels/CommitFileTree';
 import { FileToolbarToggle } from '@/shell/panels/FileToolbar';

@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Tooltip } from '@adecore/ui';
 import { useChats } from '@adecore/agents-react/state';
+import { Tooltip } from '@adecore/ui';
 import { petLabel, usePrefersStill } from '@extensions/pets/client/figure-support';
 import { KID_HEIGHT, KID_PAINT_WIDTH, KID_SPACING, kidMoodsOf, petKidsOf } from '@extensions/pets/client/kids';
-import { PetFigure } from '@extensions/pets/client/PetFigure';
+import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import { PET_HEIGHT, PET_PAINT_WIDTH, PET_WIDTH, petOf, samePet, WORLD_CELL, type AgentPet } from '@extensions/pets/client/pet-state';
+import { PetFigure } from '@extensions/pets/client/PetFigure';
 import { useTeleport, type Teleport } from '@extensions/pets/client/teleport';
 import { usePetLook } from '@extensions/pets/client/use-pet-look';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
 import { useSessions, type StatusOf } from '@/state/sessions';
-import { usePetSettings } from '@extensions/pets/client/pet-settings';
 import { useSnoozes } from '@/state/snooze';
 import { useTasks } from '@/state/tasks';
 

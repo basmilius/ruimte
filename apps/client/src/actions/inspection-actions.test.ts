@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { ActionRegistry } from '@ruimte/actions';
 import type { ChatInfo, SessionInfo } from '@ruimte/contracts';
-import { inspectionActions } from './inspection-actions';
 import { useDocument } from '@/state/document';
 import type { Transport } from '@/transport/transport';
+import { inspectionActions } from './inspection-actions';
 
 const call = { actor: { kind: 'voice' as const, id: 'test' }, context: undefined };
 

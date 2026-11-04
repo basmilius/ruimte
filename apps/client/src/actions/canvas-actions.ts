@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import { centerOf } from '@adecore/drawing';
 import { ActionRefusal, type ActionHandlers } from '@ruimte/actions';
 import {
     clipText,
@@ -14,21 +14,8 @@ import {
     type ProviderInfo,
     nodeChats
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { agentNodeOptions } from '@/agents/nodes';
-import { LOCK_KEYS } from '@/canvas/locks';
-import { centerOf } from '@adecore/drawing';
-import { isMeasured, visibleRect } from '@/canvas/math';
-import { liesWithin, nearestFreeNodeRect } from '@/canvas/place-node';
-import { useDesignChat } from '@/design/design-chat';
-import { nodeDeletionFacts, saveNodeFiles, type ViewDeletionMachine } from '@/project/view-deletion';
-import { nodesOfView } from '@/project/view-nodes';
-import { basenameOf } from '@/shell/panels/files-tree';
-import { liveCanvas, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
-import { liveDiagram } from '@/state/diagram';
-import type { DocumentState } from '@/state/document';
-import { liveDrawing } from '@/state/drawing';
-import { defaultNodeSize } from '@/state/node-size';
 import {
     agentFor,
     canvasNow,
@@ -48,6 +35,19 @@ import {
     storedFilePath,
     unknownCanvas
 } from '@/actions/action-reach';
+import { agentNodeOptions } from '@/agents/nodes';
+import { LOCK_KEYS } from '@/canvas/locks';
+import { isMeasured, visibleRect } from '@/canvas/math';
+import { liesWithin, nearestFreeNodeRect } from '@/canvas/place-node';
+import { useDesignChat } from '@/design/design-chat';
+import { nodeDeletionFacts, saveNodeFiles, type ViewDeletionMachine } from '@/project/view-deletion';
+import { nodesOfView } from '@/project/view-nodes';
+import { basenameOf } from '@/shell/panels/files-tree';
+import { liveCanvas, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
+import { liveDiagram } from '@/state/diagram';
+import type { DocumentState } from '@/state/document';
+import { liveDrawing } from '@/state/drawing';
+import { defaultNodeSize } from '@/state/node-size';
 
 /* What the canvas actions reach outside the document; a test hands in a fake of each. */
 export interface CanvasReach {

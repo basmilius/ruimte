@@ -6,12 +6,12 @@ import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { FakeWatch } from '@adecore/agents/testing';
 import type { ProjectContent, ServerFrame } from '@ruimte/contracts';
 import { Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import { peerCanvasId } from '../peering/links.ts';
 import { PeerTasks } from '../peering/peer-tasks.ts';
 import { projectLinks } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { registerPeerHandlers } from './peer.ts';
+import { askOnce } from './test-helpers.ts';
 
 let root: string;
 let store: ProjectStore;

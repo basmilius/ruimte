@@ -3,8 +3,8 @@ import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 import { field, requiredField, yesNo } from './host.ts';
+import { defineTool, defineToolkit, type ToolCall } from './tool.ts';
 
 type ComputerState = ActionOutput<'computer.state'>;
 type ComputerOutcome = ActionOutput<'computer.click'>;

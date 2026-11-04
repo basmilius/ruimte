@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { BackendEvent, BackendLaunch } from '@adecore/agents/chat';
-import { ApiTools } from './api-chat.ts';
 import { MCP_REQUEST_TIMEOUT_S } from '../providers/ruimte-mcp.ts';
+import { ApiTools } from './api-chat.ts';
 import { RUIMTE_MCP_LIMITS, type ApiMcpLimits, type ApiMcpServer, type ConnectApiMcp } from './api-mcp.ts';
 import { NANOGPT_TOOLS } from './nanogpt-tools.ts';
 

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
-import { FakeMachine } from '../../testing/fake-machine';
-import { clickOn, until } from '../../testing/dom';
 import { menuItem, openCanvasPage, openContextMenu, type CanvasPage } from '../../testing/canvas-page';
+import { clickOn, until } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 
 const REVIEW: ProjectNode = { id: 'review', kind: 'chat', title: 'Review', x: 0, y: 0, w: 480, h: 520 };
 const MAIN: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [REVIEW], texts: [], edges: [], layouts: [] };

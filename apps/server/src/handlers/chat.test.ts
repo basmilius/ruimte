@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import type { ServerFrame } from '@ruimte/contracts';
-import { type ClientAccess, Dispatcher } from '../dispatcher.ts';
-import { askOnce } from './test-helpers.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import { type ClientAccess, Dispatcher } from '../dispatcher.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { registerChatHandlers } from './chat.ts';
+import { askOnce } from './test-helpers.ts';
 
 function register(started: string[]): Dispatcher {
     const dispatcher = new Dispatcher();

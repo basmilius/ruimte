@@ -5,10 +5,10 @@ import { ChatSession, type BackendLaunch } from '@adecore/agents/chat';
 import { ModelCatalog } from '@adecore/agents/providers';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import { UsageService } from '@adecore/agents/usage';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { claudeApiUsageRoots, createAnthropicClaudeApiProvider } from './anthropic-claude-api-provider.ts';
 import { AnthropicClaudeApiService } from './anthropic-claude-api-service.ts';
 import { ProviderRegistry } from './registry.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 const newHome = tempHomes('ruimte-claude-provider-');
 const installed = async () => ({ installed: true, version: '2.1.320' });

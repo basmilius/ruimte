@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { isCanvasView, type ProjectCanvasView, type ProjectNode, type ProjectSavePayload, type ProjectView } from '@ruimte/contracts';
+import { act } from 'react';
 import { moveNodeToViewAction } from '@/actions/client-actions';
 import { setViewShared } from '@/project/views';
 import { useToasts } from '@/state/toasts';

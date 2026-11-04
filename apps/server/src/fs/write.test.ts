@@ -4,10 +4,10 @@ import * as filesystem from 'node:fs/promises';
 import { chmod, link, mkdir, readFile, stat, symlink, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { readFile as readForViewer } from './read.ts';
 import { codeOf, projectBoundary } from './test-boundary.ts';
 import { openForSave, writeTextFile, type WriteBoundary } from './write.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root: string;
 let project: string;

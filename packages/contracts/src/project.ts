@@ -1,12 +1,12 @@
-import { z } from 'zod';
 import { isRecord } from '@adecore/agent-contracts';
+import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
+import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
+import { DeviceReferenceSchema } from './device.ts';
 import { GitDiffScopeSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
-import { ProviderAccountIdSchema } from './provider-accounts.ts';
-import { DeviceReferenceSchema } from './device.ts';
-import { DrawingFontSchema, DrawingStrokeStyleSchema, DrawingStrokeWidthSchema } from '@adecore/drawing/protocol';
 import { NODE_ACCENT_NAMES } from './node-accents.ts';
+import { ProviderAccountIdSchema } from './provider-accounts.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;

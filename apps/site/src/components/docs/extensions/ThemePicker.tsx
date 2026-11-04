@@ -1,7 +1,7 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
 import { Hash, StickyNote } from 'lucide-react';
+import type { CSSProperties, ReactNode } from 'react';
 import { CanvasNode } from '../../app/canvas.tsx';
 import { AppWindow, Rail, Sidebar, TopRow } from '../../app/chrome.tsx';
 import { Scaled } from '../../film/Stage.tsx';

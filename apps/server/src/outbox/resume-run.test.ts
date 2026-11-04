@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { AttachmentStore, ChatStore } from '@adecore/agents/chat';
 import type { SpawnChatProcess } from '@adecore/agents/chat';
 import { OutboxWorker, RETRY_DELAYS_MS } from '@adecore/agents/coordination';
 import { fakeClaude, fakeCodex, inProcess, type InProcessCli, ManualClock } from '@adecore/agents/testing';
+import type { ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import { ChatManager, RESUME_PROMPT } from '../chat/chat-manager.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';

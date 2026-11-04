@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { Viewport } from '@/canvas/camera-slice';
 import { intersects, isMeasured, visibleRect, type Camera } from '@/canvas/math';
+import { rendersAtZoom } from '@/canvas/render-distance';
 import { maximizedNodeOf, useCanvasCamera, type CanvasNode, type CanvasState } from '@/state/canvas';
 import { memoByIdentity } from '@/state/identity-memo';
 import { useSettings } from '@/state/settings';
-import { rendersAtZoom } from '@/canvas/render-distance';
 
 /* Screen pixels around the viewport that still count as visible, so an edge does not flicker. */
 export const VIEW_MARGIN = 96;

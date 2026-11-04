@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { SETTINGS_INDEX } from './search';
 import { fileURLToPath } from 'node:url';
+import { SETTINGS_INDEX } from './search';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 

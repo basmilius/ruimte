@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ActionRegistry } from '@ruimte/actions';
-import { terminalPrepareActions } from './terminal-prepare-actions';
 import { TransportError, type Transport } from '@/transport/transport';
+import { terminalPrepareActions } from './terminal-prepare-actions';
 
 function fixture() {
     const calls: unknown[] = [];

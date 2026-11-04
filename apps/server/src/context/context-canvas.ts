@@ -1,5 +1,5 @@
-import { groupMemberIds, type ProjectCanvasView, type ProjectNode } from '@ruimte/contracts';
 import { escapeXml } from '@adecore/drawing';
+import { groupMemberIds, type ProjectCanvasView, type ProjectNode } from '@ruimte/contracts';
 
 function firstLine(text: string): string {
     return text.split('\n')[0]?.trim().slice(0, 80) ?? '';

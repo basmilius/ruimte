@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import i18next from 'i18next';
 import type { Shortcut } from '@adecore/ui';
+import i18next from 'i18next';
 import { boundCommands, COMMAND_IDS, COMMANDS, menuPlacesOf } from './command-table';
 
 function keysOf(shortcut: Shortcut, apple: boolean): string {

@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useChats } from '@adecore/agents-react/state';
+import { Button, Dialog, Icon, Menu, Spinner, Tooltip } from '@adecore/ui';
+import { formatNumber } from '@adecore/ui/format';
+import type { Worktree } from '@ruimte/contracts';
 import {
     ArrowDown,
     ArrowUp,
@@ -15,18 +17,16 @@ import {
     ScanSearch,
     Trash
 } from 'lucide-react';
-import type { Worktree } from '@ruimte/contracts';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatusDot } from '@/canvas/NodeFrame';
 import type { Inspection } from '@/shell/panels/use-worktree-inspection';
 import { hasWork, nodeNames, nodesInWorktree, workBadgesLabel } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { hasActiveCanvas, useDocument } from '@/state/document';
-import { useChats } from '@adecore/agents-react/state';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import type { WorktreeNode } from '@/state/worktrees';
-import { Button, Dialog, Icon, Menu, Spinner, Tooltip } from '@adecore/ui';
-import { formatNumber } from '@adecore/ui/format';
 
 /* What a worktree row can be asked besides being entered. */
 export interface WorktreeActions {

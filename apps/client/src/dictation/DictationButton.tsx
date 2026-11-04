@@ -1,6 +1,6 @@
+import { IconButton } from '@adecore/ui';
 import { CircleAlert, Mic, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IconButton } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { DictationPhase } from './controller';
 

@@ -1,10 +1,10 @@
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { rememberTicket } from '@/endpoint/credentials';
-import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { socketAddressFor } from '@/endpoint/handshake';
 import { machineAccess } from '@/pulsar/statements';
-import { hasLocalMachine } from '@/state/local-machine';
 import { LOCAL_ENDPOINT_ID, brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { hasLocalMachine } from '@/state/local-machine';
 import { iceServersFrom, useSettings } from '@/state/settings';
 import { IS_STATION } from '@/station';
 import type { LinkKind, MachineKind } from '@/telemetry/events';

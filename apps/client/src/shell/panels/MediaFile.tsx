@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { FileAudio, FileVideo } from 'lucide-react';
-import type { FsReadBinary } from '@ruimte/contracts';
-import { FILE_FOOTER } from '@/shell/panels/classes';
-import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
-import { machineResourceOf, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
-import { RevealButton } from '@/shell/panels/RevealButton';
-import { useMachineUrl } from '@/transport/machine-url';
 import { EmptyState, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatClockDuration } from '@adecore/ui/format';
+import type { FsReadBinary } from '@ruimte/contracts';
+import { FileAudio, FileVideo } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FILE_FOOTER } from '@/shell/panels/classes';
+import { machineResourceOf, revealablePath, useEndpointIdOf, type FileSource } from '@/shell/panels/file-source';
+import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
+import { RevealButton } from '@/shell/panels/RevealButton';
+import { useMachineUrl } from '@/transport/machine-url';
 
 interface MediaFileProps {
     kind: 'audio' | 'video';

@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode, ProviderInfo } from '@ruimte/contracts';
 import { useUi } from '@/state/ui';
 import { chatInfoOf } from '../../testing/chat-info';
+import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 
 const GROK = {
     kind: 'grok',

@@ -1,5 +1,7 @@
 'use client';
 
+import { Input, Switch } from '@adecore/ui';
+import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import type { LucideIcon } from 'lucide-react';
 import {
     Brain,
@@ -19,8 +21,6 @@ import {
     Settings,
     SquareTerminal
 } from 'lucide-react';
-import { Input, Switch } from '@adecore/ui';
-import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { Stage } from '../../film/Stage.tsx';
 
 interface NavItem {

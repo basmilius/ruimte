@@ -1,7 +1,7 @@
+import { messageOf } from '@adecore/ui';
 import type { ProjectLocal, ProjectSummary, ProjectView, ProjectViewLocal, SplitLayout } from '@ruimte/contracts';
 import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { messageOf } from '@adecore/ui';
 import { viewIdsIn } from '@/shell/split';
 import type { EditorRegistry, SavedFileSetters } from '@/state/editors';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '@/transport/transport';

@@ -1,5 +1,5 @@
-import i18next from 'i18next';
 import { randomToken, sha256, type ProviderId } from '@ruimte/pulsar';
+import i18next from 'i18next';
 
 /* The pure half of signing in, on WebCrypto and `URL` only, so the desktop app and the web client share it. */
 

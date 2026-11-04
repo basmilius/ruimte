@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import { messageOf } from '@adecore/ui';
 import {
     PROJECT_VERSION,
     type ProjectContent,
@@ -10,23 +10,23 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
-import { messageOf } from '@adecore/ui';
 import type { LooseStrip } from '@/shell/legacy-files-cell';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { forgetClosedProject, rememberClosedProject } from './closed-projects';
-import { restoreDesignFolders } from './design-folder-refusal';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
+import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { readDeletedViews, writeDeletedViews } from './deleted-views';
+import { restoreDesignFolders } from './design-folder-refusal';
+import { projectIconAppearance } from './icon-appearance';
 import { rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
 import { dropProjectDraft, readProjectDraft, writeProjectDraft } from './project-draft';
-import { projectIconAppearance } from './icon-appearance';
 
 type SaveOutcome = 'saved' | 'offline' | 'failed';
 

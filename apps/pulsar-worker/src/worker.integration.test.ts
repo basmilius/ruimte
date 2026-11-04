@@ -30,8 +30,8 @@ import {
 import { Miniflare, type WorkerOptions } from 'miniflare';
 import { BENCHMARK_LABS } from './benchmark-labs.ts';
 import { MAX_PAGES } from './benchmarks.ts';
-import { BUNDLED_CATALOGS } from './catalog.ts';
 import { seedStatementsOf } from './catalog-seed.ts';
+import { BUNDLED_CATALOGS } from './catalog.ts';
 import { LIMITS, WINDOW_MS } from './rate-window.ts';
 import { ROTATION_GRACE_MS } from './sessions.ts';
 

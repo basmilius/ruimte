@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { BytesReadPayload } from '@ruimte/contracts';
-import type { BytesPiece } from './piece';
 import { readResource } from './byte-transfer';
+import type { BytesPiece } from './piece';
 import { blobTypeFor } from './piece';
 
 const RESOURCE = { kind: 'file', path: '/tmp/picture.gif' } as const;

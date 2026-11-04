@@ -1,17 +1,17 @@
+import { formatShortcut } from '@adecore/ui';
 import i18next from 'i18next';
-import { RENDERED_DOC_COMMENTS } from '@/features';
 import { canSwipeBetweenPages, desktop, isDesktop } from '@/desktop/bridge';
-import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { useContributions } from '@/extensions/registry';
-import { allSettingsSections, sectionDescription, sectionLabel } from '@/shell/settings/sections';
+import { RENDERED_DOC_COMMENTS } from '@/features';
 import { FOLDING_GROUPS } from '@/shell/settings/folding-rows';
+import { allSettingsSections, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { shortcutRowId, type ShortcutGroup } from '@/shell/settings/shortcuts';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { closedLidOffered, keepAwakeAvailable } from '@/state/keep-awake';
 import { hasLocalMachine } from '@/state/local-machine';
 import { serverInfoOf } from '@/state/server';
 import { useServers } from '@/state/server';
 import type { SettingsSectionId } from '@/state/ui';
-import { formatShortcut } from '@adecore/ui';
 
 interface SearchEntry {
     /* The `searchId` of the row it leads to. */

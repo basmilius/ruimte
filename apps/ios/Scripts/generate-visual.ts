@@ -1,4 +1,3 @@
-import { VISUAL_HOST_HEADERS } from '../../../packages/csp/src/index.ts';
 import {
     VISUAL_BRIDGE_METHODS,
     VISUAL_LIMITS,
@@ -9,6 +8,7 @@ import {
     visualThemeFragment,
     type VisualTheme
 } from '../../../packages/contracts/src/visual.ts';
+import { VISUAL_HOST_HEADERS } from '../../../packages/csp/src/index.ts';
 import { writeGenerated } from './generated.ts';
 
 function swiftString(value: string): string {

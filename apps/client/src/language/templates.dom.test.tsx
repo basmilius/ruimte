@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import { typeInto } from '@adecore/editor/testing';
 import type { Shortcut } from '@adecore/ui';
+import { act } from 'react';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useUi } from '@/state/ui';
-import { eventOf } from './key-events';
-import { languageCommandRows } from './language-commands';
+import { mount, pressKey, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
 import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
-import { mount, pressKey, until, type Mounted } from '../../testing/dom';
+import { eventOf } from './key-events';
+import { languageCommandRows } from './language-commands';
 
 const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 const VIEW = { kind: 'file', id: 'run-view', name: 'run.ts', path: 'run.ts' };

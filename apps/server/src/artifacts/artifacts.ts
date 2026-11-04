@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { lstat, readdir, realpath } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
+import { KeyedSerializer } from '@adecore/agents';
+import { WatchedSinks } from '@adecore/agents/host';
 import {
     ARTIFACT_LIMITS,
     PEER_ARTIFACT_PIECE_BYTES,
@@ -24,18 +26,16 @@ import {
     type ArtifactVersionRef,
     type ChatAttachment
 } from '@ruimte/contracts';
-import { KeyedSerializer } from '@adecore/agents';
-import { WatchedSinks } from '@adecore/agents/host';
-import { isInside } from '../tools/project-paths.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
+import { realOrNull } from '../fs/real-path.ts';
 import { sniffMime } from '../fs/sniff.ts';
-import { shotFolders } from '../shots.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { shotFolders } from '../shots.ts';
+import { isInside } from '../tools/project-paths.ts';
 import { cleanupProposals, NO_PINS, removable, type PinnedVersions } from './artifact-cleanup.ts';
 import { copyVersionInto } from './artifact-copy.ts';
 import { ArtifactError, isTextMime, SNIFF_HEAD_BYTES } from './artifact-names.ts';
 import { versionTooLarge, type ArtifactStore, type CommitResult } from './artifact-store.ts';
-import { realOrNull } from '../fs/real-path.ts';
 
 // One agent with this many publishes half sent holds them all; the next waits until one is done.
 export const MAX_OPEN_UPLOADS = 8;

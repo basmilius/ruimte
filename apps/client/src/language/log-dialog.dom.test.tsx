@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { LanguageServerStatus } from '@ruimte/contracts';
-import { FakeMachine } from '../../testing/fake-machine';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { FakeMachine } from '../../testing/fake-machine';
 import { LogDialog } from './ServerParts';
 import { LanguageStatusTracker } from './status';
 

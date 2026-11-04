@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { appendFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { CodexTitleReader } from './codex-title.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { CodexTitleReader } from './codex-title.ts';
 
 function line(id: string, name: unknown): string {
     return `${JSON.stringify({ id, thread_name: name, updated_at: '2026-09-14T12:00:00.000000Z' })}\n`;

@@ -2,9 +2,9 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { processAlive } from '../process-test-helpers.ts';
 import { GitActions } from './actions.ts';
 import { expectProcessTerminated, installHangingHook, killFromPidFile } from './test-process.ts';
-import { processAlive } from '../process-test-helpers.ts';
 import { gitIn, initRepo } from './test-repo.ts';
 
 let root: string;

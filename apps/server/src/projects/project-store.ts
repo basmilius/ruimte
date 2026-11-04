@@ -1,6 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rm, rmdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { fileExists, isNotFound, writeAtomic, SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams, KeyedSerializer, Serializer } from '@adecore/agents';
+import { revisionConflictMessage } from '@ruimte/actions';
 import {
     DEFAULT_PROJECT_COLOR,
     EMPTY_LOCAL,
@@ -33,9 +35,19 @@ import {
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
-import { revisionConflictMessage } from '@ruimte/actions';
-import { fileExists, isNotFound, writeAtomic, SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams, KeyedSerializer, Serializer } from '@adecore/agents';
+import { HiddenAgentStore } from '../agents/hidden-agents.ts';
+import { ClientSinks } from '../client-sinks.ts';
+import { referablesOfViews } from '../context/references.ts';
+import { errorText } from '../error-text.ts';
+import { isDirectory } from '../fs/browse.ts';
+import { MachineHome } from '../fs/machine-home.ts';
+import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
+import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
+import { folderToOpen } from './folder-to-open.ts';
+import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
+import { ProjectError } from './project-error.ts';
 import {
     diagramsDirOf,
     documentPathInFolder,
@@ -56,25 +68,13 @@ import {
     PROJECT_FILE,
     WATCH_SETTLE_MS
 } from './project-files.ts';
-import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
-import { moveDesignFolders, settleDesignFolders, takenDesignFolders, type DesignAtWork, type DesignSides } from './design-folders.ts';
-import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
-import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { readIdeaName } from './project-identity.ts';
-import { ProjectError } from './project-error.ts';
+import { placesOf, ProjectIndex, type IndexedPlace } from './project-index.ts';
 import { ProjectRegistry, type RegistryEntry } from './project-registry.ts';
 import { isIconFile, sameIcon, ProjectSummaries } from './project-summaries.ts';
-import { splitLegacy, type LoadedFiles, type TrackedProbe } from './legacy-split.ts';
-import { referablesOfViews } from '../context/references.ts';
-import { errorText } from '../error-text.ts';
-import { ClientSinks } from '../client-sinks.ts';
+import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { scratchFolderOf } from './scratch-project.ts';
-import { folderToOpen } from './folder-to-open.ts';
-import { isDirectory } from '../fs/browse.ts';
-import { MachineHome } from '../fs/machine-home.ts';
-import { PeerLinks, withHiddenCanvases } from '../peering/links.ts';
-import { RemoteStore, idsOf, machinesOf, withBoundMachines, withMachines, withoutMachines } from '../remote/remote-store.ts';
 
 function asProjectError(e: unknown): unknown {
     if (e instanceof ProjectWriteRaced) {

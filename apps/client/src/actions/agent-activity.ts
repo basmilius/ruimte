@@ -1,5 +1,5 @@
-import type { ChatItem } from '@ruimte/contracts';
 import type { ActionOutput } from '@ruimte/actions';
+import type { ChatItem } from '@ruimte/contracts';
 
 export function agentActivity(items: ChatItem[], limit: number, toolId: string | null): Pick<ActionOutput<'agent.activity'>, 'tools' | 'truncated'> {
     const all = items.filter((item) => item.kind === 'tool');

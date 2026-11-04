@@ -1,3 +1,4 @@
+import type { Server, ServerWebSocket } from 'bun';
 import {
     LAN_DOOR_PATH,
     LanDoorClientFrameSchema,
@@ -7,7 +8,6 @@ import {
     type LanDoorMachineFrame,
     type SignalEnvelope
 } from '@ruimte/pulsar';
-import type { Server, ServerWebSocket } from 'bun';
 import { errorText } from '../error-text.ts';
 import type { SignalGate } from './signal-gate.ts';
 

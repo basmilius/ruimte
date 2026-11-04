@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { createStore } from 'zustand';
 import { createCanvasStore, defaultCanvasStore, focusedCanvas } from './canvas';
-import { createEditorRegistry } from './editors';
 import { useDocument } from './document';
+import { createEditorRegistry } from './editors';
 import { resolveEditor, storeHook } from './workspace-stores';
 
 describe('which editor a cell resolves to', () => {

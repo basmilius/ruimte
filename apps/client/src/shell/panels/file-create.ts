@@ -1,5 +1,5 @@
-import { absoluteOf, ancestorDirsOf, isDirectoryPath } from '@/shell/panels/files-tree';
 import type { FsEntry } from '@ruimte/contracts';
+import { absoluteOf, ancestorDirsOf, isDirectoryPath } from '@/shell/panels/files-tree';
 
 export type NewEntryKind = 'file' | 'directory';
 

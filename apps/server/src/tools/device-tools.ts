@@ -3,8 +3,8 @@ import type { ActionOutput } from '@ruimte/actions';
 import { z } from 'zod';
 import { machineDeviceLine } from '../actions/device-actions.ts';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineTool, defineToolkit } from './tool.ts';
 import { field, orNote, requiredField, yesNo } from './host.ts';
+import { defineTool, defineToolkit } from './tool.ts';
 
 const PERMISSIONS = ['camera', 'microphone', 'photos', 'contacts', 'calendar', 'reminders', 'location', 'motion', 'media-library', 'faceid'] as const;
 

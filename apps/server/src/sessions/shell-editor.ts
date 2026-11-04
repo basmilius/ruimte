@@ -1,6 +1,6 @@
+import type { Socket } from 'bun';
 import { chmodSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Socket } from 'bun';
 import { isNotFound } from '@adecore/agents';
 import { ShellPrompt, type ShellEditorConnection, type ShellEditorState, type ShellPrepareOutcome } from './shell-prompt.ts';
 

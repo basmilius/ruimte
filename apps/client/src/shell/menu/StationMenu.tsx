@@ -1,15 +1,15 @@
+import { AgentIcon } from '@adecore/agents-react/providers';
+import { Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
+import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
+import { Menu as MenuGlyph } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu as MenuGlyph } from 'lucide-react';
-import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuIconOf } from '@/shell/menu/icons';
 import { menuModel } from '@/shell/menu/model';
 import { IS_STATION } from '@/station';
 import { Brand } from '@/ui/Brand';
-import { Icon, IconButton, Menu, Tooltip } from '@adecore/ui';
-import { AgentIcon } from '@adecore/agents-react/providers';
 
 /* A fixed box in front of every row, the empty one included, so every label starts on the same line. */
 function RowIcon({ id }: { id: string }) {

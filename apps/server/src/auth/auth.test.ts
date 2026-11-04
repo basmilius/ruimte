@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { crossOriginHeaders, decideAccess, handleLocalTicketRequest, isOwner, originAllowed, preflightHeaders, reachabilityOf, withHeaders } from './access.ts';
 import { AuthStore } from './auth-store.ts';
 import { generateKeyPair } from './keys.ts';
 import { admitClient } from './test-admit.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let home: string;
 let clock: number;

@@ -13,17 +13,17 @@ import {
     type ProjectContent,
     type ProjectSummary
 } from '@ruimte/contracts';
-import { isInside } from '../tools/project-paths.ts';
 import { moveClaudeTranscript } from '../chat/claude-move.ts';
 import { ChatError } from '../chat/errors.ts';
 import { errorText } from '../error-text.ts';
-import { ownFileConflicts, ownFileNames } from './move-info.ts';
+import { realOrNull } from '../fs/real-path.ts';
 import type { SnoozeStore } from '../push/snoozes.ts';
-import { movedNote } from './move-note.ts';
+import { isInside } from '../tools/project-paths.ts';
+import { ownFileConflicts, ownFileNames } from './move-info.ts';
 import type { MoveJournal } from './move-journal.ts';
+import { movedNote } from './move-note.ts';
 import { moveOwnFiles } from './own-files.ts';
 import type { MutationApply } from './project-store.ts';
-import { realOrNull } from '../fs/real-path.ts';
 
 /* The English sentence a refused move carries on its reply; the client writes its own words from the reason. */
 const REFUSAL_SENTENCES: Record<ChatMoveRefusal['reason'], string> = {

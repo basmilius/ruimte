@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import type { EditorAssistStatusResult } from '@ruimte/contracts';
-import { useSettings } from '@/state/settings';
+import { useEffect, useState } from 'react';
 import { useEndpointId } from '@/state/keys';
+import { useSettings } from '@/state/settings';
 import { transportFor } from '@/transport';
 import { editorAssistClientFor } from './client';
 

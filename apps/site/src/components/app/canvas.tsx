@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { FileText, Globe, LayoutGrid, Maximize2, MessageSquare, PenTool, Smartphone, StickyNote, Terminal, Workflow, X, type LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
+import type { ReactNode } from 'react';
 import { siClaude } from 'simple-icons';
 import { EASE } from '../film/playback.ts';
 import { markerPath, type Rect, routeBetween } from './edge-route.ts';

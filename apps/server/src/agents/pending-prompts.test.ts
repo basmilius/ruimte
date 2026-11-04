@@ -1,8 +1,8 @@
 import { beforeEach, expect, test } from 'bun:test';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { PendingPromptStore } from './pending-prompts.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
+import { PendingPromptStore } from './pending-prompts.ts';
 
 let home: string;
 

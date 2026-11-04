@@ -1,5 +1,5 @@
-import { LiveStreamDecoder, type LiveStreamFrame } from '@ruimte/contracts';
 import { messageOf } from '@adecore/ui';
+import { LiveStreamDecoder, type LiveStreamFrame } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
 import { wait } from '@/transport/live-stream';
 

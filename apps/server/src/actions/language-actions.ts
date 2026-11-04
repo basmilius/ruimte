@@ -1,6 +1,6 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { checkInsideFile } from '../tools/project-paths.ts';
 import type { LanguageAgentHost } from '../tools/host.ts';
+import { checkInsideFile } from '../tools/project-paths.ts';
 import { hostService, type ServerActionContext } from './context.ts';
 
 function languageOf(context: ServerActionContext): LanguageAgentHost {

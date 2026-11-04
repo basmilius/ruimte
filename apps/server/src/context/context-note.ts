@@ -1,10 +1,10 @@
 import { uiSessionNote } from '@adecore/intelligent-ui/text';
 import type { ContextSource } from '@ruimte/contracts';
-import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../tools/depth.ts';
-import { BUILT_IN_KINDS } from '../providers/kinds.ts';
-import { NODE_NEW_KINDS } from '../tools/node-kinds.ts';
 import { RUIMTE_UI_FENCE } from '../chat/ui-fence.ts';
 import { uiSourceExamples } from '../chat/ui-source-args.ts';
+import { BUILT_IN_KINDS } from '../providers/kinds.ts';
+import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../tools/depth.ts';
+import { NODE_NEW_KINDS } from '../tools/node-kinds.ts';
 
 /*
  * Each rule is said once, where the agent decides; what a tool's description, schema, refusal or result

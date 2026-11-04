@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { providersOf } from '@adecore/agents-react/state';
 import {
     chatHostOf,
     designNodeChats,
@@ -13,13 +13,13 @@ import {
     type ProjectView,
     type RuntimeMode
 } from '@ruimte/contracts';
+import { useEffect } from 'react';
 import { deleteNodesAction, deleteViewAction } from '@/actions/client-actions';
 import { suggestedTitleFor } from '@/chat/title';
 import { nodesOfView, useViewNodes } from '@/project/view-nodes';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
-import { providersOf } from '@adecore/agents-react/state';
 
 /*
  * What a body needs to run, wherever it is drawn. A node on a canvas and a view of its own are the

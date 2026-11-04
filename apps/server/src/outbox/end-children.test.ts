@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ChatItem, ProjectContent } from '@ruimte/contracts';
-import type { ProjectStore } from '../projects/project-store.ts';
-import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
 import { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
-import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
-import { ENDED_REASON, wireEndChildren } from './end-children.ts';
-import { OutboxStore } from './outbox.ts';
 import { ManualClock } from '@adecore/agents/testing';
+import type { ChatItem, ProjectContent } from '@ruimte/contracts';
 import { voiceActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
+import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
+import type { ProjectStore } from '../projects/project-store.ts';
+import { bootTestDaemon, invokeTool, releasedProject, turnsOf, type TestDaemon } from '../tasks/test-daemon.ts';
+import { ENDED_REASON, wireEndChildren } from './end-children.ts';
+import { OutboxStore } from './outbox.ts';
 
 function content(): ProjectContent {
     return {

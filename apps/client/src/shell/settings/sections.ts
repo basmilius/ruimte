@@ -1,3 +1,4 @@
+import { PROVIDERS_SECTION, USAGE_SECTION, type AgentsSettingsSection } from '@adecore/agents-react';
 import i18next from 'i18next';
 import {
     Bot,
@@ -15,7 +16,6 @@ import {
     SquareTerminal,
     type LucideIcon
 } from 'lucide-react';
-import { PROVIDERS_SECTION, USAGE_SECTION, type AgentsSettingsSection } from '@adecore/agents-react';
 import { useContributions, type SettingsSectionContribution } from '@/extensions/registry';
 import type { SettingsSectionId } from '@/state/ui';
 

@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { SignalEnvelopeSchema } from '@ruimte/pulsar';
+import { z } from 'zod';
 import { ProtocolVersionSchema } from './protocol.ts';
 
 /*

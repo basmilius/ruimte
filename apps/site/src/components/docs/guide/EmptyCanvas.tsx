@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { ChevronRight, FileText, Globe, Hash, LayoutGrid, MessageSquare, StickyNote, Terminal, Type } from 'lucide-react';
 import { SectionLabel, Tile } from '@adecore/ui';
+import { ChevronRight, FileText, Globe, Hash, LayoutGrid, MessageSquare, StickyNote, Terminal, Type } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { ClaudeMark } from '../../app/canvas.tsx';
 import { Dock } from '../../app/chrome.tsx';
 import { Stage } from '../../film/Stage.tsx';

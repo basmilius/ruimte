@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { lstat, mkdir, readdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { tempHomes } from '../temp-home-test-helpers.ts';
 import { LanguageInstaller } from './installer.ts';
-import { PackageStore } from './package-store.ts';
 import { NativePolicy, nativeProgramFile, nativeStubsOf, type Download, type NativeRelease } from './native.ts';
+import { PackageStore } from './package-store.ts';
 import { KIND_PROFILES, type CatalogKind } from './profiles.ts';
 import type { LanguageProcessSpec, RunCommand } from './runtime.ts';
 import { sha256, tarGz } from './test-archives.ts';
 import { pinnedVersionsOf, versionOf, type NpmKind } from './versions.ts';
-import { tempHomes } from '../temp-home-test-helpers.ts';
 
 let root = '';
 

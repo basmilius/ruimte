@@ -1,7 +1,7 @@
 import type { ProjectSummary } from '@ruimte/contracts';
+import { openableRows, recentProjects } from '@/project/list';
 import type { Endpoint } from '@/state/endpoints';
 import type { ProjectRow } from '@/state/project-list';
-import { openableRows, recentProjects } from '@/project/list';
 
 /* How many projects the menu names before "Other project…". */
 const MOVE_TARGET_LIMIT = 5;

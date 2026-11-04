@@ -1,9 +1,9 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import { TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES } from '@ruimte/contracts';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
 import { defineActionTool, jsonLines, runAction } from './action-tool.ts';
-import { defineToolkit } from './tool.ts';
 import { field, orNote } from './host.ts';
+import { defineToolkit } from './tool.ts';
 
 /* Words separated by commas, each one of `known`, without the repeats. */
 function listInput<Value extends string>(name: string, known: readonly Value[]) {

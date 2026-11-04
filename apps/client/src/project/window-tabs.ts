@@ -1,6 +1,6 @@
-import { create } from 'zustand';
 import { isRecentProject } from '@ruimte/contracts';
 import { WINDOW_STATE_PARAM } from '@ruimte/desktop-bridge';
+import { create } from 'zustand';
 import { desktop, type DesktopBridge } from '@/desktop/bridge';
 import { endpointKey, splitKey } from '@/state/keys';
 import { isRealMachine } from '@/state/local-machine';

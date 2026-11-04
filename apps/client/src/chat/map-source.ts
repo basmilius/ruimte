@@ -1,5 +1,5 @@
-import { MAPS_URL, type MapsTicket } from '@ruimte/pulsar';
 import type { UiMapSource } from '@adecore/agents-react';
+import { MAPS_URL, type MapsTicket } from '@ruimte/pulsar';
 
 // A ticket is asked for again this long before it ends, so a map being panned never meets the end of one.
 const REFRESH_MARGIN_MS = 5 * 60_000;

@@ -1,9 +1,9 @@
+import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 import { fitAction, historyAction } from '@/actions/client-actions';
 import { GRID } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
-import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import {
     copyDrawing,
     cutSelection,
@@ -14,9 +14,9 @@ import {
     reorderSelection,
     toggleLockSelection
 } from '@/drawing/drawing-actions';
+import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
-import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@adecore/ui';
 
 /*
  * The one place in the app where a bare letter is a shortcut. A drawing has the keyboard the way a

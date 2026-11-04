@@ -1,9 +1,9 @@
+import { Markdown } from '@adecore/agents-react/chat/ui';
+import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog, ScrollArea } from '@adecore/ui';
+import { formatDay, formatDayWithYear } from '@adecore/ui/format';
+import { ExternalLink, Heart } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Heart } from 'lucide-react';
-import { Markdown } from '@adecore/agents-react/chat/ui';
-import { formatDay, formatDayWithYear } from '@adecore/ui/format';
-import { Button, ErrorBoundary, CloseButton, Icon, Pill, Dialog, ScrollArea } from '@adecore/ui';
 import { UpdateAction } from '@/shell/settings/panes/AboutPane';
 import {
     closeReleaseNotes,

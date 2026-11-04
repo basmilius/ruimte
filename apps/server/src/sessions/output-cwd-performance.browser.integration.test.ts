@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 import { realpath } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Terminal } from '@xterm/headless';
 import { trackTerminalCwd } from '@ruimte/contracts';
+import { Terminal } from '@xterm/headless';
 import { clientDirectory, withBrowserFixture } from '../../../client/testing/browser-fixture.ts';
 
 async function browserEntry(): Promise<string> {

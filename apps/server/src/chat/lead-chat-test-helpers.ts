@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
-import { turnsOf } from './chat-test-helpers.ts';
 import { claudeProjectSlug } from '@adecore/agents/chat';
+import type { ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { TestDaemon } from '../tasks/test-daemon.ts';
+import { turnsOf } from './chat-test-helpers.ts';
 
 /* A canvas with one Claude chat, `chat-lead`, which the fork tests copy and summarize. */
 export function leadProject(): ProjectContent {

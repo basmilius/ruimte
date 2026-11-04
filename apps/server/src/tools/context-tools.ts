@@ -1,6 +1,6 @@
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionResult } from '@ruimte/actions';
 import { z } from 'zod';
-import { ToolRefusal } from '@adecore/agents/context';
 import { serverActionCall } from '../actions/context.ts';
 import { serverActions } from '../actions/server-actions.ts';
 import { linesOf } from './action-tool.ts';

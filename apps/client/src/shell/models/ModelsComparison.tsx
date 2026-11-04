@@ -1,10 +1,10 @@
-import { useId, useReducer, useState, type ReactNode } from 'react';
-import clsx from 'clsx';
-import { SlidersHorizontal } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { ModelBenchmarksResult } from '@ruimte/pulsar';
 import { Button, Checkbox, EmptyState, IconButton, Segmented, Select, Tabs, Tooltip } from '@adecore/ui';
 import { formatNumber, useFormatLocale } from '@adecore/ui/format';
+import type { ModelBenchmarksResult } from '@ruimte/pulsar';
+import clsx from 'clsx';
+import { SlidersHorizontal } from 'lucide-react';
+import { useId, useReducer, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { chartLabs, chartModels, modelMarks, type CostScale } from './chart';
 import {
     barAxis,
@@ -20,8 +20,8 @@ import {
     type ModelView,
     type SpeedMetric
 } from './comparison';
-import { ModelsChart } from './ModelsChart';
 import { ModelsBarChart } from './ModelsBarChart';
+import { ModelsChart } from './ModelsChart';
 import { ModelsLegend } from './ModelsLegend';
 import { ModelsPointComparison } from './ModelsPointComparison';
 

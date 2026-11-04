@@ -1,6 +1,6 @@
+import { FileTree, Icon, Pill } from '@adecore/ui';
 import clsx from 'clsx';
 import { ArrowDown, ArrowUp, CircleAlert, type LucideIcon } from 'lucide-react';
-import { FileTree, Icon, Pill } from '@adecore/ui';
 import type { DecorationPart } from './git-tree';
 
 const MARKS: Partial<Record<NonNullable<DecorationPart['kind']>, LucideIcon>> = {

@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { POSTFIX_TEMPLATE_LANGUAGES, TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES, type TemplateScope } from '@ruimte/contracts';
-import { Button, Checkbox, Dialog, Field, FormError, Icon, Input, Menu, ScrollArea, Segmented, TextArea, messageOf } from '@adecore/ui';
 import type { TemplateLanguage, TemplatePlace } from '@adecore/editor-react';
+import { Button, Checkbox, Dialog, Field, FormError, Icon, Input, Menu, ScrollArea, Segmented, TextArea, messageOf } from '@adecore/ui';
+import { POSTFIX_TEMPLATE_LANGUAGES, TEMPLATE_LANGUAGES, TEMPLATE_LIMITS, TEMPLATE_PLACES, type TemplateScope } from '@ruimte/contracts';
+import { ChevronDown } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUi } from '@/state/ui';
 import { inputOf, problemOf, type TemplateDraft } from './template-draft';
 import type { TemplatesTracker } from './templates';

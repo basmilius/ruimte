@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import type { AgentKind, ModelSelection, RoutineEntry } from '@ruimte/contracts';
+import { create } from 'zustand';
 
 /* What the routine form opens with: a project, and what the place it was opened from already knows. */
 export interface RoutineFormRequest {

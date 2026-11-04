@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act } from 'react';
 import type { EndpointInfo } from '@ruimte/contracts';
+import { act } from 'react';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useUi } from '@/state/ui';
 import { useWindow } from '@/state/window';
 import { adoptEndpointInfo } from '@/transport/server-info';
 import { clickOn, mount, until, type Mounted } from '../../../testing/dom';
-import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 import { everything, installDesktop, removeDesktop } from '../../../testing/dom-helpers';
+import { connectFakeMachine, FakeMachine } from '../../../testing/fake-machine';
 
 let page: Mounted;
 let release: () => void;

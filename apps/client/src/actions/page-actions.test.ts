@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
-import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
-import type { PageDrive, PageMachine } from './page-actions';
 import type { BrowserState } from '@/browser/registry';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import type { PageDrive, PageMachine } from './page-actions';
 
 const main: ProjectCanvasView = {
     kind: 'canvas',

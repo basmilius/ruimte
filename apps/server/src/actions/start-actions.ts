@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
+import { ToolRefusal } from '@adecore/agents/context';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
@@ -12,30 +13,29 @@ import {
     type ProjectNode,
     type RuntimeMode
 } from '@ruimte/contracts';
-import { ToolRefusal } from '@adecore/agents/context';
+import type { FirstPrompt } from '../agents/pending-prompts.ts';
+import { errorText } from '../error-text.ts';
+import { KeyedQueue } from '../keyed-queue.ts';
+import { untrustedStartProblem } from '../peering/untrusted.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
+import { providerFor } from '../providers/registry.ts';
 import { agentNode, groupLines, grownGroup, inheritedAccount, nameOf, readsOf, requireInstalled, startPrompt, terminalMode } from '../tools/agents.ts';
 import { depthForOpening } from '../tools/depth.ts';
+import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall, type WorktreeWant } from '../tools/host.ts';
 import { modeForOpening } from '../tools/mode.ts';
 import { EFFORT_REFUSALS, selectionForOpening } from '../tools/model.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from '../tools/nodes.ts';
 import { refuseMissingNodes } from '../tools/own-view.ts';
-import { refuseRemoteStart, resolveMachine, sourceCheckout } from '../tools/remote-agent.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from '../tools/placement.ts';
 import { checkCwd } from '../tools/project-paths.ts';
-import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../tools/tasks.ts';
-import type { FirstPrompt } from '../agents/pending-prompts.ts';
-import { NEW_NODE, OPENING_OFF_CANVAS, canvasFor, canvasLines, field, newNode, type ProjectHost, type AgentCall, type WorktreeWant } from '../tools/host.ts';
 import { reachedPlace } from '../tools/reach.ts';
-import { KeyedQueue } from '../keyed-queue.ts';
+import { refuseRemoteStart, resolveMachine, sourceCheckout } from '../tools/remote-agent.ts';
+import { MAX_TASK_PROMPT_LENGTH, requireChatParent, taskFirstPrompt } from '../tools/tasks.ts';
 import { MAX_PROJECT_VIEWS } from '../tools/views.ts';
 import { branchSlug, makeWorktrees, requireRepository } from '../tools/worktree.ts';
-import { errorText } from '../error-text.ts';
-import { untrustedStartProblem } from '../peering/untrusted.ts';
-import type { IndexedPlace } from '../projects/project-index.ts';
-import { providerFor } from '../providers/registry.ts';
 import { agentCallOf, type ServerActionContext } from './context.ts';
-import { startInputHash } from './start-claims.ts';
 import { operationIdOf } from './operation-actions.ts';
+import { startInputHash } from './start-claims.ts';
 
 type TeamRole = { provider: AgentKind; terminal: boolean };
 

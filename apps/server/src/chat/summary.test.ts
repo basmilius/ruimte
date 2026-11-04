@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
-import type { ChatItem, ChatNoteItem, ChatTurnItem, ProjectCanvasView } from '@ruimte/contracts';
 import { ManualClock } from '@adecore/agents/testing';
+import { compileUi } from '@adecore/intelligent-ui';
+import type { ChatItem, ChatNoteItem, ChatTurnItem, ProjectCanvasView } from '@ruimte/contracts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, releasedProject, type TestDaemon } from '../tasks/test-daemon.ts';
-import { compileUi } from '@adecore/intelligent-ui';
-import { answerOf, SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
-import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 import { assistantTexts, turnsOf } from './chat-test-helpers.ts';
 import { leadProject, removeNodes, sayAndSettle, writeLeadTranscript } from './lead-chat-test-helpers.ts';
+import { answerOf, SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
+import { RUIMTE_UI_FENCE } from './ui-fence.ts';
 
 function summaryNotes(items: readonly ChatItem[]): ChatNoteItem[] {
     return items.filter((item): item is ChatNoteItem => item.kind === 'note' && item.from !== undefined);

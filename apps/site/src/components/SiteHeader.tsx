@@ -1,11 +1,11 @@
 'use client';
 
-import { type MouseEvent, useEffect, useState } from 'react';
+import { Pill, Tooltip } from '@adecore/ui';
+import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import clsx from 'clsx';
+import { type MouseEvent, useEffect, useState } from 'react';
 import { siGithub } from 'simple-icons';
-import { Pill, Tooltip } from '@adecore/ui';
 import { AppIcon } from '@/components/AppIcon.tsx';
 import { MobileMenu } from '@/components/MobileMenu.tsx';
 import { SECTIONS } from '@/lib/docs/navigation';

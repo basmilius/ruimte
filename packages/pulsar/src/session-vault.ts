@@ -1,5 +1,5 @@
-import type { Account, SessionLoginCode, SessionResult } from './address-book.ts';
 import { AddressBookRequestError, type AddressBookClient } from './address-book-client.ts';
+import type { Account, SessionLoginCode, SessionResult } from './address-book.ts';
 import { sessionKeyMessage, sessionRefreshMessage } from './signing.ts';
 
 /* What is kept between starts. The access token is not: it lives a quarter of an hour and a refresh makes a new one. */

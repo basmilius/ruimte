@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import i18next from 'i18next';
 import { messageOf } from '@adecore/ui';
 import type { VoicePreferences } from '@ruimte/contracts';
+import i18next from 'i18next';
+import { useEffect, useState } from 'react';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';

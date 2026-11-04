@@ -1,9 +1,9 @@
-import clsx from 'clsx';
-import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Box, RotateCcw } from 'lucide-react';
 import type { UiModelViewProps } from '@adecore/agents-react';
 import { EmptyState, IconButton, ScrollArea, messageOf } from '@adecore/ui';
+import clsx from 'clsx';
+import { Box, RotateCcw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { modelMimeOf } from '@/chat/model-attachment';
 import { canDrawWebgl, ModelViewer } from '@/shell/panels/model-viewer';
 import { useTheme } from '@/state/theme';

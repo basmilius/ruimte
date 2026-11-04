@@ -1,5 +1,5 @@
-import type { RoutineEntry } from '@ruimte/contracts';
 import { MessageMarkdown } from '@adecore/agents-react/chat/ui';
+import type { RoutineEntry } from '@ruimte/contracts';
 import { useReferables } from '@/chat/referables';
 import { useProject } from '@/state/project';
 

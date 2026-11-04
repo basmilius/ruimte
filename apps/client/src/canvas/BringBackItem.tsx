@@ -1,17 +1,17 @@
+import { ContextMenu, Icon, messageOf } from '@adecore/ui';
+import type { ProjectNode } from '@ruimte/contracts';
+import { GitPullRequestArrow } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GitPullRequestArrow } from 'lucide-react';
-import type { ProjectNode } from '@ruimte/contracts';
-import { ContextMenu, Icon, messageOf } from '@adecore/ui';
 import { bringBack } from '@/project/bring-back';
-import { useMachineEntry } from '@/shell/use-machine-entry';
 import { nameOf } from '@/shell/settings/machine-list';
+import { useMachineEntry } from '@/shell/use-machine-entry';
 import { endpointOfNode } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { useTransport } from '@/transport/context';
 import { useWorkspace } from '@/transport/connections';
+import { useTransport } from '@/transport/context';
 
 /*
  * "Bring back to this machine" in the menu of a node that works on another machine: its branch comes

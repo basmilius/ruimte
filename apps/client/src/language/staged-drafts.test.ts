@@ -1,13 +1,13 @@
-import { settleLanguage } from './settle.test';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@adecore/editor/fake';
 import type { WorkspaceEdit } from '@adecore/lsp';
-import { useToasts } from '@/state/toasts';
 import { TextDrafts, useTextDrafts, type DraftLink } from '@/state/text-drafts';
-import { EditorLanguage } from './ruimte-editor-language';
+import { useToasts } from '@/state/toasts';
 import { FakeLanguageTransport } from './fake-daemon';
 import { draftFiles } from './project-files';
+import { EditorLanguage } from './ruimte-editor-language';
 import { ProjectLanguage } from './ruimte-project-language';
+import { settleLanguage } from './settle.test';
 
 const GREETING = '/work/app/src/greeting.ts';
 const MAIN = '/work/app/src/main.ts';

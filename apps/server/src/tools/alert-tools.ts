@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
-import { defineToolkit } from './tool.ts';
 import { lengthOf } from './host.ts';
+import { defineToolkit } from './tool.ts';
 
 const MAX_ALERT_LENGTH = 500;
 

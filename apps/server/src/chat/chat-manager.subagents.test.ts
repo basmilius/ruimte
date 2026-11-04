@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { appendFile, cp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
-import { ChatManager } from './chat-manager.ts';
 import { FakeWatch } from '@adecore/agents/testing';
+import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { makeChatFixture, retire, FIXTURE } from './chat-manager.fixture.test.ts';
+import { ChatManager } from './chat-manager.ts';
 
 const SESSION = '5f1c2a9e-0b7d-4c1e-9a53-3e2f8d6b7a10';
 

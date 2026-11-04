@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useState } from 'react';
-import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/contracts';
 import { ModelPicker } from '@adecore/agents-react/chat/ui';
-import { typeInto } from '../../testing/dom-helpers';
+import type { AgentKind, ModelInfo, ProviderInfo } from '@ruimte/contracts';
+import { useState } from 'react';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
+import { typeInto } from '../../testing/dom-helpers';
 
 let page: Mounted;
 let picked: Array<[AgentKind, string]>;

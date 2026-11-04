@@ -1,11 +1,11 @@
+import { isModHeld } from '@adecore/ui';
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import type { StoreApi } from 'zustand';
 import type { CameraSlice } from '@/canvas/camera-slice';
-import { isApplePlatform } from '@/desktop/bridge';
-import { isModHeld } from '@adecore/ui';
 import { createPanBatch } from '@/canvas/pan-batch';
 import { createWheelPanSession, PAN_IDLE_MS } from '@/canvas/wheel-pan-session';
 import { createZoomGlide, wheelZoomOf } from '@/canvas/wheel-zoom';
+import { isApplePlatform } from '@/desktop/bridge';
 
 /* How long after the last wheel event a zoom settles on a whole percent. */
 const ZOOM_SETTLE_MS = 160;

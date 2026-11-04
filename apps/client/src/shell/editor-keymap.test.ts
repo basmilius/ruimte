@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { matchesShortcut, shortcut, type Shortcut } from '@adecore/ui';
 import { KEYMAP_IDS, type KeymapId } from '@adecore/editor/keymap';
+import { matchesShortcut, shortcut, type Shortcut } from '@adecore/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { shortcutFor, RUIMTE_EDITOR_KEYMAP as KEYMAP } from '@/shell/editor-keymap';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';

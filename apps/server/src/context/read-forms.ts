@@ -1,12 +1,12 @@
-import { VISUAL_LIMITS, isCanvasView, type ContextSource, type DrawingElement } from '@ruimte/contracts';
-import { DEFAULT_PALETTE, toSvg as drawingSvg } from '@adecore/drawing';
-import { toSvg as diagramSvg } from '@adecore/diagram';
 import { CodedError } from '@adecore/agents';
 import { ToolRefusal } from '@adecore/agents/context';
-import { callerChat } from '../actions/visual-actions.ts';
+import { toSvg as diagramSvg } from '@adecore/diagram';
+import { DEFAULT_PALETTE, toSvg as drawingSvg } from '@adecore/drawing';
+import { VISUAL_LIMITS, isCanvasView, type ContextSource, type DrawingElement } from '@ruimte/contracts';
 import type { ServerActionContext } from '../actions/context.ts';
-import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
+import { callerChat } from '../actions/visual-actions.ts';
 import { SHOT_MAX_HEIGHT } from '../visuals/render-protocol.ts';
+import { PREVIEW_WIDTH } from '../visuals/renderer.ts';
 import { canvasSvg, renderCanvas } from './context-canvas.ts';
 import { renderDatabaseView } from './context-database.ts';
 import { ContextRefusal, type ContextReading } from './context-store.ts';

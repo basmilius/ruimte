@@ -1,7 +1,7 @@
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { SessionManager } from '../sessions/manager.ts';
 import { Recorder, testPath, testShell, waitFor } from '../sessions/test-helpers.ts';
 import { BunPtyAdapter } from './bun-pty.ts';

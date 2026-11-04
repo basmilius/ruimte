@@ -1,7 +1,7 @@
 import { join } from 'node:path';
+import { RecordDirectory } from '@adecore/agents';
 import { DatabaseAgentAccessSchema, type DatabaseAgentAccess } from '@ruimte/contracts';
 import { z } from 'zod';
-import { RecordDirectory } from '@adecore/agents';
 
 const AccessRecordSchema = z.object({
     projectId: z.string().min(1),
