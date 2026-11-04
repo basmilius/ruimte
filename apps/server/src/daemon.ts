@@ -490,7 +490,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         await step('Settling tasks', () => work.tasks.coordinator.settled());
         await step('Writing terminal snapshots', () => agents.snapshotSchedule.flush());
         await step('Writing chats', () => chats.shutdown());
-        await computer.stop();
+        await step('Stopping computer use', () => computer.stop());
         await step('Ending terminals', () => sessions.killAllSettled());
         devices.browsers.closeAll();
         await step('Stopping visual previews', () => devices.visualRenderer.stop());
@@ -512,7 +512,7 @@ export async function startDaemon(config: ServerConfig, launcher: Launcher = 'st
         await step('Sending error reports', () => stopTelemetry());
         network.peers.closeAll();
         network.lanDoor.stop();
-        await network.brokerSwitch.stop();
+        await step('Leaving the broker', () => network.brokerSwitch.stop());
         void server.stop(true);
         process.exit(0);
     };
