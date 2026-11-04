@@ -105,7 +105,7 @@ import {
     WorktreeSchema
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_KEY_COMBOS, MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PER_CALL, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH, MAX_TYPED_LENGTH } from './limits.ts';
+import { MAX_KEY_COMBOS, MAX_OPENED_PER_CALLER, MAX_PER_CALL, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH, MAX_TYPED_LENGTH } from './limits.ts';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
@@ -2045,12 +2045,11 @@ export const ACTION_DEFINITIONS = {
     },
     'agent.notify': {
         title: 'Notify an agent',
-        description:
-            'Sends a short message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
+        description: 'Sends a message to the agent in another node, along a line that runs from you into it, which gives a chat between turns a turn on it.',
         effect: 'external',
         domain: 'communicate',
         actors: AGENT,
-        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).max(MAX_NOTICE_LENGTH).describe('The message') }),
+        input: z.object({ nodeId: nodeId.describe('The node to notify, by id'), text: z.string().min(1).describe('The message') }),
         output: z.object({
             nodeId,
             // Now when it was acted on as it arrived, waiting when it is held for the next turn of that node.

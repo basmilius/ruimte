@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { MAX_NOTICE_LENGTH, MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
+import { MAX_TITLE_LENGTH, type ActionInput } from '@ruimte/actions';
 import { NODE_SIZE, type ContextSource, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
 import { ContextRefusal, SubagentUnreadable } from '../context/context-store.ts';
 import type { Notice } from '@adecore/agents/coordination';
@@ -352,10 +352,6 @@ describe('the daemon actions', () => {
 
     test('the lengths a CLI flag held are held for every call of the action', async () => {
         lineOnMain('term-1', 'term-2');
-        expect(await serverActions.execute('agent.notify', { nodeId: 'term-2', text: 'x'.repeat(MAX_NOTICE_LENGTH + 1) }, agent())).toMatchObject({
-            status: 'failed',
-            error: { code: 'invalid-input' }
-        });
         expect(
             await serverActions.execute(
                 'link.create',

@@ -1,9 +1,6 @@
 // A node title, a group label, the word on a line. Past this it is a paragraph in every header that prints it.
 export const MAX_TITLE_LENGTH = 120;
 
-// A line or two an agent reads before its next turn; anything longer belongs in a note it is linked to.
-export const MAX_NOTICE_LENGTH = 500;
-
 /*
  * A terminal agent starts from a line typed into a shell that has not read a byte yet, so it waits in
  * the tty's canonical buffer (4 KiB on Linux, 8 KiB on macOS), which silently cuts off anything longer.

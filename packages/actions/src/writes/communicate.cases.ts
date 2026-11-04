@@ -1,4 +1,3 @@
-import { MAX_NOTICE_LENGTH } from '../index.ts';
 import { type WriteCases } from './case.ts';
 
 const choice = { chatId: 'chat-1', itemId: 'item-1', blockId: 'block-1', revision: 'rev-1', choiceId: 'yes', reads: { plan: 'v2' } };
@@ -58,7 +57,6 @@ export const cases: WriteCases = {
         input: { nodeId: 'chat-2', text: 'The schema changed, read it again' },
         refused: {
             'empty text': { nodeId: 'chat-2', text: '' },
-            'text past the notice limit': { nodeId: 'chat-2', text: 'x'.repeat(MAX_NOTICE_LENGTH + 1) },
             'no node': { text: 'Hello' }
         }
     },

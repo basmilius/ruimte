@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { MAX_NOTICE_LENGTH } from '@ruimte/actions';
 import { type CanvasHost } from './host.ts';
 import { projectReach } from './reach.ts';
 import { canvasFixture, knobs, root, store, projectId, notified, elsewhere, withDesignNode, host, invoke, madeId } from './canvas-test-fixture.ts';
@@ -75,12 +74,9 @@ describe('notify', () => {
         ]);
     });
 
-    test('the message is present and short enough to read in a turn', async () => {
+    test('the message and its node are present', async () => {
         expect((await invoke('notify', { id: 'note-1' })).lines[0]).toBe('refused\tbad-arguments\tnotify needs text, the message to leave');
         expect((await invoke('notify', { text: 'hi' })).lines[0]).toBe('refused\tbad-arguments\tnotify needs id, the terminal or chat node to message');
-        expect((await invoke('notify', { id: 'note-1', text: 'x'.repeat(MAX_NOTICE_LENGTH + 1) })).lines[0]).toStartWith(
-            `refused\tbad-arguments\ttext is ${MAX_NOTICE_LENGTH + 1} characters and a message is at most ${MAX_NOTICE_LENGTH}`
-        );
         expect(notified).toEqual([]);
     });
 });

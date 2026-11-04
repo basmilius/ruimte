@@ -1,8 +1,6 @@
-import { MAX_NOTICE_LENGTH } from '@ruimte/actions';
 import { z } from 'zod';
 import { defineActionTool, runAction } from './action-tool.ts';
 import { defineToolkit, PROJECT_INPUT } from './tool.ts';
-import { lengthOf } from './host.ts';
 
 const NEEDS_ID = 'notify needs id, the terminal or chat node to message';
 
@@ -15,13 +13,7 @@ const notify = defineActionTool('notify', {
     input: z.object({
         id: z.string({ error: NEEDS_ID }).min(1, NEEDS_ID).describe('A terminal or chat node'),
         project: PROJECT_INPUT,
-        text: z
-            .string({ error: NEEDS_TEXT })
-            .min(1, NEEDS_TEXT)
-            .max(MAX_NOTICE_LENGTH, {
-                error: (issue) =>
-                    `text is ${lengthOf(issue.input)} characters and a message is at most ${MAX_NOTICE_LENGTH}; anything longer belongs in a note on the canvas, which you can link to that node`
-            })
+        text: z.string({ error: NEEDS_TEXT }).min(1, NEEDS_TEXT)
     }),
     async run(input, call) {
         const delivery = await runAction(call, 'agent.notify', { nodeId: input.id, text: input.text });
