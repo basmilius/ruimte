@@ -2,53 +2,41 @@ import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import {
-    createAppIpc,
-    createGestureGate,
-    createPageKeys,
-    createTheme,
-    createUpdater,
-    createWindows,
-    type WindowOrigin,
-    createWindowState,
-    fileStorage
-} from '@adecore/shell';
-import type { ThemeState } from '@adecore/shell/bridge';
-import { type AgentActivity, type KeepAwakeRequest } from '@ruimte/desktop-bridge';
+import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOrigin, createWindowState, fileStorage } from '@adecore/shell';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
-import { isWindowKey, isWindowState, isWindowView, tabStripOf, totalActivity, windowPointOf, windowUrl } from './app-windows';
+import { windowUrl } from './app-windows';
 import { installBrowserRoutes } from './browser-routes';
 import { askDaemonWork, handVoiceKey } from './daemon-proof';
-import { editFrameOf, runGuestEdit } from './guest-edit';
-import { contextMenuPayload, editableMenuTemplate, PREVIEW_ACTIONS, type BrowserContextAction, type GuestKind } from './guest-menu';
-import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
 import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
 import { MACHINE_ARGUMENT } from './machine-argument';
 import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride } from './machine-mode';
+import { installAgentActivity } from './main/activity';
 import { serveDevExtensionFiles } from './main/dev-extension-files';
 import { installDialogs } from './main/dialogs';
 import { electron } from './main/electron';
-import { ClientExtensions } from './main/extensions';
+import { ClientExtensions, installExtensions } from './main/extensions';
+import { installGuests, isBrowserGuest, isPreviewGuest, routePreviewLinks, sealPreviewSession } from './main/guests';
+import { installLanguage } from './main/language';
 import { installLogin } from './main/login';
 import { installMachineMode } from './main/machine-mode';
 import { installMenu } from './main/menu';
+import { installPower } from './main/power';
 import { installQuickLook } from './main/quick-look';
 import { installSecrets } from './main/secrets';
 import { createMachine } from './main/service';
 import { installSpeech } from './main/speech';
 import { startTelemetry } from './main/telemetry';
+import { installUpdates } from './main/updates';
 import { installUsage } from './main/usage';
-import { heedBodyless } from './net-response';
+import { installWindows } from './main/windows';
 import { quitQuestion } from './quit-question';
-import { createReleaseNotes } from './release-notes';
 import { runSmoke } from './smoke';
 import { installSocketTypeOfServiceGuard } from './socket-tos-guard';
 import { startApp } from './startup';
-import { createTabDrag } from './tab-drag';
-import { appSubframeNavigation, BROWSER_PARTITION, isExternalLink, PREVIEW_PARTITION } from './web-guards';
+import { appSubframeNavigation, isExternalLink } from './web-guards';
 
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerMonitor, powerSaveBlocker, protocol, screen, session, shell, webContents } = electron;
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, protocol, screen, session, shell, webContents } = electron;
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
 // quitting on that app's single instance lock or talking to its daemon.
@@ -106,8 +94,6 @@ protocol.registerSchemesAsPrivileged([scheme.privileged]);
 // A change reaches only through IPC, so `windows` is there by the time one is told.
 const clientExtensions = new ClientExtensions(join(app.getPath('userData'), 'extensions'), () => windows.send('extensions:changed'));
 
-const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
-
 function fromAppWindow(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean {
     return scheme.isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame);
 }
@@ -136,47 +122,6 @@ const theme = createTheme({
 
 let browserRoutes: ReturnType<typeof installBrowserRoutes>;
 
-function isGuestOf(contents: Electron.WebContents, partition: string): boolean {
-    return contents.getType() === 'webview' && contents.session === session.fromPartition(partition);
-}
-
-function isBrowserGuest(contents: Electron.WebContents): boolean {
-    return isGuestOf(contents, BROWSER_PARTITION);
-}
-
-function isPreviewGuest(contents: Electron.WebContents): boolean {
-    return isGuestOf(contents, PREVIEW_PARTITION);
-}
-
-const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
-
-/* A previewed file may load adjacent assets, but cannot use its scripts to reach a server or, without a press of the person, the system browser. */
-function sealPreviewSession(): void {
-    const preview = session.fromPartition(PREVIEW_PARTITION);
-    preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
-    preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-}
-
-/* Network links a person clicks leave the sealed preview instead of failing silently inside it. */
-function routePreviewLinks(contents: Electron.WebContents): void {
-    const gesture = createGestureGate();
-    contents.on('input-event', (_event, input) => gesture.saw(input.type));
-    contents.on('will-navigate', (event) => {
-        if (isExternalLink(event.url)) {
-            event.preventDefault();
-            if (gesture.consume()) {
-                void shell.openExternal(event.url);
-            }
-        }
-    });
-    contents.setWindowOpenHandler(({ url }) => {
-        if (isExternalLink(url) && gesture.consume()) {
-            void shell.openExternal(url);
-        }
-        return { action: 'deny' };
-    });
-}
-
 /* Nothing but the app loads in its window: a dropped link or file would otherwise take the bridge with it. */
 function guardAppNavigation(contents: Electron.WebContents): void {
     contents.on('will-navigate', (event) => {
@@ -204,82 +149,18 @@ function guardAppNavigation(contents: Electron.WebContents): void {
     });
 }
 
-function setOrDelete<Value>(map: Map<number, Value>, key: number, value: Value | null): void {
-    if (value === null) {
-        map.delete(key);
-    } else {
-        map.set(key, value);
-    }
-}
-
-// By window id. Kept rather than applied once, since the power source changes while a request stands.
-const keepAwakeRequests = new Map<number, KeepAwakeRequest>();
-
-const holdKeepAwake = createKeepAwakeHold(powerSaveBlocker);
-
-function applyKeepAwake(): void {
-    const request = mergeKeepAwake(keepAwakeRequests.values());
-    // `powerMonitor` only answers once the app is ready, and a request only arrives from a window after that.
-    const onBattery = request !== null && powerMonitor.isOnBatteryPower();
-    holdKeepAwake(keepAwakeBlocker(request, { platform: process.platform, onBattery }));
-}
-
-function setKeepAwake(windowId: number, request: KeepAwakeRequest | null): void {
-    setOrDelete(keepAwakeRequests, windowId, request);
-    applyKeepAwake();
-}
-
-ipc.on('power:keep-awake', (event, keep: boolean) => {
-    const window = ipc.senderWindow(event);
-    if (window) {
-        setKeepAwake(window.id, keep === true ? LEGACY_KEEP_AWAKE : null);
-    }
-});
-ipc.on('power:keep-awake-request', (event, request: unknown) => {
-    const window = ipc.senderWindow(event);
-    if (window) {
-        setKeepAwake(window.id, keepAwakeRequestFrom(request));
-    }
-});
-ipc.handle('power:idle-state', (_event, thresholdSeconds: unknown) => {
-    const threshold = typeof thresholdSeconds === 'number' && Number.isInteger(thresholdSeconds) && thresholdSeconds > 0 ? thresholdSeconds : 120;
-    return powerMonitor.getSystemIdleState(threshold);
-});
-
-// By window id. The shell counts nothing itself, so the badge and the quit dialog agree with the toolbar.
-const agentActivities = new Map<number, AgentActivity>();
-let agentActivity: AgentActivity = { working: 0, attention: 0 };
-
-function setAgentActivity(windowId: number, activity: AgentActivity | null): void {
-    setOrDelete(agentActivities, windowId, activity);
-    agentActivity = totalActivity(agentActivities.values());
-    // A dock badge is macOS and Linux; Windows has none and Electron's call does nothing there.
-    if (process.platform !== 'win32') {
-        app.setBadgeCount(agentActivity.attention);
-    }
-}
-
-ipc.on('agents:activity', (event, activity: AgentActivity) => {
-    const window = ipc.senderWindow(event);
-    if (window) {
-        setAgentActivity(window.id, typeof activity === 'object' && activity !== null ? activity : null);
-    }
-});
+const power = installPower(ipc);
+const agentActivity = installAgentActivity(ipc);
+const interfaceLanguage = installLanguage(ipc);
 
 /* A window that closes or reloads takes what it asked for with it; its page asks again once it is back. */
 function dropWindowShares(windowId: number): void {
-    setKeepAwake(windowId, null);
-    setAgentActivity(windowId, null);
+    power.drop(windowId);
+    agentActivity.drop(windowId);
 }
 
 /* Set when a quit needs no question: an install asked before it closed the windows, or the launcher's pipe closed. */
 let quitConfirmed = false;
-let interfaceLanguage: string | null = null;
-ipc.on('app:language', (_event, language: unknown) => {
-    if (language === 'en' || language === 'nl') {
-        interfaceLanguage = language;
-    }
-});
 /*
  * Under `bun dev` the launcher hands down a pipe (`scripts/launch.ts`); when it closes the app quits
  * without asking. A signal cannot tell: Chromium turns the first SIGINT into a quit the question holds up.
@@ -301,10 +182,10 @@ if (launcherPipe !== undefined) {
 async function askBeforeQuit(stopsMachine = machine.stopsOnQuit()): Promise<boolean> {
     const survives = machine.controller.survivesQuit(stopsMachine);
     const question = quitQuestion({
-        language: interfaceLanguage ?? app.getPreferredSystemLanguages()[0],
+        language: interfaceLanguage.current() ?? app.getPreferredSystemLanguages()[0],
         survives,
         elsewhere: !localMachine,
-        windows: agentActivity,
+        windows: agentActivity.total(),
         machine: survives ? null : await askDaemonWork(machine.daemonPort)
     });
     if (question === null) {
@@ -348,21 +229,14 @@ const windowState = createWindowState({
     defaults: { width: 1440, height: 900 }
 });
 
-// `windows.open` calls `createWindow` in the same tick, which takes this.
-let openingView: string | null = null;
-/* A window a tab tears off into opens without the focus, so the window that holds the press keeps getting its pointer. */
-let openingInactive = false;
-
 function createWindow(
     key: string | null,
     bounds: Partial<Electron.Rectangle> & { width: number; height: number },
     origin: WindowOrigin,
     state: string | null
 ): Electron.BrowserWindow {
-    const view = openingView;
-    openingView = null;
-    const inactive = openingInactive;
-    openingInactive = false;
+    // `windows.open` calls this in the same tick as the channel that set what it opens with.
+    const { view, inactive } = windowChannels.takeOpening();
     const window = new BrowserWindow({
         ...bounds,
         minWidth: 800,
@@ -486,134 +360,9 @@ function sealAppSession(): void {
     });
 }
 
-/* Opens the inspector for a guest page, on the element under `at` when a point comes with it. */
-function guestDevTools(id: number, at?: { x: number; y: number }): void {
-    const guest = webContents.fromId(id);
-    if (!guest) {
-        return;
-    }
-    const existing = devtoolsWindows.get(id);
-    if (existing && !existing.isDestroyed()) {
-        existing.focus();
-        if (at) {
-            guest.inspectElement(at.x, at.y);
-        }
-        return;
-    }
-    // A window of our own, kept above everything, so the inspector floats over a fullscreen app.
-    const window = new BrowserWindow({ width: 960, height: 640, title: 'Inspector', show: false, backgroundColor: '#1b1b1f' });
-    window.setAlwaysOnTop(true, 'floating');
-    window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    guest.setDevToolsWebContents(window.webContents);
-    if (at) {
-        guest.inspectElement(at.x, at.y);
-    } else {
-        guest.openDevTools({ mode: 'detach' });
-    }
-    window.once('ready-to-show', () => window.show());
-    window.on('closed', () => {
-        devtoolsWindows.delete(id);
-        if (!guest.isDestroyed()) {
-            guest.closeDevTools();
-        }
-    });
-    guest.once('destroyed', () => {
-        if (!window.isDestroyed()) {
-            window.close();
-        }
-    });
-    devtoolsWindows.set(id, window);
-}
-
-function editableGuestMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, inspectable: boolean): void {
-    const template = editableMenuTemplate(params, process.platform, {
-        replaceMisspelling: (word) => contents.replaceMisspelling(word),
-        lookUp: () => contents.showDefinitionForSelection(),
-        openExternal: (url) => void shell.openExternal(url),
-        ...(inspectable ? { inspect: () => guestDevTools(contents.id, { x: params.x, y: params.y }) } : {})
-    });
-    /*
-     * The frame is what makes macOS append AutoFill, Writing Tools and Services; without it (navigated
-     * away or dead) the menu still opens, without those rows. AutoFill reaches Apple's Passwords app only.
-     */
-    Menu.buildFromTemplate(template).popup({ window: windows.fromContents(contents) ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
-}
-
-/* The frame each guest's last right-click landed in, so copy and select all act where the person pointed. */
-const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
-
-/*
- * Electron ships no menu for web content and a native one reads as another program's, so the client
- * draws it. An editable field stays native, since what the platform adds there is worth more.
- */
-function guestContextMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void {
-    if (params.isEditable) {
-        editableGuestMenu(contents, params, guest === 'browser');
-        return;
-    }
-    if (params.frame) {
-        menuFrames.set(contents, params.frame);
-    } else {
-        menuFrames.delete(contents);
-    }
-    // A guest of no window of ours gets none.
-    windows.fromContents(contents)?.webContents.send('browser:context-menu', contextMenuPayload(contents.id, guest, params));
-}
-
-// What the renderer cannot reach itself. Editing rows never get here: an editable field's menu stays native.
-ipc.on('browser:context-action', (_event, request: BrowserContextAction) => {
-    const contents = webContents.fromId(request.webContentsId);
-    if (!contents || contents.isDestroyed()) {
-        return;
-    }
-    if (!isBrowserGuest(contents) && !(isPreviewGuest(contents) && PREVIEW_ACTIONS.has(request.action))) {
-        return;
-    }
-    const payload = request.payload ?? {};
-    switch (request.action) {
-        case 'copy':
-        case 'select-all':
-            runGuestEdit(editFrameOf(menuFrames.get(contents), contents.mainFrame), request.action);
-            return;
-        case 'copy-image':
-            contents.copyImageAt(payload.x ?? 0, payload.y ?? 0);
-            return;
-        case 'save-image':
-            // Nothing here handles `will-download`, so Electron asks where to put the file itself.
-            if (payload.url) {
-                contents.downloadURL(payload.url);
-            }
-            return;
-        case 'inspect':
-            guestDevTools(contents.id, { x: payload.x ?? 0, y: payload.y ?? 0 });
-            return;
-        case 'open-external':
-            if (payload.url && /^https?:\/\//.test(payload.url)) {
-                void shell.openExternal(payload.url);
-            }
-            return;
-    }
-});
-
-installDialogs(ipc, () => interfaceLanguage ?? undefined);
-
-ipc.on('devtools:guest', (_event, id: number) => guestDevTools(id));
-
-// For an agent that asked what the page it drives looks like. A guest's own preload has none of this.
-ipc.handle('browser:capture', async (_event, id: number) => {
-    const guest = webContents.fromId(id);
-
-    return guest ? (await guest.capturePage()).toPNG() : null;
-});
-
-ipc.handle('extensions:list', () => clientExtensions.list());
-ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => clientExtensions.install(pack, options?.fromStore === true));
-ipc.handle('extensions:remove', (_event, id: string) => clientExtensions.remove(id));
-ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => clientExtensions.setEnabled(id, enabled));
-ipc.handle('extensions:link', (_event, folder: string, revision: number, enabled?: unknown) =>
-    clientExtensions.link(folder, revision, typeof enabled === 'boolean' ? enabled : undefined)
-);
-ipc.handle('extensions:unlink', (_event, id: string) => clientExtensions.unlink(id));
+const guests = installGuests(ipc, { windowOf: (contents) => windows.fromContents(contents) });
+installDialogs(ipc, () => interfaceLanguage.current() ?? undefined);
+installExtensions(ipc, clientExtensions);
 const secrets = installSecrets(ipc, localMachine ? (key) => handVoiceKey(machine.daemonPort, key) : null);
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
 const login = installLogin(ipc);
@@ -622,216 +371,16 @@ if (localMachine && process.platform === 'darwin') {
     installQuickLook(ipc, { ruimteHome, keyOf: (window) => windows.keyOf(window) });
 }
 
-ipc.handle('window:is-fullscreen', (event) => ipc.senderWindow(event)?.isFullScreen() ?? false);
+const windowChannels = installWindows(ipc, { windows, theme });
 
-/*
- * A project is in one window at a time: when another window has it, that one comes to the front and
- * the page stays where it was. Null lets the window's project go.
- */
-ipc.handle('window:claim', (event, key: unknown) => {
-    const window = ipc.senderWindow(event);
-    if (window === null || (key !== null && !isWindowKey(key))) {
-        return false;
-    }
-    if (windows.claim(window, key)) {
-        return true;
-    }
-    showOnHolder(key);
-    return false;
-});
-
-/* A window that keeps a project as a tab it does not show is asked to show it, once it came to the front. */
-function showOnHolder(key: string | null): void {
-    const holder = key === null ? null : windows.holderOf(key);
-    if (holder !== null && windows.keyOf(holder) !== key) {
-        holder.webContents.send('window:show-project', key);
-    }
-}
-
-// The tabs a window keeps; a project another window keeps stays there, so the answer is what this window has.
-ipc.handle('window:hold', (event, keys: unknown) => {
-    const window = ipc.senderWindow(event);
-    if (window === null || !Array.isArray(keys) || keys.length > 512 || !keys.every(isWindowKey)) {
-        return [];
-    }
-    return windows.hold(window, keys);
-});
-
-/* Keeps a window that tears off at `at`, as big as `size`, on the work area of the display it lands on, its top fully. */
-function onScreen(at: { x: number; y: number }, size: { width: number; height: number }): { x: number; y: number } {
-    const area = screen.getDisplayNearestPoint(at).workArea;
-    return {
-        x: Math.min(Math.max(at.x, area.x), Math.max(area.x, area.x + area.width - Math.min(size.width, area.width))),
-        y: Math.min(Math.max(at.y, area.y), Math.max(area.y, area.y + area.height - Math.min(size.height, area.height)))
-    };
-}
-
-/* Where each window's page draws its tab strip, in the page's coordinates, for a tab dragged over it. */
-const tabStrips = new Map<number, { x: number; y: number; width: number; height: number }>();
-
-ipc.on('window:tab-strip', (event, rect: unknown) => {
-    const window = ipc.senderWindow(event);
-    if (window === null) {
-        return;
-    }
-    const strip = tabStripOf(rect);
-    if (strip === null) {
-        tabStrips.delete(window.id);
-        return;
-    }
-    if (!tabStrips.has(window.id)) {
-        window.once('closed', () => tabStrips.delete(window.id));
-    }
-    tabStrips.set(window.id, strip);
-});
-
-const tabDrag = createTabDrag<Electron.BrowserWindow>({
-    detach: (window, key, at) => {
-        openingInactive = true;
-        try {
-            return windows.detach(window, key, onScreen(at, window.getBounds()));
-        } finally {
-            openingInactive = false;
-        }
-    },
-    transfer: (key, window) => windows.transfer(key, window),
-    windowAt: (point, except) => windows.windowAt(point, except),
-    stripOf: (window) => tabStrips.get(window.id) ?? null,
-    stripX: (window, point) => {
-        const strip = tabStrips.get(window.id);
-        if (strip === undefined) {
-            return null;
-        }
-        const content = window.getContentBounds();
-        const x = point.x - content.x;
-        const y = point.y - content.y;
-        return x >= strip.x && x < strip.x + strip.width && y >= strip.y && y < strip.y + strip.height ? x : null;
-    },
-    cursor: () => screen.getCursorScreenPoint(),
-    every: (tick) => {
-        const timer = setInterval(tick, 16);
-        return () => clearInterval(timer);
-    },
-    onFront: (window, listener) => {
-        window.on('focus', listener);
-        return () => window.removeListener('focus', listener);
+const updates = installUpdates(ipc, {
+    windows,
+    machine,
+    askBeforeQuit,
+    confirmQuit: (confirmed) => {
+        quitConfirmed = confirmed;
     }
 });
-
-// The page that holds the press says when a tab leaves its window and when the press lets go.
-ipc.handle('window:tab-drag', (event, phase: unknown, key: unknown, grab: unknown, whole: unknown, tabWidth: unknown) => {
-    const window = ipc.senderWindow(event);
-    if (window === null) {
-        return false;
-    }
-    if (phase === 'end') {
-        tabDrag.end();
-        return true;
-    }
-    const point = windowPointOf(grab);
-    const width = typeof tabWidth === 'number' && Number.isFinite(tabWidth) && tabWidth > 0 ? tabWidth : null;
-    return phase === 'start' && isWindowKey(key) && point !== undefined && tabDrag.start(window, key, point, whole === true, width);
-});
-
-// Null opens the start screen. A view goes in a new window's address, or as a message to one that already shows the project.
-ipc.on('window:open', (_event, key: unknown, view: unknown, at: unknown) => {
-    if (key !== null && !isWindowKey(key)) {
-        return;
-    }
-    const shown = key !== null && isWindowView(view) ? view : null;
-    const holder = key === null ? null : windows.holderOf(key);
-    if (holder !== null) {
-        windows.open(key);
-        showOnHolder(key);
-        if (shown !== null) {
-            holder.webContents.send('window:show-view', shown);
-        }
-        return;
-    }
-    openingView = shown;
-    try {
-        windows.open(key, windowPointOf(at));
-    } finally {
-        openingView = null;
-    }
-});
-
-// Handed over in one tick, so nobody ever holds the project; the asking page goes to the start screen on true.
-ipc.handle('window:move-to-new', (event, at: unknown) => {
-    const window = ipc.senderWindow(event);
-    return window !== null && windows.move(window, windowPointOf(at)) !== null;
-});
-
-// A window whose last tab closed goes, as long as it is not the last window.
-ipc.handle('window:close-if-others', (event) => {
-    const window = ipc.senderWindow(event);
-    if (window === null || windows.all().length < 2) {
-        return false;
-    }
-    setImmediate(() => window.close());
-    return true;
-});
-
-// What the page keeps of itself, such as its tabs, comes back in its address at the next start.
-ipc.on('window:state', (event, state: unknown) => {
-    const window = ipc.senderWindow(event);
-    if (window !== null && isWindowState(state)) {
-        windows.setState(window, state);
-    }
-});
-
-ipc.on('window:theme', (_event, state: ThemeState) => theme.apply(state));
-
-// A state machine the client watches, not a dialog that interrupts.
-const updater = createUpdater({
-    currentVersion: app.getVersion(),
-    packaged: app.isPackaged,
-    load: () => (require('electron-updater') as typeof import('electron-updater')).autoUpdater,
-    publish: (state) => windows.send('update:state', state),
-    onQuit: windows.quitForUpdate,
-    silentInstall: process.platform === 'win32',
-    // Refreshed with the check, so the notes of a version it finds are on disk before anyone asks.
-    beforeCheck: () => void releaseNotes.list(true)
-});
-
-ipc.handle('update:state', () => updater.state());
-
-ipc.handle('update:configure', (_event, autoDownload: unknown) => updater.configure(autoDownload));
-
-// Not through `channel`, which would also allow a downgrade: a beta on Stable keeps running until a newer release.
-ipc.handle('update:track', (_event, track: unknown) => updater.setAllowPrerelease(track === 'prerelease'));
-
-ipc.handle('update:check', () => updater.check());
-
-ipc.handle('update:download', () => updater.download());
-
-/*
- * Installing closes every window before it quits, so a quit that ends work is asked about while they
- * are still there. Not when `confirmed`: a person asked from another client after being told what ends.
- */
-async function installUpdate(confirmed: boolean): Promise<void> {
-    // Windows will not replace an executable that runs, so there the installer ends the service's daemon too.
-    const installerStopsMachine = process.platform === 'win32';
-    if (!confirmed && !machine.controller.survivesQuit(installerStopsMachine) && !(await askBeforeQuit(installerStopsMachine || machine.stopsOnQuit()))) {
-        return;
-    }
-    quitConfirmed = true;
-    if (!updater.install()) {
-        quitConfirmed = false;
-    }
-}
-
-ipc.on('update:install', (_event, confirmed: unknown) => void installUpdate(confirmed === true));
-
-/* From the REST API: the updater's atom feed carries rendered HTML, only the versions up to the next one,
-   and tags whose release is still a draft. */
-const releaseNotes = createReleaseNotes({
-    fetch: (url, init) => net.fetch(url, init).then(heedBodyless),
-    // A new name, or GitHub's 304 would keep the list from before it held prereleases.
-    cacheFile: join(app.getPath('userData'), 'release-notes-with-prereleases.json')
-});
-
-ipc.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
 
 /* One window on what the page remembers, whatever the last session left open. */
 async function runSmokeWindow(): Promise<void> {
@@ -865,11 +414,11 @@ if (!app.requestSingleInstanceLock()) {
         }
         if (isPreviewGuest(contents)) {
             routePreviewLinks(contents);
-            contents.on('context-menu', (_e, params) => guestContextMenu(contents, params, 'preview'));
+            contents.on('context-menu', (_e, params) => guests.contextMenu(contents, params, 'preview'));
             return;
         }
         if (isBrowserGuest(contents)) {
-            contents.on('context-menu', (_e, params) => guestContextMenu(contents, params, 'browser'));
+            contents.on('context-menu', (_e, params) => guests.contextMenu(contents, params, 'browser'));
         }
     });
 
@@ -896,15 +445,14 @@ if (!app.requestSingleInstanceLock()) {
         sealAppSession();
         sealPreviewSession();
         browserRoutes = installBrowserRoutes(fromAppWindow, join(here, 'guest.cjs'));
-        powerMonitor.on('on-battery', applyKeepAwake);
-        powerMonitor.on('on-ac', applyKeepAwake);
+        power.followPowerSource();
         await startApp({
             localMachine,
             startMachine: () => machine.start(),
             moveStorage: () =>
                 devUrl ? Promise.resolve(() => undefined) : moveLegacyStorage(port, join(app.getPath('userData'), 'storage-moved-to-app-scheme')),
             restoreWindows: () => windows.restore(),
-            startUpdater: () => updater.start(),
+            startUpdater: () => updates.start(),
             machineReady: () => {
                 machine.ready();
                 usage.started();

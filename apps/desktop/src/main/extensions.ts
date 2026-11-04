@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import type { AppIpc } from '@adecore/shell';
 import { Serializer } from '@adecore/utils/async';
 import { writeAtomic } from '@adecore/utils/fs';
 import {
@@ -328,4 +329,16 @@ export class ClientExtensions {
             return new Response('Not found', { status: 404 });
         }
     }
+}
+
+/* The page installs, links and switches its extensions; the shell keeps them and serves their files. */
+export function installExtensions(ipc: AppIpc, extensions: ClientExtensions): void {
+    ipc.handle('extensions:list', () => extensions.list());
+    ipc.handle('extensions:install', (_event, pack: Uint8Array, options?: { fromStore?: unknown }) => extensions.install(pack, options?.fromStore === true));
+    ipc.handle('extensions:remove', (_event, id: string) => extensions.remove(id));
+    ipc.handle('extensions:set-enabled', (_event, id: string, enabled: boolean) => extensions.setEnabled(id, enabled));
+    ipc.handle('extensions:link', (_event, folder: string, revision: number, enabled?: unknown) =>
+        extensions.link(folder, revision, typeof enabled === 'boolean' ? enabled : undefined)
+    );
+    ipc.handle('extensions:unlink', (_event, id: string) => extensions.unlink(id));
 }
