@@ -14,11 +14,11 @@
         "./testing": { "types": "./testing.d.ts" }
     },
     "dependencies": {
-        "@adecore/charts": "0.54.5",
-        "@adecore/ui": "0.54.5"
+        "@adecore/charts": "0.54.6",
+        "@adecore/ui": "0.54.6"
     },
     "peerDependencies": {
-        "@adecore/agents-react": "0.54.5",
+        "@adecore/agents-react": "0.54.6",
         "@types/react": "^19.0.0"
     },
     "peerDependenciesMeta": {
