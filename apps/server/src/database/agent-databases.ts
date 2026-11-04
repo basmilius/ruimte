@@ -1,12 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
-import { relative } from 'node:path';
 import { CodedError } from '@adecore/agents';
 import { field } from '@adecore/agents/context';
 import type { DatabaseError, RowsResult, SchemaInfo, StatementResult, TableInfo, TableStructure } from '@adecore/database/protocol';
+import { isWithin } from '@adecore/utils/path';
 import type { DatabaseAgentAccess, DatabaseConnection } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { climbsOut } from '../fs/path-segment.ts';
 import { realOrSelf } from '../fs/real-path.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import type { DatabaseAccessStore } from './agent-access.ts';
@@ -381,7 +380,7 @@ export class AgentDatabases {
     private async insideFile(place: DatabasePlace, path: string): Promise<string | null> {
         try {
             const [file, folder] = await Promise.all([realpath(path), realpath(place.folder)]);
-            return climbsOut(relative(folder, file)) ? null : file;
+            return isWithin(folder, file) ? file : null;
         } catch {
             return null;
         }

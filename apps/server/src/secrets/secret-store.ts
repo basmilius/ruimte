@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNotFound, writeAtomic, Serializer } from '@adecore/agents';
+import { isRecord } from '@adecore/utils/record';
 import { isSecretReference } from '@ruimte/contracts';
-import { isRecord } from '../is-record.ts';
 
 const SECRETS_DIR = 'secrets';
 

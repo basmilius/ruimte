@@ -1,8 +1,8 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, posix, win32 } from 'node:path';
 import { fileExists } from '@adecore/agents';
+import { isBelow } from '@adecore/utils/path';
 import type { GitRepo, GitReposResult } from '@ruimte/contracts';
-import { isBelow } from '../fs/path-segment.ts';
 import { parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { readIdeaName } from '../projects/project-identity.ts';
 import { ignoredPaths } from './ignore.ts';

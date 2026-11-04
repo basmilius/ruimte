@@ -1,11 +1,11 @@
 import { lstat, readdir, stat } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
-import { climbsOut } from '../fs/path-segment.ts';
+import { isWithin } from '@adecore/utils/path';
 import { realOrNull } from '../fs/real-path.ts';
 
 export function isInside(root: string, path: string): boolean {
-    return !climbsOut(relative(root, path));
+    return isWithin(root, path);
 }
 
 interface InsideRule {

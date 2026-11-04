@@ -1,5 +1,6 @@
 import { mkdir, open, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { KeyedSerializer } from '@adecore/utils/async';
 import {
     BUNDLE_MAX_BYTES,
     BYTES_CHUNK_MAX,
@@ -10,7 +11,6 @@ import {
     type GitFetchBundleResult
 } from '@ruimte/contracts';
 import { sha256, sha256Of } from '../artifacts/artifact-fs.ts';
-import { KeyedQueue } from '../keyed-queue.ts';
 import type { CheckpointService } from './checkpoints.ts';
 import { GitError, git, gitOrThrow, runGit, toplevel, verifyRev } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
@@ -59,8 +59,8 @@ function peerFolder(machineId: string): string {
 export class BundleStore {
     readonly root: string;
     readonly incoming: string;
-    private readonly uploads = new KeyedQueue();
-    private readonly admitting = new KeyedQueue();
+    private readonly uploads = new KeyedSerializer();
+    private readonly admitting = new KeyedSerializer();
     // What each incoming bundle is meant to weigh, as the sender said; a file that reached it waits for its fetch and is no open upload.
     private readonly expected = new Map<string, number>();
     // The client each bundle written here was for, oldest first, and how far it got: a bundle being made or read is never evicted.

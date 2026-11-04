@@ -1,6 +1,8 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileExists, isNotFound, settled, writeAtomic, type DirectoryWatcher, type Serializer, type Settled, type WatchSeams } from '@adecore/agents';
+import { climbsOut } from '@adecore/utils/path';
+import { isRecord } from '@adecore/utils/record';
 import {
     DIAGRAM_VERSION,
     DRAWING_VERSION,
@@ -31,8 +33,6 @@ import {
 } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import { retryingRename } from '../fs/busy-retry.ts';
-import { climbsOut } from '../fs/path-segment.ts';
-import { isRecord } from '../is-record.ts';
 
 export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';

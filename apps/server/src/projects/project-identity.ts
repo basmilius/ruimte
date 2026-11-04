@@ -1,7 +1,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, resolve, sep } from 'node:path';
+import { isBelow } from '@adecore/utils/path';
 import { clipText } from '@ruimte/contracts';
-import { isBelow } from '../fs/path-segment.ts';
 import { looksLikeSvg, sniffMime } from '../fs/sniff.ts';
 import { PROJECT_DIR } from './project-files.ts';
 

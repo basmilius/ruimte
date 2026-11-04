@@ -1,11 +1,11 @@
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileExists, isNotFound, writeAtomic, Serializer } from '@adecore/agents';
+import { isRecord } from '@adecore/utils/record';
 import type { AgentIntegrationFile, AgentIntegrationReport, AgentIntegrationsSummary, AgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
 import { realOrSelf } from '../fs/real-path.ts';
-import { isRecord } from '../is-record.ts';
 import {
     CODEX_RULES,
     HookFileRefused,

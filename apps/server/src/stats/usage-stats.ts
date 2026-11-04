@@ -1,3 +1,4 @@
+import { isRecord } from '@adecore/utils/record';
 import { USAGE_CLIENT_KINDS, type UsageClientKind } from '@ruimte/contracts';
 import {
     USAGE_VERB_COUNTERS,
@@ -10,7 +11,6 @@ import {
 } from '@ruimte/pulsar';
 import { isOwner } from '../auth/access.ts';
 import type { ClientAccess } from '../dispatcher.ts';
-import { isRecord } from '../is-record.ts';
 import type { UsageCounter } from './usage-counter.ts';
 
 /*

@@ -3,10 +3,10 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { isNotFound, writeAtomic, KeyedSerializer } from '@adecore/agents';
 import { codexRulesPathIn as codexRulesPathInFolder, codexRulesText, defaultCodexHome, type CodexRules } from '@adecore/agents/providers';
+import { isRecord } from '@adecore/utils/record';
 import type { AgentKind } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
 import { realOrSelf } from '../fs/real-path.ts';
-import { isRecord } from '../is-record.ts';
 import { HOOK_EVENTS } from './hooks.ts';
 
 // The one string the installer recognizes its own hook by, across versions of the command.

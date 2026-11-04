@@ -1,6 +1,6 @@
 import { fraction, type ProbeResult } from '@adecore/agents/usage';
+import { isRecord } from '@adecore/utils/record';
 import type { UsageWindow } from '@ruimte/contracts';
-import { isRecord } from '../is-record.ts';
 
 const DAY_MS = 24 * 60 * 60_000;
 const WEEK_MS = 7 * DAY_MS;

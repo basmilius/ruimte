@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { isAbsolute, relative, resolve } from 'node:path';
+import { isRecord } from '@adecore/utils/record';
 import type { LaunchConfigEnv } from '@ruimte/contracts';
-import { isRecord } from '../is-record.ts';
 import { isInside } from '../tools/project-paths.ts';
 import { kindOfScript, portable, shellQuote, unsupported, type Built } from './detect.ts';
 

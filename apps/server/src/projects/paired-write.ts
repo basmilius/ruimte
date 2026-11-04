@@ -1,5 +1,6 @@
 import { lstat, mkdir } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
+import { isBelow } from '@adecore/utils/path';
 import { z } from 'zod';
 import { PROJECT_WRITE_IO, textAt, writeChangedFiles, type ProjectWriteIO } from './project-write.ts';
 
@@ -28,15 +29,13 @@ export interface PairedWriteTargets {
 
 async function checkTargets(intentPath: string, targets: PairedWriteTargets): Promise<void> {
     for (const path of [intentPath, ...targets.paths]) {
-        const below = relative(targets.root, path);
-
-        if (below.startsWith(`..${sep}`) || below === '..' || below === '') {
+        if (!isBelow(targets.root, path)) {
             throw new PairedWriteStuck(`The recovery destination ${path} is outside its storage folder`);
         }
 
         let current = targets.root;
 
-        for (const part of below.split(sep)) {
+        for (const part of relative(targets.root, path).split(sep)) {
             current = join(current, part);
             const entry = await lstat(current).catch((error: NodeJS.ErrnoException) => {
                 if (error.code === 'ENOENT') {

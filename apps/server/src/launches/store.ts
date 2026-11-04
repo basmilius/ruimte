@@ -1,5 +1,6 @@
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { climbsOut } from '@adecore/utils/path';
 import {
     isSecretReference,
     LAUNCH_SECRET_REFERENCE,
@@ -164,7 +165,7 @@ function worktreesKeyOf(launchId: string): string {
  */
 function worktreesDigestOf(resolved: Pick<ResolvedLaunch, 'folder' | 'command' | 'cwd' | 'env'>): string | null {
     const inside = relative(resolved.folder, resolved.cwd);
-    if (inside.startsWith('..') || isAbsolute(inside)) {
+    if (climbsOut(inside)) {
         return null;
     }
     return JSON.stringify(['worktrees', resolved.command, inside.split(sep).join('/'), sortedEnv(resolved.env)]);

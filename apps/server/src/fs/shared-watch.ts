@@ -1,7 +1,7 @@
 import { dirname, join, relative, resolve } from 'node:path';
 import { settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { isWithin } from '@adecore/utils/path';
 import { forgetRepos } from '../git/repo-cache.ts';
-import { isUnder } from './path-segment.ts';
 import { forgetSearchCache } from './search.ts';
 
 // Long enough to take an install or a checkout as one burst, short enough that a list read after it is fresh.
@@ -88,7 +88,7 @@ export class SharedWatch implements WatchSeams {
         if (exact !== undefined || !recursive || !this.treeWatch) {
             return exact;
         }
-        return this.watches.find((watch) => watch.recursive && isUnder(path, watch.path));
+        return this.watches.find((watch) => watch.recursive && isWithin(watch.path, path));
     }
 
     private start(path: string, recursive: boolean): PlatformWatch {
@@ -107,7 +107,7 @@ export class SharedWatch implements WatchSeams {
         for (const subscriber of [...shared.subscribers]) {
             if (subscriber.path === shared.path || changed === null) {
                 subscriber.listener(event, filename);
-            } else if (changed !== subscriber.path && isUnder(changed, subscriber.path)) {
+            } else if (changed !== subscriber.path && isWithin(subscriber.path, changed)) {
                 subscriber.listener(event, relative(subscriber.path, changed));
             }
         }

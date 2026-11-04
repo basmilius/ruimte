@@ -2,6 +2,7 @@ import { stat } from 'node:fs/promises';
 import { ToolRefusal } from '@adecore/agents/context';
 import type { AgentLineageStore, TaskStore } from '@adecore/agents/coordination';
 import { narrowerMode } from '@adecore/agents/providers';
+import { KeyedSerializer } from '@adecore/utils/async';
 import { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 import {
     BUNDLE_MAX_BYTES,
@@ -27,7 +28,6 @@ import { BundleStore, fetchBundle, makeBundle } from '../git/bundles.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import { git } from '../git/run.ts';
 import type { Worktrees } from '../git/worktrees.ts';
-import { KeyedQueue } from '../keyed-queue.ts';
 import type { OutboxEntry, OutboxWork } from '../outbox/outbox.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
@@ -85,7 +85,7 @@ export function peerCaller(machineId: string, parentId: string): string {
  */
 export class PeerTasks {
     private readonly deps: PeerTasksDeps;
-    private readonly starts = new KeyedQueue();
+    private readonly starts = new KeyedSerializer();
     // The bundles offered for a result and the machine each was made for, in memory like the files themselves.
     private readonly offered = new Map<string, { machineId: string; nodeId: string }>();
     // Tasks that machine stopped itself, which it needs no word of.

@@ -1,8 +1,8 @@
 import { join, resolve, sep } from 'node:path';
 import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { isWithin } from '@adecore/utils/path';
 import type { GitStatus } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { isUnder } from '../fs/path-segment.ts';
 import { MAX_CHANGED_PATHS } from '../fs/watch.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ignoredPaths } from './ignore.ts';
@@ -22,7 +22,7 @@ const DEGRADED_MS = 5 * 60 * 1000;
 
 /* Loose objects and lock files move on every git command and say nothing about the status. */
 function isNoise(path: string, root: string): boolean {
-    const metadata = !isUnder(path, root) || isUnder(path, join(root, '.git'));
+    const metadata = !isWithin(root, path) || isWithin(join(root, '.git'), path);
 
     return metadata && (path.includes(`${sep}objects${sep}`) || path.endsWith('.lock') || path.endsWith('~'));
 }
@@ -291,7 +291,8 @@ export class GitStatusWatcher {
         await this.run(watch.root);
         // A diff reads the bytes, not the status, so it is told about a burst the status slept through.
         const broad =
-            touched.length > MAX_CHANGED_PATHS || touched.some((path) => path === watch.root || !isUnder(path, watch.root) || path.split(sep).includes('.git'));
+            touched.length > MAX_CHANGED_PATHS ||
+            touched.some((path) => path === watch.root || !isWithin(watch.root, path) || path.split(sep).includes('.git'));
         const hint = broad ? {} : { changedPaths: touched.sort() };
         this.publish(watch, (cwd) => ({ event: 'git.changed', payload: { cwd, ...hint } }));
     }

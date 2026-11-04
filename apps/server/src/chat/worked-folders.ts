@@ -1,6 +1,6 @@
 import { dirname, join, parse, relative, resolve, sep } from 'node:path';
+import { isRecord } from '@adecore/utils/record';
 import type { ChatItem } from '@ruimte/contracts';
-import { isRecord } from '../is-record.ts';
 import { toolWrites } from '../provenance/tool-writes.ts';
 import { isInside } from '../tools/project-paths.ts';
 

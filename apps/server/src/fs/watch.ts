@@ -1,8 +1,8 @@
 import { dirname, join, resolve } from 'node:path';
 import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { isWithin } from '@adecore/utils/path';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { isUnder } from './path-segment.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
@@ -54,7 +54,7 @@ export class FolderWatcher {
         const root = resolve(path);
         for (const [, existing] of this.watches.all(clientId)) {
             // Covered paths share the stream's startup barrier.
-            if (existing.root === root || (existing.recursive && isUnder(root, existing.root))) {
+            if (existing.root === root || (existing.recursive && isWithin(existing.root, root))) {
                 return existing.ready;
             }
         }
@@ -116,7 +116,7 @@ export class FolderWatcher {
             return;
         }
         for (const [key, existing] of this.watches.all(clientId)) {
-            if (existing !== state && isUnder(existing.root, state.root)) {
+            if (existing !== state && isWithin(state.root, existing.root)) {
                 // Pending readers follow the new stream, and queued changes survive closing the old handle.
                 existing.replacement = state;
                 for (const path of existing.touched) {

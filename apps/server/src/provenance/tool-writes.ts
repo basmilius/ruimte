@@ -1,7 +1,7 @@
 import { isAbsolute, resolve } from 'node:path';
 import { splitLines } from '@adecore/merge';
+import { isRecord } from '@adecore/utils/record';
 import type { ChatToolItem } from '@ruimte/contracts';
-import { isRecord } from '../is-record.ts';
 import type { WriteSignature } from './runs.ts';
 
 /* A file a finished tool call wrote, and what the call says about the lines. */

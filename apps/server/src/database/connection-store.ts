@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { CodedError, Serializer, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@adecore/agents';
+import { isWithin } from '@adecore/utils/path';
 import {
     DATABASES_VERSION,
     DatabasesPrivateFileSchema,
@@ -17,7 +18,6 @@ import {
     type DatabasesSharedFile
 } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { climbsOut } from '../fs/path-segment.ts';
 import { PairedWriteRaced, PairedWriteStuck, recoverPaired, writePaired, type PairedFile } from '../projects/paired-write.ts';
 import {
     PRIVATE_DIR,
@@ -131,7 +131,7 @@ function entriesIn(folder: string, entries: readonly unknown[]): DatabaseFileEnt
         }
         const stored = entry.connection.config.path;
         const path = resolve(resolveStoredPath(folder, stored) ?? stored);
-        if (!isAbsolutePath(stored) && climbsOut(relative(folder, path))) {
+        if (!isAbsolutePath(stored) && !isWithin(folder, path)) {
             return { raw: entries[index] };
         }
         return { connection: { ...entry.connection, config: { ...entry.connection.config, path } } };

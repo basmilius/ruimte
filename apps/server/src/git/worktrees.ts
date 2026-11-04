@@ -1,9 +1,9 @@
 import { mkdir, realpath, rm } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { fileExists } from '@adecore/agents';
+import { KeyedSerializer } from '@adecore/utils/async';
 import type { Worktree, WorktreeWork } from '@ruimte/contracts';
 import { ClientSinks } from '../client-sinks.ts';
-import { KeyedQueue } from '../keyed-queue.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { checkpointIndexFile, folderKey } from './checkpoints.ts';
 import { existingGitPaths } from './conflict.ts';
@@ -116,7 +116,7 @@ export class Worktrees {
     private readonly now: () => number;
     private readonly sinks = new ClientSinks();
     // One removal at a time per repository, so two clients never inspect the same worktree against each other's half-done work.
-    private readonly locks = new KeyedQueue();
+    private readonly locks = new KeyedSerializer();
 
     constructor(
         home: string,

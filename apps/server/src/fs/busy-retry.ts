@@ -1,5 +1,4 @@
-// A virus scanner, an indexer or an editor holds a file open for a moment on Windows, and a rename then fails with one of these.
-const BUSY_CODES = new Set(['EPERM', 'EBUSY', 'EACCES']);
+import { isBusyRename } from '@adecore/utils/fs';
 
 // Waits between attempts; together about a second before the move fails as it would have.
 const WAITS_MS = [20, 50, 100, 200, 400];
@@ -27,7 +26,7 @@ export function retryingRename(
             try {
                 return await rename(from, to);
             } catch (e) {
-                if (!BUSY_CODES.has((e as NodeJS.ErrnoException).code ?? '')) {
+                if (!isBusyRename(e)) {
                     throw e;
                 }
             }

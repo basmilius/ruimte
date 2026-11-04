@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { isRecord } from '@adecore/utils/record';
 import type { Tool } from '@modelcontextprotocol/client';
-import { isRecord } from '../is-record.ts';
 import { ApiMcpPool, mcpResultText, readApiMcpConfig, type ConnectApiMcp } from './api-mcp.ts';
 import type { ApiToolCall, ApiToolContext, ApiToolResult } from './api-tools.ts';
 import { extractApiPage, limitApiText, publicWebUrl, requestPublicWeb, type ApiWebRequest } from './api-web.ts';

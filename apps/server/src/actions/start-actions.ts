@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { ToolRefusal } from '@adecore/agents/context';
+import { KeyedSerializer } from '@adecore/utils/async';
 import type { ActionHandlers, ActionOutput } from '@ruimte/actions';
 import {
     isCanvasView,
@@ -15,7 +16,6 @@ import {
 } from '@ruimte/contracts';
 import type { FirstPrompt } from '../agents/pending-prompts.ts';
 import { errorText } from '../error-text.ts';
-import { KeyedQueue } from '../keyed-queue.ts';
 import { untrustedStartProblem } from '../peering/untrusted.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { providerFor } from '../providers/registry.ts';
@@ -72,7 +72,7 @@ function refuseUntrustedStart(
  * One start at a time per caller. Its count is checked again under the lock of the project it writes
  * in, and since `project` lets two starts write in two projects, that lock alone would let both pass.
  */
-const callerStarts = new KeyedQueue();
+const callerStarts = new KeyedSerializer();
 
 /*
  * What a start in another project `project` reached may not do: stand nowhere a person there sees it,

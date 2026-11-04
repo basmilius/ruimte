@@ -2,8 +2,8 @@ import { copyFile, lstat, mkdtemp, readFile, realpath, rm } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 import { missingSides, patchFits } from '@adecore/merge';
+import { climbsOut, isWithin } from '@adecore/utils/path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
-import { climbsOut } from '../fs/path-segment.ts';
 import { readCommit } from './log.ts';
 import { nativePath } from './native-path.ts';
 import { git, runGit, runGitBytes, toplevel, verifyRev, GitError } from './run.ts';
@@ -286,13 +286,13 @@ async function readBlob(top: string, name: string): Promise<string | null> {
  */
 export async function insideCheckout(top: string, path: string): Promise<boolean> {
     const root = await realpath(top);
-    if (isAbsolute(path) || climbsOut(relative(root, join(root, path)))) {
+    if (isAbsolute(path) || !isWithin(root, join(root, path))) {
         return false;
     }
     let folder = dirname(join(root, path));
     for (;;) {
         try {
-            return !climbsOut(relative(root, await realpath(folder)));
+            return isWithin(root, await realpath(folder));
         } catch {
             if (folder === root) {
                 return false;

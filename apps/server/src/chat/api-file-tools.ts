@@ -1,7 +1,7 @@
 import { constants, type Stats } from 'node:fs';
 import { lstat, open, opendir, realpath, stat, unlink, type FileHandle } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative } from 'node:path';
-import { climbsOut } from '../fs/path-segment.ts';
+import { climbsOut } from '@adecore/utils/path';
 import { isBuildOutput } from '../fs/visibility.ts';
 import type { ApiToolCall, ApiToolResult } from './api-tools.ts';
 

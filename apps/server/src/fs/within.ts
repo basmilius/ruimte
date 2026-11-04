@@ -1,6 +1,5 @@
-import { relative } from 'node:path';
 import { CodedError } from '@adecore/agents';
-import { climbsOut } from './path-segment.ts';
+import { isWithin } from '@adecore/utils/path';
 import { realOrSelf } from './real-path.ts';
 
 class OutsideError extends CodedError<'outside-project'> {}
@@ -13,7 +12,7 @@ export async function refuseOutside(path: string, folder: string | undefined): P
 
     const [real, root] = await Promise.all([realOrSelf(path), realOrSelf(folder)]);
 
-    if (climbsOut(relative(root, real))) {
+    if (!isWithin(root, real)) {
         throw new OutsideError('outside-project', `${path} is outside ${folder}`);
     }
 }

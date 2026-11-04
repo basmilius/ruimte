@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { KeyedSerializer } from '@adecore/utils/async';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
-import { KeyedQueue } from '../keyed-queue.ts';
 import { diffTrees } from './diff.ts';
 import { git, gitOrThrow, repositoryRoot, runGit, toplevel, verifyRev } from './run.ts';
 
@@ -27,7 +27,7 @@ export function checkpointIndexFile(top: string): string {
 
 // One index per repository, and one turn at a time in it: two chats in the same folder would
 // otherwise fight over the lock file git writes next to it.
-const queue = new KeyedQueue();
+const queue = new KeyedSerializer();
 
 /*
  * Capture each turn as a git tree through a private `GIT_INDEX_FILE`, leaving the person's index,

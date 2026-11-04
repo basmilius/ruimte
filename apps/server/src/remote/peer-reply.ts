@@ -1,7 +1,7 @@
 import { CodedError } from '@adecore/agents';
+import { isRecord } from '@adecore/utils/record';
 import { REQUEST_SCHEMAS } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isRecord } from '../is-record.ts';
 
 interface ResultSchemas {
     [type: string]: { result: z.ZodType } | undefined;
