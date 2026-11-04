@@ -1,18 +1,24 @@
 import { describe, expect, test } from 'bun:test';
-import { WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-window.ts';
+import { LIMITS, PERIOD_SECONDS, rateLimitBindingOf } from './rate-window.ts';
 
-describe('rate limit windows', () => {
-    const windowStart = 1_700_000_040_000;
+interface RateLimitConfig {
+    name: string;
+    namespace_id: string;
+    simple: { limit: number; period: number };
+}
 
-    test('every moment of a minute counts in the window that minute starts', () => {
-        expect(windowStartOf(windowStart)).toBe(windowStart);
-        expect(windowStartOf(windowStart + WINDOW_MS - 1)).toBe(windowStart);
-        expect(windowStartOf(windowStart + WINDOW_MS)).toBe(windowStart + WINDOW_MS);
+const config = Bun.JSONC.parse(await Bun.file(new URL('../wrangler.jsonc', import.meta.url)).text()) as { ratelimits: RateLimitConfig[] };
+
+describe('the rate limit bindings', () => {
+    test('every limit has a binding in wrangler.jsonc that counts that many per minute', () => {
+        for (const limit of new Set(Object.values(LIMITS))) {
+            const binding = config.ratelimits.find((entry) => entry.name === rateLimitBindingOf(limit));
+            expect(binding?.simple).toEqual({ limit, period: PERIOD_SECONDS });
+        }
     });
 
-    test('a refusal names the seconds left in its window, rounded up', () => {
-        expect(retryAfterSeconds(windowStart + 15_000)).toBe(45);
-        expect(retryAfterSeconds(windowStart + 59_001)).toBe(1);
-        expect(retryAfterSeconds(windowStart)).toBe(60);
+    test('no two bindings share a namespace, so no two limits share a counter', () => {
+        const namespaces = config.ratelimits.map((entry) => entry.namespace_id);
+        expect(new Set(namespaces).size).toBe(namespaces.length);
     });
 });

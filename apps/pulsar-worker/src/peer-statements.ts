@@ -14,7 +14,7 @@ import { LIMITS, sessionWithinLimits } from './rate-limit.ts';
 
 // `POST /v1/peer-statements`
 export async function issuePeerStatement(request: Request, env: Env): Promise<Response> {
-    const session = await sessionWithinLimits(request, env.DB, ['peer-statement', LIMITS.peerStatementAccount], ['peer-statement', LIMITS.peerStatementIp]);
+    const session = await sessionWithinLimits(request, env, ['peer-statement', LIMITS.peerStatementAccount], ['peer-statement', LIMITS.peerStatementIp]);
     if (session instanceof Response) {
         return session;
     }

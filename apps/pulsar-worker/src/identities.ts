@@ -131,7 +131,7 @@ export async function getAccount(request: Request, env: Env): Promise<Response> 
 
 // `POST /v1/account/link`: a token for the start URL of the provider to add, bound to this session.
 export async function startIdentityLink(request: Request, env: Env): Promise<Response> {
-    const session = await sessionWithinLimits(request, env.DB, ['link', LIMITS.linkAccount], ['login', LIMITS.loginIp]);
+    const session = await sessionWithinLimits(request, env, ['link', LIMITS.linkAccount], ['login', LIMITS.loginIp]);
     if (session instanceof Response) {
         return session;
     }
@@ -230,7 +230,7 @@ export async function completeIdentityLink(request: Request, env: Env): Promise<
     if (!session) {
         return signInAgain();
     }
-    const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:session`, LIMITS.sessionIp]]);
+    const limited = await overAnyLimit(env, [[`ip:${clientIp(request)}:session`, LIMITS.sessionIp]]);
     if (limited) {
         return limited;
     }

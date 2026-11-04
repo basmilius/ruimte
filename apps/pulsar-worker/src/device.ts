@@ -74,7 +74,7 @@ function noSuchCode(): Response {
 
 // `POST /v1/device/start`, without a session.
 export async function startDeviceLink(request: Request, env: Env): Promise<Response> {
-    const body = await bodyWithinLimit(request, env.DB, ['device-start', LIMITS.deviceStartIp], DeviceLinkStartPayloadSchema);
+    const body = await bodyWithinLimit(request, env, ['device-start', LIMITS.deviceStartIp], DeviceLinkStartPayloadSchema);
     if ('response' in body) {
         return body.response;
     }
@@ -130,7 +130,7 @@ export async function startDeviceLink(request: Request, env: Env): Promise<Respo
 // The session and the code for the three routes a person uses, or the response that says why not.
 async function personAndCode(request: Request, env: Env): Promise<{ session: SessionContext; userCode: string } | { response: Response }> {
     // Counted before the code is read, so every guess costs, a malformed one included.
-    const session = await sessionWithinLimits(request, env.DB, ['device-code', LIMITS.deviceCodeAccount], ['device-code', LIMITS.deviceCodeIp]);
+    const session = await sessionWithinLimits(request, env, ['device-code', LIMITS.deviceCodeAccount], ['device-code', LIMITS.deviceCodeIp]);
     if (session instanceof Response) {
         return { response: session };
     }
@@ -206,7 +206,7 @@ async function linkOfDeviceCode(env: Env, deviceCode: string) {
 
 // `POST /v1/device/poll`
 export async function pollDeviceLink(request: Request, env: Env): Promise<Response> {
-    const body = await bodyWithinLimit(request, env.DB, ['device-poll', LIMITS.devicePollIp], DeviceCodePayloadSchema);
+    const body = await bodyWithinLimit(request, env, ['device-poll', LIMITS.devicePollIp], DeviceCodePayloadSchema);
     if ('response' in body) {
         return body.response;
     }
@@ -231,7 +231,7 @@ export async function pollDeviceLink(request: Request, env: Env): Promise<Respon
  * requests race; one that fails after that is started again from the terminal.
  */
 export async function completeDeviceLink(request: Request, env: Env): Promise<Response> {
-    const body = await bodyWithinLimit(request, env.DB, ['device-poll', LIMITS.devicePollIp], DeviceLinkCompletePayloadSchema);
+    const body = await bodyWithinLimit(request, env, ['device-poll', LIMITS.devicePollIp], DeviceLinkCompletePayloadSchema);
     if ('response' in body) {
         return body.response;
     }
@@ -269,7 +269,7 @@ export async function completeDeviceLink(request: Request, env: Env): Promise<Re
 
 // `POST /v1/device/cancel`: the terminal stopped waiting, so the code stops working on the page too.
 export async function cancelDeviceLink(request: Request, env: Env): Promise<Response> {
-    const body = await bodyWithinLimit(request, env.DB, ['device-poll', LIMITS.devicePollIp], DeviceCodePayloadSchema);
+    const body = await bodyWithinLimit(request, env, ['device-poll', LIMITS.devicePollIp], DeviceCodePayloadSchema);
     if ('response' in body) {
         return body.response;
     }

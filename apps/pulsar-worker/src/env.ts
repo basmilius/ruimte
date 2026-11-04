@@ -1,6 +1,8 @@
+import type { RateLimitBinding, RateLimiter } from './rate-window.ts';
 import type { UsageDeps } from './usage.ts';
 
-export interface Env {
+// The limiters of `LIMITS`, one per distinct limit (`rate-window.ts`).
+export interface Env extends Record<RateLimitBinding, RateLimiter> {
     DB: D1Database;
     // The per-minute limit per address in front of the usage relay.
     USAGE_LIMIT?: UsageDeps['burst'];

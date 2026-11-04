@@ -60,7 +60,7 @@ async function revokeApple(env: Env, accountId: string, authorizationCode: strin
  * with one of its identities afterwards opens a new account.
  */
 export async function deleteAccount(request: Request, env: Env): Promise<Response> {
-    const session = await sessionWithinLimits(request, env.DB, ['delete', LIMITS.deleteAccount], ['session', LIMITS.sessionIp]);
+    const session = await sessionWithinLimits(request, env, ['delete', LIMITS.deleteAccount], ['session', LIMITS.sessionIp]);
     if (session instanceof Response) {
         return session;
     }

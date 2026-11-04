@@ -60,7 +60,7 @@ export async function listMachines(request: Request, env: Env): Promise<Response
 
 // `POST /v1/machines`
 export async function registerMachine(request: Request, env: Env): Promise<Response> {
-    const session = await sessionWithinLimits(request, env.DB, ['register', LIMITS.registerAccount], ['register', LIMITS.registerIp]);
+    const session = await sessionWithinLimits(request, env, ['register', LIMITS.registerAccount], ['register', LIMITS.registerIp]);
     if (session instanceof Response) {
         return session;
     }

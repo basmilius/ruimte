@@ -10,7 +10,7 @@ import { authenticate } from './sessions.ts';
  */
 export async function issueMapsTicket(request: Request, env: Env): Promise<Response> {
     const ip = clientIp(request);
-    const limited = await overAnyLimit(env.DB, [[`ip:${ip}:maps`, LIMITS.mapsTicketIp]]);
+    const limited = await overAnyLimit(env, [[`ip:${ip}:maps`, LIMITS.mapsTicketIp]]);
     if (limited) {
         return limited;
     }
@@ -26,7 +26,7 @@ export async function issueMapsTicket(request: Request, env: Env): Promise<Respo
         return signInAgain();
     }
     const accountId = session.account.id;
-    const perAccount = await overAnyLimit(env.DB, [[`account:${accountId}:maps`, LIMITS.mapsTicketAccount]]);
+    const perAccount = await overAnyLimit(env, [[`account:${accountId}:maps`, LIMITS.mapsTicketAccount]]);
     if (perAccount) {
         return perAccount;
     }

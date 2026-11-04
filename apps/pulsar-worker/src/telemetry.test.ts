@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import type { Env } from './env.ts';
 import { telemetryOptions } from './telemetry.ts';
+import { fakeRateLimits } from './test/rate-limits.ts';
 
-const ENV = { DB: {} as D1Database, PUBLIC_ORIGIN: 'https://pulsar.test' } satisfies Env;
+const ENV = { DB: {} as D1Database, PUBLIC_ORIGIN: 'https://pulsar.test', ...fakeRateLimits() } satisfies Env;
 
 describe('the telemetry of the address book', () => {
     test('is off without a DSN', () => {

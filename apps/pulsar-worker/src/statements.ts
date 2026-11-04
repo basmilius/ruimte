@@ -15,7 +15,7 @@ import { LIMITS, sessionWithinLimits } from './rate-limit.ts';
 
 // `POST /v1/statements`
 export async function issueStatement(request: Request, env: Env): Promise<Response> {
-    const session = await sessionWithinLimits(request, env.DB, ['statement', LIMITS.statementAccount], ['statement', LIMITS.statementIp]);
+    const session = await sessionWithinLimits(request, env, ['statement', LIMITS.statementAccount], ['statement', LIMITS.statementIp]);
     if (session instanceof Response) {
         return session;
     }

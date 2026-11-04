@@ -1,60 +1,54 @@
 import type { z } from 'zod';
+import type { Env } from './env.ts';
 import { clientIp, failure, readBody, signInAgain } from './http.ts';
-import { retryAfterSeconds, windowStartOf } from './rate-window.ts';
+import { PERIOD_SECONDS, rateLimitBindingOf, type RateLimitValue } from './rate-window.ts';
 import { authenticate, type SessionContext } from './sessions.ts';
 
 export { LIMITS } from './rate-window.ts';
 
 /*
- * A fixed window in D1 rather than the platform's rate limiting binding, which counts per location and
- * lets a burst through while it catches up. One upsert per request on these routes is cheap next to the
- * signature they guard.
+ * The platform's limiter counts per location and catches up after a burst, so a script can get a little
+ * past a limit. That is accepted here for every route: it writes nothing, where a counter in D1 cost an
+ * upsert per request and a delete per window.
  */
-export async function overLimit(db: D1Database, bucket: string, limit: number, now = Date.now()): Promise<Response | null> {
-    const windowStart = windowStartOf(now);
-    const row = await db
-        .prepare(
-            'INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, 1) ON CONFLICT (bucket, window_start) DO UPDATE SET count = count + 1 RETURNING count'
-        )
-        .bind(bucket, windowStart)
-        .first<{ count: number }>();
-    if (row && row.count > limit) {
-        const retryAfter = retryAfterSeconds(now);
-        return failure('rate-limited', `Too many requests, try again in ${retryAfter} s`, { 'retry-after': String(retryAfter) });
+export async function overLimit(env: Env, bucket: string, limit: RateLimitValue): Promise<Response | null> {
+    const { success } = await env[rateLimitBindingOf(limit)].limit({ key: bucket });
+    if (success) {
+        return null;
     }
-    return null;
+    // The limiter does not say when its window ends, so this is the longest wait.
+    return failure('rate-limited', `Too many requests, try again in ${PERIOD_SECONDS} s`, { 'retry-after': String(PERIOD_SECONDS) });
 }
 
 // The first limit that is over, checking every bucket so each one counts this request.
-export async function overAnyLimit(db: D1Database, checks: ReadonlyArray<readonly [bucket: string, limit: number]>): Promise<Response | null> {
-    const now = Date.now();
-    const results = await Promise.all(checks.map(([bucket, limit]) => overLimit(db, bucket, limit, now)));
+export async function overAnyLimit(env: Env, checks: ReadonlyArray<readonly [bucket: string, limit: RateLimitValue]>): Promise<Response | null> {
+    const results = await Promise.all(checks.map(([bucket, limit]) => overLimit(env, bucket, limit)));
     return results.find((result) => result !== null) ?? null;
 }
 
 /* The body of a request from an address within a route's limit, or the answer that turns it down. */
 export async function bodyWithinLimit<T>(
     request: Request,
-    db: D1Database,
-    ip: readonly [bucket: string, limit: number],
+    env: Env,
+    ip: readonly [bucket: string, limit: RateLimitValue],
     schema: z.ZodType<T>
 ): Promise<{ value: T } | { response: Response }> {
-    const limited = await overAnyLimit(db, [[`ip:${clientIp(request)}:${ip[0]}`, ip[1]]]);
+    const limited = await overAnyLimit(env, [[`ip:${clientIp(request)}:${ip[0]}`, ip[1]]]);
     return limited ? { response: limited } : readBody(request, schema);
 }
 
 /* The session of a signed-in request within a route's limit for its account and for its address, or the answer that turns it down. */
 export async function sessionWithinLimits(
     request: Request,
-    db: D1Database,
-    account: readonly [bucket: string, limit: number],
-    ip: readonly [bucket: string, limit: number]
+    env: Env,
+    account: readonly [bucket: string, limit: RateLimitValue],
+    ip: readonly [bucket: string, limit: RateLimitValue]
 ): Promise<SessionContext | Response> {
-    const session = await authenticate(request, db);
+    const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
     }
-    const limited = await overAnyLimit(db, [
+    const limited = await overAnyLimit(env, [
         [`account:${session.account.id}:${account[0]}`, account[1]],
         [`ip:${clientIp(request)}:${ip[0]}`, ip[1]]
     ]);

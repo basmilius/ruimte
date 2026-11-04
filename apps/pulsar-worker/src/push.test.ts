@@ -5,6 +5,7 @@ import { MACHINE_ACTIVITY_NODE, pushCollapseIdMessage, pushMessage, type PushEnv
 import { apnsPayload, deliverApns } from './apns.ts';
 import type { Env } from './env.ts';
 import { changePushDevice, registerPushDevice, sendPush, type PushDeliverySeams } from './push.ts';
+import { fakeRateLimits } from './test/rate-limits.ts';
 import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 const NOW = 1_900_000_000_000;
@@ -61,7 +62,8 @@ beforeEach(() => {
         APNS_SANDBOX_KEY: 'injected',
         APNS_SANDBOX_KEY_ID: 'test',
         APNS_TEAM_ID: 'test',
-        APNS_TOPIC: 'app.ruimte.mobile'
+        APNS_TOPIC: 'app.ruimte.mobile',
+        ...fakeRateLimits()
     };
     sqlite.query('UPDATE push_device SET start_machine_id = ?, start_collapse_id = ?').run('machine', 'c'.repeat(43));
     delivered = [];

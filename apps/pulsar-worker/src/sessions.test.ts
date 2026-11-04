@@ -4,6 +4,7 @@ import { sessionRefreshMessage, type SessionRefreshPayload, type SessionResult }
 import type { Env } from './env.ts';
 import { refreshSession } from './login.ts';
 import { ACCESS_LIFETIME_MS, ROTATION_GRACE_MS, SESSION_LIFETIME_MS, authenticate, createSession, rotateSession } from './sessions.ts';
+import { fakeRateLimits } from './test/rate-limits.ts';
 import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 const NOW = 1_900_000_000_000;
@@ -121,7 +122,7 @@ describe('a session in use', () => {
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(signedWith(generateKeyPairSync('ed25519'), session.refreshToken))
         });
-        const response = await refreshSession(request, { DB: db } as Env);
+        const response = await refreshSession(request, { DB: db, ...fakeRateLimits() } as Env);
         expect(response.status).toBe(403);
         expect(await response.json()).toMatchObject({ error: { code: 'bad-signature' } });
     });
@@ -142,7 +143,7 @@ describe('a refresh from a clock that is off', () => {
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(signed(session.refreshToken, NOW - 11 * 60_000))
         });
-        const response = await refreshSession(request, { DB: db } as Env);
+        const response = await refreshSession(request, { DB: db, ...fakeRateLimits() } as Env);
         expect(response.status).toBe(400);
         expect(await response.json()).toEqual({
             error: { code: 'clock-skew', message: 'The clock of this device is 11 minutes behind. Set it right and try again.' }

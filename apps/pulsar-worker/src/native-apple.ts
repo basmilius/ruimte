@@ -10,7 +10,7 @@ import { LIMITS, overAnyLimit } from './rate-limit.ts';
 const ATTEMPT_LIFETIME_MS = 10 * 60_000;
 
 async function available(request: Request, env: Env): Promise<Response | null> {
-    const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
+    const limited = await overAnyLimit(env, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
     if (limited) {
         return limited;
     }

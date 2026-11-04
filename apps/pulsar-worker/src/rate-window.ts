@@ -1,6 +1,7 @@
 // Kept apart from `rate-limit.ts` and free of Workers types, so the tests read the same numbers the Worker counts with.
 
-export const WINDOW_MS = 60_000;
+// The platform's limiter knows only 10 and 60 seconds; every limit here is per minute.
+export const PERIOD_SECONDS = 60;
 
 /*
  * Requests per minute for the routes that sign, mint or verify something. A person signs in once and
@@ -28,14 +29,26 @@ export const LIMITS = {
     deviceCodeIp: 30,
     // A ticket lasts an hour and a client asks again a few minutes before it ends, so only a script meets these.
     mapsTicketAccount: 10,
-    mapsTicketIp: 30
+    mapsTicketIp: 30,
+    // A machine pushes per turn and a Live Activity per update; a session registers its device on every launch.
+    pushRegisterSession: 20,
+    pushDeviceSession: 60,
+    pushIp: 240,
+    pushMachine: 120,
+    pushHandle: 60
 } as const;
 
-export function windowStartOf(now: number): number {
-    return now - (now % WINDOW_MS);
+export interface RateLimiter {
+    limit(options: { key: string }): Promise<{ success: boolean }>;
 }
 
-// Whole seconds until the window `now` falls in ends, rounded up so a client that waits them is never early.
-export function retryAfterSeconds(now: number): number {
-    return Math.ceil((windowStartOf(now) + WINDOW_MS - now) / 1000);
+/*
+ * A binding counts against one fixed limit, so every distinct number above has its own binding,
+ * `RATE_LIMIT_<limit>` in `wrangler.jsonc`, and the bucket in the key keeps the routes apart.
+ */
+export type RateLimitValue = (typeof LIMITS)[keyof typeof LIMITS];
+export type RateLimitBinding = `RATE_LIMIT_${RateLimitValue}`;
+
+export function rateLimitBindingOf(limit: RateLimitValue): RateLimitBinding {
+    return `RATE_LIMIT_${limit}`;
 }

@@ -4,17 +4,16 @@ import { MAPS_TICKET_LIFETIME_MS, MapsTicketSchema, mapsTicketSubject, verifyMap
 import type { Env } from './env.ts';
 import { issueMapsTicket } from './maps-ticket.ts';
 import { LIMITS } from './rate-limit.ts';
-import { windowStartOf } from './rate-window.ts';
 import { createSession } from './sessions.ts';
 import { errorCode, newPair, signIn as signInAs } from './test/accounts.ts';
+import { fakeRateLimits } from './test/rate-limits.ts';
 import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 // 32 bytes in base64url, as `openssl rand -base64 32` spells them once made url safe.
 const SECRET = 'rpEgLz0VDkQ2M4v1o9s3bYt7JfHaCwXn6iUeNy8PqKg';
 const OTHER_SECRET = 'Zk3mQ8vJx1LpT5aRn0cWy7DbHfUe2GsOi9NtV4Xr6Ml';
 
-// A second into a counting window, so the limit tests stand still inside one.
-const NOW = windowStartOf(Date.UTC(2026, 9, 1)) + 1_000;
+const NOW = Date.UTC(2026, 9, 1);
 
 let sqlite: Database;
 let env: Env;
@@ -34,7 +33,7 @@ function post(body: unknown, token?: string, ip = '192.0.2.1'): Request {
 beforeEach(() => {
     setSystemTime(NOW);
     sqlite = migratedDatabase();
-    env = { DB: d1(sqlite), PUBLIC_ORIGIN: 'https://pulsar.test', MAP_TICKET_SECRET: SECRET };
+    env = { DB: d1(sqlite), PUBLIC_ORIGIN: 'https://pulsar.test', MAP_TICKET_SECRET: SECRET, ...fakeRateLimits() };
 });
 
 afterEach(() => {

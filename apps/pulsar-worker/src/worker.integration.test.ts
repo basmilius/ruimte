@@ -32,7 +32,7 @@ import { BENCHMARK_LABS } from './benchmark-labs.ts';
 import { MAX_PAGES } from './benchmarks.ts';
 import { seedStatementsOf } from './catalog-seed.ts';
 import { BUNDLED_CATALOGS } from './catalog.ts';
-import { LIMITS, WINDOW_MS } from './rate-window.ts';
+import { LIMITS, rateLimitBindingOf, type RateLimiter, type RateLimitValue } from './rate-window.ts';
 import { ROTATION_GRACE_MS } from './sessions.ts';
 
 /*
@@ -149,11 +149,20 @@ function database(on: Miniflare): Database {
 }
 
 // The Worker under test comes first, so every request outside the SQL path reaches it.
+// The limiters as deployed, so a limit that has no binding fails here and not in production.
+const DEPLOYED_RATE_LIMITS = Object.fromEntries(
+    (
+        Bun.JSONC.parse(readFileSync(join(APP_ROOT, 'wrangler.jsonc'), 'utf8')) as {
+            ratelimits: { name: string; namespace_id: string; simple: { limit: number; period: number } }[];
+        }
+    ).ratelimits.map(({ name, ...limiter }) => [name, limiter])
+);
+
 function miniflare(databaseId: string, options: Partial<Pick<WorkerOptions, 'bindings' | 'outboundService' | 'ratelimits'>>): Miniflare {
     const shared = { modules: true, compatibilityDate: '2026-08-01', compatibilityFlags: ['nodejs_compat'], d1Databases: { DB: databaseId } };
     return new Miniflare({
         workers: [
-            { name: 'pulsar', script, ...shared, ...options },
+            { name: 'pulsar', script, ...shared, ...options, ratelimits: { ...DEPLOYED_RATE_LIMITS, ...options.ratelimits } },
             { name: 'sql', script: SQL_WORKER, routes: [`*${SQL_PATH}`], ...shared }
         ]
     });
@@ -541,19 +550,18 @@ async function errorCode(response: Response): Promise<string> {
 
 /*
  * A bucket already at its limit, so the next request through the route is the refusal. Filling it with
- * real requests costs a round trip each, and a slow runner spent seconds on it. The Worker reads its own
- * clock, so the next window is filled too, in case the minute turns between this and the request.
+ * real requests costs a round trip each, and a slow runner spent seconds on it, so this asks the Worker's
+ * own limiter. It asks until a refusal rather than counting to the limit, so a minute that turns while it
+ * spends is spent again.
  */
-async function spendLimit(bucket: string, limit: number): Promise<void> {
-    const now = Date.now();
-    for (const windowStart of [now - (now % WINDOW_MS), now - (now % WINDOW_MS) + WINDOW_MS]) {
-        await database(mf).run(
-            'INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3) ON CONFLICT (bucket, window_start) DO UPDATE SET count = ?3',
-            bucket,
-            windowStart,
-            limit
-        );
+async function spendLimit(bucket: string, limit: RateLimitValue): Promise<void> {
+    const limiter = (await mf.getBindings<Record<string, RateLimiter>>('pulsar'))[rateLimitBindingOf(limit)]!;
+    for (let attempt = 0; attempt <= 2 * limit + 1; attempt++) {
+        if (!(await limiter.limit({ key: bucket })).success) {
+            return;
+        }
     }
+    throw new Error(`${bucket} was never refused`);
 }
 
 const APPLE_BINDINGS = {

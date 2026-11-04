@@ -43,7 +43,7 @@ function callbackUrl(env: Env, provider: OAuthProvider): string {
 
 /* Null while this address may still try a login and the provider is set up, else the answer that says why not. */
 async function loginRefused(request: Request, env: Env, provider: OAuthProvider): Promise<Response | null> {
-    const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
+    const limited = await overAnyLimit(env, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
     if (limited) {
         return limited;
     }
@@ -234,7 +234,7 @@ export async function storeLoginCode(db: D1Database, accountId: string, appRedir
 
 // `POST /v1/session`: the app trades the code from the redirect for a session.
 export async function exchangeLoginCode(request: Request, env: Env): Promise<Response> {
-    const body = await bodyWithinLimit(request, env.DB, ['session', LIMITS.sessionIp], SessionExchangePayloadSchema);
+    const body = await bodyWithinLimit(request, env, ['session', LIMITS.sessionIp], SessionExchangePayloadSchema);
     if ('response' in body) {
         return body.response;
     }
@@ -273,7 +273,7 @@ export async function exchangeLoginCode(request: Request, env: Env): Promise<Res
 
 // `POST /v1/session/refresh`
 export async function refreshSession(request: Request, env: Env): Promise<Response> {
-    const body = await bodyWithinLimit(request, env.DB, ['session', LIMITS.sessionIp], SessionRefreshPayloadSchema);
+    const body = await bodyWithinLimit(request, env, ['session', LIMITS.sessionIp], SessionRefreshPayloadSchema);
     if ('response' in body) {
         return body.response;
     }

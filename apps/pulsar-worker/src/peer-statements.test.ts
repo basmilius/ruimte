@@ -17,6 +17,7 @@ import { registerMachine } from './machines.ts';
 import { issuePeerStatement } from './peer-statements.ts';
 import { LIMITS } from './rate-limit.ts';
 import { errorCode, newPair, signIn as signInAs, signWith, type Pair } from './test/accounts.ts';
+import { fakeRateLimits } from './test/rate-limits.ts';
 import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 const statementKey = generateKeyPairSync('ed25519');
@@ -84,7 +85,8 @@ beforeEach(() => {
     env = {
         DB: d1(sqlite),
         PUBLIC_ORIGIN: 'https://pulsar.test',
-        STATEMENT_PRIVATE_KEY: statementKey.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64url')
+        STATEMENT_PRIVATE_KEY: statementKey.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64url'),
+        ...fakeRateLimits()
     };
 });
 

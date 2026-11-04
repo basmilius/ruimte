@@ -17,7 +17,7 @@ import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { apnsConfigured, invalidApnsToken, deliverApns, type ApnsResult, type ApnsTarget } from './apns.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody, signInAgain } from './http.ts';
-import { overLimit } from './rate-limit.ts';
+import { LIMITS, overLimit } from './rate-limit.ts';
 import { authenticate } from './sessions.ts';
 
 export async function registerPushDevice(request: Request, env: Env): Promise<Response> {
@@ -25,7 +25,7 @@ export async function registerPushDevice(request: Request, env: Env): Promise<Re
     if (!session) {
         return signInAgain();
     }
-    const limited = await overLimit(env.DB, `push-register:${session.id}`, 20);
+    const limited = await overLimit(env, `push-register:${session.id}`, LIMITS.pushRegisterSession);
     if (limited) {
         return limited;
     }
@@ -131,7 +131,7 @@ export async function changePushDevice(
     if (!owned) {
         return failure('not-found', 'No push device for this session');
     }
-    const limited = await overLimit(env.DB, `push-device:${session.id}`, 60, now);
+    const limited = await overLimit(env, `push-device:${session.id}`, LIMITS.pushDeviceSession);
     if (limited) {
         return limited;
     }
@@ -270,7 +270,7 @@ async function claimActivityStart(env: Env, push: Extract<PushEnvelope, { pushTy
 
 export async function sendPush(request: Request, env: Env, seams: PushDeliverySeams = SYSTEM_PUSH): Promise<Response> {
     const now = seams.now();
-    const ipLimit = await overLimit(env.DB, `push-ip:${clientIp(request)}`, 240, now);
+    const ipLimit = await overLimit(env, `push-ip:${clientIp(request)}`, LIMITS.pushIp);
     if (ipLimit) {
         return ipLimit;
     }
@@ -312,10 +312,10 @@ export async function sendPush(request: Request, env: Env, seams: PushDeliverySe
         return failure('bad-signature', 'The machine did not sign this notification');
     }
     for (const [bucket, limit] of [
-        [`push-machine:${device.public_key}`, 120],
-        [`push-handle:${push.handle}`, 60]
+        [`push-machine:${device.public_key}`, LIMITS.pushMachine],
+        [`push-handle:${push.handle}`, LIMITS.pushHandle]
     ] as const) {
-        const limited = await overLimit(env.DB, bucket, limit, now);
+        const limited = await overLimit(env, bucket, limit);
         if (limited) {
             return limited;
         }
