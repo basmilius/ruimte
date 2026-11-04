@@ -1,26 +1,10 @@
 import { ToolRefusal } from '@adecore/agents/context';
+import { answerQuestion } from '@adecore/agents/coordination';
 import type { ActionHandlers } from '@ruimte/actions';
-import {
-    chatNameOf,
-    isAgentKind,
-    isCanvasView,
-    nodeChats,
-    viewChats,
-    type CanvasNodeKind,
-    type ChatApprovalItem,
-    type ChatQuestionItem,
-    type ProjectView
-} from '@ruimte/contracts';
-import { field, orNote, type ChatRequestHost } from '../tools/host.ts';
+import { chatNameOf, isAgentKind, isCanvasView, nodeChats, viewChats, type CanvasNodeKind, type ProjectView } from '@ruimte/contracts';
+import { field } from '../tools/host.ts';
 import { refuseOtherMachine } from '../tools/remote-node.ts';
 import { hostService, type ServerActionContext } from './context.ts';
-
-/* One row per request an agent waits on, which is what a refusal of `agent_answer` offers instead. */
-function requestLine(nodeId: string, item: ChatQuestionItem | ChatApprovalItem): string {
-    return item.kind === 'question'
-        ? `question\t${nodeId}\t${item.requestId}\t${item.questions.map((question) => `${question.id}: ${field(question.question)}`).join(' | ')}`
-        : `approval\t${nodeId}\t${item.requestId}\t${field(item.toolName)}\ta person's alone`;
-}
 
 /* The caller's name as a message signs it: any chat by its own name, a later one of a design too, else its node on a canvas or the view it is. */
 function titleOf(views: readonly ProjectView[], caller: string): string {
@@ -60,44 +44,6 @@ function messageTarget(views: readonly ProjectView[], id: string): 'agent' | Can
     return null;
 }
 
-function waitingLines(requests: ChatRequestHost, nodeId: string): string[] {
-    return orNote(
-        requests.waiting(nodeId).map((item) => requestLine(nodeId, item)),
-        `${nodeId} waits on no question now`
-    );
-}
-
-/* The answers keyed by question id, from the one answer or the map a call gave, refused while one is missing. */
-function answersFor(item: ChatQuestionItem, answer: string | null, answers: Record<string, string> | null): Record<string, string> {
-    const ids = item.questions.map((question) => question.id);
-    if (answer !== null && answers !== null) {
-        throw new ToolRefusal('answer-twice', 'answer and answers both carry the answer; give one of them');
-    }
-    if (answer !== null) {
-        if (ids.length !== 1) {
-            throw new ToolRefusal('answers-needed', `This request asks ${ids.length} questions; give answers with one answer per question id`, [
-                `note\tanswers '${JSON.stringify(Object.fromEntries(ids.map((id) => [id, '...'])))}'`
-            ]);
-        }
-        answers = { [ids[0]!]: answer };
-    }
-    const given = Object.fromEntries(Object.entries(answers ?? {}).map(([id, text]) => [id, text.trim()]));
-    const unknown = Object.keys(given).filter((id) => !ids.includes(id));
-    if (unknown.length > 0) {
-        throw new ToolRefusal('unknown-question', `${unknown.join(', ')} is not a question of this request; its ids are ${ids.join(', ')}`);
-    }
-    const missing = ids.filter((id) => (given[id] ?? '') === '');
-    if (missing.length > 0) {
-        throw new ToolRefusal(
-            'empty-answer',
-            ids.length === 1
-                ? 'The answer is empty; give it with answer'
-                : `Question ${missing.join(', ')} has no answer; every question of the request needs one`
-        );
-    }
-    return given;
-}
-
 export const agentActions: ActionHandlers<ServerActionContext> = {
     'agent.answer': async ({ nodeId, requestId, answer, answers }, { actor, context }) => {
         const { host } = context;
@@ -111,24 +57,7 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
             throw new ToolRefusal('not-yours', `${nodeId} is not a node you opened; you only answer the questions of an agent you opened yourself`);
         }
         const requests = hostService(context, 'requests', 'no-agent', `${nodeId} runs no chat on this machine that could ask anything`);
-        const item = requests.request(nodeId, requestId);
-        if (item === null) {
-            throw new ToolRefusal('unknown-request', `${nodeId} asked nothing under ${requestId}`, waitingLines(requests, nodeId));
-        }
-        if (item.kind === 'approval') {
-            throw new ToolRefusal(
-                'not-a-question',
-                `${requestId} asks a person to approve ${field(item.toolName)}; an approval is a person's alone, so tell the person if it holds up your plan`,
-                waitingLines(requests, nodeId)
-            );
-        }
-        if (item.state !== 'pending') {
-            throw new ToolRefusal('not-pending', `${requestId} no longer waits: it was ${item.state}`, waitingLines(requests, nodeId));
-        }
-        // The same door a person's chat.answer goes through, so whoever answers second is refused there.
-        if (!requests.answer(nodeId, requestId, answersFor(item, answer, answers))) {
-            throw new ToolRefusal('not-pending', `${requestId} no longer waits: it was answered a moment ago`, waitingLines(requests, nodeId));
-        }
+        answerQuestion(requests, nodeId, requestId, { answer, answers });
         return { output: { nodeId, requestId } };
     },
     'agent.alert': async ({ text }, { actor, context }) => {
