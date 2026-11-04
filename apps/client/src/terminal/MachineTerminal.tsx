@@ -40,6 +40,11 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
     const { t } = useTranslation('canvas');
     const viewRef = useRef<TerminalViewHandle>(null);
     const [hovered, setHovered] = useState<HoveredLink | null>(null);
+    /*
+     * Whether a hover may be showing. React keeps every update that changed nothing queued until the
+     * component renders again, and output alone never renders it, so a clear on each write piled up forever.
+     */
+    const mayShow = useRef(false);
     const platform = useServers((state) => state.byEndpoint[endpointId]?.platform ?? null);
     // Read at hover time, so a caller's new function never rebinds the links or loses the cwd tracked from output already on screen.
     const fileLinkHover = useRef(onFileLinkHover);
@@ -64,16 +69,30 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
             },
             hover: (link, bounds) => {
                 fileLinkHover.current?.(link);
-                setHovered((current) => {
-                    if (!link || !bounds) {
-                        return current?.kind === 'file' ? null : current;
+
+                if (!link || !bounds) {
+                    if (mayShow.current) {
+                        setHovered((current) => (current?.kind === 'file' ? null : current));
                     }
+
+                    return;
+                }
+
+                mayShow.current = true;
+                setHovered((current) => {
                     const next: HoveredLink = { kind: 'file', text: link.text, bounds, endpointId, sourceId };
                     return current !== null && sameFileHover(current, next) ? current : next;
                 });
             }
         });
-        const clear = (): void => setHovered(null);
+        const clear = (): void => {
+            if (!mayShow.current) {
+                return;
+            }
+
+            mayShow.current = false;
+            setHovered(null);
+        };
         const changes = [term.onScroll(clear), term.onResize(clear), term.onWriteParsed(clear)];
         term.element?.addEventListener('mouseleave', clear);
         term.element?.addEventListener('wheel', clear, { passive: true });
@@ -101,11 +120,18 @@ export function MachineTerminal({ endpointId, sourceId, onFileLinkHover, classNa
                 {...props}
                 ref={viewRef}
                 className="absolute inset-0"
-                onLinkHover={(uri, bounds) =>
-                    setHovered((current) =>
-                        uri === null || bounds === null ? (current?.kind === 'url' ? null : current) : { kind: 'url', uri, bounds, endpointId, sourceId }
-                    )
-                }
+                onLinkHover={(uri, bounds) => {
+                    if (uri === null || bounds === null) {
+                        if (mayShow.current) {
+                            setHovered((current) => (current?.kind === 'url' ? null : current));
+                        }
+
+                        return;
+                    }
+
+                    mayShow.current = true;
+                    setHovered({ kind: 'url', uri, bounds, endpointId, sourceId });
+                }}
                 onOpenLink={(uri, event) => {
                     if (isTerminalLinkClick(event, apple)) {
                         openTerminalLink(uri, endpointId, {
