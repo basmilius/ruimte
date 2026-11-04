@@ -81,7 +81,7 @@ import XCTest
         presentation.setVisuals([visual("v2", at: 3200)])
         XCTAssertEqual(
             presentation.entries.map(\.id),
-            ["u1", "fold-t1", "a1", "u2", "tools-x2", "a2", "visual-v2", "x3", "working-t2"])
+            ["u1", "fold-t1", "a1", "u2", "tools-x2", "a2", "visual-v2", "tools-x3", "working-t2"])
     }
 
     func testAVisualAlwaysStandsAboveTheWorkingRow() {
@@ -91,7 +91,7 @@ import XCTest
         presentation.setVisuals([visual("late", at: 9000), visual("between", at: 2000)])
         XCTAssertEqual(
             presentation.entries.map(\.id),
-            ["u1", "fold-t1", "a1", "visual-between", "u2", "tools-x2", "a2", "x3", "visual-late", "working-t2"])
+            ["u1", "fold-t1", "a1", "visual-between", "u2", "tools-x2", "a2", "tools-x3", "visual-late", "working-t2"])
     }
 
     func testVisualsOfTheSameMomentKeepTheirOrder() {

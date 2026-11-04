@@ -383,14 +383,14 @@ final class ChatPresentationTests: XCTestCase {
             ["u1", "fold-t1", "tools-r1", "n1", "tools-e1", "files-t1", "a1", "n2"])
     }
 
-    func testTheActiveTurnCollectsARunOfCallsWithTheRunningOnesAfterTheSettled() {
+    func testTheActiveTurnKeepsARunOfCallsInOneGroupInTheOrderTheyStarted() {
         let values = [
             running, item("u2", "user"), tool("b1", "Bash"), tool("b2", "Bash", state: "running"), tool("b3", "Bash"),
             item("a2", "assistant").setting("streaming", .bool(true)),
         ]
         let rows = entries(values, active: "t1")
-        XCTAssertEqual(rows.map(\.id), ["u2", "tools-b1", "b2", "a2", "working-t1"])
-        XCTAssertEqual(rows[1].items.map(\.id), ["b1", "b3"])
+        XCTAssertEqual(rows.map(\.id), ["u2", "tools-b1", "a2", "working-t1"])
+        XCTAssertEqual(rows[1].items.map(\.id), ["b1", "b2", "b3"])
     }
 
     func testAnEmptyReplyThatNoLongerStreamsHasNoRow() {
@@ -398,27 +398,30 @@ final class ChatPresentationTests: XCTestCase {
         XCTAssertEqual(rows.map(\.id), ["u", "live"])
     }
 
-    func testTheLiveThoughtStandsOverTheRunningCallTheLatestThoughtLedTo() {
+    func testTheLiveThoughtStandsOverTheRunningImageTheLatestThoughtLedTo() {
         let thought = { (id: String) in
             self.item(id, "thinking").setting("text", .string("The entry is written first."))
         }
         let call = { (id: String, state: String) in
             self.tool(id, "Bash", ["command": .string("bun test")], state: state)
         }
+        let image = tool("image", "ImageGeneration", state: "running")
         let ids = { (values: [JSONValue]) in
             self.entries([self.running, self.item("u2", "user")] + values, active: "t1").map(\.id)
         }
+        // A running call joins its group, so only an image still stands apart for the thought to repeat over.
         XCTAssertEqual(
-            ids([thought("k1"), call("r1", "done"), call("b1", "running")]),
-            ["u2", "k1", "tools-r1", "live-thought-k1", "b1", "working-t1"])
-        XCTAssertFalse(ids([thought("k1"), call("b1", "running")]).contains("live-thought-k1"))
+            ids([thought("k1"), call("r1", "done"), call("b1", "running")]), ["u2", "k1", "tools-r1", "working-t1"])
+        XCTAssertEqual(
+            ids([thought("k1"), call("r1", "done"), image]),
+            ["u2", "k1", "tools-r1", "live-thought-k1", "image", "working-t1"])
+        XCTAssertFalse(ids([thought("k1"), image]).contains("live-thought-k1"))
         // Only the answer between the thought and the call it waits to run, as while it waits on an approval.
-        XCTAssertFalse(ids([thought("k1"), reply("a1"), call("b1", "running")]).contains("live-thought-k1"))
+        XCTAssertFalse(ids([thought("k1"), reply("a1"), image]).contains("live-thought-k1"))
         XCTAssertTrue(
-            ids([thought("k1"), call("r1", "done"), thought("k2"), call("r2", "done"), call("b1", "running")])
+            ids([thought("k1"), call("r1", "done"), thought("k2"), call("r2", "done"), image])
                 .contains("live-thought-k2"))
-        XCTAssertFalse(
-            ids([call("r1", "done"), call("b1", "running"), thought("k1")]).contains { $0.hasPrefix("live") })
+        XCTAssertFalse(ids([call("r1", "done"), image, thought("k1")]).contains { $0.hasPrefix("live") })
         XCTAssertFalse(ids([thought("k1"), call("r1", "done"), call("r2", "done")]).contains { $0.hasPrefix("live") })
     }
 
