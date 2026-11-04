@@ -3,10 +3,9 @@ import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ChatMcpServer } from '@adecore/agents/chat';
 import { isNotFound } from '@adecore/utils/errors';
-import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool, type Transport } from '@modelcontextprotocol/client';
+import { Client, StreamableHTTPClientTransport, type CallToolResult, type Tool } from '@modelcontextprotocol/client';
 import { z } from 'zod';
 import { CHAT_TOKEN_VARIABLE, MCP_MAX_IMAGE_BYTES, MCP_REQUEST_TIMEOUT_S, MCP_SERVER, MCP_URL_VARIABLE } from '../providers/ruimte-mcp.ts';
-import { ApiStdioTransport } from './api-mcp-stdio.ts';
 
 const common = { enabled: z.boolean().optional(), allowedTools: z.array(z.string().min(1).max(200)).max(100).optional() };
 const ApiMcpConfigSchema = z.object({
@@ -36,6 +35,7 @@ const ApiMcpConfigSchema = z.object({
         .refine((servers) => Object.keys(servers).length <= 32, 'At most 32 MCP servers may be configured.')
 });
 export type ApiMcpServer = z.infer<typeof ApiMcpConfigSchema>['mcpServers'][string];
+export type ApiHttpMcpServer = Extract<ApiMcpServer, { url: string }>;
 
 const CONFIG_FILE = 'api-mcp.json';
 const MAX_CONFIG_BYTES = 128 * 1024;
@@ -111,7 +111,7 @@ export function expandMcpEnvironment(values: Record<string, string>, env: Record
 }
 
 /* Ruimte's own server, for a chat the daemon gave a token; it wins over a server of the same name in `api-mcp.json`. */
-export function ruimteMcpServer(env: Record<string, string>): Record<string, ApiMcpServer> {
+export function ruimteMcpServer(env: Record<string, string>): Record<string, ApiHttpMcpServer> {
     const url = env[MCP_URL_VARIABLE];
     if (url === undefined || env[CHAT_TOKEN_VARIABLE] === undefined) {
         return {};
@@ -152,9 +152,6 @@ export interface ApiMcpLimits {
     responseBytes: number;
 }
 
-/* A server a person configured. */
-export const EXTERNAL_MCP_LIMITS: ApiMcpLimits = { callTimeoutMs: 30_000, responseBytes: 1024 * 1024 };
-
 /*
  * Ruimte's own server: the time its route gives a call, and its largest picture in base64 with room for
  * the text and the JSON around it.
@@ -164,76 +161,52 @@ export const RUIMTE_MCP_LIMITS: ApiMcpLimits = {
     responseBytes: Math.ceil(MCP_MAX_IMAGE_BYTES / 3) * 4 + 1024 * 1024
 };
 
-export type ConnectApiMcp = (
-    server: ApiMcpServer,
-    cwd: string,
-    env: Record<string, string>,
-    signal: AbortSignal,
-    limits?: ApiMcpLimits
-) => Promise<ApiMcpConnection>;
+export type ConnectApiMcp = (server: ApiHttpMcpServer, env: Record<string, string>, signal: AbortSignal, limits?: ApiMcpLimits) => Promise<ApiMcpConnection>;
 
 /* The signal of the tool call a request of the transport is for, so a call that is cancelled ends its request too. */
 const callSignal = new AsyncLocalStorage<AbortSignal>();
 
 export async function connectApiMcp(
-    server: ApiMcpServer,
-    cwd: string,
+    server: ApiHttpMcpServer,
     env: Record<string, string>,
     signal: AbortSignal,
-    limits: ApiMcpLimits = EXTERNAL_MCP_LIMITS
+    limits: ApiMcpLimits = RUIMTE_MCP_LIMITS
 ): Promise<ApiMcpConnection> {
-    const client = new Client(
-        { name: 'ruimte-api-foundation', version: '1.0.0' },
-        { versionNegotiation: { mode: 'command' in server ? 'legacy' : 'auto' }, listMaxPages: 5 }
-    );
-    let transport: Transport;
-    let http: StreamableHTTPClientTransport | undefined;
-    if ('command' in server) {
-        const inherited = Object.fromEntries(
-            ['PATH', 'HOME', 'TMPDIR', 'LANG', 'LC_ALL', 'SHELL'].flatMap((key) => (env[key] === undefined ? [] : [[key, env[key]!]]))
-        );
-        transport = new ApiStdioTransport({
-            command: server.command,
-            args: server.args,
-            cwd,
-            env: { ...inherited, ...expandMcpEnvironment(server.env, env) }
-        });
-    } else {
-        const url = new URL(server.url);
-        if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) {
-            throw new Error('MCP URLs must use HTTP or HTTPS without embedded credentials.');
-        }
-        http = new StreamableHTTPClientTransport(url, {
-            requestInit: { headers: expandMcpEnvironment(server.headers, env) },
-            fetch: async (input, init) => {
-                const target = new URL(input instanceof Request ? input.url : String(input));
-                if (target.origin !== url.origin) {
-                    throw new Error('The MCP server attempted to contact an unconfigured origin.');
-                }
-                const cancelled = callSignal.getStore();
-                const signals = [init?.signal, cancelled].filter((candidate): candidate is AbortSignal => candidate !== undefined && candidate !== null);
-                const response = await fetch(input, { ...init, redirect: 'error', ...(signals.length === 0 ? {} : { signal: AbortSignal.any(signals) }) });
-                if (!response.body) {
-                    return response;
-                }
-                let bytes = 0;
-                const body = response.body.pipeThrough(
-                    new TransformStream<Uint8Array, Uint8Array>({
-                        transform(chunk, controller) {
-                            bytes += chunk.byteLength;
-                            if (bytes > limits.responseBytes) {
-                                controller.error(new Error(`MCP response exceeded ${Math.floor(limits.responseBytes / 1024 / 1024)} MiB.`));
-                            } else {
-                                controller.enqueue(chunk);
-                            }
-                        }
-                    })
-                );
-                return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
-            }
-        });
-        transport = http;
+    const client = new Client({ name: 'ruimte-api-foundation', version: '1.0.0' }, { versionNegotiation: { mode: 'auto' }, listMaxPages: 5 });
+    const url = new URL(server.url);
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) {
+        throw new Error('MCP URLs must use HTTP or HTTPS without embedded credentials.');
     }
+    const transport = new StreamableHTTPClientTransport(url, {
+        requestInit: { headers: expandMcpEnvironment(server.headers, env) },
+        fetch: async (input, init) => {
+            const target = new URL(input instanceof Request ? input.url : String(input));
+            if (target.origin !== url.origin) {
+                throw new Error('The MCP server attempted to contact an unconfigured origin.');
+            }
+            const cancelled = callSignal.getStore();
+            const signals = [init?.signal, cancelled].filter((candidate): candidate is AbortSignal => candidate !== undefined && candidate !== null);
+            const response = await fetch(input, { ...init, redirect: 'error', ...(signals.length === 0 ? {} : { signal: AbortSignal.any(signals) }) });
+            if (!response.body) {
+                return response;
+            }
+            let bytes = 0;
+            const body = response.body.pipeThrough(
+                new TransformStream<Uint8Array, Uint8Array>({
+                    transform(chunk, controller) {
+                        bytes += chunk.byteLength;
+                        if (bytes > limits.responseBytes) {
+                            controller.error(new Error(`MCP response exceeded ${Math.floor(limits.responseBytes / 1024 / 1024)} MiB.`));
+                        } else {
+                            controller.enqueue(chunk);
+                        }
+                    }
+                })
+            );
+            return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+        }
+    });
+
     const abortStartup = (): void => {
         void transport.close().catch(() => undefined);
         void client.close().catch(() => undefined);
@@ -257,9 +230,7 @@ export async function connectApiMcp(
         close: () =>
             (closing ??= (async () => {
                 // Terminating a remote session must not hold up stopping the local chat.
-                if (http) {
-                    void http.terminateSession().catch(() => undefined);
-                }
+                void transport.terminateSession().catch(() => undefined);
                 await client.close();
             })())
     };

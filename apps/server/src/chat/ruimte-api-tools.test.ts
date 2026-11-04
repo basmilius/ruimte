@@ -63,7 +63,7 @@ describe("Ruimte's tools in a chat on a plain API", () => {
     test("get the time and answer size the daemon's route allows", async () => {
         const given: Array<ApiMcpLimits | undefined> = [];
 
-        const { tools } = harness(ENV, async (_server, _cwd, _env, _signal, limits) => {
+        const { tools } = harness(ENV, async (_server, _env, _signal, limits) => {
             given.push(limits);
 
             return { list: async () => [], call: async () => ({ content: [] }), close: async () => {} };

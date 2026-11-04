@@ -3,9 +3,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Server, WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server';
-import { connectApiMcp, expandMcpEnvironment, EXTERNAL_MCP_LIMITS, readApiMcpConfigSync, RUIMTE_MCP_LIMITS, type ApiMcpServer } from './api-mcp.ts';
+import { connectApiMcp, expandMcpEnvironment, readApiMcpConfigSync, RUIMTE_MCP_LIMITS, type ApiHttpMcpServer } from './api-mcp.ts';
 
-const SERVER: ApiMcpServer = { type: 'http', url: 'http://127.0.0.1:4210/mcp', headers: {} };
+const SERVER: ApiHttpMcpServer = { type: 'http', url: 'http://127.0.0.1:4210/mcp', headers: {} };
 const PICTURE = Buffer.alloc(800 * 1024, 7).toString('base64');
 
 const original = globalThis.fetch;
@@ -47,22 +47,22 @@ afterEach(() => {
 });
 
 describe('connectApiMcp', () => {
-    test("Ruimte's own server answers a picture larger than a configured server may", async () => {
+    test('HTTP responses are capped by the limit the caller supplies', async () => {
         const signal = new AbortController().signal;
-        const own = await connectApiMcp(SERVER, '/work', {}, signal, RUIMTE_MCP_LIMITS);
-        const external = await connectApiMcp(SERVER, '/work', {}, signal, EXTERNAL_MCP_LIMITS);
+        const own = await connectApiMcp(SERVER, {}, signal, RUIMTE_MCP_LIMITS);
+        const limited = await connectApiMcp(SERVER, {}, signal, { callTimeoutMs: 30_000, responseBytes: 1024 * 1024 });
 
         try {
             expect((await own.call('shot', {}, signal)).content).toEqual([{ type: 'image', data: PICTURE, mimeType: 'image/png' }]);
-            await expect(external.call('shot', {}, signal)).rejects.toThrow();
+            await expect(limited.call('shot', {}, signal)).rejects.toThrow();
         } finally {
             await own.close();
-            await external.close();
+            await limited.close();
         }
     });
 
     test('a cancelled call ends its request', async () => {
-        const connection = await connectApiMcp(SERVER, '/work', {}, new AbortController().signal, RUIMTE_MCP_LIMITS);
+        const connection = await connectApiMcp(SERVER, {}, new AbortController().signal, RUIMTE_MCP_LIMITS);
         const turn = new AbortController();
         const reached = new Promise<Request>((resolve) => {
             hung = resolve;

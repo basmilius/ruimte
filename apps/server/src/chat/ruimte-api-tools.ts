@@ -34,7 +34,7 @@ export function ruimteApiTools(launch: BackendLaunch, host: BackendHost, connect
             const signal = AbortSignal.timeout(RUIMTE_CONNECT_TIMEOUT_MS);
 
             try {
-                const connection = await connectMcp(server, launch.cwd, launch.env, signal, RUIMTE_MCP_LIMITS);
+                const connection = await connectMcp(server, launch.env, signal, RUIMTE_MCP_LIMITS);
 
                 return { connection, tools: await connection.list(signal) };
             } catch (error) {
