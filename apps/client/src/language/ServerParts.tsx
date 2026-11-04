@@ -64,7 +64,6 @@ export function LogDialog({ server, tracker, onClose }: { server: string | null;
                     </div>
                 </div>
                 <ScrollArea
-                    axis="both"
                     className="grow overflow-hidden rounded-md bg-surface-sunken"
                     viewportClassName="p-3 font-mono text-xs whitespace-pre-wrap text-text-muted select-text"
                 >

@@ -145,7 +145,7 @@ export function RoutineWeekList({ endpointId, groups, week, now, timeZone }: Omi
     const shown = days.filter((day) => day.items.length > 0);
 
     return (
-        <ScrollArea axis="both" className="grow" viewportClassName="flex flex-col">
+        <ScrollArea className="grow" viewportClassName="flex flex-col">
             {shown.length === 0 ? (
                 <div className="grid grow place-items-center p-6">
                     <EmptyState>{t('list.empty')}</EmptyState>
